@@ -53,12 +53,12 @@ export function injectedBuildIdentity(
   });
 }
 
-export interface LiveStateForgeSnapshotCapture {
+export interface LiveStateSetupSnapshotCapture {
   readonly id: string;
   readonly tick: number;
   readonly stateClass: TearStateClass;
   readonly seed: string;
-  readonly stateForge: Pick<TearLiveWorldAdapter<unknown>, "capture">;
+  readonly stateSetup: Pick<TearLiveWorldAdapter<unknown>, "capture">;
   readonly world?: TearCodecWorld;
   readonly rng: Readonly<Record<string, Readonly<{ algorithm?: string; state?: number | string }>>>;
   readonly registry: TearStateCodecRegistry;
@@ -82,8 +82,8 @@ export interface LiveStateForgeSnapshotCapture {
   readonly trainingConsent?: TearProvenanceV1["trainingConsent"];
 }
 
-/** Shared State Forge decoder factory for privileged live restoration paths. */
-export function createLiveStateForgeRestoreFactory(registry: TearStateCodecRegistry): TearWorldFactory {
+/** Shared State Setup decoder factory for privileged live restoration paths. */
+export function createLiveStateSetupRestoreFactory(registry: TearStateCodecRegistry): TearWorldFactory {
   return Object.freeze({
     createEmpty: () => ({ components: new Map(), references: new Map(), entityIds: new Set<string>() }),
     validate: (world: ReturnType<TearWorldFactory["createEmpty"]>) =>
@@ -93,10 +93,10 @@ export function createLiveStateForgeRestoreFactory(registry: TearStateCodecRegis
   });
 }
 
-/** Captures the same fully typed codec world used by State Forge restoration. */
-export function captureLiveStateForgeSnapshot(input: LiveStateForgeSnapshotCapture): TearSnapshotV1 {
+/** Captures the same fully typed codec world used by State Setup restoration. */
+export function captureLiveStateSetupSnapshot(input: LiveStateSetupSnapshotCapture): TearSnapshotV1 {
   if (!/^[a-z0-9][a-z0-9._-]{0,127}$/u.test(input.id)) throw new TypeError("snapshot id is invalid");
-  const world = input.world ?? input.stateForge.capture();
+  const world = input.world ?? input.stateSetup.capture();
   const captured = captureCodecState(world, input.registry);
   const configurationHash = stableVerificationHash(captured.state["tear.configuration.v1"]);
   const runtimeBuild = injectedBuildIdentity(input.target, input.contentHash);
@@ -169,18 +169,18 @@ export function createLiveRuntimeSnapshotController(
   onRestored: (snapshot: TearSnapshotV1, result: Extract<TearLiveRestoreResult, { ok: true }>) => void,
 ): LiveRuntimeSnapshotController {
   const registry = createDefaultStateCodecRegistry();
-  const factory = createLiveStateForgeRestoreFactory(registry);
+  const factory = createLiveStateSetupRestoreFactory(registry);
   const controller: LiveRuntimeSnapshotController = {
     capture(id: string, stateClass: TearStateClass = "recorded-canonical", seed?: string) {
       const tick = context.authoritative()?.tick ?? 0;
-      const world = context.stateForge.capture();
+      const world = context.stateSetup.capture();
       const contentHash = stableVerificationHash(ENTITY_KIND_REGISTRY.ids);
       const runtimeBuild = injectedBuildIdentity("test-standalone", contentHash);
-      return captureLiveStateForgeSnapshot({
+      return captureLiveStateSetupSnapshot({
         id,
         tick,
         stateClass,
-        stateForge: context.stateForge,
+        stateSetup: context.stateSetup,
         world,
         rng: context.random(),
         registry,
@@ -194,7 +194,7 @@ export function createLiveRuntimeSnapshotController(
       });
     },
     restore(snapshot: TearSnapshotV1) {
-      const result = restoreSnapshotIntoLiveWorld(snapshot, registry, factory, context.stateForge);
+      const result = restoreSnapshotIntoLiveWorld(snapshot, registry, factory, context.stateSetup);
       if (result.ok) onRestored(snapshot, result);
       return result;
     },

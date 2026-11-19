@@ -717,25 +717,25 @@ describe("C30 production headless environment", () => {
     rejected.dispose();
   });
 
-  it("restores only a lineage-bound State Forge recovery frontier through the shared production composition", () => {
+  it("restores only a lineage-bound State Setup recovery frontier through the shared production composition", () => {
     const original = createProductionHeadlessEnvironment();
     original.reset(scenario);
     for (let tick = 1; tick <= 60; tick += 1) original.step(actionsAt(tick));
     const source = original.captureCheckpoint();
     const launch = createOneFrameBoundaryLaunchMatrix()[0];
-    if (launch === undefined) throw new Error("State Forge fixture launch missing");
+    if (launch === undefined) throw new Error("State Setup fixture launch missing");
     const forgedSnapshot = forgeExitLaunchSnapshot(source.snapshot, launch);
     const restored = createProductionHeadlessEnvironment();
-    expect(restored.restoreStateForgeEvaluation({ source, forgedSnapshot })).toMatchObject({
+    expect(restored.restoreStateSetupEvaluation({ source, forgedSnapshot })).toMatchObject({
       tick: source.checkpoint.tick,
     });
     const lineage = forgedSnapshot.lineage;
-    if (lineage === undefined) throw new Error("State Forge fixture lineage missing");
+    if (lineage === undefined) throw new Error("State Setup fixture lineage missing");
     const forgedWrongParent = Object.freeze({
       ...forgedSnapshot,
       lineage: Object.freeze({ ...lineage, parentId: "foreign" }),
     });
-    expect(() => restored.restoreStateForgeEvaluation({ source, forgedSnapshot: forgedWrongParent })).toThrow(
+    expect(() => restored.restoreStateSetupEvaluation({ source, forgedSnapshot: forgedWrongParent })).toThrow(
       /lineage-bound/u,
     );
     original.dispose();

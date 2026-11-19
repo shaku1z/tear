@@ -14,7 +14,7 @@ withJourney({ name: "C27 Ghost V3 dynamic configuration provenance" }, async ({ 
   });
   // The test hook creates a normal live run and reaches the real tier-up UI;
   // the click below flows through the production reward controller. Its first
-  // card is a configuration-mutating tier, not a State Forge/direct mutation.
+  // card is a configuration-mutating tier, not a State Setup/direct mutation.
   await page.evaluate(() => window.__PANTHEON_TEST.openTierUp());
   await waitScreen("tierup");
   await page.mouse.click(314, 300);
@@ -40,7 +40,7 @@ withJourney({ name: "C27 Ghost V3 dynamic configuration provenance" }, async ({ 
   });
   assert.equal(admission.status, "unavailable", JSON.stringify(admission));
   const snapshots = capsule.tracks.keyframes.filter((entry) => entry.value?.kind === "snapshot");
-  assert.ok(snapshots.length >= 2, "the upgraded live run did not retain bootstrap and a later State Forge keyframe");
+  assert.ok(snapshots.length >= 2, "the upgraded live run did not retain bootstrap and a later State Setup keyframe");
   const bootstrap = capsule.tracks.events.find(
     (entry) =>
       entry.value?.id?.startsWith("ghost-live-bootstrap-") && entry.value?.payload?.boundary === "v3-sidecar-opened",
@@ -59,12 +59,12 @@ withJourney({ name: "C27 Ghost V3 dynamic configuration provenance" }, async ({ 
   assert.equal(
     bootstrapSnapshots.length,
     1,
-    "the capsule did not retain exactly one tick-zero State Forge bootstrap snapshot",
+    "the capsule did not retain exactly one tick-zero State Setup bootstrap snapshot",
   );
   assert.deepEqual(
     bootstrapSnapshots[0].value.provenance.build,
     admission.context.build,
-    "the tick-zero State Forge snapshot does not match the immutable replay bootstrap fingerprint",
+    "the tick-zero State Setup snapshot does not match the immutable replay bootstrap fingerprint",
   );
   for (const snapshot of snapshots) {
     assert.deepEqual(
@@ -75,7 +75,7 @@ withJourney({ name: "C27 Ghost V3 dynamic configuration provenance" }, async ({ 
   }
   assert.ok(
     snapshots.some((entry) => entry.value.provenance.build.configHash !== admission.context.build.configHash),
-    "State Forge upgrades did not produce a keyframe-specific configuration fingerprint",
+    "State Setup upgrades did not produce a keyframe-specific configuration fingerprint",
   );
   assert.equal(
     capsule.tracks.events.some((entry) => entry.value?.type === "ghost.snapshot-degraded"),

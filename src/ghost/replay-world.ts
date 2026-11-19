@@ -60,7 +60,7 @@ export interface GhostProductionReplaySession<State> {
   readonly replayLifecycle?: TearSimulationAdvanceLifecycle;
   renderView?(): GhostReplayRenderView;
   semanticProjection(): unknown;
-  /** Optional State Forge semantic hash, only when its codec projection is available. */
+  /** Optional State Setup semantic hash, only when its codec projection is available. */
   snapshotSemanticHash?(): string;
   /** Complete an admitted post-capture start transaction before its first simulation tick. */
   completeRecordedOpening?(): void;

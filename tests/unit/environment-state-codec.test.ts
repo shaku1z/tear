@@ -20,7 +20,7 @@ import { projectCanonicalGameplayState } from "../../src/gameplay/runtime/canoni
 import {
   forgeEnvironmentCombatObjectState,
   forgeEnvironmentFieldState,
-} from "../../src/tearbench/state-forge-factories";
+} from "../../src/tearbench/state-setup-factories";
 
 const hazard = {
   slowZones: [{ id: "slow-1", x: 10, y: 20 }],

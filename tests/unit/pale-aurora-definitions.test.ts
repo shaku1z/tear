@@ -16,7 +16,7 @@ import {
 import { environmentHash, environmentSnapshotToObservation } from "../../src/tearbench/environment-codec";
 import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "../../src/tearbench/authored-environment-codec-validation";
 import { buildTearIdentityGraph, createDefaultStateCodecRegistry, type TearCodecWorld } from "../../src/tearbench";
-import { forgeEnvironmentFieldState, forgeEnvironmentRouteState } from "../../src/tearbench/state-forge-factories";
+import { forgeEnvironmentFieldState, forgeEnvironmentRouteState } from "../../src/tearbench/state-setup-factories";
 
 const field = createAuroraTrackFieldState({
   id: "track:stage:left",

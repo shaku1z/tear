@@ -14,15 +14,15 @@ import { createGraftAnchorState } from "../gameplay/environment/graft-anchor";
 
 type Patch = Readonly<Record<string, unknown>>;
 
-/** State Forge factories are generic capability fixtures, not a Verdant roster. */
-export const ENVIRONMENT_STATE_FORGE_FACTORY_IDS = Object.freeze([
+/** State Setup factories are generic capability fixtures, not a Verdant roster. */
+export const ENVIRONMENT_STATE_SETUP_FACTORY_IDS = Object.freeze([
   "environment-field",
   "environment-combat-object",
   "environment-route",
 ] as const);
-export const ENVIRONMENT_STATE_FORGE_FACTORY_REGISTRY = createStableRegistry(
-  "environment State Forge factory",
-  ENVIRONMENT_STATE_FORGE_FACTORY_IDS,
+export const ENVIRONMENT_STATE_SETUP_FACTORY_REGISTRY = createStableRegistry(
+  "environment State Setup factory",
+  ENVIRONMENT_STATE_SETUP_FACTORY_IDS,
 );
 
 export function forgeEnvironmentFieldState(
@@ -58,7 +58,7 @@ export function forgeEnvironmentCombatObjectState(
   });
 }
 
-/** C6 relationship fixture: State Forge restores one Rootbinder and two ordinary allies,
+/** C6 relationship fixture: State Setup restores one Rootbinder and two ordinary allies,
  * then restores their source-owned severable root-link segments using stable actor IDs. */
 export function forgeRootbinderNetworkState(base: TearSdlDocumentV1): TearSdlDocumentV1 {
   const links = ["enemy:2", "enemy:3"].map((targetId, index) => ({

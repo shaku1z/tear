@@ -400,7 +400,7 @@ describe("Rimehound", () => {
     }).toEqual({ x: source.x, y: source.y, vx: source.vx, vy: source.vy, atk: source.atk, atkT: source.atkT });
   });
 
-  it("round-trips committed Rimehound state through the production State Forge transaction", () => {
+  it("round-trips committed Rimehound state through the production State Setup transaction", () => {
     const composition = createProductionGhostReplayComposition({ seed: "pale-rimehound-restore", mode: "endless" });
     const source = composition.create(undefined);
     const hound = source.replay.world.entities.createEnemy(

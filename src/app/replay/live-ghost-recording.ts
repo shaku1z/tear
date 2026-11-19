@@ -88,7 +88,7 @@ export type LiveGhostRecording = ReturnType<typeof createLiveGhostRecording>;
 export interface LiveGhostRecordingBoundaryPorts {
   readonly ghost: Pick<GameRuntimeDependencies["GHOST"], "setRecordingObserver">;
   readonly run: () => GameRun;
-  /** The State Forge projection of the live configuration component. */
+  /** The State Setup projection of the live configuration component. */
   readonly configurationProjection: () => unknown;
   readonly randomSnapshot: () => GhostReplayRunContextInput["rng"];
   readonly chaseConfiguration: (configHash: string) => void;

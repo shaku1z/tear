@@ -85,9 +85,9 @@ for (const relativePath of requiredDocs) {
 }
 
 const activeLegacyReferences = [
-  ["tests/browser-state-forge-runtime.js", 'artifacts", "tearbench", "c23'],
-  ["tests/browser-state-forge-studio.js", 'artifacts", "tearbench", "c23'],
-  ["tests/browser-state-forge-exit-matrix.js", 'artifacts", "tearbench", "c23'],
+  ["tests/browser-state-setup-runtime.js", 'artifacts", "tearbench", "c23'],
+  ["tests/browser-state-editor.js", 'artifacts", "tearbench", "c23'],
+  ["tests/browser-state-setup-exit-matrix.js", 'artifacts", "tearbench", "c23'],
   ["tests/browser-verdant-presentation.js", 'artifacts", "tearbench", "verdant-c9'],
   ["tests/unit/tearbench-progression-ledger.test.ts", '"tearbench", "c23"'],
   ["tests/browser-c27a-live-parity-trace.js", 'focusedCapture ? "c27a-focused" : "c27a"'],

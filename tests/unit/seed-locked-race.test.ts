@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import { RewardSelectionController } from "../../src/gameplay/run/reward-selection";
 import { rollSeedLockedDraft, seedRaceCatalogHash } from "../../src/gameplay/run/seed-locked-draft";
 import { UPGRADES } from "../../src/gameplay/upgrades";
-import { captureLiveRewardSelection } from "../../src/app/engineering/state-forge-adapter";
+import { captureLiveRewardSelection } from "../../src/app/engineering/state-setup-adapter";
 import { hydrateRewardCodecPayload } from "../../src/tearbench/reward-codec-hydrator";
 import {
   createProductionGhostReplayComposition,
