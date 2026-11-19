@@ -23,7 +23,6 @@ function scenario(id, seed) {
 withJourney(
   {
     name: "C27 Ghost V3 browser storage-fault containment",
-    port: 8158,
     query: { "ghost-v3-storage-fault": "quota-on-first-chunk" },
   },
   async ({ page, boot }) => {

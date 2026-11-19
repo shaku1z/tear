@@ -383,17 +383,17 @@ describe("Rootbound production foundation", () => {
     boss.hp = boss.maxHp;
     expect(boss.phase).toBe(2);
 
-    // The opening contact grace outlasts the first recovery, so an overlapping spawn deals no touch damage.
+    // Its body never deals touch damage, so a spawn that overlaps the player costs nothing; it blocks instead.
     boss.update(1, harness.platforms, harness.player);
     expect(boss.state).toBe("idle");
-    expect(boss.contactDamageEnabled()).toBe(false);
     boss.update(0.25, harness.platforms, harness.player);
     expect(boss).toMatchObject({
       state: "idle",
       atk: "unavailable",
       availableAttacks: ALL_MOVES,
     });
-    expect(boss.contactDamageEnabled()).toBe(true);
+    expect(boss.contactDamageEnabled()).toBe(false);
+    expect(boss.bodyBlocks()).toBe(true);
   });
 
   it("cleans Rootbound idempotently at every encounter replacement boundary", () => {

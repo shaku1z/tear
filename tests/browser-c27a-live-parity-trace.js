@@ -151,7 +151,7 @@ function artifactPath(scenario) {
   return path.join(ARTIFACT_DIR, `${focusedCapture ? "focused-" : ""}${scenario.id}.json`);
 }
 
-withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page, buildInfo }) => {
+withJourney({ name: "C27A live parity trace" }, async ({ page, buildInfo }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: STATE_WAIT_MS });
   fs.mkdirSync(ARTIFACT_DIR, { recursive: true });
   const written = [];

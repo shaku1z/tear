@@ -133,7 +133,7 @@ async function runFreshJourney(browser, baseUrl, runNumber) {
     serviceWorkers: "block",
   });
   const page = await context.newPage();
-  trackScriptLoads(page);
+  await trackScriptLoads(page);
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.stack || error.message));
   await context.route("**/*", (route) => {
@@ -184,7 +184,7 @@ async function runFreshJourney(browser, baseUrl, runNumber) {
   }
 }
 
-withJourney({ name: "C24 same-seed scripted-agent repeatability", port: 8155 }, async ({ page, errors }) => {
+withJourney({ name: "C24 same-seed scripted-agent repeatability" }, async ({ page, errors }) => {
   assert.ok(
     Number.isSafeInteger(requestedSeed) && requestedSeed > 0,
     "C24_REPEAT_SEED must be a positive safe integer",

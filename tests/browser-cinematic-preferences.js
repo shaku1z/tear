@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 const { STATE_WAIT_MS } = require("./browser-waits");
 
-withJourney({ name: "cinematic preference journeys", port: 8145 }, async ({ page, boot, waitScreen }) => {
+withJourney({ name: "cinematic preference journeys" }, async ({ page, boot, waitScreen }) => {
   for (const preference of ["full", "brief", "off"]) {
     await boot();
     await page.evaluate((value) => {

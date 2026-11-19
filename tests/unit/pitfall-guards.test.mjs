@@ -77,6 +77,26 @@ describe("pitfall guards", () => {
     }
   });
 
+  it("no browser test server listens on a fixed port; each takes a free one and reads its URL back", async () => {
+    const fixedPort = [
+      // listen() and listen(0, …) take a free port; anything else names one.
+      /\.listen\(\s*(?!0\s*[,)]|\))/u,
+      /\bport:\s*\d/u,
+      /(?:127\.0\.0\.1|localhost):\d/u,
+      /_PORT\s*\|\|/u,
+    ];
+    const files = listFiles("tests", [".js", ".cjs", ".mjs"]).filter((file) => !file.startsWith("tests/unit/"));
+    expect(files).toContain("tests/browser-journey-harness.js");
+    const offenders = (await readTexts(files)).flatMap(([file, text]) =>
+      text
+        .split(/\r?\n/u)
+        .flatMap((line, index) =>
+          fixedPort.some((pattern) => pattern.test(line)) ? [`${file}:${String(index + 1)}: ${line.trim()}`] : [],
+        ),
+    );
+    expect(offenders).toEqual([]);
+  });
+
   it("no script, workflow or package command skips the Git hooks", async () => {
     const sources = [
       ...listFiles("scripts", [".mjs", ".js", ".ts", ".ps1", ".sh"]),

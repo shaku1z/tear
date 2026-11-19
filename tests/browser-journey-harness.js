@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
+const { listenOnFreePort } = require("./local-server");
 const {
   STATE_WAIT_MS,
   JOURNEY_LIMIT_MS,
@@ -98,8 +99,8 @@ async function withJourney(options, run) {
   assert.equal(buildInfo.sourceRevision, source.revision, "served build source revision is stale");
   assert.equal(buildInfo.sourceState, source.state, "served build source state is stale");
   assert.equal(buildInfo.sourceFingerprint, source.fingerprint, "served build source fingerprint is stale");
-  const port = Number(process.env.TEAR_JOURNEY_PORT || options.port);
-  const baseUrl = `http://127.0.0.1:${String(port)}`;
+  // Set once the server listens on a free port (tests/local-server.js).
+  let baseUrl = "http://127.0.0.1";
   // When each request reached this server and when its response finished, for stall reports.
   const serverLog = [];
   const server = http.createServer((request, response) => {
@@ -132,7 +133,7 @@ async function withJourney(options, run) {
   });
   let browser;
   try {
-    await new Promise((resolve) => server.listen(port, "127.0.0.1", resolve));
+    ({ origin: baseUrl } = await listenOnFreePort(server));
     const chromePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
     browser = await launchJourney(
       chromium,
@@ -154,7 +155,7 @@ async function withJourney(options, run) {
     page.setDefaultTimeout(STATE_WAIT_MS);
     page.setDefaultNavigationTimeout(STATE_WAIT_MS);
     await watchForStalls(page, { serverLog });
-    trackScriptLoads(page);
+    await trackScriptLoads(page);
     if (options.settings) {
       await page.addInitScript((settings) => {
         window.__TEAR_TEST_STORAGE__ = {

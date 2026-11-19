@@ -26,6 +26,7 @@ import {
   type ParryRun,
 } from "./blade-parry-runtime";
 import {
+  resolveBodyBlocks,
   resolveEnemyContact,
   resolveHostileBladeContact,
   type ContactEnemy,
@@ -233,6 +234,7 @@ export function runLiveCollisionPhase(host: LiveCollisionPhaseHost, dt: number):
   runThrown(host);
   runParries(host, held);
   host.combat.resolveProjectilePhases(dt, projectileTuning(host));
+  resolveBodyBlocks(state.enemies, player, host.width, dt, host.overlap);
   resolveEnemyContact(state.enemies, player, {
     overlaps: host.overlap,
     segmentDistance: () => Infinity,

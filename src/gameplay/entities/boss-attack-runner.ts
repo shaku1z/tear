@@ -57,6 +57,11 @@ export interface BossAttackContext<Phase extends string | number> {
   readonly blocked?: ReadonlySet<string>;
   /** Scales the pause after a move that finishes now (a stage object that hastens the boss, say). Default 1. */
   readonly gapMultiplier?: number;
+  /**
+   * The target on foot: its walking speed in pixels per tick, and whether the boss's body is in its way.
+   * With it, a move answered by walking out of its area is not chosen while the target could not get out.
+   */
+  readonly walker?: Readonly<{ speed: number; blocked: boolean }>;
 }
 
 export type BossAttackEvent<Place> =
@@ -112,7 +117,38 @@ function preference<Phase extends string | number, Place>(
   return score;
 }
 
-/** Whether `attack` may start now at all: its phase, not twice running, not blocked, cooled down, not spent. */
+/**
+ * Whether a target standing in the area this move would mark could walk out of it before it strikes. A lane
+ * or a travelling strike is answered by a jump, and a move with no hit needs no answer, so those always
+ * pass. A way out counts when it is inside the arena, near enough to reach at walking speed within the tell,
+ * and not through a body that blocks (a body the move itself carries away during the tell is not in the way).
+ * Only walking is counted, never a dash or a jump, so this holds for a player whose dash is on cooldown.
+ */
+function leavable<Phase extends string | number>(
+  attack: BossAttack<Phase, unknown>,
+  context: BossAttackContext<Phase>,
+): boolean {
+  const walker = context.walker;
+  const shape = attack.hit?.shape;
+  if (walker === undefined || shape === undefined || shape.kind === "lane" || shape.kind === "travel") return true;
+  const { boss, target, arena } = context;
+  const area = placeBossHitShape(shape, begin(attack, context), boss, arena.groundY, 0);
+  if (!bossHitTouches(area, target)) return true;
+  const half = area.kind === "box" ? area.hw : area.r;
+  const reach = walker.speed * attack.timing.tell;
+  const bodyStays = walker.blocked && attack.motion?.stage !== "tell";
+  return [-1, 1].some((side) => {
+    const exit = area.x + side * (half + target.hw);
+    if (exit < target.hw || exit > arena.width - target.hw || Math.abs(exit - target.x) > reach) return false;
+    const throughBody = (boss.x - target.x) * side > 0 && Math.abs(boss.x - target.x) < Math.abs(exit - target.x);
+    return !(bodyStays && throughBody);
+  });
+}
+
+/**
+ * Whether `attack` may start now at all: its phase, not twice running, not blocked, cooled down, not spent,
+ * and not one the target could not walk out of.
+ */
 function mayStart<Phase extends string | number>(
   attack: BossAttack<Phase, unknown>,
   state: BossAttackRunnerState,
@@ -123,7 +159,8 @@ function mayStart<Phase extends string | number>(
     attack.id !== state.lastAttackId &&
     context.blocked?.has(attack.id) !== true &&
     (state.cooldownUntil[attack.id] ?? 0) <= context.tick &&
-    !(attack.choose.once === true && attack.id in state.begunAt)
+    !(attack.choose.once === true && attack.id in state.begunAt) &&
+    leavable(attack, context)
   );
 }
 
@@ -345,6 +382,8 @@ export function placeBossHitShape(
     }
     case "ring":
       return { kind: "circle", x: boss.x, y: boss.y, r: shape.radius };
+    case "body":
+      return { kind: "box", x: boss.x, y: boss.y, hw: boss.hw + shape.reach, hh: boss.hh };
     case "travel":
       return {
         kind: "box",
