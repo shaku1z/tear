@@ -19,5 +19,5 @@ export * from "./production-replay-session";
 export * from "./production-replay-comparison";
 export * from "./theater";
 export * from "./player-experiences";
-export * from "./replay-editor";
+export * from "./replay-cut-list";
 export * from "./preservation-corpus";

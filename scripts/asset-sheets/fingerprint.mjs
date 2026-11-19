@@ -10,7 +10,7 @@ import { relativeImports } from "../relative-imports.mjs";
 const TOOL_FILES = [
   "scripts/asset-sheets.mjs",
   "scripts/relative-imports.mjs",
-  "src/app/replay/browser-ghost-studio-media.ts",
+  "src/app/replay/browser-ghost-replay-presentation.ts",
   "src/presentation/world/production-replay-frame.ts",
   "src/app/world/environment-layer.ts",
 ];

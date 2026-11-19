@@ -1124,7 +1124,6 @@
     "prefixes": [
       "src/app/replay/replay-screen-adapter.ts",
       "src/app/library/replay-library-controller.ts",
-      "src/app/engineering/replay-editor.ts",
       "src/app/library/replay-transport-controller.ts",
       "src/agents/live-watch-agent-host.ts",
       "src/agents/live-watch-agent-panel.ts"
