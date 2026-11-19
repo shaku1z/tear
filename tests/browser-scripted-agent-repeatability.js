@@ -133,7 +133,7 @@ async function runFreshJourney(browser, baseUrl, runNumber) {
     serviceWorkers: "block",
   });
   const page = await context.newPage();
-  trackScriptLoads(page);
+  await trackScriptLoads(page);
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.stack || error.message));
   await context.route("**/*", (route) => {

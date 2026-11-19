@@ -155,7 +155,7 @@ async function withJourney(options, run) {
     page.setDefaultTimeout(STATE_WAIT_MS);
     page.setDefaultNavigationTimeout(STATE_WAIT_MS);
     await watchForStalls(page, { serverLog });
-    trackScriptLoads(page);
+    await trackScriptLoads(page);
     if (options.settings) {
       await page.addInitScript((settings) => {
         window.__TEAR_TEST_STORAGE__ = {
