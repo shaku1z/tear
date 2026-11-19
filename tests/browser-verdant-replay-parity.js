@@ -51,9 +51,9 @@ const CASES = [
 ];
 
 // Each case gets a fresh page and Ghost vault, so recordings cannot interact through vault retention.
-async function runCase(entry, port) {
+async function runCase(entry) {
   await withJourney(
-    { name: `Verdant live/replay parity: ${entry.document.id}`, port, query: { "ghost-v3-profile": "forensic-qa" } },
+    { name: `Verdant live/replay parity: ${entry.document.id}`, query: { "ghost-v3-profile": "forensic-qa" } },
     async ({ page }) => {
       await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
         timeout: STATE_WAIT_MS,
@@ -117,5 +117,5 @@ async function runCase(entry, port) {
 }
 
 void (async () => {
-  for (const [index, entry] of CASES.entries()) await runCase(entry, 8293 + index);
+  for (const entry of CASES) await runCase(entry);
 })();

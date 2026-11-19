@@ -88,7 +88,7 @@ const resolved = Object.freeze({
   resolvedHash: "pale-stage-wave-41-engineering",
 });
 
-withJourney({ name: "Pale PT3-C5 presentation", port: 8355 }, async ({ page, buildInfo }) => {
+withJourney({ name: "Pale PT3-C5 presentation" }, async ({ page, buildInfo }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: STATE_WAIT_MS });
   const state = await page.evaluate((scenario) => {
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");

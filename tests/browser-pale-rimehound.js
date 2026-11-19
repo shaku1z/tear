@@ -4,7 +4,7 @@ const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
 const { STATE_WAIT_MS } = require("./browser-waits");
 
-withJourney({ name: "Pale PT3-C3 Rimehound", port: 8353 }, async ({ page, waitScreen, buildInfo }) => {
+withJourney({ name: "Pale PT3-C3 Rimehound" }, async ({ page, waitScreen, buildInfo }) => {
   await page.evaluate(() => window.__PANTHEON_TEST.startMode("playground"));
   await waitScreen("playing");
   await page.evaluate(() => window.__PANTHEON_TEST.prepareRimehoundScenario());
