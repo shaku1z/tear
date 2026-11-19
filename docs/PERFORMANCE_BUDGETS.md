@@ -33,6 +33,17 @@ The test knows two host classes, recorded as `referenceProfile.host` and in each
 
 `TEAR_PERF_HOST=controlled|shared` overrides the default. CPU-throttled pacing stays diagnostic on both classes.
 
+### Cost of one tick, and the per-frame figure at a slow cadence
+
+The per-frame `simulation` time is the work of a whole frame step, including every fixed tick that frame catches up, and the `frame` work includes it too. When the host delivers frames more slowly, a frame catches up more ticks and both figures rise although no tick got more expensive. The nightly hosted runner halved its cadence on 2026-11-18 (the unthrottled desktop run went from 17 ms to 33 ms between frames, with the same runner image and Chromium) and the constrained per-frame simulation p95 went from 9.7 to 14.6 and 15.1 ms (frame work from 12.5 to 18.7 ms), while the canonical tick p95 stayed at 1.1 to 1.3 ms. The old known-good commit also exceeded the 10 ms budget in a local run with software rendering at a similar cadence, so no commit was the cause.
+
+A scenario that sets `canonicalTickP95Ms` (the 4x constrained one) is therefore judged like this, by `createFrameCostAssessment` in `tests/browser-performance-pacing-policy.js`:
+
+- The p95 of one canonical tick is required on every host at every cadence. The budget is 3 ms: the highest p95 measured on the hosted runner is 1.3 ms and on a loaded local machine 2.3 ms, so 3 ms is 2.3 times the runner's worst and above the local worst. Lower it after a deliberate reduction; raise it only with the measured reason recorded here.
+- The per-frame simulation p95 and the frame-work p95 are required only when the median frame interval is at most `referenceProfile.judgedIntervalSteps` (2) times `referenceProfile.displayStepMs` (16.67 ms), that is 33.34 ms. Otherwise it is not judged, the run prints `per-frame sim not judged: interval X ms` and appends the same line to the job summary, and the report keeps the full assessment (`frameCostAssessment`).
+- Under the 4x throttle the median interval is usually far above that limit, even when the host is healthy (83 ms on the last good hosted run), so on a hosted runner the constrained per-frame figures are mostly not judged and the tick budget is the enforced cost. A local run on a fast machine judges both.
+- Scenarios without `canonicalTickP95Ms` (desktop, Verdant, Pale) still require the per-frame figures at every cadence. Giving them a tick budget, and the same switch, is the next step once their tick p95 has been measured on several runs.
+
 When hardware-independent changes deliberately alter the representative workload, capture several clean runs, document why the contract changed, and update the workload and budget together. Do not raise a threshold solely to silence one overloaded or contended machine.
 
 ## Runtime cost profile (reported, not yet a budget)
