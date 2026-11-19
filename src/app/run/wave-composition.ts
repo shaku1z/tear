@@ -50,8 +50,9 @@ export function stageIdAfterWave(
 /**
  * The stage a run opens on, when the setup screen can know it: the mode fixes
  * it, or a boss run has a chosen boss and opens on that boss's stage. The setup
- * screen prepares that stage before the run starts. A shuffled boss run is not
- * known until it starts, so it returns undefined and loads when first shown.
+ * screen prepares that stage before the run starts. A shuffled boss run and a
+ * Gauntlet (its trial order is drawn at the start) are not known until the run
+ * starts, so they return undefined and load when first shown.
  */
 export function startingStageId(
   mode: RunMode,
