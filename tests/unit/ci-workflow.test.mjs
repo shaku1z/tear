@@ -480,11 +480,20 @@ describe("Nightly checks workflow", () => {
   it("runs the nightly group on main once a day and by hand", () => {
     expect(nightly).toMatch(/schedule:\n {4}- cron: "\d{1,2} \d{1,2} \* \* \*"\n {2}workflow_dispatch:/u);
     // A schedule runs on the default branch, main; started by hand, it checks the chosen branch.
-    // Naming a ref would test a commit other than the one the run builds and labels.
     expect(nightly).toMatch(/uses: actions\/checkout@v4/u);
-    expect(nightly).not.toMatch(/\n\s+ref:/u);
     expect(nightly).toMatch(/run: xvfb-run -a node scripts\/run-checks\.mjs nightly --keep-going\n/u);
     expect(selectChecks(loadChecks(), "nightly").length).toBeGreaterThan(0);
+  });
+
+  it("checks the commit named in the optional ref input, and says which commit it checked", () => {
+    // The input is optional and has no default, so the schedule and a plain run check what they always did.
+    expect(nightly).toMatch(/workflow_dispatch:\n {4}inputs:\n {6}ref:\n(?: {8}[^\n]+\n)*? {8}required: false\n/u);
+    expect(nightly).not.toMatch(/\n {8}default:/u);
+    // Exactly one job checks out that ref: the one that runs the checks. The image job reads only the lockfile.
+    const refs = nightly.match(/\n\s+ref: [^\n]+/gu) ?? [];
+    expect(refs.map((line) => line.trim())).toEqual(["ref: ${{ inputs.ref }}"]);
+    expect(nightly).toMatch(/git rev-parse HEAD\)" >> "\$GITHUB_STEP_SUMMARY"/u);
+    expect(nightly.indexOf("Name the checked commit")).toBeLessThan(nightly.indexOf("pnpm install"));
   });
 
   it("is the only workflow that keeps going past a failing check", () => {
@@ -544,5 +553,50 @@ describe("Browser jobs' container", () => {
       expect(job.block, where(job)).not.toMatch(/playwright install/u);
       if (/xvfb-run/u.test(job.block)) expect(job.block, where(job)).toMatch(/\n {4}container:/u);
     }
+  });
+});
+
+describe("Node version", () => {
+  // Every workflow and composite action, as { file, text }.
+  const files = [
+    ...readdirSync(resolve(root, ".github/workflows"))
+      .filter((name) => /\.ya?ml$/u.test(name))
+      .map((name) => `.github/workflows/${name}`),
+    ...readdirSync(resolve(root, ".github/actions"))
+      .map((name) => `.github/actions/${name}/action.yml`)
+      .filter((path) => existsSync(resolve(root, path))),
+  ].map((file) => ({ file, text: read(file) }));
+
+  /** What is wrong with a file's Node setup: a version written in place, or a setup-node step without the file. */
+  function nodeVersionProblems(text) {
+    const problems = [...text.matchAll(/^\s*node-version:.*$/gmu)].map((match) => `literal: ${match[0].trim()}`);
+    for (const step of text.split(/\n(?=\s*- )/u).filter((part) => /uses: actions\/setup-node@/u.test(part)))
+      if (!/\n\s*node-version-file: \.node-version\n/u.test(`${step}\n`))
+        problems.push(`setup-node without node-version-file: .node-version`);
+    return problems;
+  }
+
+  it("names one exact version in .node-version", () => {
+    const version = read(".node-version").trim();
+    expect(version).toMatch(/^\d+\.\d+\.\d+$/u);
+    const required = /^>=(\d+)\./u.exec(JSON.parse(read("package.json")).engines.node)?.[1];
+    expect(Number(version.split(".")[0])).toBeGreaterThanOrEqual(Number(required));
+  });
+
+  it("is read from .node-version by every workflow and action, never written in place", () => {
+    expect(files.filter(({ text }) => /actions\/setup-node@/u.test(text)).length).toBeGreaterThan(0);
+    for (const { file, text } of files) expect(nodeVersionProblems(text), file).toEqual([]);
+  });
+
+  it("rejects a version written in place and a setup step that names no file", () => {
+    const step = (with_) => `steps:\n  - uses: actions/setup-node@v4\n    with:\n${with_}  - run: node -v\n`;
+    expect(nodeVersionProblems(step("      node-version-file: .node-version\n"))).toEqual([]);
+    expect(nodeVersionProblems(step("      node-version: 24\n"))).toEqual([
+      "literal: node-version: 24",
+      "setup-node without node-version-file: .node-version",
+    ]);
+    expect(nodeVersionProblems(step("      cache: pnpm\n"))).toEqual([
+      "setup-node without node-version-file: .node-version",
+    ]);
   });
 });

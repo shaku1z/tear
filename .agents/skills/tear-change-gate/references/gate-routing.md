@@ -14,7 +14,7 @@ Always confirm current scripts in `package.json`; this file explains selection, 
 | CrazyGames | CrazyGames build and platform contracts | Platform browser, iframe, and package gates for SDK, lifecycle, paths, or artifact changes |
 | Bundling or dependencies | Applicable build and bundle budget | Reproducibility and target packaging when output may change |
 | Cloudflare configuration | Standalone build | Cloudflare dry-run gate |
-| Git hooks, owner guard or merge helper (`scripts/governance/`) | `pnpm exec vitest run tests/unit/governance-guard.test.mjs tests/unit/governance-merge-helper.test.mjs tests/unit/governance-setup.test.mjs` (the guard cases also run against the shared skill copy when it exists, to prove they agree) | Never change these to make a commit pass; behaviour may only stay the same or get stricter |
+| Git hooks, owner guard or merge helper (`scripts/governance/`) | `pnpm exec vitest run tests/unit/governance-guard.test.mjs tests/unit/governance-merge-helper.test.mjs tests/unit/governance-setup.test.mjs` (the guard cases also run against the shared skill copy when it exists and either copy changed since the last passing run, to prove they agree; `TEAR_GOVERNANCE_PARITY=1` forces it) | Never change these to make a commit pass; behaviour may only stay the same or get stricter |
 | Release claim | Targeted checks may accelerate iteration | Always finish with `pnpm check` |
 
 Browser gates consume built artifacts. Rebuild the affected target before trusting their results.

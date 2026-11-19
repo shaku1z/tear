@@ -7,6 +7,11 @@ on:
   schedule:
     - cron: "41 7 * * *"
   workflow_dispatch:
+    inputs:
+      ref:
+        description: "Commit, branch or tag to check; empty checks the branch the run was started on"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -49,14 +54,21 @@ jobs:
     # generous so a slow runner is not cut off, and a hung check still stops.
     timeout-minutes: 120
     steps:
-      # The commit the run is for: main on the schedule, the chosen branch when started by hand.
+      # The commit the run is for: main on the schedule, the chosen branch when started by hand,
+      # or the commit named in the `ref` input (an empty input leaves the default).
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      # The summary names the commit that was checked, since it may not be the one the run is labelled with.
+      - name: Name the checked commit
+        shell: bash
+        run: echo "Checked commit $(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
       - uses: pnpm/action-setup@v4
         with:
           version: 11.15.0
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version-file: .node-version
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Record check results

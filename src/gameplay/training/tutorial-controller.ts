@@ -573,7 +573,7 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   },
   {
     title: "JUMP",
-    description: "Jump three times. Use the ledges to climb.",
+    description: "Jump three times. Height opens routes.",
     arena: "vertical-gate",
     entryMarks: ["jump"],
     teachingFocus: "movement",
@@ -582,7 +582,7 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   },
   {
     title: "DASH",
-    description: "Dash through the lane three times. Steer the burst; do not just spend it.",
+    description: "Dash three times. Steer the burst; do not just spend it.",
     arena: "dash-lane",
     entryMarks: ["dash"],
     teachingFocus: "movement",

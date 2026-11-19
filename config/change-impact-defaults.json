@@ -82,7 +82,6 @@
         "src/replay/envelope.ts",
         "src/replay/index.ts",
         "src/replay/legacy-compat-validation.ts",
-        "src/replay/surface-route.ts",
         "src/test-build.d.ts"
       ]
     },
@@ -142,6 +141,7 @@
         "AGENTS.md",
         "CLAUDE.md",
         "README.md",
+        "eslint-suppressions.json",
         "eslint.config.mjs",
         "firebase.json",
         "firestore.rules",

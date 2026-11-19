@@ -2,11 +2,11 @@ import { createFinaleRenderer } from "../../presentation/world/finale";
 import { drawCinematicDirector } from "../../presentation/cinematics";
 import type { CinematicUiPort } from "../../presentation/cinematics";
 import type { WorldUiPort } from "../../presentation/world/contracts";
-import { encodeStudioVp8Webm, studioWebCodecsAvailable } from "./browser-ghost-studio-webm";
 import { isDrawableEnemy, projectPresentationEnemy, projectSceneBoss } from "../world/world-presentation-adapters";
 import { A11Y, GFX, THEME } from "../../config/game-config";
 import { STAGES, stageAt } from "../../gameplay/stages";
 import { clamp, len, lerp } from "../../domain/geometry";
+import { isObject } from "../../domain/records";
 import { createBackdrop } from "../../presentation/backdrop";
 import { createProductionReplayFrame } from "../../presentation/world/production-replay-frame";
 import type { WorldBounds, WorldCamera } from "../../presentation/world/world-frame";
@@ -24,16 +24,6 @@ import {
 } from "../world/world-simulation-factories";
 import type { ProductionReplayPresentationContext } from "../../tearbench/production-world-factory";
 import type { ProductionGhostReplayCompositionOptions } from "../../tearbench/production-replay-composition";
-import type { GhostReadCapsule } from "../../ghost/capsule-reader";
-import type { GhostVerifiedProductionReplaySession } from "../../ghost/production-replay-session";
-import {
-  createStudioEdl,
-  renderStudioMediaLocally,
-  type GhostStudioEditDecisionList,
-} from "../../ghost/player-experiences";
-import { parseGhostApplicationClockEvent } from "../../ghost/application-frame-events";
-import { mapGhostCapsuleToReplayEnvelope } from "../../ghost/capsule-replay-envelope";
-import { stableVerificationHash } from "../../domain/hash";
 
 type Ui = LiveWorldSimulationPresentationAdapterOptions["ui"] & CinematicUiPort & WorldUiPort;
 /** The parts of a drawn replay frame a caller may leave out. */
@@ -117,7 +107,7 @@ export function createBrowserGhostReplayPresentation(
         timeSeconds: replay.clock.sim,
       };
       const platforms = replay.stage.platforms.map((value) => {
-        if (value === null || typeof value !== "object") throw new TypeError("replay platform is malformed");
+        if (!isObject(value)) throw new TypeError("replay platform is malformed");
         const number = (key: string) => {
           const field: unknown = Reflect.get(value, key);
           if (typeof field !== "number" || !Number.isFinite(field))
@@ -325,282 +315,6 @@ export function createBrowserGhostReplayPresentation(
         if (activeCanvas === undefined) throw new Error("replay draw has no target");
         return activeCanvas;
       }
-    },
-  };
-}
-
-export interface GhostStudioWebmArtifact {
-  readonly fileName: string;
-  readonly mimeType: "video/webm";
-  readonly bytes: Uint8Array;
-  readonly thumbnail: string;
-  readonly sourceId: string;
-  readonly sourceRootHash: string;
-  readonly sourceCapsuleRootIntegrity: string;
-  readonly edlHash: string;
-  readonly width: number;
-  readonly height: number;
-  readonly durationSeconds: number;
-  readonly frameCount: number;
-  readonly clock: "simulation-time-120hz";
-  readonly camera: "reconstructed-player-follow";
-  readonly frameScheduleHash: string;
-}
-export interface GhostStudioBrowserMediaPort {
-  available(): boolean;
-  render(
-    capsule: GhostReadCapsule,
-    session: GhostVerifiedProductionReplaySession,
-    edl: GhostStudioEditDecisionList,
-    signal: AbortSignal,
-  ): Promise<GhostStudioWebmArtifact>;
-  download(artifact: GhostStudioWebmArtifact, signal: AbortSignal): Promise<void>;
-  drawThumbnail?(
-    canvas: CanvasRenderingContext2D,
-    rectangle: Readonly<{ x: number; y: number; w: number; h: number }>,
-  ): void;
-  dispose(): void;
-}
-const MAX_FRAMES = 1800,
-  MAX_BYTES = 64 * 1024 * 1024,
-  FPS = 30;
-function mediaWait(
-  target: EventTarget,
-  event: string,
-  signal: AbortSignal,
-  milliseconds = 10000,
-  activate?: () => void,
-): Promise<void> {
-  signal.throwIfAborted();
-  return new Promise((resolve, reject) => {
-    const finish = (error?: unknown): void => {
-      clearTimeout(timer);
-      target.removeEventListener(event, done);
-      signal.removeEventListener("abort", aborted);
-      if (error === undefined) resolve();
-      else reject(error instanceof Error ? error : new Error("Media operation failed", { cause: error }));
-    };
-    const done = (): void => {
-        finish();
-      },
-      aborted = (): void => {
-        finish(signal.reason);
-      };
-    const timer = setTimeout(() => {
-      finish(new Error(`WebM ${event} timed out`));
-    }, milliseconds);
-    target.addEventListener(event, done, { once: true });
-    signal.addEventListener("abort", aborted, { once: true });
-    try {
-      activate?.();
-    } catch (error) {
-      finish(error);
-    }
-  });
-}
-/** Browser-native local encoding of the dedicated reconstructed replay canvas, never the live game surface. */
-export function createBrowserGhostStudioMedia(
-  document: Document,
-  current: (id: string, manifestHash: string) => Promise<boolean>,
-): GhostStudioBrowserMediaPort {
-  const urls = new Set<string>(),
-    timers = new Set<ReturnType<typeof setTimeout>>();
-  const release = (url: string): void => {
-    URL.revokeObjectURL(url);
-    urls.delete(url);
-  };
-  let last: Readonly<{ artifact: GhostStudioWebmArtifact; manifestHash: string; image: HTMLImageElement }> | undefined;
-  const check = async (id: string, hash: string, signal: AbortSignal): Promise<void> => {
-    signal.throwIfAborted();
-    if (!(await current(id, hash))) throw new Error("Studio source custody changed");
-    signal.throwIfAborted();
-  };
-  return {
-    available: studioWebCodecsAvailable,
-    async render(capsule, session, edl, signal) {
-      if (!studioWebCodecsAvailable())
-        throw new Error("Timestamped WebCodecs VP8 export is unavailable. GIF is unavailable.");
-      if (
-        session.renderFrame === undefined ||
-        capsule.manifest.id !== session.sourceId ||
-        capsule.manifest.rootIntegrity !== session.sourceCapsuleRootIntegrity ||
-        edl.sourceGhostId !== session.sourceId ||
-        edl.sourceRootHash !== session.sourceRootHash ||
-        createStudioEdl(edl).edlHash !== edl.edlHash
-      )
-        throw new TypeError("Studio source/EDL binding is invalid");
-      const ratios: Readonly<Partial<Record<string, number>>> = {
-          "16:9": 16 / 9,
-          "9:16": 9 / 16,
-          "1:1": 1,
-          "4:3": 4 / 3,
-        },
-        ratio = ratios[edl.aspectRatio];
-      if (
-        ratio === undefined ||
-        edl.clips.length === 0 ||
-        new Set(edl.clips.map((clip) => clip.outputOrder)).size !== edl.clips.length
-      )
-        throw new TypeError("Studio output layout/order is invalid");
-      const clips = [...edl.clips].sort((a, b) => a.outputOrder - b.outputOrder);
-      const plan: number[] = [];
-      for (const clip of clips) {
-        if (
-          clip.camera !== "player-follow" ||
-          ![0.25, 0.5, 1, 2, 4].includes(clip.speed) ||
-          !Number.isSafeInteger(clip.sourceFromTick) ||
-          !Number.isSafeInteger(clip.sourceToTick) ||
-          clip.sourceFromTick < 0 ||
-          clip.sourceToTick <= clip.sourceFromTick ||
-          clip.sourceToTick > capsule.maxTick ||
-          !Number.isSafeInteger(clip.outputOrder)
-        )
-          throw new TypeError("Studio clip is unsupported or outside its source");
-        // Only simulation-time gameplay is offered. Never collapse recorded zero-tick cinema/intro frames into inferred physics time.
-        if (
-          capsule.tracks.events.some((entry) => {
-            const value = parseGhostApplicationClockEvent(entry.value)?.payload;
-            return (
-              value?.format === "tearghost-application-frame" &&
-              value.kind === "begin" &&
-              value.beforeTick >= clip.sourceFromTick &&
-              value.beforeTick < clip.sourceToTick
-            );
-          })
-        )
-          throw new TypeError("Source-time cinema/intro media is unavailable; choose a gameplay-only range");
-        const count = Math.ceil(((clip.sourceToTick - clip.sourceFromTick) * FPS) / (120 * clip.speed));
-        if (count + plan.length > MAX_FRAMES) throw new RangeError("Studio output exceeds 1800 frames / 60 seconds");
-        for (let index = 0; index < count; index++)
-          plan.push(
-            Math.min(clip.sourceToTick - 1, clip.sourceFromTick + Math.floor((index * 120 * clip.speed) / FPS)),
-          );
-      }
-      const width = Math.round(Math.min(640, 640 * ratio) / 2) * 2,
-        height = Math.round(width / ratio / 2) * 2;
-      const manifestHash = stableVerificationHash(capsule.manifest);
-      await check(session.sourceId, manifestHash, signal);
-      last = undefined;
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const context = canvas.getContext("2d", { alpha: false });
-      if (context === null) throw new Error("Studio canvas is unavailable");
-      let scheduleHash = stableVerificationHash({
-        edlHash: edl.edlHash,
-        width,
-        height,
-        fps: FPS,
-        clock: "simulation-time-120hz",
-        camera: "reconstructed-player-follow",
-      });
-      const draw = (index: number, accumulate = true): void => {
-        signal.throwIfAborted();
-        const tick = plan[index];
-        if (tick === undefined) throw new Error("Studio frame plan is incomplete");
-        const view = session.renderFrame?.(tick);
-        if (
-          view?.sourceRootHash !== edl.sourceRootHash ||
-          view.sourceCapsuleRootIntegrity !== capsule.manifest.rootIntegrity ||
-          view.clockBlocked ||
-          view.screen !== "playing"
-        )
-          throw new TypeError("This frame is not supported gameplay-time media");
-        view.draw(context, { x: 0, y: 0, w: width, h: height });
-        if (accumulate)
-          scheduleHash = stableVerificationHash({ prior: scheduleHash, tick, stateHash: view.semanticHash });
-      };
-      draw(0, false);
-      const thumbnail = canvas.toDataURL("image/png");
-      const encoded = await encodeStudioVp8Webm(canvas, plan.length, draw, signal);
-      const blob = new Blob([Uint8Array.from(encoded).buffer], { type: "video/webm" });
-      if (blob.size === 0 || blob.size > MAX_BYTES) throw new Error("VP8 encoder returned invalid output size");
-      const url = URL.createObjectURL(blob);
-      urls.add(url);
-      const video = document.createElement("video");
-      video.muted = true;
-      video.preload = "auto";
-      let durationSeconds: number;
-      try {
-        const loaded = mediaWait(video, "loadedmetadata", signal);
-        video.src = url;
-        await loaded;
-        if (!Number.isFinite(video.duration)) {
-          const sought = mediaWait(video, "seeked", signal);
-          video.currentTime = 1000000;
-          await sought;
-        }
-        durationSeconds = Number.isFinite(video.duration) ? video.duration : video.currentTime + 1 / FPS;
-        if (
-          video.videoWidth !== width ||
-          video.videoHeight !== height ||
-          !Number.isFinite(durationSeconds) ||
-          Math.abs(durationSeconds - plan.length / FPS) > Math.max(0.35, (plan.length / FPS) * 0.05)
-        )
-          throw new Error("Decoded WebM dimensions/duration do not match the requested output");
-      } finally {
-        video.removeAttribute("src");
-        video.load();
-        release(url);
-      }
-      await check(session.sourceId, manifestHash, signal);
-      const exported = await renderStudioMediaLocally(mapGhostCapsuleToReplayEnvelope(capsule).ghost, edl, {
-        render: async () => ({ mimeType: "video/webm", bytes: new Uint8Array(await blob.arrayBuffer()), thumbnail }),
-      });
-      const artifact = Object.freeze({
-        ...exported,
-        mimeType: "video/webm" as const,
-        sourceId: session.sourceId,
-        sourceRootHash: session.sourceRootHash,
-        sourceCapsuleRootIntegrity: capsule.manifest.rootIntegrity,
-        edlHash: edl.edlHash,
-        width,
-        height,
-        durationSeconds,
-        frameCount: plan.length,
-        clock: "simulation-time-120hz" as const,
-        camera: "reconstructed-player-follow" as const,
-        frameScheduleHash: scheduleHash,
-      });
-      const image = document.createElement("img"),
-        loadedImage = mediaWait(image, "load", signal);
-      image.src = thumbnail;
-      await loadedImage;
-      await check(session.sourceId, manifestHash, signal);
-      last = { artifact, manifestHash, image };
-      return artifact;
-    },
-    async download(artifact, signal) {
-      const captured = last;
-      if (captured?.artifact !== artifact) throw new Error("Studio output is stale");
-      await check(artifact.sourceId, captured.manifestHash, signal);
-      if (last !== captured) throw new Error("Studio output was replaced");
-      const url = URL.createObjectURL(new Blob([Uint8Array.from(artifact.bytes).buffer], { type: artifact.mimeType }));
-      urls.add(url);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = artifact.fileName.replace(/[^a-zA-Z0-9._-]/gu, "_").slice(0, 120);
-      try {
-        document.body.append(anchor);
-        anchor.click();
-      } finally {
-        anchor.remove();
-        const timer = setTimeout(() => {
-          timers.delete(timer);
-          release(url);
-        }, 1000);
-        timers.add(timer);
-      }
-    },
-    drawThumbnail(canvas, rectangle) {
-      if (last !== undefined) canvas.drawImage(last.image, rectangle.x, rectangle.y, rectangle.w, rectangle.h);
-    },
-    dispose() {
-      last = undefined;
-      for (const timer of timers) clearTimeout(timer);
-      timers.clear();
-      for (const url of urls) URL.revokeObjectURL(url);
-      urls.clear();
     },
   };
 }

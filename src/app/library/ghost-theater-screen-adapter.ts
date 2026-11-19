@@ -9,9 +9,8 @@ import {
 } from "../../ghost/recorded-challenge";
 import type { GhostForkPermit } from "../../ghost/fork-origin";
 import type { ProductionGhostReplayCompositionOptions } from "../../tearbench/production-replay-composition";
-import type { GhostStudioBrowserMediaPort, GhostStudioWebmArtifact } from "../replay/browser-ghost-studio-media";
+import type { ReplayClipExportPort, ReplayClipWebm } from "../replay/browser-replay-clip-export";
 import type { GhostVerifiedReplayRenderView } from "../../ghost/production-replay-session";
-import { createStudioEdl } from "../../ghost/player-experiences";
 import type { GhostReadCapsule } from "../../ghost/capsule-reader";
 import { mapGhostCapsuleToReplayEnvelope } from "../../ghost/capsule-replay-envelope";
 import {
@@ -24,8 +23,7 @@ import type { ReplayScreenView } from "../../presentation/screens/contracts";
 import type { AppScreen } from "../../domain/screen-catalog";
 import type { GhostPracticeLaunchResult } from "../replay/ghost-practice-launch";
 import { projectGhostRunDnaTheater } from "../../ghost/run-dna-theater";
-import { createGhostStudioCutListFromTheater } from "../../ghost/studio-cut-list-theater";
-import type { GhostStudioEditDecisionList } from "../../ghost/player-experiences";
+import { appendTheaterClip, type ReplayCutList } from "../../ghost/replay-cut-list";
 import { refuseGhostTheater, type GhostTheaterOpenResult } from "../../ghost/theater-open-result";
 import { readGhostReplayRunContext } from "../../ghost/replay-admission";
 import { rulesetRefusal } from "../../gameplay/run/ruleset-version";
@@ -34,7 +32,7 @@ export interface GhostTheaterScreenServices {
   readonly render: (view: ReplayScreenView) => void;
   readonly presentation?: Pick<ProductionGhostReplayCompositionOptions, "presentation" | "renderView">;
   readonly drawWorld?: (view: GhostVerifiedReplayRenderView) => void;
-  readonly studioMedia?: GhostStudioBrowserMediaPort;
+  readonly clipExport?: ReplayClipExportPort;
   readonly bossMemory?: ReturnType<typeof createBrowserBossMemory>;
   readonly width: () => number;
   readonly deltaSeconds: () => number;
@@ -67,13 +65,13 @@ interface GhostTheaterContext {
   firstTick: number;
   lastTick: number;
   runDnaOpen: boolean;
-  studioOpen: boolean;
-  studioCutList: GhostStudioEditDecisionList | undefined;
+  editorOpen: boolean;
+  cutList: ReplayCutList | undefined;
   frame: GhostVerifiedReplayRenderView | undefined;
-  studioMark: number | undefined;
-  studioAbort: AbortController | undefined;
-  studioArtifact: GhostStudioWebmArtifact | undefined;
-  studioStatus: "idle" | "rendering" | "ready" | "failed" | "cancelled" | "download-requested";
+  clipMark: number | undefined;
+  exportAbort: AbortController | undefined;
+  exportedClip: ReplayClipWebm | undefined;
+  exportStatus: "idle" | "rendering" | "ready" | "failed" | "cancelled" | "download-requested";
   finaleAvailable?: boolean;
 }
 
@@ -92,16 +90,16 @@ function isSpeed(value: number): value is (typeof SPEEDS)[number] {
 export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServices) {
   let context: GhostTheaterContext | undefined;
   let memoryOwner: AbortController | undefined;
-  const invalidateStudio = (): void => {
+  const invalidateExport = (): void => {
     memoryOwner?.abort();
     memoryOwner = undefined;
     services.bossMemory?.close();
-    context?.studioAbort?.abort();
-    services.studioMedia?.dispose();
+    context?.exportAbort?.abort();
+    services.clipExport?.dispose();
     if (context !== undefined) {
-      context.studioAbort = undefined;
-      context.studioArtifact = undefined;
-      context.studioStatus = "idle";
+      context.exportAbort = undefined;
+      context.exportedClip = undefined;
+      context.exportStatus = "idle";
     }
   };
 
@@ -218,10 +216,10 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
           }
         : {}),
       ...(currentContext.runDnaOpen ? { runDna: projectGhostRunDnaTheater(currentContext.capsule) } : {}),
-      ...(currentContext.studioOpen
+      ...(currentContext.editorOpen
         ? {
-            studioCutList:
-              currentContext.studioCutList === undefined
+            cutList:
+              currentContext.cutList === undefined
                 ? Object.freeze({
                     available: context.checkpoints.includes(current),
                     ...(context.checkpoints.includes(current)
@@ -230,23 +228,23 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
                   })
                 : Object.freeze({
                     available: true,
-                    sourceGhostId: currentContext.studioCutList.sourceGhostId,
-                    sourceRootHash: currentContext.studioCutList.sourceRootHash,
-                    fromTick: currentContext.studioCutList.clips[0]?.sourceFromTick ?? 0,
-                    toTick: currentContext.studioCutList.clips.at(-1)?.sourceToTick ?? 0,
-                    edlHash: currentContext.studioCutList.edlHash,
-                    clipCount: currentContext.studioCutList.clips.length,
+                    sourceGhostId: currentContext.cutList.sourceGhostId,
+                    sourceRootHash: currentContext.cutList.sourceRootHash,
+                    fromTick: currentContext.cutList.clips[0]?.sourceFromTick ?? 0,
+                    toTick: currentContext.cutList.clips.at(-1)?.sourceToTick ?? 0,
+                    cutListHash: currentContext.cutList.cutListHash,
+                    clipCount: currentContext.cutList.clips.length,
                   }),
           }
         : {}),
-      ...(currentContext.studioOpen
+      ...(currentContext.editorOpen
         ? {
-            studioMedia: {
-              available: services.studioMedia?.available() === true,
-              status: currentContext.studioStatus,
-              markIn: currentContext.studioMark,
-              thumbnail: currentContext.studioArtifact?.thumbnail,
-              duration: currentContext.studioArtifact?.durationSeconds,
+            clipExport: {
+              available: services.clipExport?.available() === true,
+              status: currentContext.exportStatus,
+              markIn: currentContext.clipMark,
+              thumbnail: currentContext.exportedClip?.thumbnail,
+              duration: currentContext.exportedClip?.durationSeconds,
             },
           }
         : {}),
@@ -276,7 +274,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
       from: AppScreen,
       evidence?: Readonly<{ permit: GhostForkPermit; result: RecordedGhostChallengeResult }>,
     ): GhostTheaterOpenResult {
-      invalidateStudio();
+      invalidateExport();
       const recorded = readGhostReplayRunContext(capsule.manifest.provenance);
       const retired = rulesetRefusal(recorded?.build.rulesetVersion);
       if (retired !== null) {
@@ -319,13 +317,13 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
           challengeChoices: [],
           choiceCache: new Map(),
           runDnaOpen: false,
-          studioOpen: false,
-          studioCutList: undefined,
+          editorOpen: false,
+          cutList: undefined,
           frame: session.renderFrame?.(firstTick),
-          studioMark: undefined,
-          studioAbort: undefined,
-          studioArtifact: undefined,
-          studioStatus: "idle",
+          clipMark: undefined,
+          exportAbort: undefined,
+          exportedClip: undefined,
+          exportStatus: "idle",
         };
         return Object.freeze({ kind: "opened", root: capsule.manifest.rootIntegrity, tick: firstTick });
       } catch {
@@ -335,7 +333,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
     },
     render(): void {
       advance();
-      if (context !== undefined && !context.challengeOpen && !context.runDnaOpen && !context.studioOpen) {
+      if (context !== undefined && !context.challengeOpen && !context.runDnaOpen && !context.editorOpen) {
         const native = services.nativeTransport?.(),
           current = context;
         if (native !== undefined)
@@ -358,7 +356,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
     },
     exit(): AppScreen | undefined {
       const from = context?.from;
-      invalidateStudio();
+      invalidateExport();
       context = undefined;
       return from;
     },
@@ -398,7 +396,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
       try {
         const child = context.session.forkPractice(tick, "exact-practice");
         context.transport.pause();
-        invalidateStudio();
+        invalidateExport();
         const launched = services.launchPractice(child);
         context.message = launched.ok
           ? "Practice child launched. This run is unranked and non-persistent."
@@ -410,7 +408,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
     openChallenges(): void {
       if (context === undefined) return;
       context.challengeOpen = !context.challengeOpen;
-      context.runDnaOpen = context.studioOpen = false;
+      context.runDnaOpen = context.editorOpen = false;
       if (context.challengeOpen) context.challengeChoices = challengeChoices();
       context.transport.pause();
     },
@@ -438,7 +436,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
         const captured = context;
         if (!captured || !services.bossMemory || !challengeChoices().some((c) => c.rule === "boss-defeat")) return;
         captured.transport.pause();
-        invalidateStudio();
+        invalidateExport();
         const owner = new AbortController();
         memoryOwner = owner;
         services.bossMemory.edit((title, notes) => {
@@ -479,104 +477,93 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
     toggleRunDna(): void {
       if (context !== undefined) {
         context.runDnaOpen = !context.runDnaOpen;
-        context.studioOpen = false;
+        context.editorOpen = false;
       }
     },
-    toggleStudio(): void {
+    toggleReplayEditor(): void {
       if (context !== undefined) {
-        context.studioOpen = !context.studioOpen;
+        context.editorOpen = !context.editorOpen;
         context.runDnaOpen = false;
       }
     },
-    markStudioIn(): void {
+    markClipIn(): void {
       if (!context?.checkpoints.includes(context.result.tick)) return;
-      invalidateStudio();
-      context.studioMark = context.result.tick;
-      context.message = `IN marked at verified TICK ${String(context.studioMark)}. Seek an OUT checkpoint and append.`;
+      invalidateExport();
+      context.clipMark = context.result.tick;
+      context.message = `IN marked at verified TICK ${String(context.clipMark)}. Seek an OUT checkpoint and append.`;
     },
-    clearStudioCuts(): void {
+    clearClips(): void {
       if (context !== undefined) {
-        invalidateStudio();
-        context.studioCutList = undefined;
-        context.studioMark = undefined;
+        invalidateExport();
+        context.cutList = undefined;
+        context.clipMark = undefined;
       }
     },
-    createStudioCutList(): void {
+    appendClip(): void {
       if (context === undefined) return;
-      const projected = createGhostStudioCutListFromTheater(
+      const appended = appendTheaterClip(
+        context.cutList,
         context.capsule,
         context.session,
         context.result.tick,
-        context.studioMark,
+        context.clipMark,
         context.transport.state().speed,
       );
-      if (projected.edl === undefined) {
-        context.message = projected.unavailable ?? "Replay Editor Cut List is unavailable.";
+      if (appended.cutList === undefined) {
+        context.message = appended.unavailable;
         return;
       }
-      invalidateStudio();
-      const prior = context.studioCutList?.clips ?? [];
-      context.studioCutList = createStudioEdl({
-        ...projected.edl,
-        id: `studio-${context.session.sourceId}`,
-        clips: [
-          ...prior,
-          ...projected.edl.clips.map((clip) => ({
-            ...clip,
-            id: `clip-${String(prior.length)}`,
-            outputOrder: prior.length,
-          })),
-        ],
-      });
+      invalidateExport();
+      context.cutList = appended.cutList;
       context.message = "Cut appended in chosen order · reconstructed player-follow · simulation time.";
     },
-    exportStudio(): void {
+    exportClips(): void {
       const captured = context,
-        media = services.studioMedia;
-      if (captured?.studioCutList === undefined || media?.available() !== true) return;
-      invalidateStudio();
+        media = services.clipExport;
+      if (captured?.cutList === undefined || media?.available() !== true) return;
+      invalidateExport();
       captured.transport.pause();
       const operation = new AbortController();
-      captured.studioAbort = operation;
-      captured.studioStatus = "rendering";
+      captured.exportAbort = operation;
+      captured.exportStatus = "rendering";
       captured.message = "Encoding local replay canvas; the live game canvas is not recorded.";
       void media
-        .render(captured.capsule, captured.session, captured.studioCutList, operation.signal)
+        .render(captured.capsule, captured.session, captured.cutList, operation.signal)
         .then((artifact) => {
-          if (context !== captured || captured.studioAbort !== operation || operation.signal.aborted) return;
-          captured.studioArtifact = artifact;
-          captured.studioStatus = "ready";
+          if (context !== captured || captured.exportAbort !== operation || operation.signal.aborted) return;
+          captured.exportedClip = artifact;
+          captured.exportStatus = "ready";
           captured.message = "WebM decoded locally. Click DOWNLOAD WEBM to request a browser save.";
         })
         .catch((error: unknown) => {
-          if (context !== captured || captured.studioAbort !== operation || operation.signal.aborted) return;
-          captured.studioStatus = "failed";
-          captured.message = `Studio export refused: ${error instanceof Error ? error.message : String(error)}`;
+          if (context !== captured || captured.exportAbort !== operation || operation.signal.aborted) return;
+          captured.exportStatus = "failed";
+          captured.message = `Clip export refused: ${error instanceof Error ? error.message : String(error)}`;
         });
     },
-    cancelStudio(): void {
+    cancelClipExport(): void {
       if (context !== undefined) {
-        invalidateStudio();
-        context.studioStatus = "cancelled";
-        context.message = "Studio export cancelled; source retained.";
+        invalidateExport();
+        context.exportStatus = "cancelled";
+        context.message = "Clip export cancelled; source retained.";
       }
     },
-    downloadStudio(): void {
+    downloadClip(): void {
       const captured = context,
-        artifact = captured?.studioArtifact,
-        operation = captured?.studioAbort;
+        artifact = captured?.exportedClip,
+        operation = captured?.exportAbort;
       if (
         captured === undefined ||
         artifact === undefined ||
         operation === undefined ||
-        services.studioMedia === undefined
+        services.clipExport === undefined
       )
         return;
-      void services.studioMedia
+      void services.clipExport
         .download(artifact, operation.signal)
         .then(() => {
-          if (context === captured && captured.studioAbort === operation && !operation.signal.aborted) {
-            captured.studioStatus = "download-requested";
+          if (context === captured && captured.exportAbort === operation && !operation.signal.aborted) {
+            captured.exportStatus = "download-requested";
             captured.message = "WebM download requested; browser save is not confirmed.";
           }
         })

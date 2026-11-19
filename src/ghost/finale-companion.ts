@@ -1,3 +1,4 @@
+import { asRecord, isObject, isRecord } from "../domain/records";
 import type { TearSnapshotV1 } from "../tearbench/contracts";
 import type { AuthoritativeInputSnapshot } from "../gameplay/runtime/authoritative-input";
 import {
@@ -27,14 +28,12 @@ export interface GhostFinaleCompanionV1 {
 }
 function object(value: unknown): Record<string, unknown> {
   if (
-    typeof value !== "object" ||
-    value === null ||
-    Array.isArray(value) ||
+    !isRecord(value) ||
     Object.getPrototypeOf(value) !== Object.prototype ||
     Object.values(Object.getOwnPropertyDescriptors(value)).some((v) => !("value" in v))
   )
     throw new TypeError("Finale declaration requires plain data");
-  return value as Record<string, unknown>;
+  return value;
 }
 function fields(value: unknown, names: readonly string[]): Record<string, unknown> {
   const result = object(value);
@@ -43,10 +42,7 @@ function fields(value: unknown, names: readonly string[]): Record<string, unknow
   return result;
 }
 export function readGhostFinaleCompanion(provenance: unknown): GhostFinaleCompanionV1 | undefined {
-  const raw =
-    typeof provenance === "object" && provenance !== null
-      ? Object.getOwnPropertyDescriptor(provenance, "finaleCompanion")
-      : undefined;
+  const raw = isObject(provenance) ? Object.getOwnPropertyDescriptor(provenance, "finaleCompanion") : undefined;
   if (raw === undefined) return undefined;
   if (!("value" in raw)) throw new TypeError("Finale declaration must be data");
   const value = fields(raw.value, [
@@ -90,10 +86,7 @@ export interface GhostFinaleFrameWitness {
 }
 export function finaleFrameWitnesses(capsule: GhostReadCapsule): readonly GhostFinaleFrameWitness[] {
   const values = capsule.tracks.results.filter(
-    (entry) =>
-      typeof entry.value === "object" &&
-      entry.value !== null &&
-      Reflect.get(entry.value, "format") === "tearghost-finale-frame",
+    (entry) => isObject(entry.value) && Reflect.get(entry.value, "format") === "tearghost-finale-frame",
   );
   let ordinal = -1;
   return values.map((entry) => {
@@ -187,13 +180,12 @@ export function admitGhostFinaleCompanion(capsule: GhostReadCapsule, parent: Gho
   }
   const terminals = parent.tracks.events.filter((e) => {
     const v = object(e.value);
-    const p = typeof v.payload === "object" && v.payload !== null ? (v.payload as Record<string, unknown>) : {};
+    const p = asRecord(v.payload) ?? {};
     return v.type === "run.completed" && p.runId === declaration.sourceRunId && e.tick === declaration.origin.tick;
   });
   if (terminals.length !== 1) throw new TypeError("Finale origin lacks the unique original scored terminal");
   const links = capsule.tracks.results.filter(
-    (e) =>
-      typeof e.value === "object" && e.value !== null && Reflect.get(e.value, "format") === "tearghost-finale-parent",
+    (e) => isObject(e.value) && Reflect.get(e.value, "format") === "tearghost-finale-parent",
   );
   const link = fields(links[0]?.value, [
     "format",

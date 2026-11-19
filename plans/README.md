@@ -23,6 +23,7 @@ their own.
 | [TEARBENCH_GHOST3_ACTION_PLAN.md](TEARBENCH_GHOST3_ACTION_PLAN.md) | history | — | Historical | — | Superseded C0–C20 scaffold |
 | [TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md](TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md) | active plan | TearBench program owner | Active | C21–C40 checkpoint exit gates pass with completion-grade evidence or explicit authorized dispositions; foundation gates alone never close the program. | Current C21–C40 completion plan |
 | [TEARBENCH_MASTER_HANDOFF.md](TEARBENCH_MASTER_HANDOFF.md) | active plan | TearBench handoff owner | Active | A succeeding agent can follow the exact next-slice boundary and reproduce the last verified gate from protected `main` without relying on stale branch state. | Program continuation handoff and evidence boundary |
+| [MOBILE_LATER.md](MOBILE_LATER.md) | parked notes | Mobile owner (mobile-input) | Paused | The owner resumes mobile work; each item then becomes a task card or is dropped. | The one place for mobile follow-ups while mobile is paused (owner, 2026-11-19); any session may add a note |
 
 ## Active plans
 
@@ -60,6 +61,8 @@ Where a plan lives:
   release evidence and `config/tearbench-current-program-state.json` bind
   their paths, so they move only in one change that also updates those tools.
   Their rows are in the classification table above.
+- `MOBILE_LATER.md` also stays directly under `plans/`: it is not a plan but the
+  notes file every session writes mobile follow-ups to while mobile is paused.
 - `archive/` remains a future G5 destination.
 
 New plans start from [TASK_CARD_TEMPLATE.md](TASK_CARD_TEMPLATE.md) and go in

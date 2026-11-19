@@ -38,11 +38,12 @@
       "id": "verdant-visuals",
       "name": "Verdant Sanctum visuals",
       "state": "In progress",
-      "summary": "Verdant has a painted background drawn from a scene package, with platforms still drawn by the game from collision geometry. The same format, command and checks work for any biome; a Pale Traverse placeholder fixture proves it. Boss warnings and strikes on Verdant are drawn as roots and thorns rising from the floor, from a table on the stage's presentation definition that any biome can supply. The background does not move yet.",
-      "next": "Living motion (water, light, foliage) as package data, in its own pull request.",
-      "owner_action": "Judge the look: the owner's taste decides visual work. A sharper, wider source painting that meets the brief in docs/BACKGROUND_WORKFLOW.md would remove most of the readability shading.",
+      "summary": "The game draws Verdant itself at load from a stage art recipe (src/presentation/stage-art): a key light, an atmosphere, colour ramps and layers of shared strokes (foliage, trunks, ruined arcades, water, light), painted in short slices into layers the scene renderer composes. The painted image package is gone. Any biome reaches the same look with a recipe; Pale Traverse is next. Boss warnings and strikes on Verdant are drawn as roots and thorns rising from the floor, from a table on the stage's presentation definition that any biome can supply. The background does not move yet.",
+      "next": "Keep closing the look toward the owner's reference illustration, then a live layer (light shafts, water glints, sway) as recipe data, then Pale Traverse from a recipe.",
+      "owner_action": "Judge the drawn look against the reference illustration: the owner's taste decides visual work.",
       "evidence": [
         "docs/BACKGROUND_WORKFLOW.md",
+        "tests/unit/stage-art.test.ts",
         "tests/unit/scene-packages.test.ts",
         "tests/unit/boss-tell-skin.test.ts",
         "plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md"
@@ -52,8 +53,8 @@
       "id": "verdant-gameplay",
       "name": "Verdant Sanctum gameplay",
       "state": "In progress",
-      "summary": "The Rootbound boss is rebuilt in all three phases as data on a shared boss move layer that Pale and later bosses reuse: Phase I's moves, Phase II's Grafts, Root Cage and Bloom Wells, and Phase III's Regrowth and Last Spring. Its body no longer hurts on touch: it blocks, and it does not play a move the player could not walk out of. Bloom Wells, the Rootbinder and its links, and Verdant waves are not rebuilt yet.",
-      "next": "The Bloom Wells and Rootbinder design, then Verdant waves.",
+      "summary": "The Rootbound boss is rebuilt in all three phases as data on a shared boss move layer that Pale and later bosses reuse: Phase I's moves, Phase II's Grafts, Root Cage and Bloom Wells, and Phase III's Regrowth and Last Spring. Its body no longer hurts on touch: it blocks, and it does not play a move the player could not walk out of. The stage's Bloom Wells stand on the floor and lift the player and light enemies; who a stage field moves is one data row. The Rootbinder and its links, its snare, and Verdant waves are not rebuilt yet.",
+      "next": "The Rootbinder and its root links, then its snare, then Verdant waves.",
       "owner_action": "Playtest the Rootbound in all three phases.",
       "evidence": [
         "plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md"
@@ -111,7 +112,7 @@
       "name": "Playtest tool",
       "state": "Stage 1 in part: pnpm playtest bosses prints a table per boss fight and phase, from Phase I or a chosen phase",
       "summary": "One command, pnpm playtest, that plays the game headless with scripted players on fixed seeds and reports clear rates, time to kill, damage taken and differences between builds. It is built from the working parts of TearBench and the scripted player and replaces both names. Verified on 2026-11-16: the scripted player runs headless at 13 to 15 times real time and the same seed reproduces exactly.",
-      "next": "Rest of stage 1: a player that cuts Grafts, the still, walker and no-dodge players, and the sweep over weapons and seeds.",
+      "next": "Rest of stage 1: the walker player, boss movement, and the sweep over weapons and seeds.",
       "owner_action": "",
       "evidence": [
         "plans/active/PLAYTEST_TOOL_PLAN.md"
@@ -128,6 +129,18 @@
         "config/tearbench-current-program-state.json",
         "plans/TEARBENCH_MASTER_HANDOFF.md",
         "https://github.com/shaku1z/tear/pull/84"
+      ]
+    },
+    {
+      "id": "mobile",
+      "name": "Mobile, touch and phone layouts",
+      "state": "Paused by the owner 2026-11-19",
+      "summary": "The owner paused all mobile work and wants it out of the official production builds until further notice. Touch controls, stick or drag aim, the rotate gate, phone layouts, touch density and haptics exist in the source. Touch-aim fixes are parked as draft pull request 191. Sessions write anything mobile will need later in plans/MOBILE_LATER.md.",
+      "next": "Leave the mobile code out of the production builds while keeping it in dev and test builds.",
+      "owner_action": "Say when mobile resumes.",
+      "evidence": [
+        "plans/MOBILE_LATER.md",
+        "https://github.com/shaku1z/tear/pull/191"
       ]
     }
   ]

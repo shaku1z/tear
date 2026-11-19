@@ -1074,6 +1074,28 @@ describe("legacy screen renderer registry", () => {
     });
   });
 
+  it("draws a read-only settings row without a control to press", () => {
+    const controls: ScreenControl[] = [];
+    createScreenRenderers(createRenderContext(controls)).settings({
+      id: "settings",
+      tab: "general",
+      tabs: [{ id: "general", label: "GENERAL" }],
+      returnTo: "menu",
+      sections: [
+        {
+          label: "GENERAL",
+          rows: [
+            { key: "terms", label: "Terms of Service", value: "OPEN", kind: "cycle" },
+            { key: "version", label: "Version", value: "v0.1.0 · 820e8e9", kind: "info" },
+          ],
+        },
+      ],
+    });
+    const keys = controls.flatMap((control) => ("key" in control.action ? [control.action.key] : []));
+    expect(keys).toContain("terms");
+    expect(keys).not.toContain("version");
+  });
+
   it("uses the oracle replay-vault row geometry and a profile-specific watch intent", () => {
     const controls: ScreenControl[] = [];
     const renderer = createScreenRenderers(createRenderContext(controls));

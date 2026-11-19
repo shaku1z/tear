@@ -1,3 +1,4 @@
+import { requireRecord } from "../domain/records";
 import { stableVerificationHash, canonicalStringify } from "../domain/hash";
 import {
   createProductionGhostReplayComposition,
@@ -30,10 +31,7 @@ import {
 import { GhostProductionReplayWorld } from "./replay-world";
 import { createGhostV3 } from "./truth-kernel";
 
-const obj = (v: unknown): Record<string, unknown> => {
-  if (!v || typeof v !== "object" || Array.isArray(v)) throw new TypeError("Boss Memory requires object data");
-  return v as Record<string, unknown>;
-};
+const obj = (v: unknown): Record<string, unknown> => requireRecord(v, "Boss Memory requires object data");
 const eventKey = (e: TearCausalEventV1) =>
   stableVerificationHash({ type: e.type, tick: e.tick, actorId: e.actorId ?? null, payload: e.payload });
 const receiptEntries = (c: GhostReadCapsule) =>

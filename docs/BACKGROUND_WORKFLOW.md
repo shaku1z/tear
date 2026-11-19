@@ -6,9 +6,14 @@ and the order of work. One loader and renderer serve every biome. Adding a
 biome's background means adding a package directory and one registry line;
 everything specific to a biome is data in its package, never renderer code.
 
-Verdant Sanctum is the worked example at the end. A placeholder package for the
-Pale Traverse (a test fixture, never shipped) runs through the same command,
-loader and checks to keep that true.
+**Drawn stages replace this.** Verdant Sanctum is now drawn by the game from a
+stage art recipe (`src/presentation/stage-art/`, recipe in
+`recipes/verdant-sanctum.ts`) and no longer ships an image package; its worked
+example at the end records how the earlier package was made. The image path
+below stays until its removal lands; a new biome gets a recipe, not a package.
+
+A placeholder package for the Pale Traverse (a test fixture, never shipped)
+runs through the same command, loader and checks to keep that true.
 
 ## Rules for every biome
 

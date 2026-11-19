@@ -7,9 +7,7 @@ import {
   createChallengeAttemptProof,
   createFairLiveGhostOverlay,
   createGhostV3,
-  createStudioEdl,
   distillNemesisGrammar,
-  renderStudioMediaLocally,
   verifyChallengeAttemptProof,
   type GhostChallengeDefinition,
   type GhostReplayTrident,
@@ -64,7 +62,7 @@ function sourceGhost() {
   });
 }
 
-describe("Ghost challenges, Studio, and player experiences", () => {
+describe("Ghost challenges and player experiences", () => {
   it("maintains a deterministic career archive and transparent Run DNA rollup", () => {
     const archive = new GhostCareerArchive();
     archive.add({
@@ -167,63 +165,6 @@ describe("Ghost challenges, Studio, and player experiences", () => {
       revealsHiddenState: false,
     });
     expect(overlay.visibleEvents.map((entry) => entry.id)).toEqual(["past"]);
-  });
-
-  it("renders a polished local Studio clip without rewriting its parent timeline", async () => {
-    const source = sourceGhost();
-    const before = JSON.stringify(source);
-    const edl = createStudioEdl({
-      id: "highlight",
-      sourceGhostId: source.id,
-      sourceRootHash: source.rootHash,
-      aspectRatio: "9:16",
-      title: "Boss Read",
-      credits: "Local Player",
-      clips: [
-        {
-          id: "opening",
-          sourceFromTick: 0,
-          sourceToTick: 10,
-          outputOrder: 0,
-          speed: 1,
-          camera: "player-follow",
-          caption: "Watch the setup",
-        },
-        {
-          id: "payoff",
-          sourceFromTick: 10,
-          sourceToTick: 20,
-          outputOrder: 1,
-          speed: 0.5,
-          camera: "blade-follow",
-          caption: "The punish",
-        },
-      ],
-    });
-    const media = await renderStudioMediaLocally(source, edl, {
-      render: (input) =>
-        Promise.resolve({
-          mimeType: "video/webm",
-          bytes: new TextEncoder().encode(
-            JSON.stringify({
-              source: input.source.id,
-              clips: input.edl.clips,
-              aspectRatio: input.edl.aspectRatio,
-            }),
-          ),
-          thumbnail: "data:image/png;base64,thumbnail",
-        }),
-    });
-    expect(media).toMatchObject({
-      fileName: "highlight.webm",
-      mimeType: "video/webm",
-      generatedLocally: true,
-      screenRecordingRequired: false,
-      sourceRootHash: source.rootHash,
-      edlHash: edl.edlHash,
-    });
-    expect(media.bytes.byteLength).toBeGreaterThan(0);
-    expect(JSON.stringify(source)).toBe(before);
   });
 
   it("derives transparent Run DNA and a bounded non-privileged Nemesis grammar", () => {
