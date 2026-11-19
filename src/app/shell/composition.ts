@@ -51,7 +51,7 @@ import { GHOST_WORKER_URLS } from "../replay/ghost-worker-urls";
 import { startWorkerCacheWarmup } from "../../platform/worker-cache-warmup";
 import { createAttract } from "../../presentation/attract";
 import { createBackdrop } from "../../presentation/backdrop";
-import { rotateGateShown } from "../../presentation/render-pipeline";
+import { rotateGateShown } from "../../presentation/rotate-gate";
 import { createSceneLibrary } from "../../presentation/scenes/scene-library";
 import { lastCoverFrameTally } from "../../presentation/music-cover-art";
 import { createSceneCanvas, loadSceneBitmap, releaseSceneBitmap } from "../../presentation/scenes/scene-bitmap";
@@ -361,7 +361,10 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   // One rule for "plain main menu": the menu screen with no phone rotate gate drawn over it.
   const plainMainMenu = (): boolean => {
     const canvas = document.querySelector<HTMLCanvasElement>("#game");
-    const gate = canvas !== null && rotateGateShown(Input.touchActive(), canvas.clientWidth, canvas.clientHeight);
+    const gate =
+      __TEAR_MOBILE__ &&
+      canvas !== null &&
+      rotateGateShown(Input.touchActive(), canvas.clientWidth, canvas.clientHeight);
     return APP.screen === "menu" && !gate;
   };
   // The ghost worker scripts are cached by the service worker on first fetch; fetch any missing one on an idle menu.

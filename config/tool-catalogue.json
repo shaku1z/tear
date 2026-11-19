@@ -1183,6 +1183,14 @@
       ],
       "duration": "long"
     },
+    "check:mobile": {
+      "purpose": "Parked mobile group of config/checks.json: the touch and phone halves of the browser checks, on a test build (mobile is paused, plans/MOBILE_LATER.md)",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
     "check:functional": {
       "purpose": "Alias of pnpm check, kept for notes and scripts that name it",
       "effects": [
@@ -1705,7 +1713,8 @@
         "check:functional",
         "check:quick",
         "check:nightly",
-        "check:weekly"
+        "check:weekly",
+        "check:mobile"
       ]
     },
     "scripts/queue.mjs": {
