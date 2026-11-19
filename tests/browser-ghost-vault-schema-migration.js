@@ -98,30 +98,27 @@ async function recordThroughTheRunningApp(page) {
   await page.waitForFunction(() => window.__TEAR_GHOST_V3__.manifest() !== null, undefined, { timeout: STATE_WAIT_MS });
 }
 
-withJourney(
-  { name: "C28 Ghost Vault schema migration", port: 8163, deferBoot: true },
-  async ({ page, baseUrl, boot }) => {
-    // A same-origin blank 404 document lets the fixture create version 1 before
-    // the production app opens its Vault database. It does not load app code.
-    await page.goto(`${baseUrl}/__tear_browser_blank_fixture__.html`, {
-      timeout: STATE_WAIT_MS,
-      waitUntil: "domcontentloaded",
-    });
-    await createLegacyVault(page);
+withJourney({ name: "C28 Ghost Vault schema migration", deferBoot: true }, async ({ page, baseUrl, boot }) => {
+  // A same-origin blank 404 document lets the fixture create version 1 before
+  // the production app opens its Vault database. It does not load app code.
+  await page.goto(`${baseUrl}/__tear_browser_blank_fixture__.html`, {
+    timeout: STATE_WAIT_MS,
+    waitUntil: "domcontentloaded",
+  });
+  await createLegacyVault(page);
 
-    await boot();
-    await recordThroughTheRunningApp(page);
-    const migrated = await inspectMigratedVault(page);
-    assert.equal(migrated.version, 2, "the running app did not upgrade the legacy Vault schema");
-    assert.ok(migrated.stores.includes("libraries"), "the version-2 knowledge-library store was not created");
-    assert.equal(migrated.sentinel, SENTINEL_VALUE, "schema migration lost a legacy stored record");
+  await boot();
+  await recordThroughTheRunningApp(page);
+  const migrated = await inspectMigratedVault(page);
+  assert.equal(migrated.version, 2, "the running app did not upgrade the legacy Vault schema");
+  assert.ok(migrated.stores.includes("libraries"), "the version-2 knowledge-library store was not created");
+  assert.equal(migrated.sentinel, SENTINEL_VALUE, "schema migration lost a legacy stored record");
 
-    await boot();
-    const afterRestart = await inspectMigratedVault(page);
-    assert.equal(afterRestart.version, 2, "Vault schema changed after browser restart");
-    assert.equal(afterRestart.sentinel, SENTINEL_VALUE, "migrated legacy record did not survive browser restart");
-  },
-)
+  await boot();
+  const afterRestart = await inspectMigratedVault(page);
+  assert.equal(afterRestart.version, 2, "Vault schema changed after browser restart");
+  assert.equal(afterRestart.sentinel, SENTINEL_VALUE, "migrated legacy record did not survive browser restart");
+})
   .then(() => console.log("browser Ghost Vault schema migration passed"))
   .catch((error) => {
     console.error(error);

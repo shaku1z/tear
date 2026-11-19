@@ -20,7 +20,7 @@ function scenario(id, seed) {
   };
 }
 
-withJourney({ name: "C27 Ghost V3 interrupted browser recovery", port: 8157 }, async ({ page }) => {
+withJourney({ name: "C27 Ghost V3 interrupted browser recovery" }, async ({ page }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
     timeout: STATE_WAIT_MS,
   });

@@ -2,6 +2,7 @@ const { chromium } = require("@playwright/test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
+const { listenOnFreePort } = require("./local-server");
 const path = require("node:path");
 const {
   assertPacingAssessment,
@@ -50,8 +51,8 @@ const performanceBuild = {
   artifactHash: buildInfo.artifactHash,
   buildIdentityDigest: buildInfo.buildIdentityDigest,
 };
-const port = Number(process.env.TEAR_PERF_PORT || 8126);
-const baseUrl = `http://127.0.0.1:${port}`;
+// Set once the server listens on a free port (tests/local-server.js).
+let baseUrl = "http://127.0.0.1";
 const selectedScenario = process.env.TEAR_PERF_SCENARIO || "all";
 const durationMultiplier = Number(process.env.TEAR_PERF_DURATION_MULTIPLIER || "1");
 assert.ok(
@@ -800,7 +801,7 @@ async function repeatedRunScenario(browser, pageErrors) {
   const server = staticServer();
   let browser;
   try {
-    await new Promise((resolve) => server.listen(port, "127.0.0.1", resolve));
+    ({ origin: baseUrl } = await listenOnFreePort(server));
     const chromePath = selectedChromePath();
     browser = await launchJourney(chromium, {
       headless: budgets.referenceProfile.headless,

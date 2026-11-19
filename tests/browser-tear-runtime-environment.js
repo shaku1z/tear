@@ -35,7 +35,7 @@ function actionsAt(tick) {
   return [];
 }
 
-withJourney({ name: "C22 live Tear runtime", port: 8137 }, async ({ page }) => {
+withJourney({ name: "C22 live Tear runtime" }, async ({ page }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: STATE_WAIT_MS });
   const actionSchedule = Object.fromEntries(
     Array.from({ length: scenario.maxTicks }, (_, index) => {

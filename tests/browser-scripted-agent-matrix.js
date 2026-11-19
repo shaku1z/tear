@@ -90,7 +90,7 @@ function mechanics(snapshot) {
   };
 }
 
-withJourney({ name: "C24 weapon and contract truth matrix", port: 8154 }, async ({ page, errors }) => {
+withJourney({ name: "C24 weapon and contract truth matrix" }, async ({ page, errors }) => {
   const artifactDirectory = path.resolve(__dirname, "..", "artifacts", "tearbench", "c24");
   const contractDirectory = path.join(artifactDirectory, "mode-contracts");
   fs.mkdirSync(contractDirectory, { recursive: true });
