@@ -1012,6 +1012,7 @@ describe("legacy screen renderer registry", () => {
     renderer.settings({
       id: "settings",
       tab: "controls",
+      resettable: true,
       tabs: [{ id: "controls", label: "CONTROLS" }],
       returnTo: "menu",
       sections: [
@@ -1079,6 +1080,7 @@ describe("legacy screen renderer registry", () => {
     createScreenRenderers(createRenderContext(controls)).settings({
       id: "settings",
       tab: "general",
+      resettable: true,
       tabs: [{ id: "general", label: "GENERAL" }],
       returnTo: "menu",
       sections: [
@@ -1094,6 +1096,23 @@ describe("legacy screen renderer registry", () => {
     const keys = controls.flatMap((control) => ("key" in control.action ? [control.action.key] : []));
     expect(keys).toContain("terms");
     expect(keys).not.toContain("version");
+  });
+
+  it("draws RESET DEFAULTS only on a tab that has settings to reset", () => {
+    const labels = (resettable: boolean): string[] => {
+      const controls: ScreenControl[] = [];
+      createScreenRenderers(createRenderContext(controls)).settings({
+        id: "settings",
+        tab: resettable ? "general" : "credits",
+        resettable,
+        tabs: [{ id: "general", label: "GENERAL" }],
+        returnTo: "menu",
+        sections: [{ label: "CREDITS", rows: [{ key: "credit:vite", label: "Vite", value: "", kind: "info" }] }],
+      });
+      return controls.map((control) => control.label);
+    };
+    expect(labels(true)).toContain("RESET DEFAULTS");
+    expect(labels(false)).not.toContain("RESET DEFAULTS");
   });
 
   it("uses the oracle replay-vault row geometry and a profile-specific watch intent", () => {
