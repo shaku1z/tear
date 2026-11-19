@@ -8,7 +8,7 @@ const {
   serveProductionBuild,
   writeClassCArtifact,
 } = require("./class-c-browser-harness");
-const { STATE_WAIT_MS, settleFor } = require("./browser-waits");
+const { STATE_WAIT_MS, settleFor, launchJourney } = require("./browser-waits");
 
 function sampleDifference(left, right) {
   let changed = 0;
@@ -33,7 +33,7 @@ async function main() {
   assert.ok(fs.existsSync(path.join(root, "index.html")), "dist/standalone is missing; run pnpm build first");
   const host = await serveProductionBuild(root);
   const chromePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
-  const browser = await chromium.launch({
+  const browser = await launchJourney(chromium, {
     headless: true,
     ...(fs.existsSync(chromePath) ? { executablePath: chromePath } : {}),
   });
