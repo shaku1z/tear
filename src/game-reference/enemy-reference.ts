@@ -1,3 +1,4 @@
+import { requireRecord } from "../domain/records";
 import { ENEMY_IDENTITY_IDS, enemyIdsAvailableOn, type EnemyKind } from "../gameplay/run/content-director";
 import type { EnemyAffix, EnemyPreset } from "../gameplay/affixes";
 import { variantIdsAvailableOn, type EnemyVariant } from "../gameplay/variants";
@@ -119,9 +120,7 @@ export const CANONICAL_ENEMY_PRESETS: readonly EnemyPresetSignatureV1[] = Object
 ]);
 
 function record(value: unknown, path: string): Record<string, unknown> {
-  if (value === null || typeof value !== "object" || Array.isArray(value))
-    throw new TypeError(`${path} must be an object`);
-  return value as Record<string, unknown>;
+  return requireRecord(value, `${path} must be an object`);
 }
 
 function text(value: unknown, path: string): string {

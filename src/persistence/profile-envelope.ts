@@ -1,8 +1,8 @@
 import { normalizeCosmeticState } from "../domain/cosmetics";
 import { normalizeGauntletBests } from "../domain/gauntlet-records";
+import { asRecord } from "../domain/records";
 import { achievementOutbox, addGrant, dailyReceiptId, tutorialLedger } from "../domain/reward-receipts";
 import {
-  asRecord,
   extensionFields,
   mutableJsonClone,
   safeInteger,

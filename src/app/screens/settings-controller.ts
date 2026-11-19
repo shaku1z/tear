@@ -2,6 +2,7 @@ import type { LegacyAudioCompatibility } from "../../audio/legacy-live-audio";
 import { setMusicMode } from "../../audio/music-mode";
 import { musicSourceValue, parseMusicSource, setMusicSource } from "../../audio/music/music-source";
 import { sanitizeCinematicPreference, type CinematicPreference } from "../../gameplay/campaign/cinematic-preference";
+import { asRecord } from "../../domain/records";
 
 export type { CinematicPreference } from "../../gameplay/campaign/cinematic-preference";
 
@@ -153,7 +154,7 @@ function parseStoredSettings(serialized: string | null): Record<string, unknown>
   if (serialized === null) return {};
   try {
     const parsed: unknown = JSON.parse(serialized);
-    return typeof parsed === "object" && parsed !== null ? (parsed as Record<string, unknown>) : {};
+    return asRecord(parsed) ?? {};
   } catch {
     return {};
   }

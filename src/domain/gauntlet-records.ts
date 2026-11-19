@@ -1,4 +1,4 @@
-import { isSafeKey } from "./records";
+import { asRecord, isRecord, isSafeKey } from "./records";
 
 /**
  * The Gauntlet personal best, one per difficulty, kept in the profile as an optional field.
@@ -22,8 +22,8 @@ function count(value: unknown): number | null {
 
 /** A stored clear, or null when it is malformed. A clear takes at least one tick. */
 export function gauntletClear(value: unknown): GauntletClear | null {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
-  const record = value as Record<string, unknown>;
+  const record = asRecord(value);
+  if (record === undefined) return null;
   const ticks = count(record.ticks),
     hits = count(record.hits);
   return ticks === null || hits === null || ticks === 0 ? null : Object.freeze({ ticks, hits });
@@ -32,8 +32,8 @@ export function gauntletClear(value: unknown): GauntletClear | null {
 /** Stored bests with malformed entries dropped; anything that is not an object reads as none. */
 export function normalizeGauntletBests(value: unknown): GauntletBests {
   const output: Record<string, GauntletClear> = {};
-  if (typeof value === "object" && value !== null && !Array.isArray(value))
-    for (const [difficulty, entry] of Object.entries(value as Record<string, unknown>)) {
+  if (isRecord(value))
+    for (const [difficulty, entry] of Object.entries(value)) {
       const clear = gauntletClear(entry);
       if (clear !== null && isSafeKey(difficulty)) output[difficulty] = clear;
     }

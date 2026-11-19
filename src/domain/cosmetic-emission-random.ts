@@ -1,3 +1,4 @@
+import { isRecord } from "./records";
 import { SeededRandom } from "./random";
 
 export type CosmeticEmissionRandomSnapshot = Readonly<{
@@ -17,8 +18,7 @@ export interface CosmeticEmissionRandom {
 
 /** Strict data protocol; SeededRandom's permissive legacy restore is not the boundary. */
 export function parseCosmeticEmissionRandomSnapshot(value: unknown): CosmeticEmissionRandomSnapshot {
-  if (typeof value !== "object" || value === null || Array.isArray(value))
-    throw new TypeError("cosmetic emission entropy must be data");
+  if (!isRecord(value)) throw new TypeError("cosmetic emission entropy must be data");
   const prototype: unknown = Object.getPrototypeOf(value);
   if (prototype !== Object.prototype && prototype !== null)
     throw new TypeError("cosmetic emission entropy must be plain data");
