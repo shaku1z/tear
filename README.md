@@ -11,7 +11,7 @@ that web portal.
 
 ## Prerequisites
 
-- Node.js 24 (`.node-version`; `package.json` requires `>=24`).
+- Node.js 24 (`.node-version` names the exact version CI installs; `package.json` requires `>=24`).
 - pnpm 11.15.0, the version pinned in `package.json`. Run `corepack enable`
   once and Corepack provides it.
 - Chrome or Playwright's Chromium for the browser tests: `pnpm exec playwright install --with-deps chromium`.
