@@ -369,7 +369,6 @@ export interface TutorialLesson {
   readonly description: string;
   /** Current plain-language instruction for multi-step encounter lessons. */
   readonly instruction?: (counters: Readonly<Partial<Record<TutorialMark, number>>>) => string;
-  readonly keys: readonly string[];
   /** Legacy lesson-local counters; Cutting Room uses entryMarks below. */
   readonly objectiveMarks?: readonly TutorialMark[];
   readonly arena?: TutorialArenaId;
@@ -463,7 +462,6 @@ const LESSONS: TutorialLesson[] = [
   {
     title: "MOVE",
     description: "Run with A and D. Warm up — move both ways.",
-    keys: ["A", "D"],
     objectiveMarks: ["moveL", "moveR"],
     progress: (n) => [(count(n, "moveL") > 25 ? 1 : 0) + (count(n, "moveR") > 25 ? 1 : 0), 2],
     complete: (n) => count(n, "moveL") > 25 && count(n, "moveR") > 25,
@@ -471,7 +469,6 @@ const LESSONS: TutorialLesson[] = [
   {
     title: "JUMP",
     description: "W or Space to jump. Hold S on a ledge to drop through it.",
-    keys: ["W", "SPACE"],
     objectiveMarks: ["jump"],
     progress: (n) => [bounded(count(n, "jump"), 2), 2],
     complete: (n) => count(n, "jump") >= 2,
@@ -479,7 +476,6 @@ const LESSONS: TutorialLesson[] = [
   {
     title: "DASH",
     description: "Shift to dash — steer it mid-flight with W / A / S / D.",
-    keys: ["SHIFT"],
     objectiveMarks: ["dash"],
     progress: (n) => [bounded(count(n, "dash"), 2), 2],
     complete: (n) => count(n, "dash") >= 2,
@@ -487,7 +483,6 @@ const LESSONS: TutorialLesson[] = [
   {
     title: "CUT",
     description: "The blade follows your mouse — SPEED IS DAMAGE. Slash the dummy, fast.",
-    keys: ["MOUSE"],
     objectiveMarks: ["strike"],
     dummyCount: 1,
     progress: (n) => [bounded(count(n, "strike"), 3), 3],
@@ -496,7 +491,6 @@ const LESSONS: TutorialLesson[] = [
   {
     title: "LAUNCH",
     description: "A fast UPWARD swing pops an enemy into the air.",
-    keys: ["MOUSE ↑"],
     objectiveMarks: ["launch"],
     dummyCount: 1,
     progress: (n) => [bounded(count(n, "launch"), 1), 1],
@@ -505,7 +499,6 @@ const LESSONS: TutorialLesson[] = [
   {
     title: "JUGGLE",
     description: "Launch it — then cut it again before it lands.",
-    keys: ["MOUSE ↑", "MOUSE"],
     objectiveMarks: ["airHit"],
     dummyCount: 1,
     progress: (n) => [bounded(count(n, "airHit"), 2), 2],
@@ -514,7 +507,6 @@ const LESSONS: TutorialLesson[] = [
   {
     title: "SLAM",
     description: "While airborne, strike DOWN through an enemy — a slam hits harder.",
-    keys: ["W", "MOUSE ↓"],
     objectiveMarks: ["slam", "superslam"],
     dummyCount: 1,
     progress: (n) => [count(n, "slam") + count(n, "superslam") >= 1 ? 1 : 0, 1],
@@ -523,7 +515,6 @@ const LESSONS: TutorialLesson[] = [
   {
     title: "POWER SLAM",
     description: "Dash DOWN to fall fast, then slam mid-fall — a fast descent hits far harder.",
-    keys: ["S + SHIFT", "MOUSE ↓"],
     objectiveMarks: ["superslam"],
     dummyCount: 1,
     progress: (n) => [bounded(count(n, "superslam"), 1), 1],
@@ -532,7 +523,6 @@ const LESSONS: TutorialLesson[] = [
   {
     title: "UPDRAFT",
     description: "Launch WHILE RISING — jump first, then swing up hard.",
-    keys: ["W", "MOUSE ↑"],
     objectiveMarks: ["updraft"],
     dummyCount: 1,
     progress: (n) => [bounded(count(n, "updraft"), 1), 1],
@@ -542,7 +532,6 @@ const LESSONS: TutorialLesson[] = [
     title: "THROW",
     description:
       "Right-click to hurl the blade through an enemy. Move within tether range, then right-click again to recall it.",
-    keys: ["RMB"],
     objectiveMarks: ["throwHit", "recall"],
     dummyCount: 1,
     progress: (n) => [(count(n, "throwHit") >= 1 ? 1 : 0) + (count(n, "recall") >= 1 ? 1 : 0), 2],
@@ -551,7 +540,6 @@ const LESSONS: TutorialLesson[] = [
   {
     title: "PARRY",
     description: "Swing FAST through an incoming shot to send it back. Perfect timing homes it.",
-    keys: ["MOUSE"],
     objectiveMarks: ["parry", "deflect"],
     ranged: true,
     progress: (n) => [count(n, "parry") >= 1 ? 2 : bounded(count(n, "deflect"), 2), 2],
@@ -560,7 +548,6 @@ const LESSONS: TutorialLesson[] = [
   {
     title: "READY",
     description: "That's the whole blade. Cut clean. Keep moving. The Tear awaits.",
-    keys: [],
     objectiveMarks: [],
     final: true,
     progress: () => [0, 1],
@@ -578,7 +565,6 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   {
     title: "MOVE",
     description: "Run left for one full second, then right for one full second.",
-    keys: ["A", "D"],
     arena: "runway",
     entryMarks: ["moveL", "moveR"],
     teachingFocus: "movement",
@@ -588,7 +574,6 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   {
     title: "JUMP",
     description: "Jump three times. Use the ledges to climb.",
-    keys: ["W", "SPACE"],
     arena: "vertical-gate",
     entryMarks: ["jump"],
     teachingFocus: "movement",
@@ -598,7 +583,6 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   {
     title: "DASH",
     description: "Dash through the lane three times. Steer the burst; do not just spend it.",
-    keys: ["SHIFT"],
     arena: "dash-lane",
     entryMarks: ["dash"],
     teachingFocus: "movement",
@@ -608,7 +592,6 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   {
     title: "CUT",
     description: "Six clean cuts. Blade speed comes from deliberate movement.",
-    keys: ["MOUSE"],
     arena: "blade-range",
     entryMarks: ["strike"],
     teachingFocus: "blade",
@@ -619,7 +602,6 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   {
     title: "LAUNCH",
     description: "Make three upward openings. Every launch must happen in this block.",
-    keys: ["MOUSE UP"],
     arena: "launch-bay",
     entryMarks: ["launch"],
     teachingFocus: "momentum",
@@ -630,7 +612,6 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   {
     title: "JUGGLE",
     description: "Launch now, then keep the target airborne for three further hits.",
-    keys: ["MOUSE UP", "MOUSE"],
     arena: "air-chain",
     entryMarks: ["launch", "airHit"],
     teachingFocus: "momentum",
@@ -641,7 +622,6 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   {
     title: "SLAM",
     description: "Take height and drive down through the target twice. Height becomes force.",
-    keys: ["W", "MOUSE DOWN"],
     arena: "drop-well",
     entryMarks: ["slam", "superslam"],
     teachingFocus: "momentum",
@@ -652,7 +632,6 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   {
     title: "POWER SLAM",
     description: "Accelerate downward, then land two true power slams. No inherited credit.",
-    keys: ["S + SHIFT", "MOUSE DOWN"],
     arena: "dive-channel",
     entryMarks: ["superslam"],
     teachingFocus: "momentum",
@@ -663,7 +642,6 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   {
     title: "UPDRAFT",
     description: "While rising, carve up twice. A good cut can make the next route possible.",
-    keys: ["W", "MOUSE UP"],
     arena: "liftwell",
     entryMarks: ["jump", "launch", "strike", "updraft"],
     teachingFocus: "momentum",
@@ -674,7 +652,6 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   {
     title: "THROW",
     description: "Hit twice at range and recall twice. The blade stays part of your movement.",
-    keys: ["RMB"],
     arena: "throw-lane",
     entryMarks: ["throwHit", "recall"],
     teachingFocus: "blade",
@@ -685,7 +662,6 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   {
     title: "PARRY",
     description: "Return two shots. A counter is a route change, not a panic button.",
-    keys: ["MOUSE"],
     arena: "counterline",
     entryMarks: ["parry", "deflect"],
     teachingFocus: "counterplay",
@@ -696,7 +672,6 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   {
     title: "READ THE CHARGE",
     description: "Watch for the commitment. Dash clear when the Charger lunges.",
-    keys: ["SHIFT"],
     arena: "read-line",
     entryMarks: ["evade"],
     teachingFocus: "enemy",
@@ -707,7 +682,6 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   {
     title: "FIELD TEST",
     description: "Complete one clean combat route.",
-    keys: ["SHIFT", "MOUSE"],
     arena: "field-floor",
     entryMarks: ["evade", "punish"],
     teachingFocus: "encounter",
@@ -723,7 +697,6 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   {
     title: "READY",
     description: "Move, make space, take height, and return pressure. The Tear awaits.",
-    keys: [],
     arena: "ready-room",
     entryMarks: [],
     teachingFocus: "ready",
@@ -986,6 +959,10 @@ export class TutorialController {
     this.coachIdle = 0;
     return true;
   }
+  /** The course a finished tutorial hands to the next run, read without building a checkpoint. */
+  freePracticeCourse(): string | undefined {
+    return this.phase === "free-practice" ? this.courseSessionId : undefined;
+  }
   captureSession() {
     const checkpoint = {
       version: 1 as const,
@@ -1187,7 +1164,6 @@ export class TutorialController {
         return {
           ...lesson,
           coachCharger: false,
-          keys: [],
           entryMarks: [],
           description:
             "INTER-WAVE — BREATHE. Wave 1 clear. Next: launch, follow through in the air, and return a shot.",
@@ -1202,7 +1178,6 @@ export class TutorialController {
           coachCharger: false,
           dummyCount: 1,
           ranged: true,
-          keys: ["MOUSE UP", "MOUSE"],
           entryMarks: ["launch", "airHit", "deflect", "parry"],
           instruction: (n) =>
             count(n, "launch") < 1

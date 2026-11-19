@@ -14,7 +14,6 @@ export const TUTORIAL_WEAPON_ANNEXES = [
     id: "sword",
     title: "SWORD",
     arena: "launch-bay",
-    keys: ["MOUSE", "MOUSE UP"],
     effects: [["reversal"], ["launch", "updraft"]],
     instructions: [
       "Cut through the target, leave its line, then reverse through it with a new swing to earn REVERSAL.",
@@ -25,7 +24,6 @@ export const TUTORIAL_WEAPON_ANNEXES = [
     id: "hammer",
     title: "HAMMER",
     arena: "drop-well",
-    keys: ["W", "MOUSE DOWN"],
     effects: [["slam", "superslam", "spike"], ["break"]],
     instructions: [
       "Take height and drive the Hammer down through the target for a real airborne slam.",
@@ -36,7 +34,6 @@ export const TUTORIAL_WEAPON_ANNEXES = [
     id: "greatsword",
     title: "GREATSWORD",
     arena: "throw-lane",
-    keys: ["MOUSE", "RMB"],
     effects: [["cleave"], ["wheelCut", "wheelReturn"]],
     instructions: [
       "Carry a fast, clean Greatsword edge through the target to trigger CLEAVE.",
@@ -47,7 +44,6 @@ export const TUTORIAL_WEAPON_ANNEXES = [
     id: "chainblade",
     title: "CHAINBLADE",
     arena: "throw-lane",
-    keys: ["RMB", "MOUSE", "RMB"],
     effects: [["hook"], ["slingRelease"]],
     instructions: [
       "Throw into the living target to establish a real Hook. An empty throw does not count.",
@@ -58,7 +54,6 @@ export const TUTORIAL_WEAPON_ANNEXES = [
     id: "riftlock",
     title: "RIFTLOCK",
     arena: "throw-lane",
-    keys: ["RMB", "LMB"],
     effects: [["capture"], ["razorRoundHit", "backblastRoundHit"]],
     instructions: [
       "Throw the Loose Cannon into the living target to establish Capture.",
@@ -69,7 +64,6 @@ export const TUTORIAL_WEAPON_ANNEXES = [
   id: WeaponId;
   title: string;
   arena: TutorialLesson["arena"];
-  keys: readonly string[];
   effects: readonly (readonly string[])[];
   instructions: readonly string[];
 }[];
@@ -120,7 +114,6 @@ export function weaponAnnexLesson(state: TutorialWeaponAnnexState): TutorialLess
   return {
     title: `${definition.title} ANNEX`,
     description: definition.instructions[state.progress] ?? "EXERCISE COMPLETE · Select another exercise or restart.",
-    keys: definition.keys,
     arena: definition.arena,
     teachingFocus: "blade",
     dummyCount: 1,

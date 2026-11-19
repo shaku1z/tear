@@ -233,7 +233,6 @@ export interface LiveTutorialPort<TEnemy extends LiveTutorialEnemy> {
 export interface LiveTutorialLessonView {
   readonly t: string;
   readonly d: string;
-  readonly keys: readonly string[];
   readonly need: number | undefined;
   readonly ranged: boolean | undefined;
   readonly final: boolean | undefined;
@@ -269,6 +268,8 @@ export interface LiveTutorialRuntime {
   showHelp(): void;
   demonstrate(): boolean;
   captureSession(): ReturnType<TutorialController["captureSession"]> | undefined;
+  /** The course of a tutorial in free practice, or undefined; cheap enough to ask every tick. */
+  freePracticeCourse(): string | undefined;
   validateSession(
     value: unknown,
     candidateWeaponId?: string,
@@ -342,7 +343,6 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
     return {
       t: lesson.title,
       d: nudge ?? lesson.instruction?.(controller.counters) ?? lesson.description,
-      keys: lesson.keys,
       need: lesson.dummyCount,
       ranged: lesson.ranged,
       final: lesson.final,
@@ -497,6 +497,7 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
       syncCoach();
       coach.captureCommands(commands);
     },
+    freePracticeCourse: () => controller.freePracticeCourse(),
     captureSession: () => {
       if (controller.session().phase === "inactive") return undefined;
       if (controller.session().bossPractice && !controller.session().bossPractice?.defeated) bossPort?.capture();

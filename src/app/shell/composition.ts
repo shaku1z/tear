@@ -3,6 +3,7 @@ import { createLiveTutorialCompletionPersistence } from "../progress/tutorial-co
 import { createLivePracticeEncounterPersistence } from "../progress/practice-encounter-persistence";
 import { createLegacySynthFacade } from "../../audio/legacy-synth";
 import { createBrowserAudioContextHandoff } from "../../audio/audio-context-handoff";
+import { setMusicProgressFacts } from "../../audio/music/music-source";
 import { A11Y, CONFIG, GFX, OVERSCAN, REMOTE, SAFE, THEME } from "../../config/game-config";
 import {
   aabbOverlap,
@@ -42,6 +43,7 @@ import type { CloudFactory } from "../../platform/cloud-factory";
 import type { TearBuildTarget } from "../../platform/contracts";
 import type { CrazyGamesSdkShape, createCrazyGamesPlatformServices } from "../../platform/crazygames";
 import { createLegacyPlatformCompatibility } from "../../platform/legacy-compat";
+import { browserFullscreen } from "../../platform/browser";
 import { createRunSeed } from "../../platform/run-seed";
 import type { PwaUpdateCapability } from "../../platform/pwa-update";
 import { GHOST_WORKER_URLS } from "../replay/ghost-worker-urls";
@@ -126,7 +128,9 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   const disposableValues = new Map<string, string>(
     tearTestMode ? Object.entries(compositionWindow.__TEAR_TEST_STORAGE__ ?? {}) : [],
   );
-  const tearTestEnvironment = tearTestMode ? createTearTestEnvironment("live-test-composition") : undefined;
+  const tearTestEnvironment = tearTestMode
+    ? createTearTestEnvironment("live-test-composition", { fullscreen: browserFullscreen(document) })
+    : undefined;
   const disposableStorage = tearTestMode
     ? {
         getItem: (key: string) => disposableValues.get(key) ?? null,
@@ -298,6 +302,8 @@ export function composeTearApplication(options: TearCompositionOptions): void {
       console.log(message);
     },
   });
+  // The music pick and the Radio hear only songs this player has found.
+  setMusicProgressFacts(() => PROFILE.facts());
   const GAMEPLAY_EVENTS = new TearGameplayEventBus(() => Input.semantic.lastSealedTick);
   const { GHOST, VAULT } = createLegacyReplayCompatibility({
     store: CG.store,
@@ -389,6 +395,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     browserStorage: window.localStorage,
     browserWindow: window,
     CG,
+    fullscreen: () => platform.services.fullscreen,
     CLOCK,
     CONFIG: worldConfig,
     Charger,
@@ -508,6 +515,8 @@ export function composeTearApplication(options: TearCompositionOptions): void {
       abilities: UPGRADES.filter((upgrade) => ["stormbank", "overrun", "sever"].includes(upgrade.id)).map(
         (upgrade) => upgrade.name,
       ),
+      // The achievement count the achievements screen shows, so a journey never hard-codes it.
+      achievementCount: () => ACH.list.length,
       input: Object.freeze({
         startRecording: () => {
           Input.startSemanticRecording();

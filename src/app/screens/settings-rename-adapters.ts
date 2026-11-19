@@ -35,8 +35,10 @@ export interface SettingsRenameAdapters {
   readonly renderRename: () => void;
   readonly renderMusic: () => void;
   readonly selectSettingsTab: (id: string) => void;
-  /** MUSIC page: "home", "songs", "settings" or "collection:<id>". */
+  /** MUSIC page: "home", "radio", "songs", "settings" or "collection:<id>". */
   readonly selectMusicPage: (page: string) => void;
+  /** Make a music pick the player can make now (the Radio page's PLAY), saved like the Settings row. */
+  readonly pickMusic: (value: string) => void;
   readonly stepSetting: (key: string, direction: number) => void;
   readonly toggleSetting: (key: string) => void;
   readonly activateSetting: (key: string) => void;
@@ -118,6 +120,11 @@ export function createLiveSettingsRenameAdapters(services: SettingsRenameService
     activateSetting: (key) => {
       invoke((value) => {
         value.activateSetting(key);
+      });
+    },
+    pickMusic: (pick) => {
+      invoke((value) => {
+        value.pickMusic(pick);
       });
     },
     beginRename: (firstRun, bypass = false) => {

@@ -12,11 +12,22 @@ import { actionRow, overlayHeader, overlayLayout, tabs, verticalMenu, type Overl
 import { arsenalPanel, panelTag, runProgressPanel, waveLogPanel } from "./run-overlay-panels";
 import { LESSON_TEACHING, countedLessons } from "../../gameplay/training/training-exercises";
 import { PRACTICE_TABS, practiceTabDefinition, type PracticeTab } from "../../gameplay/training/practice-tabs";
+import { buttonGrid } from "./choice-grid";
+import { createCompactPage } from "./compact-page";
 
-const clampValue = (value: number, minimum: number, maximum: number) => Math.max(minimum, Math.min(maximum, value));
+/** The status line under an opponent or boss in the Drills list, from what the profile knows of it. */
+const KNOWLEDGE_STATUS: Readonly<Record<string, string>> = Object.freeze({
+  "defeated-identity": "DEFEATED",
+  "encountered-phase": "PHASE REACHED",
+  "confirmed-defeated": "DEFEATED",
+  encountered: "MET",
+  "save-unconfirmed": "NOT SAVED YET",
+  unknown: "NOT MET YET",
+});
 
 export function createPauseResultRenderers(context: ScreenRenderContext) {
-  const { ui, width, height } = context;
+  const { ui, width, height } = context,
+    kit = createCompactPage(context);
 
   function wrapText(
     text: string,
@@ -134,9 +145,10 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
     });
     const panelX = width * 0.39,
       panelW = width * 0.54,
-      rowTop = top + (compact ? 38 : 45),
-      helpH = compact ? (catalog ? 70 : 90) : 130;
-    if (tab) drillTabs(tab.id, panelX, top, panelW, rowTop - top - (compact ? 6 : 10));
+      // The tab strip is one touch target tall; without tabs a tag and a line head the list.
+      tabH = ui.t.metric.minTarget,
+      rowTop = top + (tab ? tabH + (compact ? 6 : 10) : compact ? 38 : 45);
+    if (tab) drillTabs(tab.id, panelX, top, panelW, tabH);
     else {
       ui.tag(
         canvas,
@@ -174,47 +186,6 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
         : annexes
           ? (session.annexes ?? []).map((annex) => ({ ...annex, completed: false, reached: true, canPractice: true }))
           : session.lessons.filter((lesson) => lesson.id !== "ready" && (lab || complete || lesson.reached));
-    const rows = bosses ? (compact ? 3 : 6) : catalog ? Math.max(1, Math.ceil(exercises.length / 2)) : 7,
-      rowH = Math.min(bosses ? (compact ? 42 : 62) : catalog ? 62 : 46, (height - rowTop - helpH - 16) / rows);
-    const bossOffset = bosses && compact ? clampValue(Math.floor(context.scroll / 48), 0, 3) * 3 : 0;
-    exercises.forEach((lesson, originalIndex) => {
-      const index = originalIndex - bossOffset;
-      if (bosses && compact && (index < 0 || index >= 9)) return;
-      const columns = tab?.columns ?? 2,
-        column = index % columns,
-        row = Math.floor(index / columns);
-      context.enqueue({
-        x: panelX + column * (panelW / columns + 4),
-        y: rowTop + row * rowH,
-        w: panelW / columns - 8,
-        h: rowH - 4,
-        label: `${lesson.completed && !lab ? "✓ " : ""}${lesson.title}${session.skipped?.some((id) => id === lesson.id) ? " · SKIPPED" : ""}${lesson.reached ? "" : " · LOCKED"}`,
-        ...("knowledge" in lesson && typeof lesson.knowledge === "string"
-          ? {
-              sub: (
-                {
-                  "defeated-identity": "DEFEATED",
-                  "encountered-phase": "PHASE REACHED",
-                  "confirmed-defeated": "DEFEATED",
-                  encountered: "MET",
-                  "save-unconfirmed": "NOT SAVED YET",
-                  unknown: "NOT MET YET",
-                } as Readonly<Record<string, string>>
-              )[lesson.knowledge],
-            }
-          : {}),
-        enabled: lesson.canPractice,
-        selected: lesson.current,
-        action: {
-          type: "tutorial.action",
-          command: tab?.select ?? "select",
-          lessonId: lesson.id,
-        },
-        size: compact ? ui.t.type.micro : ui.t.type.caption,
-      });
-    });
-    if (bosses && compact)
-      ui.scrollHint(canvas, panelX + panelW / 2, rowTop + rows * rowH + 10, bossOffset > 0, bossOffset < 9);
     // On the drill's own tab, the drill under way says what to do now; any other tab explains its list.
     const drillTab = session.annex
         ? "weapons"
@@ -233,12 +204,68 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
             : current
               ? `${LESSON_TEACHING[current.id].goal} ${LESSON_TEACHING[current.id].why}`
               : ""));
-    if (session.coach?.available && !bosses && !catalog && !annexes) {
-      const coach = session.coach,
-        controls: { label: string; command: "coach-rate" | "coach-compare" }[] = [
-          { label: `DEMO SPEED ${String(coach.rate)}×`, command: "coach-rate" },
-          ...(coach.canCompare ? [{ label: "COMPARE WITH DEMO", command: "coach-compare" as const }] : []),
-        ];
+    // One copy block follows the list: the coach's copy above its footer row, or else the help
+    // above the overlay's bottom margin. The list takes the room the copy's measured lines leave.
+    const coach = bosses || catalog || annexes ? undefined : session.coach?.available ? session.coach : undefined,
+      copy = coach
+        ? {
+            text: coach.adaptive?.assistOffered
+              ? `${help} Stuck? SKIP LESSON moves on; you can come back to it.`
+              : (coach.adaptive?.nudge ?? (session.helpVisible ? session.instruction : `${help} ${coach.diagnosis}`)),
+            size: ui.t.type.micro,
+            line: Math.round(ui.t.type.micro * 1.3),
+            limit: header.footerY - ui.t.space.md,
+          }
+        : {
+            text: help,
+            size: ui.t.type.caption,
+            line: Math.round(ui.t.type.caption * 1.35),
+            limit: height - 16,
+          };
+    canvas.font = ui.font(copy.size, false);
+    const copyLines =
+      copy.text === "" ? 0 : wrapSpaceSeparated((value) => canvas.measureText(value).width, copy.text, panelW).length;
+    const listBottom = copy.limit - (copyLines === 0 ? 0 : ui.t.space.sm + copy.size + (copyLines - 1) * copy.line);
+    // The list is the shared button list: columns from the widest name, rows from the tallest
+    // (name and status line), scrolling inside the panel with its hint on a line of its own.
+    const buttons = exercises.map((lesson) => ({
+      label: `${lesson.completed && !lab ? "✓ " : ""}${lesson.title}${session.skipped?.some((id) => id === lesson.id) ? " · SKIPPED" : ""}${lesson.reached ? "" : " · LOCKED"}`,
+      ...("knowledge" in lesson && typeof lesson.knowledge === "string"
+        ? { sub: KNOWLEDGE_STATUS[lesson.knowledge] }
+        : {}),
+      enabled: lesson.canPractice,
+      selected: lesson.current,
+      action: { type: "tutorial.action", command: tab?.select ?? "select", lessonId: lesson.id } as const,
+      size: compact ? ui.t.type.micro : ui.t.type.caption,
+    }));
+    const columns = tab?.columns ?? 2,
+      cellGap = ui.t.metric.btnGap,
+      grid = buttonGrid(ui, canvas, buttons, {
+        minColumns: columns,
+        maxColumns: columns,
+        maxRows: Number.MAX_SAFE_INTEGER,
+        width: panelW,
+        gap: cellGap,
+      });
+    const list = kit.list(
+      { left: panelX, width: panelW, top: rowTop, bottom: listBottom },
+      kit.grid(
+        { left: panelX, width: panelW },
+        buttons,
+        grid.columns,
+        () => grid.rowHeight,
+        (button, x, y, w, h, view) => {
+          view.enqueue({ ...button, x, y, w, h });
+        },
+        cellGap,
+      ),
+      ui.t.space.xs,
+    );
+    if (coach) {
+      const controls: { label: string; command: "coach-rate" | "coach-compare" }[] = [
+        { label: `DEMO SPEED ${String(coach.rate)}×`, command: "coach-rate" },
+        ...(coach.canCompare ? [{ label: "COMPARE WITH DEMO", command: "coach-compare" as const }] : []),
+      ];
       controls.forEach((control, index) => {
         context.enqueue({
           x: panelX + (index * panelW) / controls.length,
@@ -250,29 +277,9 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
           size: ui.t.type.micro,
         });
       });
-      wrapText(
-        coach.adaptive?.assistOffered
-          ? `${help} Stuck? SKIP LESSON moves on; you can come back to it.`
-          : (coach.adaptive?.nudge ?? (session.helpVisible ? session.instruction : `${help} ${coach.diagnosis}`)),
-        panelX,
-        header.footerY - ui.t.space.md - ui.t.type.micro * 2,
-        panelW,
-        Math.round(ui.t.type.micro * 1.3),
-        ui.t.type.micro,
-        ui.ink,
-      );
-      return;
     }
     canvas.textBaseline = "alphabetic";
-    wrapText(
-      help,
-      panelX,
-      rowTop + rows * rowH + (catalog ? 28 : 18),
-      panelW,
-      Math.round(ui.t.type.caption * 1.35),
-      ui.t.type.caption,
-      ui.ink,
-    );
+    wrapText(copy.text, panelX, list.bottom + ui.t.space.sm + copy.size, panelW, copy.line, copy.size, ui.ink);
   }
 
   /** The Drills tabs over the list panel: the hubs' tab strip, framed to the panel. */
@@ -467,9 +474,10 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
     }
     ui.dim(canvas, width, height, 0.92);
     const layout = overlayHeader(context, {
-      title: "VICTORY",
+      title: view.title ?? "VICTORY",
       subtitle: [
-        `boss down   ·   ${String(view.score)} pts   ·   ${view.time}${view.isNew ? "   ·   NEW BEST" : ""}`,
+        view.headline ??
+          `boss down   ·   ${String(view.score)} pts   ·   ${view.time}${view.isNew ? "   ·   NEW BEST" : ""}`,
         `+${String(view.earned)} coins  (${String(view.coins)} total)`,
       ],
     });

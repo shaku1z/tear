@@ -16,14 +16,7 @@ import {
 import { productionRunSeed, type ProductionReplayWorld } from "./production-world-factory";
 import type { ProductionWaveRewardRuntime } from "./production-wave-reward-runtime";
 import type { ProductionWaveRewardIntent } from "./production-wave-reward-runtime";
-import {
-  TEAR_CONTRACT_FORMAT,
-  TEAR_CONTRACT_VERSION,
-  type TearCausalEventV1,
-  type TearObservationV1,
-  type TearScenarioV1,
-  type TearSnapshotV1,
-} from "./contracts";
+import type { TearCausalEventV1, TearObservationV1, TearScenarioV1, TearSnapshotV1 } from "./contracts";
 import {
   TearHeadlessEnvironmentPool,
   type TearHeadlessEnvironment,
@@ -36,17 +29,7 @@ import { requireProductionHeadlessScenario } from "./production-headless-scenari
 import { beginProductionBossPractice } from "./production-boss-practice-start";
 import { requireProductionReplayBootstrap as requireBootstrap } from "./production-replay-bootstrap-check";
 import type { PracticeBossId, PracticeBossPhase } from "../gameplay/training/boss-phase-practice-runtime";
-import {
-  canonicalObservationActions,
-  canonicalObservationEnemyKind,
-  canonicalObservationStage,
-} from "./observation-identity";
-import { projectLiveProjectiles } from "./live-observation-projectiles";
-import {
-  projectLiveActorMechanics,
-  projectLiveBladeMechanics,
-  projectLivePlayerMechanics,
-} from "./live-observation-actors";
+import { projectProductionPolicyObservation } from "./production-policy-observation";
 import { createGameplayCausalEvent } from "./gameplay-causal-events";
 import { assertTearSimulationStepSeconds, TEAR_SIMULATION_TICKS_PER_SECOND } from "./simulation-profile";
 
@@ -211,6 +194,8 @@ export interface ProductionHeadlessEnvironment extends TearHeadlessEnvironment<
   continueTutorialPractice(nextScenario: TearScenarioV1): CanonicalGameplayState;
   /** In a fresh tutorial episode: Playground boss practice at a chosen phase. Returns a reader of its lifecycle. */
   practiceBoss(bossId: PracticeBossId, phase: PracticeBossPhase): ReturnType<typeof beginProductionBossPractice>;
+  /** Replaces the enemies in play with these, made by the game's own factory, for a playtest of chosen enemies. */
+  replaceEnemies(spawns: readonly Readonly<{ id: string; x: number; y: number }>[]): void;
   captureCheckpoint(): ProductionHeadlessCheckpoint;
   restoreCheckpoint(checkpoint: ProductionHeadlessCheckpoint): CanonicalGameplayState;
   restoreStateForgeEvaluation(evaluation: ProductionHeadlessStateForgeEvaluation): CanonicalGameplayState;
@@ -488,122 +473,12 @@ export function createProductionHeadlessEnvironment(
       value.simulation.simulationRuntime.scheduler.tick,
       value.simulation.simulationRuntime.input,
     );
-  const policyObservation = (value: ProductionHeadlessCore): TearObservationV1 => {
-    const run = value.replay.world.state.run() as unknown as {
-      mode: TearObservationV1["run"]["mode"];
-      diff: TearObservationV1["run"]["difficulty"];
-      weaponId: TearObservationV1["run"]["weapon"];
-      wave: number;
-      score: number;
-    } | null;
-    const sourcePlayer = value.replay.world.state.player();
-    const player = sourcePlayer as unknown as
-      | {
-          x: number;
-          y: number;
-          vx: number;
-          vy: number;
-          hp: number;
-          maxHp: number;
-          facing?: number;
-          onGround?: boolean;
-          dashCharges?: number;
-        }
-      | undefined;
-    const blade = value.replay.world.state.blade() as unknown as
-      | {
-          x: number;
-          y: number;
-          tipX: number;
-          tipY: number;
-          vx: number;
-          vy: number;
-          tipSpeed: number;
-          state: string;
-          riftChambers?: number;
-          riftChamberCooldown?: number;
-          wheelSpin?: number;
-          reversals?: readonly unknown[];
-        }
-      | undefined;
-    if (run === null || player === undefined || sourcePlayer === undefined || blade === undefined) {
-      throw new Error("production policy observation requires an active source world");
-    }
-    const tick = value.simulation.simulationRuntime.scheduler.tick;
-    return Object.freeze({
-      format: TEAR_CONTRACT_FORMAT,
-      kind: "observation",
-      schemaVersion: TEAR_CONTRACT_VERSION,
-      tick,
-      observationClass: "structured-state",
-      player: Object.freeze({
-        x: player.x,
-        y: player.y,
-        vx: player.vx,
-        vy: player.vy,
-        hp: player.hp,
-        maxHp: player.maxHp,
-        facing: player.facing === undefined || player.facing >= 0 ? 1 : -1,
-        grounded: player.onGround ?? false,
-        dashCharges: player.dashCharges ?? 0,
-        ...projectLivePlayerMechanics(sourcePlayer, "B"),
-      }),
-      blade: Object.freeze({
-        handX: blade.x,
-        handY: blade.y,
-        tipX: blade.tipX,
-        tipY: blade.tipY,
-        vx: blade.vx,
-        vy: blade.vy,
-        tipSpeed: blade.tipSpeed,
-        state: blade.state,
-        ...projectLiveBladeMechanics(blade, "B"),
-      }),
-      entities: Object.freeze([
-        ...value.replay.world.state
-          .enemies()
-          .filter((enemy: { dead?: boolean }) => !enemy.dead)
-          .map((enemy, index) => {
-            const value = enemy as unknown as {
-              _gid?: number;
-              kind?: string;
-              bossId?: string;
-              supportType?: string;
-              isVoidWisp?: boolean;
-              x: number;
-              y: number;
-              vx: number;
-              vy: number;
-              hp: number;
-              maxHp?: number;
-              state?: string;
-            };
-            return Object.freeze({
-              id: `production:${String(value._gid ?? index + 1)}`,
-              kind: canonicalObservationEnemyKind({ ...value, kind: value.kind ?? "" }),
-              x: value.x,
-              y: value.y,
-              vx: value.vx,
-              vy: value.vy,
-              hpRatio: value.maxHp === undefined || value.maxHp <= 0 ? 1 : value.hp / value.maxHp,
-              state: value.state ?? "active",
-              ...projectLiveActorMechanics(enemy, "B"),
-            });
-          }),
-        ...projectLiveProjectiles(value.replay.world.state.projectiles(), sourcePlayer, "B"),
-      ]),
-      run: Object.freeze({
-        mode: run.mode,
-        difficulty: run.diff,
-        weapon: run.weaponId,
-        stage: canonicalObservationStage(value.replay.stage.index),
-        wave: run.wave,
-        score: run.score,
-        elapsedTicks: tick,
-      }),
-      availableActions: canonicalObservationActions(value.waveReward.screen(), run.mode, false),
-    });
-  };
+  const policyObservation = (value: ProductionHeadlessCore): TearObservationV1 =>
+    projectProductionPolicyObservation(
+      value.replay,
+      value.simulation.simulationRuntime.scheduler.tick,
+      value.waveReward.screen(),
+    );
   const compose = (
     scenario: TearScenarioV1,
     snapshot?: TearSnapshotV1,
@@ -718,6 +593,11 @@ export function createProductionHeadlessEnvironment(
         phase,
       );
     },
+    replaceEnemies: (spawns: Parameters<ProductionHeadlessEnvironment["replaceEnemies"]>[0]) => {
+      const { state, entities } = requireCore().replay.world;
+      const placed = spawns.map((spawn) => entities.createEnemy(spawn.id, spawn.x, spawn.y, state.run() as never));
+      state.setEnemies(placed);
+    },
     continueTutorialPractice: (source: TearScenarioV1): CanonicalGameplayState => {
       const current = requireCore();
       if (current.replay.tutorialHandoff() === null)
@@ -799,7 +679,9 @@ export function createProductionHeadlessEnvironment(
       deliveredCausalEventCount = current.nativeEvents.length;
       pendingEvents = [];
       return Object.freeze({
-        observation: result.state,
+        get observation() {
+          return result.state;
+        },
         events: Object.freeze(causalEvents),
         terminated,
         truncated,

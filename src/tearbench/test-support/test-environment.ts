@@ -1,4 +1,4 @@
-import type { PlatformServices } from "../../platform/contracts";
+import type { Capability, FullscreenService, PlatformServices } from "../../platform/contracts";
 import { unavailable } from "../../platform/contracts";
 import { createLifecycleController } from "../../platform/lifecycle";
 import { createMemoryStorage } from "../../platform/storage";
@@ -17,11 +17,22 @@ export interface TearTestEnvironment {
   stream(name: RunRandomStreamName): ReturnType<RunRandomStreams["stream"]>;
 }
 
+export interface TearTestEnvironmentOptions {
+  /**
+   * The page's own fullscreen, for a test build running in a real browser. Fullscreen keeps
+   * no state outside the page, so a disposable run may use it; headless runners leave it out.
+   */
+  readonly fullscreen?: Capability<FullscreenService>;
+}
+
 /**
  * Disposable environment used by engineering and training runners. Remote
  * capabilities are unavailable by construction and storage lives only in memory.
  */
-export function createTearTestEnvironment(seed: number | string = 1): TearTestEnvironment {
+export function createTearTestEnvironment(
+  seed: number | string = 1,
+  options: TearTestEnvironmentOptions = {},
+): TearTestEnvironment {
   const settingsStorage = createMemoryStorage();
   const profileStorage = createMemoryStorage();
   const lifecycle = createLifecycleController({ focused: true, visible: true });
@@ -39,7 +50,7 @@ export function createTearTestEnvironment(seed: number | string = 1): TearTestEn
     ads: unavailable("TearBench advertisements are disabled."),
     achievements: unavailable("TearBench achievement writes are disabled."),
     analytics: unavailable("TearBench analytics are disabled."),
-    fullscreen: unavailable("TearBench fullscreen is controlled by its runner."),
+    fullscreen: options.fullscreen ?? unavailable("TearBench fullscreen is controlled by its runner."),
     overlay: unavailable("TearBench external overlays are disabled."),
   });
   return Object.freeze({

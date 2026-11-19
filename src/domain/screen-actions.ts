@@ -60,15 +60,6 @@ export type ScreenAction =
   | { readonly type: "replay.practice" }
   | { readonly type: "replay.challenge.open" }
   | { readonly type: "replay.challenge.start"; readonly id: string }
-  | { readonly type: "replay.coach.open" }
-  | { readonly type: "replay.coach.viewMoment"; readonly id: string }
-  | {
-      readonly type: "replay.coach.control";
-      readonly command: "close" | "scene" | "page" | "metric" | "moment" | "details" | "sources" | "rows" | "section";
-      readonly delta: number;
-    }
-  | { readonly type: "replay.coach.selectBaseline"; readonly id: string }
-  | { readonly type: "replay.coach.practice"; readonly findingId: string }
   | { readonly type: "replay.runDna.toggle" }
   | { readonly type: "replay.editor.toggle" }
   | { readonly type: "replay.editor.createCutList" }
@@ -88,6 +79,10 @@ export type ScreenAction =
   | { readonly type: "music.preview"; readonly id: string; readonly queue?: readonly string[] }
   | { readonly type: "music.step"; readonly delta: 1 | -1 }
   | { readonly type: "music.stopPreview" }
+  /** Make this the music pick (`default`, a song id or `channel:<id>`), as the Settings row would. */
+  | { readonly type: "music.pick"; readonly value: string }
+  /** On a Radio channel: move on to its next song. */
+  | { readonly type: "music.next" }
   | { readonly type: "rename.submit" }
   | { readonly type: "rename.cancel" }
   | { readonly type: "draft.choose"; readonly index: number }

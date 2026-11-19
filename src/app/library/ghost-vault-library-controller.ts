@@ -16,7 +16,6 @@ import {
   type GhostArchiveFilePort,
 } from "./browser-ghost-archive-files";
 import type { GhostArchiveOperationView } from "../../presentation/screens/contracts";
-import type { GhostLibraryKind } from "../../ghost/knowledge-libraries";
 import type { GhostTheaterOpenResult } from "../../ghost/theater-open-result";
 
 export interface GhostVaultLibraryCapsule {
@@ -26,7 +25,6 @@ export interface GhostVaultLibraryCapsule {
   readonly recordingProfile: TearGhostManifest["recordingProfile"];
   readonly chunkCount: number;
   readonly healthy: boolean;
-  readonly libraries: readonly GhostLibraryKind[];
   readonly repairable: boolean;
   readonly repairChildId?: string;
   /** Player-safe, runtime-only Theater eligibility; custody remains unchanged. */
@@ -303,7 +301,6 @@ function restoreFailureMessage(code: string): string {
 function capsuleView(
   manifest: TearGhostManifest,
   healthy: boolean,
-  libraries: readonly GhostLibraryKind[],
   repairChildId?: string,
   theaterRefusal?: GhostTheaterOpenResult,
   repairMetadataComplete = false,
@@ -315,7 +312,6 @@ function capsuleView(
     recordingProfile: manifest.recordingProfile,
     chunkCount: manifest.chunks.length,
     healthy,
-    libraries: Object.freeze([...libraries].sort()),
     repairable: !healthy && (repairChildId === undefined || !repairMetadataComplete),
     theaterEligible: theaterRefusal?.kind !== "refused",
     ...(theaterRefusal === undefined ? {} : { theaterRefusal }),
@@ -351,14 +347,8 @@ export function createGhostVaultLibraryController(options: GhostVaultLibraryCont
   });
   const catalogSnapshot = (catalog: BrowserGhostVaultCatalog, message?: string): GhostVaultLibrarySnapshot => {
     const health = new Map(catalog.maintenance.integrity.map((entry) => [entry.id, entry.healthy]));
-    const memberships = new Map<string, GhostLibraryKind[]>();
     const repairedChildren = new Map<string, string>();
     const repairMetadata = new Map(catalog.repairMetadata?.map((entry) => [entry.id, entry.complete]));
-    for (const entry of catalog.maintenance.libraries.entries) {
-      const membershipsForGhost = memberships.get(entry.ghostId) ?? [];
-      membershipsForGhost.push(entry.library);
-      memberships.set(entry.ghostId, membershipsForGhost);
-    }
     for (const manifest of catalog.manifests) {
       if (manifest.lineage?.relation === "repaired-from") repairedChildren.set(manifest.lineage.parentId, manifest.id);
     }
@@ -384,7 +374,6 @@ export function createGhostVaultLibraryController(options: GhostVaultLibraryCont
           ...capsuleView(
             manifest,
             health.get(manifest.id) === true,
-            memberships.get(manifest.id) ?? [],
             repairedChildren.get(manifest.id),
             theaterRefusals.get(manifest.id),
             repairMetadata.get(manifest.id),

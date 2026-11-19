@@ -1,3 +1,5 @@
+import { parseMusicCatalog } from "../../src/audio/music/catalog";
+import { buildMusicLibrary } from "../../src/audio/music/library";
 import { describe, expect, it } from "vitest";
 import { CONFIG } from "../../src/config/game-config";
 import { createTearWorldClock } from "../../src/gameplay/runtime/tear-world-clock";
@@ -23,6 +25,10 @@ import { WEAPON_IDS } from "../../src/gameplay/weapon-selection";
 import { catalog, routing } from "../../public/audio/music.json";
 import { validateMusicRoutingManifest } from "../../src/audio/music/music-routing-validate";
 import { buildMusicScreenView } from "../../src/presentation/music-snapshots";
+import { TutorialController } from "../../src/gameplay/training/tutorial-controller";
+import { PRACTICE_TABS } from "../../src/gameplay/training/practice-tabs";
+import { practiceBossCatalog } from "../../src/gameplay/training/practice-boss-catalog";
+import { practiceEnemyCatalog } from "../../src/gameplay/training/practice-enemy-catalog";
 
 /**
  * The phone (compact density) compositions of the shop, codex, profile, leaderboards,
@@ -44,13 +50,19 @@ interface Glyphs {
   readonly size: number;
 }
 type Clip = Readonly<{ x: number; y: number; w: number; h: number }> | null;
+/** One text run or filled or stroked shape, its vertical extent before clipping and the clip it was drawn under. */
+type Mark = Readonly<{ clip: Clip; top: number; bottom: number }>;
 
 function fontSize(font: unknown): number {
   return Number(/(\d+(?:\.\d+)?)px/u.exec(String(font))?.[1] ?? 10);
 }
 
-/** A canvas that records each visible text run (after clipping) with its box. */
-function recordingCanvas(texts: Glyphs[]): CanvasRenderingContext2D {
+/** A canvas that records each visible text run (after clipping) with its box, each clip it applies and every mark it draws. */
+function recordingCanvas(
+  texts: Glyphs[],
+  applied: NonNullable<Clip>[] = [],
+  marks: Mark[] = [],
+): CanvasRenderingContext2D {
   const values = new Map<PropertyKey, unknown>();
   const clips: Clip[] = [];
   let clip: Clip = null,
@@ -60,7 +72,13 @@ function recordingCanvas(texts: Glyphs[]): CanvasRenderingContext2D {
     const value = values.get(key);
     return typeof value === "string" ? value : fallback;
   };
+  const shape = (_x: number, y: number, _w: number, h: number) => {
+    marks.push({ clip, top: Math.min(y, y + h), bottom: Math.max(y, y + h) });
+  };
   const methods: Record<string, (...args: never[]) => unknown> = {
+    fillRect: shape,
+    strokeRect: shape,
+    roundRect: shape,
     measureText: (text: string) => ({ width: width(text) }),
     createLinearGradient: () => ({ addColorStop: () => undefined }),
     createRadialGradient: () => ({ addColorStop: () => undefined }),
@@ -78,6 +96,7 @@ function recordingCanvas(texts: Glyphs[]): CanvasRenderingContext2D {
     },
     clip: () => {
       clip = pending;
+      if (pending) applied.push(pending);
     },
     fillText: (text: string, x: number, y: number) => {
       if (text.trim() === "") return;
@@ -88,6 +107,7 @@ function recordingCanvas(texts: Glyphs[]): CanvasRenderingContext2D {
       const left = align === "center" ? x - w / 2 : align === "right" || align === "end" ? x - w : x;
       const top = baseline === "middle" ? y - size * 0.45 : y - size * 0.72,
         bottom = baseline === "middle" ? y + size * 0.45 : y + size * 0.12;
+      marks.push({ clip, top, bottom });
       if (clip && (top < clip.y - 1 || bottom > clip.y + clip.h + 1)) return;
       texts.push({ text, x: left, top, bottom, right: left + w, size });
     },
@@ -119,6 +139,12 @@ function phoneUi(width: number, height: number, phoneLayout = true) {
 interface Frame {
   readonly texts: readonly Glyphs[];
   readonly controls: readonly ScreenControl[];
+  /** Every clip rectangle the screen applied (a scrolling body clips to its view). */
+  readonly clips: readonly NonNullable<Clip>[];
+  /** Every text run and shape drawn, with the clip it was drawn under. */
+  readonly marks: readonly Mark[];
+  /** How far a scrolling view's clip reaches above its first row (the kit's `space.xs`). */
+  readonly scrollPad: number;
   readonly scroll: number;
   readonly scale: number;
   /** Whether the button draw would cut this control's label with an ellipsis. */
@@ -148,10 +174,12 @@ function render(
 ): Frame {
   const { ui, scale, overscan } = phoneUi(phone.width, phone.height, phoneLayout);
   const texts: Glyphs[] = [],
-    controls: ScreenControl[] = [];
+    controls: ScreenControl[] = [],
+    clips: NonNullable<Clip>[] = [],
+    marks: Mark[] = [];
   let written = scroll;
   const context: ScreenRenderContext = {
-    canvas: recordingCanvas(texts),
+    canvas: recordingCanvas(texts, clips, marks),
     ui,
     width: 1600,
     height: 900,
@@ -175,7 +203,7 @@ function render(
     },
   };
   draw(createScreenRenderers(context));
-  return { texts, controls, scroll: written, scale, labelCut: labelCutter(ui) };
+  return { texts, controls, clips, marks, scrollPad: ui.t.space.xs, scroll: written, scale, labelCut: labelCutter(ui) };
 }
 
 const overlaps = (
@@ -248,10 +276,42 @@ function sweep(
     expect(frame.texts.length, `${label}: draws its copy`).toBeGreaterThan(3);
     expect(frame.controls.length, `${label}: offers controls`).toBeGreaterThan(0);
     expectPhoneContract(frame, `${label} @${String(scroll)}`);
+    expectRestOnRowEdge(frame, `${label} @${String(scroll)}`);
     for (const control of frame.controls) ids.add(JSON.stringify(control.action));
     if (scroll >= end) break;
   }
   return ids;
+}
+
+/**
+ * A scrolling view rests on a row edge (the kit's `scrollRest`): nothing drawn in it is cut by its
+ * top edge, and when what comes first is a control (a list of buttons) it sits on that edge. A view
+ * resting part-way into a row would drop the row (only whole controls are offered) and leave an
+ * empty band in its place, as the Drills BOSSES end did.
+ */
+function expectRestOnRowEdge(frame: Frame, label: string): void {
+  for (const clip of frame.clips) {
+    if (clip.h < 150) continue;
+    const edge = clip.y + frame.scrollPad;
+    const marks = frame.marks.filter(
+      (mark) => mark.clip === clip && mark.bottom > clip.y + 1 && mark.top < clip.y + clip.h - 1,
+    );
+    for (const mark of marks)
+      expect(mark.top, `${label}: a row is cut by the top of its scrolling view`).toBeGreaterThanOrEqual(clip.y - 1);
+    const controls = frame.controls.filter(
+      (control) =>
+        control.x >= clip.x - 1 &&
+        control.x + control.w <= clip.x + clip.w + 1 &&
+        control.y >= clip.y - 1 &&
+        control.y + control.h <= clip.y + clip.h + 1,
+    );
+    const firstMark = Math.min(...marks.map((mark) => mark.top)),
+      firstControl = Math.min(...controls.map((control) => control.y));
+    if (firstControl < firstMark)
+      expect(firstControl, `${label}: an empty band above the first row of a scrolling list`).toBeLessThanOrEqual(
+        edge + 1,
+      );
+  }
 }
 
 const LONG =
@@ -623,6 +683,39 @@ const careerView = (selected: boolean) =>
     selected: selected ? { entry: careerEntry, notes: { revision: 0, tags: [], retention: "recent" } } : undefined,
   }) as unknown as NonNullable<Parameters<ReturnType<typeof createScreenRenderers>["profile"]>[0]["career"]>;
 
+/** The demo coach on a lesson, with a diagnosis long enough to wrap over several lines. */
+const DRILLS_COACH = {
+  available: true,
+  visible: true,
+  mode: "diagnostic",
+  rate: 1,
+  diagnosis:
+    "Your last attempt left the ground before the cut landed; stay grounded through the swing, then jump once it connects.",
+  canCompare: true,
+  reducedMotion: false,
+  tick: 0,
+  fromTick: 0,
+  toTick: 0,
+} as const;
+
+/** The Drills overlay on one tab, with every opponent met and every boss phase reached (the longest lists). */
+function drillsView(tab: (typeof PRACTICE_TABS)[number]["id"], coach?: typeof DRILLS_COACH) {
+  const controller = new TutorialController(CONFIG);
+  controller.openPractice(1600, 1);
+  controller.showPracticeTab(tab);
+  return {
+    id: "paused" as const,
+    abilities: [],
+    progress: [],
+    tutorial: {
+      ...controller.session(),
+      enemyCatalog: practiceEnemyCatalog(() => 1),
+      bossCatalog: practiceBossCatalog(() => 1),
+      ...(coach ? { coach } : {}),
+    },
+  };
+}
+
 describe("phone compositions (compact density)", () => {
   for (const phone of PHONES) {
     it(`lays out the shop as one scrolling column with every BUY reachable at ${phone.name}`, () => {
@@ -802,7 +895,7 @@ describe("phone compositions (compact density)", () => {
       const view = (page: string) =>
         buildMusicScreenView({
           settings: {},
-          library: { songs: catalog.works, routing: validateMusicRoutingManifest(routing) },
+          library: buildMusicLibrary(parseMusicCatalog(catalog), validateMusicRoutingManifest(routing)),
           nowPlaying: { workId: "fillet", title: "Fillet" },
           preview: "spring",
           page,
@@ -843,8 +936,41 @@ describe("phone compositions (compact density)", () => {
       );
       expect(top.controls.some((control) => control.label === "▶  PLAY")).toBe(true);
       const settings = offered("settings");
-      for (const key of ["station", "menuMusic", "musicMode"])
-        expect(settings.some((action) => action.key === key)).toBe(true);
+      for (const key of ["menuMusic", "musicMode"]) expect(settings.some((action) => action.key === key)).toBe(true);
+    });
+
+    it(`lists every entry of each Drills tab uncut and reachable by scrolling at ${phone.name}`, () => {
+      for (const { id } of PRACTICE_TABS) {
+        const view = drillsView(id),
+          offered = sweep(
+            phone,
+            (r) => {
+              r.paused(view);
+            },
+            `drills ${id} ${phone.name}`,
+          );
+        const entries = [
+          ...(id === "lessons" ? view.tutorial.lessons.filter((lesson) => lesson.id !== "ready") : []),
+          ...(id === "weapons" ? (view.tutorial.annexes ?? []) : []),
+          ...(id === "enemies" ? view.tutorial.enemyCatalog : []),
+          ...(id === "bosses" ? view.tutorial.bossCatalog : []),
+        ];
+        expect(entries.length, `${id}: has entries`).toBeGreaterThan(0);
+        const listed = [...offered].filter((action) => action.includes('"lessonId"') && !action.includes('"tab"'));
+        expect(listed.length, `drills ${id} ${phone.name}: every entry offered`).toBe(entries.length);
+      }
+    });
+
+    it(`keeps the lesson coach's copy clear of its DEMO SPEED row at ${phone.name}`, () => {
+      const view = drillsView("lessons", DRILLS_COACH),
+        offered = sweep(
+          phone,
+          (r) => {
+            r.paused(view);
+          },
+          `drills coach ${phone.name}`,
+        );
+      expect([...offered].some((action) => action.includes('"coach-rate"'))).toBe(true);
     });
 
     it(`keeps the Playground menu and its ABILITIES tab inside the frame at ${phone.name}`, () => {
@@ -1044,7 +1170,7 @@ function renderDesktop(
       setScroll: () => undefined,
     }),
   );
-  return { texts, controls, scroll, scale, labelCut: labelCutter(ui) };
+  return { texts, controls, clips: [], marks: [], scrollPad: ui.t.space.xs, scroll, scale, labelCut: labelCutter(ui) };
 }
 
 /**
@@ -1290,5 +1416,70 @@ describe("playground: one screen definition at both densities", () => {
       for (const action of actions(renderDesktop({ width: 1600, height: 900 }, lab, scroll).controls))
         desktopLab.add(action);
     expect([...sweep(phone, lab, "pglab phone")].sort()).toEqual([...desktopLab].sort());
+  });
+});
+
+describe("button rows sized from their content (ui.buttonFitHeight)", () => {
+  const desktopUi = () => {
+    const ui = createUi({
+      CLOCK: createTearWorldClock(),
+      presentation: { view: CONFIG.view, colors: CONFIG.colors, overscan: { x: 0, y: 0 } },
+      clamp,
+      Input: { mode: "mouse" },
+    });
+    ui.setDensity({ touch: false, cssPerLogicalPixel: 1 });
+    return ui;
+  };
+
+  it("keeps a one-line row at the list row token and grows a row with a status line to hold both", () => {
+    const ui = desktopUi(),
+      canvas = recordingCanvas([]);
+    expect(ui.buttonFitHeight(canvas, { label: "CHARGER", size: 14, w: 300 })).toBe(ui.t.metric.listRowH);
+    const status = ui.buttonFitHeight(canvas, { label: "CHARGER", sub: "DEFEATED", size: 14, w: 300 });
+    // The pair is drawn about the centre, the label 10 px above it and the sub line 13 px below.
+    expect(status).toBe(Math.ceil(2 * Math.max(10 + 14 / 2, 13 + ui.t.type.micro / 2) + 2 * 9));
+    // A name too long for one line at full size takes the two-line height.
+    expect(ui.buttonFitHeight(canvas, { label: "A NAME FAR TOO LONG FOR THIS BUTTON", size: 20, w: 120 })).toBe(
+      Math.max(ui.t.metric.listRowH, Math.ceil(Math.round(20 * 1.12) + 20 + 18)),
+    );
+  });
+
+  it("never answers less than a touch target on the phone", () => {
+    for (const phone of PHONES) {
+      const { ui, scale } = phoneUi(phone.width, phone.height);
+      expect(ui.buttonFitHeight(recordingCanvas([]), { label: "MOVE", w: 300 }) * scale).toBeGreaterThanOrEqual(44);
+    }
+  });
+});
+
+describe("the Vault list before its saved replays have been read", () => {
+  const vault = { ...profileBase, tab: "vault", replays: [] };
+  const drawn = (view: Parameters<ReturnType<typeof createScreenRenderers>["profile"]>[0]) =>
+    [
+      render(PHONES[0], (r) => {
+        r.profile(view);
+      }),
+      renderDesktop({ width: 1600, height: 900 }, (r) => {
+        r.profile(view);
+      }),
+    ].map((frame) => frame.texts.map((glyphs) => glyphs.text).join(" | "));
+
+  it("says it is opening, and does not claim there are none, on the phone and on the desktop", () => {
+    for (const text of drawn({ ...vault, vaultList: "opening", message: "Opening your saved replays…" })) {
+      expect(text).toContain("Opening your saved replays…");
+      expect(text).not.toContain("No saved replays yet");
+    }
+  });
+
+  it("says they could not be opened, with the reason, when the Vault failed to open", () => {
+    for (const text of drawn({ ...vault, vaultList: "failed", message: "Ghost Vault could not open: blocked" })) {
+      expect(text).toContain("Saved replays could not be opened");
+      expect(text).toContain("blocked");
+      expect(text).not.toContain("No saved replays yet");
+    }
+  });
+
+  it("says there are none only once the list has been read and is empty", () => {
+    for (const text of drawn(vault)) expect(text).toContain("No saved replays yet");
   });
 });

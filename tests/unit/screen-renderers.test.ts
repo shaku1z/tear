@@ -7,12 +7,18 @@ import type { ScreenControl, ScreenRenderContext, ScreenUiPort } from "../../src
 import { createScreenRenderers } from "../../src/presentation/screens";
 import { buildMusicScreenView } from "../../src/presentation/music-snapshots";
 import { validateMusicRoutingManifest } from "../../src/audio/music/music-routing-validate";
+import { parseMusicCatalog } from "../../src/audio/music/catalog";
+import { buildMusicLibrary, publishMusicLibrary } from "../../src/audio/music/library";
+import { setMusicProgressFacts } from "../../src/audio/music/music-source";
+import { progressFacts } from "../../src/domain/progress-facts";
+import { TEST_CHANNELS, index as musicIndex } from "./music-backend-harness";
 import { campaignDraftGuidance } from "../../src/app/run/run-screen-adapters";
 import { buildShopSnapshot, SHOP_LIST_TOP } from "../../src/presentation/shop-snapshot";
 import { DESKTOP } from "../../src/presentation/screens/codex-shop-metrics";
 import { CONFIG } from "../../src/config/game-config";
 import { TutorialController } from "../../src/gameplay/training/tutorial-controller";
 import { backControl, tabs, verticalMenu } from "../../src/presentation/screens/screen-primitives";
+import { keyboardLabel } from "../../src/domain/keyboard-bindings";
 
 class TestUi implements ScreenUiPort {
   readonly ink = "#000";
@@ -61,6 +67,7 @@ class TestUi implements ScreenUiPort {
       settingsControlH: 42,
       settingsStepperW: 54,
       minTarget: 32,
+      listRowH: 46,
       railFadeW: 800,
       railFadeMid: 0.56,
     },
@@ -93,6 +100,9 @@ class TestUi implements ScreenUiPort {
   }
   buttonFitWidth(...values: Parameters<ScreenUiPort["buttonFitWidth"]>): number {
     return values[0].measureText(values[1].label).width + 16;
+  }
+  buttonFitHeight(...values: Parameters<ScreenUiPort["buttonFitHeight"]>): number {
+    return values[1].sub === undefined ? this.t.metric.listRowH : this.t.metric.listRowH + 8;
   }
   emptyState(...values: Parameters<ScreenUiPort["emptyState"]>): number {
     return values[4] + 60;
@@ -263,11 +273,12 @@ function createRenderContext(controls: ScreenControl[]): ScreenRenderContext {
 }
 
 describe("legacy screen renderer registry", () => {
-  it("keeps boss phase controls and every Lab menu item reachable at 800 by 360 with the existing scroll owner", () => {
+  it("keeps every boss phase reachable by scrolling the Drills list at 800 by 360", () => {
     const controller = new TutorialController(CONFIG);
     controller.openPractice(800, 1);
     const found: string[] = [];
-    for (const scroll of [0, 144]) {
+    // The list scrolls over its measured extent (the shared scrolling list clamps past the end).
+    for (let scroll = 0; scroll <= 2400; scroll += 24) {
       // A small landscape touch screen runs the compact density (tutorial pause uses its tight composition).
       const controls: ScreenControl[] = [],
         context = createRenderContext(controls);
@@ -472,7 +483,10 @@ describe("legacy screen renderer registry", () => {
         .filter((control) => control.action.type === "tutorial.action" && control.action.command === "select-enemy")
         .map((control) => control.y + control.h),
     );
-    expect(copy.mock.calls.every(([, , y]) => y >= lastRowBottom + 28)).toBe(true);
+    // The help starts under the list, a gap clear of its last row (its first line's top below it).
+    expect(
+      copy.mock.calls.every(([, , y]) => y - context.ui.t.type.caption >= lastRowBottom + context.ui.t.space.sm),
+    ).toBe(true);
     expect(context.canvas.textBaseline).toBe("alphabetic");
     controls.length = 0;
     renderer.menu({
@@ -523,6 +537,8 @@ describe("legacy screen renderer registry", () => {
       const draft = { id: "draft" as const, wave: 1, rerolls: 0, cards: [{ id: "speed", label: "SPEED" }] };
       renderer.draft(draft);
       const draftControls = [...controls];
+      // The reroll button names the key the binding table gives it.
+      expect(draftControls.map((control) => control.label)).toContain(`⟳  REROLL · 0  [${keyboardLabel("reroll")}]`);
       controls.length = 0;
       lines.length = 0;
       renderer.draft({ ...draft, onboarding: campaignDraftGuidance("campaign", 1, 0, 0) ?? "" });
@@ -601,11 +617,13 @@ describe("legacy screen renderer registry", () => {
     let written = -1;
     const music = JSON.parse(
       readFileSync(fileURLToPath(new URL("../../public/audio/music.json", import.meta.url)), "utf8"),
-    ) as { catalog: { works: { id: string; title: string }[] }; routing: unknown };
-    const library = {
-      songs: music.catalog.works.map((work) => ({ ...work, seconds: 30 })),
-      routing: validateMusicRoutingManifest(music.routing),
-    };
+    ) as { catalog: unknown; routing: unknown };
+    const catalog = parseMusicCatalog(music.catalog);
+    const library = buildMusicLibrary(
+      catalog,
+      validateMusicRoutingManifest(music.routing),
+      Object.fromEntries(catalog.works.map((work) => [work.id, 30])),
+    );
     const view = (page: string) =>
       buildMusicScreenView({
         settings: {},
@@ -662,7 +680,47 @@ describe("legacy screen renderer registry", () => {
 
     controls.length = 0;
     createScreenRenderers(context).music(view("settings"));
-    expect(controls.filter((control) => control.action.type === "settings.activate")).toHaveLength(3);
+    // Music (the pick) and Soundtrack behavior.
+    expect(controls.filter((control) => control.action.type === "settings.activate")).toHaveLength(2);
+  });
+
+  it("draws the Radio: a row per channel the player can tune to, PLAY to pick it, STOP on the pick; ▶▶ moves it on", () => {
+    const controls: ScreenControl[] = [];
+    setMusicProgressFacts(() => progressFacts({ stats: {}, ach: {} }));
+    const library = publishMusicLibrary(
+      parseMusicCatalog({ ...musicIndex.catalog, ...TEST_CHANNELS }),
+      validateMusicRoutingManifest(musicIndex.routing),
+    );
+    const view = (menuMusic: string, channel: Readonly<{ channelId: string; channelName: string }> | null) =>
+      buildMusicScreenView({
+        settings: { menuMusic },
+        library,
+        nowPlaying: { workId: "fillet", title: "Fillet", since: 1, ...channel },
+        preview: null,
+        page: "radio",
+        now: 15_001,
+      });
+    const context = { ...createRenderContext(controls), scroll: 0, setScroll: () => undefined };
+    const picks = () => controls.filter((control) => control.action.type === "music.pick");
+
+    createScreenRenderers(context).music(view("default", null));
+    expect(controls.map((control) => control.action)).toContainEqual({ type: "navigate", to: "music", tab: "radio" });
+    // A new player can tune to Calm only: Bosses holds nothing found, My mix and Odd cannot be honoured.
+    expect(picks().map((control) => [control.label, control.action])).toEqual([
+      ["▶  PLAY", { type: "music.pick", value: "channel:calm" }],
+    ]);
+    expect(controls.some((control) => control.action.type === "music.next")).toBe(false);
+
+    controls.length = 0;
+    createScreenRenderers(context).music(view("channel:calm", { channelId: "calm", channelName: "Calm" }));
+    expect(picks().map((control) => [control.label, control.action])).toEqual([
+      ["■  STOP", { type: "music.pick", value: "default" }],
+    ]);
+    expect(controls.filter((control) => control.action.type === "music.next").map((control) => control.label)).toEqual([
+      "▶▶",
+    ]);
+    for (const control of controls) expect(control.y + control.h).toBeLessThanOrEqual(900);
+    setMusicProgressFacts(null);
   });
 
   it("records semantic navigation and menu actions without coordinating state", () => {
@@ -1450,7 +1508,7 @@ describe("release and engineering surface rendering", () => {
   });
   it("closes up the Career command row when a command surface is unavailable", () => {
     const controls: ScreenControl[] = [];
-    const hidden = new Set(["coach", "race"]);
+    const hidden = new Set(["race"]);
     const context: ScreenRenderContext = {
       ...createRenderContext(controls),
       available: (action) => action.type !== "career.control" || !hidden.has(action.command),
@@ -1506,7 +1564,7 @@ describe("release and engineering surface rendering", () => {
     const row = controls.filter(
       (control) =>
         control.action.type === "career.control" &&
-        ["watch", "challenge", "download", "chase", "coach", "race"].includes(control.action.command),
+        ["watch", "challenge", "download", "chase", "race"].includes(control.action.command),
     );
     expect(row.map((control) => control.label)).toEqual(["THEATER", "CHALLENGE", "DOWNLOAD", "CHASE BEST"]);
     // The page pattern content column is 1120 wide.
