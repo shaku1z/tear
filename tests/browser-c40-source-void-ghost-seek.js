@@ -62,7 +62,7 @@ withJourney({ name: "C40 Source void Ghost seek", query: { "ghost-v3-profile": "
     const collapse = environment.captureSnapshot("c40-source-seek-collapse");
     const advances = [];
     for (let index = 0; index < 6; index += 1) {
-      advances.push(environment.advanceStateForgeCinematicBeat());
+      advances.push(environment.advanceStateSetupCinematicBeat());
       environment.advanceApplicationFrame(1 / 60);
     }
     let commandId = 1,

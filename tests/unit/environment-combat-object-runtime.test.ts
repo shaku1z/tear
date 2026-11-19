@@ -6,7 +6,7 @@ import {
 } from "../../src/gameplay/environment/combat-object-runtime";
 import { ENVIRONMENT_OBJECT_DEFINITIONS } from "../../src/gameplay/environment/environment-definitions";
 import type { EnvironmentCombatObjectState } from "../../src/gameplay/environment/environment-contracts";
-import { forgeEnvironmentCombatObjectState } from "../../src/tearbench/state-forge-factories";
+import { forgeEnvironmentCombatObjectState } from "../../src/tearbench/state-setup-factories";
 import type { TearSdlDocumentV1 } from "../../src/tearbench/tearsdl";
 import { TearGameplayEventBus } from "../../src/gameplay/runtime/gameplay-events";
 

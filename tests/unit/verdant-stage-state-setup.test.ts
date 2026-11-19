@@ -6,12 +6,12 @@ import type {
   TearStructuredRuntimeEnvironment,
 } from "../../src/tearbench/live-runtime-contracts";
 import type { LiveRuntimeSnapshotController } from "../../src/tearbench/live-runtime-snapshots";
-import { launchResolvedLiveState } from "../../src/tearbench/live-state-forge-scenario-launch";
+import { launchResolvedLiveState } from "../../src/tearbench/live-state-setup-scenario-launch";
 import {
   captureProductionReplayCheckpoint,
   createProductionGhostReplayComposition,
 } from "../../src/tearbench/production-replay-composition";
-import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-forge-live-compiler";
+import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-setup-live-compiler";
 import { resolveTearSdl } from "../../src/tearbench/tearsdl";
 import {
   VERDANT_STAGE_ENGINEERING_TEARSDL,
@@ -31,7 +31,7 @@ function sourceSnapshot(): TearSnapshotV1 {
   ).snapshot;
 }
 
-describe("Verdant stage State Forge entry", () => {
+describe("Verdant stage State Setup entry", () => {
   it("locks exact engineering-only early, middle, and late wave scenarios", () => {
     expect(VERDANT_WAVE_ENGINEERING_TEARSDL.map((scenario) => scenario.start.wave)).toEqual([31, 35, 39]);
     expect(VERDANT_WAVE_ENGINEERING_TEARSDL.map((scenario) => scenario.constraints?.verdantComposition)).toEqual([

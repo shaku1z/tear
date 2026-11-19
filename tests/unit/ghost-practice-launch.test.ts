@@ -5,7 +5,7 @@ import { createLiveGhostPracticeSessionState } from "../../src/app/replay/ghost-
 const captured = vi.hoisted(() => ({ restore: vi.fn() }));
 
 vi.mock("../../src/tearbench/live-runtime-snapshots", () => ({
-  createLiveStateForgeRestoreFactory: vi.fn(() => ({})),
+  createLiveStateSetupRestoreFactory: vi.fn(() => ({})),
 }));
 vi.mock("../../src/tearbench/live-state-snapshot", () => ({
   restoreSnapshotIntoLiveWorld: captured.restore,
@@ -36,9 +36,9 @@ describe("Ghost player practice launch", () => {
         _snapshot: unknown,
         _registry: unknown,
         _factory: unknown,
-        stateForge: Readonly<{ commit: (candidate: unknown) => void }>,
+        stateSetup: Readonly<{ commit: (candidate: unknown) => void }>,
       ) => {
-        stateForge.commit({ candidate: true });
+        stateSetup.commit({ candidate: true });
         return Object.freeze({ ok: true, exactHash: "exact", semanticHash: "semantic" });
       },
     );
@@ -51,7 +51,7 @@ describe("Ghost player practice launch", () => {
 
     const result = launchGhostPracticeChild(source, {
       registry: {} as never,
-      stateForge: { capture: vi.fn(), stage: vi.fn(), validate: vi.fn(() => []), commit: committed },
+      stateSetup: { capture: vi.fn(), stage: vi.fn(), validate: vi.fn(() => []), commit: committed },
       hasLiveWorld: () => false,
       practice,
       clearRestoredRecording,
@@ -73,7 +73,7 @@ describe("Ghost player practice launch", () => {
     const practice = createLiveGhostPracticeSessionState();
     const result = launchGhostPracticeChild({ ...child(), rankedEligible: true } as never, {
       registry: {} as never,
-      stateForge: {} as never,
+      stateSetup: {} as never,
       hasLiveWorld: () => false,
       practice,
       clearRestoredRecording: vi.fn(),

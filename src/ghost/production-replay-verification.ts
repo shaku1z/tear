@@ -378,7 +378,7 @@ export function verifyGhostCapsuleProductionReplay(
           tick: receipt.tick,
           expectedHash: receipt.stateHash,
           equal: false,
-          reason: "receipt has no same-tick recorded-canonical State Forge snapshot",
+          reason: "receipt has no same-tick recorded-canonical State Setup snapshot",
         }),
       );
       continue;

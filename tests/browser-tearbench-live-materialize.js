@@ -308,7 +308,7 @@ const scenarioId =
   headlessTerminal?.scenario.id ?? (process.argv.includes("--scenario") ? option("--scenario") : process.argv[2]);
 if (!scenarioId)
   throw new TypeError(
-    "usage: node tests/browser-tearbench-live-materialize.js <scenario-id> [--seed value] [--max-ticks value] [--actions path] [--snapshot state-forge-snapshot.json] [--presentation inputs.json] [--artifact path] | --production-headless-terminal terminal.json [--artifact path]",
+    "usage: node tests/browser-tearbench-live-materialize.js <scenario-id> [--seed value] [--max-ticks value] [--actions path] [--snapshot snapshot.json] [--presentation inputs.json] [--artifact path] | --production-headless-terminal terminal.json [--artifact path]",
   );
 const catalogEntry = catalog.find((entry) => entry.id === scenarioId);
 if (!catalogEntry) throw new RangeError(`unknown canonical TearBench scenario: ${scenarioId}`);
@@ -339,7 +339,7 @@ if (
     requestedSnapshot.kind !== "snapshot" ||
     requestedSnapshot.schemaVersion !== 1)
 ) {
-  throw new TypeError("--snapshot must contain a persisted TearSnapshotV1 State Forge artifact");
+  throw new TypeError("--snapshot must contain a persisted TearSnapshotV1 State Setup artifact");
 }
 if (option("--presentation") !== undefined && replayContextArtifact !== undefined)
   throw new TypeError("--presentation and --replay-context cannot be combined");
@@ -358,7 +358,7 @@ const runtimeScenario = {
   version: 1,
   description: headlessTerminal?.scenario.description ?? catalogEntry.description,
   // Natural live reset is intentionally restricted to canonical, reachable
-  // opening states. Surgical state construction belongs to State Forge.
+  // opening states. Surgical state construction belongs to State Setup.
   stateClass: "recorded-canonical",
   executionClass: headlessTerminal?.scenario.executionClass ?? "engineering",
   seed,
@@ -376,9 +376,9 @@ async function main() {
   const { materializedRunStatus } = await import("../scripts/tearbench-run-artifact.mjs");
   const canonicalLaunch = await loadCanonicalScenario(catalogEntry);
   const canonicalScenario = canonicalLaunch.scenario;
-  if (catalogEntry.stateForge !== undefined && seed !== canonicalScenario.seed) {
+  if (catalogEntry.stateSetup !== undefined && seed !== canonicalScenario.seed) {
     throw new RangeError(
-      `canonical State Forge scenario ${scenarioId} requires its authoritative catalog seed ${canonicalScenario.seed}`,
+      `canonical State Setup scenario ${scenarioId} requires its authoritative catalog seed ${canonicalScenario.seed}`,
     );
   }
   Object.assign(runtimeScenario, {
@@ -408,7 +408,7 @@ async function main() {
             const forged = environment.forgeResolvedScenario(resolved);
             if (!forged.ok)
               throw new Error(
-                `canonical State Forge launch failed for ${scenario.id}: ${forged.phase} ${JSON.stringify(forged.issues)}`,
+                `canonical State Setup launch failed for ${scenario.id}: ${forged.phase} ${JSON.stringify(forged.issues)}`,
               );
           } else {
             environment.reset(scenario);
@@ -431,7 +431,7 @@ async function main() {
           if (snapshot) {
             const restored = environment.restoreSnapshot(snapshot);
             if (!restored.ok)
-              throw new Error(`State Forge snapshot restore failed during materialization: ${restored.phase}`);
+              throw new Error(`State Setup snapshot restore failed during materialization: ${restored.phase}`);
           }
           const observations = [environment.observe()];
           const transitions = [];
@@ -541,7 +541,7 @@ async function main() {
     sourceState: servedBuildInfo.sourceState,
     sourceFingerprint: servedBuildInfo.sourceFingerprint,
     contentHash: `sha256:${servedBuildInfo.artifactHash}`,
-    // The scenario, action trace, fixed-tick horizon, and State Forge state are
+    // The scenario, action trace, fixed-tick horizon, and State Setup state are
     // replay coordinates. They must be allowed to shrink during C26
     // minimization without pretending the compiled build/configuration changed.
     configHash: sha256(canonicalJson({ target: servedBuildInfo.target, mode: servedBuildInfo.mode, presentation })),
@@ -573,7 +573,7 @@ async function main() {
       finalTick: finalObservation.tick,
       maxTicks,
       fixedTicks: materialized.metrics.fixedTicks,
-      surgical: runtimeScenario.stateClass === "surgical-valid" && catalogEntry.stateForge !== undefined,
+      surgical: runtimeScenario.stateClass === "surgical-valid" && catalogEntry.stateSetup !== undefined,
       terminated: terminalTransition?.terminated === true,
     }),
     ticks: finalObservation.tick,

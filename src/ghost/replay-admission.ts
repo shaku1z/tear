@@ -706,17 +706,17 @@ export function assessGhostReplayBootstrap(
   });
   const bootstrapSnapshots = snapshots.filter((snapshot) => snapshot.tick === 0);
   if (bootstrapSnapshots.length !== 1) {
-    return "capsule requires exactly one recorded-canonical tick-zero State Forge snapshot";
+    return "capsule requires exactly one recorded-canonical tick-zero State Setup snapshot";
   }
   for (const snapshot of snapshots) {
     if (snapshot.provenance.sourceId !== expectedId) {
-      return `recorded State Forge snapshot ${snapshot.id} does not cite the V3 bootstrap event`;
+      return `recorded State Setup snapshot ${snapshot.id} does not cite the V3 bootstrap event`;
     }
     if (!staticBuildMatches(snapshot.provenance.build, context.build)) {
-      return `recorded State Forge snapshot ${snapshot.id} has a different static build identity`;
+      return `recorded State Setup snapshot ${snapshot.id} has a different static build identity`;
     }
     if (snapshot.provenance.build.configHash !== stableVerificationHash(snapshot.state["tear.configuration.v1"])) {
-      return `recorded State Forge snapshot ${snapshot.id} configuration hash does not match its payload`;
+      return `recorded State Setup snapshot ${snapshot.id} configuration hash does not match its payload`;
     }
   }
   const bootstrapSnapshot = bootstrapSnapshots[0];
@@ -725,15 +725,15 @@ export function assessGhostReplayBootstrap(
     !fingerprintsMatch(bootstrapSnapshot.provenance.build, context.build) ||
     bootstrapSnapshot.seed !== context.run.seed
   ) {
-    return "tick-zero State Forge snapshot does not match replay bootstrap build or seed";
+    return "tick-zero State Setup snapshot does not match replay bootstrap build or seed";
   }
   try {
     const snapshotRng = normalizeRng(bootstrapSnapshot.state["tear.rng.v1"], "tick-zero snapshot RNG");
     if (stableVerificationHash(snapshotRng) !== stableVerificationHash(context.rng)) {
-      return "tick-zero State Forge snapshot RNG does not match replay bootstrap context";
+      return "tick-zero State Setup snapshot RNG does not match replay bootstrap context";
     }
   } catch {
-    return "tick-zero State Forge snapshot RNG is invalid";
+    return "tick-zero State Setup snapshot RNG is invalid";
   }
   return undefined;
 }

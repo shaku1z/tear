@@ -242,7 +242,7 @@
         ]
       },
       "owner": "TearBench/evidence infrastructure owner",
-      "compatibilityStrategy": "No rename in this program; Scenario Console is a facade over existing TearBench State Forge hosts.",
+      "compatibilityStrategy": "No rename in this program; Scenario Console is a facade over existing TearBench State Setup hosts.",
       "removalCheckpoint": {
         "id": "never",
         "condition": "Never remove or rename TearBench as part of terminology normalization."

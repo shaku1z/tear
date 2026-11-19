@@ -1319,7 +1319,7 @@
     "R16"
    ],
    "file": "src/tearbench/index.ts",
-   "text": "export * from \"./state-forge-studio\";",
+   "text": "export * from \"./state-editor\";",
    "reject": true
   },
   {

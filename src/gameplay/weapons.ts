@@ -92,7 +92,7 @@ export interface WeaponBladePort {
 
 // `config` is optional for the final-five runtime (which owns the canonical
 // CONFIG singleton), but retained as a compatibility input for the newer
-// production-world/State-Forge callers that pass their configuration value.
+// production-world and state-setup callers that pass their configuration value.
 export interface WeaponBladeContext {
   blade: WeaponBladePort;
   config?: WeaponConfiguration;

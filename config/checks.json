@@ -428,16 +428,16 @@
         "seconds": 252
       },
       {
-        "id": "state-forge-runtime",
-        "run": "node tests/browser-state-forge-runtime.js"
+        "id": "state-setup-runtime",
+        "run": "node tests/browser-state-setup-runtime.js"
       },
       {
-        "id": "state-forge-studio",
-        "run": "node tests/browser-state-forge-studio.js"
+        "id": "state-editor",
+        "run": "node tests/browser-state-editor.js"
       },
       {
-        "id": "state-forge-exit-matrix",
-        "run": "node tests/browser-state-forge-exit-matrix.js"
+        "id": "state-setup-exit-matrix",
+        "run": "node tests/browser-state-setup-exit-matrix.js"
       },
       {
         "id": "source-void-replay-seek",

@@ -4,7 +4,7 @@ import { CONFIG } from "../../src/config/game-config";
 import { stableVerificationHash } from "../../src/domain/hash";
 import { captureProductionReplayCheckpoint, createProductionGhostReplayComposition } from "../../src/tearbench";
 
-describe("White Hart State Forge and canonical projection", () => {
+describe("White Hart State Setup and canonical projection", () => {
   it("restores Phase I owned projectiles and their boss references", () => {
     const composition = createProductionGhostReplayComposition({
       seed: "pale-white-hart-projectile-restore",
