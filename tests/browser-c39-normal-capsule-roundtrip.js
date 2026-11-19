@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { createHash } = require("node:crypto");
 const { withJourney } = require("./browser-journey-harness");
-const { SLOW_STATE_WAIT_MS, STATE_WAIT_MS, holdFor } = require("./browser-waits");
+const { STATE_WAIT_MS, holdFor, pollEvery } = require("./browser-waits");
 
 // This consumer is deliberately separate from unit fixtures. Every producer and
 // consumer below owns a fresh browser process; only the normal download survives.
@@ -236,6 +236,48 @@ async function phase(id, run) {
   ); // withJourney closes this entire producer/consumer browser before returning.
 }
 
+/**
+ * Ends the one-hit run the way a player can: with the movement keys, walk into the nearest enemy until the game
+ * reports the run over. Standing still and waiting to be found took from 2 seconds to more than 180 across nightly
+ * runs, because it depends on where the enemies of that run's seed go; contact with any enemy ends a one-hit run.
+ */
+async function walkIntoDefeat(page) {
+  const deadline = Date.now() + STATE_WAIT_MS;
+  let held = null;
+  const hold = async (key) => {
+    if (held === key) return;
+    if (held !== null) await page.keyboard.up(held);
+    if (key !== null) await page.keyboard.down(key);
+    held = key;
+  };
+  try {
+    for (;;) {
+      const view = await page.evaluate(() => {
+        const state = window.__PANTHEON_TEST.state();
+        return {
+          game: state.game,
+          tick: state.simulationTick,
+          player: state.playerTrace === null ? null : { x: state.playerTrace.x, y: state.playerTrace.y },
+          enemies: state.enemyTrace.map((enemy) => ({ kind: enemy.kind, x: enemy.x, y: enemy.y })),
+        };
+      });
+      if (view.game === "gameover") return;
+      assert.ok(Date.now() < deadline, "the player did not reach an enemy: " + JSON.stringify(view));
+      const { player } = view;
+      const distance = (enemy) => Math.hypot(enemy.x - player.x, enemy.y - player.y);
+      const nearest =
+        player === null ? undefined : [...view.enemies].sort((left, right) => distance(left) - distance(right))[0];
+      await hold(nearest === undefined ? null : nearest.x > player.x ? "d" : "a");
+      // An enemy standing on a platform above: jump at it.
+      if (nearest !== undefined && nearest.y < player.y - 60 && Math.abs(nearest.x - player.x) < 160)
+        await page.keyboard.press("Space");
+      await page.waitForTimeout(pollEvery(50));
+    }
+  } finally {
+    await hold(null);
+  }
+}
+
 async function main() {
   save("execution-start", {
     classification: report.classification,
@@ -262,7 +304,7 @@ async function main() {
       buildInfo,
       actualSetup: await page.evaluate(() => window.__PANTHEON_TEST.state().setup),
       profile: "forensic-qa",
-      lifecycle: "ordinary physical input, natural defeat; deadline failure is not completion",
+      lifecycle: "ordinary physical input; the player walks into the nearest enemy; deadline failure is not completion",
     });
     await page.keyboard.down("d");
     await page.mouse.click(800, 758);
@@ -274,9 +316,7 @@ async function main() {
     await page.waitForTimeout(holdFor(220));
     await page.keyboard.up("d");
     // No terminate, forced outcome, semantic stepping, actor patch, or timer-to-success fallback.
-    await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "gameover", undefined, {
-      timeout: SLOW_STATE_WAIT_MS,
-    });
+    await walkIntoDefeat(page);
     await page.waitForFunction(
       () => window.__TEAR_GHOST_V3__.manifest()?.status === "complete" || window.__TEAR_GHOST_V3__.failure() !== null,
       undefined,

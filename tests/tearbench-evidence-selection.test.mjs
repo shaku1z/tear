@@ -512,7 +512,7 @@ test("boss, stage, progression, event, and player owners receive current mapped 
   for (const file of [
     "src/agents/live-watch-agent-host.ts",
     "src/agents/live-watch-agent-panel.ts",
-    "src/app/engineering/replay-editor.ts",
+    "src/app/replay/replay-screen-adapter.ts",
   ]) {
     const surface = select([file]);
     assert.ok(surface.routes.includes("current-player-surfaces"));
@@ -824,7 +824,7 @@ test("selected player journeys are actually dispatched through safe evidence exe
       };
     }
   });
-  const selection = select(["src/app/engineering/replay-editor.ts"], {
+  const selection = select(["src/app/replay/replay-screen-adapter.ts"], {
     routes: routePath,
     catalog,
     executeEvidence: true,

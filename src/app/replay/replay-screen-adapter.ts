@@ -4,7 +4,8 @@ import { reopenGhostFinaleCompanion } from "../../ghost/browser-finale-companion
 import { createGhostFinaleScreenAdapter } from "./ghost-finale-screen-adapter";
 import { readGhostFinaleCompanion } from "../../ghost/finale-companion";
 import { reopenRecordedGhostChallenge } from "../../ghost/browser-recorded-challenge";
-import { createBrowserGhostReplayPresentation, createBrowserGhostStudioMedia } from "./browser-ghost-studio-media";
+import { createBrowserGhostReplayPresentation } from "./browser-ghost-replay-presentation";
+import { createBrowserReplayClipExport } from "./browser-replay-clip-export";
 import { stableVerificationHash } from "../../domain/hash";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../../presentation/screens/live-screen-renderers";
@@ -92,13 +93,13 @@ export interface ReplayScreenAdapter {
   readonly openChallenges: () => void;
   readonly startChallenge: (id: string) => void;
   readonly toggleRunDna: () => void;
-  readonly toggleStudio: () => void;
-  readonly createStudioCutList: () => void;
-  readonly markStudioIn: () => void;
-  readonly clearStudioCuts: () => void;
-  readonly exportStudio: () => void;
-  readonly cancelStudio: () => void;
-  readonly downloadStudio: () => void;
+  readonly toggleReplayEditor: () => void;
+  readonly appendClip: () => void;
+  readonly markClipIn: () => void;
+  readonly clearClips: () => void;
+  readonly exportClips: () => void;
+  readonly cancelClipExport: () => void;
+  readonly downloadClip: () => void;
   readonly setSpeed: (value: number) => void;
   readonly status: () => ReplayStatus | null;
 }
@@ -113,13 +114,13 @@ type LegacyReplayScreenAdapter = Omit<
   | "enterGhostComparison"
   | "practice"
   | "toggleRunDna"
-  | "toggleStudio"
-  | "createStudioCutList"
-  | "markStudioIn"
-  | "clearStudioCuts"
-  | "exportStudio"
-  | "cancelStudio"
-  | "downloadStudio"
+  | "toggleReplayEditor"
+  | "appendClip"
+  | "markClipIn"
+  | "clearClips"
+  | "exportClips"
+  | "cancelClipExport"
+  | "downloadClip"
 >;
 type DeferredAction = (adapter: LegacyReplayScreenAdapter) => void;
 
@@ -127,21 +128,21 @@ type DeferredAction = (adapter: LegacyReplayScreenAdapter) => void;
 export function createLiveReplayScreenAdapter(services: ReplayScreenServices): ReplayScreenAdapter {
   const d = services.dependencies;
   let runtime: LegacyReplayScreenAdapter | undefined;
-  const studioMedia = createBrowserGhostStudioMedia(services.document, async (id, hash) => {
+  const clipExport = createBrowserReplayClipExport(services.document, async (id, hash) => {
     const source = await readBrowserGhostCapsule(services.browserIndexedDb, id);
     return source !== undefined && stableVerificationHash(source.manifest) === hash;
   });
   const theater = createGhostTheaterScreenAdapter({
     bossMemory: createBrowserBossMemory(services.browserIndexedDb, services.document),
     presentation: createBrowserGhostReplayPresentation(services.document, d.UI),
-    studioMedia,
+    clipExport,
     drawWorld: (frame) => {
       frame.draw(services.canvas, { x: 0, y: 56, w: services.width, h: services.height - 172 });
     },
     render: (view) => {
       services.renderers.replay(view);
-      if (view.studioMedia?.thumbnail !== undefined)
-        studioMedia.drawThumbnail?.(services.canvas, { x: services.width / 2 + 260, y: 220, w: 160, h: 90 });
+      if (view.clipExport?.thumbnail !== undefined)
+        clipExport.drawThumbnail?.(services.canvas, { x: services.width / 2 + 260, y: 220, w: 160, h: 90 });
     },
     width: () => services.width,
     deltaSeconds: services.deltaSeconds,
@@ -428,26 +429,26 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
     toggleRunDna: () => {
       if (active === "theater") theater.toggleRunDna();
     },
-    toggleStudio: () => {
-      if (active === "theater") theater.toggleStudio();
+    toggleReplayEditor: () => {
+      if (active === "theater") theater.toggleReplayEditor();
     },
-    createStudioCutList: () => {
-      if (active === "theater") theater.createStudioCutList();
+    appendClip: () => {
+      if (active === "theater") theater.appendClip();
     },
-    markStudioIn: () => {
-      if (active === "theater") theater.markStudioIn();
+    markClipIn: () => {
+      if (active === "theater") theater.markClipIn();
     },
-    clearStudioCuts: () => {
-      if (active === "theater") theater.clearStudioCuts();
+    clearClips: () => {
+      if (active === "theater") theater.clearClips();
     },
-    exportStudio: () => {
-      if (active === "theater") theater.exportStudio();
+    exportClips: () => {
+      if (active === "theater") theater.exportClips();
     },
-    cancelStudio: () => {
-      if (active === "theater") theater.cancelStudio();
+    cancelClipExport: () => {
+      if (active === "theater") theater.cancelClipExport();
     },
-    downloadStudio: () => {
-      if (active === "theater") theater.downloadStudio();
+    downloadClip: () => {
+      if (active === "theater") theater.downloadClip();
     },
     toggleInfo: () => {
       if (active === "finale") finale.toggleInfo();
