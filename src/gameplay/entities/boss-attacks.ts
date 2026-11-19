@@ -33,6 +33,11 @@ export type BossHitShape =
   /** A circle around the boss. */
   | Readonly<{ kind: "ring"; radius: number }>
   /**
+   * The boss's own body, `reach` wider on each side: a charge or a slam where the body is the strike. This
+   * is the only way a boss on the move table hurts by touch (boss-body-contact.ts).
+   */
+  | Readonly<{ kind: "body"; reach: number }>
+  /**
    * A box that leaves the boss's front edge when the strike starts and travels along its facing. Authored
    * in pixels per second; a built table holds pixels per tick.
    */

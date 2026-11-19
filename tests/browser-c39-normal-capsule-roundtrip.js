@@ -203,7 +203,6 @@ async function phase(id, run) {
   await withJourney(
     {
       name: "C39 normal capsule files " + id,
-      port: 8181,
       deferBoot: true,
       query: { "ghost-v3-profile": "forensic-qa" },
     },
@@ -241,7 +240,6 @@ async function main() {
   save("execution-start", {
     classification: report.classification,
     scriptSha256: sha256(fs.readFileSync(__filename)),
-    requestedPort: process.env.TEAR_JOURNEY_PORT || "8181",
   });
   await phase("A-producer", async (journey) => {
     const { page, boot, waitScreen, clickAndWait, buildInfo } = journey;

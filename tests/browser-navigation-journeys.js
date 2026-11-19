@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 const { STATE_WAIT_MS } = require("./browser-waits");
 
-withJourney({ name: "navigation journeys", port: 8141 }, async ({ page, boot, waitScreen, clickAndWait }) => {
+withJourney({ name: "navigation journeys" }, async ({ page, boot, waitScreen, clickAndWait }) => {
   async function setupSnapshot() {
     const snapshot = await page.evaluate(() => window.__PANTHEON_TEST.state().setup || null);
     assert.ok(snapshot, "built artifact must expose the read-only setup selection summary in PANTHEON_DEBUG");

@@ -70,7 +70,7 @@ const resolved = Object.freeze({
   resolvedHash: "verdant-stage-wave-31-engineering",
 });
 
-withJourney({ name: "Verdant C9 presentation", port: 8298 }, async ({ page, buildInfo }) => {
+withJourney({ name: "Verdant C9 presentation" }, async ({ page, buildInfo }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: STATE_WAIT_MS });
   const state = await page.evaluate((scenario) => {
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");

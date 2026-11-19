@@ -1,3 +1,5 @@
+import { BOSS_BODY_PUSH_SPEED, pushOutOfBossBody } from "../entities/boss-body-contact";
+
 export type DamageOutcome = string;
 
 export interface ContactPlayer {
@@ -23,6 +25,8 @@ export interface ContactEnemy {
   readonly chargeMult?: number;
   readonly auraDmg?: number;
   contactDamageEnabled?(player: ContactPlayer): boolean;
+  /** True while the body pushes the player out instead of letting them walk through it. */
+  bodyBlocks?(): boolean;
   contactDamageAmount?(player: ContactPlayer): number;
   onContactDamage?(outcome: DamageOutcome, player: ContactPlayer): void;
 }
@@ -50,6 +54,39 @@ export interface ContactRuntimeHooks {
 function reportDamage(outcome: DamageOutcome, hooks: ContactRuntimeHooks): void {
   if (outcome === "hit") hooks.onHit();
   else if (outcome === "absorbed") hooks.onAbsorbed();
+}
+
+/** The player as a blocking body moves it: its place, its run speed and whether it is dashing. */
+export interface BlockedPlayer {
+  x: number;
+  vx: number;
+  readonly y: number;
+  readonly hw: number;
+  readonly hh: number;
+  readonly dashTimer: number;
+}
+
+/**
+ * Moves the player out of every body that blocks, in stable enemy-array order. A dash passes through. The
+ * player keeps no speed into the body it was pushed out of. Where the player ends up is decided by
+ * `pushOutOfBossBody`, which never leaves a player stuck between a body and the arena edge.
+ */
+export function resolveBodyBlocks(
+  enemies: readonly ContactEnemy[],
+  player: BlockedPlayer,
+  arenaWidth: number,
+  dt: number,
+  overlaps: ContactRuntimeHooks["overlaps"],
+): void {
+  if (player.dashTimer > 0) return;
+  for (const enemy of enemies) {
+    if (enemy.dead || enemy.dying || enemy.spawnT > 0 || (enemy.introT ?? 0) > 0) continue;
+    if (enemy.bodyBlocks?.() !== true) continue;
+    if (!overlaps(player.x, player.y, player.hw, player.hh, enemy.x, enemy.y, enemy.hw, enemy.hh)) continue;
+    const x = pushOutOfBossBody(player, enemy, arenaWidth, BOSS_BODY_PUSH_SPEED * dt);
+    if ((enemy.x - player.x) * player.vx > 0 && (enemy.x - player.x) * (x - player.x) <= 0) player.vx = 0;
+    player.x = x;
+  }
 }
 
 /** Resolves actor contact in stable enemy-array order. */

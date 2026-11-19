@@ -10,7 +10,7 @@ const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
 // in the annex flow ship); TEAR_PRACTICE_LAB_ONLY=1 runs the Practice Lab alone.
 const journey = (practiceLab) =>
   withJourney(
-    { name: practiceLab ? "practice lab journeys" : "playground journeys", port: practiceLab ? 8145 : 8144 },
+    { name: practiceLab ? "practice lab journeys" : "playground journeys" },
     async ({ page, boot, waitScreen }) => {
       async function pressUntilScreen(key, screen) {
         for (let attempt = 0; attempt < 12; attempt++) {

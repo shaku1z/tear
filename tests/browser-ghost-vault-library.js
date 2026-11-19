@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const { withJourney, waitForBrowserValue } = require("./browser-journey-harness");
 const { STATE_WAIT_MS } = require("./browser-waits");
 
-withJourney({ name: "C28 Ghost Vault player library", port: 8162 }, async ({ page, boot, waitScreen }) => {
+withJourney({ name: "C28 Ghost Vault player library" }, async ({ page, boot, waitScreen }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
     timeout: STATE_WAIT_MS,
   });

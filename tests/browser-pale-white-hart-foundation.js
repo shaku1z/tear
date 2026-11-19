@@ -9,7 +9,7 @@ function bossSnapshot(page) {
 }
 
 withJourney(
-  { name: "Pale PT3-C7 White Hart foundation regression", port: 8356, recordFrames: true },
+  { name: "Pale PT3-C7 White Hart foundation regression", recordFrames: true },
   async ({ page, buildInfo, waitArmed, clickLabel }) => {
     await page.evaluate(() => window.__PANTHEON_TEST.startBoss("white-hart", "normal"));
     await page.waitForFunction(
