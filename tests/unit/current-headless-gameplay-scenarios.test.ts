@@ -4,35 +4,14 @@ import type { GameAction } from "../../src/input/game-action";
 import {
   CANONICAL_ENGINEERING_SCENARIOS,
   createProductionHeadlessEnvironment,
-  type ProductionHeadlessEnvironment,
   type TearCausalEventV1,
   type TearObservationV1,
 } from "../../src/tearbench";
+import { skipOpeningChapter } from "./headless-opening-chapter";
 
 const scenarios = CANONICAL_ENGINEERING_SCENARIOS.filter(
   (scenario) => scenario.subject.kind === "gameplay" && scenario.backends.includes("headless"),
 );
-
-function chapterState(environment: ProductionHeadlessEnvironment): unknown {
-  return (environment.captureCheckpoint().snapshot.state["tear.run.v1"] as { chapterState?: unknown }).chapterState;
-}
-
-/**
- * Since 6dfd99c7 a natural headless Campaign opening plays the real opening
- * chapter (player locked), as live play does. Fixed ticks neither time nor
- * confirm its pages, so skip it the way a player does: release confirm long
- * enough to arm the latch, then hold it (HOLD TO SKIP CHAPTER) through real
- * application frames until the chapter hands over to the live wave.
- */
-function skipOpeningChapter(environment: ProductionHeadlessEnvironment): void {
-  expect(chapterState(environment)).toBe("LORE_ENTER");
-  // Checkpoint capture is the probe, so sample it every eight frames.
-  for (let frame = 0; frame < 600 && (frame % 8 !== 0 || chapterState(environment) !== "WAVE_LIVE"); frame += 1) {
-    environment.advanceApplicationFrame(1 / 60, { key: frame >= 12 });
-  }
-  expect(chapterState(environment)).toBe("WAVE_LIVE");
-  environment.advanceApplicationFrame(1 / 60, { key: false });
-}
 
 function assertSubjectTransition(
   subject: string,
