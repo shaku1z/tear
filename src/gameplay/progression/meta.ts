@@ -5,6 +5,9 @@ import {
   type AcknowledgedStorage,
   type CompletionStatus,
 } from "../../domain/reward-receipts";
+import type { SaveProblemReporter } from "../../domain/save-problems";
+/** The key the coins and upgrades are stored under. */
+export const META_STORE_KEY = "tear_meta";
 export const META_RANK_LIMITS = Object.freeze({
   tough: 8,
   sharp: 8,
@@ -143,6 +146,8 @@ export interface MetaProgressionDependencies<
   readonly random: ProgressionRandomPort;
   readonly upgrades: readonly Upgrade[];
   readonly applyUpgrade: (upgrade: Upgrade, context: ApplyContext) => void;
+  /** Told when the stored coins and upgrades cannot be read, so the player can be told. */
+  readonly reportProblem?: SaveProblemReporter;
 }
 
 function record(value: unknown): Record<string, unknown> | null {
@@ -217,7 +222,7 @@ export function createMetaProgression<Upgrade extends UpgradeDefinition, ApplyCo
     newReceipt: () => boolean = () => false,
   ): Promise<CompletionStatus> => {
     if (!dependencies.store.acknowledged) return "unavailable";
-    const result = await dependencies.store.acknowledged.update("tear_meta", (text) => {
+    const result = await dependencies.store.acknowledged.update(META_STORE_KEY, (text) => {
       const candidate = mergeMetaData(structuredClone(meta.data), text === null ? {} : (JSON.parse(text) as unknown));
       change(candidate);
       return JSON.stringify(candidate);
@@ -234,9 +239,10 @@ export function createMetaProgression<Upgrade extends UpgradeDefinition, ApplyCo
     load() {
       let parsed: unknown;
       try {
-        parsed = JSON.parse(dependencies.store.get("tear_meta") ?? "{}");
+        parsed = JSON.parse(dependencies.store.get(META_STORE_KEY) ?? "{}");
       } catch {
         parsed = {};
+        dependencies.reportProblem?.("meta-unreadable");
       }
       const migrated = migrateMetaData(parsed);
       this.data = migrated;
@@ -250,7 +256,7 @@ export function createMetaProgression<Upgrade extends UpgradeDefinition, ApplyCo
         return;
       }
       try {
-        dependencies.store.set("tear_meta", JSON.stringify(this.data));
+        dependencies.store.set(META_STORE_KEY, JSON.stringify(this.data));
       } catch {
         /* offline memory remains playable */
       }

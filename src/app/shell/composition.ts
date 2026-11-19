@@ -43,6 +43,7 @@ import type { CloudFactory } from "../../platform/cloud-factory";
 import type { TearBuildTarget } from "../../platform/contracts";
 import type { BuildIdentity } from "../../platform/build-identity";
 import { createPrivacyNotice } from "../../platform/browser-privacy-notice";
+import { createSaveNotice } from "../../platform/browser-save-notice";
 import { privacyStanceFor } from "../../platform/privacy-stance";
 import { createStatisticsChoice, statisticsAllowed } from "../../platform/statistics-consent";
 import type { CrazyGamesSdkShape, createCrazyGamesPlatformServices } from "../../platform/crazygames";
@@ -292,8 +293,11 @@ export function composeTearApplication(options: TearCompositionOptions): void {
       theme: THEME,
     },
   });
+  // A save that cannot be read or kept is told to the player once, whichever part of the game finds out.
+  const saveNotice = createSaveNotice(document);
   const platform = createLegacyPlatformCompatibility({
     target,
+    reportProblem: saveNotice.report,
     ...(sdk === undefined ? {} : { sdk }),
     ...(createCrazyGamesServices === undefined ? {} : { createCrazyGamesServices }),
     ...(disposableStorage === undefined ? {} : { storage: disposableStorage }),
@@ -303,6 +307,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
 
   const PROFILE = createProfileStore({
     store: CG.store,
+    reportProblem: saveNotice.report,
     onCommitted: () => {
       if (PROFILE.pendingRewards().length > 0) void tutorialCompletionPersistence.retry();
     },
@@ -362,6 +367,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   });
   const { META, SHOP } = createMetaProgression<UpgradeDefinition, UpgradeApplyContext & ProgressionApplyContext>({
     store: CG.store,
+    reportProblem: saveNotice.report,
     config: worldConfig,
     cloud: Cloud,
     random: GAME_RANDOM_STREAMS.stream("draft"),

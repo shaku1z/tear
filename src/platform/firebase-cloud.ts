@@ -313,6 +313,16 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
         /* retry on next save */
       }
     },
+    async replace(_context, payload) {
+      if (!db || !authUid) return false;
+      try {
+        // No merge: the document becomes exactly this payload, so nothing the player earned survives in it.
+        await race(db.collection("users").doc(authUid).set({ profile: payload.profile, meta: payload.meta }));
+        return true;
+      } catch {
+        return false;
+      }
+    },
     dispose() {
       removeAuthListener?.();
       removeAuthListener = undefined;
