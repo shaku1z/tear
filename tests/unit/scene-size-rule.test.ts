@@ -153,8 +153,17 @@ describe("scene art share of a release build", () => {
     expect(report.bytes).toBeLessThanOrEqual(storefrontBudget(target).shareBytes);
   });
 
+  // Drawn stages ship no images, so these drive a copy of the fixture as if it shipped.
+  const fixture = sceneDirectories(false, [FIXTURE_SCENES_ROOT])[0];
+  if (fixture === undefined) throw new Error("no fixture package");
+  const shippedRoot = join(scratch, "shipped");
+  const noFixtures = join(scratch, "no-fixtures");
+  cpSync(fixture, join(shippedRoot, basename(fixture)), { recursive: true });
+  mkdirSync(noFixtures, { recursive: true });
+  const roots = [shippedRoot, noFixtures];
+
   it("fails when the packages declare more than the share", () => {
-    const report = declaredStorefrontArt("crazygames", { shareBytes: 1000 });
+    const report = declaredStorefrontArt("crazygames", { shareBytes: 1000 }, shippedRoot);
     expect(report.problems).toEqual([expect.stringMatching(/over this build's share of 1000/u)]);
   });
 
@@ -162,31 +171,30 @@ describe("scene art share of a release build", () => {
     const dist = join(scratch, "dist");
     const assets = join(dist, "assets");
     mkdirSync(assets, { recursive: true });
-    for (const directory of shipped)
-      for (const file of readdirSync(directory).filter((name) => name.endsWith(".avif")))
-        cpSync(join(directory, file), join(assets, `${basename(directory)}-${file.replace(".avif", "-hash.avif")}`));
-    const clean = builtStorefrontArt("crazygames", dist);
+    const budget = storefrontBudget("crazygames");
+    for (const file of readdirSync(fixture).filter((name) => name.endsWith(".avif")))
+      cpSync(join(fixture, file), join(assets, `${basename(fixture)}-${file.replace(".avif", "-hash.avif")}`));
+    const clean = builtStorefrontArt("crazygames", dist, budget, roots);
     expect(clean.problems).toEqual([]);
-    expect(clean.bytes).toBe(declaredStorefrontArt("crazygames").bytes);
-    expect(assertStorefrontArt("crazygames", dist)).toMatch(
-      /^PASS crazygames scene art: \d+ image\(s\), \d+ of 3000000 bytes$/u,
-    );
-    expect(builtStorefrontArt("crazygames", dist, { shareBytes: 1000 }).problems).toEqual([
+    expect(clean.bytes).toBe(declaredStorefrontArt("crazygames", budget, shippedRoot).bytes);
+    expect(builtStorefrontArt("crazygames", dist, { shareBytes: 1000 }, roots).problems).toEqual([
       expect.stringMatching(/over its share of 1000/u),
     ]);
-    // A test fixture's image, an image no package lists, and a missing image each fail the build.
-    const fixture = sceneDirectories(false, [FIXTURE_SCENES_ROOT])[0];
-    if (fixture === undefined) throw new Error("no fixture package");
-    cpSync(join(fixture, "far.avif"), join(assets, "pale-far.avif"));
+    // Against the real roots the same images are test fixtures, and fail the build.
+    expect(builtStorefrontArt("crazygames", dist, budget).problems).toEqual(
+      expect.arrayContaining([expect.stringMatching(/test fixture image pale-traverse\/far\.avif/u)]),
+    );
+    expect(() => assertStorefrontArt("crazygames", dist)).toThrow(
+      /scene art size rule failed:[\s\S]*test fixture image/u,
+    );
+    // An image no package lists and a missing image each fail the build.
     writeFileSync(join(assets, "stray.avif"), "not a scene image");
     const first = readdirSync(assets).find((name) => name.endsWith("-hash.avif"));
-    if (first === undefined) throw new Error("no shipped scene image");
+    if (first === undefined) throw new Error("no scene image");
     rmSync(join(assets, first));
-    expect(builtStorefrontArt("crazygames", dist).problems).toEqual([
-      expect.stringMatching(/test fixture image pale-traverse\/far\.avif/u),
+    expect(builtStorefrontArt("crazygames", dist, budget, roots).problems).toEqual([
       expect.stringMatching(/stray\.avif is an AVIF image no scene package lists/u),
       expect.stringMatching(/build is missing/u),
     ]);
-    expect(() => assertStorefrontArt("crazygames", dist)).toThrow(/scene art size rule failed:[\s\S]*stray\.avif/u);
   });
 });

@@ -120,23 +120,37 @@ export interface SceneCameraContract {
   readonly shake: number;
 }
 
-export interface ScenePackage {
+export interface SceneWorld {
+  readonly width: number;
+  readonly height: number;
+  readonly groundY: number;
+}
+
+/**
+ * What the renderer composes, however the layer images were made: the camera
+ * contract, layers by image name, shading and the platform binding.
+ */
+export interface SceneLayout {
+  readonly world: SceneWorld;
+  readonly camera: SceneCameraContract;
+  readonly edge: { readonly color: string; readonly feather: number };
+  /** Colour the HUD/actor ink polarity is derived from while the scene shows. */
+  readonly theme: { readonly paper: string };
+  readonly layers: readonly SceneLayer[];
+  readonly shading: readonly SceneShade[];
+  readonly platforms: ScenePlatformBinding;
+}
+
+/** A layout whose images are encoded files shipped with the package. */
+export interface ScenePackage extends SceneLayout {
   readonly format: typeof SCENE_PACKAGE_FORMAT;
   readonly version: typeof SCENE_PACKAGE_VERSION;
   readonly id: string;
   readonly stageId: string;
   readonly title: string;
-  readonly world: { readonly width: number; readonly height: number; readonly groundY: number };
-  readonly camera: SceneCameraContract;
-  readonly edge: { readonly color: string; readonly feather: number };
-  /** Colour the HUD/actor ink polarity is derived from while the scene shows. */
-  readonly theme: { readonly paper: string };
   readonly palette: Readonly<Record<string, string>>;
   readonly sources: readonly SceneSource[];
   readonly images: readonly SceneImage[];
-  readonly layers: readonly SceneLayer[];
-  readonly shading: readonly SceneShade[];
-  readonly platforms: ScenePlatformBinding;
   /** Encoded bytes the package's image files may total. */
   readonly encodedBudget: number;
   /** Decoded RGBA bytes the package may hold (width x height x 4, summed). */
@@ -474,7 +488,7 @@ export function viewportWorldRect(world: ScenePackage["world"], cssWidth: number
  * `floorY`, rows below the floor surface are left to the floor.
  */
 export function requiredLayerRect(
-  scene: Pick<ScenePackage, "camera" | "world">,
+  scene: Pick<SceneLayout, "camera" | "world">,
   depth: number,
   screen: Rect,
   floorY?: number,
