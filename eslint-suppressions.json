@@ -34,11 +34,6 @@
       "count": 1
     }
   },
-  "src/app/replay/browser-ghost-studio-media.ts": {
-    "tear/one-record-guard": {
-      "count": 1
-    }
-  },
   "src/app/replay/replay-screen-adapter-runtime.ts": {
     "tear/one-record-guard": {
       "count": 1
