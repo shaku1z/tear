@@ -44,7 +44,6 @@ export interface LiveKillHost extends KillCallbacks {
   stageAccent(): string;
   stageChapterBossOutro(): unknown;
   hasStageChapter(): boolean;
-  readonly bossRosterSize: number;
   achievementsEnabled(): boolean;
 }
 
@@ -71,7 +70,6 @@ export class LiveKillRuntime {
       stageAccent: host.stageAccent(),
       stageChapterBossOutro: host.stageChapterBossOutro(),
       hasStageChapter: host.hasStageChapter(),
-      bossRosterSize: host.bossRosterSize,
       scoring: { scorePerKill: host.config.run.scorePerKill, cleanWindow: host.config.overrun.cleanWindow },
       colors: { charger: host.config.colors.charger, slam: host.config.colors.slam },
       deathShards: host.config.juice.deathShards,

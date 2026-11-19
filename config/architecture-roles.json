@@ -232,9 +232,14 @@
       "purpose": "Modules that still write PROFILE directly instead of through a composition-owned persistence adapter. Ratchet target: empty (plan step 12).",
       "include": ["src/app/screens/menu-screen-adapters-runtime.ts", "src/app/run/run-start-host.ts"]
     },
-    "engineering.channel-entries": {
-      "purpose": "Engineering-channel entry modules that composition loads only through a build-guarded dynamic import. None exists today; the pattern guards the next one.",
+    "release.developer-only": {
+      "purpose": "Developer and test code that no release build may contain: the scripted test player, the playtest tool, TearBench's browser and test-support modules and the debug harness. Other code may load it only through a dynamic import guarded by a build constant, and a release build fails when one of these modules contributes code to a bundle (scripts/release-developer-code.mjs).",
+      "include": ["@tearbench.developer-surfaces", "src/agents/**", "src/playtest/**", "src/app/engineering/debug-*.ts"],
       "anticipate": ["src/app/engineering/*-channel-entry.ts"]
+    },
+    "release.build-guarded-importers": {
+      "purpose": "Release modules that still import developer-only code with a static import and rely on a build constant and tree-shaking to drop it. Ratchet target: empty.",
+      "include": ["src/app/engineering/test-build-runtime-hooks.ts", "src/app/shell/composition.ts"]
     },
     "size.authored-data-exceptions": {
       "purpose": "Authored data tables exempt from the 700-line (line-equivalent) module limit.",

@@ -17,8 +17,8 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 | [Release readiness](#release-readiness) | Merged to main | Production deploy, after the owner has played the build. | — |
 | [Production deploy](#production-deploy) | Deployed 2026-11-13 | The next production deploy follows the Verdant, Tutorial and music work. | — |
 | [Verdant Sanctum visuals](#verdant-visuals) | In progress | Living motion (water, light, foliage) as package data, in its own pull request. | Judge the look: the owner's taste decides visual work. A sharper, wider source painting that meets the brief in docs/BACKGROUND_WORKFLOW.md would remove most of the readability shading. |
-| [Verdant Sanctum gameplay](#verdant-gameplay) | In progress | A shared rule that a boss body hurts only inside a declared move, then the Bloom Wells and Rootbinder design. | Playtest the Rootbound in all three phases. |
-| [Tutorial and Playground experience](#training-ux) | In progress | Scrolling views resting on a row edge (#238), then one source of names for the drilled weapon moves. | — |
+| [Verdant Sanctum gameplay](#verdant-gameplay) | In progress | The Bloom Wells and Rootbinder design, then Verdant waves. | Playtest the Rootbound in all three phases. |
+| [Tutorial and Playground experience](#training-ux) | In progress | One source of names for the drilled weapon moves (this pull request, then its floaters), then the release tutorial flow and menu fixes. | — |
 | [Pale Traverse rework](#pale-traverse) | Not started | Start once the Verdant gameplay rework has landed. | — |
 | [Player wiki](#wiki) | In progress | Review the move pull request, then confirm the Cloudflare secret question and run the first wiki deploy. | Archive shaku1z/tear-wiki after the first deploy from this repository. |
 | [Repository structure and workflow](#repository-structure) | In progress | After the hooks pull request merges, run pnpm setup:hooks in the canonical checkout on main (scripts/governance/README.md). | — |
@@ -59,9 +59,9 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 ### Verdant Sanctum gameplay
 
-**In progress.** The Rootbound boss is rebuilt in all three phases as data on a shared boss move layer that Pale and later bosses reuse: Phase I's moves, Phase II's Grafts, Root Cage and Bloom Wells, and Phase III's Regrowth and Last Spring. Bloom Wells, the Rootbinder and its links, and Verdant waves are not rebuilt yet.
+**In progress.** The Rootbound boss is rebuilt in all three phases as data on a shared boss move layer that Pale and later bosses reuse: Phase I's moves, Phase II's Grafts, Root Cage and Bloom Wells, and Phase III's Regrowth and Last Spring. Its body no longer hurts on touch: it blocks, and it does not play a move the player could not walk out of. Bloom Wells, the Rootbinder and its links, and Verdant waves are not rebuilt yet.
 
-- Next: A shared rule that a boss body hurts only inside a declared move, then the Bloom Wells and Rootbinder design.
+- Next: The Bloom Wells and Rootbinder design, then Verdant waves.
 - Owner action: Playtest the Rootbound in all three phases.
 - Evidence: [plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md)
 
@@ -71,7 +71,7 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 **In progress.** A session is reworking the Tutorial and Playground popups, menus, flow, navigation and explanations. Drills has LESSONS, WEAPONS, ENEMIES and BOSSES tabs, and its phone list is sized from its content.
 
-- Next: Scrolling views resting on a row edge (#238), then one source of names for the drilled weapon moves.
+- Next: One source of names for the drilled weapon moves (this pull request, then its floaters), then the release tutorial flow and menu fixes.
 - Owner action: none
 - Evidence: [docs/TUTORIAL_PARITY_AND_UPGRADE_PLAN.md](TUTORIAL_PARITY_AND_UPGRADE_PLAN.md), [plans/active/DRILLED_MOVE_NAMES.md](../plans/active/DRILLED_MOVE_NAMES.md)
 

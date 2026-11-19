@@ -134,6 +134,7 @@ describe("legacy input adapter", () => {
 
   it("consolidates UI edges and consumes wheel input without losing gamepad scroll", () => {
     const input = createInput();
+    input.uiMode = true;
     input.pressed.add("KeyQ");
     input._uiTabNext = true;
     input.padScrollX = 3;
@@ -145,6 +146,112 @@ describe("legacy input adapter", () => {
     expect(input.takeUIScroll()).toEqual({ x: 3, y: 13, source: "mouse" });
     expect(input.takeUIScroll()).toEqual({ x: 3, y: 8, source: "gamepad" });
     expect(input._uiTabNext).toBe(false);
+  });
+});
+
+/** A keyboard event in the node test environment, which has Event but no KeyboardEvent. */
+function keyEvent(type: "keydown" | "keyup", code: string): Event {
+  const event = new Event(type, { cancelable: true });
+  Object.defineProperty(event, "code", { value: code });
+  return event;
+}
+
+describe("keyboard throw and tether keys", () => {
+  function keyboardFixture() {
+    const semantic = new SemanticInputBuffer();
+    const windowTarget = new EventTarget();
+    const canvas = new EventTarget() as HTMLCanvasElement;
+    const input = createInput(semantic, windowTarget);
+    input.init(canvas, () => undefined);
+    semantic.startRecording();
+    const mouse = (type: string, button: number) => {
+      const event = new Event(type);
+      Object.defineProperty(event, "button", { value: button });
+      (type === "mouseup" ? windowTarget : canvas).dispatchEvent(event);
+    };
+    const commands = () => semantic.drain(1).map((entry) => entry.command);
+    return { input, windowTarget, mouse, commands };
+  }
+
+  it("E throws exactly like the right mouse button, once per press despite key repeat", () => {
+    const keys = keyboardFixture();
+    keys.windowTarget.dispatchEvent(keyEvent("keydown", "KeyE"));
+    keys.windowTarget.dispatchEvent(keyEvent("keydown", "KeyE")); // auto-repeat
+    expect(keys.input.consumeThrow()).toBe(true);
+    expect(keys.input.consumeThrow()).toBe(false);
+    const fromKey = keys.commands();
+    keys.windowTarget.dispatchEvent(keyEvent("keyup", "KeyE"));
+    keys.mouse("mousedown", 2);
+    expect(keys.input.consumeThrow()).toBe(true);
+    expect(fromKey).toEqual(keys.commands());
+    expect(fromKey).toEqual([{ type: "weapon", intent: "throw", phase: "pressed" }]);
+  });
+
+  it("Q holds the tether exactly like the left mouse button, and blur lets it go", () => {
+    const keys = keyboardFixture();
+    keys.windowTarget.dispatchEvent(keyEvent("keydown", "KeyQ"));
+    keys.windowTarget.dispatchEvent(keyEvent("keydown", "KeyQ")); // auto-repeat
+    expect(keys.input.tetherHeld).toBe(true);
+    keys.windowTarget.dispatchEvent(keyEvent("keyup", "KeyQ"));
+    expect(keys.input.tetherHeld).toBe(false);
+    const fromKey = keys.commands();
+    keys.mouse("mousedown", 0);
+    keys.mouse("mouseup", 0);
+    expect(fromKey).toEqual(keys.commands());
+    expect(fromKey).toEqual([
+      { type: "weapon", intent: "primary", phase: "pressed" },
+      { type: "weapon", intent: "primary", phase: "released" },
+    ]);
+
+    keys.windowTarget.dispatchEvent(keyEvent("keydown", "KeyQ"));
+    keys.windowTarget.dispatchEvent(new Event("blur"));
+    expect(keys.input.tetherHeld).toBe(false);
+    expect(keys.input.held.size).toBe(0);
+  });
+
+  it("keeps the mouse tether held when the tether key is let go", () => {
+    const keys = keyboardFixture();
+    keys.mouse("mousedown", 0);
+    keys.windowTarget.dispatchEvent(keyEvent("keydown", "KeyQ"));
+    keys.windowTarget.dispatchEvent(keyEvent("keyup", "KeyQ"));
+    expect(keys.input.tetherHeld).toBe(true);
+  });
+
+  it("never turns Q or E into a menu tab step during play", () => {
+    const keys = keyboardFixture();
+    keys.input.uiMode = false;
+    keys.windowTarget.dispatchEvent(keyEvent("keydown", "KeyQ"));
+    keys.windowTarget.dispatchEvent(keyEvent("keydown", "KeyE"));
+    keys.input.updateUI();
+    expect(keys.input.ui.tabPrev).toBe(false);
+    expect(keys.input.ui.tabNext).toBe(false);
+    keys.input.endFrame();
+    keys.input.held.clear();
+    keys.input.uiMode = true;
+    keys.windowTarget.dispatchEvent(keyEvent("keydown", "KeyE"));
+    keys.input.updateUI();
+    expect(keys.input.ui.tabNext).toBe(true);
+  });
+
+  it("lets no throw or tether from pause-menu tab steps reach the run, even with Q held across resume", () => {
+    const keys = keyboardFixture();
+    keys.input.uiMode = true; // the pause menu owns input
+    keys.windowTarget.dispatchEvent(keyEvent("keydown", "KeyE"));
+    keys.windowTarget.dispatchEvent(keyEvent("keyup", "KeyE"));
+    keys.windowTarget.dispatchEvent(keyEvent("keydown", "KeyQ")); // held through the resume
+    keys.input.updateUI();
+    expect(keys.input.ui).toMatchObject({ tabPrev: true, tabNext: true });
+    keys.input.endFrame(true); // a frame that keeps simulation edges for the next tick
+
+    keys.input.uiMode = false; // resumed
+    expect(keys.input.consumeThrow()).toBe(false);
+    expect(keys.input.tetherHeld).toBe(false);
+    expect(keys.commands().filter((command) => command.type === "weapon")).toEqual([]);
+
+    // Letting Q go and pressing it again in play tethers as usual.
+    keys.windowTarget.dispatchEvent(keyEvent("keyup", "KeyQ"));
+    keys.windowTarget.dispatchEvent(keyEvent("keydown", "KeyQ"));
+    expect(keys.input.tetherHeld).toBe(true);
   });
 });
 

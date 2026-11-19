@@ -1,8 +1,8 @@
 const assert = require("node:assert/strict");
 const { withJourney, waitForBrowserValue } = require("./browser-journey-harness");
-const { STATE_WAIT_MS, settleFor } = require("./browser-waits");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
-withJourney({ name: "C28 Ghost Vault player library", port: 8162 }, async ({ page, boot, waitScreen }) => {
+withJourney({ name: "C28 Ghost Vault player library" }, async ({ page, boot, waitScreen }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
     timeout: STATE_WAIT_MS,
   });
@@ -108,10 +108,13 @@ withJourney({ name: "C28 Ghost Vault player library", port: 8162 }, async ({ pag
     window.__TEAR_C28_VAULT_TEXT_POSITIONS__.findLast((entry) => entry.text === "VAULT"),
   );
   await page.mouse.click(vaultTab.x, vaultTab.y); // The drawn VAULT tab label, wherever the tab row puts it.
-  await page.waitForFunction(() => window.__TEAR_C28_VAULT_TEXT__?.includes("IMPORT A REPLAY FILE"), undefined, {
-    timeout: STATE_WAIT_MS,
-  });
-  await page.waitForTimeout(settleFor(250));
+  // The toolbar is drawn while the Vault is still reading its records, so it does not mean the list
+  // is ready. The seeded capsule's row does: it is drawn only once the read has finished.
+  await page.waitForFunction(
+    () => window.__TEAR_C28_VAULT_TEXT__?.some((text) => text.includes("needs repair")),
+    undefined,
+    { timeout: STATE_WAIT_MS },
+  );
   assert.ok(
     !(await page.evaluate(() => window.__TEAR_C28_VAULT_TEXT__.includes("MY ACCOUNT'S REPLAYS"))),
     "the removed account-recovery control must not be drawn",

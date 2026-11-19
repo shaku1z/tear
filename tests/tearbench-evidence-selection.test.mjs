@@ -670,12 +670,12 @@ test("the scheduled TearBench workflow inspects the complete commit range", () =
   assert.match(scheduledWorkflow, /fetch-depth: 0/u);
 });
 
-test("the scheduled TearBench workflow runs only the weekly endurance job", () => {
+test("the scheduled TearBench workflow runs only the weekly endurance job, after the job naming its browser image", () => {
   const scheduledWorkflow = readFileSync(join(root, ".github", "workflows", "tearbench-program.yml"), "utf8");
   const jobs = scheduledWorkflow.slice(scheduledWorkflow.indexOf("\njobs:"));
   assert.deepEqual(
     [...jobs.matchAll(/^ {2}([\w-]+):$/gmu)].map((match) => match[1]),
-    ["weekly-endurance"],
+    ["image", "weekly-endurance"],
   );
   assert.deepEqual(
     [...scheduledWorkflow.matchAll(/cron: "([^"]+)"/gu)].map((match) => match[1]),

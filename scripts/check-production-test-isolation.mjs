@@ -15,24 +15,10 @@ const forbidden = [
   // let page script choose the channel instead of the build.
   "__TEAR_ENGINEERING_SURFACES__",
 ];
-// Engineering-channel code is loaded only through build-constant-guarded
-// dynamic imports, so none of it may reach a release bundle. Each marker is a
-// distinctive storage key, format identifier or diagnostic sentence of one
-// stripped module; none of them is release player copy.
-const ENGINEERING_MARKERS = Object.freeze([
-  ["Watch Agent must start from the real main menu", "src/agents/live-watch-agent-host.ts"],
-  ["Watch Agent seed must be positive", "src/agents/live-watch-agent-panel.ts"],
-  ["Snapshot editor actions", "src/tearbench/browser/state-forge-studio.ts"],
-]);
+// Developer-only modules are kept out of release bundles by the build itself: it fails when one
+// contributes code to a chunk (scripts/release-developer-code.mjs, used by vite.config.ts). This
+// script covers what a module list cannot: test globals that release code must not define.
 const failures = [];
-
-// A marker that no longer exists in its source module would pass vacuously.
-for (const [marker, source] of ENGINEERING_MARKERS) {
-  const file = path.join(root, source);
-  if (!fs.existsSync(file) || !fs.readFileSync(file, "utf8").includes(marker)) {
-    failures.push(`engineering marker "${marker}" is no longer present in ${source}; choose a new distinctive marker`);
-  }
-}
 
 function walk(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -54,9 +40,6 @@ for (const target of targets) {
     for (const marker of forbidden) {
       if (text.includes(marker)) failures.push(`${relative} contains ${marker}`);
     }
-    for (const [marker, source] of ENGINEERING_MARKERS) {
-      if (text.includes(marker)) failures.push(`${relative} contains engineering marker "${marker}" from ${source}`);
-    }
   }
 }
 
@@ -64,6 +47,4 @@ if (failures.length > 0) {
   console.error(["Production test-isolation gate failed:", ...failures.map((failure) => `- ${failure}`)].join("\n"));
   process.exit(1);
 }
-console.log(
-  `production test-isolation gate passed (${String(forbidden.length)} test globals, ${String(ENGINEERING_MARKERS.length)} engineering markers)`,
-);
+console.log(`production test-isolation gate passed (${String(forbidden.length)} test globals)`);

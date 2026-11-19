@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
-const { STATE_WAIT_MS } = require("./browser-waits");
+const { STATE_WAIT_MS, launchJourney } = require("./browser-waits");
 
 const repositoryRoot = path.resolve(__dirname, "..");
 const targets = ["standalone", "crazygames"];
@@ -299,7 +299,7 @@ async function main() {
   }
 
   const chromePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
-  const browser = await chromium.launch({
+  const browser = await launchJourney(chromium, {
     headless: true,
     ...(fs.existsSync(chromePath) ? { executablePath: chromePath } : {}),
   });

@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 // Reference images of everything the game draws, from the game's own drawing code: each picture as SVG
 // (vector, any size) and PNG (1x and 3x), all with no background, plus a true-scale SVG sheet per asset.
 //

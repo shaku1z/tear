@@ -42,7 +42,10 @@ export function drawTransport(
       ? []
       : [{ label: "◀◀", action: { type: "music.step", delta: -1 } as const, enabled: view.canStep }]),
     { label: now?.previewing ? "■" : "▶", action: play, enabled: play !== null },
-    { label: "▶▶", action: { type: "music.step", delta: 1 } as const, enabled: view.canStep },
+    // On a Radio channel ▶▶ moves the channel on; over a preview it steps the preview's queue.
+    view.radioNext
+      ? { label: "▶▶", action: { type: "music.next" } as const, enabled: true }
+      : { label: "▶▶", action: { type: "music.step", delta: 1 } as const, enabled: view.canStep },
   ];
   // The step buttons carry two glyphs, so they are wider than the square play button.
   const widthOf = (label: string): number => (label.length > 1 ? Math.round(size * (box.compact ? 1.25 : 1.6)) : size);
@@ -68,7 +71,9 @@ export function drawTransport(
   const where = now
     ? now.previewing
       ? `Preview · ${now.where || "Tear soundtrack"}`
-      : now.where || "Plays on the menu"
+      : now.channel
+        ? `Radio · ${now.channel}`
+        : now.where || "Plays on the menu"
     : "";
   twoLines(context, now ? now.title : "Nothing playing", where, textX, y, h, textW, t.type.label, t.color.paper);
 }

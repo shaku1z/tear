@@ -16,6 +16,7 @@ import {
   parseArguments,
   serializeBaseline,
   updateBaseline,
+  updateScope,
 } from "../scripts/check-code-budget.mjs";
 
 const script = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "scripts", "check-code-budget.mjs");
@@ -190,6 +191,51 @@ test("update carries a moved file's debt only when the move is declared", () => 
   );
 });
 
+test("a scoped update leaves an untouched file's entry alone, even when the file shrank", () => {
+  // Batch run 44327522625: a branch that never touched src/shared.ts recorded its smaller size,
+  // another branch grew it on main, and main then failed on a file neither branch changed.
+  const baseline = { "src/shared.ts": { chars: 47_038 }, "src/mine.ts": { chars: 40_000 } };
+  const measurements = new Map([
+    ["src/shared.ts", metrics({ chars: 46_144 })],
+    ["src/mine.ts", metrics({ chars: 30_000 })],
+  ]);
+  const scoped = updateBaseline(measurements, baseline, { scope: new Set(["src/mine.ts"]) });
+  assert.deepEqual(scoped, {
+    files: { "src/mine.ts": { chars: 30_000 }, "src/shared.ts": { chars: 47_038 } },
+    refused: [],
+    increased: [],
+  });
+  assert.deepEqual(updateBaseline(measurements, baseline).files["src/shared.ts"], { chars: 46_144 });
+});
+
+test("a scoped update still refuses growth in a changed file and keeps an untouched one's entry", () => {
+  const baseline = { "src/a.ts": { chars: 40_000 }, "src/b.ts": { chars: 40_000 } };
+  const measurements = new Map([
+    ["src/a.ts", metrics({ chars: 41_000 })],
+    ["src/b.ts", metrics({ chars: 41_000 })],
+  ]);
+  const result = updateBaseline(measurements, baseline, { scope: new Set(["src/a.ts"]) });
+  assert.deepEqual(result.refused, [{ file: "src/a.ts", metric: "chars", value: 41_000, limit: 40_000 }]);
+  assert.deepEqual(result.files["src/b.ts"], { chars: 40_000 });
+});
+
+test("the update scope adds both ends of a move and entries whose file is gone", () => {
+  const baseline = {
+    "src/gone.ts": { chars: 40_000 },
+    "src/kept.ts": { chars: 40_000 },
+    "src/old.ts": { chars: 40_000 },
+  };
+  const measurements = new Map([
+    ["src/kept.ts", metrics({ chars: 30_000 })],
+    ["src/new.ts", metrics({ chars: 30_000 })],
+  ]);
+  const moves = new Map([["src/old.ts", "src/new.ts"]]);
+  const scope = updateScope(["src/edited.ts"], measurements, baseline, moves);
+  assert.deepEqual([...scope].sort(), ["src/edited.ts", "src/gone.ts", "src/new.ts", "src/old.ts"]);
+  const result = updateBaseline(measurements, baseline, { scope, moves });
+  assert.deepEqual(result.files, { "src/kept.ts": { chars: 40_000 }, "src/new.ts": { chars: 30_000 } });
+});
+
 test("records only metrics over the ceilings and reports the worst offenders deterministically", () => {
   assert.deepEqual(overCeiling(metrics({ chars: 11, largestFunctionStatements: 1 }), small), {
     chars: 11,
@@ -214,15 +260,45 @@ test("argument parsing keeps escape hatches explicit", () => {
   assert.deepEqual([...options.moves], [["src/x.ts", "src/y.ts"]]);
 });
 
+/** A repository whose origin/main is its first commit, made with plumbing so no hook runs. */
+function gitRepository(root) {
+  const env = {
+    ...process.env,
+    GIT_AUTHOR_NAME: "test",
+    GIT_AUTHOR_EMAIL: "test@example.invalid",
+    GIT_COMMITTER_NAME: "test",
+    GIT_COMMITTER_EMAIL: "test@example.invalid",
+  };
+  const git = (...args) => {
+    const result = spawnSync("git", args, { cwd: root, encoding: "utf8", env });
+    assert.equal(result.status, 0, result.stderr);
+    return result.stdout.trim();
+  };
+  git("init", "-q", "-b", "main");
+  git("add", "-A");
+  const commit = git("commit-tree", git("write-tree"), "-m", "base");
+  git("update-ref", "refs/heads/main", commit);
+  git("update-ref", "refs/remotes/origin/main", commit);
+}
+
 test("the CLI fails a planted packed file, refuses to raise it, and accepts an explicit exception loudly", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "tear-code-budget-"));
   try {
     fs.mkdirSync(path.join(root, "src"), { recursive: true });
     fs.mkdirSync(path.join(root, "config"), { recursive: true });
     fs.writeFileSync(path.join(root, "src", "clean.ts"), "export const value = 1;\n");
-    fs.writeFileSync(path.join(root, "config", "code-budget-baseline.json"), serializeBaseline({}));
+    // An untouched file below its recorded entry: a scoped --update must leave the entry as it is.
+    fs.writeFileSync(path.join(root, "src", "untouched.ts"), "export function g() { a(); }\n");
+    const untouchedEntry = { multiStatementLines: 3 };
+    fs.writeFileSync(
+      path.join(root, "config", "code-budget-baseline.json"),
+      serializeBaseline({ "src/untouched.ts": untouchedEntry }),
+    );
+    gitRepository(root);
     const run = (...argumentsList) =>
       spawnSync(process.execPath, [script, "--root", root, ...argumentsList], { encoding: "utf8" });
+    const entries = () =>
+      JSON.parse(fs.readFileSync(path.join(root, "config", "code-budget-baseline.json"), "utf8")).files;
     assert.equal(run().status, 0);
     fs.writeFileSync(path.join(root, "src", "packed.ts"), "export function f() { a(); b(); }\n");
     const failed = run();
@@ -234,7 +310,10 @@ test("the CLI fails a planted packed file, refuses to raise it, and accepts an e
     const allowed = run("--update", "--allow-increase", "src/packed.ts");
     assert.equal(allowed.status, 0);
     assert.match(allowed.stderr, /!!! CODE BUDGET BASELINE RAISED for src\/packed\.ts/u);
+    assert.deepEqual(entries()["src/untouched.ts"], untouchedEntry);
     assert.equal(run().status, 0);
+    assert.equal(run("--update", "--all").status, 0);
+    assert.deepEqual(entries()["src/untouched.ts"], { multiStatementLines: 1 });
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

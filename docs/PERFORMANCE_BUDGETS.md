@@ -33,6 +33,17 @@ The test knows two host classes, recorded as `referenceProfile.host` and in each
 
 `TEAR_PERF_HOST=controlled|shared` overrides the default. CPU-throttled pacing stays diagnostic on both classes.
 
+### Cost of one tick, and the per-frame figure at a slow cadence
+
+The per-frame `simulation` time is the work of a whole frame step, including every fixed tick that frame catches up, and the `frame` work includes it too. When the host delivers frames more slowly, a frame catches up more ticks and both figures rise although no tick got more expensive. The nightly hosted runner halved its cadence on 2026-11-18 (the unthrottled desktop run went from 17 ms to 33 ms between frames, with the same runner image and Chromium) and the constrained per-frame simulation p95 went from 9.7 to 14.6 and 15.1 ms (frame work from 12.5 to 18.7 ms), while the canonical tick p95 stayed at 1.1 to 1.3 ms. The old known-good commit also exceeded the 10 ms budget in a local run with software rendering at a similar cadence, so no commit was the cause.
+
+A scenario that sets `canonicalTickP95Ms` (the 4x constrained one) is therefore judged like this, by `createFrameCostAssessment` in `tests/browser-performance-pacing-policy.js`:
+
+- The p95 of one canonical tick is required on every host at every cadence. The budget is 3 ms: the highest p95 measured on the hosted runner is 1.3 ms and on a loaded local machine 2.3 ms, so 3 ms is 2.3 times the runner's worst and above the local worst. Lower it after a deliberate reduction; raise it only with the measured reason recorded here.
+- The per-frame simulation p95 and the frame-work p95 are required only when the median frame interval is at most `referenceProfile.judgedIntervalSteps` (2) times `referenceProfile.displayStepMs` (16.67 ms), that is 33.34 ms. Otherwise it is not judged, the run prints `per-frame sim not judged: interval X ms` and appends the same line to the job summary, and the report keeps the full assessment (`frameCostAssessment`).
+- Under the 4x throttle the median interval is usually far above that limit, even when the host is healthy (83 ms on the last good hosted run), so on a hosted runner the constrained per-frame figures are mostly not judged and the tick budget is the enforced cost. A local run on a fast machine judges both.
+- Scenarios without `canonicalTickP95Ms` (desktop, Verdant, Pale) still require the per-frame figures at every cadence. Giving them a tick budget, and the same switch, is the next step once their tick p95 has been measured on several runs.
+
 When hardware-independent changes deliberately alter the representative workload, capture several clean runs, document why the contract changed, and update the workload and budget together. Do not raise a threshold solely to silence one overloaded or contended machine.
 
 ## Runtime cost profile (reported, not yet a budget)
@@ -61,11 +72,11 @@ Path to budgets: once several clean runs on the controlled release host agree, p
 
 - **Startup scripts.** The bytes of the entry script plus every `modulepreload` that `index.html` references are at most `startupScriptBytes` (2,300,000 bytes uncompressed; about 2.09 MB measured). The on-demand tutorial corpus may never be among them.
 - **Main chunk.** The largest application JavaScript chunk, excluding worker bundles and the on-demand tutorial corpus, stays within `standaloneMainGzipBytes` / `crazygamesMainGzipBytes` gzip bytes.
-- **Workers.** The largest worker bundle (Career Archive, coach history, Chase Your Best reference, capsule encoder) is at most `workerGzipBytes` gzip bytes.
+- **Workers.** The largest worker bundle (Career Archive, Chase Your Best reference, capsule encoder) is at most `workerGzipBytes` gzip bytes.
 - **Tutorial corpus.** The tutorial demonstration corpus is a separate chunk of at most `tutorialGoldGzipBytes` gzip bytes. Training preflight fetches it before a tutorial or practice run; the service worker runtime-caches it on first use, so it then works offline, rather than precaching it for every player.
 - **Precache.** The standalone service worker precaches at most `precacheEntries` files and `precacheBytes` bytes (33 entries and about 2.70 MB measured; the three large workers are cached on first use instead), and never the tutorial corpus.
 
-`pnpm check:test-isolation` proves the engineering channel stays out of both release builds. The Watch Agent and the snapshot editor load only through dynamic imports guarded by the test-build constants, and the Verdant calibration scene only through one guarded by `__TEAR_TEST_BUILD__`. The gate fails if a release file contains one of their distinctive markers (storage keys, format identifiers and diagnostic sentences listed in the script) or a calibration image, and it fails if a marker disappears from its source module, so a renamed string cannot make the check pass vacuously.
+Developer-only code stays out of every release build because the build refuses it: a release build of any target fails when a module of the `release.developer-only` role (`config/architecture-roles.json`) contributes code to a bundle. The Watch Agent and the snapshot editor load only through dynamic imports guarded by the test-build constants. `pnpm check:test-isolation` then fails if a release file defines one of the test globals listed in the script.
 
 Set a new ceiling about 10% above a deliberate, measured change and record why here; never raise one to absorb an unexplained increase.
 

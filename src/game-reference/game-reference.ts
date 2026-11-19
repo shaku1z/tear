@@ -191,16 +191,13 @@ export interface GameReferenceProjectionInput {
   readonly difficulties: readonly DifficultyDefinition[];
   readonly tuningByWeapon: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
 }
-const EXPECTED_UPGRADE_COUNT = 60;
-const EXPECTED_ACHIEVEMENT_COUNT = 100;
+/** The upgrade and achievement catalogs are the authority: the reference carries every entry each lists, in its order. */
+const EXPECTED_UPGRADE_COUNT = CANONICAL_UPGRADE_IDS.length;
+const EXPECTED_ACHIEVEMENT_COUNT = CANONICAL_ACHIEVEMENT_IDS.length;
 const EXPECTED_STAGE_COUNT = STAGES.length;
 const UPGRADE_CATEGORIES = Object.freeze(["offense", "throw", "parry", "mobility", "resilience", "utility"] as const);
 const ACHIEVEMENT_CATEGORIES = Object.freeze(["combat", "skill", "progress", "boss", "survival", "mastery"] as const);
 const ACHIEVEMENT_RARITIES = Object.freeze(["common", "uncommon", "rare", "epic", "legendary"] as const);
-if (CANONICAL_UPGRADE_IDS.length !== EXPECTED_UPGRADE_COUNT)
-  throw new Error("canonical upgrade catalog count changed without a reference-contract update");
-if (CANONICAL_ACHIEVEMENT_IDS.length !== EXPECTED_ACHIEVEMENT_COUNT)
-  throw new Error("canonical achievement catalog count changed without a reference-contract update");
 
 function record(value: unknown, path: string): Record<string, unknown> {
   if (value === null || typeof value !== "object" || Array.isArray(value))

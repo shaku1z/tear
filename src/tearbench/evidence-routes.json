@@ -84,6 +84,7 @@
     "id": "persistence-cloud",
     "prefixes": [
       "src/persistence/",
+      "src/domain/gauntlet-records.ts",
       "src/platform/",
       "src/ghost/",
       "wrangler.jsonc",
@@ -626,6 +627,7 @@
       "src/gameplay/environment/environment-runtime.ts",
       "src/gameplay/environment/biome-actors/rootbound-actors.ts",
       "src/presentation/enemies/renderers/rootbound-renderer.ts",
+      "src/presentation/enemies/figures/",
       "src/presentation/environment/verdant-environment-presentation.ts",
       "src/tearbench/rootbound-graft-anchor-forge.ts",
       "src/tearbench/state-forge-factories.ts",
@@ -636,7 +638,8 @@
       "src/tearbench/evidence-routes.json",
       "tests/browser-current-gameplay-scenarios.js",
       "tests/unit/rootbound-phase-two.test.ts",
-      "tests/unit/graft-anchor.test.ts"
+      "tests/unit/graft-anchor.test.ts",
+      "tests/unit/boss-figure.test.ts"
     ],
     "scenarios": [
       "rootbound-graft-anchor-destruction"
@@ -682,6 +685,7 @@
       "src/gameplay/run/campaign-stage-curve.ts",
       "src/gameplay/run/composition-budget.ts",
       "src/gameplay/run/wave-planner.ts",
+      "src/gameplay/run/gauntlet-trials.ts",
       "src/gameplay/run/spawn-scheduler.ts",
       "src/gameplay/run/live-wave-controller.ts",
       "src/tearbench/progression-ledger.ts",
@@ -1008,7 +1012,8 @@
     "prefixes": [
       "src/tearbench/production-combat-phases.ts",
       "src/tearbench/production-replay-composition.ts",
-      "src/tearbench/production-headless-environment.ts"
+      "src/tearbench/production-headless-environment.ts",
+      "src/tearbench/production-policy-observation.ts"
     ],
     "scenarios": [],
     "journeyCheckpoint": "production-replay-headless-composition-engineering",

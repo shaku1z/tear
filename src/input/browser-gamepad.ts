@@ -1,3 +1,4 @@
+import { keyCodes, type KeyboardAction } from "../domain/keyboard-bindings";
 import type {
   GamepadSettings,
   BrowserGamepad,
@@ -5,6 +6,9 @@ import type {
   PadPresetName,
   PadPresets,
 } from "./browser-input-contracts";
+
+/** The pad drives keyboard-shaped consumers by holding or pressing an action's first bound key. */
+const keyFor = (action: KeyboardAction): string => keyCodes(action)[0] ?? action;
 
 type GlyphStyle = Exclude<GamepadSettings["glyphStyle"], "auto">;
 
@@ -351,16 +355,16 @@ export function createBrowserGamepad(dependencies: BrowserGamepadDependencies): 
           // dominant axis: the analog stick compares magnitudes; a d-pad diagonal (no
           // strong analog) falls back to vertical, the safer default for lists.
           const horiz = Math.abs(ax) > Math.abs(ay) && Math.abs(ax) > menuDead;
-          if (dy !== 0 && !horiz) navKey = dy < 0 ? "ArrowUp" : "ArrowDown";
-          else if (dx !== 0) navKey = dx < 0 ? "ArrowLeft" : "ArrowRight";
-          else navKey = dy < 0 ? "ArrowUp" : "ArrowDown";
+          if (dy !== 0 && !horiz) navKey = keyFor(dy < 0 ? "menu-up" : "menu-down");
+          else if (dx !== 0) navKey = keyFor(dx < 0 ? "menu-left" : "menu-right");
+          else navKey = keyFor(dy < 0 ? "menu-up" : "menu-down");
         }
         if (navKey && (navKey !== this._navKey || this._navT <= 0)) {
           Input.pressed.add(navKey); // menuUp/Down/Left/Right (and the Prev/Next wrappers) read these
           this._navT = PAD_CONFIG.menuRepeat;
         } else if (!navKey) this._navT = 0;
         this._navKey = navKey;
-        if (this._edge(gp, 0)) Input.pressed.add("Enter"); // A = confirm
+        if (this._edge(gp, 0)) Input.pressed.add(keyFor("confirm")); // A = confirm
         if (this._edge(gp, 1)) Input.padBack = true; // B = back (game routes to BACK)
         if (this._edge(gp, 2)) {
           Input._uiContext1 = true;
@@ -407,10 +411,10 @@ export function createBrowserGamepad(dependencies: BrowserGamepadDependencies): 
       const deadL = PAD_CONFIG.deadL,
         deadR = PAD_CONFIG.deadR;
       // movement: left stick beyond the (tunable) left deadzone, or dpad, -> held keys
-      this._setHeld("KeyA", ax < -deadL || this._down(gp, 14));
-      this._setHeld("KeyD", ax > deadL || this._down(gp, 15));
-      this._setHeld("KeyW", ay < -0.5 || this._down(gp, 12)); // up (dash aim / climbs)
-      this._setHeld("KeyS", ay > 0.55 || this._down(gp, 13)); // hold to drop through platforms
+      this._setHeld(keyFor("move-left"), ax < -deadL || this._down(gp, 14));
+      this._setHeld(keyFor("move-right"), ax > deadL || this._down(gp, 15));
+      this._setHeld(keyFor("move-up"), ay < -0.5 || this._down(gp, 12)); // up (dash aim / climbs)
+      this._setHeld(keyFor("move-down"), ay > 0.55 || this._down(gp, 13)); // hold to drop through platforms
       Input.syncSemanticMovement();
 
       // actions resolved from the active preset (match the touch edges so every

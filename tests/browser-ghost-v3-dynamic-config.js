@@ -8,7 +8,7 @@ function staticBuild(build) {
   return stable;
 }
 
-withJourney({ name: "C27 Ghost V3 dynamic configuration provenance", port: 8163 }, async ({ page, waitScreen }) => {
+withJourney({ name: "C27 Ghost V3 dynamic configuration provenance" }, async ({ page, waitScreen }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
     timeout: STATE_WAIT_MS,
   });

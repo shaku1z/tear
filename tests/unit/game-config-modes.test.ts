@@ -36,6 +36,6 @@ describe("runtime mode configuration projection", () => {
       "bossonly",
       "sandbox",
     ]);
-    expect(stableVerificationHash(CONFIG.modes)).toBe("d8ff7113c5aa6bac");
+    expect(stableVerificationHash(CONFIG.modes)).toBe("17df355a3c197d76");
   });
 });

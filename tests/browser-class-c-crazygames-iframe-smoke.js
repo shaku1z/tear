@@ -5,7 +5,7 @@ const http = require("node:http");
 const path = require("node:path");
 const { chromium } = require("@playwright/test");
 const { assertCleanProductionUrl, createClassCControls, writeClassCArtifact } = require("./class-c-browser-harness");
-const { STATE_WAIT_MS } = require("./browser-waits");
+const { STATE_WAIT_MS, launchJourney } = require("./browser-waits");
 
 function contentType(file) {
   if (file.endsWith(".js")) return "text/javascript";
@@ -69,7 +69,7 @@ async function main() {
   assert.ok(fs.existsSync(path.join(root, "index.html")), "dist/crazygames is missing; run pnpm build first");
   const host = await serveIframeBuild(root);
   const chromePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
-  const browser = await chromium.launch({
+  const browser = await launchJourney(chromium, {
     headless: true,
     ...(fs.existsSync(chromePath) ? { executablePath: chromePath } : {}),
   });

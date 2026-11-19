@@ -10,7 +10,7 @@ const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
 // in the annex flow ship); TEAR_PRACTICE_LAB_ONLY=1 runs the Practice Lab alone.
 const journey = (practiceLab) =>
   withJourney(
-    { name: practiceLab ? "practice lab journeys" : "playground journeys", port: practiceLab ? 8145 : 8144 },
+    { name: practiceLab ? "practice lab journeys" : "playground journeys" },
     async ({ page, boot, waitScreen }) => {
       async function pressUntilScreen(key, screen) {
         for (let attempt = 0; attempt < 12; attempt++) {
@@ -453,8 +453,8 @@ const journey = (practiceLab) =>
         await page.mouse.click(point.x, point.y);
       };
 
-      // E opens the menu on its first tab; the E that opened it does not also switch tabs.
-      await pressUntilScreen("e", "pgmenu");
+      // Tab opens the menu on its first tab (E throws; the menu key is Tab in the binding table).
+      await pressUntilScreen("Tab", "pgmenu");
       await page.evaluate(() => window.__PLAYGROUND_TEXT__.splice(0));
       await tabOpen("ENEMIES");
       console.log("playground journey: menu open on SPAWN");

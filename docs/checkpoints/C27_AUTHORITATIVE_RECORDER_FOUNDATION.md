@@ -1,5 +1,7 @@
 # C27 — Authoritative Ghost 3.0 Recorder and Capsule Foundation
 
+The replay Coach, the knowledge libraries and `tests/browser-ghost-v3-live-capture.js` named in this note were removed in shaku1z/tear#227.
+
 ## Status
 
 In progress as of 2026-07-30. Ghost 3.0 remains separate from the Ghost 2.0

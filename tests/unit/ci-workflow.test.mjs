@@ -1,12 +1,11 @@
 // What the Validate workflow must do, tested by behaviour rather than by its exact text.
-import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
-import process from "node:process";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import vm from "node:vm";
 import { describe, expect, it } from "vitest";
 import { hashMismatches } from "../../scripts/ci-build-hashes.mjs";
+import { main as checkedCommitMain } from "../../scripts/ci-checked-commit.mjs";
+import { lockedPlaywrightVersion, playwrightImage } from "../../scripts/ci-playwright-image.mjs";
 import { FIXED_JOBS, main as verdictMain, verdictProblems } from "../../scripts/ci-verdict.mjs";
 import { loadChecks, selectChecks, shardChecks } from "../../scripts/run-checks.mjs";
 
@@ -135,57 +134,84 @@ describe("Validate workflow", () => {
     expect(jobBlocks.check).toContain('echo "::notice title=checked::head=$HEAD_SHA main=$MAIN"');
     // Every later step must expect the commit checked out here, not GitHub's GITHUB_SHA: the
     // workspace check, the build's attribution and the artifact verification all read these.
-    expect(checkedCommit).toContain('echo "TEAR_RELEASE_SHA=$commit" >> "$GITHUB_ENV"');
-    expect(checkedCommit).toContain('echo "TEAR_BUILD_GIT_SHA=$commit" >> "$GITHUB_ENV"');
+    expect(checkedCommit).toMatch(
+      /\n {4}- name: Merge main into the change\n {6}id: merge\n {6}shell: bash\n {6}env:\n {8}MAIN: \$\{\{ inputs\.main \}\}\n {8}EXPECTED: \$\{\{ inputs\.commit \}\}\n(?: {6}#.*\n)* {6}run: node scripts\/ci-checked-commit\.mjs\n/u,
+    );
   });
 
-  it(
-    "makes the identical merge commit in every job, and refuses a job that checked out another",
-    { timeout: 60_000 },
-    () => {
-      const script = /\n {4}- name: Merge main into the change\n[\s\S]*?\n {6}run: \|\n((?: {8}.*\n|\n)+)/u
-        .exec(checkedCommit)?.[1]
-        ?.replace(/^ {8}/gmu, "");
-      expect(script, "the merge script").toBeDefined();
-      const work = mkdtempSync(join(tmpdir(), "tear-checked-commit-"));
-      const sh = (cwd, command, env = {}) =>
-        spawnSync("bash", ["-c", command], { cwd, encoding: "utf8", env: { ...process.env, ...env } });
-      try {
-        const origin = join(work, "origin");
-        const commits = ["git init --quiet -b main", "git config user.name t", "git config user.email t@invalid"];
-        expect(sh(work, `mkdir origin && cd origin && ${commits.join(" && ")}`).status).toBe(0);
-        sh(origin, "echo a > a && git add a && git commit --quiet -m a && git checkout --quiet -b change");
-        sh(origin, "echo b > b && git add b && git commit --quiet -m b && git checkout --quiet main");
-        sh(origin, "echo c > c && git add c && git commit --quiet -m c");
-        const main = sh(origin, "git rev-parse main").stdout.trim();
-        const merged = [];
-        for (const name of ["one", "two"]) {
-          expect(sh(work, `git clone --quiet origin ${name} && cd ${name} && git checkout --quiet change`).status).toBe(
-            0,
-          );
-          const output = join(work, `${name}.out`);
-          const env = { MAIN: main, EXPECTED: "", GITHUB_OUTPUT: output, GITHUB_ENV: join(work, `${name}.env`) };
-          const result = sh(join(work, name), script ?? "", env);
-          expect(result.status, result.stdout + result.stderr).toBe(0);
-          merged.push(/commit=([0-9a-f]{40})/u.exec(readFileSync(output, "utf8"))?.[1]);
-        }
-        expect(merged[0]).toMatch(/^[0-9a-f]{40}$/u);
-        expect(merged[1]).toBe(merged[0]);
-        const env = {
-          MAIN: main,
-          EXPECTED: "0".repeat(40),
-          GITHUB_OUTPUT: join(work, "x"),
-          GITHUB_ENV: join(work, "y"),
-        };
-        sh(work, "git clone --quiet origin three && cd three && git checkout --quiet change");
-        const refused = sh(join(work, "three"), script ?? "", env);
-        expect(refused.status).not.toBe(0);
-        expect(refused.stdout).toContain("not the commit the scope job recorded");
-      } finally {
-        rmSync(work, { recursive: true, force: true });
-      }
-    },
-  );
+  describe("the checked commit (scripts/ci-checked-commit.mjs, run in process with a recording git)", () => {
+    const MAIN = "c".repeat(40);
+    const HEAD = "d".repeat(40);
+    const MAIN_DATE = "2026-11-18T03:00:00-05:00";
+    /** One job: a git that answers like a checkout of the change, recording every call. */
+    const job = (env, { mergeFails = false } = {}) => {
+      const calls = [];
+      const files = {};
+      const git = (args, extra = {}) => {
+        calls.push({ args, env: extra });
+        if (args.includes("merge") && mergeFails) throw new Error("conflict");
+        if (args[0] === "log") return MAIN_DATE;
+        if (args[0] === "rev-parse") return HEAD;
+        return "";
+      };
+      const lines = [];
+      const append = (file, text) => {
+        files[file] = (files[file] ?? "") + text;
+      };
+      const status = checkedCommitMain(
+        { GITHUB_OUTPUT: "out", GITHUB_ENV: "env", ...env },
+        { git, log: (line) => lines.push(line), append },
+      );
+      return { status, calls, files, stdout: lines.join("\n") };
+    };
+
+    it("merges the one main commit with a fixed identity, message and main's own date, so every job makes the same commit", () => {
+      const one = job({ MAIN, EXPECTED: "" });
+      const two = job({ MAIN, EXPECTED: "" });
+      expect(one.status).toBe(0);
+      expect(two.calls).toEqual(one.calls);
+      const merge = one.calls.find((call) => call.args.includes("merge"));
+      expect(merge?.args).toEqual([
+        "-c",
+        "user.name=validate",
+        "-c",
+        "user.email=validate@invalid",
+        "merge",
+        "--quiet",
+        "--no-edit",
+        "-m",
+        `Validate: merge main ${MAIN}`,
+        MAIN,
+      ]);
+      expect(merge?.env).toEqual({ GIT_AUTHOR_DATE: MAIN_DATE, GIT_COMMITTER_DATE: MAIN_DATE });
+      expect(one.calls[0].args).toEqual(["fetch", "--quiet", "origin", `+${MAIN}:refs/remotes/origin/main`]);
+      expect(one.files).toEqual({
+        out: `commit=${HEAD}\n`,
+        env: `TEAR_RELEASE_SHA=${HEAD}\nTEAR_BUILD_GIT_SHA=${HEAD}\n`,
+      });
+    });
+
+    it("checks a push to main as it is, with no merge", () => {
+      const push = job({ MAIN: "", EXPECTED: "" });
+      expect(push.status).toBe(0);
+      expect(push.calls.map((call) => call.args[0])).toEqual(["rev-parse"]);
+    });
+
+    it("refuses a job that checked out another commit than the scope job recorded, and records nothing", () => {
+      const refused = job({ MAIN, EXPECTED: "0".repeat(40) });
+      expect(refused.status).toBe(1);
+      expect(refused.stdout).toContain("not the commit the scope job recorded");
+      expect(refused.files).toEqual({});
+      expect(job({ MAIN, EXPECTED: HEAD }).status).toBe(0);
+    });
+
+    it("refuses a change that does not merge cleanly, by saying so", () => {
+      const conflict = job({ MAIN, EXPECTED: "" }, { mergeFails: true });
+      expect(conflict.status).toBe(1);
+      expect(conflict.stdout).toContain("does not merge cleanly with current main");
+      expect(conflict.files).toEqual({});
+    });
+  });
 
   it("has every script that compares HEAD with GITHUB_SHA prefer the checked commit", () => {
     for (const [file, variable] of [
@@ -453,7 +479,10 @@ describe("Nightly checks workflow", () => {
 
   it("runs the nightly group on main once a day and by hand", () => {
     expect(nightly).toMatch(/schedule:\n {4}- cron: "\d{1,2} \d{1,2} \* \* \*"\n {2}workflow_dispatch:/u);
-    expect(nightly).toMatch(/uses: actions\/checkout@v4\n {8}with:\n {10}ref: main/u);
+    // A schedule runs on the default branch, main; started by hand, it checks the chosen branch.
+    // Naming a ref would test a commit other than the one the run builds and labels.
+    expect(nightly).toMatch(/uses: actions\/checkout@v4/u);
+    expect(nightly).not.toMatch(/\n\s+ref:/u);
     expect(nightly).toMatch(/run: xvfb-run -a node scripts\/run-checks\.mjs nightly --keep-going\n/u);
     expect(selectChecks(loadChecks(), "nightly").length).toBeGreaterThan(0);
   });
@@ -471,5 +500,49 @@ describe("Nightly checks workflow", () => {
 
   it("only reads the repository", () => {
     expect(nightly).toMatch(/permissions:\n {2}contents: read\n\n/u);
+  });
+});
+
+describe("Browser jobs' container", () => {
+  // Every job of every workflow, as { file, id, block }.
+  const allJobs = readdirSync(resolve(root, ".github/workflows"))
+    .filter((name) => /\.ya?ml$/u.test(name))
+    .flatMap((name) =>
+      Object.entries(jobs(read(`.github/workflows/${name}`))).map(([id, block]) => ({ file: name, id, block })),
+    );
+  const where = (job) => `${job.file}: ${job.id}`;
+  // A job with an environment is owner-gated (a deploy); it is not run to test a change.
+  const gated = (job) => /\n {4}environment:/u.test(job.block);
+
+  it("takes its image from the version the lockfile installs", () => {
+    const lockfile = read("pnpm-lock.yaml");
+    const declared = JSON.parse(read("package.json")).devDependencies["@playwright/test"];
+    expect(lockedPlaywrightVersion(lockfile)).toBe(declared);
+    expect(playwrightImage("1.2.3")).toBe("mcr.microsoft.com/playwright:v1.2.3-noble");
+    expect(() => lockedPlaywrightVersion("lockfileVersion: '9.0'\n")).toThrow(/no @playwright\/test/u);
+  });
+
+  it("is named by a job output in every workflow, never written by hand", () => {
+    const containers = allJobs.filter((job) => /\n {4}container:/u.test(job.block));
+    expect(containers.length).toBeGreaterThan(0);
+    for (const job of containers) {
+      const from = /\n {4}container:\n {6}image: \$\{\{ needs\.([\w-]+)\.outputs\.playwright_image \}\}\n/u.exec(
+        job.block,
+      )?.[1];
+      expect(from, where(job)).toBeDefined();
+      expect(needsOf(job.block), where(job)).toContain(from);
+      const source = allJobs.find((other) => other.file === job.file && other.id === from);
+      expect(source?.block, where(job)).toMatch(/node scripts\/ci-playwright-image\.mjs >> "\$GITHUB_OUTPUT"/u);
+      expect(job.block, where(job)).toMatch(
+        /\n {6}GIT_CONFIG_COUNT: 1\n {6}GIT_CONFIG_KEY_0: safe\.directory\n {6}GIT_CONFIG_VALUE_0: "\*"\n/u,
+      );
+    }
+  });
+
+  it("is where every job that needs a browser runs, so no such job installs one", () => {
+    for (const job of allJobs.filter((each) => !gated(each))) {
+      expect(job.block, where(job)).not.toMatch(/playwright install/u);
+      if (/xvfb-run/u.test(job.block)) expect(job.block, where(job)).toMatch(/\n {4}container:/u);
+    }
   });
 });

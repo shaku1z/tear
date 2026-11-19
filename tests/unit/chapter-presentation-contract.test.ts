@@ -18,6 +18,10 @@ import { STAGES } from "../../src/gameplay/stages";
 import { layoutChapterPage, type ChapterMeasure, type ChapterTextRole } from "../../src/presentation/chapter-layout";
 import { cinematicPromptForDevice } from "../../src/presentation/cinematic-prompts";
 import { createUiState } from "../../src/presentation/ui-tokens";
+import { promptLabel } from "../../src/domain/prompt-vocabulary";
+
+/** The keyboard confirm keys as the prompt vocabulary words them (from the binding table). */
+const CONFIRM = promptLabel("confirm", "keyboard") ?? "";
 
 const tokens = createUiState({ bomber: "#f80", charger: "#e33", perfect: "#1cc" }).t;
 const timing: CampaignChapterTiming = Object.freeze({ ...tokens.motion, dialogueDuck: 0.45, biomeRevealDuck: 0.72 });
@@ -159,10 +163,16 @@ describe("chapter presentation contract", () => {
 
   it("words the chapter prompt for the device that owns input", () => {
     const hint = "TAP TO CONTINUE  ·  HOLD TO SKIP";
-    expect(cinematicPromptForDevice(hint, "mouse")).toBe("CLICK TO CONTINUE  ·  HOLD SPACE TO SKIP");
-    expect(cinematicPromptForDevice(hint, "keyboard")).toBe("SPACE TO CONTINUE  ·  HOLD SPACE TO SKIP");
+    expect(cinematicPromptForDevice(hint, "mouse")).toBe(`CLICK TO CONTINUE  ·  HOLD ${CONFIRM} TO SKIP`);
+    expect(cinematicPromptForDevice(hint, "keyboard")).toBe(`${CONFIRM} TO CONTINUE  ·  HOLD ${CONFIRM} TO SKIP`);
     expect(cinematicPromptForDevice(hint, "gamepad", "A")).toBe("A TO CONTINUE  ·  HOLD A TO SKIP");
     expect(cinematicPromptForDevice(hint, "touch")).toBe("TAP TO CONTINUE");
+  });
+
+  it("names SPACE in the keyboard and mouse skip prompts, the owner's wording", () => {
+    const hint = "TAP TO CONTINUE  ·  HOLD TO SKIP";
+    expect(cinematicPromptForDevice(hint, "mouse")).toBe("CLICK TO CONTINUE  ·  HOLD SPACE TO SKIP");
+    expect(cinematicPromptForDevice(hint, "keyboard")).toBe("SPACE TO CONTINUE  ·  HOLD SPACE TO SKIP");
   });
 
   it("queues achievement toasts while a cinematic owns the screen", () => {

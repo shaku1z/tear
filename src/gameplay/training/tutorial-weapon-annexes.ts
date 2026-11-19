@@ -19,7 +19,6 @@ export interface TutorialWeaponAnnexState {
 const ANNEX_ROWS = {
   sword: {
     arena: "launch-bay",
-    keys: ["MOUSE", "MOUSE UP"],
     controls: ["swing", "swing-up"],
     instructions: [
       "Cut through the target, leave its line, then reverse through it with a new swing to earn REVERSAL.",
@@ -28,7 +27,6 @@ const ANNEX_ROWS = {
   },
   hammer: {
     arena: "drop-well",
-    keys: ["W", "MOUSE DOWN"],
     controls: ["jump", "swing-down"],
     instructions: [
       "Take height and drive the Hammer down through the target for a real airborne slam.",
@@ -37,7 +35,6 @@ const ANNEX_ROWS = {
   },
   greatsword: {
     arena: "throw-lane",
-    keys: ["MOUSE", "RMB"],
     controls: ["swing", "throw"],
     instructions: [
       "Carry a fast, clean Greatsword edge through the target to trigger CLEAVE.",
@@ -46,7 +43,6 @@ const ANNEX_ROWS = {
   },
   chainblade: {
     arena: "throw-lane",
-    keys: ["RMB", "MOUSE", "RMB"],
     controls: ["throw", "swing", "recall"],
     instructions: [
       "Throw into the living target to establish a real Hook. An empty throw does not count.",
@@ -55,7 +51,6 @@ const ANNEX_ROWS = {
   },
   riftlock: {
     arena: "throw-lane",
-    keys: ["RMB", "LMB"],
     controls: ["throw", "tether"],
     instructions: [
       "Throw the Loose Cannon into the living target to establish Capture.",
@@ -66,7 +61,6 @@ const ANNEX_ROWS = {
   WeaponId,
   {
     arena: NonNullable<TutorialLesson["arena"]>;
-    keys: readonly string[];
     controls: readonly PromptAction[];
     instructions: readonly string[];
   }
@@ -79,7 +73,6 @@ export interface TutorialWeaponAnnex {
   /** The name in capitals, as the Drills list shows it. */
   readonly title: string;
   readonly arena: NonNullable<TutorialLesson["arena"]>;
-  readonly keys: readonly string[];
   readonly controls: readonly PromptAction[];
   /** The weapon's drill moves, one step each. */
   readonly moves: readonly WeaponDrillMove[];
@@ -155,7 +148,6 @@ export function weaponAnnexLesson(state: TutorialWeaponAnnexState): TutorialLess
   return {
     title: `${definition.title} ANNEX`,
     description: definition.instructions[state.progress] ?? "EXERCISE COMPLETE · Select another exercise or restart.",
-    keys: definition.keys,
     arena: definition.arena,
     teachingFocus: "blade",
     dummyCount: 1,
