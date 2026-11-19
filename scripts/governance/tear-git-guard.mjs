@@ -67,8 +67,29 @@ function gitIn(repo, args, options = {}) {
   return git(args, { cwd: repo, ...options });
 }
 
+// Each hook is its own process, and on Windows every git process costs 100-200 ms, so the guard asks
+// git once for what it needs and keeps the answers for the rest of the process.
+const commonDirs = new Map();
+const configSnapshots = new Map();
+
 function repoRoot() {
-  return path.resolve(git(["rev-parse", "--show-toplevel"]));
+  const both = git(["rev-parse", "--show-toplevel", "--git-common-dir"], { allowFailure: true });
+  const lines = both.status === 0 ? String(both.stdout ?? "").split(/\r?\n/u) : [];
+  // On failure, or on output this does not expect, the single call reports exactly what it always has.
+  if (lines.length < 2 || !lines[0].trim() || !lines[1].trim()) {
+    return path.resolve(git(["rev-parse", "--show-toplevel"]));
+  }
+  const root = path.resolve(lines[0].trim());
+  // --git-common-dir is relative to the working directory, which is not always the top level.
+  commonDirs.set(root, path.resolve(lines[1].trim()));
+  return root;
+}
+
+function gitCommonDir(repo) {
+  const known = commonDirs.get(path.resolve(repo));
+  if (known) return known;
+  const value = gitIn(repo, ["rev-parse", "--git-common-dir"]);
+  return path.isAbsolute(value) ? path.resolve(value) : path.resolve(repo, value);
 }
 
 function samePath(left, right) {
@@ -83,9 +104,47 @@ function normalizeRemote(value) {
     .toLowerCase();
 }
 
+/**
+ * A config key as git compares it: the section and the final name ignore case, a subsection keeps it.
+ * "--list" prints keys in this form, and "--get" normalises the key it is asked for the same way.
+ */
+export function canonicalConfigKey(key) {
+  const text = String(key);
+  const first = text.indexOf(".");
+  const last = text.lastIndexOf(".");
+  if (first === last) return text.toLowerCase();
+  return text.slice(0, first).toLowerCase() + text.slice(first, last) + text.slice(last).toLowerCase();
+}
+
+/**
+ * Parses "git config --null --list": entries end in NUL, a key is separated from its value by the first
+ * newline, and a key with no value has no newline. A key set more than once keeps its last value, as
+ * "--get" returns it. Values are trimmed as the guard trimmed "--get" output.
+ */
+export function parseConfigList(text) {
+  const values = new Map();
+  for (const entry of String(text).split("\0")) {
+    if (!entry) continue;
+    const newline = entry.indexOf("\n");
+    const key = newline < 0 ? entry : entry.slice(0, newline);
+    const value = newline < 0 ? "" : entry.slice(newline + 1);
+    values.set(canonicalConfigKey(key), value.trim());
+  }
+  return values;
+}
+
+function configSnapshot(repo) {
+  const key = path.resolve(repo);
+  if (!configSnapshots.has(key)) {
+    const result = gitIn(repo, ["config", "--local", "--null", "--list"], { allowFailure: true });
+    // Where the list cannot be read, every "--get" would have failed too, and an unset key reads as "".
+    configSnapshots.set(key, result.status === 0 ? parseConfigList(result.stdout ?? "") : new Map());
+  }
+  return configSnapshots.get(key);
+}
+
 function localConfig(repo, key) {
-  const result = gitIn(repo, ["config", "--local", "--get", key], { allowFailure: true });
-  return result.status === 0 ? String(result.stdout ?? "").trim() : "";
+  return configSnapshot(repo).get(canonicalConfigKey(key)) ?? "";
 }
 
 function identityFromGitVar(value) {
@@ -177,8 +236,7 @@ function assertInstalledPolicy(repo) {
   ]) {
     if (localConfig(repo, key) !== expected) fail(key + " is not the owner identity");
   }
-  const commonDirValue = gitIn(repo, ["rev-parse", "--git-common-dir"]);
-  const commonDir = path.isAbsolute(commonDirValue) ? path.resolve(commonDirValue) : path.resolve(repo, commonDirValue);
+  const commonDir = gitCommonDir(repo);
   if (!commonDirConfigured || !samePath(commonDirConfigured, commonDir)) {
     fail("Git common directory does not match the installed governance policy");
   }

@@ -38,6 +38,12 @@ export interface ScreenFacts<Screen extends string = string> {
    * has passed.
    */
   readonly confirmArming?: true;
+  /**
+   * An end screen (with `confirmArming`): every menu input held when it opens,
+   * navigation and back included, is ignored until all of them were released and
+   * the settle window has passed, so keys held through a death never move focus.
+   */
+  readonly holdArming?: true;
   /** A reward or results screen: a click aimed at the arena must not choose, so pointers also wait for the settle window. */
   readonly pointerSettle?: true;
   /** Drawn on the paper sheet, so the controller toast sits in the sheet footer. */
@@ -140,6 +146,7 @@ const CATALOG = {
     frame: "world",
     density: "compact",
     confirmArming: true,
+    holdArming: true,
     pointerSettle: true,
     transitions: ["playing", "gameover", "rename"],
   },
@@ -148,6 +155,7 @@ const CATALOG = {
     frame: "world",
     density: "compact",
     confirmArming: true,
+    holdArming: true,
     pointerSettle: true,
     transitions: ["menu", "playing", "replay", "rename"],
   },
@@ -156,6 +164,7 @@ const CATALOG = {
     frame: "world",
     density: "compact",
     confirmArming: true,
+    holdArming: true,
     pointerSettle: true,
     transitions: ["menu", "playing", "replay", "rename"],
   },
@@ -245,6 +254,8 @@ export const isWorldScreen = (screen: string): boolean => screenFacts(screen)?.f
 export const screenDensity = (screen: string): ScreenDensity => screenFacts(screen)?.density ?? "touch";
 
 export const screenNeedsConfirmArming = (screen: string): boolean => screenFacts(screen)?.confirmArming === true;
+
+export const screenNeedsHoldArming = (screen: string): boolean => screenFacts(screen)?.holdArming === true;
 
 export const screenNeedsPointerSettle = (screen: string): boolean => screenFacts(screen)?.pointerSettle === true;
 

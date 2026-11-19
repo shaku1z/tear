@@ -67,4 +67,4 @@ What writes these overrides is not established. They appeared only in worktrees 
 
 ## Keeping the two copies in step
 
-The copy here is the authority for this repository; the shared skill copy remains the authority for the music and wiki repositories. `tests/unit/governance-guard.test.mjs` runs every rule case against both copies when the shared copy exists on the machine, so a difference in behaviour fails locally. CI has only this copy.
+The copy here is the authority for this repository; the shared skill copy remains the authority for the music and wiki repositories. `tests/unit/governance-guard.test.mjs` runs every rule case against both copies when the shared copy exists on the machine, so a difference in behaviour fails locally. It runs the shared copy again whenever the hash of both guards, their hooks and the test differs from the last run that passed here (recorded in `node_modules/.cache/tear-governance-parity/`); `TEAR_GOVERNANCE_PARITY=1` forces that run and `=0` skips it. CI has only this copy.

@@ -301,6 +301,24 @@ export function updateScope(changed, measurements, baselineFiles, moves = new Ma
   return scope;
 }
 
+/**
+ * The passing check's hint. `scope` is what a plain --update rebuilds (`updateScope`), or undefined when
+ * origin/main can't be compared; improvements outside it are locked in only by --update --all.
+ */
+export function tightenHint(tightenable, scope) {
+  if (tightenable.length === 0) return "";
+  if (scope === undefined)
+    return `; ${String(tightenable.length)} improved metrics can be locked in with --update --all (no origin/main to compare)`;
+  const inScope = tightenable.filter(({ file }) => scope.has(file)).length,
+    outside = tightenable.length - inScope;
+  const parts = [];
+  if (inScope > 0)
+    parts.push(`${String(inScope)} improved metrics in files this branch changes can be locked in with --update`);
+  if (outside > 0)
+    parts.push(`${String(outside)} improved metrics in other files can be locked in only with --update --all`);
+  return `; ${parts.join("; ")}`;
+}
+
 export function debtScore(metrics, ceilings = NEW_FILE_CEILINGS) {
   const excess = (metric) => Math.max(0, metrics[metric] - ceilings[metric]);
   return (
@@ -403,6 +421,15 @@ export function parseArguments(argumentsList) {
   return options;
 }
 
+/** The scope a plain --update would rebuild, or undefined when origin/main can't be compared. */
+function scopeOrUndefined(root, measurements, baselineFiles) {
+  try {
+    return updateScope(changedFiles(root), measurements, baselineFiles);
+  } catch {
+    return undefined;
+  }
+}
+
 function runUpdate(options, measurements, baselineFiles, baselinePath) {
   let changed;
   if (!options.all) {
@@ -476,8 +503,8 @@ function main() {
     );
     return 1;
   }
-  const hint =
-    tightenable.length > 0 ? `; ${String(tightenable.length)} improved metrics can be locked in with --update` : "";
+  const scope = tightenable.length > 0 ? scopeOrUndefined(options.root, measurements, baselineFiles) : undefined;
+  const hint = tightenHint(tightenable, scope);
   console.log(`code budget gate passed (${String(measurements.size)} files, ${seconds} s${hint})`);
   return 0;
 }
