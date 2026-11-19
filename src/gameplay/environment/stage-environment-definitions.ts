@@ -21,7 +21,10 @@ export interface StageEnvironmentDefinition {
   readonly cleanup: "stage-owned";
 }
 
-/** Typed stage-owned environment setup; activation remains centralized in the stage host. */
+/**
+ * Typed stage-owned environment setup; activation remains centralized in the stage host.
+ * A Bloom Well stands on the floor (its box ends at the ground, y 800), so it lifts whoever stands in it.
+ */
 export const STAGE_ENVIRONMENT_DEFINITIONS = Object.freeze({
   "verdant-sanctum": Object.freeze({
     id: "verdant-sanctum-environment",
@@ -30,12 +33,12 @@ export const STAGE_ENVIRONMENT_DEFINITIONS = Object.freeze({
       Object.freeze({
         kind: "bloom-well",
         slot: "left-rise",
-        geometry: Object.freeze({ x: 480, y: 285, w: 170, h: 470 }),
+        geometry: Object.freeze({ x: 480, y: 285, w: 170, h: 515 }),
       }),
       Object.freeze({
         kind: "bloom-well",
         slot: "right-rise",
-        geometry: Object.freeze({ x: 950, y: 285, w: 170, h: 470 }),
+        geometry: Object.freeze({ x: 950, y: 285, w: 170, h: 515 }),
         offsetTicks: 372,
       }),
     ]),

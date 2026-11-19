@@ -1,4 +1,5 @@
 import type { AuroraTransportActor, AuroraTransportKind } from "../aurora-track-runtime";
+import { fieldEnemyClass } from "../field-runtime";
 import { createPaleEnvironmentFeature } from "../pale-environment-feature";
 
 interface DirectionInput {
@@ -122,9 +123,7 @@ export function bindLiveAuroraTrackActors(
           ? enemy.auroraBossChargeActive === true
             ? "boss-charge"
             : "boss"
-          : (enemy.weight ?? 1) >= 1.75
-            ? "heavy-enemy"
-            : "light-enemy";
+          : fieldEnemyClass(enemy);
       actors.push({
         id: actorId(enemy),
         kind,

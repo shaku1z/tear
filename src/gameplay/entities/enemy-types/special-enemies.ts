@@ -131,6 +131,7 @@ export function createSpecialEnemyTypes(dependencies: EnemyDependencies, Enemy: 
     constructor(x: number, y: number) {
       super(x, y, CONFIG.wraith);
       this.kind = "wraith";
+      this.flies = true;
       this.color = CONFIG.colors.wraith;
       this.immuneToBlade = true;
       this.phase = GAME_RANDOM.next() * 6;
