@@ -2,7 +2,7 @@
   "format": "tear-campaign-publication-boundary",
   "schemaVersion": 1,
   "status": "public",
-  "rulesetVersion": "tear-rules-six-biome-verdant-r3-pale-preview-v6",
+  "rulesetVersion": "tear-rules-six-biome-verdant-r3-pale-preview-v7",
   "activeStageIds": [
     "grounds",
     "undercroft",

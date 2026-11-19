@@ -1,3 +1,4 @@
+import { BOSS_BODY_CONTACT, type BossBodyContactRow } from "../boss-body-contact";
 import { practicePhaseEntryHealth, type BossPracticeActorEntry } from "../../training/boss-phase-practice-runtime";
 import type { EnemyDependencies, EnemyPlatform, EnemyPlayerPort } from "../enemy-contracts";
 import type { EnemyBaseConstructor } from "./enemy-base";
@@ -21,7 +22,6 @@ import {
 } from "../../environment/regrowth-link";
 import type { BossRuntime } from "./boss-runtime";
 import {
-  ROOTBOUND_ENCOUNTER,
   ROOTBOUND_GRAFT_ANCHOR_GEOMETRY,
   ROOTBOUND_GRAFTS,
   ROOTBOUND_HEALING,
@@ -30,7 +30,7 @@ import {
   ROOTBOUND_PHASE_TWO_CADENCE,
 } from "./rootbound-tuning";
 import type { BatonSegment } from "../../combat/held-blade-collision-contracts";
-import { bossAttackSecondsToTicks } from "../boss-attacks";
+import { BOSS_ATTACK_TICKS_PER_SECOND, bossAttackSecondsToTicks } from "../boss-attacks";
 import {
   advanceBossAttack,
   bossAttackDamageTaken,
@@ -67,6 +67,7 @@ type MoveContext = {
 interface MoveScratch {
   readonly box: MutableBox;
   readonly target: MutableBox;
+  readonly walker: { speed: number; blocked: boolean };
   readonly blocked: Set<string>;
   readonly context: MoveContext;
 }
@@ -91,16 +92,18 @@ export function createRootboundType(
       const target: MutableBox = { x: 0, y: 0, hw: 0, hh: 0 };
       const blocked = new Set<string>();
       const arena = { width: CONFIG.view.w, groundY: CONFIG.world.groundY };
+      const walker = { speed: CONFIG.player.moveSpeed / BOSS_ATTACK_TICKS_PER_SECOND, blocked: true };
       const context: MoveContext = {
         tick: 0,
         phase: 1,
         boss: box,
         target,
         arena,
+        walker,
         random: dependencies.GAME_RANDOM,
         blocked,
       };
-      scratch = { box, target, blocked, context };
+      scratch = { box, target, walker, blocked, context };
       scratchByBoss.set(boss, scratch);
     }
     return scratch;
@@ -118,7 +121,6 @@ export function createRootboundType(
       ROOTBOUND_DEFINITION.phaseMarks[1],
     ];
     readonly availableAttacks: readonly string[] = Object.freeze(ROOTBOUND_MOVES.attacks.map((move) => move.id));
-    contactGraceT = 0;
     /** The shared runner's state for the move table, and the boss's own tick count (one per update). */
     moveState: BossAttackRunnerState = createBossAttackRunnerState(
       bossAttackSecondsToTicks(ROOTBOUND_PHASE_ONE_CADENCE.openingDelay),
@@ -170,6 +172,7 @@ export function createRootboundType(
     phaseThreeEntryHp: number | null = null;
     lastSpringUseCount = 0;
 
+    override bodyContact: BossBodyContactRow | null = BOSS_BODY_CONTACT.rootbound;
     constructor(x: number, y: number) {
       super(x, y, CONFIG.boss);
       this.kind = "rootbound";
@@ -379,15 +382,9 @@ export function createRootboundType(
       return this.regrowthState;
     }
 
-    override contactDamageEnabled(): boolean {
-      return (
-        !this.attackCommitProtected() &&
-        this.contactGraceT <= 0 &&
-        this.state === "idle" &&
-        this.moveState.run === null &&
-        !this.exposed() &&
-        !this.hidden
-      );
+    /** Burrowed, there is no body to push against. */
+    override bodyBlocks(): boolean {
+      return super.bodyBlocks() && !this.hidden;
     }
 
     attackCommitProtected(): boolean {
@@ -406,6 +403,7 @@ export function createRootboundType(
       this.scratch.box.y = this.y;
       this.scratch.box.hw = this.hw;
       this.scratch.box.hh = this.hh;
+      this.scratch.walker.blocked = this.bodyBlocks();
       return this.scratch.context;
     }
 
@@ -689,7 +687,6 @@ export function createRootboundType(
       }
       this.facing = Math.sign(player.x - this.x) || this.facing;
       this.vx = 0;
-      this.contactGraceT = Math.max(0, this.contactGraceT - dt);
       if (this.introT > 0) {
         this.state = "intro";
         this.stateT = this.introT;
@@ -704,7 +701,6 @@ export function createRootboundType(
       if (this.state === "intro") {
         this.state = "recover";
         this.stateT = 0.35;
-        this.contactGraceT = ROOTBOUND_ENCOUNTER.openingContactGrace;
       } else {
         this.updateHealing(dt);
         this.updateAttacks(platforms, player, dt);

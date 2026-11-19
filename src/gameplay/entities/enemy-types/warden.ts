@@ -1,3 +1,4 @@
+import { BOSS_BODY_CONTACT, type BossBodyContactRow } from "../boss-body-contact";
 import { practicePhaseEntryHealth, type BossPracticeActorEntry } from "../../training/boss-phase-practice-runtime";
 import type {
   EnemyDependencies,
@@ -70,6 +71,7 @@ export function createWardenType(
     debugGeometry: { a: Point; b: Point; radius: number }[] = [];
     declare cfg: typeof CONFIG.boss;
 
+    override bodyContact: BossBodyContactRow | null = BOSS_BODY_CONTACT.warden;
     constructor(x: number, y: number) {
       super(x, y, CONFIG.boss);
       this.color = CONFIG.colors.boss;
@@ -170,14 +172,14 @@ export function createWardenType(
       else if (this.guardMeter > 0) this.guardMeter = Math.max(0, this.guardMeter - CONFIG.warden.guardDecay * dt);
     }
 
+    override bodyContactLabel() {
+      return this.state;
+    }
     weaponGeometry(angle?: number | null, prevAngle?: number | null) {
       return wardstaffPose(this, angle ?? this.batonA, prevAngle ?? this.batonPrevA);
     }
     batonSegment() {
       return this.weaponGeometry().parryCapsule;
-    }
-    override contactDamageEnabled() {
-      return this.state !== "string" && this.state !== "batonlunge" && this.state !== "lunge";
     }
     parryBaton(perfect: boolean) {
       if (this.dying || this.batonParryCd > 0 || this.batonStrike <= 0 || this.beatHeavy) return false;

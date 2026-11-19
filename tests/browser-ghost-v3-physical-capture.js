@@ -162,7 +162,7 @@ withJourney({ name: "C27 Ghost V3 physical live capture", port: 8156 }, async ({
     capsule.tracks.keyframes.find((entry) => entry.tick === 0)?.value?.state?.["tear.ui.v1"]?.screen,
     "setup",
   );
-  assert.equal(admission.context.build.rulesetVersion, "tear-rules-six-biome-verdant-r3-pale-preview-v6");
+  assert.equal(admission.context.build.rulesetVersion, "tear-rules-six-biome-verdant-r3-pale-preview-v7");
   assert.ok(admission.context.build.contentHash.length > 0);
   assert.ok(admission.context.build.configHash.length > 0);
   const stateKeyframes = capsule.tracks.keyframes.filter((entry) => entry.value?.kind === "snapshot");
