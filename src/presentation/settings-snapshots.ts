@@ -33,13 +33,24 @@ export interface SettingsSnapshotSource {
   readonly controls: string;
   readonly touchAim?: string;
   readonly autoPauseDisconnect?: boolean;
+  readonly shareStatistics?: boolean;
   readonly shake: number;
+}
+/** What the General tab says about the player's data, as the build's privacy stance resolves it. */
+export interface SettingsPrivacyView {
+  readonly privacyLink: boolean;
+  readonly termsLink: boolean;
+  /** A line shown in place of links (a build that keeps everything in the browser); null for none. */
+  readonly note: string | null;
+  /** Show the switch for anonymous run statistics. */
+  readonly statistics: boolean;
 }
 export interface SettingsEnvironmentSnapshot {
   readonly lowGraphics: boolean;
   readonly touch: boolean;
   readonly installAvailable: boolean;
   readonly update: Readonly<{ ready: boolean; applying: boolean }>;
+  readonly privacy: SettingsPrivacyView;
   readonly presets: Readonly<Record<string, ControllerPresetView>>;
   readonly controllerGlyphs?: readonly string[];
 }
@@ -210,9 +221,20 @@ export function buildSettingsSections(
       on: settings.autoPauseDisconnect !== false,
     },
     { key: "shake", label: "Screen shake", value: percent(settings.shake), kind: "stepper" },
-    { key: "terms", label: "Terms of Service", value: "OPEN", kind: "cycle" },
-    { key: "privacy", label: "Privacy Policy", value: "OPEN", kind: "cycle" },
   ];
+  const { privacy } = environment;
+  if (privacy.statistics)
+    rows.push({
+      key: "shareStatistics",
+      label: "Share anonymous run statistics",
+      value: "",
+      kind: "toggle",
+      on: settings.shareStatistics !== false,
+      note: "No name or account is attached. Off sends nothing.",
+    });
+  if (privacy.termsLink) rows.push({ key: "terms", label: "Terms of Service", value: "OPEN", kind: "cycle" });
+  if (privacy.privacyLink) rows.push({ key: "privacy", label: "Privacy Policy", value: "OPEN", kind: "cycle" });
+  if (privacy.note !== null) rows.push({ key: "privacyNote", label: privacy.note, value: "", kind: "info" });
   if (environment.installAvailable)
     rows.push({ key: "install", label: "Install browser app", value: "INSTALL", kind: "cycle" });
   if (environment.update.ready)

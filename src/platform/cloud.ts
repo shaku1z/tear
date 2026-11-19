@@ -77,6 +77,11 @@ export interface CloudCompatibilityOptions {
   readonly getMeta: () => LegacyMetaPort;
   readonly firebaseAccount?: AccountProvider;
   readonly shared: SharedCloudService;
+  /**
+   * Whether an anonymous run statistic may be sent right now (see statistics-consent.ts). The facade
+   * asks before every send, so no target's shared service ever sees a statistic the player declined.
+   */
+  readonly statisticsAllowed: () => boolean;
   readonly now?: () => number;
 }
 
@@ -348,6 +353,7 @@ export function createCloudCompatibility(options: CloudCompatibilityOptions): Cl
     },
     logEvent(name, data = {}) {
       try {
+        if (!options.statisticsAllowed()) return;
         options.shared.logEvent(name, data);
       } catch {
         /* optional telemetry */
