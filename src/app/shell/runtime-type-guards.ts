@@ -1,23 +1,18 @@
 import type { GameEnemy, GameFloater } from "../../gameplay/runtime/game-runtime-state";
+import { isObject } from "../../domain/records";
 
 export function isGameEnemy(value: unknown): value is GameEnemy {
   return (
-    typeof value === "object" &&
-    value !== null &&
-    "cfg" in value &&
-    "hit" in value &&
-    "damageTakenMult" in value &&
-    "x" in value &&
-    "y" in value
+    isObject(value) && "cfg" in value && "hit" in value && "damageTakenMult" in value && "x" in value && "y" in value
   );
 }
 
 export function isDodgeProjectile(value: unknown): value is Readonly<{ _dodged?: boolean }> {
-  return typeof value === "object" && value !== null;
+  return isObject(value);
 }
 
 export function isRitualCue(value: unknown): value is Readonly<{ id: string }> {
-  return typeof value === "object" && value !== null && "id" in value && typeof value.id === "string";
+  return isObject(value) && "id" in value && typeof value.id === "string";
 }
 
 export function isEnemySample(value: GameEnemy): value is GameEnemy & { _gid?: number } {
@@ -26,8 +21,7 @@ export function isEnemySample(value: GameEnemy): value is GameEnemy & { _gid?: n
 
 export function isCombatPlatform(value: unknown): value is Readonly<{ x: number; y: number; w: number; h: number }> {
   return (
-    typeof value === "object" &&
-    value !== null &&
+    isObject(value) &&
     "x" in value &&
     typeof value.x === "number" &&
     "y" in value &&
@@ -44,7 +38,7 @@ export function isGameFloater(value: { y: number; life: number }): value is Game
 }
 
 export function isWeaponEffect(value: unknown): value is Readonly<{ mechanic?: string }> {
-  return typeof value === "object" && value !== null && (!("mechanic" in value) || typeof value.mechanic === "string");
+  return isObject(value) && (!("mechanic" in value) || typeof value.mechanic === "string");
 }
 
 export function makeCombatEnemy(value: unknown): GameEnemy {

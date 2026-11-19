@@ -1,12 +1,7 @@
+import { asRecord } from "../domain/records";
 import { stableVerificationHash } from "../domain/hash";
 import { parseFinaleBinding } from "../gameplay/campaign/finale-binding";
 import type { TearCodecWorld, TearCodecIssue } from "./state-codecs";
-
-function record(value: unknown): Record<string, unknown> | undefined {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : undefined;
-}
 
 /** Retired Source geometry remains run-owned data, never additional collision actors. */
 export function sourceVoidHistoryReferences(
@@ -14,10 +9,10 @@ export function sourceVoidHistoryReferences(
 ): Readonly<{ local: ReadonlySet<string>; issues: readonly TearCodecIssue[] }> {
   const local = new Set<string>(),
     issues: TearCodecIssue[] = [];
-  const run = record(world.components.get("tear.run.v1")),
-    runtime = record(record(world.components.get("tear.world.v1"))?.runtime);
-  const stream = record(run?.voidScroll),
-    lifecycle = record(runtime?.lifecycle);
+  const run = asRecord(world.components.get("tear.run.v1")),
+    runtime = asRecord(asRecord(world.components.get("tear.world.v1"))?.runtime);
+  const stream = asRecord(run?.voidScroll),
+    lifecycle = asRecord(runtime?.lifecycle);
   // Frozen descent/intro geometry is still installed. Only the actual finale
   // restoration owner has replaced it with stage-zero collision platforms.
   if (
@@ -47,7 +42,7 @@ export function sourceVoidHistoryReferences(
   }
   const array = (value: unknown): unknown[] =>
     Array.isArray(value) ? value : fail("Source history collection is missing");
-  const generator = record(stream.generator);
+  const generator = asRecord(stream.generator);
   try {
     if (
       generator?.version !== 2 ||
@@ -58,7 +53,7 @@ export function sourceVoidHistoryReferences(
       fail("Source history generator identity is invalid");
     const prefix = `void:${Number(generator.seed).toString(16).padStart(8, "0")}:`;
     const platform = (value: unknown): Record<string, unknown> => {
-      const p = record(value);
+      const p = asRecord(value);
       if (
         p === undefined ||
         typeof p.id !== "string" ||
@@ -96,7 +91,7 @@ export function sourceVoidHistoryReferences(
       const chunkIds = new Set<number>(),
         used = new Set<string>();
       for (const [index, value] of array(values).entries()) {
-        const chunk = record(value),
+        const chunk = asRecord(value),
           chunkPath = `${path}[${String(index)}]`;
         if (chunk === undefined || !Number.isSafeInteger(chunk.chunkId) || chunkIds.has(Number(chunk.chunkId)))
           fail("Source history chunk identity is ambiguous");
@@ -112,10 +107,10 @@ export function sourceVoidHistoryReferences(
           if (live) alias(p, pPath, roster);
           else register(pPath);
         }
-        const lanes = record(chunk.lanes);
+        const lanes = asRecord(chunk.lanes);
         for (const lane of ["lower", "upper"])
           for (const [at, p] of array(lanes?.[lane]).entries()) {
-            if (record(p)?.voidLane !== lane) fail("Source history lane alias conflicts");
+            if (asRecord(p)?.voidLane !== lane) fail("Source history lane alias conflicts");
             alias(p, `${chunkPath}.lanes.${lane}[${String(at)}]`, records);
           }
         if (

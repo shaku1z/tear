@@ -1,5 +1,6 @@
 import { SeededRandom } from "../../domain/random";
 import { stableVerificationHash } from "../../domain/hash";
+import { isRecord } from "../../domain/records";
 import { UPGRADES, rollUpgrades, type UpgradeDefinition } from "../upgrades";
 
 export interface SeedLockedDraft {
@@ -48,8 +49,7 @@ export const seedRaceCatalogHash = (): string =>
   );
 export function readSeedLockedDraft(value: unknown): SeedLockedDraft | undefined {
   if (value === undefined) return undefined;
-  if (value === null || typeof value !== "object" || Array.isArray(value))
-    throw new TypeError("Invalid shared draft declaration");
+  if (!isRecord(value)) throw new TypeError("Invalid shared draft declaration");
   const descriptors = Object.getOwnPropertyDescriptors(value);
   if (
     (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null) ||
@@ -59,7 +59,7 @@ export function readSeedLockedDraft(value: unknown): SeedLockedDraft | undefined
     })
   )
     throw new TypeError("Shared draft requires plain data");
-  const v = value as Record<string, unknown>;
+  const v = value;
   if (
     Object.keys(v).sort().join() !== "catalogHash,policy,seed" ||
     v.policy !== "seed-locked-common-offers.v1" ||

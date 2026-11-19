@@ -1,3 +1,4 @@
+import { isRecord } from "../domain/records";
 import { hasMonotonicEnvelopes } from "../domain/envelopes";
 import { normalizeGameAction } from "../input/game-action";
 import { bossDefinition } from "../gameplay/run/boss-definitions";
@@ -40,10 +41,6 @@ const MAX_COLLECTION = 100_000;
 const MAX_IDENTIFIER = 256;
 const MAX_TEXT = 16_384;
 const HASH_PATTERN = /^(?:[a-z0-9][a-z0-9._-]*:)?[a-f0-9]{8,256}$/i;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function stringValue(value: unknown, max = MAX_IDENTIFIER): value is string {
   return typeof value === "string" && value.trim().length > 0 && value.length <= max;

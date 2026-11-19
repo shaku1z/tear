@@ -1,3 +1,4 @@
+import { isRecord, requireRecord } from "../domain/records";
 import { stableVerificationHash } from "../domain/hash";
 import { stageRuntimeIndexForSurface, type StageId } from "../gameplay/stages";
 import { findVariant } from "../gameplay/variants";
@@ -12,10 +13,7 @@ function isUnknownArray(value: unknown): value is unknown[] {
 }
 
 function record(value: unknown, label: string): MutableRecord {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new TypeError(`${label} must be an object`);
-  }
-  return value as MutableRecord;
+  return requireRecord(value, `${label} must be an object`);
 }
 
 function patchRecord(target: MutableRecord, patch: unknown, label: string): void {
@@ -120,8 +118,8 @@ function rebaseEnvironmentOrigin(snapshot: TearSnapshotV1): void {
     const entries = hazard[key];
     if (!isUnknownArray(entries)) continue;
     hazard[key] = entries.map((entry) => {
-      if (typeof entry !== "object" || entry === null || Array.isArray(entry)) return entry;
-      const value = { ...(entry as Record<string, unknown>) };
+      if (!isRecord(entry)) return entry;
+      const value = { ...entry };
       if (typeof value.stateTick === "number") value.stateTick = 0;
       return value;
     });

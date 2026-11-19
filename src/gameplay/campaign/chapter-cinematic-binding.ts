@@ -9,6 +9,7 @@ import {
   type ChapterPage,
 } from "./chapter-controller";
 import { stableVerificationHash } from "../../domain/hash";
+import { isObject, isRecord } from "../../domain/records";
 
 export interface CampaignChapterBindingSpecV1 {
   readonly format: "tear.campaign-chapter-binding";
@@ -49,7 +50,7 @@ const REVISION = "tear.campaign-chapter-binding.v1";
 
 function definedData(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(definedData);
-  if (typeof value !== "object" || value === null) return value;
+  if (!isObject(value)) return value;
   return Object.fromEntries(
     Object.entries(value)
       .filter((entry) => entry[1] !== undefined)
@@ -77,7 +78,7 @@ export function createCampaignChapterBindingSpec(
 }
 
 export function parseCampaignChapterBindingSpec(value: unknown): CampaignChapterBindingSpecV1 {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+  if (!isRecord(value)) {
     throw new TypeError("campaign chapter binding must be an object");
   }
   const spec = value as Partial<CampaignChapterBindingSpecV1>;
@@ -89,7 +90,7 @@ export function parseCampaignChapterBindingSpec(value: unknown): CampaignChapter
   }
   if (
     spec.priorOutro !== null &&
-    (typeof spec.priorOutro !== "object" ||
+    (!isObject(spec.priorOutro) ||
       typeof spec.priorOutro.label !== "string" ||
       typeof spec.priorOutro.text !== "string")
   ) {
@@ -98,7 +99,7 @@ export function parseCampaignChapterBindingSpec(value: unknown): CampaignChapter
   if (typeof spec.brief !== "boolean" || typeof spec.prologueShownBefore !== "boolean") {
     throw new TypeError("campaign chapter binding flags are invalid");
   }
-  if (typeof spec.prologueShownAfter !== "boolean" || typeof spec.timing !== "object") {
+  if (typeof spec.prologueShownAfter !== "boolean" || !isObject(spec.timing)) {
     throw new TypeError("campaign chapter binding reconstruction fields are invalid");
   }
   const timingKeys: readonly (keyof CampaignChapterTiming)[] = [

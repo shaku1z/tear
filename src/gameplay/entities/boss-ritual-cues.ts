@@ -1,5 +1,6 @@
 import type { BossPhasePracticeActor } from "../training/boss-phase-practice-runtime";
 import type { BossRitualActor, BossRitualCue } from "./boss-ritual-controller";
+import { isObject } from "../../domain/records";
 
 /** The behavior-bearing authored cue contract, shared by fresh launch and portable binding. */
 const cues: Readonly<
@@ -124,8 +125,7 @@ export function canonicalBossRitualCue(owner: BossRitualActor, cue: BossRitualCu
   if (
     !expected ||
     cue.pose !== owner.cinematicPose ||
-    typeof status !== "object" ||
-    status === null ||
+    !isObject(status) ||
     !("phase" in status) ||
     status.phase !== expected.phase ||
     expected.bossId !== owner.bossId ||

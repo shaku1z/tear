@@ -29,6 +29,7 @@ import {
   type CinematicRuntimePlayer,
 } from "./cinematic-player-runtime";
 import type { SourceRuntimeOwner, SourceVoidRuntimeBridge } from "./source-void-runtime";
+import { isObject, requireRecord } from "../../domain/records";
 
 export interface LiveRitualOwner extends BossRitualActor {
   _throwShield?(projectiles: unknown[]): void;
@@ -187,19 +188,11 @@ export function createLiveCinematicRuntime(options: LiveCinematicRuntimeOptions)
     },
     stageBinding(value, owners) {
       if (value === undefined || value === null) return undefined;
-      if (typeof value !== "object" || Array.isArray(value)) throw new TypeError("Invalid boss cinematic binding");
-      const raw = value as Record<string, unknown>;
+      const raw = requireRecord(value, "Invalid boss cinematic binding");
       if (raw.kind !== "source-descent" && raw.kind !== "boss-ritual")
         throw new TypeError("Invalid boss cinematic binding kind");
-      if (raw.kind === "source-descent" && (raw.transition === null || typeof raw.transition !== "object"))
-        throw new TypeError("Invalid Source transition");
-      if (
-        raw.kind === "boss-ritual" &&
-        (raw.context === null ||
-          typeof raw.context !== "object" ||
-          raw.ritual === null ||
-          typeof raw.ritual !== "object")
-      )
+      if (raw.kind === "source-descent" && !isObject(raw.transition)) throw new TypeError("Invalid Source transition");
+      if (raw.kind === "boss-ritual" && (!isObject(raw.context) || !isObject(raw.ritual)))
         throw new TypeError("Invalid ritual context");
       const saved = value as PortableBossCinematicBinding;
       if (!owners.includes(saved.owner)) throw new RangeError("Boss cinematic owner is not in the candidate world");
@@ -224,7 +217,7 @@ export function createLiveCinematicRuntime(options: LiveCinematicRuntimeOptions)
       for (const point of points)
         if (
           point !== null &&
-          (typeof point !== "object" ||
+          (!isObject(point) ||
             !("x" in point) ||
             !("y" in point) ||
             !Number.isFinite(point.x) ||

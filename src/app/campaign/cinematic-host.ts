@@ -10,6 +10,7 @@ import {
 } from "../../gameplay/campaign/live-cinematic-runtime";
 import { BossRitualController } from "../../gameplay/entities/boss-ritual-controller";
 import type { VoidLane } from "../../gameplay/voidgen-contracts";
+import { isObject } from "../../domain/records";
 
 interface CinematicStage {
   platforms: ArenaPlatform[];
@@ -179,7 +180,6 @@ export function createLiveCinematicHost(context: LiveCinematicHostContext) {
 
 function projectiles(values: unknown[]): GameProjectile[] {
   return values.filter(
-    (value): value is GameProjectile =>
-      typeof value === "object" && value !== null && "x" in value && "y" in value && "r" in value,
+    (value): value is GameProjectile => isObject(value) && "x" in value && "y" in value && "r" in value,
   );
 }

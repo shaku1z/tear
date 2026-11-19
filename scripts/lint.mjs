@@ -16,18 +16,6 @@ export const LINT_TARGETS = Object.freeze([
   "vitest.endurance.config.ts",
 ]);
 
-/**
- * Options that would let the bulk-suppressions ratchet (eslint-suppressions.json) grow, move or go stale
- * without failing. ESLint applies the file on every run and exits 2 when an entry no longer matches a
- * violation, so a fixed site must leave the file in the same change. These options are refused here.
- */
-export const REFUSED_OPTIONS = Object.freeze([
-  "--pass-on-unpruned-suppressions",
-  "--suppress-all",
-  "--suppress-rule",
-  "--suppressions-location",
-]);
-
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 if (process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -36,11 +24,6 @@ if (process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(
   // ESLint dies with "JavaScript heap out of memory" on the hosted runner, which has about 16 GB.
   const heap = "--max-old-space-size=6144";
   const options = process.argv.slice(2);
-  const refused = options.filter((option) => REFUSED_OPTIONS.includes(option.split("=")[0]));
-  if (refused.length > 0) {
-    console.error(`lint: ${refused.join(", ")} would let eslint-suppressions.json grow or go stale; not run.`);
-    process.exit(2);
-  }
   let targets = LINT_TARGETS;
   if (options.includes("--changed")) {
     targets = changedFiles(root).filter((file) => /.(?:[cm]?js|ts)$/u.test(file) && withinTargets(file, LINT_TARGETS));

@@ -1,5 +1,6 @@
 import type { EnvironmentSnapshot, EnvironmentObjectState } from "./environment-contracts";
 import { isEnvironmentOwnedData } from "./environment-state";
+import { isObject } from "../../domain/records";
 
 export interface EnvironmentPresentationSnapshot {
   readonly stageId: string;
@@ -49,8 +50,7 @@ function bounds(geometry: Readonly<{ x: number; y: number; w?: number; h?: numbe
  * state) is still cloned so the view never aliases mutable caller data.
  */
 function detached(value: unknown): unknown {
-  if (value === null || (typeof value !== "object" && typeof value !== "function" && typeof value !== "symbol"))
-    return value;
+  if (!isObject(value) && typeof value !== "function" && typeof value !== "symbol") return value;
   return isEnvironmentOwnedData(value) ? value : structuredClone(value);
 }
 

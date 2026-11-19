@@ -8,6 +8,7 @@ import type {
 } from "./environment-contracts";
 import type { TearGameplayEventPort } from "../runtime/gameplay-events";
 import { publishEnvironmentEvent } from "./environment-events";
+import { isObject } from "../../domain/records";
 
 /** Bloom Wells use authored fixed ticks so warning and force do not drift with render cadence. */
 export const BLOOM_WELL_TIMING = Object.freeze({
@@ -86,7 +87,7 @@ function assertTick(value: number, name: string): void {
 }
 
 export function isValidBloomWellForcePolicy(value: unknown): value is EnvironmentForcePolicy {
-  if (typeof value !== "object" || value === null) return false;
+  if (!isObject(value)) return false;
   const force = value as Partial<EnvironmentForcePolicy>;
   if (![force.x, force.y, force.magnitude].every((entry) => typeof entry === "number" && Number.isFinite(entry)))
     return false;

@@ -3,9 +3,13 @@
  * painted stage background is delivered in, and the pure maths every consumer
  * shares (validation, parallax camera, coverage, surface binding).
  *
- * This module has no runtime imports so the `pnpm scene` CLI can load it with
- * Node's type stripping; keep it that way (type-only imports are erased).
+ * The `pnpm scene` CLI loads this module with Node's type stripping
+ * (scripts/scene/package-files.mjs), whose resolve hook finds the `.ts` file for
+ * each extensionless relative import. Use no TypeScript-only runtime syntax
+ * (enums, parameter properties, namespaces) here or in what it imports.
  */
+
+import { asRecord } from "../../domain/records";
 
 export const SCENE_PACKAGE_FORMAT = "tear-scene-package";
 export const SCENE_PACKAGE_VERSION = 1;
@@ -171,8 +175,7 @@ function fail(path: string, message: string): never {
 }
 
 function record(value: unknown, path: string): Raw {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) fail(path, "expected an object");
-  return value as Raw;
+  return asRecord(value) ?? fail(path, "expected an object");
 }
 
 function list(value: unknown, path: string, max = 64): readonly unknown[] {

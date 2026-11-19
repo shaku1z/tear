@@ -1,6 +1,7 @@
 // Shared by `pnpm scene` and tests/unit/scene-packages.test.ts: find scene
 // packages in the repository and check their files against their manifests.
 import { createHash } from "node:crypto";
+import { registerHooks } from "node:module";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -30,9 +31,26 @@ export const REQUIRED_VIEWPORTS = Object.freeze(viewports.required.map((entry) =
 export const BEST_EFFORT_VIEWPORTS = Object.freeze(viewports.bestEffort.map((entry) => Object.freeze(entry)));
 
 let contractModule;
+/**
+ * Node's type stripping needs a file extension on every import, while tsc wants relative imports in
+ * src/ without one. This resolve hook tries the `.ts` file for an extensionless relative import made
+ * from a `.ts` module, so a src module loaded here may import other src modules as the game does.
+ */
+function resolveSourceImports() {
+  registerHooks({
+    resolve(specifier, context, nextResolve) {
+      const relative = specifier.startsWith("./") || specifier.startsWith("../");
+      if (relative && context.parentURL?.endsWith(".ts") && !/\.[cm]?[jt]s$/u.test(specifier))
+        return nextResolve(`${specifier}.ts`, context);
+      return nextResolve(specifier, context);
+    },
+  });
+}
+
 /** The TypeScript contract, loaded through Node's type stripping (no build step). */
 export async function loadContract() {
   if (contractModule === undefined) {
+    resolveSourceImports();
     const url = pathToFileURL(join(REPOSITORY_ROOT, "src", "presentation", "scenes", "scene-contract.ts")).href;
     contractModule = await import(url);
   }

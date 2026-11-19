@@ -1,3 +1,4 @@
+import { isObject, isRecord, requireRecord } from "../domain/records";
 import { sourceVoidHistoryReferences } from "./source-void-history-references";
 import { isAuthoredArenaSlotReference } from "./arena-slot-references";
 import { stableVerificationHash } from "../domain/hash";
@@ -48,7 +49,7 @@ function validateDataOnly(codecId: TearCodecId, value: unknown, path = "$", dept
     if (value.length > 100_000) return [{ codecId, path, message: "array exceeds item limit" }];
     return value.flatMap((entry, index) => validateDataOnly(codecId, entry, `${path}[${String(index)}]`, depth + 1));
   }
-  if (typeof value !== "object") {
+  if (!isObject(value)) {
     return [{ codecId, path, message: `unsupported payload value ${typeof value}` }];
   }
   const prototype = Reflect.getPrototypeOf(value);
@@ -151,7 +152,7 @@ function indexIdentitiesAndReferences(
     });
     return;
   }
-  if (value === null || typeof value !== "object") return;
+  if (!isObject(value)) return;
   for (const [key, entry] of Object.entries(value)) {
     if (declaresIdentity(codecId, key, path) && typeof entry === "string") world.entityIds.add(entry);
     if (declaresReference(codecId, key, path)) {
@@ -234,8 +235,7 @@ export function createLiveStateCodec(id: TearCodecId): TearStateCodec {
     },
     hashProjection(world: TearCodecWorld): TearCodecValue {
       const payload = dataCodec.hashProjection(world);
-      if (id !== "tear.ui.v1" || payload === null || typeof payload !== "object" || Array.isArray(payload))
-        return payload;
+      if (id !== "tear.ui.v1" || !isRecord(payload)) return payload;
       // Exact capture retains this new field. Existing UI fields/extensions stay semantic.
       const projection = structuredClone(payload);
       Reflect.deleteProperty(projection, "hudPresentation");
@@ -255,10 +255,10 @@ function createEnvironmentStateCodec(): TearStateCodec {
     version: 2,
     capture(world: TearCodecWorld) {
       const payload = world.components.get("tear.hazard.v1");
-      if (payload === undefined || typeof payload !== "object" || payload === null || Array.isArray(payload)) {
+      if (!isRecord(payload)) {
         return Object.freeze({ slowZones: [], walls: [], fields: [], combatObjects: [], routes: [] });
       }
-      const value = payload as Readonly<Record<string, unknown>>;
+      const value = payload;
       return Object.freeze({
         ...structuredClone(value),
         slowZones: Array.isArray(value.slowZones) ? structuredClone(value.slowZones) : [],
@@ -272,9 +272,7 @@ function createEnvironmentStateCodec(): TearStateCodec {
       if (fromVersion === 2) return payload;
       if (fromVersion !== 1)
         throw new RangeError("tear.hazard.v1 cannot migrate schema version " + String(fromVersion));
-      if (payload === null || typeof payload !== "object" || Array.isArray(payload))
-        throw new TypeError("hazard v1 payload must be an object");
-      const value = payload as Record<string, unknown>;
+      const value = requireRecord(payload, "hazard v1 payload must be an object");
       return Object.freeze({ ...structuredClone(value), fields: [], combatObjects: [], routes: [] });
     },
     validate(payload: unknown) {
@@ -291,14 +289,14 @@ function createEnvironmentStateCodec(): TearStateCodec {
     },
     hashProjection(world: TearCodecWorld) {
       const payload = world.components.get("tear.hazard.v1");
-      if (payload === undefined || typeof payload !== "object" || payload === null || Array.isArray(payload)) {
+      if (!isRecord(payload)) {
         return Object.freeze({
           slowZones: [],
           walls: [],
           environment: projectEnvironmentHash(undefined) as TearCodecValue,
         });
       }
-      const value = payload as Readonly<Record<string, unknown>>;
+      const value = payload;
       return Object.freeze({
         slowZones: structuredClone(value.slowZones ?? []) as TearCodecValue[],
         walls: structuredClone(value.walls ?? []) as TearCodecValue[],
@@ -328,7 +326,7 @@ export function buildTearIdentityGraph(world: TearCodecWorld): TearIdentityGraph
       });
       return;
     }
-    if (value === null || typeof value !== "object") return;
+    if (!isObject(value)) return;
     for (const [key, entry] of Object.entries(value)) {
       const entryPath = `${path}.${key}`;
       if (declaresIdentity(codecId, key, path) && typeof entry === "string") {

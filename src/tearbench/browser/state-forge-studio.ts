@@ -1,3 +1,4 @@
+import { isRecord } from "../../domain/records";
 import type { TearProvenanceV1 } from "../contracts";
 import type { StateForgeEvaluation, StateForgeReport, StateForgeValueDiff } from "../state-forge-studio-model";
 import { diffStateForgeValues, evaluateStateForgeSource } from "../state-forge-studio-model";
@@ -325,8 +326,4 @@ export function installStateForgeStudio(host: StateForgeStudioHost): HTMLElement
   validate();
   document.body.append(panel);
   return panel;
-}
-
-function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
