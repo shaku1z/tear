@@ -289,6 +289,8 @@ export interface ProfileScreenView {
   readonly stats: readonly StatView[];
   readonly message?: string;
   readonly replays?: readonly ReplayView[];
+  /** Vault tab only: set while the saved replays are being read, or when they could not be. */
+  readonly vaultList?: "opening" | "failed";
   readonly canScrollUp?: boolean;
   readonly canScrollDown?: boolean;
   readonly passport?: {
@@ -504,13 +506,24 @@ export type MusicShelfView =
   | Readonly<{ layout: "feature"; heading: string; song: MusicSongView | null; queue: readonly string[] }>
   | Readonly<{ layout: "tiles"; heading: string; collections: readonly MusicCollectionView[] }>
   | Readonly<{ layout: "rows"; heading: string; open: string; songs: readonly MusicSongView[] }>;
-/** Home (shelves), a collection's page (Songs is the whole soundtrack's) or the playback settings. */
-export type MusicPage = "home" | "collection" | "settings";
+/** One Radio channel the player can tune to: a catalog rule over the songs they have found. */
+export interface MusicChannelView {
+  readonly id: string;
+  readonly name: string;
+  readonly description: string;
+  /** How many of its songs the player has found (never 0: an empty channel is not shown). */
+  readonly songs: number;
+  readonly cover: MusicCoverView;
+  /** It is the player's music pick, so it plays in menus and runs. */
+  readonly picked: boolean;
+}
+/** Home (shelves), the Radio, a collection's page (Songs is the whole soundtrack's) or the playback settings. */
+export type MusicPage = "home" | "radio" | "collection" | "settings";
 export interface MusicScreenView {
   readonly id: "music";
   readonly page: MusicPage;
   readonly title: string;
-  /** Rail (desktop) or chip strip (phone): Home · Songs · Settings, the current one selected. */
+  /** Rail (desktop) or chip strip (phone): Home · Radio · Songs · Settings, the current one selected; Radio only when a channel can be tuned to. */
   readonly rail: readonly ChoiceView[];
   /** The stage collections, in campaign order, for the rail's Stages list. */
   readonly stages: readonly MusicCollectionView[];
@@ -519,6 +532,8 @@ export interface MusicScreenView {
   readonly soundtrack: MusicCollectionView | null;
   /** The open collection on a collection page. */
   readonly collection: MusicCollectionView | null;
+  /** The channels the player can tune to, for the Radio page. */
+  readonly radio: readonly MusicChannelView[];
   /** Where BACK (and controller B) goes: up one level, then out to the menu. */
   readonly back: ScreenAction;
   /** What is sounding now, for the transport; null before anything has played. */
@@ -527,11 +542,15 @@ export interface MusicScreenView {
     where: string;
     art: MusicCoverView;
     previewing: boolean;
+    /** The Radio channel it is playing on, by name; null off the Radio. */
+    channel: string | null;
     /** Position in the loop, 0..1; null when unknown. */
     progress: number | null;
   }> | null;
   /** ◀◀/▶▶ step through the queue the preview started from. */
   readonly canStep: boolean;
+  /** ▶▶ moves the Radio channel on to its next song (on a channel, with no preview over it). */
+  readonly radioNext: boolean;
   /** The first song of the soundtrack, which ▶ plays when nothing is playing. */
   readonly start: Readonly<{ id: string; queue: readonly string[] }> | null;
   /** Every catalogued song in catalog order; empty while the music index is still loading. */
@@ -618,6 +637,9 @@ export interface GameoverScreenView {
 export interface WinScreenView {
   readonly id: "win";
   readonly campaign: boolean;
+  /** A mode's own title and first line ("GAUNTLET CLEARED"); the generic VICTORY otherwise. */
+  readonly title?: string;
+  readonly headline?: string;
   readonly score: number;
   readonly time: string;
   readonly isNew: boolean;

@@ -3,6 +3,7 @@ import { createLiveTutorialCompletionPersistence } from "../progress/tutorial-co
 import { createLivePracticeEncounterPersistence } from "../progress/practice-encounter-persistence";
 import { createLegacySynthFacade } from "../../audio/legacy-synth";
 import { createBrowserAudioContextHandoff } from "../../audio/audio-context-handoff";
+import { setMusicProgressFacts } from "../../audio/music/music-source";
 import { A11Y, CONFIG, GFX, OVERSCAN, REMOTE, SAFE, THEME } from "../../config/game-config";
 import {
   aabbOverlap,
@@ -301,6 +302,8 @@ export function composeTearApplication(options: TearCompositionOptions): void {
       console.log(message);
     },
   });
+  // The music pick and the Radio hear only songs this player has found.
+  setMusicProgressFacts(() => PROFILE.facts());
   const GAMEPLAY_EVENTS = new TearGameplayEventBus(() => Input.semantic.lastSealedTick);
   const { GHOST, VAULT } = createLegacyReplayCompatibility({
     store: CG.store,
@@ -512,6 +515,8 @@ export function composeTearApplication(options: TearCompositionOptions): void {
       abilities: UPGRADES.filter((upgrade) => ["stormbank", "overrun", "sever"].includes(upgrade.id)).map(
         (upgrade) => upgrade.name,
       ),
+      // The achievement count the achievements screen shows, so a journey never hard-codes it.
+      achievementCount: () => ACH.list.length,
       input: Object.freeze({
         startRecording: () => {
           Input.startSemanticRecording();

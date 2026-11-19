@@ -67,7 +67,7 @@ const authoredModes = [
     id: "gauntlet",
     order: 2,
     label: "Gauntlet",
-    blurb: `Endless, but a full boss storms in every 8 waves — cycling all ${String(bossIdsAvailableOn("gauntlet").length)}, ever tougher.`,
+    blurb: `${String(bossIdsAvailableOn("gauntlet").length)} trials, one per boss: two rounds in its home stage, then the boss. Health returns only when a boss falls.`,
     enabled: true,
     classification: "gauntlet",
     training: false,

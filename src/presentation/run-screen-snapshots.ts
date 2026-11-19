@@ -32,6 +32,25 @@ export interface ResultLogSource {
   readonly died?: boolean;
 }
 
+/** A Gauntlet run's result, in display units: the result screens word it. */
+export interface GauntletResultSource {
+  readonly trialsCleared: number;
+  readonly trialCount: number;
+  /** The boss of the trial the run reached. */
+  readonly bossName: string;
+  readonly seconds: number;
+  readonly hits: number;
+  readonly best: Readonly<{ seconds: number; hits: number }> | null;
+  readonly newBest: boolean;
+}
+
+const hitsLabel = (hits: number): string => `${String(hits)} ${hits === 1 ? "hit" : "hits"}`;
+
+function gauntletBestLine(result: GauntletResultSource, formatTime: (seconds: number) => string): string | undefined {
+  if (result.newBest) return "★ NEW BEST";
+  return result.best === null ? undefined : `best: ${formatTime(result.best.seconds)} · ${hitsLabel(result.best.hits)}`;
+}
+
 export function fortuneDraftDescription(owned: number): string {
   const next = Math.min(5, owned + 1);
   const multiplier = 1 + 0.12 * next + (next >= 3 ? 0.25 : 0) + (next >= 5 ? 0.35 : 0);
@@ -245,7 +264,26 @@ export function buildGameoverSnapshot(input: {
   readonly progress: readonly ProgressView[];
   readonly log: readonly ResultLogView[];
   readonly formatTime: (seconds: number) => string;
+  readonly gauntlet?: GauntletResultSource;
 }): GameoverScreenView {
+  const gauntlet = input.gauntlet;
+  if (gauntlet !== undefined) {
+    const reached = `trial ${String(Math.min(gauntlet.trialCount, gauntlet.trialsCleared + 1))}/${String(gauntlet.trialCount)}`;
+    const best = gauntletBestLine({ ...gauntlet, newBest: false }, input.formatTime);
+    return Object.freeze({
+      id: "gameover",
+      summary: `${reached}   ·   ${gauntlet.bossName.toLowerCase()}   ·   ${String(input.score)} pts   ·   ${input.formatTime(input.time)}`,
+      isNew: false,
+      ...(best === undefined ? {} : { best }),
+      earned: input.earned,
+      coins: input.coins,
+      replayAvailable: input.replayAvailable,
+      celebrate: input.score > 0,
+      abilities: input.abilities,
+      progress: input.progress,
+      log: input.log,
+    });
+  }
   return Object.freeze({
     id: "gameover",
     summary: `wave ${String(input.wave)}   ·   ${String(input.score)} pts   ·   ${input.formatTime(input.time)}`,
@@ -274,10 +312,24 @@ export function buildWinSnapshot(input: {
   readonly difficulty: string;
   readonly log: readonly ResultLogView[];
   readonly formatTime: (seconds: number) => string;
+  readonly gauntlet?: GauntletResultSource;
 }): WinScreenView {
+  const gauntlet = input.gauntlet;
+  const best = gauntlet === undefined ? undefined : gauntletBestLine(gauntlet, input.formatTime);
   return Object.freeze({
     id: "win",
     campaign: input.campaign,
+    ...(gauntlet === undefined
+      ? {}
+      : {
+          title: "GAUNTLET CLEARED",
+          headline: [
+            `${String(gauntlet.trialCount)} trials`,
+            input.formatTime(gauntlet.seconds),
+            hitsLabel(gauntlet.hits),
+            ...(best === undefined ? [] : [best]),
+          ].join("   ·   "),
+        }),
     score: input.score,
     time: input.formatTime(input.time),
     isNew: input.isNew && input.score > 0,

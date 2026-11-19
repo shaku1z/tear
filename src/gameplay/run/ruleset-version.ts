@@ -4,9 +4,13 @@
  * moves run on the shared boss attack layer. v3: its Phase II is rebuilt (Grafts planted one at a time,
  * fair healing) and a thrown blade cuts the stage objects a held blade cuts. v4: its Phase III is rebuilt
  * (Regrowth and Last Spring are moves on the shared layer; Regrowth keeps attacking and heals by the one table). v5: each
- * repeat of a repeating boss strike has a warning of its own, in which the hit is off.
+ * repeat of a repeating boss strike has a warning of its own, in which the hit is off. v6: the Gauntlet is a run
+ * of trials, one per boss (see `gauntlet-trials.ts`).
  */
-export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v5";
+export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v6";
+
+/** The identity while the Gauntlet still cycled waves through the biomes; historical replays only. */
+export const SIX_BIOME_PALE_PREVIEW_V5_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v5";
 
 /** The identity while a repeating boss strike came again unwarned; historical replays only. */
 export const SIX_BIOME_PALE_PREVIEW_V4_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v4";
@@ -28,3 +32,44 @@ export const VERDANT_R3_ENGINEERING_RULESET_VERSION = "tear-rules-verdant-r3-eng
 
 /** Last public/baseline identity retained for explicit replay admission tests. */
 export const PRE_VERDANT_RULESET_VERSION = "tear-rules-2026.07";
+
+/**
+ * Every ruleset in order, oldest first, with what changed at that step in words a player reads.
+ * Replays are admitted only under the exact ruleset they were recorded with, in every mode: a
+ * step changes the simulation, so an older recording would play out differently. A recording
+ * from an earlier ruleset is refused and the refusal names the first change it missed. A new
+ * bump is one row here.
+ */
+export interface RulesetStep {
+  readonly version: string;
+  /** Completes "This replay was recorded before …". */
+  readonly change: string;
+}
+
+export const RULESET_STEPS: readonly RulesetStep[] = Object.freeze(
+  [
+    { version: PRE_VERDANT_RULESET_VERSION, change: "the July 2026 rules" },
+    { version: VERDANT_R3_ENGINEERING_RULESET_VERSION, change: "Verdant Sanctum was added" },
+    { version: PALE_R3_ENGINEERING_RULESET_VERSION, change: "Pale Traverse was added for testing" },
+    { version: SIX_BIOME_PALE_PREVIEW_V1_RULESET_VERSION, change: "the campaign settled on six stages" },
+    { version: SIX_BIOME_PALE_PREVIEW_V2_RULESET_VERSION, change: "the Rootbound moved onto the shared boss moves" },
+    { version: SIX_BIOME_PALE_PREVIEW_V3_RULESET_VERSION, change: "the Rootbound's second phase was rebuilt" },
+    { version: SIX_BIOME_PALE_PREVIEW_V4_RULESET_VERSION, change: "the Rootbound's third phase was rebuilt" },
+    { version: SIX_BIOME_PALE_PREVIEW_V5_RULESET_VERSION, change: "each repeat of a boss strike got its own warning" },
+    { version: CURRENT_RULESET_VERSION, change: "the Gauntlet became a run of trials" },
+  ].map((step) => Object.freeze(step)),
+);
+
+/** The reason a recording from another ruleset is refused, when this build does not know that ruleset. */
+export const UNKNOWN_RULESET_REFUSAL = "recorded with a version of the game this one cannot play back";
+
+/**
+ * Why a recording cannot be watched, or null when it was recorded under the current ruleset or
+ * names none (older paths decide those). The reason names the first change after the recording.
+ */
+export function rulesetRefusal(recordedVersion: string | undefined): string | null {
+  if (recordedVersion === undefined || recordedVersion === CURRENT_RULESET_VERSION) return null;
+  const recorded = RULESET_STEPS.findIndex((step) => step.version === recordedVersion);
+  const missed = recorded < 0 ? undefined : RULESET_STEPS[recorded + 1];
+  return missed === undefined ? UNKNOWN_RULESET_REFUSAL : `recorded before ${missed.change}`;
+}

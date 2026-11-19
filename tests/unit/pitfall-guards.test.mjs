@@ -1,5 +1,7 @@
 // Guards for the rules in docs/PITFALLS.md. Each test names the row it protects.
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -15,6 +17,21 @@ function listFiles(directory, extensions) {
     .readdirSync(absolute, { withFileTypes: true, recursive: true })
     .filter((entry) => entry.isFile() && extensions.some((extension) => entry.name.endsWith(extension)))
     .map((entry) => path.relative(root, path.join(entry.parentPath, entry.name)).replaceAll("\\", "/"));
+}
+
+const texts = new Map();
+/**
+ * Each file's text, read once for the whole file of guards. The reads run in parallel: on Windows
+ * one open at a time costs several milliseconds, so reading the ~725 files the guards scan one
+ * after another took 2.6 to 7.5 s, against 0.4 to 0.6 s in parallel.
+ */
+async function readTexts(files) {
+  return Promise.all(
+    files.map(async (file) => {
+      if (!texts.has(file)) texts.set(file, readFile(path.join(root, file), "utf8"));
+      return [file, await texts.get(file)];
+    }),
+  );
 }
 
 /** Body rows of the PITFALLS table, each as its trimmed cells (header and separator dropped). */
@@ -60,7 +77,7 @@ describe("pitfall guards", () => {
     }
   });
 
-  it("no browser test server listens on a fixed port; each takes a free one and reads its URL back", () => {
+  it("no browser test server listens on a fixed port; each takes a free one and reads its URL back", async () => {
     const fixedPort = [
       // listen() and listen(0, …) take a free port; anything else names one.
       /\.listen\(\s*(?!0\s*[,)]|\))/u,
@@ -70,9 +87,8 @@ describe("pitfall guards", () => {
     ];
     const files = listFiles("tests", [".js", ".cjs", ".mjs"]).filter((file) => !file.startsWith("tests/unit/"));
     expect(files).toContain("tests/browser-journey-harness.js");
-    const offenders = files.flatMap((file) =>
-      fs
-        .readFileSync(path.join(root, file), "utf8")
+    const offenders = (await readTexts(files)).flatMap(([file, text]) =>
+      text
         .split(/\r?\n/u)
         .flatMap((line, index) =>
           fixedPort.some((pattern) => pattern.test(line)) ? [`${file}:${String(index + 1)}: ${line.trim()}`] : [],
@@ -81,12 +97,14 @@ describe("pitfall guards", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("no script, workflow or package command skips the Git hooks", () => {
+  it("no script, workflow or package command skips the Git hooks", async () => {
     const sources = [
       ...listFiles("scripts", [".mjs", ".js", ".ts", ".ps1", ".sh"]),
       ...listFiles(".github", [".yml", ".yaml"]),
     ];
-    const offenders = sources.filter((file) => /--no-verify\b/u.test(fs.readFileSync(path.join(root, file), "utf8")));
+    const offenders = (await readTexts(sources))
+      .filter(([, text]) => /--no-verify\b/u.test(text))
+      .map(([file]) => file);
     for (const [name, command] of Object.entries(scripts)) if (/--no-verify\b/u.test(command)) offenders.push(name);
     expect(offenders).toEqual([]);
   });
@@ -97,16 +115,32 @@ describe("pitfall guards", () => {
     expect(scripts.lint).toBe("node scripts/lint.mjs");
   });
 
-  it("no current document states a line-count module limit; the size rule lives in ARCHITECTURE.md", () => {
+  it("no current document states a line-count module limit; the size rule lives in ARCHITECTURE.md", async () => {
     const rootDocuments = fs.readdirSync(root).filter((name) => name.endsWith(".md"));
     const current = [rootDocuments, ...["docs", "plans", ".agents"].map((folder) => listFiles(folder, [".md"]))]
       .flat()
       .filter((file) => !/^docs\/(?:history|checkpoints)\//u.test(file) && !file.startsWith("plans/completed/"));
     const stale = /\b(?:700|500)[- ](?:physical[- ])?lines?\b(?! equivalents)|\bbelow 500\b/iu;
-    const offenders = current.filter((file) => stale.test(fs.readFileSync(path.join(root, file), "utf8")));
+    const offenders = (await readTexts(current)).filter(([, text]) => stale.test(text)).map(([file]) => file);
     expect(offenders).toEqual([]);
     expect(fs.readFileSync(path.join(root, "docs", "ARCHITECTURE.md"), "utf8")).toContain("**The module size rule.**");
   });
+  it("no JavaScript or TypeScript module starts with a shebang (a CRLF checkout breaks the import)", () => {
+    // One git grep over the tracked modules instead of opening each. Git hooks have no extension
+    // and keep theirs: git runs them directly, nothing imports them.
+    const found = spawnSync(
+      "git",
+      ["grep", "-n", "-I", "-e", "^#!", "--", "*.mjs", "*.js", "*.cjs", "*.ts", "*.mts", "*.cts"],
+      { cwd: root, encoding: "utf8" },
+    );
+    expect([0, 1], found.stderr).toContain(found.status);
+    const offenders = found.stdout
+      .split("\n")
+      .filter((line) => /^[^:]+:1:/u.test(line))
+      .map((line) => line.split(":")[0]);
+    expect(offenders).toEqual([]);
+  });
+
   it("docs/PITFALLS.md has no duplicate rows: no two rows share an incident or a rule, and every row names its guard", () => {
     const rows = pitfallRows(fs.readFileSync(path.join(root, "docs", "PITFALLS.md"), "utf8"));
     expect(rows.length).toBeGreaterThan(0);
@@ -154,7 +188,7 @@ describe("pitfall guards", () => {
         expect(retryRequests(text), text).toEqual([]);
     });
 
-    it("no test, test configuration, check list, package script, script or workflow asks for one", () => {
+    it("no test, test configuration, check list, package script, script or workflow asks for one", async () => {
       const sources = [
         ...listFiles("tests", [".js", ".mjs", ".cjs", ".ts", ".json"]),
         ...listFiles("scripts", [".js", ".mjs", ".cjs", ".ts", ".ps1", ".sh"]),
@@ -162,8 +196,8 @@ describe("pitfall guards", () => {
         ...listFiles("config", [".json"]),
         ...fs.readdirSync(root).filter((name) => /\.config\.[cm]?[jt]s$/u.test(name) || name === "package.json"),
       ].filter((file) => file !== "tests/unit/pitfall-guards.test.mjs");
-      const offenders = sources.flatMap((file) =>
-        retryRequests(fs.readFileSync(path.join(root, file), "utf8")).map((line) => `${file}: ${line}`),
+      const offenders = (await readTexts(sources)).flatMap(([file, text]) =>
+        retryRequests(text).map((line) => `${file}: ${line}`),
       );
       expect(offenders).toEqual([]);
     });

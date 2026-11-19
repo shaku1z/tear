@@ -20,7 +20,6 @@ import { runLiveOpeningPhase, type LiveOpeningPhaseHost } from "../gameplay/comb
 import { updateMirrorCombat } from "../gameplay/combat/mirror-combat-feedback";
 import { addKillScore, invokeWeaponHook } from "../gameplay/combat/weapon-runtime-coordinator";
 import { tracksAchievements } from "../gameplay/progression/achievement-runtime";
-import { BOSS_ROSTER } from "../gameplay/run/content-director";
 import { createLiveStyleAchievementRuntime } from "../gameplay/scoring/live-style-achievement-runtime";
 import { BossArenaRules, type ArenaActor, type ArenaPlatform } from "../gameplay/training/arena-rules";
 import { createBossArenaRuntimeBridge } from "../gameplay/training/arena-runtime-bridge";
@@ -999,7 +998,6 @@ export function createProductionCombatPhases(
     stageAccent: () => stageAt(stage.index).accent,
     stageChapterBossOutro: () => stageAt(stage.index).chapter.bossOutro,
     hasStageChapter: () => true,
-    bossRosterSize: BOSS_ROSTER.length,
     achievementsEnabled: nativeTracking,
     addKillScore: () => {
       addKillScore(world.state.run() as never, config.run.scorePerKill, config.run.scoreMult);
