@@ -85,13 +85,29 @@ describe("Verdant mode coverage", () => {
     expect(seen).toEqual(new Set(PUBLISHED_ENEMY_IDENTITY_IDS));
   });
 
-  it.each(["endless", "gauntlet"] as const)("uses the authored Verdant pool when %s rotates into the biome", (mode) => {
-    const wave = plan({ state: state({ mode, wave: 16, currentStageIndex: 3, biomeIdx: 3 }) });
+  it("uses the authored Verdant pool when endless rotates into the biome", () => {
+    const wave = plan({ state: state({ mode: "endless", wave: 16, currentStageIndex: 3, biomeIdx: 3 }) });
     expect(wave.state).toMatchObject({ wave: 17, stage: 3, currentStageIndex: 3, biomeIdx: 3 });
     expect(wave.state.spawnQueue.some((spawn) => spawn.type === "rootbinder")).toBe(true);
     expect(wave.state.spawnQueue.every((spawn) => stages[3]?.pool.some((entry) => entry.kind === spawn.type))).toBe(
       true,
     );
+  });
+
+  it("plays the Rootbound trial of the Gauntlet on the authored Verdant pool", () => {
+    const seen = new Set<string>();
+    for (let seed = 0; seed < 40; seed += 1) {
+      const wave = plan({
+        state: state({ mode: "gauntlet", wave: 4, bossOrder: ["warden", "rootbound", "source"] }),
+        random: new SeededRandom(`verdant-trial-${String(seed)}`),
+      });
+      expect(wave.state).toMatchObject({ wave: 5, stage: 3, curBoss: "rootbound" });
+      for (const spawn of wave.state.spawnQueue) {
+        expect(stages[3]?.pool.some((entry) => entry.kind === spawn.type)).toBe(true);
+        seen.add(spawn.type);
+      }
+    }
+    expect(seen.has("rootbinder")).toBe(true);
   });
 
   it("keeps Campaign and Boss Test on the same Verdant and Rootbound authorities", () => {

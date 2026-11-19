@@ -101,6 +101,7 @@ interface RunStartHostContext {
   readonly setScreen: (screen: "playing", detail: { runId: string }) => void;
   readonly selectedBoss: () => string;
   readonly shuffledRoster: () => BossId[];
+  readonly gauntletTrials: () => BossId[];
   readonly bossBiome: (bossId: BossId) => number;
   readonly trainingPlatforms: () => unknown[];
   readonly playground: PlaygroundPort;
@@ -473,7 +474,7 @@ export function createLiveRunStartHost(
         context.environment.clear("boss-encounter-replacement");
         context.loadStage(context.bossBiome(first));
       } else if (mode === "gauntlet") {
-        run.bossOrder = context.shuffledRoster();
+        run.bossOrder = context.gauntletTrials();
         run.bossIdx = 0;
         run.bossesBeaten = 0;
       }

@@ -30,23 +30,9 @@ runs:
       env:
         MAIN: ${{ inputs.main }}
         EXPECTED: ${{ inputs.commit }}
-      run: |
-        if [[ -n "$MAIN" ]]; then
-          git fetch --quiet origin "+$MAIN:refs/remotes/origin/main"
-          date="$(git log -1 --format=%cI "$MAIN")"
-          GIT_AUTHOR_DATE="$date" GIT_COMMITTER_DATE="$date" \
-            git -c user.name=validate -c user.email=validate@invalid merge --quiet --no-edit -m "Validate: merge main $MAIN" "$MAIN" ||
-            { echo "::error::This change does not merge cleanly with current main. Bring it up to date."; exit 1; }
-        fi
-        commit="$(git rev-parse HEAD)"
-        if [[ -n "$EXPECTED" && "$commit" != "$EXPECTED" ]]; then
-          echo "::error::This job checked out $commit, not the commit the scope job recorded ($EXPECTED)."
-          exit 1
-        fi
-        echo "commit=$commit" >> "$GITHUB_OUTPUT"
-        # Every later step checks and builds this commit, not GitHub's GITHUB_SHA (its own merge ref).
-        echo "TEAR_RELEASE_SHA=$commit" >> "$GITHUB_ENV"
-        echo "TEAR_BUILD_GIT_SHA=$commit" >> "$GITHUB_ENV"
+      # The runner's own Node runs it (setup-node comes later); it uses only Node's built-in modules.
+      # It also writes TEAR_RELEASE_SHA and TEAR_BUILD_GIT_SHA, which every later step reads.
+      run: node scripts/ci-checked-commit.mjs
     - if: inputs.install == 'true'
       uses: pnpm/action-setup@v4
       with:

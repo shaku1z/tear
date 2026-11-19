@@ -18,7 +18,7 @@
       "chars": 27922
     },
     "src/game-reference/game-reference.ts": {
-      "chars": 30731
+      "chars": 30695
     },
     "src/gameplay/combat/held-blade-collision-runtime.ts": {
       "largestFunctionStatements": 171
@@ -63,7 +63,7 @@
       "chars": 26787
     },
     "src/gameplay/training/tutorial-controller.ts": {
-      "chars": 46144,
+      "chars": 45807,
       "largestFunctionStatements": 170
     },
     "src/gameplay/upgrades.ts": {
@@ -127,9 +127,6 @@
     "src/presentation/platform-materials/verdant-rootstone.ts": {
       "largestFunctionStatements": 129
     },
-    "src/presentation/screens/leaderboards-replays.ts": {
-      "maxLineLength": 229
-    },
     "src/presentation/tear-wipe.ts": {
       "largestFunctionStatements": 106
     },
@@ -155,10 +152,10 @@
       "chars": 29599
     },
     "src/tearbench/production-combat-phases.ts": {
-      "chars": 30134
+      "chars": 30100
     },
     "src/tearbench/production-headless-environment.ts": {
-      "chars": 29937
+      "chars": 28010
     },
     "src/tearbench/production-replay-composition.ts": {
       "chars": 34925

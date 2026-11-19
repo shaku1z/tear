@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 // Adds or replaces one MUSIC cover: encodes a stage painting at every size the manifest lists,
 // writes the files and the stage's row in src/presentation/assets/music-covers/covers.json, and
 // refuses a cover over the manifest's per-cover byte limit. The painting itself stays where it is.

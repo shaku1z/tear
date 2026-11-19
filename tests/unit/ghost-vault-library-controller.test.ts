@@ -74,7 +74,6 @@ function archiveController(backend = createMemoryGhostVaultBackend()) {
           evictedCapsuleIds: [],
           integrity: [],
           rebuiltIndexes: 0,
-          libraries: { schemaVersion: 1, entries: [], rejectedEntryKeys: [] },
         },
       }),
   });
@@ -165,7 +164,6 @@ describe("Ghost Vault library controller", () => {
     });
     expect(controller.snapshot().capsules.find((entry) => entry.id === f.manifest.id)).toMatchObject({
       repairable: false,
-      libraries: ["graveyard"],
     });
     expect((await backend.keys("manifests")).filter((id) => id !== f.manifest.id)).toEqual(childIds);
     expect(await backend.get("chunks", f.chunk.id)).toBe("retained-corrupt-bytes");
@@ -324,20 +322,6 @@ describe("Ghost Vault library controller", () => {
               { id: "newer", healthy: true },
             ],
             rebuiltIndexes: 2,
-            libraries: {
-              schemaVersion: 1,
-              entries: [
-                {
-                  id: "graveyard:newer",
-                  library: "graveyard",
-                  ghostId: "newer",
-                  rootHash: "root-newer",
-                  createdAt: "2026-08-02T00:00:00.000Z",
-                  provenance: { source: "ghost-doctor" },
-                },
-              ],
-              rejectedEntryKeys: [],
-            },
           },
         }),
     });
@@ -358,7 +342,6 @@ describe("Ghost Vault library controller", () => {
           recordingProfile: "coaching",
           chunkCount: 0,
           healthy: true,
-          libraries: ["graveyard"],
         },
         { id: "older", status: "complete", recordingProfile: "coaching", chunkCount: 0, healthy: true },
       ],
@@ -383,7 +366,6 @@ describe("Ghost Vault library controller", () => {
               evictedCapsuleIds: [],
               integrity: [{ id: "kept", healthy: true }],
               rebuiltIndexes: 1,
-              libraries: { schemaVersion: 1, entries: [], rejectedEntryKeys: [] },
             },
           });
         return Promise.reject(new Error("IndexedDB blocked"));
@@ -414,7 +396,6 @@ describe("Ghost Vault library controller", () => {
         evictedCapsuleIds: [],
         integrity: [{ id: "hostile", healthy: true }],
         rebuiltIndexes: 1,
-        libraries: { schemaVersion: 1 as const, entries: [], rejectedEntryKeys: [] },
       },
     };
     const controller = createGhostVaultLibraryController({
@@ -436,7 +417,6 @@ describe("Ghost Vault library controller", () => {
     expect(after).toMatchObject({
       createdAt: before?.createdAt,
       chunkCount: before?.chunkCount,
-      libraries: before?.libraries,
     });
   });
 });

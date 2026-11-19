@@ -25,6 +25,7 @@ import type { LiveWaveSpawnSpec } from "../../gameplay/run/live-enemy-spawn";
 import type { RunDifficulty } from "../../gameplay/run/session";
 import { practiceEnemyCatalog } from "../../gameplay/training/practice-enemy-catalog";
 import { padPromptLabel } from "../../presentation/world/tutorial-input-prompts";
+import { anyKeyIn } from "../../domain/keyboard-bindings";
 
 interface TrainingLifecycle {
   terminate(reason: string): void;
@@ -83,7 +84,7 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
     config: d.CONFIG,
     viewportWidth: context.width,
     groundY: () => d.CONFIG.world.groundY,
-    skipPressed: () => d.Input.pressed.has("KeyN"),
+    skipPressed: () => anyKeyIn(d.Input.pressed, "skip-lesson"),
     movingLeft: () => player().aiInput?.left() === true,
     movingRight: () => player().aiInput?.right() === true,
     player,
@@ -149,7 +150,6 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
   });
 
   const controller = new PlaygroundController();
-  let menuOpened = false;
   const runtime = createPlaygroundRuntimeBridge({
     controller,
     get difficulties() {
@@ -194,7 +194,6 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
       context.addFloater(actor.x, actor.y - 60, text, emphasis, color);
     },
     navigate: (screen) => {
-      menuOpened = true;
       // ABILITIES is the menu's last tab on its own screen: U opens it directly, and the
       // menu reopens on it when it was the tab left open.
       if (screen === "pglab") runtime.tab = "abilities";
@@ -273,12 +272,9 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
     arenaName: () => runtime.arenaName(),
     arenas: () => d.PLAYGROUND_STAGES.map((stage) => stage.name),
     // Q / E and L1 / R1 step the menu's tabs, as on every tabbed screen.
+    // The tab keys count only while menus own input (Input.updateUI), so the key that opened
+    // the menu in play never also steps a tab.
     tab: () => {
-      // The E that opened the menu is also "next tab": the first menu frame ignores it.
-      if (menuOpened) {
-        menuOpened = false;
-        return runtime.tab;
-      }
       const next = stepUiTab(PLAYGROUND_TABS, runtime.tab, d.Input.ui.tabPrev, d.Input.ui.tabNext);
       if (next.changed) {
         d.SFX.ui();

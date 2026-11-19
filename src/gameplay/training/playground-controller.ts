@@ -1,4 +1,5 @@
 import { ENEMY_IDENTITY_IDS } from "../run/content-director";
+import { anyKeyIn, keyCodes } from "../../domain/keyboard-bindings";
 
 export const PLAYGROUND_HOTKEY_KINDS = Object.freeze([
   "charger",
@@ -210,11 +211,13 @@ export class PlaygroundController {
       if (enemy.tutorialDummy && !enemy.dead)
         intents.push({ type: "stabilize-dummy", enemyId: enemy.id, minimumStun: 1, healBelow: enemy.maxHp * 0.5 });
 
-    if (pressed.has("Tab") || pressed.has("KeyE"))
+    if (anyKeyIn(pressed, "playground-menu"))
       return [{ type: "navigate", screen: "pgmenu" }, { type: "release-pointer" }];
+    const spawnKeys = keyCodes("quick-spawn");
     for (let index = 0; index < PLAYGROUND_HOTKEY_KINDS.length; index++) {
       const kind = PLAYGROUND_HOTKEY_KINDS[index];
-      if (kind && pressed.has(`Digit${String(index + 1)}`))
+      const code = spawnKeys[index];
+      if (kind && code !== undefined && pressed.has(code))
         intents.push(this.spawn(kind), {
           type: "announce",
           text: kind.toUpperCase(),
@@ -222,27 +225,28 @@ export class PlaygroundController {
           color: colors[kind] ?? "#000",
         });
     }
-    if (pressed.has("KeyT"))
+    if (anyKeyIn(pressed, "spawn-dummy"))
       intents.push(this.spawnDummy(player, snapshot.viewportWidth), {
         type: "announce",
         text: "DUMMY",
         emphasis: false,
         color: "#888",
       });
-    if (pressed.has("KeyB")) {
+    if (anyKeyIn(pressed, "summon-boss")) {
       const bossId = run.bossOrder[run.bossIndex % run.bossOrder.length];
       if (bossId) intents.push({ type: "summon-boss", bossId, nextBossIndex: run.bossIndex + 1 });
     }
-    if (pressed.has("KeyK"))
+    if (anyKeyIn(pressed, "clear-enemies"))
       intents.push(
         { type: "clear-enemies" },
         { type: "clear-projectiles" },
         { type: "announce", text: "CLEARED", emphasis: true, color: colors.perfect ?? "#fff" },
       );
-    if (pressed.has("KeyH"))
+    if (anyKeyIn(pressed, "heal"))
       intents.push({ type: "heal-player" }, { type: "announce", text: "HEALED", emphasis: true, color: "#1faf5a" });
-    if (pressed.has("KeyU")) intents.push({ type: "navigate", screen: "pglab" }, { type: "release-pointer" });
-    if (pressed.has("KeyM")) {
+    if (anyKeyIn(pressed, "abilities"))
+      intents.push({ type: "navigate", screen: "pglab" }, { type: "release-pointer" });
+    if (anyKeyIn(pressed, "summon-echo")) {
       const mirror = enemies.find((enemy) => enemy.mirrorBoss && !enemy.dead);
       if (mirror)
         intents.push(

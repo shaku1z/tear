@@ -422,14 +422,6 @@
       ],
       "duration": "minutes"
     },
-    "test:browser:ghost-v3-live-capture": {
-      "purpose": "Browser check of Ghost v3 live replay capture",
-      "effects": [
-        "writes-artifacts",
-        "launches-browser"
-      ],
-      "duration": "under-a-minute"
-    },
     "test:browser:verdant-presentation": {
       "purpose": "Browser capture of the Verdant biome presentation",
       "effects": [
@@ -888,7 +880,7 @@
       "duration": "seconds"
     },
     "check:test-isolation": {
-      "purpose": "Fails if engineering or test-only code reached a production bundle",
+      "purpose": "Fails if a release build defines a test global",
       "effects": [
         "read-only"
       ],
@@ -928,6 +920,13 @@
         "read-only"
       ],
       "duration": "seconds"
+    },
+    "queue": {
+      "purpose": "Runs a heavy local command in its turn in the queue all worktrees share; light commands start at once",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "long"
     },
     "leftovers": {
       "purpose": "Read-only: merged local branches, ignored tracked files, leftovers beside the repo and cache sizes",
@@ -1535,6 +1534,18 @@
         "scripts/run-checks.mjs"
       ]
     },
+    "scripts/ci-checked-commit.mjs": {
+      "purpose": "Validate: merges the chosen main commit into the change and refuses a job on another commit",
+      "effects": [
+        "network",
+        "writes-repo-files"
+      ],
+      "duration": "seconds",
+      "via": [],
+      "runBy": [
+        ".github/actions/checked-commit/action.yml"
+      ]
+    },
     "scripts/ci-verdict.mjs": {
       "purpose": "Validate's required check: fails unless every needed job ended as it should",
       "effects": [
@@ -1670,7 +1681,7 @@
       ]
     },
     "scripts/run-checks.mjs": {
-      "purpose": "Runs config/checks.json groups in order, stops at the first failure, shares machine-wide slots and records a full pass",
+      "purpose": "Runs config/checks.json groups in order, stops at the first failure, waits its turn in scripts/queue.mjs and records a full pass",
       "effects": [
         "writes-artifacts",
         "launches-browser"
@@ -1682,6 +1693,16 @@
         "check:quick",
         "check:nightly",
         "check:weekly"
+      ]
+    },
+    "scripts/queue.mjs": {
+      "purpose": "Arrival-order queue for heavy local commands shared by all worktrees; run-checks joins it too",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "long",
+      "via": [
+        "queue"
       ]
     },
     "scripts/run-current-live-detached-parity.mjs": {
@@ -1828,6 +1849,7 @@
     "scripts/architecture/selectors.mjs": [
       "scripts/architecture/analyze.mjs",
       "scripts/architecture/layering.mjs",
+      "scripts/release-developer-code.mjs",
       "tests/source-architecture.test.mjs"
     ],
     "scripts/architecture/source-graph.mjs": [
@@ -1840,6 +1862,10 @@
     ],
     "scripts/asset-sheets/output.mjs": [
       "scripts/asset-sheets.mjs"
+    ],
+    "scripts/relative-imports.mjs": [
+      "scripts/asset-sheets/fingerprint.mjs",
+      "tests/unit/tool-catalogue.test.mjs"
     ],
     "scripts/build-targets.mjs": [
       "scripts/build-target.mjs",
@@ -1881,6 +1907,10 @@
     "scripts/package-target.mjs": [
       "scripts/package-crazygames.mjs",
       "scripts/package-itch.mjs"
+    ],
+    "scripts/release-developer-code.mjs": [
+      "tests/unit/release-developer-code.test.mjs",
+      "vite.config.ts"
     ],
     "scripts/release-artifact.mjs": [
       "scripts/apply-workspace-quarantine.mjs",
@@ -1961,6 +1991,11 @@
       "tests/unit/tutorial-production-ghost.test.ts",
       "vite.config.ts"
     ],
+    "scripts/test-files.mjs": [
+      "tests/unit/pitfall-guards.test.mjs",
+      "vitest.config.ts",
+      "vitest.endurance.config.ts"
+    ],
     "scripts/wiki-data-export.mjs": [
       "scripts/export-game-reference.mjs"
     ],
@@ -1973,10 +2008,12 @@
     "scripts/campaign-publication-boundary.d.mts",
     "scripts/music-cover.d.mts",
     "scripts/release-artifact.d.mts",
+    "scripts/release-developer-code.d.mts",
     "scripts/scene/hidden-paint.d.mts",
     "scripts/scene/package-files.d.mts",
     "scripts/scene/pixel-checks.d.mts",
     "scripts/scene/reports.d.mts",
+    "scripts/test-files.d.mts",
     "scripts/tutorial-gold-compatibility.d.mts"
   ]
 }

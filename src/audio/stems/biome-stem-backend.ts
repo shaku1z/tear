@@ -1,5 +1,4 @@
 import { progressFacts, type ProgressSource } from "../../domain/progress-facts";
-import { conditionMet } from "../../domain/unlock-condition";
 import { unwrapBrowserAudioContext, unwrapBrowserAudioNode } from "../browser-audio";
 import type { TemporaryMuteReason } from "../mixer";
 import type {
@@ -13,11 +12,21 @@ import type {
 } from "../music-contracts";
 import { isMusicShell } from "../music-contracts";
 import { applyMusicMode, onMusicModeChange } from "../music-mode";
-import { onLoadoutChange, resolveMenuCueId } from "../music/loadout";
-import { getActiveStation, onStationChange } from "../music/active-station";
 import { setNowPlaying } from "../music/now-playing";
-import { onMusicPreviewChange } from "../music/preview";
-import { createStationState, pickNext, remember, type StationState } from "../music/station";
+import { getMusicPreview, onMusicPreviewChange } from "../music/preview";
+import {
+  DEFAULT_MUSIC_SOURCE,
+  getMusicSource,
+  heardSource,
+  musicUnlocked,
+  onMusicSourceChange,
+  onNextSongRequest,
+  pickPlaysInRun,
+  playerChannels,
+  type MusicSource,
+} from "../music/music-source";
+import type { MusicLibrary } from "../music/library";
+import { advance, currentSong, radioPlaySeconds, tuneIn, type RadioState } from "../music/radio";
 import type { MusicCatalog } from "../music/catalog";
 import { StingerPlayer } from "../music/stingers";
 import { nextBoundaryTime, secondsPerBar } from "../music/quantize";
@@ -78,17 +87,19 @@ export class BiomeStemBackend implements MusicBackend {
   #bossActive = false;
   #introBuffer: AudioBuffer | null = null;
   #stopModeWatch: (() => void) | null = null;
-  #stopLoadoutWatch: (() => void) | null = null;
+  #stopSourceWatch: (() => void) | null = null;
+  #stopNextWatch: (() => void) | null = null;
   #stopPreviewWatch: (() => void) | null = null;
   /** While paused, ignore the user's music mode and use the adaptive tier. */
   #modeExempt = false;
   #catalog: MusicCatalog | null = null;
   #lastBossId: string | null = null;
-  #stationState: StationState = createStationState();
-  #stopStationWatch: (() => void) | null = null;
-  /** Cue the station had queued before a boss/story takeover, for resume. */
-  #interrupted: string | null = null;
-  #stationSeed = 1;
+  /** The channel being played while the pick is a Radio channel; null otherwise. */
+  #radio: RadioState | null = null;
+  /** When the Radio moves to its next song: one timer, never per-frame work. */
+  #radioTimer: ReturnType<typeof setTimeout> | null = null;
+  /** The player's pick as they can hear it, read again by `#retune`. */
+  #pick: MusicSource = DEFAULT_MUSIC_SOURCE;
   /** Picks from a routing pool (the Verdant Sanctum's two songs) come from the run's seed. */
   #routeSeed = 1;
   /** Saved progress at run start; null outside a run and in runs that must sound the same for everyone. */
@@ -107,8 +118,17 @@ export class BiomeStemBackend implements MusicBackend {
   #lastBiomeId = "menu";
   #lastScene: MusicScene = "main-menu";
 
-  constructor(cues: readonly LoadedCueRef[], routing: MusicRoutingManifest, catalog: MusicCatalog | null = null) {
+  /** The songs and Radio channels the pick is read against; null plays every pick as the default. */
+  readonly #library: MusicLibrary | null;
+
+  constructor(
+    cues: readonly LoadedCueRef[],
+    routing: MusicRoutingManifest,
+    catalog: MusicCatalog | null = null,
+    library: MusicLibrary | null = null,
+  ) {
     this.#catalog = catalog;
+    this.#library = library;
     for (const cue of cues) this.#cues.set(cue.id, cue);
     this.#routing = routing;
     this.#defaultCueId = routing.defaultWorkId;
@@ -121,20 +141,19 @@ export class BiomeStemBackend implements MusicBackend {
     this.#stopModeWatch = onMusicModeChange(() => {
       this.#applyTier(0.5);
     });
-    // Re-pick the shell track when the player changes their menu music or previews a song.
-    const repickShell = (): void => {
-      if (!this.#onShell) return;
-      const next = this.#shellCueId();
-      if (next !== this.#active?.cueId) void this.#activate(next, MENU_CROSSFADE_SECONDS);
-    };
-    this.#stopLoadoutWatch = onLoadoutChange(repickShell);
-    this.#stopPreviewWatch = onMusicPreviewChange(repickShell);
-    this.#stopStationWatch = onStationChange(() => {
-      // Switching station re-programmes the next pick immediately.
-      this.#interrupted = null;
-      const next = this.#routeCueId(this.#lastBiomeId, this.#lastScene);
-      if (next !== this.#active?.cueId) void this.#activate(next, CROSSFADE_SECONDS, QUANTIZE_BARS);
+    // A new pick (or newly found songs) re-tunes the Radio and re-routes both slots; a preview
+    // only ever changes the menu slot.
+    this.#stopSourceWatch = onMusicSourceChange(() => {
+      this.#retune();
+      this.#reroute();
     });
+    this.#stopNextWatch = onNextSongRequest(() => {
+      this.#nextOnRadio();
+    });
+    this.#stopPreviewWatch = onMusicPreviewChange(() => {
+      if (this.#onShell) this.#reroute();
+    });
+    this.#retune();
     this.#stingers = new StingerPlayer(this.#context, this.#output);
     void this.#stingers.load();
     await this.#activate(this.#shellCueId(), CROSSFADE_SECONDS, 0, true);
@@ -169,14 +188,15 @@ export class BiomeStemBackend implements MusicBackend {
     // Same run seed, same song: replays and seed-locked races hear what the run heard.
     this.#routeSeed = routeSeedFromRunSeed(metadata.runSeed);
     this.#progress = metadata.progress ?? null;
+    this.#retune();
     this.#introduced.clear();
     return Promise.resolve();
   }
 
   updateContext(snapshot: MusicContextSnapshot): void {
-    // Menu/shell screens use the player's loadout; gameplay uses biome routing.
     // "settings"/"shop"/etc. all resolve to the main-menu scene, so scene alone
     // would hand the menu track over mid-run. A live run always reports a biome.
+    const wasShell = this.#onShell;
     this.#onShell = isMusicShell(snapshot.scene, snapshot.biomeId);
     this.#lastBiomeId = snapshot.biomeId;
     this.#lastScene = snapshot.scene;
@@ -184,7 +204,7 @@ export class BiomeStemBackend implements MusicBackend {
     const cueId = this.#routeCueId(snapshot.biomeId, snapshot.scene);
     if (cueId !== this.#active?.cueId) {
       // Entering or leaving the menu is a UI swap; keep it snappy.
-      const menuSwap = this.#onShell || this.#active?.cueId === this.#shellCueId();
+      const menuSwap = this.#onShell || wasShell;
       void this.#activate(cueId, menuSwap ? MENU_CROSSFADE_SECONDS : CROSSFADE_SECONDS, menuSwap ? 0 : QUANTIZE_BARS);
     }
 
@@ -215,6 +235,8 @@ export class BiomeStemBackend implements MusicBackend {
 
   endRun(): Promise<void> {
     this.#progress = null;
+    // The run may have found songs: a pick that could not be heard before may be heard now.
+    this.#retune();
     this.#introduced.clear();
     return Promise.resolve();
   }
@@ -245,12 +267,14 @@ export class BiomeStemBackend implements MusicBackend {
     this.#switchToken += 1;
     this.#stopModeWatch?.();
     this.#stopModeWatch = null;
-    this.#stopLoadoutWatch?.();
-    this.#stopLoadoutWatch = null;
+    this.#stopSourceWatch?.();
+    this.#stopSourceWatch = null;
+    this.#stopNextWatch?.();
+    this.#stopNextWatch = null;
     this.#stopPreviewWatch?.();
     this.#stopPreviewWatch = null;
-    this.#stopStationWatch?.();
-    this.#stopStationWatch = null;
+    this.#clearRadioTimer();
+    this.#radio = null;
     this.#stingers?.dispose();
     this.#stingers = null;
     if (this.#active) {
@@ -262,9 +286,83 @@ export class BiomeStemBackend implements MusicBackend {
     return Promise.resolve();
   }
 
-  /** Cue for the shell/menu slot: a MUSIC-screen preview, else the player's Music Loadout. */
+  /** Cue for the menu slot: a MUSIC-screen preview, else the player's pick, else the menu default. */
   #shellCueId(): string {
-    return resolveMenuCueId(this.#defaultCueId, (cueId) => this.#cues.has(cueId));
+    const preview = getMusicPreview();
+    if (preview !== null && this.#cues.has(preview)) return preview;
+    return this.#pickCueId() ?? this.#defaultCueId;
+  }
+
+  /** The cue the player's pick plays now, or null when the pick is the default. Cheap: read every snapshot. */
+  #pickCueId(): string | null {
+    const source = this.#pick;
+    const cueId =
+      source.kind === "song"
+        ? source.workId
+        : source.kind === "channel" && this.#radio
+          ? currentSong(this.#radio)
+          : null;
+    return cueId !== null && this.#cues.has(cueId) ? cueId : null;
+  }
+
+  /** The songs a channel plays for this player, among the cues this build has. */
+  #channelSongIds(library: MusicLibrary, channelId: string): readonly string[] {
+    const tuned = playerChannels(library).find(({ channel }) => channel.id === channelId);
+    return (tuned?.songs ?? []).map((song) => song.id).filter((id) => this.#cues.has(id));
+  }
+
+  /**
+   * Read the pick again and follow it: tune in to a newly picked channel, or stop the Radio when the
+   * pick is not one. Runs when the pick changes and when a run begins or ends (when found songs can
+   * change), never per snapshot.
+   */
+  #retune(): void {
+    this.#pick = heardSource(getMusicSource(), this.#library);
+    const source = this.#pick;
+    const library = this.#library;
+    if (source.kind !== "channel" || library === null) {
+      this.#clearRadioTimer();
+      this.#radio = null;
+      return;
+    }
+    if (this.#radio?.channelId === source.channelId) return;
+    const songs = this.#channelSongIds(library, source.channelId);
+    this.#radio = songs.length > 0 ? tuneIn(source.channelId, songs, true, Date.now() >>> 0) : null;
+    this.#scheduleRadio();
+  }
+
+  /** The Radio's next song: when its time is up, or when the player asks for the next one. */
+  #nextOnRadio(): void {
+    const library = this.#library;
+    if (!this.#radio || library === null) return;
+    this.#radio = advance(this.#radio, this.#channelSongIds(library, this.#radio.channelId));
+    this.#scheduleRadio();
+    this.#reroute();
+  }
+
+  /** One timer for the song playing on the Radio: its length rounded to whole loops. */
+  #scheduleRadio(): void {
+    this.#clearRadioTimer();
+    const song = this.#radio ? currentSong(this.#radio) : null;
+    const cue = song === null ? undefined : this.#cues.get(song);
+    if (!cue || this.#library === null) return;
+    const seconds = radioPlaySeconds(loopSeconds(cue.manifest).lengthSeconds, this.#library.radio.songSeconds);
+    this.#radioTimer = setTimeout(() => {
+      this.#nextOnRadio();
+    }, seconds * 1000);
+  }
+
+  #clearRadioTimer(): void {
+    if (this.#radioTimer !== null) clearTimeout(this.#radioTimer);
+    this.#radioTimer = null;
+  }
+
+  /** Play what the current place and the pick call for, if it is not already playing. */
+  #reroute(): void {
+    const next = this.#routeCueId(this.#lastBiomeId, this.#lastScene);
+    if (next === this.#active?.cueId) return;
+    if (this.#onShell) void this.#activate(next, MENU_CROSSFADE_SECONDS);
+    else void this.#activate(next, CROSSFADE_SECONDS, QUANTIZE_BARS);
   }
 
   #openGain(): number {
@@ -301,7 +399,7 @@ export class BiomeStemBackend implements MusicBackend {
     );
   }
 
-  /** Canonical (biome/menu) routing, ignoring any station. */
+  /** Canonical (biome/menu) routing: what plays with the default pick. */
   #canonicalCueId(biomeId: string, scene: MusicScene): string {
     if (isMusicShell(scene, biomeId)) return this.#shellCueId();
     const routeScene: RoutingScene =
@@ -320,51 +418,27 @@ export class BiomeStemBackend implements MusicBackend {
   }
 
   /**
-   * Resolve which cue should play.
-   *
-   * Hybrid policy: a boss takes the canonical cue (story wins), and the station's
-   * pick is remembered so it can resume afterwards. Outside a boss, an active
-   * station programmes the track; `canonical` falls back to biome routing.
+   * Which cue plays. Menus play the menu slot. In a run the player's pick plays where
+   * `pickPlaysInRun` allows it, and the canonical cue plays everywhere else; the pick comes back
+   * after a boss. With the default pick, runs route exactly as they do without one.
    */
   #routeCueId(biomeId: string, scene: MusicScene): string {
+    if (isMusicShell(scene, biomeId)) return this.#shellCueId();
     const canonical = this.#canonicalCueId(biomeId, scene);
-    const station = getActiveStation();
-    if (station === "canonical" || !this.#catalog) return canonical;
-    if (isMusicShell(scene, biomeId)) return canonical; // shell slot owns the menu
-
-    // Boss/story takeover — remember what the station wanted, play canonical.
-    if (scene === "boss" || scene === "victory" || scene === "defeat") {
-      this.#interrupted ??= this.#active?.cueId ?? null;
-      return canonical;
-    }
-
-    // Resuming after a takeover: go back to what the station had queued.
-    if (this.#interrupted) {
-      const resume = this.#interrupted;
-      this.#interrupted = null;
-      if (this.#cues.has(resume)) return resume;
-    }
-
-    // Keep the current station pick until it is no longer eligible.
-    const current = this.#active?.cueId;
-    if (current && current !== canonical && this.#cues.has(current)) return current;
-
-    const entry = pickNext(this.#catalog, station, "gameplay", this.#stationState, this.#stationSeed++);
-    if (!entry || !this.#cues.has(entry.workId)) return canonical;
-    this.#stationState = remember(this.#stationState, entry.workId);
-    return entry.workId;
+    if (!pickPlaysInRun(scene)) return canonical;
+    return this.#pickCueId() ?? canonical;
   }
 
   /** Publish what is sounding so the Music UI can show it. */
   #publishNowPlaying(cueId: string): void {
-    const station = getActiveStation();
     const work = this.#catalog?.works.find((w) => w.id === cueId);
-    const stationMeta = station === "canonical" ? null : this.#catalog?.stations.find((s) => s.id === station);
+    const channelId = this.#radio && currentSong(this.#radio) === cueId ? this.#radio.channelId : null;
+    const channel = this.#library?.radio.channels.find((entry) => entry.id === channelId) ?? null;
     setNowPlaying({
       workId: cueId,
       title: work?.title ?? cueId,
-      stationId: stationMeta?.id ?? null,
-      stationName: stationMeta?.name ?? null,
+      channelId: channel?.id ?? null,
+      channelName: channel?.name ?? null,
       tier: this.#tier,
     });
   }
@@ -544,7 +618,7 @@ export function musicProgressRouting(
     firstRun: !facts.biomeEntered(biomeId),
     isUnlocked: (workId) => {
       const unlock = catalog?.works.find((work) => work.id === workId)?.unlock;
-      return unlock !== undefined && unlock.type !== "unreadable" && conditionMet(unlock, facts);
+      return unlock !== undefined && musicUnlocked(unlock, facts);
     },
   };
 }

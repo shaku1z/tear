@@ -6,6 +6,7 @@ import type {
   StageBannerSnapshot,
   WaveBannerSnapshot,
 } from "./contracts";
+import { waveTitle } from "../../gameplay/run/wave-rules";
 import { clamp } from "./primitives";
 import { bossHudTop, hudFrame, hudType } from "./hud";
 
@@ -126,7 +127,7 @@ export function createOverlayRenderers(context: WorldRenderContext) {
     const top = announcementTop(),
       size = type.display,
       titleY = top + t.space.md + Math.round(size * 0.8);
-    const title = snapshot.bossWave ? "BOSS" : `WAVE ${String(snapshot.wave)}`;
+    const title = waveTitle(snapshot.mode ?? "", snapshot.wave, snapshot.bossWave, snapshot.trialCount);
     canvas.save();
     canvas.globalAlpha = alpha;
     // Plain text over the scene in the biome ink, like the HUD.
@@ -163,7 +164,10 @@ export function createOverlayRenderers(context: WorldRenderContext) {
       alpha = clamp(Math.min(snapshot.elapsed, 1) * Math.min((3 - snapshot.elapsed) * 2.5, 1));
     const bossTest = snapshot.mode === "bossonly";
     const endlessLike = snapshot.mode === "endless" || snapshot.mode === "gauntlet";
-    const label = bossTest ? "BOSS TEST" : endlessLike ? "ENTERING" : `STAGE ${String(snapshot.stageIndex + 1)}`;
+    const label =
+      snapshot.trial?.label ??
+      (bossTest ? "BOSS TEST" : endlessLike ? "ENTERING" : `STAGE ${String(snapshot.stageIndex + 1)}`);
+    const blurb = snapshot.trial === undefined ? snapshot.blurb : `BOSS · ${snapshot.trial.boss.toUpperCase()}`;
     const top = announcementTop(),
       labelY = top + t.space.md + type.body;
     const nameY = labelY + t.space.sm + Math.round(type.display * 0.8),
@@ -181,8 +185,7 @@ export function createOverlayRenderers(context: WorldRenderContext) {
       type.body,
     );
     ui.tag(canvas, snapshot.stageName, context.width / 2, nameY, ui.ink, "center", type.display);
-    if (!bossTest)
-      ui.text(canvas, snapshot.blurb, context.width / 2, blurbY, type.body, "center", t.alpha.soft * alpha);
+    if (!bossTest) ui.text(canvas, blurb, context.width / 2, blurbY, type.body, "center", t.alpha.soft * alpha);
     canvas.restore();
   }
 

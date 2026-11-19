@@ -11,17 +11,25 @@ import {
   shardBalance,
   type PurchaseRefusal,
 } from "../domain/cosmetics";
+import {
+  betterGauntletClear,
+  mergeGauntletBests,
+  normalizeGauntletBests,
+  type GauntletClear,
+} from "../domain/gauntlet-records";
 import { progressFacts } from "../domain/progress-facts";
 import { finiteOrZero, hasOwnKey, ownValue, safeEntries } from "../domain/records";
 import type { ProgressFacts } from "../domain/unlock-condition";
 import type { AcknowledgedStorage } from "../platform/contracts";
 import {
   achievementOutbox,
+  addGrant,
   isTutorialCourseId,
   mergeAchievementOutboxes,
   mergeTutorialLedgers,
   outboxCoins,
   outboxShards,
+  receiptOpen,
   tutorialCount,
   tutorialLedger,
   type AchievementGrant,
@@ -76,6 +84,8 @@ export interface ProfileData extends Record<string, unknown> {
   advDiffs?: Record<string, number>;
   /** Cosmetic ownership and equipped slots (version 4); read through `cosmetics()`. */
   cosmetics?: unknown;
+  /** The Gauntlet personal best per difficulty, an optional field; read through `gauntletBest()`. */
+  gauntletBest?: unknown;
 }
 
 export interface ProfileStore {
@@ -94,9 +104,16 @@ export interface ProfileStore {
   usernameSetAt(): number;
   setUsername(name: string): void;
   shards(): number;
-  addShards(amount: number): void;
+  /** Pays `shards` once for this receipt (a daily claim); false when it was paid already or its day is closed. */
+  claimShards(receiptId: string, shards: number): boolean;
+  /** Whether claiming this receipt would still pay. */
+  shardsClaimable(receiptId: string): boolean;
   /** Validated cosmetic ownership and equipped slots. */
   cosmetics(): CosmeticState;
+  /** The fastest Gauntlet clear on this difficulty, or null before the first. */
+  gauntletBest(difficulty: string): GauntletClear | null;
+  /** Keeps a Gauntlet clear when it beats the best on its difficulty; true when it does. */
+  recordGauntletClear(difficulty: string, clear: GauntletClear): boolean;
   /** Shards left to spend: earned minus the prices paid for owned cosmetics, never below zero. */
   shardBalance(): number;
   buyCosmetic(itemId: string): Promise<CompletionStatus | PurchaseRefusal>;
@@ -167,6 +184,7 @@ const RECEIPT_OWNED_FIELDS = new Set([
   "weaponsWon",
   "advDiffs",
   "cosmetics",
+  "gauntletBest",
 ]);
 function overlayNormalChanges(target: Tracker, baseline: Tracker, current: Tracker, root = true): void {
   for (const key of new Set([...Object.keys(baseline), ...Object.keys(current)])) {
@@ -202,6 +220,7 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
     achCoinsRetrofit: false,
     // The same empty ledger migration gives an older save, so a new profile has every field from the start.
     cosmetics: emptyCosmeticState(),
+    gauntletBest: {},
   });
 
   let knownProfile = fresh();
@@ -235,6 +254,11 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
         normalizeCosmeticState(target.cosmetics),
         normalizeCosmeticState(source.cosmetics),
         options.getCosmeticCatalog?.(),
+      );
+    if (source.gauntletBest !== undefined || target.gauntletBest !== undefined)
+      target.gauntletBest = mergeGauntletBests(
+        normalizeGauntletBests(target.gauntletBest),
+        normalizeGauntletBests(source.gauntletBest),
       );
     Object.assign(target.modes, boolMap(source.modes));
     Object.assign(target.seen, boolMap(source.seen));
@@ -288,23 +312,27 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
     }
     for (const [key, value] of safeEntries(source)) if (!hasOwnKey(target, key)) target[key] = structuredClone(value);
   };
-  const unlockInto = (target: ProfileData, achievement: AchievementDefinition): boolean => {
-    if (ownValue(target.ach, achievement.id) !== undefined) return false;
-    const outbox = achievementOutbox(target.achievementOutbox, finiteOrZero(target.stats.coinsEarned), target.shards);
-    const grant: AchievementGrant = {
-      coins: achievement.coins ?? options.getAchievements()?.coinsFor(achievement) ?? 0,
-      shards: achievement.shards ?? options.getAchievements()?.shardsFor?.(achievement) ?? 0,
-      acknowledged: false,
-    };
-    outbox.baselineCoins =
-      outboxCoins(outbox) - Object.values(outbox.grants).reduce((sum, entry) => sum + entry.coins, 0);
-    outbox.baselineShards =
-      outboxShards(outbox) - Object.values(outbox.grants).reduce((sum, entry) => sum + entry.shards, 0);
-    outbox.grants[`achievement:${achievement.id}`] ??= grant;
-    target.ach[achievement.id] = now();
+  /** Records one receipt in the outbox, counting coins and shards added outside it; false if it does not pay. */
+  const grantInto = (target: ProfileData, id: string, grant: AchievementGrant): boolean => {
+    const coins = finiteOrZero(target.stats.coinsEarned);
+    const outbox = addGrant(achievementOutbox(target.achievementOutbox, coins, target.shards), id, grant, {
+      coins,
+      shards: target.shards,
+    });
+    if (!outbox) return false;
     target.achievementOutbox = outbox;
     target.shards = outboxShards(outbox);
     target.stats.coinsEarned = outboxCoins(outbox);
+    return true;
+  };
+  const unlockInto = (target: ProfileData, achievement: AchievementDefinition): boolean => {
+    if (ownValue(target.ach, achievement.id) !== undefined) return false;
+    grantInto(target, `achievement:${achievement.id}`, {
+      coins: achievement.coins ?? options.getAchievements()?.coinsFor(achievement) ?? 0,
+      shards: achievement.shards ?? options.getAchievements()?.shardsFor?.(achievement) ?? 0,
+      acknowledged: false,
+    });
+    target.ach[achievement.id] = now();
     return true;
   };
   const commit = async (change: (target: ProfileData) => void = () => undefined): Promise<CompletionStatus> => {
@@ -533,18 +561,26 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
     shards() {
       return finiteOrZero(this.data.shards);
     },
-    addShards(amount) {
-      this.data.shards = finiteOrZero(this.data.shards) + amount;
-      if (this.data.achievementOutbox !== undefined) {
-        const ledger = achievementOutbox(this.data.achievementOutbox);
-        ledger.baselineShards =
-          outboxShards(ledger) - Object.values(ledger.grants).reduce((sum, entry) => sum + entry.shards, 0) + amount;
-        this.data.achievementOutbox = ledger;
-      }
-      this.save();
+    claimShards(receiptId, shards) {
+      const claimed = grantInto(this.data, receiptId, { coins: 0, shards, acknowledged: true });
+      if (claimed) this.save();
+      return claimed;
+    },
+    shardsClaimable(receiptId) {
+      return receiptOpen(achievementOutbox(this.data.achievementOutbox), receiptId);
     },
     cosmetics() {
       return normalizeCosmeticState(this.data.cosmetics);
+    },
+    gauntletBest(difficulty) {
+      return ownValue(normalizeGauntletBests(this.data.gauntletBest), difficulty) ?? null;
+    },
+    recordGauntletClear(difficulty, clear) {
+      const bests = normalizeGauntletBests(this.data.gauntletBest);
+      if (!betterGauntletClear(clear, ownValue(bests, difficulty))) return false;
+      this.data.gauntletBest = { ...bests, [difficulty]: { ticks: clear.ticks, hits: clear.hits } };
+      this.save();
+      return true;
     },
     shardBalance() {
       return shardBalance(finiteOrZero(this.data.shards), normalizeCosmeticState(this.data.cosmetics));

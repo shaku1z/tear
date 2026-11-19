@@ -12,6 +12,7 @@ import { buildGameoverSnapshot, buildWinSnapshot } from "../../src/presentation/
 import {
   CONTROL_HINT_RUN_LIMIT,
   CONTROL_HINT_SECONDS,
+  controlHintText,
   domChromeVisibility,
   type DomChromeInput,
 } from "../../src/presentation/dom-chrome-policy";
@@ -20,6 +21,10 @@ import { shouldDrawCanvasCursor } from "../../src/presentation/cursor-contract";
 import { createLiveWorldSessionState } from "../../src/app/world/world-session-state";
 import { CONFIG } from "../../src/config/game-config";
 import { createSurfaceAvailability } from "../../src/domain/surface-availability";
+import { promptLabel } from "../../src/domain/prompt-vocabulary";
+
+/** The keyboard confirm keys as the prompt vocabulary words them (from the binding table). */
+const CONFIRM = promptLabel("confirm", "keyboard") ?? "";
 
 const RELEASE = createSurfaceAvailability("release");
 const fresh = { tutorialDone: 0, runs: 0, modesPlayed: [] as string[] };
@@ -148,6 +153,7 @@ describe("DOM chrome over the canvas", () => {
     uiIncluded: true,
     pointerLockIncluded: true,
     touch: false,
+    fullscreenAvailable: true,
     inputMode: "mouse",
     pointerLocked: true,
     runSeconds: 1,
@@ -173,6 +179,17 @@ describe("DOM chrome over the canvas", () => {
     expect(domChromeVisibility({ ...playing, screen: "menu", uiIncluded: false }).fullscreen).toBe(false);
   });
 
+  it("hides the fullscreen button where the platform cannot go fullscreen (CrazyGames, iPhone Safari)", () => {
+    expect(domChromeVisibility({ ...playing, screen: "menu", fullscreenAvailable: false }).fullscreen).toBe(false);
+  });
+
+  it("words the control legend from the binding table and names the fullscreen key only where it works", () => {
+    expect(controlHintText(true)).toContain("E / RIGHT CLICK throw / recall");
+    expect(controlHintText(true)).toContain("Q / LEFT CLICK tether");
+    expect(controlHintText(true)).toContain("F fullscreen");
+    expect(controlHintText(false)).not.toContain("fullscreen");
+  });
+
   it("keeps the pointer-capture hint for uncaptured desktop play only", () => {
     expect(domChromeVisibility(playing).lockHint).toBe(false);
     expect(domChromeVisibility({ ...playing, pointerLocked: false }).lockHint).toBe(true);
@@ -191,8 +208,10 @@ describe("DOM chrome over the canvas", () => {
 describe("device-correct cinematic prompts", () => {
   const chapter = "TAP TO REVEAL  ·  HOLD TO SKIP CHAPTER";
   it("promises only what each device can do", () => {
-    expect(cinematicPromptForDevice(chapter, "mouse")).toBe("CLICK TO REVEAL  ·  HOLD SPACE TO SKIP CHAPTER");
-    expect(cinematicPromptForDevice(chapter, "keyboard")).toBe("SPACE TO REVEAL  ·  HOLD SPACE TO SKIP CHAPTER");
+    expect(cinematicPromptForDevice(chapter, "mouse")).toBe(`CLICK TO REVEAL  ·  HOLD ${CONFIRM} TO SKIP CHAPTER`);
+    expect(cinematicPromptForDevice(chapter, "keyboard")).toBe(
+      `${CONFIRM} TO REVEAL  ·  HOLD ${CONFIRM} TO SKIP CHAPTER`,
+    );
     expect(cinematicPromptForDevice(chapter, "gamepad", "✕")).toBe("✕ TO REVEAL  ·  HOLD ✕ TO SKIP CHAPTER");
     expect(cinematicPromptForDevice(chapter, "touch")).toBe("TAP TO REVEAL");
     expect(cinematicPromptForDevice("BRIEF SCENE  ·  HOLD TO SKIP", "touch")).toBe("BRIEF SCENE");
@@ -203,7 +222,7 @@ describe("device-correct cinematic prompts", () => {
     // The finale assist names the real key and is dropped where touch cannot hold it.
     const assist = "SWING THROUGH EACH ANCHOR  ·  HOLD CONFIRM OR WAIT FOR ASSIST";
     expect(cinematicPromptForDevice(assist, "keyboard")).toBe(
-      "SWING THROUGH EACH ANCHOR  ·  HOLD SPACE OR WAIT FOR ASSIST",
+      `SWING THROUGH EACH ANCHOR  ·  HOLD ${CONFIRM} OR WAIT FOR ASSIST`,
     );
     expect(cinematicPromptForDevice(assist, "gamepad", "✕")).toBe(
       "SWING THROUGH EACH ANCHOR  ·  HOLD ✕ OR WAIT FOR ASSIST",
