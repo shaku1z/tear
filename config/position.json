@@ -112,7 +112,7 @@
       "name": "Playtest tool",
       "state": "Stage 1 in part: pnpm playtest bosses prints a table per boss fight and phase, from Phase I or a chosen phase",
       "summary": "One command, pnpm playtest, that plays the game headless with scripted players on fixed seeds and reports clear rates, time to kill, damage taken and differences between builds. It is built from the working parts of TearBench and the scripted player and replaces both names. Verified on 2026-11-16: the scripted player runs headless at 13 to 15 times real time and the same seed reproduces exactly.",
-      "next": "Rest of stage 1: a player that cuts Grafts, the still, walker and no-dodge players, and the sweep over weapons and seeds.",
+      "next": "Rest of stage 1: the still, walker and no-dodge players, boss movement, and the sweep over weapons and seeds.",
       "owner_action": "",
       "evidence": [
         "plans/active/PLAYTEST_TOOL_PLAN.md"
