@@ -4,6 +4,7 @@ const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
 const { decodePng } = require("./class-c-png");
 const { STATE_WAIT_MS } = require("./browser-waits");
+const { assertStageReadable } = require("./stage-readability");
 
 function paintedPixelRatio(png) {
   const { rgba } = decodePng(png);
@@ -89,6 +90,10 @@ withJourney({ name: "Verdant C9 presentation" }, async ({ page, buildInfo }) => 
   assert.equal(state.run.stage, 3);
   assert.equal(state.hazard.stageId, "verdant-sanctum");
   assert.equal(state.bloom.length, 2);
+
+  // The drawn stage at rest keeps the interface ink readable (config/stage-readability.json).
+  const readability = await assertStageReadable(page, "verdant-sanctum");
+  console.log(`stage readability ${JSON.stringify(readability.shares)}`);
 
   const directory = path.resolve(
     __dirname,

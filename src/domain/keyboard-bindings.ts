@@ -116,6 +116,11 @@ export function anyKeyIn(keys: ReadonlySet<string>, action: KeyboardAction): boo
   return KEYBOARD_BINDINGS[action].codes.some((code) => keys.has(code));
 }
 
+/** True when any key bound to an action of the context is in the set. */
+export function anyContextKeyIn(keys: ReadonlySet<string>, context: KeyboardContext): boolean {
+  return KEYBOARD_ACTIONS.some((action) => KEYBOARD_BINDINGS[action].context === context && anyKeyIn(keys, action));
+}
+
 /** The index of the first key of an ordered range (`quick-spawn`, `choose`) in the set, below `limit`. */
 export function rangeKeyIn(keys: ReadonlySet<string>, action: KeyboardAction, limit = Infinity): number | null {
   const codes = KEYBOARD_BINDINGS[action].codes;

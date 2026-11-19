@@ -3,6 +3,7 @@ import {
   KEYBOARD_ACTIONS,
   KEYBOARD_BINDINGS,
   KEYBOARD_SCREENS,
+  anyContextKeyIn,
   anyKeyIn,
   keyCodeLabel,
   keyCodes,
@@ -67,6 +68,8 @@ describe("keyboard binding table", () => {
     expect(anyKeyIn(new Set(["KeyQ"]), "throw")).toBe(false);
     expect(rangeKeyIn(new Set(["Digit3"]), "choose")).toBe(2);
     expect(rangeKeyIn(new Set(["Digit4"]), "choose", 3)).toBeNull();
+    expect(anyContextKeyIn(new Set(["KeyA"]), "menu")).toBe(true);
+    expect(anyContextKeyIn(new Set(["ShiftLeft"]), "menu")).toBe(false);
   });
 });
 

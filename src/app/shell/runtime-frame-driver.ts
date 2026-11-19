@@ -12,17 +12,27 @@ export interface RuntimeFrame {
 
 export type RuntimeFrameCallback = (frame: RuntimeFrame) => void;
 
+/** Receives the error a frame threw, after the loop has stopped. */
+export type RuntimeFrameFaultHandler = (error: unknown) => void;
+
 export class RuntimeFrameDriver {
   readonly #source: AnimationFrameSource;
+  readonly #onFault: RuntimeFrameFaultHandler;
   readonly #maximumDeltaSeconds: number;
   #handle: number | null = null;
   #previousTimestamp: number | null = null;
 
-  constructor(source: AnimationFrameSource, maximumDeltaSeconds = 0.1) {
+  /**
+   * A frame that throws stops the loop and goes to `onFault`: nothing draws or advances after it,
+   * and the handler decides what the player sees. A driver cannot be made without a handler, so
+   * no loop fails silently.
+   */
+  constructor(source: AnimationFrameSource, onFault: RuntimeFrameFaultHandler, maximumDeltaSeconds = 0.1) {
     if (!(maximumDeltaSeconds > 0) || !Number.isFinite(maximumDeltaSeconds)) {
       throw new RangeError("maximum frame delta must be finite and positive");
     }
     this.#source = source;
+    this.#onFault = onFault;
     this.#maximumDeltaSeconds = maximumDeltaSeconds;
   }
 
@@ -36,13 +46,19 @@ export class RuntimeFrameDriver {
       const previous = this.#previousTimestamp;
       this.#previousTimestamp = timestampMs;
       const rawDelta = previous === null ? 0 : Math.max(0, (timestampMs - previous) / 1_000);
-      callback(
-        Object.freeze({
-          timestampMs,
-          deltaSeconds: Math.min(rawDelta, this.#maximumDeltaSeconds),
-          intervalSeconds: rawDelta,
-        }),
-      );
+      try {
+        callback(
+          Object.freeze({
+            timestampMs,
+            deltaSeconds: Math.min(rawDelta, this.#maximumDeltaSeconds),
+            intervalSeconds: rawDelta,
+          }),
+        );
+      } catch (error) {
+        this.stop();
+        this.#onFault(error);
+        return;
+      }
       if (this.#handle !== null) this.#handle = this.#source.requestAnimationFrame(step);
     };
     this.#handle = this.#source.requestAnimationFrame(step);

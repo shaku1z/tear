@@ -52,6 +52,7 @@ describe("presentation runtime boundaries", () => {
         menuNext: () => false,
         confirmPressed: () => true,
         confirmHeld: () => true,
+        menuInputHeld: () => true,
         backPressed: () => false,
         takeClick: () => null,
       },
@@ -108,6 +109,7 @@ describe("presentation runtime boundaries", () => {
           menuNext: () => false,
           confirmPressed: () => confirm,
           confirmHeld: () => held,
+          menuInputHeld: () => held,
           backPressed: () => false,
           takeClick: () => {
             const value = click;

@@ -38,11 +38,12 @@
       "id": "verdant-visuals",
       "name": "Verdant Sanctum visuals",
       "state": "In progress",
-      "summary": "Verdant has a painted background drawn from a scene package, with platforms still drawn by the game from collision geometry. The same format, command and checks work for any biome; a Pale Traverse placeholder fixture proves it. Boss warnings and strikes on Verdant are drawn as roots and thorns rising from the floor, from a table on the stage's presentation definition that any biome can supply. The background does not move yet.",
-      "next": "Living motion (water, light, foliage) as package data, in its own pull request.",
-      "owner_action": "Judge the look: the owner's taste decides visual work. A sharper, wider source painting that meets the brief in docs/BACKGROUND_WORKFLOW.md would remove most of the readability shading.",
+      "summary": "The game draws Verdant itself at load from a stage art recipe (src/presentation/stage-art): a key light, an atmosphere, colour ramps and layers of shared strokes (foliage, trunks, ruined arcades, water, light), painted in short slices into layers the scene renderer composes. The painted image package is gone. Any biome reaches the same look with a recipe; Pale Traverse is next. Boss warnings and strikes on Verdant are drawn as roots and thorns rising from the floor, from a table on the stage's presentation definition that any biome can supply. The background does not move yet.",
+      "next": "Keep closing the look toward the owner's reference illustration, then a live layer (light shafts, water glints, sway) as recipe data, then Pale Traverse from a recipe.",
+      "owner_action": "Judge the drawn look against the reference illustration: the owner's taste decides visual work.",
       "evidence": [
         "docs/BACKGROUND_WORKFLOW.md",
+        "tests/unit/stage-art.test.ts",
         "tests/unit/scene-packages.test.ts",
         "tests/unit/boss-tell-skin.test.ts",
         "plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md"
@@ -63,11 +64,12 @@
       "id": "training-ux",
       "name": "Tutorial and Playground experience",
       "state": "In progress",
-      "summary": "A session is reworking the Tutorial and Playground popups, menus, flow, navigation and explanations.",
-      "next": "Its pull request, then the lead's review.",
+      "summary": "A session is reworking the Tutorial and Playground popups, menus, flow, navigation and explanations. Drills has LESSONS, WEAPONS, ENEMIES and BOSSES tabs, and its phone list is sized from its content.",
+      "next": "One source of names for the drilled weapon moves (this pull request, then its floaters), then the release tutorial flow and menu fixes.",
       "owner_action": "",
       "evidence": [
-        "docs/TUTORIAL_PARITY_AND_UPGRADE_PLAN.md"
+        "docs/TUTORIAL_PARITY_AND_UPGRADE_PLAN.md",
+        "plans/active/DRILLED_MOVE_NAMES.md"
       ]
     },
     {
