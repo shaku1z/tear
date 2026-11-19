@@ -10,7 +10,7 @@ import {
   type TearWorldFactory,
 } from "../tearbench/state-codecs";
 import { validateTearContract } from "../tearbench/validation";
-import type { GhostCapsuleContents, GhostCapsuleEntry } from "./capsule-reader";
+import { isUnchangedGhostRead, type GhostCapsuleContents, type GhostCapsuleEntry } from "./capsule-reader";
 import { createGhostV3, GhostTimeline, type GhostEnvelopeV3, type GhostReplayTrident } from "./truth-kernel";
 
 export interface GhostCapsuleReplayIssue {
@@ -218,6 +218,20 @@ function rulesetVersion(snapshots: readonly TearSnapshotV1[]): string {
  * actions, state, causal events, or verification status.
  */
 export function mapGhostCapsuleToReplayEnvelope(capsule: GhostCapsuleContents): GhostCapsuleReplayMapping {
+  // One read is validated once: every caller that holds the same read gets the same result.
+  // Only an unchanged read is remembered; any other capsule object is validated on every call.
+  if (!isUnchangedGhostRead(capsule)) return validateAndMap(capsule);
+  let mapping = MAPPED_READS.get(capsule);
+  if (mapping === undefined) {
+    mapping = validateAndMap(capsule);
+    MAPPED_READS.set(capsule, mapping);
+  }
+  return mapping;
+}
+
+const MAPPED_READS = new WeakMap<GhostCapsuleContents, GhostCapsuleReplayMapping>();
+
+function validateAndMap(capsule: GhostCapsuleContents): GhostCapsuleReplayMapping {
   const issues: GhostCapsuleReplayIssue[] = [];
   const actionTrack = commands(capsule.tracks.commands, issues);
   const snapshotTrack = snapshots(capsule.tracks.keyframes, issues);

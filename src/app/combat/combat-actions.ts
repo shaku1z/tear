@@ -694,7 +694,6 @@ function createKill(context: LiveCombatActionContext): LiveKillHost {
     stageAccent: () => ports.stage.current.accent ?? "#ffffff",
     stageChapterBossOutro: () => ports.stage.current.chapter?.bossOutro ?? null,
     hasStageChapter: () => !!ports.stage.current.chapter,
-    bossRosterSize: context.bossRosterSize,
     achievementsEnabled: f.achievementsEnabled,
     addKillScore: f.addKillScore,
     addStat: profileStats.add,

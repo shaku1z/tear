@@ -11,6 +11,12 @@ import {
   shardBalance,
   type PurchaseRefusal,
 } from "../domain/cosmetics";
+import {
+  betterGauntletClear,
+  mergeGauntletBests,
+  normalizeGauntletBests,
+  type GauntletClear,
+} from "../domain/gauntlet-records";
 import { progressFacts } from "../domain/progress-facts";
 import { finiteOrZero, hasOwnKey, ownValue, safeEntries } from "../domain/records";
 import type { ProgressFacts } from "../domain/unlock-condition";
@@ -78,6 +84,8 @@ export interface ProfileData extends Record<string, unknown> {
   advDiffs?: Record<string, number>;
   /** Cosmetic ownership and equipped slots (version 4); read through `cosmetics()`. */
   cosmetics?: unknown;
+  /** The Gauntlet personal best per difficulty, an optional field; read through `gauntletBest()`. */
+  gauntletBest?: unknown;
 }
 
 export interface ProfileStore {
@@ -102,6 +110,10 @@ export interface ProfileStore {
   shardsClaimable(receiptId: string): boolean;
   /** Validated cosmetic ownership and equipped slots. */
   cosmetics(): CosmeticState;
+  /** The fastest Gauntlet clear on this difficulty, or null before the first. */
+  gauntletBest(difficulty: string): GauntletClear | null;
+  /** Keeps a Gauntlet clear when it beats the best on its difficulty; true when it does. */
+  recordGauntletClear(difficulty: string, clear: GauntletClear): boolean;
   /** Shards left to spend: earned minus the prices paid for owned cosmetics, never below zero. */
   shardBalance(): number;
   buyCosmetic(itemId: string): Promise<CompletionStatus | PurchaseRefusal>;
@@ -172,6 +184,7 @@ const RECEIPT_OWNED_FIELDS = new Set([
   "weaponsWon",
   "advDiffs",
   "cosmetics",
+  "gauntletBest",
 ]);
 function overlayNormalChanges(target: Tracker, baseline: Tracker, current: Tracker, root = true): void {
   for (const key of new Set([...Object.keys(baseline), ...Object.keys(current)])) {
@@ -207,6 +220,7 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
     achCoinsRetrofit: false,
     // The same empty ledger migration gives an older save, so a new profile has every field from the start.
     cosmetics: emptyCosmeticState(),
+    gauntletBest: {},
   });
 
   let knownProfile = fresh();
@@ -240,6 +254,11 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
         normalizeCosmeticState(target.cosmetics),
         normalizeCosmeticState(source.cosmetics),
         options.getCosmeticCatalog?.(),
+      );
+    if (source.gauntletBest !== undefined || target.gauntletBest !== undefined)
+      target.gauntletBest = mergeGauntletBests(
+        normalizeGauntletBests(target.gauntletBest),
+        normalizeGauntletBests(source.gauntletBest),
       );
     Object.assign(target.modes, boolMap(source.modes));
     Object.assign(target.seen, boolMap(source.seen));
@@ -552,6 +571,16 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
     },
     cosmetics() {
       return normalizeCosmeticState(this.data.cosmetics);
+    },
+    gauntletBest(difficulty) {
+      return ownValue(normalizeGauntletBests(this.data.gauntletBest), difficulty) ?? null;
+    },
+    recordGauntletClear(difficulty, clear) {
+      const bests = normalizeGauntletBests(this.data.gauntletBest);
+      if (!betterGauntletClear(clear, ownValue(bests, difficulty))) return false;
+      this.data.gauntletBest = { ...bests, [difficulty]: { ticks: clear.ticks, hits: clear.hits } };
+      this.save();
+      return true;
     },
     shardBalance() {
       return shardBalance(finiteOrZero(this.data.shards), normalizeCosmeticState(this.data.cosmetics));

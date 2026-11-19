@@ -3,6 +3,11 @@ import { defineConfig, type Plugin } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { readSourceIdentitySync } from "./scripts/release-artifact.mjs";
 import {
+  DEVELOPER_ONLY_ROLE,
+  developerModulesInBundle,
+  loadDeveloperOnlyMatcher,
+} from "./scripts/release-developer-code.mjs";
+import {
   buildTarget,
   resolveBuildMode,
   type BuildTargetDefinition as TargetDefinition,
@@ -117,6 +122,28 @@ function targetDependencyBoundary(name: TargetName, target: TargetDefinition): P
   };
 }
 
+/** A release build fails when developer-only code contributes to one of its bundles. */
+function developerCodeBoundary(name: TargetName): Plugin {
+  const isDeveloperOnly = loadDeveloperOnlyMatcher();
+  return {
+    name: "tear-developer-code-boundary",
+    generateBundle(_options, bundle) {
+      const modules = Object.values(bundle).flatMap((item) =>
+        item.type === "chunk"
+          ? Object.entries(item.modules).map(([id, module]) => [id, module.renderedLength] as const)
+          : [],
+      );
+      const found = developerModulesInBundle(modules, isDeveloperOnly);
+      if (found.length > 0)
+        this.error(
+          `${name} release bundle contains developer-only code (${DEVELOPER_ONLY_ROLE} in config/architecture-roles.json).\n` +
+            `Load it through a dynamic import guarded by __TEAR_TEST_BUILD__ or __TEAR_ENGINEERING_SURFACES__:\n` +
+            found.join("\n"),
+        );
+    },
+  };
+}
+
 const TUTORIAL_GOLD_DATA = "gameplay/training/tutorial-gold-reference-data.json";
 
 /**
@@ -223,6 +250,7 @@ export default defineConfig(({ mode, command }) => {
       targetHtml(definition),
       cloudflareHeaders(definition, previewDev),
       targetDependencyBoundary(target, definition),
+      ...(testBuild ? [] : [developerCodeBoundary(target)]),
       ...(previewDev ? [previewDevMarking(source.revision)] : []),
       ...(definition.serviceWorker
         ? [
@@ -313,6 +341,7 @@ export default defineConfig(({ mode, command }) => {
     // Workers never run a tutorial, so they never request that lazy chunk.
     worker: {
       format: "es",
+      plugins: () => (testBuild ? [] : [developerCodeBoundary(target)]),
       rolldownOptions: {
         output: {
           codeSplitting: {

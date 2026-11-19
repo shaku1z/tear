@@ -33,6 +33,7 @@ type Dependencies = Pick<
   | "CONFIG"
   | "DAILY"
   | "FirebaseProvider"
+  | "fullscreen"
   | "META"
   | "PROFILE"
   | "STAGES"

@@ -4,8 +4,7 @@ import type { AppScreen } from "../../domain/screen-catalog";
 import { RenameController, type RenameSnapshot } from "./rename-controller";
 import type { SettingsController, GameSettings } from "./settings-controller";
 import { buildSettingsSections } from "../../presentation/settings-snapshots";
-import { MENU_MUSIC_CHOICES } from "../../audio/music/loadout";
-import { STATION_CHOICES } from "../../audio/music/active-station";
+import { musicPickChoices } from "../../audio/music/music-source";
 import { normalizeMusicSettingsTab } from "../../audio/music/settings";
 import { getMusicLibrary } from "../../audio/music/library";
 import { getNowPlaying } from "../../audio/music/now-playing";
@@ -44,6 +43,7 @@ export interface SettingsRenameAdapters {
   readonly renderMusic: () => void;
   readonly selectSettingsTab: (id: string) => void;
   readonly selectMusicPage: (page: string) => void;
+  readonly pickMusic: (value: string) => void;
   readonly stepSetting: (key: string, direction: number) => void;
   readonly toggleSetting: (key: string) => void;
   readonly activateSetting: (key: string) => void;
@@ -98,8 +98,7 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
     else if (key === "touchAim") cycle(key, ["stick", "drag"]);
     else if (key === "cinematics") cycle(key, ["full", "brief", "off"]);
     else if (key === "musicMode") cycle(key, ["adaptive", "full", "calm", "dynamic"]);
-    else if (key === "menuMusic") cycle(key, [...MENU_MUSIC_CHOICES]);
-    else if (key === "station") cycle(key, [...STATION_CHOICES]);
+    else if (key === "menuMusic") cycle(key, musicPickChoices(getMusicLibrary()));
     else if (key === "guide") services.setCodexGuide();
     else if (key === "install" && services.installPrompt.available) services.installPrompt.prompt();
     else if (key === "update") void d.PwaUpdate.apply();
@@ -209,6 +208,9 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
       if (page.startsWith("collection:") && !musicPage.startsWith("collection:")) musicOpenedFrom = musicPage;
       if (page !== musicPage) services.setScroll(0);
       musicPage = page;
+    },
+    pickMusic: (value) => {
+      services.settingsController.choose("menuMusic", value, musicPickChoices(getMusicLibrary()));
     },
     stepSetting: (key, direction) => {
       services.settingsController.step(key, direction);

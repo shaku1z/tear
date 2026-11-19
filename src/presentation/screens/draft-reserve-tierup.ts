@@ -7,6 +7,10 @@ import type {
   TierUpScreenView,
 } from "./contracts";
 import { actionRow, overlayHeader, scrollHint, type OverlayLayout } from "./screen-primitives";
+import { keyboardLabel, keyCodeLabel, keyCodes } from "../../domain/keyboard-bindings";
+
+/** The label of the key that picks the card at `index`. */
+const chooseKey = (index: number): string => keyCodeLabel(keyCodes("choose")[index] ?? "");
 
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 const clamp = (v: number, min: number, max: number): number => Math.max(min, Math.min(max, v));
@@ -177,7 +181,7 @@ export function createDraftRenderers(context: ScreenRenderContext) {
   function selectionHint(index: number, focused: boolean, hovered: number, spec: ChoiceCardSpec): string {
     if (spec.enabled === false) return "UNAVAILABLE FOR YOUR BUILD";
     if (context.touch) return focused ? "TAP AGAIN  ✓" : "TAP TO READ";
-    return hovered > 0.5 ? "▸  SELECT" : `press  [ ${String(index + 1)} ]`;
+    return hovered > 0.5 ? "▸  SELECT" : `press  [ ${chooseKey(index)} ]`;
   }
 
   /** Smoothed hover progress for card `index` over the rectangle it occupies. */
@@ -482,7 +486,7 @@ export function createDraftRenderers(context: ScreenRenderContext) {
   /** The keys (or touch) line under each title names the input that owns the screen. */
   function keysLine(count: number, verb: string): string {
     if (context.touch) return `TAP A CARD TO READ IT  ·  TAP AGAIN TO ${verb}`;
-    const keys = Array.from({ length: Math.min(4, count) }, (_, index) => String(index + 1)).join(" / ");
+    const keys = keyCodes("choose").slice(0, count).map(keyCodeLabel).join(" / ");
     return `press ${keys}`;
   }
 
@@ -508,7 +512,7 @@ export function createDraftRenderers(context: ScreenRenderContext) {
   function draftActions(view: DraftScreenView): { label: string; action: ScreenAction; enabled?: boolean }[] {
     const actions: { label: string; action: ScreenAction; enabled?: boolean }[] = [
       {
-        label: `⟳  REROLL · ${String(view.rerolls)}${context.touch ? "" : "  [R]"}`,
+        label: `⟳  REROLL · ${String(view.rerolls)}${context.touch ? "" : `  [${keyboardLabel("reroll")}]`}`,
         enabled: view.rerolls > 0,
         action: { type: "draft.reroll" },
       },

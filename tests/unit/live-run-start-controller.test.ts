@@ -403,6 +403,7 @@ function actualOpeningHost(
     },
     selectedBoss: () => "shuffle",
     shuffledRoster: () => [],
+    gauntletTrials: () => [],
     bossBiome: () => 0,
     trainingPlatforms: () => [],
     playground: { state: {}, reset: noop, enterArena: noop },

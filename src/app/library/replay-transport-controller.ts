@@ -1,3 +1,5 @@
+import { anyKeyIn, keyCodes } from "../../domain/keyboard-bindings";
+
 export interface ReplayTransportInput {
   readonly clicked: boolean;
   readonly clickX: number;
@@ -45,16 +47,18 @@ export function handleReplayTransport(input: {
     const click = controls.takeClick();
     if (click !== null) input.seek(((click.x - scrub.x) / scrub.width) * input.duration);
   }
-  if (controls.pressed.has("Space")) {
+  const transportKey = (action: "replay-toggle" | "replay-back" | "replay-forward", act: () => void): void => {
+    if (!anyKeyIn(controls.pressed, action)) return;
+    act();
+    for (const code of keyCodes(action)) input.consumeKey?.(code);
+  };
+  transportKey("replay-toggle", () => {
     input.toggle();
-    input.consumeKey?.("Space");
-  }
-  if (controls.pressed.has("ArrowLeft")) {
+  });
+  transportKey("replay-back", () => {
     input.seek(input.currentTime - 5);
-    input.consumeKey?.("ArrowLeft");
-  }
-  if (controls.pressed.has("ArrowRight")) {
+  });
+  transportKey("replay-forward", () => {
     input.seek(input.currentTime + 5);
-    input.consumeKey?.("ArrowRight");
-  }
+  });
 }

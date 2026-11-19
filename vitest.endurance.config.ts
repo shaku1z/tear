@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
+import { indexedTestFiles } from "./scripts/test-files.mjs";
 
 /** Node tests link the replay engine in directly; the game fetches it on first use. */
 const replayEngineInTests = {
@@ -10,7 +11,8 @@ const replayEngineInTests = {
 export default defineConfig({
   resolve: { alias: [replayEngineInTests] },
   test: {
-    include: ["tests/endurance/**/*.test.ts"],
+    // Only files in git's index run (tracked, or staged with `git add -N`): see scripts/test-files.mjs.
+    include: indexedTestFiles(["tests/endurance/**/*.test.ts"]),
     environment: "node",
     testTimeout: 60_000,
   },

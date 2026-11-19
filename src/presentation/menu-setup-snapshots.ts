@@ -1,4 +1,4 @@
-import { getNowPlaying, type NowPlaying } from "../audio/music/now-playing";
+import { getNowPlaying, nowPlayingLabel, type NowPlaying } from "../audio/music/now-playing";
 import type { MenuScreenView, SetupScreenView } from "./screens/contracts";
 import type { SurfaceAvailability } from "../domain/surface-availability";
 import { FIRST_RUN_PLAY_LABEL, FIRST_RUN_SETUP_GUIDANCE } from "../gameplay/progression/first-run-guidance";
@@ -48,8 +48,7 @@ export interface BountyChoiceSource {
 /** The menu music row: always "MUSIC", with the sounding track (or a plain empty state) underneath. */
 export function menuMusicRow(state: NowPlaying): Readonly<{ label: string; detail: string }> {
   if (!state.workId) return Object.freeze({ label: "MUSIC", detail: "nothing playing yet" });
-  const station = state.stationName ? ` · ${state.stationName}` : "";
-  return Object.freeze({ label: "MUSIC", detail: `${state.title.toUpperCase()}${station}` });
+  return Object.freeze({ label: "MUSIC", detail: nowPlayingLabel(state) });
 }
 
 export function buildMenuSnapshot(input: {
@@ -90,7 +89,7 @@ export function buildMenuSnapshot(input: {
 const modeTrim: Readonly<Record<string, Readonly<{ glyph: string; sub: string }>>> = Object.freeze({
   campaign: { glyph: "▲", sub: "stage after stage, ever deeper" },
   endless: { glyph: "∞", sub: "biomes cycle — chase your best" },
-  gauntlet: { glyph: "☠", sub: "a full boss every 8 waves" },
+  gauntlet: { glyph: "☠", sub: "a trial for every boss" },
   playground: { glyph: "✦", sub: "open arena — test everything" },
   tutorial: { glyph: "➔", sub: "learn the blade" },
 });

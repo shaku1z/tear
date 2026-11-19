@@ -74,7 +74,6 @@ export function practiceEnemyLesson(state: PracticeEnemyState): TutorialLesson {
       : "Read this opponent's real attacks and recovery. Defeat it, or pause to reset instantly. Training death recovery stays on; no rewards or discovery are earned here.",
     arena: "field-floor",
     teachingFocus: "enemy",
-    keys: ["MOUSE", "SHIFT", "RMB"],
     progress: () => [state.defeated ? 1 : 0, 1],
     complete: () => state.defeated,
   };
