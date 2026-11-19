@@ -14,11 +14,11 @@ export type KeyboardContext =
   "play" | "tutorial" | "playground" | "menu" | "playground-menu" | "replay" | "everywhere" | "engineering";
 
 export interface KeyboardBinding {
-  /** Physical keys, in label order: the first `labelled` codes name the action in prompts. */
+  /** Physical keys. Without `named`, a prompt names the first one. */
   readonly codes: readonly string[];
   readonly context: KeyboardContext;
-  /** How many of the codes a prompt names (default 1). */
-  readonly labelled?: number;
+  /** The codes a prompt names, in that order, when it is not just the first (every one is in `codes`). */
+  readonly named?: readonly string[];
   /** The codes are an ordered range (1–8): a prompt names the first and last. */
   readonly range?: boolean;
 }
@@ -33,14 +33,14 @@ const BINDINGS = {
   /** Up also aims a dash; held down drops through a platform and aims a dash down. */
   "move-up": { codes: ["KeyW", "ArrowUp"], context: "play" },
   "move-down": { codes: ["KeyS", "ArrowDown"], context: "play" },
-  jump: { codes: ["KeyW", "Space", "ArrowUp"], context: "play", labelled: 2 },
+  jump: { codes: ["KeyW", "Space", "ArrowUp"], context: "play", named: ["KeyW", "Space"] },
   dash: { codes: ["ShiftLeft", "ShiftRight"], context: "play" },
   /** Throw a held blade, recall a thrown one: the keyboard twin of the right mouse button. */
   throw: { codes: ["KeyE"], context: "play" },
   /** Hold to draw the tether in: the keyboard twin of the left mouse button. */
   tether: { codes: ["KeyQ"], context: "play" },
   /** Escape also releases pointer lock, which pauses through the lost-capture rule. */
-  pause: { codes: ["Escape", "KeyP"], context: "play", labelled: 2 },
+  pause: { codes: ["Escape", "KeyP"], context: "play", named: ["Escape", "KeyP"] },
   "skip-lesson": { codes: ["KeyN"], context: "tutorial" },
   "playground-menu": { codes: ["Tab"], context: "playground" },
   abilities: { codes: ["KeyU"], context: "playground" },
@@ -58,7 +58,8 @@ const BINDINGS = {
   "menu-down": { codes: ["ArrowDown", "KeyS"], context: "menu" },
   "menu-left": { codes: ["ArrowLeft", "KeyA"], context: "menu" },
   "menu-right": { codes: ["ArrowRight", "KeyD"], context: "menu" },
-  confirm: { codes: ["Enter", "NumpadEnter", "Space"], context: "menu" },
+  /** Prompts say SPACE (owner, 2026-11-19); Enter is first because the pad's A button presses it. */
+  confirm: { codes: ["Enter", "NumpadEnter", "Space"], context: "menu", named: ["Space"] },
   back: { codes: ["Escape", "Backspace"], context: "menu" },
   "tab-prev": { codes: ["KeyQ"], context: "menu" },
   "tab-next": { codes: ["KeyE"], context: "menu" },
@@ -161,7 +162,7 @@ export function keyboardLabel(action: KeyboardAction): string {
   if (binding.range === true && codes.length > 1)
     return `${keyCodeLabel(codes[0] ?? "")}–${keyCodeLabel(codes.at(-1) ?? "")}`;
   const labels: string[] = [];
-  for (const code of codes.slice(0, binding.labelled ?? 1)) {
+  for (const code of binding.named ?? codes.slice(0, 1)) {
     const label = keyCodeLabel(code);
     if (!labels.includes(label)) labels.push(label);
   }
