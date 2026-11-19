@@ -1,4 +1,4 @@
-import { encodeStudioVp8Webm } from "../../src/app/replay/browser-ghost-studio-webm";
+import { encodeClipVp8Webm } from "../../src/app/replay/browser-replay-clip-webm";
 import { describe, expect, it, vi } from "vitest";
 
 const fixture = vi.hoisted((): { sessionCalls: number; mapped: unknown; session?: unknown } => ({
@@ -84,7 +84,7 @@ describe("Ghost Theater open result", () => {
     pressed.add("Space");
     theater.render();
     expect(theater.status()?.paused).toBe(true);
-    theater.toggleStudio();
+    theater.toggleReplayEditor();
     controls.clicked = true;
     const accepted = takeClick.mock.calls.length;
     pressed.clear();
@@ -92,7 +92,7 @@ describe("Ghost Theater open result", () => {
     theater.render();
     expect(seeks.at(-1)).toBe(1680);
     expect(takeClick).toHaveBeenCalledTimes(accepted);
-    theater.toggleStudio();
+    theater.toggleReplayEditor();
     controls.clicked = false;
     pressed.clear();
     theater.seekBy(-5);
@@ -161,12 +161,12 @@ describe("Theater local media ownership", () => {
       width: () => 1600,
       deltaSeconds: () => 0,
       launchPractice: () => ({ ok: false, message: "unused" }),
-      studioMedia: {
+      clipExport: {
         available: () => true,
         dispose: vi.fn(),
         download: downloads,
-        render: (_capsule, _session, edl, signal) => {
-          expect(edl.clips.map((clip) => [clip.sourceFromTick, clip.sourceToTick, clip.speed])).toEqual([
+        render: (_capsule, _session, cutList, signal) => {
+          expect(cutList.clips.map((clip) => [clip.sourceFromTick, clip.sourceToTick, clip.speed])).toEqual([
             [120, 240, 0.5],
             [0, 120, 2],
           ]);
@@ -183,31 +183,31 @@ describe("Theater local media ownership", () => {
       maxTick: 240,
     } as GhostReadCapsule;
     expect(theater.open(capsule, "profile").kind).toBe("opened");
-    theater.toggleStudio();
+    theater.toggleReplayEditor();
     theater.jumpCheckpoint(1);
-    theater.markStudioIn();
+    theater.markClipIn();
     theater.jumpCheckpoint(1);
     theater.setSpeed(0.5);
-    theater.createStudioCutList();
+    theater.appendClip();
     theater.restart();
-    theater.markStudioIn();
+    theater.markClipIn();
     theater.jumpCheckpoint(1);
     theater.setSpeed(2);
-    theater.createStudioCutList();
-    theater.exportStudio();
+    theater.appendClip();
+    theater.exportClips();
     theater.render();
-    expect(rendered.at(-1)?.studioMedia?.status).toBe("rendering");
-    theater.cancelStudio();
+    expect(rendered.at(-1)?.clipExport?.status).toBe("rendering");
+    theater.cancelClipExport();
     expect(signals[0]?.aborted).toBe(true);
     theater.exit();
     expect(theater.open(capsule, "profile").kind).toBe("opened");
-    theater.toggleStudio();
+    theater.toggleReplayEditor();
     finish?.({ thumbnail: "late" } as never);
     await Promise.resolve();
     theater.render();
-    expect(rendered.at(-1)?.studioMedia?.status).toBe("idle");
-    expect(rendered.at(-1)?.studioMedia?.thumbnail).toBeUndefined();
-    theater.downloadStudio();
+    expect(rendered.at(-1)?.clipExport?.status).toBe("idle");
+    expect(rendered.at(-1)?.clipExport?.thumbnail).toBeUndefined();
+    theater.downloadClip();
     expect(downloads).not.toHaveBeenCalled();
     fixture.session = undefined;
   });
@@ -268,7 +268,7 @@ describe("Theater local media ownership", () => {
     vi.stubGlobal("VideoEncoder", Encoder);
     try {
       const order: number[] = [],
-        bytes = await encodeStudioVp8Webm(
+        bytes = await encodeClipVp8Webm(
           { width: 640, height: 360 } as HTMLCanvasElement,
           31,
           (index) => {
@@ -358,17 +358,12 @@ describe("Theater local media ownership", () => {
     vi.stubGlobal("VideoEncoder", Encoder);
     try {
       await expect(
-        encodeStudioVp8Webm(
-          { width: 640, height: 360 } as HTMLCanvasElement,
-          30,
-          vi.fn(),
-          new AbortController().signal,
-        ),
+        encodeClipVp8Webm({ width: 640, height: 360 } as HTMLCanvasElement, 30, vi.fn(), new AbortController().signal),
       ).rejects.toThrow(/support/);
       expect(frameClosed).not.toHaveBeenCalled();
       supported = true;
       const abort = new AbortController(),
-        rendering = encodeStudioVp8Webm({ width: 640, height: 360 } as HTMLCanvasElement, 30, vi.fn(), abort.signal);
+        rendering = encodeClipVp8Webm({ width: 640, height: 360 } as HTMLCanvasElement, 30, vi.fn(), abort.signal);
       await vi.waitFor(() => {
         expect(flush).toHaveBeenCalledOnce();
       });

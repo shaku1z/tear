@@ -426,21 +426,21 @@ export interface ReplayScreenView {
     readonly unavailable: readonly string[];
   }>;
   readonly worldVisible?: boolean;
-  readonly studioMedia?: Readonly<{
+  readonly clipExport?: Readonly<{
     available: boolean;
     status: string;
     markIn: number | undefined;
     thumbnail: string | undefined;
     duration: number | undefined;
   }>;
-  /** C37 immutable decision list; media work stays in the app adapter. */
-  readonly studioCutList?: Readonly<{
+  /** The replay editor's cut list; encoding stays in the app adapter. */
+  readonly cutList?: Readonly<{
     readonly available: boolean;
     readonly sourceGhostId?: string;
     readonly sourceRootHash?: string;
     readonly fromTick?: number;
     readonly toTick?: number;
-    readonly edlHash?: string;
+    readonly cutListHash?: string;
     readonly unavailable?: string;
     readonly clipCount?: number;
   }>;

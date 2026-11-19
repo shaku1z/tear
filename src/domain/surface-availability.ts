@@ -99,7 +99,7 @@ export function screenActionSurface(action: ScreenAction): SurfaceId | undefined
     return action.id.startsWith("boss-memory-") ? "feature:boss-memory" : undefined;
   if (action.type === "profile.downloadGhostArchive")
     return action.paired === true ? "feature:linked-pair-download" : undefined;
-  if (type.startsWith("replay.editor.") || type.startsWith("replay.studio.")) return "feature:replay-editor";
+  if (type.startsWith("replay.editor.")) return "feature:replay-editor";
   return undefined;
 }
 
