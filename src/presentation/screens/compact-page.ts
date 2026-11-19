@@ -80,6 +80,40 @@ const PAGE_PAD = 40;
 /** The narrowest a header tab may be before the strip drops to its own row. */
 const TAB_MIN_WIDTH = 150;
 
+/**
+ * Where a scrolled body rests: on a block's top edge, or anywhere inside a block taller than the
+ * view (so all of it can be read). The view offers whole controls only, so a body resting part-way
+ * into a row would drop that row and show an empty band at its top. `maximum` is the first rest at
+ * or past the content's end, so the last block is whole as well; `offset` is the rest nearest the
+ * input scroll `raw`. The input itself keeps moving freely (it is only clamped), so small wheel or
+ * drag steps add up to the next row instead of snapping back.
+ */
+export function scrollRest(
+  heights: readonly number[],
+  gap: number,
+  visible: number,
+  raw: number,
+): Readonly<{ offset: number; maximum: number }> {
+  const spans: (readonly [number, number])[] = [];
+  let top = 0;
+  for (const height of heights) {
+    spans.push([top, top + Math.max(0, height - visible)]);
+    top += height + gap;
+  }
+  const end = top - gap - visible;
+  const last = spans.find(([, to]) => to >= end);
+  if (end <= 0 || !last) return { offset: 0, maximum: 0 };
+  const maximum = Math.ceil(Math.max(last[0], end)),
+    target = Math.max(0, Math.min(maximum, raw));
+  let offset = 0;
+  for (const [from, to] of spans) {
+    if (from > maximum) break;
+    const rest = Math.max(from, Math.min(Math.min(to, maximum), target));
+    if (Math.abs(rest - target) < Math.abs(offset - target)) offset = rest;
+  }
+  return { offset, maximum };
+}
+
 export function createCompactPage(context: ScreenRenderContext) {
   const { ui } = context;
 
@@ -273,10 +307,14 @@ export function createCompactPage(context: ScreenRenderContext) {
   function scroll(page: ScrollRegion, blocks: readonly ScrollBlock[], gap = ui.t.space.md): ScrollState {
     const { canvas } = context,
       visible = page.bottom - page.top;
-    const total = blocks.reduce((sum, block) => sum + block.height, 0) + Math.max(0, blocks.length - 1) * gap;
-    const maximum = Math.max(0, Math.ceil(total - visible));
-    const offset = Math.max(0, Math.min(maximum, context.scroll));
-    if (offset !== context.scroll) context.setScroll?.(offset);
+    const { offset, maximum } = scrollRest(
+      blocks.map((block) => block.height),
+      gap,
+      visible,
+      context.scroll,
+    );
+    const clamped = Math.max(0, Math.min(maximum, context.scroll));
+    if (clamped !== context.scroll) context.setScroll?.(clamped);
     const view: ScrollView = {
       top: page.top,
       bottom: page.bottom,

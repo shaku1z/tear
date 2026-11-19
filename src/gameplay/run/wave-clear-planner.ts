@@ -1,3 +1,4 @@
+import { gauntletBossHeal, gauntletCleared } from "./gauntlet-trials";
 import type { RunDifficulty, RunMode } from "./session";
 
 export interface WaveLogEntry {
@@ -43,6 +44,10 @@ export interface WaveClearInput {
   readonly waveHealBonus: number;
   readonly waveClearPause: number;
   readonly availableTierUpCount: number;
+  /** The player's health now; the Gauntlet's boss clear restores a share of what is missing. */
+  readonly playerHealth?: Readonly<{ hp: number; maxHp: number }>;
+  /** Gauntlet only: how many trials the run has. Its last boss wins the run. */
+  readonly trialCount?: number;
 }
 
 export type WaveClearIntent =
@@ -106,6 +111,40 @@ function resolveTimer(state: WaveClearState, input: WaveClearInput, intents: Wav
   return { ...state, clearTimer: -1 };
 }
 
+/** A Gauntlet boss falls: half the missing health back, then a tier-up, or the win after the last trial. */
+function gauntletBossCleared(
+  state: WaveClearState,
+  input: WaveClearInput,
+  intents: WaveClearIntent[],
+): WaveClearResult {
+  // A trial is the Gauntlet's stage: its no-hit record restarts with the next one.
+  const beaten = { ...state, bossesBeaten: state.bossesBeaten + 1, damagedThisStage: false };
+  const won = gauntletCleared(beaten.bossesBeaten, input.trialCount ?? 0);
+  if (input.achievementTracking) {
+    intents.push({ type: "profile-max", stat: "gauntletBestTrial", value: beaten.bossesBeaten });
+    if (!state.damagedThisStage) intents.push({ type: "profile-add", stat: "gauntletFlawlessTrials", value: 1 });
+    if (won) {
+      intents.push(
+        { type: "profile-add", stat: "gauntletClears", value: 1 },
+        { type: "profile-max", stat: "gauntletFull", value: 1 },
+      );
+      if (state.diff === "hard" || state.diff === "extreme")
+        intents.push({ type: "profile-max", stat: "gauntletClearHard", value: 1 });
+    }
+    intents.push({ type: "achievement-check" });
+  }
+  if (won) {
+    intents.push({ type: "win-run" });
+    return { state: beaten, intents, terminal: true };
+  }
+  const health = input.playerHealth;
+  const heal = health === undefined ? 0 : gauntletBossHeal(health.hp, health.maxHp, input.playerOneHit);
+  if (heal > 0) intents.push({ type: "heal-player", amount: heal });
+  intents.push({ type: "prepare-reward", reward: "boss" });
+  const next = { ...beaten, pendingReward: "boss" as const, clearTimer: input.waveClearPause * 1.6 };
+  return { state: resolveTimer(next, input, intents), intents, terminal: false };
+}
+
 export function planWaveClear(input: WaveClearInput): WaveClearResult {
   if (!Number.isFinite(input.dt) || input.dt < 0) throw new RangeError("dt must be finite and non-negative");
   let state = input.state;
@@ -126,16 +165,16 @@ export function planWaveClear(input: WaveClearInput): WaveClearResult {
     );
     state = { ...state, waveLog: [...state.waveLog, entry], damagedThisWave: false };
 
+    if (state.isBossWave && state.mode === "gauntlet") return gauntletBossCleared(state, input, intents);
     if (state.isBossWave) {
       if (state.mode === "campaign" && input.stageIndex >= input.stageCount - 1) {
         intents.push({ type: "start-adventure-finale" });
         return { state, intents, terminal: true };
       }
-      if (state.mode === "campaign" || state.mode === "bossonly" || state.mode === "gauntlet") {
+      if (state.mode === "campaign" || state.mode === "bossonly") {
         if (!input.playerOneHit)
           intents.push({ type: "heal-player", amount: input.healEachWave * 2 + input.waveHealBonus });
-        if (state.mode === "bossonly" || state.mode === "gauntlet")
-          state = { ...state, bossesBeaten: state.bossesBeaten + 1 };
+        if (state.mode === "bossonly") state = { ...state, bossesBeaten: state.bossesBeaten + 1 };
         if (state.mode === "campaign" && input.achievementTracking) {
           intents.push({ type: "profile-add", stat: "stageClears", value: 1 });
           if (!state.damagedThisStage) intents.push({ type: "profile-add", stat: "noHitStages", value: 1 });
@@ -149,7 +188,9 @@ export function planWaveClear(input: WaveClearInput): WaveClearResult {
         return { state, intents, terminal: true };
       }
     } else {
-      if (!input.playerOneHit) intents.push({ type: "heal-player", amount: input.healEachWave + input.waveHealBonus });
+      // Gauntlet rounds restore nothing: health is spent across a trial and won back from its boss.
+      if (!input.playerOneHit && state.mode !== "gauntlet")
+        intents.push({ type: "heal-player", amount: input.healEachWave + input.waveHealBonus });
       intents.push({ type: "prepare-reward", reward: "draft" });
       state = { ...state, pendingReward: "draft", clearTimer: input.waveClearPause };
     }

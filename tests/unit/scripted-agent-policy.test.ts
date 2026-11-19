@@ -4,6 +4,7 @@ import type { TearAgentObservation } from "../../src/agents/contracts";
 import {
   BladeMotorModule,
   MovementModule,
+  PURSUE_AFTER_TICKS,
   SCRIPTED_POLICY_PROFILES,
   TearScriptedPolicy,
 } from "../../src/agents/scripted-policy";
@@ -334,5 +335,30 @@ describe("deterministic scripted agent hierarchy", () => {
     });
     expect(hazard.actions).toContainEqual({ type: "move", x: -1_000, y: 0 });
     expect(hazard.actions).toContainEqual({ type: "jump", phase: "pressed" });
+  });
+
+  it("closes in on a target once its attacks have landed nothing for a while, and backs off again when they do", () => {
+    const riftlock = (tick: number, hpRatio: number): TearAgentObservation => {
+      const base = state(tick, [{ ...actor("herald", 640, 600, "herald"), hpRatio }]);
+      return observation({ ...base, run: { ...base.run, weapon: "riftlock" } });
+    };
+    const moveX = (movement: MovementModule, current: TearAgentObservation): number | undefined => {
+      const target = current.state.entities[0];
+      if (target === undefined) throw new Error("the test needs a target");
+      const move = movement.decide({ observation: current, target, profile: "competent" }).actions[0];
+      return move?.type === "move" ? move.x : undefined;
+    };
+    const movement = new MovementModule();
+    expect(moveX(movement, riftlock(0, 1))).toBe(-1_000);
+    expect(moveX(movement, riftlock(PURSUE_AFTER_TICKS - 1, 1))).toBe(-1_000);
+    expect(moveX(movement, riftlock(PURSUE_AFTER_TICKS, 1))).toBe(1_000);
+    expect(moveX(movement, riftlock(PURSUE_AFTER_TICKS + 1, 0.9))).toBe(-1_000);
+
+    // At low health the player retreats from a target in reach; a target it never hurts would hold it there for good.
+    const hurt = (tick: number): TearAgentObservation =>
+      observation(state(tick, [actor("herald", 400, 600, "herald")], { hp: 30 }));
+    const melee = new MovementModule();
+    expect(moveX(melee, hurt(0))).toBe(-1_000);
+    expect(moveX(melee, hurt(PURSUE_AFTER_TICKS))).toBe(1_000);
   });
 });
