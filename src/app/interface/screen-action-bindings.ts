@@ -9,6 +9,7 @@ import type { GhostVaultLibraryPort } from "../library/ghost-vault-library-contr
 import { screenActionAvailable, type SurfaceAvailability } from "../../domain/surface-availability";
 import type { ScreenAction } from "../../presentation/screens/contracts";
 import { setMusicPreview, stepMusicPreview } from "../../audio/music/preview";
+import { requestNextSong } from "../../audio/music/music-source";
 
 export interface ScreenActionBindingPorts {
   readonly controlChase?: (command: "toggle" | "stop") => void;
@@ -158,6 +159,12 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "music.stopPreview": () => {
       setMusicPreview(null);
     },
+    "music.pick": (action) => {
+      ports.settings.pickMusic(action.value);
+    },
+    "music.next": () => {
+      requestNextSong();
+    },
     "shop.buy": (action) => {
       ports.buyShopItem(action.id);
     },
@@ -271,26 +278,11 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "replay.practice": () => {
       ports.replay.practice();
     },
-    "replay.coach.viewMoment": (action) => {
-      ports.replay.viewCoachMoment(action.id);
-    },
-    "replay.coach.control": (action) => {
-      ports.replay.controlCoach(action.command, action.delta);
-    },
     "replay.challenge.open": () => {
       ports.replay.openChallenges();
     },
     "replay.challenge.start": (action) => {
       ports.replay.startChallenge(action.id);
-    },
-    "replay.coach.open": () => {
-      ports.replay.openCoach();
-    },
-    "replay.coach.selectBaseline": (action) => {
-      ports.replay.selectCoachBaseline(action.id);
-    },
-    "replay.coach.practice": (action) => {
-      ports.replay.practiceCoachFinding(action.findingId);
     },
     "replay.runDna.toggle": () => {
       ports.replay.toggleRunDna();

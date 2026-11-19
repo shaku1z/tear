@@ -20,12 +20,13 @@ describe("wave and boss lifecycle rules", () => {
       hordeWave: false,
       miniBossWave: true,
     });
-    expect(describeWave({ mode: "gauntlet", wave: 8 })).toMatchObject({ bossWave: true, endlessBiome: 1 });
+    expect(describeWave({ mode: "gauntlet", wave: 8 })).toMatchObject({ bossWave: false, gauntletTrial: 2 });
+    expect(describeWave({ mode: "gauntlet", wave: 9 })).toMatchObject({ bossWave: true, endlessBiome: null });
     expect(describeWave({ mode: "bossonly", wave: 1, bossOnly: true })).toMatchObject({ bossWave: true });
     expect(describeWave({ mode: "sandbox", wave: 6, configuredWaves: 5 })).toMatchObject({ bossWave: true });
   });
 
-  it("preserves campaign placeholder and deep gauntlet boss scaling", () => {
+  it("preserves campaign placeholder boss scaling and scales Gauntlet bosses by trial", () => {
     expect(
       bossScaling({
         mode: "campaign",
@@ -45,6 +46,6 @@ describe("wave and boss lifecycle rules", () => {
         placeholderBoss: false,
         difficultyHp: 1.7,
       }),
-    ).toEqual({ health: (1 + 50 * 0.12 + 4 * 0.06) * 1.7, contactDamage: 1 + 50 * 0.05 });
+    ).toEqual({ health: (1 + 16 * 0.12) * 1.7, contactDamage: 1 + 16 * 0.05 });
   });
 });

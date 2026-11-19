@@ -1,4 +1,5 @@
 import { WEAPONS } from "../../src/gameplay/weapons";
+import { STAGES } from "../../src/gameplay/stages";
 import {
   createProductionGhostReplayComposition,
   captureProductionReplayCheckpoint,
@@ -135,21 +136,23 @@ describe("production wave and reward runtime", () => {
       if (boundary) splits.push(boundary);
     });
     runtime.startNaturalOpening();
-    run.wave = 10;
+    // Wave 10 opens the fourth trial, in its boss's home stage.
+    const fourthHome = STAGES.findIndex((stage) => stage.boss === run.bossOrder[3]);
+    run.wave = 9;
     run.runTime = 12;
     replay.world.lifecycle.clearWave();
     replay.world.lifecycle.prepareReward("draft");
     runtime.waves.startNextWave();
-    expect(replay.stage.index).toBe(2);
+    expect(replay.stage.index).toBe(fourthHome);
     expect(stageFacts).toBe(0);
-    expect(splits.at(-1)).toMatchObject({ stage: 2, wave: 11, time: 12, event: "start" });
-    run.wave = 15;
+    expect(splits.at(-1)).toMatchObject({ stage: fourthHome, wave: 10, time: 12, event: "start" });
+    run.wave = 11;
     run.runTime = 24;
     replay.world.lifecycle.clearWave();
     replay.world.lifecycle.prepareReward("draft");
     runtime.waves.startNextWave();
     expect(run.isBossWave).toBe(true);
-    expect(splits.at(-1)).toMatchObject({ stage: replay.stage.index, wave: 16, time: 24, event: "start" });
+    expect(splits.at(-1)).toMatchObject({ stage: replay.stage.index, wave: 12, time: 24, event: "start" });
   });
   it("preserves restored focus until a source transition explicitly resets it", () => {
     const replay = createProductionReplayWorld({ seed: "reward-focus", mode: "endless" });
@@ -170,6 +173,57 @@ describe("production wave and reward runtime", () => {
     expect(() => {
       runtime.restoreUi("playing", Number.NaN);
     }).toThrow(/focus/);
+  });
+  it("clears a whole Gauntlet trial: two rounds with drafts and no healing, then the boss, then the next trial", () => {
+    const replay = createProductionReplayWorld({ seed: "gauntlet-trial", mode: "gauntlet" });
+    const runtime = createProductionWaveRewardRuntime(replay);
+    runtime.startNaturalOpening();
+    const run = replay.world.state.run() as never as {
+      bossOrder: string[];
+      bossesBeaten: number;
+      isBossWave: boolean;
+      spawnQueue: unknown[];
+      wave: number;
+    };
+    const player = replay.world.state.player() as never as { hp: number; maxHp: number };
+    const home = (index: number) => STAGES.findIndex((stage) => stage.boss === run.bossOrder[index]);
+    expect(run.bossOrder[0]).toBe("warden");
+    expect(replay.stage.index).toBe(home(0));
+    const clear = () => {
+      run.spawnQueue = [];
+      replay.world.state.setEnemies([]);
+      runtime.update(1);
+    };
+    const choose = () => {
+      const choice = runtime.reward.snapshot()?.choices[0];
+      const action =
+        runtime.screen() === "tierup"
+          ? { type: "tier-up-choice" as const, choiceId: choice?.id ?? "missing" }
+          : { type: "draft-choice" as const, choiceId: choice?.id ?? "missing" };
+      expect(runtime.routeAction(action)).toBe(true);
+      expect(runtime.screen()).toBe("playing");
+    };
+    for (const wave of [1, 2]) {
+      expect(run).toMatchObject({ wave, isBossWave: false });
+      player.hp = player.maxHp - 30;
+      clear();
+      expect(player.hp).toBe(player.maxHp - 30);
+      expect(runtime.screen()).toBe("draft");
+      choose();
+      expect(replay.stage.index).toBe(home(0));
+    }
+    expect(run).toMatchObject({ wave: 3, isBossWave: true });
+    expect(run.spawnQueue).toEqual([{ type: "boss" }]);
+    player.hp = player.maxHp - 40;
+    clear();
+    expect(player.hp).toBe(player.maxHp - 20);
+    expect(run.bossesBeaten).toBe(1);
+    // A boss clear pauses longer than a round's before its reward opens.
+    runtime.update(1);
+    expect(["tierup", "draft"]).toContain(runtime.screen());
+    choose();
+    expect(run).toMatchObject({ wave: 4, isBossWave: false });
+    expect(replay.stage.index).toBe(home(1));
   });
   it("owns a natural opening and routes its real draft transition without a host screen", () => {
     const replay = createProductionReplayWorld({ seed: "production-wave-reward", mode: "endless" });

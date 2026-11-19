@@ -61,11 +61,11 @@ Path to budgets: once several clean runs on the controlled release host agree, p
 
 - **Startup scripts.** The bytes of the entry script plus every `modulepreload` that `index.html` references are at most `startupScriptBytes` (2,300,000 bytes uncompressed; about 2.09 MB measured). The on-demand tutorial corpus may never be among them.
 - **Main chunk.** The largest application JavaScript chunk, excluding worker bundles and the on-demand tutorial corpus, stays within `standaloneMainGzipBytes` / `crazygamesMainGzipBytes` gzip bytes.
-- **Workers.** The largest worker bundle (Career Archive, coach history, Chase Your Best reference, capsule encoder) is at most `workerGzipBytes` gzip bytes.
+- **Workers.** The largest worker bundle (Career Archive, Chase Your Best reference, capsule encoder) is at most `workerGzipBytes` gzip bytes.
 - **Tutorial corpus.** The tutorial demonstration corpus is a separate chunk of at most `tutorialGoldGzipBytes` gzip bytes. Training preflight fetches it before a tutorial or practice run; the service worker runtime-caches it on first use, so it then works offline, rather than precaching it for every player.
 - **Precache.** The standalone service worker precaches at most `precacheEntries` files and `precacheBytes` bytes (33 entries and about 2.70 MB measured; the three large workers are cached on first use instead), and never the tutorial corpus.
 
-`pnpm check:test-isolation` proves the engineering channel stays out of both release builds. The Watch Agent and the snapshot editor load only through dynamic imports guarded by the test-build constants, and the Verdant calibration scene only through one guarded by `__TEAR_TEST_BUILD__`. The gate fails if a release file contains one of their distinctive markers (storage keys, format identifiers and diagnostic sentences listed in the script) or a calibration image, and it fails if a marker disappears from its source module, so a renamed string cannot make the check pass vacuously.
+Developer-only code stays out of every release build because the build refuses it: a release build of any target fails when a module of the `release.developer-only` role (`config/architecture-roles.json`) contributes code to a bundle. The Watch Agent and the snapshot editor load only through dynamic imports guarded by the test-build constants. `pnpm check:test-isolation` then fails if a release file defines one of the test globals listed in the script.
 
 Set a new ceiling about 10% above a deliberate, measured change and record why here; never raise one to absorb an unexplained increase.
 

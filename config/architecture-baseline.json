@@ -73,21 +73,6 @@
       "kind": "value"
     },
     {
-      "from": "src/ghost/coach-history.ts",
-      "to": "src/tearbench/contracts.ts",
-      "kind": "type"
-    },
-    {
-      "from": "src/ghost/coach.ts",
-      "to": "src/tearbench/contracts.ts",
-      "kind": "type"
-    },
-    {
-      "from": "src/ghost/coach.ts",
-      "to": "src/tearbench/tearsdl.ts",
-      "kind": "value"
-    },
-    {
       "from": "src/ghost/finale-companion.ts",
       "to": "src/tearbench/contracts.ts",
       "kind": "type"
@@ -106,16 +91,6 @@
       "from": "src/ghost/fork-origin.ts",
       "to": "src/tearbench/environment-codec.ts",
       "kind": "value"
-    },
-    {
-      "from": "src/ghost/knowledge-libraries.ts",
-      "to": "src/tearbench/contracts.ts",
-      "kind": "type"
-    },
-    {
-      "from": "src/ghost/knowledge-libraries.ts",
-      "to": "src/tearbench/tearsdl.ts",
-      "kind": "type"
     },
     {
       "from": "src/ghost/live-causal-events.ts",

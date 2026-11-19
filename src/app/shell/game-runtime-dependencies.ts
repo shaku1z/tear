@@ -84,6 +84,8 @@ export interface GameRuntimeDependencies {
   readonly browserWindow: Window;
   readonly browserNavigator: Pick<Navigator, "getGamepads" | "hardwareConcurrency">;
   readonly CG: PlatformCompatibility["CG"];
+  /** The platform's fullscreen owner, read per use: CrazyGames services arrive after start. */
+  readonly fullscreen: () => PlatformCompatibility["services"]["fullscreen"];
   readonly CLOCK: TearWorldClock;
   readonly CONFIG: typeof CONFIG;
   readonly Charger: EnemyTypes["Charger"];

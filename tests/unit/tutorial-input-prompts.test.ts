@@ -18,7 +18,7 @@ describe("tutorial input prompts", () => {
 
   it("words gold demonstration edges from the shared vocabulary on every device", () => {
     const edges = ["left", "jump", "dash", "swing", "primary"];
-    expect(tutorialGoldGlyphs(edges, "mouse", pad)).toEqual(["A", "W / SPACE", "SHIFT", "MOUSE", "LEFT CLICK"]);
+    expect(tutorialGoldGlyphs(edges, "mouse", pad)).toEqual(["A", "W / SPACE", "SHIFT", "MOUSE", "Q / LEFT CLICK"]);
     expect(tutorialGoldGlyphs(edges, "touch", pad)).toEqual(["STICK ←", "JUMP", "DASH", "DRAG", "HOLD"]);
     expect(tutorialGoldGlyphs(edges, "gamepad", pad)).toEqual(["LS ←", "Cross", "R2", "RS", "L1"]);
     expect(tutorialGoldGlyphs(["unknown"], "gamepad", pad)).toEqual(["unknown"]);

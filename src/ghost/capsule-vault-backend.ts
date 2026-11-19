@@ -31,6 +31,9 @@ export const GHOST_VAULT_RETIRED_KEY_PREFIXES = Object.freeze([
   { store: "analysis", prefix: "ghost-publication-custody:v1:", removedIn: "shaku1z/tear#204" },
   { store: "analysis", prefix: "ghost-publication-transport:v1:", removedIn: "shaku1z/tear#204" },
   { store: "analysis", prefix: "ghost-publication-consent:v1:", removedIn: "shaku1z/tear#204" },
+  { store: "libraries", prefix: "entry:canon:", removedIn: "shaku1z/tear#227" },
+  { store: "libraries", prefix: "entry:frontier:", removedIn: "shaku1z/tear#227" },
+  { store: "libraries", prefix: "entry:corpus:", removedIn: "shaku1z/tear#227" },
 ] as const satisfies readonly Readonly<{ store: GhostVaultStore; prefix: string; removedIn: string }>[]);
 
 export type GhostChunkKind = "commands" | "rng" | "events" | "results" | "keyframes" | "presentation";

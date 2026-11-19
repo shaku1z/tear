@@ -299,7 +299,8 @@ withJourney({ name: "C22 live Tear runtime", port: 8137 }, async ({ page }) => {
     ads: false,
     achievements: false,
     analytics: false,
-    fullscreen: false,
+    // The page's own fullscreen: it keeps nothing outside the page, so a disposable run has it.
+    fullscreen: true,
     overlay: false,
   });
   for (const stream of Object.values(result.rng)) {

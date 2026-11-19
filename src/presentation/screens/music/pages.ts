@@ -1,6 +1,12 @@
-import type { MusicCollectionView, ScreenAction, ScreenRenderContext, SettingRowView } from "../contracts";
+import type {
+  MusicChannelView,
+  MusicCollectionView,
+  ScreenAction,
+  ScreenRenderContext,
+  SettingRowView,
+} from "../contracts";
 import type { ScrollBlock } from "../compact-page";
-import { drawCover, textWidth, twoLines } from "./draw";
+import { drawCover, highlight, textWidth, twoLines } from "./draw";
 import { playSong, songCount, songRow, type MusicMetrics } from "./shelf";
 
 /**
@@ -108,6 +114,46 @@ export function collectionBlocks(
     }),
   );
   return blocks;
+}
+
+/**
+ * The Radio: one row per channel the player can tune to (cover, name over "description · N songs")
+ * and ▶ PLAY, which makes it the music pick, so it plays in menus and runs; the picked channel's
+ * button is ■ STOP, back to the default music.
+ */
+export function radioBlocks(
+  context: ScreenRenderContext,
+  m: MusicMetrics,
+  channels: readonly MusicChannelView[],
+): ScrollBlock[] {
+  const { ui } = context,
+    t = ui.t;
+  const label = (channel: MusicChannelView): string => (channel.picked ? "■  STOP" : "▶  PLAY");
+  const buttonW =
+    Math.max(...channels.map((channel) => textWidth(context, label(channel), t.type.label))) + t.space.xl * 2;
+  const buttonH = m.compact ? t.metric.minTarget : t.metric.settingsControlH;
+  const rowH = m.compact ? m.rowH : t.metric.settingsRowH + t.space.sm;
+  return channels.map((channel) => ({
+    height: rowH,
+    draw: (y, view) => {
+      if (channel.picked) highlight(context, m.x - t.space.sm, y + 1, m.w + t.space.sm * 2, rowH - 2);
+      drawCover(context, channel.cover, m.x, y + (rowH - m.cover) / 2, m.cover, m.cover);
+      const textX = m.x + m.cover + t.space.md,
+        buttonX = m.x + m.w - buttonW;
+      const detail = [channel.description, songCount(channel.songs)].filter(Boolean).join(" · ");
+      twoLines(context, channel.name, detail, textX, y, rowH, buttonX - t.space.lg - textX, t.type.label);
+      view.enqueue({
+        x: buttonX,
+        y: y + (rowH - buttonH) / 2,
+        w: buttonW,
+        h: buttonH,
+        label: label(channel),
+        size: t.type.label,
+        action: { type: "music.pick", value: channel.picked ? "default" : `channel:${channel.id}` },
+      });
+      ui.divider(context.canvas, m.x, y + rowH, m.w, 0.12);
+    },
+  }));
 }
 
 /** The playback settings: one cycling row each. */

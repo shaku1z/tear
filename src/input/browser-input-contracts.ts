@@ -123,6 +123,7 @@ export interface BrowserInput {
   rmb: boolean;
   lmb: boolean;
   padTether: boolean;
+  keyTether: boolean;
   clicked: boolean;
   clickX: number;
   clickY: number;
@@ -187,6 +188,7 @@ export interface BrowserInput {
   drainSemanticActions(tick: number, aimTurn?: number): readonly CommandEnvelope<GameAction>[];
   syncSemanticMovement(): void;
   setPadTether(held: boolean): void;
+  setKeyTether(held: boolean): void;
   updateUI(): void;
   takeUIScroll(): UiScroll;
   touchActive(): boolean;

@@ -354,7 +354,7 @@ const representativeEnemyKinds = Object.freeze([
 
 async function spawnRepresentativeEnemies(page, commandCount, onSample) {
   for (let attempt = 0; attempt < 12; attempt++) {
-    await page.keyboard.press("KeyE");
+    await page.keyboard.press("Tab");
     try {
       await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "pgmenu", undefined, {
         timeout: pollEvery(500),
