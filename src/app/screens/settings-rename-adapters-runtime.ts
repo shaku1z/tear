@@ -11,6 +11,7 @@ import {
 } from "../../presentation/settings-snapshots";
 import { isRebindableAction, type RebindableAction } from "../../domain/keyboard-remap";
 import type { BrowserInput } from "../../input/browser-input-contracts";
+import { formatBuildLabel } from "../../platform/build-identity";
 import { musicPickChoices } from "../../audio/music/music-source";
 import { normalizeMusicSettingsTab } from "../../audio/music/settings";
 import { getMusicLibrary } from "../../audio/music/library";
@@ -20,7 +21,7 @@ import { buildMusicScreenView } from "../../presentation/music-snapshots";
 
 type Dependencies = Pick<
   GameRuntimeDependencies,
-  "APP" | "GFX" | "Input" | "PAD" | "PROFILE" | "Cloud" | "PwaUpdate" | "UI"
+  "APP" | "GFX" | "Input" | "PAD" | "PROFILE" | "Cloud" | "PwaUpdate" | "UI" | "build"
 >;
 type Renderers = ReturnType<typeof createLiveScreenRenderers>;
 
@@ -203,6 +204,7 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
       touch: d.Input.touchActive(),
       installAvailable: services.installPrompt.available,
       update: d.PwaUpdate.snapshot(),
+      buildLabel: formatBuildLabel(d.build),
       presets: presetMeta,
       controllerGlyphs: [g(0), g(1), g(2), g(3)],
       keyboard,

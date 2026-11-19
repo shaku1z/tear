@@ -26,7 +26,11 @@ afterEach(() => {
 describe("keyboard remap", () => {
   it("moves the primary key and keeps the action's other default keys", () => {
     const table = remappedBindings({ jump: "KeyL", "move-left": "KeyJ" });
-    expect(table.jump).toEqual({ codes: ["KeyL", "Space", "ArrowUp"], context: "play", named: ["KeyL", "Space"] });
+    expect(table.jump).toEqual({
+      codes: ["KeyL", "Space", "ArrowUp"],
+      context: "play",
+      named: ["KeyL", "Space", "ArrowUp"],
+    });
     expect(table["move-left"].codes).toEqual(["KeyJ", "ArrowLeft"]);
     expect(table.dash).toBe(KEYBOARD_DEFAULTS.dash);
     expect(keyboardCollisions(table)).toEqual([]);
@@ -63,7 +67,7 @@ describe("keyboard remap", () => {
     applyKeyboardRemap({ throw: "KeyR", jump: "KeyL" });
     expect(keyboardBindings().throw.codes).toEqual(["KeyR"]);
     expect(promptLabel("throw", "keyboard")).toBe("R / RIGHT CLICK");
-    expect(keyboardLabel("jump")).toBe("L / SPACE");
+    expect(keyboardLabel("jump")).toBe("L / SPACE / ↑");
     applyKeyboardRemap({});
     expect(keyboardBindings()).toBe(KEYBOARD_DEFAULTS);
     expect(promptLabel("throw", "keyboard")).toBe("E / RIGHT CLICK");
@@ -161,6 +165,7 @@ describe("Controls tab keyboard rows", () => {
     touch,
     installAvailable: false,
     update: { ready: false, applying: false },
+    buildLabel: "test",
     presets: { default: { name: "DEFAULT", tag: "", line: "", map: "" } },
     keyboard: { listening, note: { row: "rebind:dash", text: "Swapped: Throw / recall now uses the old key." } },
   });
@@ -173,7 +178,7 @@ describe("Controls tab keyboard rows", () => {
       ...REBINDABLE_ACTIONS.map((action) => `rebind:${action}`),
       "resetKeys",
     ]);
-    expect(keyboard?.rows.find((row) => row.key === "rebind:jump")?.value).toBe("L / SPACE");
+    expect(keyboard?.rows.find((row) => row.key === "rebind:jump")?.value).toBe("L / SPACE / ↑");
     expect(keyboard?.rows.find((row) => row.key === "rebind:dash")?.note).toMatch(/Swapped/u);
     expect(buildSettingsSections("controls", settings, environment(true))).toHaveLength(1);
     const listening = buildSettingsSections("controls", settings, environment(false, "jump"))[1];

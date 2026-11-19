@@ -1,6 +1,7 @@
 import type { TearWorldConfiguration } from "../../gameplay/runtime/tear-world-configuration";
 import { tracksAchievements } from "../../gameplay/progression/achievement-runtime";
 import { dismissBootScreen } from "../../platform/browser-boot-screen";
+import { createFrameFaultHandler } from "../../platform/browser-error-screen";
 import { createScreenPresence } from "../../platform/screen-presence";
 import { assembleLiveCampaignTraining } from "../campaign/live-campaign-training-assembly";
 import { createLiveBossPhasePractice } from "../campaign/boss-phase-practice";
@@ -359,7 +360,19 @@ export function startLiveGame(
       },
     }),
   );
-  const frameDriver = new RuntimeFrameDriver(browserWindow);
+  const frameDriver = new RuntimeFrameDriver(
+    browserWindow,
+    createFrameFaultHandler({
+      document: browserDocument,
+      build: dependencies.build,
+      reload: () => {
+        browserWindow.location.reload();
+      },
+      report: (error) => {
+        console.error("TEAR stopped: a frame threw.", error);
+      },
+    }),
+  );
   const combatAdapters = createLiveCombatActionPorts({
     dependencies,
     surface: browserRuntime,

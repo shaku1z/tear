@@ -130,6 +130,12 @@ export interface WeaponMechanicResult {
   repeatScale?: number;
 }
 
+/** One move a weapon's drill trains: its display name and the effect ids the weapon reports when it lands. */
+export interface WeaponDrillMove {
+  readonly name: string;
+  readonly effects: readonly string[];
+}
+
 export interface WeaponDefinition {
   id: WeaponId;
   name: string;
@@ -139,6 +145,11 @@ export interface WeaponDefinition {
   blurb: string;
   /** JSON-safe names for the authored mechanics; runtime hooks remain below. */
   mechanics: readonly string[];
+  /**
+   * The moves the weapon's drill trains, in order: the one source of their names for the drill
+   * steps, the drill's teaching line and the Drills WEAPONS help.
+   */
+  drillMoves: readonly WeaponDrillMove[];
   tags: readonly string[];
   weaknesses: readonly string[];
   throwIdentity: string;
@@ -195,6 +206,10 @@ const WEAPONS: readonly WeaponDefinition[] = [
       "The responsive baseline. Leave a first cut, reverse through the line with a new swing, then Threadcut your throw route home.",
     blurb: "Responsive precision · Reversal · Threadcut recall",
     mechanics: ["Reversal", "Threadcut"],
+    drillMoves: [
+      { name: "Reversal", effects: ["reversal"] },
+      { name: "Launch", effects: ["launch", "updraft"] },
+    ],
     tags: ["Precision", "Parry", "Recall"],
     weaknesses: ["Low burst", "Narrow control", "Requires timing"],
     throwIdentity: "Threadcut",
@@ -251,6 +266,10 @@ const WEAPONS: readonly WeaponDefinition[] = [
     description: "Slow and devastating. Committed hits build Break, while Meteor throws erupt into seismic shockwaves.",
     blurb: "Committed impact · Break · Meteor shockwave",
     mechanics: ["Break", "Meteor"],
+    drillMoves: [
+      { name: "Slam", effects: ["slam", "superslam", "spike"] },
+      { name: "Break", effects: ["break"] },
+    ],
     tags: ["Break", "Slam", "Crowd"],
     weaknesses: ["Slow", "Short control", "Hard parries"],
     throwIdentity: "Meteor",
@@ -318,6 +337,10 @@ const WEAPONS: readonly WeaponDefinition[] = [
       "A broad steel edge carries through lighter foes. Throw a spinning Wheel Cut and call it back edge-first.",
     blurb: "Broad edge · Cleaving Momentum · Wheel Cut",
     mechanics: ["Cleave", "Wheel Cut"],
+    drillMoves: [
+      { name: "Cleave", effects: ["cleave"] },
+      { name: "Wheel Cut", effects: ["wheelCut", "wheelReturn"] },
+    ],
     tags: ["Reach", "Cleave", "Formation"],
     weaknesses: ["Slow", "Weak near hilt", "Committed"],
     throwIdentity: "Wheel Cut",
@@ -381,6 +404,10 @@ const WEAPONS: readonly WeaponDefinition[] = [
       "A compact blade with a full-damage Lash. Hook a target, swing it through the arena, and release it tangentially on recall.",
     blurb: "Compact Lash · Hook & Sling · Tangential release",
     mechanics: ["Lash", "Hook & Sling"],
+    drillMoves: [
+      { name: "Hook", effects: ["hook"] },
+      { name: "Sling", effects: ["slingRelease"] },
+    ],
     tags: ["Control", "Sling", "Expert"],
     weaknesses: ["Needs space", "Setup", "Low boss damage"],
     throwIdentity: "Hook & Sling",
@@ -437,6 +464,10 @@ const WEAPONS: readonly WeaponDefinition[] = [
       "Fire Razor Rounds from four reforming chambers, then throw the whole weapon as a Loose Cannon and command it remotely.",
     blurb: "Razor Rounds · Recoil Cut · Loose Cannon",
     mechanics: ["Razor Rounds", "Recoil Cut", "Capture", "Loose Cannon", "Backblast"],
+    drillMoves: [
+      { name: "Capture", effects: ["capture"] },
+      { name: "Razor Rounds", effects: ["razorRoundHit", "backblastRoundHit"] },
+    ],
     tags: ["Ranged", "Recoil", "Resource"],
     weaknesses: ["Chambers", "Precise fire", "No wide control"],
     throwIdentity: "Loose Cannon",

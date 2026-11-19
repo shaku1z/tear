@@ -75,6 +75,8 @@ export interface SettingsEnvironmentSnapshot {
   readonly touch: boolean;
   readonly installAvailable: boolean;
   readonly update: Readonly<{ ready: boolean; applying: boolean }>;
+  /** The running build as the player reads it (version and short revision). */
+  readonly buildLabel: string;
   readonly presets: Readonly<Record<string, ControllerPresetView>>;
   readonly controllerGlyphs?: readonly string[];
   /** Desktop only: the keyboard rows' state. Absent, the Controls tab has no keyboard section. */
@@ -279,5 +281,7 @@ export function buildSettingsSections(
       kind: "cycle",
       enabled: !environment.update.applying,
     });
+  // Last, so it reads as the footer of the list: what a player quotes when they report a problem.
+  rows.push({ key: "version", label: "Version", value: environment.buildLabel, kind: "info" });
   return [{ label: "GENERAL", rows }];
 }
