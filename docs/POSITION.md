@@ -18,7 +18,7 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 | [Production deploy](#production-deploy) | Deployed 2026-11-13 | The next production deploy follows the Verdant, Tutorial and music work. | — |
 | [Verdant Sanctum visuals](#verdant-visuals) | In progress | Living motion (water, light, foliage) as package data, in its own pull request. | Judge the look: the owner's taste decides visual work. A sharper, wider source painting that meets the brief in docs/BACKGROUND_WORKFLOW.md would remove most of the readability shading. |
 | [Verdant Sanctum gameplay](#verdant-gameplay) | In progress | The Bloom Wells and Rootbinder design, then Verdant waves. | Playtest the Rootbound in all three phases. |
-| [Tutorial and Playground experience](#training-ux) | In progress | Scrolling views resting on a row edge (#238), then one source of names for the drilled weapon moves. | — |
+| [Tutorial and Playground experience](#training-ux) | In progress | One source of names for the drilled weapon moves (this pull request, then its floaters), then the release tutorial flow and menu fixes. | — |
 | [Pale Traverse rework](#pale-traverse) | Not started | Start once the Verdant gameplay rework has landed. | — |
 | [Player wiki](#wiki) | In progress | Review the move pull request, then confirm the Cloudflare secret question and run the first wiki deploy. | Archive shaku1z/tear-wiki after the first deploy from this repository. |
 | [Repository structure and workflow](#repository-structure) | In progress | After the hooks pull request merges, run pnpm setup:hooks in the canonical checkout on main (scripts/governance/README.md). | — |
@@ -71,7 +71,7 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 **In progress.** A session is reworking the Tutorial and Playground popups, menus, flow, navigation and explanations. Drills has LESSONS, WEAPONS, ENEMIES and BOSSES tabs, and its phone list is sized from its content.
 
-- Next: Scrolling views resting on a row edge (#238), then one source of names for the drilled weapon moves.
+- Next: One source of names for the drilled weapon moves (this pull request, then its floaters), then the release tutorial flow and menu fixes.
 - Owner action: none
 - Evidence: [docs/TUTORIAL_PARITY_AND_UPGRADE_PLAN.md](TUTORIAL_PARITY_AND_UPGRADE_PLAN.md), [plans/active/DRILLED_MOVE_NAMES.md](../plans/active/DRILLED_MOVE_NAMES.md)
 

@@ -64,7 +64,7 @@
       "name": "Tutorial and Playground experience",
       "state": "In progress",
       "summary": "A session is reworking the Tutorial and Playground popups, menus, flow, navigation and explanations. Drills has LESSONS, WEAPONS, ENEMIES and BOSSES tabs, and its phone list is sized from its content.",
-      "next": "Scrolling views resting on a row edge (#238), then one source of names for the drilled weapon moves.",
+      "next": "One source of names for the drilled weapon moves (this pull request, then its floaters), then the release tutorial flow and menu fixes.",
       "owner_action": "",
       "evidence": [
         "docs/TUTORIAL_PARITY_AND_UPGRADE_PLAN.md",
