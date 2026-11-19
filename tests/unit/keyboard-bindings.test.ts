@@ -50,10 +50,18 @@ describe("keyboard binding table", () => {
     expect(keyCodeLabel("Digit7")).toBe("7");
     expect(keyCodeLabel("ShiftRight")).toBe("SHIFT");
     expect(keyCodeLabel("Escape")).toBe("ESC");
-    expect(keyboardLabel("jump")).toBe("W / SPACE");
+    expect(keyboardLabel("jump")).toBe("W / SPACE / ↑");
     expect(keyboardLabel("pause")).toBe("ESC / P");
     expect(keyboardLabel("quick-spawn")).toBe("1–8");
     expect(keyboardLabel("confirm")).toBe("SPACE");
+  });
+
+  it("names every key that plays an action, so the arrows are named beside the letters", () => {
+    for (const action of KEYBOARD_ACTIONS) {
+      const binding = KEYBOARD_BINDINGS[action];
+      if (binding.context !== "play" || binding.range === true) continue;
+      for (const code of binding.codes) expect(keyboardLabel(action), action).toContain(keyCodeLabel(code));
+    }
   });
 
   it("names only bound keys, and keeps Enter first for the pad's confirm", () => {
@@ -81,8 +89,10 @@ describe("prompt vocabulary keyboard column", () => {
     expect(promptLabel("tether", "keyboard")).toBe("Q / LEFT CLICK");
     expect(promptLabel("fullscreen", "keyboard")).toBe("F");
     expect(promptLabel("playground-menu", "keyboard")).toBe("TAB");
-    expect(promptLabel("dash-down", "keyboard")).toBe("S + SHIFT");
-    expect(promptLabel("drop", "keyboard")).toBe("HOLD S");
+    expect(promptLabel("dash-down", "keyboard")).toBe("S/↓ + SHIFT");
+    expect(promptLabel("drop", "keyboard")).toBe("HOLD S / ↓");
+    expect(promptLabel("move", "keyboard")).toBe("A D / ← →");
+    expect(promptLabel("move-left", "keyboard")).toBe("A / ←");
   });
 
   it("has no fullscreen prompt on touch or controller", () => {
