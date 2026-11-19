@@ -218,6 +218,7 @@ describe("presentation runtime boundaries", () => {
       setTheme: () => events.push("theme"),
       renderWorldLayers: () => events.push("world"),
       renderReticle: () => events.push("reticle"),
+      renderOverlayBackdrop: () => events.push("scrim"),
       isMenuScreen: () => true,
       enterSeconds: () => 1,
       setEnterSeconds: () => events.push("enter-reset"),
@@ -256,30 +257,30 @@ describe("presentation runtime boundaries", () => {
     let previous = "codex";
     let arrival: { focus: number; scroll: number } | undefined = { focus: 4, scroll: 160 };
     const context = new Proxy({}, { get: () => () => undefined, set: () => true }) as CanvasRenderingContext2D;
-    const ports = new Proxy(
-      {
-        canvas: { width: 1600, clientWidth: 1600, clientHeight: 900 } as HTMLCanvasElement,
-        context,
-        logicalWidth: 1600,
-        overscan: () => ({ x: 0, y: 0 }),
-        screen: () => "settings",
-        previousScreen: () => previous,
-        setPreviousScreen: (value: string) => {
-          previous = value;
-        },
-        screenRectangle: () => ({ x: 0, y: 0, w: 1600, h: 900 }),
-        background: () => "#fff",
-        isMenuScreen: () => false,
-        touchActive: () => false,
-        showCanvasCursor: () => false,
-        arrival: () => arrival,
-        setScroll: (value: number) => calls.push(`scroll ${String(value)}`),
-        resetScroll: () => calls.push("scroll top"),
-        entryFocus: (restored: number | undefined) => restored ?? 0,
-        setFocus: (value: number) => calls.push(`focus ${String(value)}`),
-      } as Partial<RenderPipelinePorts<string>>,
-      { get: (target, key) => (target as Record<string | symbol, unknown>)[key] ?? (() => undefined) },
-    ) as RenderPipelinePorts<string>;
+    const named: Partial<RenderPipelinePorts<string>> = {
+      canvas: { width: 1600, clientWidth: 1600, clientHeight: 900 } as HTMLCanvasElement,
+      context,
+      logicalWidth: 1600,
+      overscan: () => ({ x: 0, y: 0 }),
+      screen: () => "settings",
+      previousScreen: () => previous,
+      setPreviousScreen: (value: string) => {
+        previous = value;
+      },
+      screenRectangle: () => ({ x: 0, y: 0, w: 1600, h: 900 }),
+      background: () => "#fff",
+      isMenuScreen: () => false,
+      touchActive: () => false,
+      showCanvasCursor: () => false,
+      arrival: () => arrival,
+      setScroll: (value: number) => calls.push(`scroll ${String(value)}`),
+      resetScroll: () => calls.push("scroll top"),
+      entryFocus: (restored: number | undefined) => restored ?? 0,
+      setFocus: (value: number) => calls.push(`focus ${String(value)}`),
+    };
+    const ports = new Proxy(named, {
+      get: (target, key) => (target as Record<string | symbol, unknown>)[key] ?? (() => undefined),
+    }) as RenderPipelinePorts<string>;
     renderPresentationFrame(ports);
     expect(calls).toEqual(["scroll 160", "focus 4"]);
     calls.length = 0;

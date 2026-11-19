@@ -40,7 +40,7 @@ describe("screen history", () => {
 
   it("stays bounded on a chain that never returns", () => {
     const history = createScreenHistory(ROOTS);
-    for (let step = 0; step < 100; step += 1) history.move(at(`s${step}`, step), `s${step + 1}`);
+    for (let step = 0; step < 100; step += 1) history.move(at(`s${String(step)}`, step), `s${String(step + 1)}`);
     let depth = 0;
     while (history.backTarget() !== undefined && depth < 100) {
       history.move(at("x"), history.backTarget() ?? "x");

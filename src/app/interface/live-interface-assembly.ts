@@ -380,8 +380,8 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
           Backdrop.post(context, stage, camera);
         },
         stageBackground: (stage) => Scenes.paper(stage.id) ?? stage.bg,
-        drawMenuAttract: () => {
-          Attract.draw(ctx);
+        drawMenuAttract: (_, keepOut) => {
+          Attract.draw(ctx, keepOut);
         },
         renderScreen: (next) => {
           renderRegisteredScreen(next, interfaceComposition.screens.renderers);

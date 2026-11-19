@@ -31,6 +31,8 @@ export interface RenderPipelinePorts<Screen extends string> {
   readonly setTheme: (background: string, playLike: boolean) => void;
   readonly renderWorldLayers: (screenRectangle: ScreenRectangle, playLike: boolean) => void;
   readonly renderReticle: () => void;
+  /** The one scrim every run overlay (pause, results, draft, revive, quit confirm, playground menus) sits on. */
+  readonly renderOverlayBackdrop: (screenRectangle: ScreenRectangle) => void;
   readonly isMenuScreen: (screen: Screen) => boolean;
   readonly enterSeconds: () => number;
   readonly setEnterSeconds: (seconds: number) => void;
@@ -76,6 +78,7 @@ export function renderPresentationFrame<Screen extends string>(ports: RenderPipe
   ports.setTheme(background, playLike);
   if (playLike) ports.renderWorldLayers(rectangle, playLike);
   if (screen === "playing") ports.renderReticle();
+  else if (playLike) ports.renderOverlayBackdrop(rectangle);
 
   const entering = screen !== ports.previousScreen();
   // A return lands where the player left the screen; any other entry starts at the top.

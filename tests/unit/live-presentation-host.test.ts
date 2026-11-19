@@ -131,7 +131,7 @@ describe("live presentation host", () => {
     });
     try {
       compositionModule.createLivePresentationFrameHost(
-        { timeSeconds: () => 1 } as never,
+        { timeSeconds: () => 1, screen: () => "mainmenu", controls: () => [] } as never,
         {
           context: { save: vi.fn(), restore: vi.fn() },
           ui: { badge, rotateGate: rotation, t: { color: { accent: "#abc" } } },
@@ -213,6 +213,7 @@ describe("live presentation host", () => {
         setTheme: vi.fn(),
         renderWorldLayers: screenDraw,
         renderReticle: vi.fn(),
+        renderOverlayBackdrop: vi.fn(),
         isMenuScreen: () => false,
         enterSeconds: () => 1,
         setEnterSeconds: vi.fn(),
