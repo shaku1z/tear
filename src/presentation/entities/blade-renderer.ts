@@ -18,6 +18,15 @@ export interface BladeRendererDependencies {
   readonly lerp: (from: number, to: number, amount: number) => number;
 }
 
+type Point = Readonly<{ x: number; y: number }>;
+
+/**
+ * Every blade is drawn in the theme's ink over a thin edge of the opposite tone. The theme takes its polarity from
+ * the stage background, so ink alone vanishes where a floor or platform has the ink's own tone (a black floor on a
+ * light stage); the edge keeps the silhouette on any ground. `width` is added on each side of an ink stroke.
+ */
+export const BLADE_EDGE = { light: "#ffffff", dark: "rgba(10,12,20,0.9)", width: 1.5 } as const;
+
 export function createBladeRenderer({
   policy,
   graphics,
@@ -30,6 +39,30 @@ export function createBladeRenderer({
   const trailAlpha = policy.juice.trailAlpha;
   const chainSegments = policy.chainSegments ?? 14;
   const chamberCount = policy.chamberCount ?? 4;
+  /** The edge tone for the current theme; the theme can change between frames. */
+  const edgeColor = (): string => (theme.dark ? BLADE_EDGE.dark : BLADE_EDGE.light);
+  /**
+   * Straight ink strokes over their edges: every edge first, then every ink stroke, so one stroke's edge never cuts
+   * across another's ink. Only the first stroke carries the rim shadow, as the single ink stroke did before.
+   */
+  function edgedStrokes(
+    context: CanvasRenderingContext2D,
+    strokes: readonly Readonly<{ from: Point; to: Point; width: number }>[],
+  ): void {
+    for (const [color, extra] of [
+      [edgeColor(), BLADE_EDGE.width * 2],
+      [theme.ink, 0],
+    ] as const)
+      for (const stroke of strokes) {
+        context.strokeStyle = color;
+        context.lineWidth = stroke.width + extra;
+        context.beginPath();
+        context.moveTo(stroke.from.x, stroke.from.y);
+        context.lineTo(stroke.to.x, stroke.to.y);
+        context.stroke();
+        context.shadowBlur = 0;
+      }
+  }
   function drawBody(context: CanvasRenderingContext2D, blade: BladeRenderSnapshot): void {
     const scale = blade.state === "held" ? 1 : blade.throwSizeMult;
     if (!graphics.low) {
@@ -39,21 +72,19 @@ export function createBladeRenderer({
     context.strokeStyle = theme.ink;
     context.fillStyle = theme.ink;
     context.lineCap = "round";
+    const outline = edgeColor();
+    const tip = { x: blade.tipX, y: blade.tipY };
 
     if (blade.model === "hammer") {
-      context.lineWidth = 7 * scale;
-      context.beginPath();
-      context.moveTo(blade.x, blade.y);
-      context.lineTo(blade.tipX, blade.tipY);
-      context.stroke();
-      context.shadowBlur = 0;
+      edgedStrokes(context, [{ from: blade, to: tip, width: 7 * scale }]);
       context.save();
       context.translate(blade.tipX, blade.tipY);
       context.rotate(blade.angle);
       const headLength = 22 * scale;
       const headHeight = 16 * scale;
+      context.fillStyle = theme.ink;
       context.fillRect(-headLength * 0.35, -headHeight, headLength, headHeight * 2);
-      context.strokeStyle = theme.dark ? "rgba(10,12,20,0.9)" : "#fff";
+      context.strokeStyle = outline;
       context.lineWidth = 2;
       context.strokeRect(-headLength * 0.35, -headHeight, headLength, headHeight * 2);
       context.restore();
@@ -66,7 +97,6 @@ export function createBladeRenderer({
       context.rotate(blade.angle);
       const length = len(blade.tipX - blade.x, blade.tipY - blade.y),
         width = 14 * scale;
-      const outline = theme.dark ? "rgba(10,12,20,0.9)" : "#fff";
       // A readable two-handed hilt: pommel, wrapped grip, shoulders, and a broad
       // crossguard remain visible even when the weapon is spinning at throw scale.
       context.fillStyle = theme.ink;
@@ -140,12 +170,18 @@ export function createBladeRenderer({
             y: lerp(hand.y, blade.tipY, amount) + Math.sin(amount * Math.PI) * sagAmount,
           });
         }
-      context.lineWidth = 2 * scale;
-      context.strokeStyle = chainColor;
-      context.beginPath();
-      context.moveTo(points[0]?.x ?? hand.x, points[0]?.y ?? hand.y);
-      for (const point of points.slice(1)) context.lineTo(point.x, point.y);
-      context.stroke();
+      // The chain's edge first, then the chain over it; the links sit on the same edge.
+      for (const [color, lineWidth] of [
+        [outline, 2 * scale + BLADE_EDGE.width * 2],
+        [chainColor, 2 * scale],
+      ] as const) {
+        context.lineWidth = lineWidth;
+        context.strokeStyle = color;
+        context.beginPath();
+        context.moveTo(points[0]?.x ?? hand.x, points[0]?.y ?? hand.y);
+        for (const point of points.slice(1)) context.lineTo(point.x, point.y);
+        context.stroke();
+      }
       // Alternating elongated links make the chain articulate instead of reading as
       // a single rubber tether. Link positions are deterministic simulation output.
       for (let index = 1; index < points.length - 1; index++) {
@@ -172,7 +208,11 @@ export function createBladeRenderer({
       context.lineTo(-3 * scale, 0);
       context.lineTo(-7 * scale, 11 * scale);
       context.closePath();
+      context.fillStyle = theme.ink;
       context.fill();
+      context.strokeStyle = outline;
+      context.lineWidth = BLADE_EDGE.width;
+      context.stroke();
       context.restore();
       return;
     }
@@ -182,7 +222,6 @@ export function createBladeRenderer({
       context.translate(blade.x, blade.y);
       context.rotate(blade.angle);
       const length = len(blade.tipX - blade.x, blade.tipY - blade.y);
-      const outline = theme.dark ? "rgba(10,12,20,0.9)" : "#fff";
       // Heavy pistol silhouette: angled grip, beavertail, trigger guard, slide,
       // squared muzzle, and a blade beneath the barrel.
       context.fillStyle = theme.ink;
@@ -250,19 +289,16 @@ export function createBladeRenderer({
       return;
     }
 
-    context.lineWidth = 7 * scale;
-    context.beginPath();
-    context.moveTo(blade.x, blade.y);
-    context.lineTo(blade.tipX, blade.tipY);
-    context.stroke();
-    context.shadowBlur = 0;
     const guardX = Math.cos(blade.angle + Math.PI / 2) * 9;
     const guardY = Math.sin(blade.angle + Math.PI / 2) * 9;
-    context.lineWidth = 5;
-    context.beginPath();
-    context.moveTo(blade.x - guardX, blade.y - guardY);
-    context.lineTo(blade.x + guardX, blade.y + guardY);
-    context.stroke();
+    edgedStrokes(context, [
+      { from: blade, to: tip, width: 7 * scale },
+      {
+        from: { x: blade.x - guardX, y: blade.y - guardY },
+        to: { x: blade.x + guardX, y: blade.y + guardY },
+        width: 5,
+      },
+    ]);
   }
 
   function drawTrail(context: CanvasRenderingContext2D, blade: BladeRenderSnapshot): void {
