@@ -1,3 +1,5 @@
+import { isObject } from "./records";
+
 function canonicalize(value: unknown, path: string): string {
   if (value === null || typeof value === "boolean" || typeof value === "string") return JSON.stringify(value);
   if (typeof value === "number") {
@@ -7,7 +9,7 @@ function canonicalize(value: unknown, path: string): string {
   if (Array.isArray(value)) {
     return `[${value.map((entry, index) => canonicalize(entry, `${path}[${String(index)}]`)).join(",")}]`;
   }
-  if (typeof value === "object") {
+  if (isObject(value)) {
     const record = value as Record<string, unknown>;
     const keys = Object.keys(record).sort();
     const entries = keys.map((key) => {
@@ -122,7 +124,7 @@ function hashCanonicalValue(state: CanonicalHashState, value: unknown, path: Can
     hashCodeUnit(state, 0x5d);
     return;
   }
-  if (typeof value === "object") {
+  if (isObject(value)) {
     const record = value as Record<string, unknown>;
     const keys = Object.keys(record).sort();
     hashCodeUnit(state, 0x7b);
