@@ -80,6 +80,13 @@ in two fresh browser contexts against one immutable full build tree. Both
 repeats produced the same run seed, terminal summary, transitions, drafts,
 mechanic summary, sample count, and transcript hash
 `abb81bcd43592dd2d098bae495d17b0ac63234662bc3a2623ef39d91834b95d6`.
+
+Since 2026-11-18 the repeatability journey compares the first 60 samples of 200 frames (about 24,000 ticks, to
+about wave 8) instead of two whole campaigns. Two runs from one seed are compared sample by sample, so a fixed
+stretch proves the same thing per tick, and two whole campaigns never fitted in the 600-second journey limit: the
+nightly check had not passed once. `C24_REPEAT_MAX_SAMPLES` sets a longer comparison by hand. What the shorter
+run leaves out: a difference that first appears after wave 8 in the browser. Headless, `pnpm test:determinism`
+and the simulation determinism property cover any tick.
 The immutable test-build SHA-256 was
 `d1f6d46cf33163100a04fee94f6a16c3ecfe70b5af6f7feb41358aa1b28871bf`.
 
@@ -111,7 +118,9 @@ so it is not wired into the production policy.
 
 `tests/browser-scripted-agent-matrix.js` drives all five production weapons in
 real simulation and now fails unless the declared collective core set is
-observed:
+observed: Each weapon plays until it has shown its own mechanics and any shared mechanic no earlier
+weapon has shown, to a limit of 60 batches of 200 frames; Riftlock goes first because it can show all of them.
+The journey prints batches, ticks and seconds per weapon. The set:
 
 - held slash;
 - launch and airborne juggle;

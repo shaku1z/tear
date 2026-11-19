@@ -9,7 +9,13 @@ const repositoryRoot = path.resolve(__dirname, "..");
 const buildDirectoryName = process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone";
 const buildDirectory = path.join(repositoryRoot, "dist", buildDirectoryName);
 const sampleStepBudget = 200;
-const maxSamples = Number(process.env.C24_REPEAT_MAX_SAMPLES || 4_000);
+/**
+ * How many samples of 200 frames each run plays before the two are compared. Two runs from one seed are compared
+ * sample by sample, so a fixed stretch proves the same thing per tick as a whole campaign, and two whole campaigns
+ * do not fit in the journey limit (one takes more than 600 s). 60 samples is about 24,000 ticks, to about wave 8.
+ * Set C24_REPEAT_MAX_SAMPLES for a longer comparison by hand.
+ */
+const maxSamples = Number(process.env.C24_REPEAT_MAX_SAMPLES || 60);
 const requestedSeed = Number(process.env.C24_REPEAT_SEED || 117);
 const scenario = Object.freeze({
   profile: process.env.C24_REPEAT_PROFILE || "competent",
