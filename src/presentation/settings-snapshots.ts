@@ -51,6 +51,8 @@ export interface SettingsEnvironmentSnapshot {
   readonly installAvailable: boolean;
   readonly update: Readonly<{ ready: boolean; applying: boolean }>;
   readonly privacy: SettingsPrivacyView;
+  /** The running build as the player reads it (version and short revision). */
+  readonly buildLabel: string;
   readonly presets: Readonly<Record<string, ControllerPresetView>>;
   readonly controllerGlyphs?: readonly string[];
 }
@@ -245,5 +247,7 @@ export function buildSettingsSections(
       kind: "cycle",
       enabled: !environment.update.applying,
     });
+  // Last, so it reads as the footer of the list: what a player quotes when they report a problem.
+  rows.push({ key: "version", label: "Version", value: environment.buildLabel, kind: "info" });
   return [{ label: "GENERAL", rows }];
 }
