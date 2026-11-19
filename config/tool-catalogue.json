@@ -1880,6 +1880,10 @@
       "scripts/package-target.mjs",
       "vite.config.ts"
     ],
+    "scripts/application-chunks.mjs": [
+      "tests/unit/application-chunks.test.mjs",
+      "vite.config.ts"
+    ],
     "scripts/audio-profile.mjs": [
       "scripts/build-target.mjs"
     ],
@@ -2011,6 +2015,7 @@
     ]
   },
   "declarations": [
+    "scripts/application-chunks.d.mts",
     "scripts/build-targets.d.mts",
     "scripts/campaign-publication-boundary.d.mts",
     "scripts/music-cover.d.mts",

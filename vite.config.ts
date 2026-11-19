@@ -2,6 +2,7 @@ import { assertTutorialGoldFresh } from "./scripts/tutorial-gold-compatibility.m
 import { defineConfig, type Plugin } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { readSourceIdentitySync } from "./scripts/release-artifact.mjs";
+import { applicationChunk } from "./scripts/application-chunks.mjs";
 import {
   DEVELOPER_ONLY_ROLE,
   developerModulesInBundle,
@@ -142,92 +143,6 @@ function developerCodeBoundary(name: TargetName): Plugin {
         );
     },
   };
-}
-
-const TUTORIAL_GOLD_DATA = "gameplay/training/tutorial-gold-reference-data.json";
-
-/**
- * `src/app/<folder>/` -> chunk; other folders and the app root go to runtime-app-core.
- * A group also takes the static dependencies of its modules that an earlier group
- * (in name order) has not taken, so catalog and combat hold their folders' closures
- * and core holds the rest of the application.
- */
-const APPLICATION_FOLDER_CHUNKS: Readonly<Record<string, string>> = {
-  library: "runtime-app-catalog",
-  combat: "runtime-app-combat",
-  world: "runtime-app-combat",
-};
-
-/** The entry points import the application composition dynamically; it is where the startup path begins. */
-const STARTUP_ROOT = "/src/app/shell/composition.ts";
-
-interface ChunkModuleInfo {
-  readonly isEntry: boolean;
-  readonly importers: readonly string[];
-  readonly dynamicImporters: readonly string[];
-}
-interface ChunkMeta {
-  readonly getModuleInfo: (id: string) => ChunkModuleInfo | null;
-}
-
-/**
- * True when every path from the application composition to the module crosses a dynamic import.
- * Such a module is fetched on demand, so no named group may pull it into a
- * chunk that the startup path loads (a group would merge it with static code).
- */
-function reachedOnlyDynamically(id: string, meta: ChunkMeta, memo = new Map<string, boolean>()): boolean {
-  const known = memo.get(id);
-  if (known !== undefined) return known;
-  if (id.replaceAll("\\", "/").endsWith(STARTUP_ROOT)) return false;
-  memo.set(id, false); // a cycle through static importers is not evidence of a dynamic-only path
-  const info = meta.getModuleInfo(id);
-  const dynamicOnly =
-    info !== null &&
-    !info.isEntry &&
-    info.dynamicImporters.length + info.importers.length > 0 &&
-    info.importers.every((importer) => reachedOnlyDynamically(importer, meta, memo));
-  memo.set(id, dynamicOnly);
-  return dynamicOnly;
-}
-
-/** Keep the async application composition below the release transfer budget. */
-function applicationChunk(id: string, meta: ChunkMeta): string | undefined {
-  const normalized = id.replaceAll("\\", "/");
-  const source = normalized.indexOf("/src/");
-  if (source < 0) return undefined;
-  const relative = normalized.slice(source + "/src/".length);
-  if (reachedOnlyDynamically(id, meta)) return undefined;
-  const topLevel = relative.split("/")[0] ?? "";
-  if (topLevel === "app") return APPLICATION_FOLDER_CHUNKS[relative.split("/")[1] ?? ""] ?? "runtime-app-core";
-  // The ~1.5 MB tutorial demonstration corpus is imported only by training
-  // preflight; its own chunk keeps it out of the startup modulepreload set.
-  if (relative === TUTORIAL_GOLD_DATA) return "tutorial-gold-reference";
-  // A painted stage background (manifest and image URLs) is imported on demand
-  // when a run nears its stage; its own chunk keeps it out of the startup set.
-  if (relative.startsWith("presentation/assets/scenes/")) return undefined;
-  if (topLevel === "gameplay") {
-    const area = relative.split("/").slice(1, 2)[0] ?? "core";
-    return `gameplay-${area}`;
-  }
-  if (
-    [
-      "presentation",
-      "audio",
-      "ghost",
-      "tearbench",
-      "agents",
-      "input",
-      "persistence",
-      "platform",
-      "replay",
-      "simulation",
-      "diagnostics",
-      "domain",
-      "config",
-    ].includes(topLevel)
-  )
-    return `runtime-${topLevel}`;
-  return undefined;
 }
 
 export default defineConfig(({ mode, command }) => {
