@@ -856,15 +856,6 @@
       ],
       "duration": "under-a-minute"
     },
-    "scene": {
-      "purpose": "Painted stage backgrounds: validate, build, contrast, contact sheet and in-game preview of scene packages",
-      "effects": [
-        "writes-repo-files",
-        "writes-artifacts",
-        "launches-browser"
-      ],
-      "duration": "under-a-minute"
-    },
     "check:architecture": {
       "purpose": "Source architecture gate (roles, layer edges, cycles, module size); --update lowers the baseline",
       "effects": [
@@ -1740,18 +1731,6 @@
         "assets:sheets"
       ]
     },
-    "scripts/scene.mjs": {
-      "purpose": "The pnpm scene command; build rewrites a package's images and manifest, reports and previews write elsewhere",
-      "effects": [
-        "writes-repo-files",
-        "writes-artifacts",
-        "launches-browser"
-      ],
-      "duration": "under-a-minute",
-      "via": [
-        "scene"
-      ]
-    },
     "scripts/music-cover.mjs": {
       "purpose": "The pnpm music:cover command; add encodes one painting into src/presentation/assets/music-covers and writes its covers.json row",
       "effects": [
@@ -1958,35 +1937,6 @@
       "scripts/report-remaining-workspace-inventory.mjs",
       "scripts/report-workspace-recovery.mjs"
     ],
-    "scripts/scene/build.mjs": [
-      "scripts/scene.mjs"
-    ],
-    "scripts/scene/hidden-paint.mjs": [
-      "scripts/scene/build.mjs",
-      "scripts/scene/pixel-checks.mjs",
-      "tests/unit/scene-size-rule.test.ts"
-    ],
-    "scripts/scene/package-files.mjs": [
-      "scripts/build-target.mjs",
-      "scripts/scene.mjs",
-      "scripts/scene/build.mjs",
-      "scripts/scene/preview.mjs",
-      "scripts/scene/reports.mjs",
-      "tests/unit/scene-packages.test.ts",
-      "tests/unit/scene-size-rule.test.ts"
-    ],
-    "scripts/scene/pixel-checks.mjs": [
-      "scripts/scene.mjs",
-      "tests/unit/scene-packages.test.ts",
-      "tests/unit/scene-size-rule.test.ts"
-    ],
-    "scripts/scene/preview.mjs": [
-      "scripts/scene.mjs"
-    ],
-    "scripts/scene/reports.mjs": [
-      "scripts/scene.mjs",
-      "tests/unit/scene-packages.test.ts"
-    ],
     "scripts/tearbench-build-artifact.mjs": [
       "scripts/build-target.mjs",
       "tests/tearbench-build-artifact.test.mjs"
@@ -2022,10 +1972,6 @@
     "scripts/music-cover.d.mts",
     "scripts/release-artifact.d.mts",
     "scripts/release-developer-code.d.mts",
-    "scripts/scene/hidden-paint.d.mts",
-    "scripts/scene/package-files.d.mts",
-    "scripts/scene/pixel-checks.d.mts",
-    "scripts/scene/reports.d.mts",
     "scripts/test-files.d.mts",
     "scripts/tutorial-gold-compatibility.d.mts"
   ]

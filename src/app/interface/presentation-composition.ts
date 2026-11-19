@@ -151,7 +151,7 @@ export interface LivePresentationFrameServices<Screen extends string, Stage exte
   readonly setTheme: (background: string, playLike: boolean) => void;
   readonly themeInk: () => string;
   readonly backdropPost: (context: CanvasRenderingContext2D, stage: Stage, camera: WorldCamera) => void;
-  /** The colour the stage paints behind play: a ready scene package's paper, else the stage colour. */
+  /** The colour the stage paints behind play: a painted stage's paper, else the stage colour. */
   readonly stageBackground: (stage: Stage) => string;
   readonly renderWorld: () => WorldCamera;
   readonly drawHud: () => void;

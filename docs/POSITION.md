@@ -53,7 +53,7 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 - Next: Keep closing the look toward the owner's reference illustration, then a live layer (light shafts, water glints, sway) as recipe data, then Pale Traverse from a recipe.
 - Owner action: Judge the drawn look against the reference illustration: the owner's taste decides visual work.
-- Evidence: [docs/BACKGROUND_WORKFLOW.md](BACKGROUND_WORKFLOW.md), [tests/unit/stage-art.test.ts](../tests/unit/stage-art.test.ts), [tests/unit/scene-packages.test.ts](../tests/unit/scene-packages.test.ts), [tests/unit/boss-tell-skin.test.ts](../tests/unit/boss-tell-skin.test.ts), [plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md)
+- Evidence: [docs/BACKGROUND_WORKFLOW.md](BACKGROUND_WORKFLOW.md), [tests/unit/stage-art.test.ts](../tests/unit/stage-art.test.ts), [tests/unit/scene-library.test.ts](../tests/unit/scene-library.test.ts), [tests/unit/boss-tell-skin.test.ts](../tests/unit/boss-tell-skin.test.ts), [plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md)
 
 <a id="verdant-gameplay"></a>
 
