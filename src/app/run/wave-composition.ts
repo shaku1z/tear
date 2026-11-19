@@ -47,6 +47,22 @@ export function stageIdAfterWave(
   return next.endlessBiome === null ? undefined : stages[next.endlessBiome % stages.length]?.id;
 }
 
+/**
+ * The stage a run opens on, when the setup screen can know it: the mode fixes
+ * it, or a boss run has a chosen boss and opens on that boss's stage. The setup
+ * screen prepares that stage before the run starts. A shuffled boss run and a
+ * Gauntlet (its trial order is drawn at the start) are not known until the run
+ * starts, so they return undefined and load when first shown.
+ */
+export function startingStageId(
+  mode: RunMode,
+  selectedBoss: string,
+  stages: readonly Readonly<{ id: string; boss?: string }>[],
+): string | undefined {
+  if (mode === "bossonly") return stages.find((stage) => stage.boss === selectedBoss)?.id;
+  return stageIdAfterWave(mode, 0, stages);
+}
+
 export interface LiveWaveCompositionOptions {
   readonly dependencies: GameRuntimeDependencies;
   readonly lifecycle: RunLifecycleController;

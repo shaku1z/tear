@@ -22,6 +22,7 @@ function frame(overrides: Partial<UiFrameInput> = {}): UiFrameInput {
     screen: "menu",
     screenAgeSeconds: 10,
     confirmReleasedSinceOpen: true,
+    inputReleasedSinceOpen: true,
     buttons,
     focus: 0,
     scroll: 0,
@@ -176,28 +177,46 @@ describe("confirm arming on screens that interrupt play", () => {
   const early = UI_CONFIRM_SETTLE_SECONDS - 0.01;
 
   it("tracks screen age and a release since the screen opened", () => {
-    const opened = advanceUiConfirmArming(null, "draft", 5, true);
-    expect(opened).toEqual({ screen: "draft", openedAtSeconds: 5, releasedSinceOpen: false });
-    const stillHeld = advanceUiConfirmArming(opened, "draft", 5.5, true);
+    const opened = advanceUiConfirmArming(null, "draft", 5, true, true);
+    expect(opened).toEqual({
+      screen: "draft",
+      openedAtSeconds: 5,
+      releasedSinceOpen: false,
+      inputReleasedSinceOpen: false,
+    });
+    const stillHeld = advanceUiConfirmArming(opened, "draft", 5.5, true, true);
     expect(stillHeld).toBe(opened);
-    const released = advanceUiConfirmArming(stillHeld, "draft", 5.6, false);
-    expect(released).toEqual({ screen: "draft", openedAtSeconds: 5, releasedSinceOpen: true });
-    expect(advanceUiConfirmArming(released, "draft", 6, true)).toBe(released);
-    expect(advanceUiConfirmArming(released, "gameover", 7, false)).toEqual({
+    const confirmUp = advanceUiConfirmArming(stillHeld, "draft", 5.6, false, true);
+    expect(confirmUp).toEqual({
+      screen: "draft",
+      openedAtSeconds: 5,
+      releasedSinceOpen: true,
+      inputReleasedSinceOpen: false,
+    });
+    const released = advanceUiConfirmArming(confirmUp, "draft", 5.7, false, false);
+    expect(released).toEqual({
+      screen: "draft",
+      openedAtSeconds: 5,
+      releasedSinceOpen: true,
+      inputReleasedSinceOpen: true,
+    });
+    expect(advanceUiConfirmArming(released, "draft", 6, true, true)).toBe(released);
+    expect(advanceUiConfirmArming(released, "gameover", 7, false, false)).toEqual({
       screen: "gameover",
       openedAtSeconds: 7,
       releasedSinceOpen: true,
+      inputReleasedSinceOpen: true,
     });
   });
 
   it("requires both a release and the settle time before keyboard or controller confirm acts", () => {
     for (const screen of ["draft", "reserve", "tierup", "gameover", "win", "continue", "paused", "confirmquit"]) {
-      expect(uiConfirmGate(screen, settled, false).confirm, `${screen} held`).toBe(false);
-      expect(uiConfirmGate(screen, early, true).confirm, `${screen} early`).toBe(false);
-      expect(uiConfirmGate(screen, settled, true).confirm, `${screen} armed`).toBe(true);
+      expect(uiConfirmGate(screen, settled, false, true).confirm, `${screen} held`).toBe(false);
+      expect(uiConfirmGate(screen, early, true, true).confirm, `${screen} early`).toBe(false);
+      expect(uiConfirmGate(screen, settled, true, true).confirm, `${screen} armed`).toBe(true);
     }
     for (const screen of ["menu", "setup", "shop", "settings", "codex"]) {
-      expect(uiConfirmGate(screen, 0, false)).toEqual({ confirm: true, pointer: true });
+      expect(uiConfirmGate(screen, 0, false, false)).toEqual({ confirm: true, pointer: true, navigation: true });
     }
   });
 
@@ -236,6 +255,29 @@ describe("confirm arming on screens that interrupt play", () => {
       }),
     );
     expect(hovered.focus).toBe(1);
+  });
+
+  it("ignores every key held into an end screen until all are released and it has settled", () => {
+    const right = { left: false, right: true, up: false, down: false } as const;
+    for (const screen of ["gameover", "win", "continue"]) {
+      const held = { screen, buttons, focus: 0, directions: right, confirm: true, back: true } as const;
+      // Arrow, jump (confirm) and back held through the death: nothing moves or opens.
+      const stillHeld = coordinateUiFrame(frame({ ...held, screenAgeSeconds: settled, inputReleasedSinceOpen: false }));
+      expect(stillHeld.focus, screen).toBe(0);
+      expect(stillHeld.action, screen).toBeNull();
+      expect(stillHeld.consumeBack, screen).toBe(true);
+      // Released but still settling: navigation waits too.
+      const settling = coordinateUiFrame(frame({ ...held, screenAgeSeconds: early }));
+      expect(settling.focus, screen).toBe(0);
+      expect(settling.action, screen).toBeNull();
+      // Released and settled: a fresh arrow moves focus.
+      expect(coordinateUiFrame(frame({ screen, buttons, focus: 0, directions: right })).focus, screen).toBe(1);
+    }
+    // Screens that are not end screens keep navigation live while confirm arms.
+    const draft = coordinateUiFrame(
+      frame({ screen: "draft", buttons: cards, directions: right, screenAgeSeconds: 0, inputReleasedSinceOpen: false }),
+    );
+    expect(draft.focus).toBe(1);
   });
 
   it("gates number-key picks on draft, reserve and tier-up with the same arming", () => {

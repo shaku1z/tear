@@ -1,4 +1,4 @@
-import { validateScenePackage, type SceneCamera } from "./scene-contract";
+import { validateScenePackage, type SceneCamera, type SceneWorld } from "./scene-contract";
 import {
   bakeShading,
   drawSceneBack,
@@ -12,12 +12,33 @@ import {
   type SurfaceTarget,
 } from "./scene-renderer";
 
-/** What a stage's lazily imported package module provides. */
-export interface ScenePackageModule {
+/** A package of encoded image files and the manifest that lays them out. */
+export interface ImageScenePackage {
   readonly manifest: unknown;
   /** Built URL of every image file named in the manifest, keyed by file name. */
   readonly files: Readonly<Record<string, string>>;
 }
+
+/** What a drawn stage's painter is given: canvases, the world and a way to yield the thread. */
+export interface ScenePaintPorts {
+  readonly world: SceneWorld;
+  readonly createCanvas: (width: number, height: number) => SceneCanvas & SceneBitmap;
+  readonly now: () => number;
+  /** Resolves once the browser has had the thread back. */
+  readonly nextSlice: () => Promise<void>;
+  /** Longest stretch, in ms, the painter may run before yielding. */
+  readonly sliceMs: number;
+  /** Canvas resolution multiplier (below 1 on low graphics). */
+  readonly detail: number;
+}
+
+/** A stage drawn from data at load: it paints its own layers. */
+export interface PaintedScenePackage {
+  paint(ports: ScenePaintPorts): Promise<LoadedScene>;
+}
+
+/** What a stage's lazily imported package module provides. */
+export type ScenePackageModule = ImageScenePackage | PaintedScenePackage;
 
 export type ScenePackageLoaders = Readonly<Record<string, () => Promise<ScenePackageModule>>>;
 
@@ -25,6 +46,9 @@ export type SceneStatus = "none" | "loading" | "ready" | "failed";
 
 export interface SceneLibraryPorts {
   readonly packages: ScenePackageLoaders;
+  readonly world: SceneWorld;
+  /** Resolves once the browser has had the thread back (drawn stages paint in slices). */
+  readonly nextSlice: () => Promise<void>;
   readonly loadImage: (url: string) => Promise<SceneBitmap>;
   /** Canvas to bake shading into at load; without it shading draws per frame. */
   readonly createCanvas?: (width: number, height: number) => SceneCanvas & SceneBitmap;
@@ -113,6 +137,10 @@ export interface SceneLibrary {
 }
 
 const FADE_SECONDS = 0.6;
+/** A drawn stage hands the thread back after this long, so painting never becomes a long task. */
+const PAINT_SLICE_MS = 4;
+/** Canvas resolution of drawn stages on low graphics. */
+const LOW_GRAPHICS_DETAIL = 0.6;
 
 interface Entry {
   status: SceneStatus;
@@ -128,6 +156,17 @@ function releaseImages(loaded: LoadedScene, ports: SceneLibraryPorts): void {
 }
 
 async function loadScene(module: ScenePackageModule, ports: SceneLibraryPorts): Promise<LoadedScene> {
+  if ("paint" in module) {
+    if (ports.createCanvas === undefined) throw new Error("drawn stages need a canvas to paint into");
+    return module.paint({
+      world: ports.world,
+      createCanvas: ports.createCanvas,
+      now: ports.now,
+      nextSlice: ports.nextSlice,
+      sliceMs: PAINT_SLICE_MS,
+      detail: ports.lowGraphics() ? LOW_GRAPHICS_DETAIL : 1,
+    });
+  }
   const scene = validateScenePackage(module.manifest);
   const decoded = await Promise.all(
     scene.images.map(async (image) => {

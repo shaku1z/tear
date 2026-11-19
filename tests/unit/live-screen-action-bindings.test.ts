@@ -44,17 +44,15 @@ describe("live screen action bindings", () => {
     expect(ghostFiles.downloadArchive).toHaveBeenLastCalledWith("capsule", true);
   });
 
-  it("maps canonical Replay Editor actions and legacy Studio actions to one adapter", () => {
-    const toggleStudio = vi.fn(),
-      createStudioCutList = vi.fn();
+  it("maps the replay editor actions to the replay adapter", () => {
+    const toggleReplayEditor = vi.fn(),
+      appendClip = vi.fn();
     const dispatch = createLiveScreenActionBindings({
-      replay: { toggleStudio, createStudioCutList },
+      replay: { toggleReplayEditor, appendClip },
     } as unknown as ScreenActionBindingPorts);
     dispatch({ type: "replay.editor.toggle" });
-    dispatch({ type: "replay.studio.toggle" });
-    dispatch({ type: "replay.editor.createCutList" });
-    dispatch({ type: "replay.studio.createCutList" });
-    expect(toggleStudio).toHaveBeenCalledTimes(2);
-    expect(createStudioCutList).toHaveBeenCalledTimes(2);
+    dispatch({ type: "replay.editor.appendClip" });
+    expect(toggleReplayEditor).toHaveBeenCalledTimes(1);
+    expect(appendClip).toHaveBeenCalledTimes(1);
   });
 });

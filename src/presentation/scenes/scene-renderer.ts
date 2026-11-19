@@ -3,7 +3,7 @@ import {
   type Rect,
   type SceneCamera,
   type SceneLayer,
-  type ScenePackage,
+  type SceneLayout,
   type SceneShade,
 } from "./scene-contract";
 
@@ -11,7 +11,7 @@ import {
 export type SceneBitmap = CanvasImageSource & { readonly width: number; readonly height: number };
 
 export interface LoadedScene {
-  readonly scene: ScenePackage;
+  readonly scene: SceneLayout;
   readonly images: ReadonlyMap<string, SceneBitmap>;
   /** Shades still drawn each frame; the rest were baked into their layer at load. */
   readonly shading: readonly SceneShade[];
@@ -52,7 +52,7 @@ function layerSpaceView(frame: SceneFrame, k: number, tx: number, ty: number): S
 }
 
 /** Soft transition from the art into the package edge colour where a camera outruns the art. */
-function featherEdges(context: CanvasRenderingContext2D, scene: ScenePackage, rect: Rect, view: SceneView): void {
+function featherEdges(context: CanvasRenderingContext2D, scene: SceneLayout, rect: Rect, view: SceneView): void {
   const [x, y, w, h] = rect;
   const feather = Math.min(scene.edge.feather, w / 4, h / 4);
   if (feather <= 0) return;
@@ -134,7 +134,7 @@ function drawShade(
  * decoded copy in memory is shaded. Shades with no such layer stay per frame.
  */
 export function bakeShading(
-  scene: ScenePackage,
+  scene: SceneLayout,
   images: ReadonlyMap<string, SceneBitmap>,
   createCanvas: (width: number, height: number) => SceneCanvas & SceneBitmap,
 ): LoadedScene {

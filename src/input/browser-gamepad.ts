@@ -7,6 +7,8 @@ import type {
   PadPresets,
 } from "./browser-input-contracts";
 
+/** Menu stick deadzone, firmer than gameplay so stick drift never navigates. */
+const MENU_DEAD = 0.5;
 /** The pad drives keyboard-shaped consumers by holding or pressing an action's first bound key. */
 const keyFor = (action: KeyboardAction): string => keyCodes(action)[0] ?? action;
 
@@ -50,6 +52,8 @@ interface BrowserGamepadInternal extends BrowserGamepad {
   _down(gamepad: Gamepad, index: number): boolean;
   _edgeAny(gamepad: Gamepad, buttons: readonly number[]): boolean;
   _downAny(gamepad: Gamepad, buttons: readonly number[]): boolean;
+  /** Any button, or the left stick past the menu deadzone: an end screen waits for all of it to let go. */
+  _anyMenuInputDown(gamepad: Gamepad): boolean;
 }
 
 // Temporary ESM Gamepad adapter for the classic game shell.
@@ -303,15 +307,20 @@ export function createBrowserGamepad(dependencies: BrowserGamepadDependencies): 
     _downAny(gp, arr) {
       return arr.some((i) => this._isDown(gp, i));
     },
+    _anyMenuInputDown(gp) {
+      const stick = Math.max(Math.abs(gp.axes[0] ?? 0), Math.abs(gp.axes[1] ?? 0));
+      return stick > MENU_DEAD || gp.buttons.some((_, index) => this._isDown(gp, index));
+    },
 
     poll(dt, uiMode) {
       if (this.toastT > 0) this.toastT -= dt;
-      Input.padConfirmHeld = false;
+      Input.padConfirmHeld = Input.padMenuHeld = false;
       if (!this.connected) return;
       const gp = navigator.getGamepads()[this.index];
       if (!gp) return;
       // A held across a screen change must be released before that screen's confirm arms.
       Input.padConfirmHeld = this._isDown(gp, 0);
+      Input.padMenuHeld = this._anyMenuInputDown(gp);
       // post preset-switch: adopt the current physical button states as the baseline so
       // a button held across the switch is not read as a fresh press in the new map.
       if (this._resync) {
@@ -345,16 +354,15 @@ export function createBrowserGamepad(dependencies: BrowserGamepadDependencies): 
         // B backs out. Left/Right were previously dropped; now emitted with dominant-
         // axis resolution so a diagonal never fires two nav events in one repeat.
         this._navT -= dt;
-        const menuDead = 0.5; // firmer than gameplay so stick drift never navigates
         const dx =
-          (this._down(gp, 14) ? -1 : 0) + (this._down(gp, 15) ? 1 : 0) + (Math.abs(ax) > menuDead ? Math.sign(ax) : 0);
+          (this._down(gp, 14) ? -1 : 0) + (this._down(gp, 15) ? 1 : 0) + (Math.abs(ax) > MENU_DEAD ? Math.sign(ax) : 0);
         const dy =
-          (this._down(gp, 12) ? -1 : 0) + (this._down(gp, 13) ? 1 : 0) + (Math.abs(ay) > menuDead ? Math.sign(ay) : 0);
+          (this._down(gp, 12) ? -1 : 0) + (this._down(gp, 13) ? 1 : 0) + (Math.abs(ay) > MENU_DEAD ? Math.sign(ay) : 0);
         let navKey = null;
         if (dx !== 0 || dy !== 0) {
           // dominant axis: the analog stick compares magnitudes; a d-pad diagonal (no
           // strong analog) falls back to vertical, the safer default for lists.
-          const horiz = Math.abs(ax) > Math.abs(ay) && Math.abs(ax) > menuDead;
+          const horiz = Math.abs(ax) > Math.abs(ay) && Math.abs(ax) > MENU_DEAD;
           if (dy !== 0 && !horiz) navKey = keyFor(dy < 0 ? "menu-up" : "menu-down");
           else if (dx !== 0) navKey = keyFor(dx < 0 ? "menu-left" : "menu-right");
           else navKey = keyFor(dy < 0 ? "menu-up" : "menu-down");

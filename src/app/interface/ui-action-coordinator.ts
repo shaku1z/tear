@@ -4,7 +4,7 @@ import {
   type FocusableRect,
   type NavigationDirection,
 } from "./ui-navigation";
-import { screenNeedsConfirmArming, screenNeedsPointerSettle } from "../../domain/screen-catalog";
+import { screenNeedsConfirmArming, screenNeedsHoldArming, screenNeedsPointerSettle } from "../../domain/screen-catalog";
 import { anyKeyIn, rangeKeyIn } from "../../domain/keyboard-bindings";
 
 export interface UiActionButton extends FocusableRect {
@@ -22,7 +22,8 @@ export interface UiPoint {
  * number keys, mouse and touch). A screen that interrupts play ignores choices
  * until the player has let go of confirm since it opened and this long has
  * passed, so a jump or retry mash meant for the previous screen never picks.
- * Which screens arm confirm and settle pointers is the screen catalog's
+ * End screens also hold back navigation and back until every menu input held
+ * when they opened was released. Which screens arm and settle is the screen catalog's
  * (src/domain/screen-catalog.ts).
  */
 export const UI_CONFIRM_SETTLE_SECONDS = 0.35;
@@ -31,20 +32,31 @@ export interface UiConfirmArmingState {
   readonly screen: string;
   readonly openedAtSeconds: number;
   readonly releasedSinceOpen: boolean;
+  /** Every menu input (navigation, confirm, back, choices) has been up at least once since the screen opened. */
+  readonly inputReleasedSinceOpen: boolean;
 }
 
-/** Records when the current screen opened and whether confirm has been up since then. */
+/** Records when the current screen opened and whether confirm, and every menu input, has been up since then. */
 export function advanceUiConfirmArming(
   previous: UiConfirmArmingState | null,
   screen: string,
   nowSeconds: number,
   confirmHeld: boolean,
+  inputHeld: boolean,
 ): UiConfirmArmingState {
   if (previous?.screen !== screen) {
-    return Object.freeze({ screen, openedAtSeconds: nowSeconds, releasedSinceOpen: !confirmHeld });
+    return Object.freeze({
+      screen,
+      openedAtSeconds: nowSeconds,
+      releasedSinceOpen: !confirmHeld,
+      inputReleasedSinceOpen: !inputHeld,
+    });
   }
-  if (previous.releasedSinceOpen || confirmHeld) return previous;
-  return Object.freeze({ ...previous, releasedSinceOpen: true });
+  const releasedSinceOpen = previous.releasedSinceOpen || !confirmHeld;
+  const inputReleasedSinceOpen = previous.inputReleasedSinceOpen || !inputHeld;
+  if (releasedSinceOpen === previous.releasedSinceOpen && inputReleasedSinceOpen === previous.inputReleasedSinceOpen)
+    return previous;
+  return Object.freeze({ ...previous, releasedSinceOpen, inputReleasedSinceOpen });
 }
 
 export interface UiConfirmGate {
@@ -52,17 +64,22 @@ export interface UiConfirmGate {
   readonly confirm: boolean;
   /** Mouse clicks and touch taps may activate a control. */
   readonly pointer: boolean;
+  /** Keyboard and controller navigation and back may act. */
+  readonly navigation: boolean;
 }
 
 export function uiConfirmGate(
   screen: string,
   screenAgeSeconds: number,
   confirmReleasedSinceOpen: boolean,
+  inputReleasedSinceOpen: boolean,
 ): UiConfirmGate {
   const settled = screenAgeSeconds >= UI_CONFIRM_SETTLE_SECONDS;
+  const held = screenNeedsHoldArming(screen) && !(settled && inputReleasedSinceOpen);
   return Object.freeze({
-    confirm: !screenNeedsConfirmArming(screen) || (settled && confirmReleasedSinceOpen),
+    confirm: !held && (!screenNeedsConfirmArming(screen) || (settled && confirmReleasedSinceOpen)),
     pointer: !screenNeedsPointerSettle(screen) || settled,
+    navigation: !held,
   });
 }
 
@@ -72,6 +89,8 @@ export interface UiFrameInput {
   readonly screenAgeSeconds: number;
   /** Every confirm input has been up at least once since `screen` opened. */
   readonly confirmReleasedSinceOpen: boolean;
+  /** Every menu input has been up at least once since `screen` opened. */
+  readonly inputReleasedSinceOpen: boolean;
   readonly buttons: readonly UiActionButton[];
   readonly focus: number;
   readonly scroll: number;
@@ -210,6 +229,12 @@ export function coordinateUiFrame(input: UiFrameInput): UiFrameDecision {
     });
   }
 
+  const gate = uiConfirmGate(
+    input.screen,
+    input.screenAgeSeconds,
+    input.confirmReleasedSinceOpen,
+    input.inputReleasedSinceOpen,
+  );
   let focus = input.focus;
   // mouse hover moves focus while the mouse owns the interface
   const pointer = input.pointer;
@@ -225,6 +250,18 @@ export function coordinateUiFrame(input: UiFrameInput): UiFrameDecision {
     position = 0;
     focus = enabled[0] ?? focus;
   }
+  // An end screen ignores keyboard and controller input held from play (see the screen catalog);
+  // mouse hover above still moves focus.
+  if (!gate.navigation) {
+    return Object.freeze({
+      focus,
+      scroll,
+      action: null,
+      consumeBack: input.back,
+      pointer: gate.pointer ? "read" : "consume",
+      playUiSound: false,
+    });
+  }
   let moved = false;
   for (const direction of ["left", "right", "up", "down"] as const) {
     if (moved || !input.directions[direction]) continue;
@@ -239,8 +276,7 @@ export function coordinateUiFrame(input: UiFrameInput): UiFrameDecision {
     else if (input.next) focus = enabled[(position + 1) % enabled.length] ?? focus;
   }
 
-  // Navigation above stays live through the settle window; choices wait for the gate.
-  const gate = uiConfirmGate(input.screen, input.screenAgeSeconds, input.confirmReleasedSinceOpen);
+  // Navigation above stays live through the settle window (not on end screens); choices wait for the gate.
   const shortcut = gate.confirm ? quickAction(input.screen, input.pressed, input.buttons, input.context1) : null;
   if (shortcut)
     return Object.freeze({ focus, scroll, action: shortcut, consumeBack: false, pointer: "leave", playUiSound: false });
