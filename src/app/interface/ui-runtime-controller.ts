@@ -30,6 +30,8 @@ export interface UiRuntimeInput {
   confirmPressed(): boolean;
   /** Any keyboard or controller confirm/choice input is physically down. */
   confirmHeld(): boolean;
+  /** Any keyboard menu key, controller button or stick is physically down. */
+  menuInputHeld(): boolean;
   /** Semantic back this frame (controller back, Escape, Backspace outside text entry). */
   backPressed(): boolean;
   takeClick(): Readonly<{ x: number; y: number }> | null;
@@ -83,7 +85,7 @@ export function handleUiRuntimeFrame(ports: UiRuntimePorts): void {
   const input = ports.input;
   const now = ports.now();
   // Observe every frame (including play) so a screen's age starts when it opens.
-  const arming = advanceUiConfirmArming(ports.arming.state, screen, now, input.confirmHeld());
+  const arming = advanceUiConfirmArming(ports.arming.state, screen, now, input.confirmHeld(), input.menuInputHeld());
   ports.arming.state = arming;
   if (screen === "playing") return;
   const wheel = input.takeUIScroll();
@@ -92,6 +94,7 @@ export function handleUiRuntimeFrame(ports: UiRuntimePorts): void {
     screen,
     screenAgeSeconds: now - arming.openedAtSeconds,
     confirmReleasedSinceOpen: arming.releasedSinceOpen,
+    inputReleasedSinceOpen: arming.inputReleasedSinceOpen,
     buttons: ports.buttons(),
     focus: ports.focus(),
     scroll: ports.scroll(),

@@ -10,7 +10,7 @@ import {
   type RelativeTravel,
 } from "../domain/pointer-ownership";
 import { touchControlAt, touchControlLayout } from "./touch-control-layout";
-import { anyKeyIn, bindsKey, type KeyboardAction } from "../domain/keyboard-bindings";
+import { anyContextKeyIn, anyKeyIn, bindsKey, type KeyboardAction } from "../domain/keyboard-bindings";
 
 /** Keys the browser would otherwise use to scroll the page or move focus. */
 const PAGE_KEYS: readonly KeyboardAction[] = [
@@ -88,6 +88,7 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
     padScrollY: 0, // controller right-stick scroll intent (px/frame), written by gamepad.js
     padBack: false,
     padConfirmHeld: false,
+    padMenuHeld: false,
     pointerInside: true, // the mouse is over the canvas (not over DOM chrome or outside the page)
     // one-frame UI edge flags the gamepad injects (consumed by updateUI):
     _uiTabPrev: false,
@@ -692,6 +693,11 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
     // arms confirm on a newly opened screen only after all of these have been let go.
     confirmHeld() {
       return this.padConfirmHeld || anyKeyIn(this.held, "confirm") || anyKeyIn(this.held, "choose");
+    },
+    // level state of every menu key, controller button and stick; an end screen ignores
+    // keyboard and controller input until all of these have been let go.
+    menuInputHeld() {
+      return this.padMenuHeld || anyContextKeyIn(this.held, "menu");
     },
     // semantic back: controller back or the back keys. Keydown is ignored while a text
     // field owns input (textEntryMode), so Backspace never leaves the rename field.
