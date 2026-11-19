@@ -137,16 +137,27 @@ applies them and answers yes or no with the reason; the merge helper calls it.
    - Switching to `enforce` is the lead's decision, after a few days of
      observe with no false refusals.
    - A label is answered by a line whose bold span starts with it as whole
-     words and ends in a colon, inside the span or after a qualifier:
-     `**Cause and check:**`, `**Cause**:` and `**Measured** (on CI):` count.
-     The answer is the rest of the line or, if that is empty, the indented
-     list under it. A heading such as `### Cause` does not count.
+     words, in one of three shapes:
+     - a colon inside the span: `**Cause:**`, `**Cause and check:**`,
+       `**Cause: the test, not the load.**`;
+     - a colon right after the span, behind at most one parenthetical:
+       `**Cause**:`, `**Measured** (on CI):`;
+     - a label sentence ending in a full stop: `**Cause.**`.
+
+     A colon later in the line's prose does not make a label. The answer is
+     the text after the colon inside the span plus the rest of the line or,
+     if that is empty, the indented list under it. A heading such as
+     `### Cause` does not count.
    - False refusals found in observe, each fixed in the matcher with a test:
      - #214 (2026-11-18) wrote `**Cause and check:**` and was reported as
        "Cause (missing)".
      - #205 (2026-11-18) wrote `**Measured** (…):` and answered Removed with
        a nested list, and was reported as "Measured (missing), Removed
        (empty)".
+     - #240 (2026-11-19) wrote `**Cause: the test, not the load.** …` and was
+       reported as "Cause (empty)". #262 (2026-11-19) wrote `**Cause.** …` and
+       passed only because the old pattern read on to a colon later in the
+       sentence. The answer it took was a fragment.
    - Refusals the report shows that were right: #188 (no design-check
      section) and #208 and #209 (a bare "n/a." for The next one).
    - The labels, the rule and the mode reader live once, in
