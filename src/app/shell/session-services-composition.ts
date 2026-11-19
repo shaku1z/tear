@@ -42,6 +42,7 @@ export function createLiveSessionServices(options: LiveSessionServicesOptions) {
     input: d.Input,
     gamepad: d.PAD,
     audio: d.SFX,
+    statistics: d.privacy.statistics,
     store: d.CG.store,
     navigator: d.browserNavigator,
     matchMedia: (query) => d.browserWindow.matchMedia(query),

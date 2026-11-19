@@ -49,6 +49,8 @@ import type { PlatformBootstrapPersistence } from "../progress/platform-bootstra
 import type { VictoryProfileProgressPersistence } from "../progress/victory-profile-progress-persistence";
 import type { TutorialCompletionPersistence } from "../progress/tutorial-completion-persistence";
 import type { BuildIdentity } from "../../platform/build-identity";
+import type { PrivacyStance } from "../../platform/privacy-stance";
+import type { StatisticsChoice } from "../../platform/statistics-consent";
 
 type EnemyTypes = ReturnType<typeof createEnemyTypes>;
 type MirrorTypes = ReturnType<typeof createMirrorTypes>;
@@ -83,6 +85,8 @@ export interface GameRuntimeDependencies {
   readonly browserIndexedDb: IDBFactory | undefined;
   readonly browserStorage: Pick<Storage, "setItem">;
   readonly browserWindow: Window;
+  /** What this build tells the player about their data, and the player's choice about anonymous run statistics. */
+  readonly privacy: Readonly<{ stance: PrivacyStance; statistics: StatisticsChoice }>;
   /** Which build is running; the frame loop's error screen shows it. */
   readonly build: BuildIdentity;
   readonly browserNavigator: Pick<Navigator, "getGamepads" | "hardwareConcurrency">;

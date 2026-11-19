@@ -49,7 +49,6 @@ function targetHtml(target: TargetDefinition): Plugin {
  * a "standalone" artifact, which this is not).
  */
 export const PREVIEW_DEV_BASE = "/dev/";
-
 function headerRules(prefix: string): string[] {
   return [
     `${prefix}assets/*`,
@@ -255,8 +254,13 @@ export default defineConfig(({ mode, command }) => {
                 clientsClaim: true,
                 navigateFallback: "/index.html",
                 // On the preview origin the dev build lives below this path; its pages
-                // must reach the network, not the release build's cached index.
-                navigateFallbackDenylist: [new RegExp(`^${PREVIEW_DEV_BASE}`, "u")],
+                // must reach the network, not the release build's cached index. So must
+                // the static pages beside the game (public/privacy.html): they are not
+                // precached (see globIgnores) and the game's index must not answer for them.
+                navigateFallbackDenylist: [
+                  new RegExp(`^${PREVIEW_DEV_BASE}`, "u"),
+                  ...definition.staticPages.map((page) => new RegExp(`^/${page}(?:\\.html)?(?:[?#]|$)`, "u")),
+                ],
                 globPatterns: ["**/*.{html,js,css,woff2,png,webmanifest}"],
                 // The tutorial corpus is fetched on demand (training preflight), not at
                 // install: it is runtime-cached on first use so it then works offline.
@@ -270,6 +274,7 @@ export default defineConfig(({ mode, command }) => {
                   "assets/worker-tutorial-gold-*.js",
                   "assets/career-archive-worker-*.js",
                   "assets/live-ghost-reference-worker-*.js",
+                  ...definition.staticPages.map((page) => `${page}.html`),
                   "branding/icons/icon-512.png",
                   "branding/icons/icon-maskable-512.png",
                 ],

@@ -42,6 +42,9 @@ import { createProfileStore } from "../../persistence/profile-store";
 import type { CloudFactory } from "../../platform/cloud-factory";
 import type { TearBuildTarget } from "../../platform/contracts";
 import type { BuildIdentity } from "../../platform/build-identity";
+import { createPrivacyNotice } from "../../platform/browser-privacy-notice";
+import { privacyStanceFor } from "../../platform/privacy-stance";
+import { createStatisticsChoice, statisticsAllowed } from "../../platform/statistics-consent";
 import type { CrazyGamesSdkShape, createCrazyGamesPlatformServices } from "../../platform/crazygames";
 import { createLegacyPlatformCompatibility } from "../../platform/legacy-compat";
 import { browserFullscreen } from "../../platform/browser";
@@ -327,11 +330,25 @@ export function composeTearApplication(options: TearCompositionOptions): void {
       tearScore: () => SFX.musicReplayMetadata(),
     },
   });
+  // What the build keeps and the player's choice about statistics. A statistic is sent only when the build
+  // sends them, the player has not turned them off, and the player has seen the first-run notice.
+  const privacyStance = privacyStanceFor(target);
+  const statisticsChoice = createStatisticsChoice();
+  const privacyNotice =
+    privacyStance.sendsStatistics && privacyStance.privacyUrl !== null
+      ? createPrivacyNotice({ document, storage: window.localStorage, privacyUrl: privacyStance.privacyUrl })
+      : null;
   const { Cloud, FirebaseProvider } = createCloud({
     target,
     getPlatform: () => platform.services,
     getProfile: () => PROFILE,
     getMeta: () => META,
+    statisticsAllowed: () =>
+      statisticsAllowed({
+        stance: privacyStance,
+        choice: statisticsChoice,
+        noticeAcknowledged: () => privacyNotice?.acknowledged() ?? false,
+      }),
   });
   const { META, SHOP } = createMetaProgression<UpgradeDefinition, UpgradeApplyContext & ProgressionApplyContext>({
     store: CG.store,
@@ -397,6 +414,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     browserNavigator: navigator,
     browserStorage: window.localStorage,
     browserWindow: window,
+    privacy: { stance: privacyStance, statistics: statisticsChoice },
     build,
     CG,
     fullscreen: () => platform.services.fullscreen,
@@ -488,6 +506,8 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     weaponCapsuleIntersectsSegment,
   } satisfies GameRuntimeDependencies;
   startLiveGame(gameRuntimeDependencies, worldConfiguration);
+  // Test pages drive the canvas by clicks and must not be covered; they send no statistics either way.
+  if (!tearTestMode) privacyNotice?.showIfDue();
 
   if (tearTestMode) {
     const observedSemanticActions: ReturnType<typeof Input.drainSemanticActions>[number][] = [];

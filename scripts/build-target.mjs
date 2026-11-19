@@ -57,7 +57,7 @@ console.log(
   `${target} audio: ${String(audio.swapped)} file(s) from its own encode, ${String(audio.droppedBytes)} bytes of other targets' audio left out`,
 );
 if (resolved.target.pruneUnrequestedFiles) {
-  const pruned = await pruneCrazyGamesArtifact(staging);
+  const pruned = await pruneCrazyGamesArtifact(staging, resolved.target.staticPages);
   console.log(
     `${target} output: left out ${String(pruned.files.length)} unrequested file(s), ${String(pruned.bytes)} bytes`,
   );
