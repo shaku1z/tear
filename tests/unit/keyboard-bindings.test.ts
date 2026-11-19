@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   KEYBOARD_ACTIONS,
-  KEYBOARD_BINDINGS,
+  KEYBOARD_DEFAULTS,
   KEYBOARD_SCREENS,
   anyKeyIn,
   keyCodeLabel,
@@ -18,19 +18,19 @@ describe("keyboard binding table", () => {
   });
 
   it("refuses the Playground menu on E, where E throws, and accepts it on Tab", () => {
-    const onE = { ...KEYBOARD_BINDINGS, "playground-menu": { codes: ["KeyE"], context: "playground" as const } };
+    const onE = { ...KEYBOARD_DEFAULTS, "playground-menu": { codes: ["KeyE"], context: "playground" as const } };
     expect(keyboardCollisions(onE)).toContainEqual({
       screen: "playground",
       code: "KeyE",
       actions: ["throw", "playground-menu"],
     });
-    expect(KEYBOARD_BINDINGS["playground-menu"]).toEqual({ codes: ["Tab"], context: "playground" });
+    expect(KEYBOARD_DEFAULTS["playground-menu"]).toEqual({ codes: ["Tab"], context: "playground" });
   });
 
   it("binds every action to at least one key, each listed once, live on at least one screen", () => {
     const liveContexts = new Set(Object.values(KEYBOARD_SCREENS).flat());
     for (const action of KEYBOARD_ACTIONS) {
-      const { codes, context } = KEYBOARD_BINDINGS[action];
+      const { codes, context } = KEYBOARD_DEFAULTS[action];
       expect(codes.length, action).toBeGreaterThan(0);
       expect(new Set(codes).size, action).toBe(codes.length);
       expect(liveContexts.has(context), action).toBe(true);
@@ -38,11 +38,11 @@ describe("keyboard binding table", () => {
   });
 
   it("puts throw on E, tether on Q and fullscreen on F, and keeps the Playground menu off E", () => {
-    expect(KEYBOARD_BINDINGS.throw.codes).toEqual(["KeyE"]);
-    expect(KEYBOARD_BINDINGS.tether.codes).toEqual(["KeyQ"]);
-    expect(KEYBOARD_BINDINGS.fullscreen.codes).toEqual(["KeyF"]);
-    expect(KEYBOARD_BINDINGS["playground-menu"].codes).toEqual(["Tab"]);
-    expect(KEYBOARD_BINDINGS.fullscreen.context).toBe("everywhere");
+    expect(KEYBOARD_DEFAULTS.throw.codes).toEqual(["KeyE"]);
+    expect(KEYBOARD_DEFAULTS.tether.codes).toEqual(["KeyQ"]);
+    expect(KEYBOARD_DEFAULTS.fullscreen.codes).toEqual(["KeyF"]);
+    expect(KEYBOARD_DEFAULTS["playground-menu"].codes).toEqual(["Tab"]);
+    expect(KEYBOARD_DEFAULTS.fullscreen.context).toBe("everywhere");
   });
 
   it("names keys by their QWERTY legend", () => {
@@ -58,7 +58,7 @@ describe("keyboard binding table", () => {
 
   it("names only bound keys, and keeps Enter first for the pad's confirm", () => {
     for (const action of KEYBOARD_ACTIONS)
-      for (const code of KEYBOARD_BINDINGS[action].named ?? []) expect(keyCodes(action), action).toContain(code);
+      for (const code of KEYBOARD_DEFAULTS[action].named ?? []) expect(keyCodes(action), action).toContain(code);
     expect(keyCodes("confirm")[0]).toBe("Enter");
   });
 

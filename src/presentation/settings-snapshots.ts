@@ -1,5 +1,40 @@
 import type { SettingRowView, SettingsScreenView } from "./screens/contracts";
 import { normalizeMusicSettingsTab } from "../audio/music/settings";
+import { keyCodeLabel, keyboardLabel, type KeyboardAction } from "../domain/keyboard-bindings";
+import { REBINDABLE_ACTIONS, type RebindOutcome, type RebindableAction } from "../domain/keyboard-remap";
+
+/** The Controls tab's keyboard rows, one per rebindable action. */
+export const REBIND_ROW_LABELS: Readonly<Record<RebindableAction, string>> = Object.freeze({
+  "move-left": "Move left",
+  "move-right": "Move right",
+  "move-up": "Up / aim dash up",
+  "move-down": "Down / drop",
+  jump: "Jump",
+  dash: "Dash",
+  throw: "Throw / recall",
+  tether: "Tether",
+});
+
+/** The settings row key of an action's keyboard row. */
+export const rebindRowKey = (action: RebindableAction): string => `rebind:${action}`;
+
+const actionName = (action: KeyboardAction): string =>
+  (REBIND_ROW_LABELS as Readonly<Record<string, string>>)[action] ?? action.replaceAll("-", " ");
+
+/** What the keyboard row says after a rebind: nothing when the key simply took. */
+export function rebindNote(action: RebindableAction, outcome: RebindOutcome, code: string): string | null {
+  const key = keyCodeLabel(code);
+  if (outcome.kind === "swapped") return `Swapped: ${actionName(outcome.with)} now uses the old key.`;
+  if (outcome.kind !== "refused") return null;
+  if (outcome.by === action) return `${key} can't be bound. Pick another key.`;
+  return `${key} already means ${actionName(outcome.by).toLowerCase()}. Pick another key.`;
+}
+
+/** The keyboard rows' live state: the row waiting for a key, and the last rebind's note. */
+export interface KeyboardRowsState {
+  readonly listening: RebindableAction | null;
+  readonly note: Readonly<{ row: string; text: string }> | null;
+}
 
 export interface ControllerPresetView {
   readonly name: string;
@@ -42,9 +77,24 @@ export interface SettingsEnvironmentSnapshot {
   readonly update: Readonly<{ ready: boolean; applying: boolean }>;
   readonly presets: Readonly<Record<string, ControllerPresetView>>;
   readonly controllerGlyphs?: readonly string[];
+  /** Desktop only: the keyboard rows' state. Absent, the Controls tab has no keyboard section. */
+  readonly keyboard?: KeyboardRowsState;
 }
 export type SettingsSections = SettingsScreenView["sections"];
 const percent = (value: number): string => String(Math.round(value * 100)) + "%";
+function keyboardRows(state: KeyboardRowsState): SettingRowView[] {
+  const note = (row: string): { note?: string } => (state.note?.row === row ? { note: state.note.text } : {});
+  const rows: SettingRowView[] = REBINDABLE_ACTIONS.map((action) => ({
+    key: rebindRowKey(action),
+    label: REBIND_ROW_LABELS[action],
+    value: state.listening === action ? "PRESS A KEY" : keyboardLabel(action),
+    kind: "cycle",
+    ...(state.listening === action ? { note: "Press the new key. Esc cancels." } : note(rebindRowKey(action))),
+  }));
+  rows.push({ key: "resetKeys", label: "Reset keys", value: "DEFAULTS", kind: "cycle", ...note("resetKeys") });
+  return rows;
+}
+
 export function buildSettingsSections(
   tab: string,
   settings: SettingsSnapshotSource,
@@ -199,7 +249,13 @@ export function buildSettingsSections(
         kind: "cycle",
       });
     rows.push({ key: "guide", label: "Full controls", value: "VIEW GUIDE  ›", kind: "cycle" });
-    return [{ label: "CONTROLS", rows }];
+    const keyboard = environment.touch ? undefined : environment.keyboard;
+    return keyboard === undefined
+      ? [{ label: "CONTROLS", rows }]
+      : [
+          { label: "CONTROLS", rows },
+          { label: "KEYBOARD", rows: keyboardRows(keyboard) },
+        ];
   }
   const rows: SettingRowView[] = [
     {
