@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const http = require("node:http");
 const { listenOnFreePort } = require("./local-server");
 const path = require("node:path");
-const { STATE_WAIT_MS } = require("./browser-waits");
+const { STATE_WAIT_MS, launchJourney } = require("./browser-waits");
 
 async function main() {
   const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
@@ -26,7 +26,7 @@ async function main() {
   });
   ({ origin: baseUrl } = await listenOnFreePort(server));
   const chromePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
-  const browser = await chromium.launch({
+  const browser = await launchJourney(chromium, {
     headless: true,
     ...(fs.existsSync(chromePath) ? { executablePath: chromePath } : {}),
   });

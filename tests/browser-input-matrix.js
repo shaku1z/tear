@@ -5,7 +5,7 @@ const http = require("node:http");
 const { listenOnFreePort } = require("./local-server");
 const path = require("node:path");
 const { chapterOpeningCarriesThroughOnEveryDevice } = require("./browser-chapter-opening");
-const { STATE_WAIT_MS, holdFor, notWithin, pollEvery } = require("./browser-waits");
+const { STATE_WAIT_MS, holdFor, notWithin, pollEvery, launchJourney } = require("./browser-waits");
 
 async function moveCapturedPointer(page, from, to) {
   await page.evaluate(
@@ -477,7 +477,7 @@ async function main() {
     fs.createReadStream(file).pipe(response);
   });
   ({ origin: baseUrl } = await listenOnFreePort(server));
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchJourney(chromium, { headless: true });
 
   async function configure(page) {
     await page.route("**/*", (route) =>

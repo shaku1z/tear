@@ -7,7 +7,8 @@ const { listenOnFreePort } = require("./local-server");
 const {
   STATE_WAIT_MS,
   JOURNEY_LIMIT_MS,
-  describeStall,
+  journeyStep,
+  launchJourney,
   pollEvery,
   trackScriptLoads,
   waitForScriptLoads,
@@ -134,10 +135,11 @@ async function withJourney(options, run) {
   try {
     ({ origin: baseUrl } = await listenOnFreePort(server));
     const chromePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
-    browser = await chromium.launch({
-      headless: true,
-      ...(fs.existsSync(chromePath) ? { executablePath: chromePath } : {}),
-    });
+    browser = await launchJourney(
+      chromium,
+      { headless: true, ...(fs.existsSync(chromePath) ? { executablePath: chromePath } : {}) },
+      { name: options.name, limitMs: options.limitMs ?? JOURNEY_LIMIT_MS },
+    );
     // Journey suites repeatedly navigate the same instrumented page. Keep the
     // production service worker out of this harness so an activation/update
     // race cannot replace the exact test build between boots. PWA behavior has
@@ -354,38 +356,22 @@ async function withJourney(options, run) {
     const served = await page.request.get(`${baseUrl}/build-info.json`);
     assert.ok(served.ok(), "served build-info.json is unavailable");
     assert.deepEqual(await served.json(), buildInfo, "served build metadata differs from the verified local artifact");
-    // One ceiling for the whole journey: page.evaluate has no timeout, so a page whose main thread
-    // never comes back would otherwise hold the job until the CI limit and print nothing.
-    const limitMs = options.limitMs ?? JOURNEY_LIMIT_MS;
-    let limitTimer;
-    const overLimit = new Promise((_resolve, reject) => {
-      limitTimer = setTimeout(() => {
-        void describeStall(page).then((stall) => {
-          reject(new Error(`${options.name} did not finish within ${String(limitMs / 1000)} s: ${stall}`));
-        });
-      }, limitMs);
+    // The whole journey's ceiling was armed by launchJourney above.
+    journeyStep(browser, `${options.name}: running`);
+    await run({
+      page,
+      errors,
+      baseUrl,
+      boot,
+      waitScreen,
+      clickAndWait,
+      buildInfo,
+      waitArmed,
+      labelPoint,
+      clickLabel,
+      cardCentre,
+      clickCard,
     });
-    try {
-      await Promise.race([
-        run({
-          page,
-          errors,
-          baseUrl,
-          boot,
-          waitScreen,
-          clickAndWait,
-          buildInfo,
-          waitArmed,
-          labelPoint,
-          clickLabel,
-          cardCentre,
-          clickCard,
-        }),
-        overLimit,
-      ]);
-    } finally {
-      clearTimeout(limitTimer);
-    }
     assert.deepEqual(errors, [], `${options.name} page errors: ${errors.join("\n")}`);
   } finally {
     if (browser && options.browserCloseTimeoutMs) {

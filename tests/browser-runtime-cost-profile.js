@@ -29,7 +29,7 @@ const fs = require("node:fs");
 const http = require("node:http");
 const { listenOnFreePort } = require("./local-server");
 const path = require("node:path");
-const { STATE_WAIT_MS, holdFor } = require("./browser-waits");
+const { STATE_WAIT_MS, holdFor, launchJourney } = require("./browser-waits");
 
 const projectRoot = path.resolve(__dirname, "..");
 const buildRoot = path.resolve(projectRoot, process.env.TEAR_PROFILE_BUILD || path.join("dist", "test-standalone"));
@@ -576,7 +576,7 @@ function aggregate(runs) {
   );
   const server = staticServer();
   ({ origin: baseUrl } = await listenOnFreePort(server));
-  const browser = await chromium.launch({
+  const browser = await launchJourney(chromium, {
     headless: true,
     args: ["--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--enable-precise-memory-info"],
   });

@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const { chromium } = require("@playwright/test");
 const { withJourney } = require("./browser-journey-harness");
-const { STATE_WAIT_MS } = require("./browser-waits");
+const { STATE_WAIT_MS, launchJourney } = require("./browser-waits");
 
 const scenario = {
   format: "tear-contract",
@@ -319,7 +319,7 @@ withJourney({ name: "C22 live Tear runtime" }, async ({ page }) => {
     uncapped: [1 / 1000, 1 / 777, 1 / 1440, 1 / 500],
   };
   for (const [profile, deltas] of Object.entries(cleanProfiles)) {
-    const profileBrowser = await chromium.launch({
+    const profileBrowser = await launchJourney(chromium, {
       headless: true,
       ...(fs.existsSync(chromePath) ? { executablePath: chromePath } : {}),
     });

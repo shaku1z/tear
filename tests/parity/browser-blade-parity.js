@@ -6,7 +6,7 @@ const http = require("node:http");
 const { listenOnFreePort } = require("../local-server");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
-const { STATE_WAIT_MS, holdFor, pollEvery } = require("../browser-waits");
+const { STATE_WAIT_MS, holdFor, pollEvery, launchJourney } = require("../browser-waits");
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "..", "..");
 const fixtureArgument = process.argv.find((argument) => argument.startsWith("--fixture="));
@@ -991,7 +991,7 @@ async function main() {
   try {
     await currentServer.listen();
     if (oracleServer) await oracleServer.listen();
-    browser = await chromium.launch({ headless: true });
+    browser = await launchJourney(chromium, { headless: true });
     const currentTrace = await captureTrace(browser, "current", currentServer.baseUrl, currentRoot, fixture);
     fs.mkdirSync(OUTPUT_ROOT, { recursive: true });
     const currentFile = path.join(OUTPUT_ROOT, `${fixture.id}.current.json`);
