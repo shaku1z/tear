@@ -252,6 +252,10 @@ export function playBossFight(request: BossFightRequest): BossFightResult {
           lastHit = { source, damage: lost, bossDoing: before.doing };
         }
         if (after === null || after.dead) end = "boss defeated";
+        else if (player.phaseTicks !== undefined && row.ticks >= player.phaseTicks) {
+          end = "time limit";
+          reason = `the ${player.id} player plays ${String(secondsOf(player.phaseTicks))} s of a phase`;
+        }
       }
       if (end === undefined && (hpAfter <= 0 || step.terminated)) end = hpAfter <= 0 ? "player defeated" : "broken";
       if (end === "player defeated" && reset) reason = "the Playground restored the player; the fight stops there";

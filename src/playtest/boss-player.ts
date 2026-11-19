@@ -27,11 +27,25 @@ export const TELL_AVOIDANCE = Object.freeze({
   bodyClearancePixels: 24,
 });
 
-export const BOSS_PLAYER_IDS = Object.freeze(["scripted", "avoids-tells", "cuts-objects"] as const);
+export const BOSS_PLAYER_IDS = Object.freeze([
+  "scripted",
+  "avoids-tells",
+  "cuts-objects",
+  "no-dodge",
+  "still",
+] as const);
 export type BossPlayerId = (typeof BOSS_PLAYER_IDS)[number];
+
+/**
+ * The players that measure the pressure of a boss, not the kill, play this much of a phase (60 s) and stop: one
+ * that never avoids or never attacks would otherwise run every fight to its time limit.
+ */
+export const PRESSURE_PHASE_TICKS = 60 * TEAR_SIMULATION_TICKS_PER_SECOND;
 
 export interface BossPlayer {
   readonly id: BossPlayerId;
+  /** The fight stops, as a time limit, once a phase has been played for this many ticks. Absent: no such limit. */
+  readonly phaseTicks?: number;
   decide(observation: TearAgentObservation, boss: BossView | null, player: PlayerBox | null): readonly GameAction[];
 }
 
@@ -121,6 +135,42 @@ export function createTellAvoidingBossPlayer(id: "avoids-tells" | "cuts-objects"
   };
 }
 
+/**
+ * The scripted player without its dash and its jump: it attacks and walks, and avoids nothing that needs either.
+ * Set beside the scripted player it shows whether avoiding is needed.
+ */
+export function createNoDodgeBossPlayer(): BossPlayer {
+  const scripted = createScriptedBossPlayer();
+  return {
+    id: "no-dodge",
+    phaseTicks: PRESSURE_PHASE_TICKS,
+    decide: (observation, boss, player) =>
+      scripted.decide(observation, boss, player).filter((action) => action.type !== "dash" && action.type !== "jump"),
+  };
+}
+
+/**
+ * No input during play: where it stands shows what a boss does to a player who does nothing. Off the play screen
+ * it answers as the scripted player does, so a fight is not held up by a page that waits for a key.
+ */
+export function createStillBossPlayer(): BossPlayer {
+  const scripted = createScriptedBossPlayer();
+  return {
+    id: "still",
+    phaseTicks: PRESSURE_PHASE_TICKS,
+    decide: (observation, boss, player) =>
+      observation.ui?.screen === "playing" ? [] : scripted.decide(observation, boss, player),
+  };
+}
+
+const PLAYERS: Readonly<Record<BossPlayerId, () => BossPlayer>> = {
+  scripted: createScriptedBossPlayer,
+  "avoids-tells": () => createTellAvoidingBossPlayer("avoids-tells"),
+  "cuts-objects": () => createTellAvoidingBossPlayer("cuts-objects"),
+  "no-dodge": createNoDodgeBossPlayer,
+  still: createStillBossPlayer,
+};
+
 export function createBossPlayer(id: BossPlayerId): BossPlayer {
-  return id === "scripted" ? createScriptedBossPlayer() : createTellAvoidingBossPlayer(id);
+  return PLAYERS[id]();
 }
