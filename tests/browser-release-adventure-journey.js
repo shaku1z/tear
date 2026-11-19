@@ -18,7 +18,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { assertCleanProductionUrl, serveProductionBuild } = require("./class-c-browser-harness");
-const { STATE_WAIT_MS, holdFor, notWithin, pollEvery, settleFor } = require("./browser-waits");
+const { STATE_WAIT_MS, holdFor, notWithin, pollEvery, settleFor, launchJourney } = require("./browser-waits");
 
 const VIEW = Object.freeze({ width: 1280, height: 720 });
 const SCALE = VIEW.width / 1600;
@@ -335,7 +335,7 @@ async function main() {
   if (shotDirectory) fs.mkdirSync(shotDirectory, { recursive: true });
   const host = await serveProductionBuild(buildRoot);
   const chromePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
-  const browser = await chromium.launch({
+  const browser = await launchJourney(chromium, {
     headless: true,
     ...(fs.existsSync(chromePath) ? { executablePath: chromePath } : {}),
     args: ["--autoplay-policy=no-user-gesture-required"],
