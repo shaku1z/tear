@@ -1,4 +1,5 @@
-import { asRecord, extensionFields, safeInteger, safeString, validateJsonObject, type JsonObject } from "./json";
+import { asRecord } from "../domain/records";
+import { extensionFields, safeInteger, safeString, validateJsonObject, type JsonObject } from "./json";
 import { invalid, unsupportedVersion, type MigrationResult } from "./result";
 
 export const REPLAY_ENVELOPE_VERSION = 3;

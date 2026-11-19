@@ -295,6 +295,7 @@ describe("boss fight measurement", () => {
       hitsTaken: 2,
       exposedTicks: 0,
       hitsBy: { sweep: { hits: 1, damage: 30 }, [UNMARKED_HIT]: { hits: 1, damage: 10 } },
+      objects: {},
     };
     const fight = {
       boss: "rootbound",

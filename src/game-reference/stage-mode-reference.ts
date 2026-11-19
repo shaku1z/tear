@@ -1,3 +1,4 @@
+import { requireRecord } from "../domain/records";
 import { BOSS_IDENTITY_IDS } from "../gameplay/run/boss-definitions";
 import { ENEMY_IDENTITY_IDS, type BossId, type EnemyKind } from "../gameplay/run/content-director";
 import { MODE_IDS, type ModeClassification, type ModeDefinition } from "../gameplay/run/mode-catalog";
@@ -73,9 +74,7 @@ const MODE_CLASSIFICATIONS = Object.freeze([
 ] as const);
 
 function record(value: unknown, path: string): Record<string, unknown> {
-  if (value === null || typeof value !== "object" || Array.isArray(value))
-    throw new TypeError(`${path} must be an object`);
-  return value as Record<string, unknown>;
+  return requireRecord(value, `${path} must be an object`);
 }
 
 function text(value: unknown, path: string): string {

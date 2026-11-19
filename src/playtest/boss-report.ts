@@ -1,6 +1,6 @@
 import { AUTHORED_BOSS_ROSTER } from "../gameplay/run/content-director";
 import { isPracticeBossId } from "../gameplay/training/boss-phase-practice-runtime";
-import { TELL_AVOIDANCE, type BossPlayerId } from "./boss-player";
+import { BOSS_PLAYER_IDS, TELL_AVOIDANCE, type BossPlayerId } from "./boss-player";
 import {
   bossFightScenario,
   playBossFight,
@@ -29,6 +29,9 @@ export const REPORT_BOSSES: readonly BossFightRequest["boss"][] = Object.freeze(
 );
 /** With chosen start phases: every boss the game's boss practice accepts. */
 export const PRACTICE_REPORT_BOSSES = Object.freeze(REPORT_BOSSES.filter(isPracticeBossId));
+
+/** The players reported when none is named: every one. */
+export const REPORT_PLAYERS: readonly BossPlayerId[] = BOSS_PLAYER_IDS;
 
 const ROMAN = ["", "I", "II", "III"];
 
@@ -84,6 +87,21 @@ export function noTellDamage(phase: BossPhaseResult): number {
   return (phase.hitsBy[BODY_HIT]?.damage ?? 0) + (phase.hitsBy[UNMARKED_HIT]?.damage ?? 0);
 }
 
+/** One line per phase that had something to cut: what was planted, what the player cut, how long it stood. */
+function objectsText(fight: BossFightResult): string {
+  return fight.phases
+    .filter((phase) => Object.keys(phase.objects).length > 0)
+    .map((phase) => {
+      const names = Object.entries(phase.objects).sort(([left], [right]) => left.localeCompare(right));
+      const parts = names.map(
+        ([name, count]) =>
+          `${name} cut ${String(count.cut)} of ${String(count.placed)} (stood ${secondsOf(count.standingTicks).toFixed(1)} s)`,
+      );
+      return `\nto cut in phase ${ROMAN[phase.phase] ?? String(phase.phase)}: ${parts.join(", ")}`;
+    })
+    .join("");
+}
+
 function phaseEnd(fight: BossFightResult, index: number): string {
   if (index < fight.phases.length - 1) return "phase cleared";
   return fight.end;
@@ -134,7 +152,7 @@ start: phase ${ROMAN[fight.phase] ?? String(fight.phase)} through the game's bos
       hitsText(phase),
     ]),
   ];
-  return `${head}\n${table(rows)}`;
+  return `${head}\n${table(rows)}${objectsText(fight)}`;
 }
 
 /** Damage taken across the fights, and how much of it no declared tell warned of. */
@@ -169,6 +187,9 @@ export function formatBossReport(fights: readonly BossFightResult[]): string {
     'attributed from the tells the boss declares, not reported by the game: "unmarked" is damage with no active ' +
     'tell on the player and no body contact. The "no tell" column is body contact plus unmarked: damage nothing warned of. The "avoids-tells" player leaves a warned area ' +
     `${String(TELL_AVOIDANCE.reactTicks)} ticks before it lands and dashes at ${String(TELL_AVOIDANCE.dashTicks)} ticks ` +
-    `(120 ticks a second), keeping ${String(TELL_AVOIDANCE.marginPixels)} px clear. Both players are weaker than a person.`;
+    `(120 ticks a second), keeping ${String(TELL_AVOIDANCE.marginPixels)} px clear. The "cuts-objects" player is ` +
+    "the same player, and it also goes to whatever stands on the stage for a weapon to cut (Grafts, cage walls, " +
+    'roots) and cuts it before it returns to the boss. "To cut" lines count those: a thing that left without ' +
+    "being cut (the boss took it back, the phase ended) counts as placed only. Every player is weaker than a person.";
   return `${sections.join("\n\n")}\n\n${notes}\n`;
 }

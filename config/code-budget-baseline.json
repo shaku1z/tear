@@ -18,7 +18,7 @@
       "chars": 27922
     },
     "src/game-reference/game-reference.ts": {
-      "chars": 30695
+      "chars": 30503
     },
     "src/gameplay/combat/held-blade-collision-runtime.ts": {
       "largestFunctionStatements": 171
@@ -76,7 +76,7 @@
       "largestFunctionStatements": 111
     },
     "src/ghost/replay-admission.ts": {
-      "chars": 26832
+      "chars": 26698
     },
     "src/input/browser-gamepad.ts": {
       "largestFunctionStatements": 124

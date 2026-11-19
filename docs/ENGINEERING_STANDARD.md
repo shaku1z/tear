@@ -62,6 +62,7 @@ it found it.
 
 - Measure before and after, on the emulated phone profile and on desktop, and put the numbers in the pull
   request. No performance claim without a number, and say when a number is emulated.
+- While mobile is paused (owner, 2026-11-19), phone measurements are paused and desktop numbers are required.
 - Respect the budgets: startup bytes and time, frame time, particles, saved-data size, CI time. Heavy code
   stays off the startup path; work is done once, not per frame; nothing allocates per tick in hot loops.
 - Cheapest correct design first. Do not add a system, a dependency or a background process when a rule in
