@@ -1,6 +1,6 @@
 import { AUTHORED_BOSS_ROSTER } from "../gameplay/run/content-director";
 import { isPracticeBossId } from "../gameplay/training/boss-phase-practice-runtime";
-import { BOSS_PLAYER_IDS, TELL_AVOIDANCE, type BossPlayerId } from "./boss-player";
+import { BOSS_PLAYER_IDS, PRESSURE_PHASE_TICKS, TELL_AVOIDANCE, type BossPlayerId } from "./boss-player";
 import {
   bossFightScenario,
   playBossFight,
@@ -59,7 +59,7 @@ export function playBossReport(request: BossReportRequest): readonly BossFightRe
   const requests = bossFightRequests(request);
   // Every fight is admitted before the first is played, so a mistyped id costs no playing time.
   for (const fight of requests) bossFightScenario(fight);
-  return requests.map(playBossFight);
+  return requests.map((fight) => playBossFight(fight));
 }
 
 function table(rows: readonly (readonly string[])[]): string {
@@ -190,6 +190,9 @@ export function formatBossReport(fights: readonly BossFightResult[]): string {
     `(120 ticks a second), keeping ${String(TELL_AVOIDANCE.marginPixels)} px clear. The "cuts-objects" player is ` +
     "the same player, and it also goes to whatever stands on the stage for a weapon to cut (Grafts, cage walls, " +
     'roots) and cuts it before it returns to the boss. "To cut" lines count those: a thing that left without ' +
-    "being cut (the boss took it back, the phase ended) counts as placed only. Every player is weaker than a person.";
+    "being cut (the boss took it back, the phase ended) counts as placed only. " +
+    'The "no-dodge" player is the scripted player without its dash and its jump, and the "still" player gives no ' +
+    "input; both measure what the boss does to them, not the kill, and stop after " +
+    `${String(secondsOf(PRESSURE_PHASE_TICKS))} s of a phase. Every player is weaker than a person.`;
   return `${sections.join("\n\n")}\n\n${notes}\n`;
 }
