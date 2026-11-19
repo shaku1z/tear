@@ -62,10 +62,8 @@ export type ScreenAction =
   | { readonly type: "replay.challenge.start"; readonly id: string }
   | { readonly type: "replay.runDna.toggle" }
   | { readonly type: "replay.editor.toggle" }
-  | { readonly type: "replay.editor.createCutList" }
+  | { readonly type: "replay.editor.appendClip" }
   | { readonly type: "replay.editor.media"; readonly command: "markIn" | "clear" | "export" | "cancel" | "download" }
-  | { readonly type: "replay.studio.toggle" }
-  | { readonly type: "replay.studio.createCutList" }
   | { readonly type: "replay.toggleInfo" }
   | { readonly type: "replay.speed"; readonly value: number }
   | { readonly type: "replay.exit" }

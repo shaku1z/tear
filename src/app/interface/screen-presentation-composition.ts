@@ -13,10 +13,10 @@ import {
   type MenuScreenState,
 } from "../screens/menu-screen-adapters";
 import {
-  createLiveReplayEditor,
-  type ReplayEditorAdapter as ReplayScreenAdapter,
-  type ReplayEditorServices as ReplayScreenServices,
-} from "../engineering/replay-editor";
+  createLiveReplayScreenAdapter,
+  type ReplayScreenAdapter,
+  type ReplayScreenServices,
+} from "../replay/replay-screen-adapter";
 import { createLiveRunScreenAdapters, type RunScreenServices, type RunScreenState } from "../run/run-screen-adapters";
 import {
   createLiveScreenActionBindings,
@@ -107,7 +107,7 @@ export function createLiveScreenPresentationComposition(
       else library.drawReplayPreview(id, bounds);
     },
   });
-  const replay: ReplayScreenAdapter = createLiveReplayEditor({
+  const replay: ReplayScreenAdapter = createLiveReplayScreenAdapter({
     ...options.replay,
     renderers: renderer,
     categories: () => library.categories,
