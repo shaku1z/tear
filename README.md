@@ -14,8 +14,8 @@ that web portal.
 - Node.js 24 (`.node-version`; `package.json` requires `>=24`).
 - pnpm 11.15.0, the version pinned in `package.json`. Run `corepack enable`
   once and Corepack provides it.
-- Chrome or Playwright's Chromium for the browser tests. CI runs
-  `pnpm exec playwright install --with-deps chromium`.
+- Chrome or Playwright's Chromium for the browser tests: `pnpm exec playwright install --with-deps chromium`.
+  CI's browser jobs run in Playwright's image for the lockfile's version instead, so they install nothing.
 
 ## Commands
 

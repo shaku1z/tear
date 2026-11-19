@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
-const { STATE_WAIT_MS, holdFor } = require("./browser-waits");
+const { STATE_WAIT_MS, holdFor, launchJourney } = require("./browser-waits");
 
 async function assertVisibilityLifecycle(page, baseline) {
   // Tab occlusion is window-manager behavior and is not portable through Xvfb.
@@ -58,7 +58,7 @@ async function assertVisibilityLifecycle(page, baseline) {
   await new Promise((resolve) => server.listen(port, "127.0.0.1", resolve));
 
   const chromePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
-  const browser = await chromium.launch({
+  const browser = await launchJourney(chromium, {
     headless: true,
     ...(fs.existsSync(chromePath) ? { executablePath: chromePath } : {}),
   });
