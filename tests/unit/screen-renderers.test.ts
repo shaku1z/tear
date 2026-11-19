@@ -1079,7 +1079,6 @@ describe("legacy screen renderer registry", () => {
       id: "settings",
       tab: "general",
       tabs: [{ id: "general", label: "GENERAL" }],
-      returnTo: "menu",
       sections: [
         {
           label: "GENERAL",
