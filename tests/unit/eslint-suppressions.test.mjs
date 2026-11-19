@@ -1,7 +1,8 @@
 // eslint-suppressions.json is a shrinking ratchet for one rule only: the sites `tear/one-record-guard` found when
 // it arrived, each to be converted to src/domain/records.ts. It may name no other rule, and nothing may let a
 // stale entry pass: ESLint exits 2 on an entry that no longer matches, and scripts/lint.mjs refuses the options
-// that would hide or grow it. The file, this test and its row in docs/REPOSITORY_MAP.md go when the last site does.
+// that would hide or grow it. The file, this test, its row in docs/REPOSITORY_MAP.md
+// and its line in config/change-impact-defaults.json go when the last site does.
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
