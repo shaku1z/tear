@@ -1,3 +1,4 @@
+import { asRecord, isRecord } from "../domain/records";
 import type { ReplayActionEnvelope } from "../replay/envelope";
 import { normalizeGameAction } from "../input/game-action";
 import { stableVerificationHash } from "../domain/hash";
@@ -398,8 +399,8 @@ function parseLegacyRecord(value: unknown): Record<string, unknown> | null {
       return null;
     }
   }
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return null;
-  const outer = parsed as Record<string, unknown>;
+  const outer = asRecord(parsed);
+  if (outer === undefined) return null;
   const recording = outer.schema === "tear.replay" && isRecord(outer.recording) ? outer.recording : outer;
   return recording;
 }
@@ -409,8 +410,8 @@ function legacyActions(value: unknown, legacyV1: boolean): ReplayActionEnvelope[
   const actions: ReplayActionEnvelope[] = [];
   for (let index = 0; index < value.length; index += 1) {
     const entry: unknown = value[index];
-    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) continue;
-    const record = entry as Record<string, unknown>;
+    const record = asRecord(entry);
+    if (record === undefined) continue;
     const normalized = normalizeGameAction(legacyV1 ? record.action : record.command);
     const tick = integer(record.tick);
     if (!normalized.ok || tick < 0) continue;
@@ -422,9 +423,8 @@ function legacyActions(value: unknown, legacyV1: boolean): ReplayActionEnvelope[
 }
 
 function legacyFinal(value: unknown): Readonly<{ tick: number; stateHash: string }> {
-  if (typeof value !== "object" || value === null || Array.isArray(value))
-    return { tick: 0, stateHash: "legacy-final-hash" };
-  const record = value as Record<string, unknown>;
+  const record = asRecord(value);
+  if (record === undefined) return { tick: 0, stateHash: "legacy-final-hash" };
   return { tick: integer(record.tick), stateHash: stringValue(record.stateHash, "legacy-final-hash") };
 }
 
@@ -433,9 +433,6 @@ function integer(value: unknown): number {
 }
 function stringValue(value: unknown, fallback: string): string {
   return typeof value === "string" && value.length > 0 ? value : fallback;
-}
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export interface GhostRoundTripReport {
@@ -450,8 +447,7 @@ export interface GhostRoundTripReport {
 export function verifyGhostRoundTrips(ghost: GhostEnvelopeV3): GhostRoundTripReport {
   const serialized = JSON.stringify(ghost);
   const imported: unknown = JSON.parse(serialized);
-  const importedRecord: Readonly<Record<string, unknown>> =
-    typeof imported === "object" && imported !== null ? (imported as Readonly<Record<string, unknown>>) : {};
+  const importedRecord: Readonly<Record<string, unknown>> = asRecord(imported) ?? {};
   const timeline = new GhostTimeline(ghost.events);
   const seekTick = ghost.snapshots[0]?.tick ?? ghost.events[0]?.tick ?? 0;
   const forkHash = stableVerificationHash({ actions: ghost.actions, snapshots: ghost.snapshots, events: ghost.events });

@@ -1,3 +1,4 @@
+import { isObject, isRecord } from "../domain/records";
 import { META_RANK_LIMITS } from "../gameplay/progression/meta";
 import { WEAPON_IDS } from "../gameplay/weapon-selection";
 import { BOSS_ROSTER } from "../gameplay/run/content-director";
@@ -7,9 +8,6 @@ import type { SeedRaceRun, SeedRaceShared } from "../gameplay/run/seed-locked-dr
 import { seedRaceCatalogHash, seedRaceLegality } from "../gameplay/run/seed-locked-draft";
 import { stableVerificationHash } from "../domain/hash";
 const HASH = /^[a-f0-9]{16}$/u;
-function record(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
 function closed(value: Record<string, unknown>, names: string): boolean {
   const fields = names.split(" ");
   return Object.keys(value).length === fields.length && fields.every((key) => Object.hasOwn(value, key));
@@ -22,11 +20,11 @@ export function readSeedRaceRun(value: unknown): SeedRaceRun | undefined {
   if (value === undefined) return undefined;
   assertRaceData(value);
   if (
-    !record(value) ||
+    !isRecord(value) ||
     !closed(value, value.role === "challenger" ? "shared sharedHash role source" : "shared sharedHash role") ||
     typeof value.role !== "string" ||
     !["reference", "challenger"].includes(value.role) ||
-    !record(value.shared)
+    !isRecord(value.shared)
   )
     throw new TypeError("Invalid seed race declaration");
   const s = value.shared;
@@ -48,7 +46,7 @@ export function readSeedRaceRun(value: unknown): SeedRaceRun | undefined {
     !Number.isSafeInteger(s.seed) ||
     Number(s.seed) < 1 ||
     Number(s.seed) > 0xffff_ffff ||
-    !record(s.metaRanks) ||
+    !isRecord(s.metaRanks) ||
     Object.keys(s.metaRanks).length > 64 ||
     Object.entries(s.metaRanks).some(
       ([id, rank]) =>
@@ -69,10 +67,10 @@ export function readSeedRaceRun(value: unknown): SeedRaceRun | undefined {
       : s.headstartId !== null) ||
     !hash(s.initialBuildHash) ||
     !hash(s.baselineHash) ||
-    !record(s.build) ||
+    !isRecord(s.build) ||
     !closed(s.build, "version revision target rulesetVersion contentHash configHash") ||
     Object.values(s.build).some((v) => typeof v !== "string" || !v) ||
-    !record(s.draft) ||
+    !isRecord(s.draft) ||
     !closed(s.draft, "policy seed catalogHash") ||
     s.draft.policy !== "seed-locked-common-offers.v1" ||
     s.draft.seed !== s.seed ||
@@ -83,7 +81,7 @@ export function readSeedRaceRun(value: unknown): SeedRaceRun | undefined {
     throw new TypeError("Invalid seed race shared contract");
   if (
     value.role === "challenger" &&
-    (!record(value.source) ||
+    (!isRecord(value.source) ||
       !closed(value.source, "id root manifestHash") ||
       typeof value.source.id !== "string" ||
       !value.source.id ||
@@ -105,7 +103,7 @@ export function seedRaceInitialBuildHash(state: Readonly<Record<string, unknown>
   const run = state["tear.run.v1"],
     player = state["tear.player.v1"],
     blade = state["tear.blade.v1"];
-  if (!record(run) || !record(player) || !record(blade)) throw new TypeError("Race initial actors unavailable");
+  if (!isRecord(run) || !isRecord(player) || !isRecord(blade)) throw new TypeError("Race initial actors unavailable");
   const select = (source: Record<string, unknown>, keys: readonly string[]) =>
     Object.fromEntries(keys.map((key) => [key, source[key] ?? null]));
   return stableVerificationHash({
@@ -137,7 +135,7 @@ function assertRaceData(value: unknown, depth = 0): void {
   )
     return;
   if (
-    typeof value !== "object" ||
+    !isObject(value) ||
     (Array.isArray(value)
       ? Object.getPrototypeOf(value) !== Array.prototype
       : Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null)
@@ -158,7 +156,7 @@ function assertRaceData(value: unknown, depth = 0): void {
   }
 }
 function freezeRaceData<T>(value: T): T {
-  if (value && typeof value === "object") {
+  if (isObject(value)) {
     for (const child of Object.values(value)) freezeRaceData(child);
     Object.freeze(value);
   }
@@ -167,14 +165,14 @@ function freezeRaceData<T>(value: T): T {
 /** Validate source-bound run/entitlement/projection relations before either host installs candidates. */
 export function validateSeedRaceState(state: Readonly<Record<string, unknown>>): void {
   const run = state["tear.run.v1"];
-  if (!record(run)) return;
+  if (!isRecord(run)) return;
   const race = readSeedRaceRun(run.seedRace);
   if (!race) return;
   const shared = race.shared,
     mods = run.mods,
     reward = state["tear.reward.v1"];
   if (
-    !record(mods) ||
+    !isRecord(mods) ||
     run.runSeed !== shared.seed ||
     run.mode !== shared.mode ||
     (run.diff ?? run.difficulty) !== shared.difficulty ||
@@ -185,15 +183,20 @@ export function validateSeedRaceState(state: Readonly<Record<string, unknown>>):
     !Number.isSafeInteger(mods.draftRerolls) ||
     Number(mods.draftRerolls) < 0 ||
     Number(mods.draftRerolls) > (shared.metaRanks.reroll ?? 0) ||
-    (record(reward) &&
-      record(reward.selection) &&
+    (isRecord(reward) &&
+      isRecord(reward.selection) &&
       stableVerificationHash(reward.selection.seedLocked ?? null) !== stableVerificationHash(shared.draft))
   )
     throw new TypeError("Race run differs from declared setup or entitlements");
-  if (!record(reward) || !record(reward.selection) || !record(mods.owned) || !Array.isArray(reward.selection.choices))
+  if (
+    !isRecord(reward) ||
+    !isRecord(reward.selection) ||
+    !isRecord(mods.owned) ||
+    !Array.isArray(reward.selection.choices)
+  )
     throw new TypeError("Race reward projection unavailable");
   const choice = (v: unknown): { id: string } => {
-    if (!record(v) || typeof v.id !== "string") throw new TypeError("Invalid race choice");
+    if (!isRecord(v) || typeof v.id !== "string") throw new TypeError("Invalid race choice");
     return { id: v.id };
   };
   const legality = seedRaceLegality(

@@ -1,3 +1,4 @@
+import { asRecord } from "../domain/records";
 import type { TearGhostManifest } from "./capsule-vault";
 import type { GhostDoctorReport } from "./ghost-doctor";
 import type { GhostVaultBackend, GhostVaultGuard, GhostVaultWrite } from "./capsule-vault";
@@ -29,20 +30,14 @@ type StoredRecord = Readonly<{
   entry: GhostCorruptCapsuleRecord;
 }>;
 
-function object(value: unknown): Readonly<Record<string, unknown>> | undefined {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as Readonly<Record<string, unknown>>)
-    : undefined;
-}
-
 const text = (value: unknown): value is string => typeof value === "string" && value.length > 0;
 
 function parseStoredRecord(value: string): GhostCorruptCapsuleRecord {
-  const envelope = object(JSON.parse(value) as unknown);
+  const envelope = asRecord(JSON.parse(value) as unknown);
   if (envelope?.format !== RECORD_FORMAT || envelope.schemaVersion !== RECORD_SCHEMA_VERSION)
     throw new TypeError("unsupported corrupt-capsule record");
-  const entry = object(envelope.entry),
-    provenance = object(entry?.provenance);
+  const entry = asRecord(envelope.entry),
+    provenance = asRecord(entry?.provenance);
   if (
     entry === undefined ||
     provenance === undefined ||

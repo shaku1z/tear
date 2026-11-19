@@ -100,6 +100,16 @@ export function createSettingsRenameRenderers(context: ScreenRenderContext) {
           if (visible) {
             if (row.kind === "stepper") {
               stepperControl(row, controlX, controlY);
+            } else if (row.kind === "info") {
+              ui.text(
+                canvas,
+                row.value,
+                controlX + controlWidth,
+                controlY + controlHeight / 2 + 6,
+                ui.t.type.label,
+                "right",
+                ui.t.alpha.muted,
+              );
             } else if (row.kind === "toggle") {
               context.enqueue({
                 x: controlX,

@@ -1,3 +1,4 @@
+import { asRecord } from "../domain/records";
 import { migrateAudioSettings } from "../persistence/audio-settings";
 import type { MusicContextSnapshot, MusicEvent, MusicRunSessionMetadata } from "./music-contracts";
 import type { LegacySynthRuntime } from "./legacy-synth-runtime";
@@ -30,7 +31,7 @@ export interface LegacySynthFacadeOptions {
 function readBrowserAudioSettings(): Record<string, unknown> {
   try {
     const parsed: unknown = JSON.parse(window.localStorage.getItem("tear_settings") ?? "{}");
-    return typeof parsed === "object" && parsed !== null ? (parsed as Record<string, unknown>) : {};
+    return asRecord(parsed) ?? {};
   } catch {
     return {};
   }
@@ -167,8 +168,7 @@ export function createLegacySynthFacade(options: LegacySynthFacadeOptions) {
     audioSource: Record<string, unknown> = settings,
   ): Record<string, unknown> {
     const candidate: unknown = audioSource === settings ? settings : audioSource.audio;
-    const provided =
-      typeof candidate === "object" && candidate !== null ? (candidate as Record<string, unknown>) : audioSource;
+    const provided = asRecord(candidate) ?? audioSource;
     const source = containsAudioSettings(provided) ? provided : readPersistedSettings();
     const audio = migrateAudioSettings(source);
     return Object.assign(settings, audio, { vol: audio.masterVolume, music: !audio.musicMuted });

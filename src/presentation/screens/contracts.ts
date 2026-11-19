@@ -451,7 +451,8 @@ export interface SettingRowView {
   readonly key: string;
   readonly label: string;
   readonly value: string;
-  readonly kind: "stepper" | "toggle" | "cycle";
+  /** `info` is a read-only fact (the build, for example): drawn as a label and a value, with no control. */
+  readonly kind: "stepper" | "toggle" | "cycle" | "info";
   readonly on?: boolean;
   readonly enabled?: boolean;
   readonly note?: string;

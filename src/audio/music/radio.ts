@@ -3,6 +3,7 @@
  * tear-music in the catalog, so a new song joins its channels by itself and a new channel is one
  * catalog row. Pure logic; playback lives in the stem backend.
  */
+import { isRecord } from "../../domain/records";
 import { isMusicId } from "../../domain/identifiers";
 import { SeededRandom } from "../../domain/random";
 
@@ -41,8 +42,6 @@ export interface RadioProgramme {
 /** About two minutes per song when the catalog does not say. */
 export const DEFAULT_RADIO_SONG_SECONDS = 120;
 
-const record = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
 const text = (value: unknown): value is string => typeof value === "string" && value.length > 0;
 
 /**
@@ -52,13 +51,13 @@ const text = (value: unknown): value is string => typeof value === "string" && v
 export function parseRadioProgramme(channels: unknown, radio: unknown): RadioProgramme {
   const seen = new Set<string>();
   const parsed = (Array.isArray(channels) ? channels : []).flatMap((value: unknown): RadioChannel[] => {
-    if (!record(value) || !isMusicId(value.id) || !text(value.name) || !record(value.rule)) return [];
+    if (!isRecord(value) || !isMusicId(value.id) || !text(value.name) || !isRecord(value.rule)) return [];
     if (seen.has(value.id)) return [];
     seen.add(value.id);
     const description = text(value.description) ? value.description : "";
     return [Object.freeze({ id: value.id, name: value.name, description, rule: Object.freeze({ ...value.rule }) })];
   });
-  const seconds = record(radio) ? radio.songSeconds : undefined;
+  const seconds = isRecord(radio) ? radio.songSeconds : undefined;
   return Object.freeze({
     channels: Object.freeze(parsed),
     songSeconds: typeof seconds === "number" && seconds > 0 ? seconds : DEFAULT_RADIO_SONG_SECONDS,
