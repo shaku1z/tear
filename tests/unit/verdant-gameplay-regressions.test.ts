@@ -5,7 +5,7 @@ import { bindVerdantEnvironmentActors } from "./environment-feature-fixture";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 import { ROOTBOUND_REGROWTH_TIMING } from "../../src/gameplay/environment/regrowth-link";
 import { BLOOM_WELL_TIMING, createBloomWellState } from "../../src/gameplay/environment/bloom-well";
-import { ROOTBOUND_ENCOUNTER, ROOTBOUND_HEALING } from "../../src/gameplay/entities/enemy-types/rootbound";
+import { ROOTBOUND_HEALING } from "../../src/gameplay/entities/enemy-types/rootbound";
 import { ROOTBOUND_MOVES } from "../../src/gameplay/entities/enemy-types/rootbound-moves";
 import { createRootbinderState, severRootLink } from "../../src/gameplay/entities/rootbinder-runtime";
 import {
@@ -121,19 +121,20 @@ describe("Verdant gameplay regressions", () => {
     expect(actor.dying).toBe(true);
   });
 
-  it("does not deal contact damage during the opening beat after the intro", () => {
+  it("never deals contact damage: its body blocks, and not while it is burrowed", () => {
     const harness = createEnemyHarness();
     const actor = boss(harness);
-    actor.introT = dt;
-    actor.update(dt, harness.platforms, harness.player);
     actor.introT = 0;
-    actor.update(dt, harness.platforms, harness.player);
-    let firstContact = -1;
-    for (let tick = 0; tick < 240 && firstContact < 0; tick += 1) {
-      if (actor.contactDamageEnabled()) firstContact = tick;
+    let blocked = 0;
+    let burrowedBlocks = 0;
+    for (let tick = 0; tick < 120 * 30; tick += 1) {
       actor.update(dt, harness.platforms, harness.player);
+      expect(actor.contactDamageEnabled()).toBe(false);
+      if (actor.bodyBlocks()) blocked += 1;
+      if (actor.hidden && actor.bodyBlocks()) burrowedBlocks += 1;
     }
-    expect(firstContact === -1 || firstContact / 120 >= ROOTBOUND_ENCOUNTER.openingContactGrace - dt * 2).toBe(true);
+    expect(blocked).toBeGreaterThan(0);
+    expect(burrowedBlocks).toBe(0);
   });
 
   it("staggers a Rootbinder whose network is cut and does not relink it the next tick", () => {

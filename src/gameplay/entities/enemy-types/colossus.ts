@@ -1,3 +1,4 @@
+import { BOSS_BODY_CONTACT, type BossBodyContactRow } from "../boss-body-contact";
 import { practicePhaseEntryHealth, type BossPracticeActorEntry } from "../../training/boss-phase-practice-runtime";
 import type {
   EnemyDependencies,
@@ -54,6 +55,7 @@ export function createColossusType(
     _introBeat = false;
     declare cfg: typeof CONFIG.colossus;
 
+    override bodyContact: BossBodyContactRow | null = BOSS_BODY_CONTACT.colossus;
     constructor(x: number, y: number) {
       super(x, y, CONFIG.colossus);
       this.color = CONFIG.colors.armored;

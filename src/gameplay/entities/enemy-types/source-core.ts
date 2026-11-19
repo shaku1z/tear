@@ -1,3 +1,4 @@
+import { BOSS_BODY_CONTACT, type BossBodyContactRow } from "../boss-body-contact";
 import type { ArenaZone, EnemyDependencies, EnemyPlatform, EnemyPlayerPort, EnemyProjectile } from "../enemy-contracts";
 import type { EnemyBaseConstructor } from "./enemy-base";
 import type { BossRuntime } from "./boss-runtime";
@@ -103,6 +104,7 @@ export function createSourceCore(
     _burstMotif = "warden";
     declare cfg: typeof CONFIG.source;
 
+    override bodyContact: BossBodyContactRow | null = BOSS_BODY_CONTACT.source;
     constructor(x: number, y: number) {
       super(x, y, CONFIG.source);
       this.color = "#8b3bd6";
@@ -635,11 +637,13 @@ export function createSourceCore(
       }
     }
 
-    override contactDamageEnabled() {
-      if (this.depthPlane === "rear" || this.depthState === "exposed") return false;
-      if (this.breachState === "tell" || this.breachState === "recoil") return false;
-      if (this.breachState === "drift") return !this.breachContactSpent;
-      return true;
+    /** The Source's body by plane and breach; a breach drift hurts once. Its row lists which of these hurt. */
+    override bodyContactLabel() {
+      if (this.depthPlane === "rear") return "rear";
+      if (this.depthState === "exposed") return "exposed";
+      if (this.breachState === "tell" || this.breachState === "recoil") return `breach-${this.breachState}`;
+      if (this.breachState === "drift") return this.breachContactSpent ? "breach-drift-spent" : "breach-drift";
+      return "front";
     }
     override contactDamageAmount() {
       return this._voidDmg(this.breachState === "drift" ? CONFIG.source.breachDmg : this.contactDmg);
