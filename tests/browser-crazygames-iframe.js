@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
-const { STATE_WAIT_MS } = require("./browser-waits");
+const { STATE_WAIT_MS, launchJourney } = require("./browser-waits");
 
 async function main() {
   const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-crazygames");
@@ -31,7 +31,7 @@ async function main() {
   const address = server.address();
   if (!address || typeof address === "string") throw new Error("CrazyGames iframe test server did not bind");
   const origin = `http://127.0.0.1:${String(address.port)}`;
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchJourney(chromium, { headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
     const errors = [];

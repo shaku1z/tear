@@ -29,7 +29,7 @@ const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
 const zlib = require("node:zlib");
-const { SLOW_STATE_WAIT_MS, STATE_WAIT_MS, holdFor, pollEvery, settleFor } = require("./browser-waits");
+const { SLOW_STATE_WAIT_MS, STATE_WAIT_MS, holdFor, pollEvery, settleFor, launchJourney } = require("./browser-waits");
 
 const projectRoot = path.resolve(__dirname, "..");
 const check = process.argv.includes("--check");
@@ -517,7 +517,7 @@ function enforce(report) {
 
 async function main() {
   const chromePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
-  const browser = await chromium.launch({
+  const browser = await launchJourney(chromium, {
     headless: true,
     ...(fs.existsSync(chromePath) && process.env.TEAR_LOAD_BROWSER !== "bundled" ? { executablePath: chromePath } : {}),
     args: ["--autoplay-policy=no-user-gesture-required"],

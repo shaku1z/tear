@@ -1,4 +1,5 @@
 import { normalizeCosmeticState } from "../domain/cosmetics";
+import { normalizeGauntletBests } from "../domain/gauntlet-records";
 import { asRecord } from "../domain/records";
 import { achievementOutbox, addGrant, dailyReceiptId, tutorialLedger } from "../domain/reward-receipts";
 import {
@@ -97,6 +98,13 @@ export function migrateProfileEnvelope(input: unknown, nowMs = 0): MigrationResu
       ? validateJsonObject(normalizeCosmeticState(withReceipts.cosmetics))
       : null;
   if (cosmetics && !cosmetics.ok) return invalid(cosmetics.error);
+  // The Gauntlet personal bests (one per difficulty) are an optional field, so they need no version:
+  // older builds carry the field through unchanged. A present value is re-validated, malformed entries dropped.
+  const gauntletBest =
+    profile.value.gauntletBest !== undefined
+      ? validateJsonObject(normalizeGauntletBests(profile.value.gauntletBest))
+      : null;
+  if (gauntletBest && !gauntletBest.ok) return invalid(gauntletBest.error);
   const extensions = extensionFields(isEnvelope ? source : {}, KNOWN_FIELDS);
   if (!extensions.ok) return invalid(extensions.error);
   return {
@@ -108,7 +116,11 @@ export function migrateProfileEnvelope(input: unknown, nowMs = 0): MigrationResu
       revision: safeInteger(source.revision, 0),
       updatedAtMs: safeInteger(source.updatedAtMs, nowMs),
       writerId: safeString(source.writerId, "legacy"),
-      profile: cosmetics ? { ...withReceipts, cosmetics: cosmetics.value } : withReceipts,
+      profile: {
+        ...withReceipts,
+        ...(cosmetics ? { cosmetics: cosmetics.value } : {}),
+        ...(gauntletBest ? { gauntletBest: gauntletBest.value } : {}),
+      },
       extensions: extensions.value,
     }),
   };

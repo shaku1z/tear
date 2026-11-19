@@ -50,9 +50,13 @@ try {
     throw new Error("game reference check produced an invalid fixed collection authority");
   if (reference.collections.upgrades?.status !== "complete" || reference.collections.upgrades.items?.length !== 60)
     throw new Error("game reference check produced an incomplete upgrade catalog");
+  // The exporter checks the achievements against the catalog (every id, in its order), so the count
+  // comes from the catalog and is not repeated here.
+  const achievementIds = reference.collections.achievements?.items?.map((achievement) => achievement.id) ?? [];
   if (
     reference.collections.achievements?.status !== "complete" ||
-    reference.collections.achievements.items?.length !== 100
+    achievementIds.length === 0 ||
+    new Set(achievementIds).size !== achievementIds.length
   )
     throw new Error("game reference check produced an incomplete achievement catalog");
   if (reference.collections.enemies?.status !== "complete")

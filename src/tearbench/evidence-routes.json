@@ -84,6 +84,7 @@
     "id": "persistence-cloud",
     "prefixes": [
       "src/persistence/",
+      "src/domain/gauntlet-records.ts",
       "src/platform/",
       "src/ghost/",
       "wrangler.jsonc",
@@ -682,6 +683,7 @@
       "src/gameplay/run/campaign-stage-curve.ts",
       "src/gameplay/run/composition-budget.ts",
       "src/gameplay/run/wave-planner.ts",
+      "src/gameplay/run/gauntlet-trials.ts",
       "src/gameplay/run/spawn-scheduler.ts",
       "src/gameplay/run/live-wave-controller.ts",
       "src/tearbench/progression-ledger.ts",

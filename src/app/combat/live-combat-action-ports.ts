@@ -1,5 +1,4 @@
 import { releasePointerLock } from "../../platform/browser-pointer-lock";
-import { BOSS_ROSTER } from "../../gameplay/run/content-director";
 import type { AttackPresentationCueSink } from "../../gameplay/combat/attack-presentation-cue";
 import type { LiveCampaignTrainingAssembly } from "../campaign/live-campaign-training-assembly";
 import type { LiveScreenNavigation } from "../interface/live-screen-navigation";
@@ -151,7 +150,6 @@ export function createLiveCombatActionPorts(options: LiveCombatActionPortsOption
     dependencies,
     canvas: options.surface.canvas,
     width: W,
-    bossRosterSize: BOSS_ROSTER.length,
     environment,
     attackPresentation: options.attackPresentation,
     live: combatWorldState,

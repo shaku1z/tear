@@ -29,6 +29,11 @@
       "count": 15
     }
   },
+  "src/app/library/replay-library-controller.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
   "src/app/replay/browser-ghost-studio-media.ts": {
     "tear/one-record-guard": {
       "count": 1

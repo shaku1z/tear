@@ -2,6 +2,28 @@ import type { BeatRunBinding } from "./beat-run";
 import type { SeedRaceRun } from "./seed-locked-draft";
 import type { RunDifficulty, RunMode, RunWaveLogEntry } from "./session";
 import type { GhostRunAssistance } from "./ghost-assistance";
+import type { GauntletClear } from "../../domain/gauntlet-records";
+
+/** How far a Gauntlet run got: trials cleared, the boss of the trial it ended in, ticks and hits. */
+export interface GauntletProgress {
+  readonly trialsCleared: number;
+  readonly trialCount: number;
+  /** The boss of the trial the run reached (the last one on a clear). */
+  readonly boss: string;
+  readonly ticks: number;
+  readonly hits: number;
+}
+
+export interface GauntletResult extends GauntletProgress {
+  readonly cleared: boolean;
+  /** The personal best on this difficulty after this run. */
+  readonly best: GauntletClear | null;
+  readonly newBest: boolean;
+}
+
+export function gauntletRunCleared(progress: GauntletProgress | undefined): boolean {
+  return progress !== undefined && progress.trialCount > 0 && progress.trialsCleared >= progress.trialCount;
+}
 
 export type OutcomeWaveLogEntry = RunWaveLogEntry;
 
@@ -20,12 +42,35 @@ export interface OutcomeRunState {
   readonly waveLog: readonly OutcomeWaveLogEntry[];
   readonly weaponId: string;
   readonly damagedThisRun: boolean;
+  readonly gauntlet?: GauntletProgress;
 }
 
-export function snapshotOutcomeRun(
-  run: Omit<OutcomeRunState, "damagedThisRun"> & Readonly<{ _dmgThisRun?: boolean }>,
-): OutcomeRunState {
+type OutcomeRunSource = Omit<OutcomeRunState, "damagedThisRun" | "gauntlet"> &
+  Readonly<{
+    _dmgThisRun?: boolean;
+    runTicks?: number;
+    hitsTaken?: number;
+    bossesBeaten?: number;
+    bossOrder?: readonly string[];
+  }>;
+
+function gauntletProgress(run: OutcomeRunSource): GauntletProgress | undefined {
+  if (run.mode !== "gauntlet") return undefined;
+  const order = run.bossOrder ?? [];
+  const trialsCleared = Math.min(order.length, run.bossesBeaten ?? 0);
   return Object.freeze({
+    trialsCleared,
+    trialCount: order.length,
+    boss: order[Math.min(trialsCleared, order.length - 1)] ?? "",
+    ticks: run.runTicks ?? 0,
+    hits: run.hitsTaken ?? 0,
+  });
+}
+
+export function snapshotOutcomeRun(run: OutcomeRunSource): OutcomeRunState {
+  const gauntlet = gauntletProgress(run);
+  return Object.freeze({
+    ...(gauntlet === undefined ? {} : { gauntlet }),
     ...(run.ghostAssistance === undefined ? {} : { ghostAssistance: run.ghostAssistance }),
     ...(run.beatThisRun === undefined ? {} : { beatThisRun: run.beatThisRun }),
     ...(run.seedRace === undefined ? {} : { seedRace: run.seedRace }),
@@ -125,6 +170,8 @@ export interface PreparedVictory {
   readonly isNew: boolean;
   readonly earned: number;
   readonly coins: number;
+  /** A cleared Gauntlet beat the personal best on its difficulty. */
+  readonly gauntletNewBest?: boolean;
 }
 
 export type VictoryProgressionIntent =
@@ -199,6 +246,7 @@ export interface RunResultInfo {
   readonly win?: true;
   readonly campaign?: boolean;
   readonly diff?: RunDifficulty;
+  readonly gauntlet?: GauntletResult;
 }
 
 export function buildRunResult(
@@ -208,9 +256,21 @@ export function buildRunResult(
     prepared: PreparedVictory;
     victory: boolean;
     campaign?: boolean;
+    gauntletBest?: GauntletClear | null;
   }>,
 ): RunResultInfo {
+  const gauntlet = run.gauntlet;
   return Object.freeze({
+    ...(gauntlet === undefined
+      ? {}
+      : {
+          gauntlet: Object.freeze({
+            ...gauntlet,
+            cleared: gauntletRunCleared(gauntlet),
+            best: options.gauntletBest ?? null,
+            newBest: options.prepared.gauntletNewBest === true,
+          }),
+        }),
     wave: run.wave,
     score: run.score,
     time: run.runTime,

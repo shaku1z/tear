@@ -88,9 +88,20 @@ describe("Pale mode and lifecycle coverage", () => {
     expect(seen.has("rimehound")).toBe(false);
   });
 
-  it.each(["endless", "gauntlet"] as const)("transitions from Verdant to published Voidspire in %s", (mode) => {
-    const wave = plan({ state: state({ mode, wave: 21, currentStageIndex: 4, biomeIdx: 4 }) });
+  it("transitions from Verdant to published Voidspire in endless", () => {
+    const wave = plan({ state: state({ mode: "endless", wave: 21, currentStageIndex: 4, biomeIdx: 4 }) });
     expect(wave.state).toMatchObject({ wave: 22, stage: 4, currentStageIndex: 4, biomeIdx: 4 });
+    expect(wave.state.spawnQueue.every((spawn) => stages[4]?.pool.some((entry) => entry.kind === spawn.type))).toBe(
+      true,
+    );
+    expect(stages[4]?.id).toBe("voidspire");
+  });
+
+  it("plays the Voidspire trial of the Gauntlet on the published Voidspire pool", () => {
+    const voidBoss = stages[4]?.boss;
+    if (voidBoss === undefined) throw new Error("Voidspire has no boss");
+    const wave = plan({ state: state({ mode: "gauntlet", wave: 3, bossOrder: ["warden", voidBoss, "source"] }) });
+    expect(wave.state).toMatchObject({ wave: 4, stage: 4, curBoss: voidBoss });
     expect(wave.state.spawnQueue.every((spawn) => stages[4]?.pool.some((entry) => entry.kind === spawn.type))).toBe(
       true,
     );

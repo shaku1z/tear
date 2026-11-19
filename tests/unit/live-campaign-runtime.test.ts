@@ -417,6 +417,7 @@ describe("live campaign chapter gate and the wave it holds", () => {
       loreBusy: campaign.loreBusy,
       achievementTracking: () => false,
       playerOneHit: () => false,
+      playerHealth: () => ({ hp: 100, maxHp: 100 }),
       availableTierUpCount: () => 0,
       install: vi.fn(),
     });
