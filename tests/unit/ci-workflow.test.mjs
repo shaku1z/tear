@@ -555,3 +555,48 @@ describe("Browser jobs' container", () => {
     }
   });
 });
+
+describe("Node version", () => {
+  // Every workflow and composite action, as { file, text }.
+  const files = [
+    ...readdirSync(resolve(root, ".github/workflows"))
+      .filter((name) => /\.ya?ml$/u.test(name))
+      .map((name) => `.github/workflows/${name}`),
+    ...readdirSync(resolve(root, ".github/actions"))
+      .map((name) => `.github/actions/${name}/action.yml`)
+      .filter((path) => existsSync(resolve(root, path))),
+  ].map((file) => ({ file, text: read(file) }));
+
+  /** What is wrong with a file's Node setup: a version written in place, or a setup-node step without the file. */
+  function nodeVersionProblems(text) {
+    const problems = [...text.matchAll(/^\s*node-version:.*$/gmu)].map((match) => `literal: ${match[0].trim()}`);
+    for (const step of text.split(/\n(?=\s*- )/u).filter((part) => /uses: actions\/setup-node@/u.test(part)))
+      if (!/\n\s*node-version-file: \.node-version\n/u.test(`${step}\n`))
+        problems.push(`setup-node without node-version-file: .node-version`);
+    return problems;
+  }
+
+  it("names one exact version in .node-version", () => {
+    const version = read(".node-version").trim();
+    expect(version).toMatch(/^\d+\.\d+\.\d+$/u);
+    const required = /^>=(\d+)\./u.exec(JSON.parse(read("package.json")).engines.node)?.[1];
+    expect(Number(version.split(".")[0])).toBeGreaterThanOrEqual(Number(required));
+  });
+
+  it("is read from .node-version by every workflow and action, never written in place", () => {
+    expect(files.filter(({ text }) => /actions\/setup-node@/u.test(text)).length).toBeGreaterThan(0);
+    for (const { file, text } of files) expect(nodeVersionProblems(text), file).toEqual([]);
+  });
+
+  it("rejects a version written in place and a setup step that names no file", () => {
+    const step = (with_) => `steps:\n  - uses: actions/setup-node@v4\n    with:\n${with_}  - run: node -v\n`;
+    expect(nodeVersionProblems(step("      node-version-file: .node-version\n"))).toEqual([]);
+    expect(nodeVersionProblems(step("      node-version: 24\n"))).toEqual([
+      "literal: node-version: 24",
+      "setup-node without node-version-file: .node-version",
+    ]);
+    expect(nodeVersionProblems(step("      cache: pnpm\n"))).toEqual([
+      "setup-node without node-version-file: .node-version",
+    ]);
+  });
+});
