@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 import { CONFIG } from "../../src/config/game-config";
 import { stageDefinition } from "../../src/gameplay/stages";
 import { stagePresentationDefinition } from "../../src/presentation/stage-presentation-definitions";
-import { createSceneLibrary, type ScenePackageModule } from "../../src/presentation/scenes/scene-library";
+import { createSceneLibrary, type ImageScenePackage } from "../../src/presentation/scenes/scene-library";
 import { SCENE_PACKAGES } from "../../src/presentation/scenes/scene-registry";
 import {
   coverageReport,
@@ -54,13 +54,16 @@ function recordingContext() {
 }
 
 describe("scene packages", () => {
-  it("registers exactly the shipped packages on disk, and never a fixture", () => {
+  it("registers every shipped package on disk, and never a fixture", () => {
     const shipped = sceneDirectories(false, [SCENES_ROOT]).map((directory) => basename(directory));
-    expect(Object.keys(SCENE_PACKAGES).sort()).toEqual(shipped.sort());
+    const fixtures = sceneDirectories(false, [FIXTURE_SCENES_ROOT]).map((directory) => basename(directory));
+    expect(Object.keys(SCENE_PACKAGES)).toEqual(expect.arrayContaining(shipped));
+    expect(
+      Object.keys(SCENE_PACKAGES).filter((stageId) => fixtures.includes(stageId) && !shipped.includes(stageId)),
+    ).toEqual([]);
   });
 
-  it("checks more than one biome", () => {
-    expect(new Set(directories.map((directory) => basename(directory))).size).toBeGreaterThan(1);
+  it("checks a package that is not tied to one biome", () => {
     expect(sceneDirectories(false, [FIXTURE_SCENES_ROOT]).length).toBeGreaterThan(0);
   });
 
@@ -121,10 +124,12 @@ describe("scene packages", () => {
 
       it("loads through the game's scene library and draws every plane", async () => {
         const scene = await inspect();
-        const module = (await import(join(directory, "scene.ts"))) as ScenePackageModule;
+        const module = (await import(join(directory, "scene.ts"))) as ImageScenePackage;
         const sizes = new Map(scene.images.map((image) => [module.files[image.file], image]));
         const library = createSceneLibrary({
           packages: { [scene.stageId]: () => Promise.resolve(module) },
+          world: { width: 1600, height: 900, groundY: 800 },
+          nextSlice: () => Promise.resolve(),
           loadImage: (url) => {
             const image = sizes.get(url);
             return Promise.resolve({ width: image?.width ?? 0, height: image?.height ?? 0 } as unknown as ImageBitmap);

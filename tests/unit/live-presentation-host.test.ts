@@ -189,6 +189,7 @@ describe("live presentation host", () => {
       menuNext: () => false,
       confirmPressed: () => false,
       confirmHeld: () => false,
+      menuInputHeld: () => false,
       backPressed: () => false,
       takeClick: () => null,
     };

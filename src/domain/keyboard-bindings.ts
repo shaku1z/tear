@@ -28,12 +28,13 @@ const digits = (count: number): readonly string[] =>
 
 const BINDINGS = {
   // ---- play: a run, the Tutorial and the Playground ----
-  "move-left": { codes: ["KeyA", "ArrowLeft"], context: "play" },
-  "move-right": { codes: ["KeyD", "ArrowRight"], context: "play" },
+  // Movement plays on the letters and on the arrows alike, so prompts name both sets.
+  "move-left": { codes: ["KeyA", "ArrowLeft"], context: "play", named: ["KeyA", "ArrowLeft"] },
+  "move-right": { codes: ["KeyD", "ArrowRight"], context: "play", named: ["KeyD", "ArrowRight"] },
   /** Up also aims a dash; held down drops through a platform and aims a dash down. */
-  "move-up": { codes: ["KeyW", "ArrowUp"], context: "play" },
-  "move-down": { codes: ["KeyS", "ArrowDown"], context: "play" },
-  jump: { codes: ["KeyW", "Space", "ArrowUp"], context: "play", named: ["KeyW", "Space"] },
+  "move-up": { codes: ["KeyW", "ArrowUp"], context: "play", named: ["KeyW", "ArrowUp"] },
+  "move-down": { codes: ["KeyS", "ArrowDown"], context: "play", named: ["KeyS", "ArrowDown"] },
+  jump: { codes: ["KeyW", "Space", "ArrowUp"], context: "play", named: ["KeyW", "Space", "ArrowUp"] },
   dash: { codes: ["ShiftLeft", "ShiftRight"], context: "play" },
   /** Throw a held blade, recall a thrown one: the keyboard twin of the right mouse button. */
   throw: { codes: ["KeyE"], context: "play" },
@@ -116,6 +117,11 @@ export function anyKeyIn(keys: ReadonlySet<string>, action: KeyboardAction): boo
   return KEYBOARD_BINDINGS[action].codes.some((code) => keys.has(code));
 }
 
+/** True when any key bound to an action of the context is in the set. */
+export function anyContextKeyIn(keys: ReadonlySet<string>, context: KeyboardContext): boolean {
+  return KEYBOARD_ACTIONS.some((action) => KEYBOARD_BINDINGS[action].context === context && anyKeyIn(keys, action));
+}
+
 /** The index of the first key of an ordered range (`quick-spawn`, `choose`) in the set, below `limit`. */
 export function rangeKeyIn(keys: ReadonlySet<string>, action: KeyboardAction, limit = Infinity): number | null {
   const codes = KEYBOARD_BINDINGS[action].codes;
@@ -155,18 +161,23 @@ export function keyCodeLabel(code: string): string {
   return digit ?? code.toUpperCase();
 }
 
-/** What a prompt calls the action's keys: "E", "W / SPACE", "1–8". */
-export function keyboardLabel(action: KeyboardAction): string {
+/** The keys a prompt names for the action, each once: ["A", "←"], ["SHIFT"], ["1–8"]. */
+export function keyboardLabels(action: KeyboardAction): readonly string[] {
   const binding = KEYBOARD_BINDINGS[action];
   const codes = binding.codes;
   if (binding.range === true && codes.length > 1)
-    return `${keyCodeLabel(codes[0] ?? "")}–${keyCodeLabel(codes.at(-1) ?? "")}`;
+    return [`${keyCodeLabel(codes[0] ?? "")}–${keyCodeLabel(codes.at(-1) ?? "")}`];
   const labels: string[] = [];
   for (const code of binding.named ?? codes.slice(0, 1)) {
     const label = keyCodeLabel(code);
     if (!labels.includes(label)) labels.push(label);
   }
-  return labels.join(" / ");
+  return labels;
+}
+
+/** What a prompt calls the action's keys: "E", "W / SPACE / ↑", "1–8". */
+export function keyboardLabel(action: KeyboardAction): string {
+  return keyboardLabels(action).join(" / ");
 }
 
 /** Every key used twice on one screen that `KEYBOARD_SHARED_KEYS` does not explain; `bindings` defaults to the table. */

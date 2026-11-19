@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { createSceneLibrary, type SceneLibraryPorts } from "../../src/presentation/scenes/scene-library";
+import {
+  createSceneLibrary,
+  type SceneLibraryPorts,
+  type ScenePaintPorts,
+} from "../../src/presentation/scenes/scene-library";
+import type { LoadedScene, SceneBitmap, SceneCanvas } from "../../src/presentation/scenes/scene-renderer";
 import { fixturePackage } from "./scene-fixture";
 
 function recordingContext() {
@@ -40,6 +45,8 @@ function ports(overrides: Partial<SceneLibraryPorts> = {}): SceneLibraryPorts {
           files: Object.fromEntries([...sizes.keys()].map((file) => [file, `/assets/${file}`])),
         }),
     },
+    world: { width: 1600, height: 900, groundY: 800 },
+    nextSlice: () => Promise.resolve(),
     loadImage: (url) => {
       const image = sizes.get(url.replace("/assets/", ""));
       return Promise.resolve(sizedBitmap(image?.width ?? 1, image?.height ?? 1));
@@ -255,5 +262,122 @@ describe("scene library", () => {
     expect(library.opaque("fixture-stage")).toBe(false);
     now = 1_000;
     expect(library.opaque("fixture-stage")).toBe(true);
+  });
+});
+
+describe("drawn stages", () => {
+  /** A drawn stage whose painting finishes when the test says so. */
+  function drawnStage() {
+    const paints: ScenePaintPorts[] = [];
+    let finish: (loaded: LoadedScene) => void = () => undefined;
+    const loaded: LoadedScene = {
+      scene: {
+        world: { width: 1600, height: 900, groundY: 800 },
+        camera: { playerShift: 48, zoomMin: 1, zoomMax: 1.2, shake: 24 },
+        edge: { color: "#000000", feather: 72 },
+        theme: { paper: "#dff2d6" },
+        layers: [
+          {
+            id: "far",
+            image: "far",
+            rect: [-400, -300, 2400, 1500],
+            depth: 0.9,
+            plane: "back",
+            opacity: 1,
+            covers: true,
+          },
+        ],
+        shading: [],
+        platforms: {
+          material: "fixture",
+          texture: "far",
+          scale: 1,
+          fill: "#000000",
+          shadow: { color: "#000000", opacity: 0.5, length: 40 },
+        },
+      },
+      images: new Map([["far", sizedBitmap(1200, 750)]]),
+      shading: [],
+    };
+    const packages = {
+      "drawn-stage": () =>
+        Promise.resolve({
+          paint: (paintPorts: ScenePaintPorts) => {
+            paints.push(paintPorts);
+            return new Promise<LoadedScene>((resolve) => {
+              finish = resolve;
+            });
+          },
+        }),
+    };
+    return {
+      packages,
+      paints,
+      finish: () => {
+        finish(loaded);
+      },
+    };
+  }
+  const canvas = () => sizedBitmap(1, 1) as unknown as SceneCanvas & SceneBitmap;
+  const drawnInput = { ...input, stageId: "drawn-stage" };
+
+  it("keeps the caller's own art until painting finishes: never blank, nothing half painted", async () => {
+    const stage = drawnStage();
+    const library = createSceneLibrary(ports({ packages: stage.packages, createCanvas: canvas }));
+    library.show("drawn-stage");
+    await vi.waitFor(() => {
+      expect(stage.paints.length).toBe(1);
+    });
+    const { context, calls } = recordingContext();
+    library.drawBack(context, drawnInput);
+    expect(library.status("drawn-stage")).toBe("loading");
+    // Not opaque tells the world to draw its own backdrop first; the scene adds nothing yet.
+    expect(library.opaque("drawn-stage")).toBe(false);
+    expect(calls).toEqual([]);
+    stage.finish();
+    await vi.waitFor(() => {
+      expect(library.status("drawn-stage")).toBe("ready");
+    });
+    library.drawBack(context, drawnInput);
+    expect(calls.some((call) => call.startsWith("drawImage"))).toBe(true);
+  });
+
+  it("paints once per load, in world units: a different view or camera never paints again", async () => {
+    const stage = drawnStage();
+    const library = createSceneLibrary(ports({ packages: stage.packages, createCanvas: canvas }));
+    library.show("drawn-stage");
+    await vi.waitFor(() => {
+      expect(stage.paints.length).toBe(1);
+    });
+    stage.finish();
+    await vi.waitFor(() => {
+      expect(library.status("drawn-stage")).toBe("ready");
+    });
+    const { context } = recordingContext();
+    for (const scale of [1, 1.2]) {
+      for (const view of [input.view, { left: -400, top: -56, right: 2000, bottom: 956 }]) {
+        library.show("drawn-stage");
+        library.drawBack(context, { ...drawnInput, view, camera: { ...input.camera, scale } });
+      }
+    }
+    expect(stage.paints.length).toBe(1);
+  });
+
+  it("chooses the canvas detail from the graphics setting when the stage loads", async () => {
+    for (const [low, detail] of [
+      [false, 1],
+      [true, 0.6],
+    ] as const) {
+      const stage = drawnStage();
+      const library = createSceneLibrary(
+        ports({ packages: stage.packages, createCanvas: canvas, lowGraphics: () => low }),
+      );
+      library.show("drawn-stage");
+      await vi.waitFor(() => {
+        expect(stage.paints.length).toBe(1);
+      });
+      expect(stage.paints[0]?.detail).toBe(detail);
+      expect(stage.paints[0]?.sliceMs).toBeLessThanOrEqual(4);
+    }
   });
 });

@@ -1,4 +1,4 @@
-import { createBrowserGhostReplayPresentation } from "../../src/app/replay/browser-ghost-studio-media";
+import { createBrowserGhostReplayPresentation } from "../../src/app/replay/browser-ghost-replay-presentation";
 import {
   createProductionGhostReplayComposition,
   projectProductionReplayCanonicalState,

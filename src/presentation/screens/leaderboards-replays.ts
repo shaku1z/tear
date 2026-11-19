@@ -1,7 +1,6 @@
 import type { ReplayScreenView, ScreenRenderContext } from "./contracts";
 import { ellipsize } from "./screen-primitives";
 import { createLeaderboardRenderers } from "./leaderboards";
-import { REPLAY_EDITOR_ACTIONS } from "../../domain/replay-editor-actions";
 import { replayClock } from "../replay-snapshots";
 
 const REPLAY_CYAN = "#13c4d6";
@@ -267,7 +266,7 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     if (view.notice) ui.text(canvas, view.notice, width / 2, barY - 34, ui.t.type.caption, "center", ui.t.alpha.muted);
     if (view.infoVisible) replayInfo(view);
     if (view.runDna) runDnaState(view);
-    if (view.studioCutList) studioCutListState(view);
+    if (view.cutList) replayEditorPanel(view);
   }
 
   function theaterState(): void {
@@ -278,13 +277,13 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
       w: 190,
       h: 34,
       label: "REPLAY EDITOR",
-      action: { type: REPLAY_EDITOR_ACTIONS.toggle },
+      action: { type: "replay.editor.toggle" },
     });
   }
 
-  function studioCutListState(view: ReplayScreenView): void {
-    const cut = view.studioCutList,
-      media = view.studioMedia;
+  function replayEditorPanel(view: ReplayScreenView): void {
+    const cut = view.cutList,
+      media = view.clipExport;
     if (cut === undefined) return;
     const { canvas, safeInsets: safe } = context;
     const panelWidth = Math.min(920, width - 64 - safe.l - safe.r),
@@ -296,7 +295,7 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     ui.title(canvas, "REPLAY EDITOR · LOCAL WEBM", width / 2, y + 36, ui.t.type.lead);
     ui.text(
       canvas,
-      "Reconstructed player-follow · simulation time · 30 fps · 640×360 · GIF unavailable",
+      "Reconstructed player-follow · simulation time · 30 fps · 640×360",
       width / 2,
       y + 62,
       ui.t.type.micro,
@@ -323,7 +322,7 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     );
     ui.text(
       canvas,
-      `EDL ${cut.edlHash ?? "mark IN, seek an OUT checkpoint, then append"}`,
+      `CUT LIST ${cut.cutListHash ?? "mark IN, seek an OUT checkpoint, then append"}`,
       x + 24,
       y + 139,
       ui.t.type.micro,
@@ -349,7 +348,7 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
       h: 34,
       label: "APPEND RANGE",
       enabled: view.practiceAvailable && !busy,
-      action: { type: REPLAY_EDITOR_ACTIONS.createCutList },
+      action: { type: "replay.editor.appendClip" },
     });
     context.enqueue({
       x: x + 24 + (w + gap) * 2,
@@ -366,7 +365,7 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
       w,
       h: 34,
       label: busy ? "CANCEL ENCODING" : "ENCODE WEBM",
-      enabled: busy || (media?.available === true && cut.edlHash !== undefined),
+      enabled: busy || (media?.available === true && cut.cutListHash !== undefined),
       action: { type: "replay.editor.media", command: busy ? "cancel" : "export" },
     });
     context.enqueue({
@@ -384,7 +383,7 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
       w,
       h: 34,
       label: "CLOSE EDITOR",
-      action: { type: REPLAY_EDITOR_ACTIONS.toggle },
+      action: { type: "replay.editor.toggle" },
     });
     ui.text(
       canvas,
