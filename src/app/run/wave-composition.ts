@@ -33,9 +33,15 @@ function bossId(value: string): BossId {
 export function stageIdAfterWave(
   mode: RunMode,
   wave: number,
-  stages: readonly Readonly<{ id: string }>[],
+  stages: readonly Readonly<{ id: string; boss?: string }>[],
+  bossOrder: readonly string[] = [],
 ): string | undefined {
   const next = describeWave({ mode, wave: wave + 1 });
+  // A Gauntlet trial plays in its boss's home stage.
+  if (next.gauntletTrial !== null) {
+    const boss = bossOrder[next.gauntletTrial];
+    return boss === undefined ? undefined : stages.find((stage) => stage.boss === boss)?.id;
+  }
   // The campaign ends with its last stage; endless-like modes cycle through the stages.
   if (next.campaignStage !== null) return stages[next.campaignStage]?.id;
   return next.endlessBiome === null ? undefined : stages[next.endlessBiome % stages.length]?.id;
@@ -127,7 +133,8 @@ export function createLiveWaveComposition(options: LiveWaveCompositionOptions): 
         const weapon = d.WEAPONS.find((candidate) => candidate.id === options.run().weaponId);
         weapon?.onReset?.({ blade: options.blade() });
         options.lifecycle.prepareWave(wave, boss, deferred);
-        const upcoming = stageIdAfterWave(options.run().mode, wave, d.STAGES);
+        const run = options.run();
+        const upcoming = stageIdAfterWave(run.mode, wave, d.STAGES, run.bossOrder);
         if (upcoming !== undefined) d.Scenes.prefetch(upcoming);
       },
       activateWave: () => {
@@ -182,6 +189,10 @@ export function createLiveWaveComposition(options: LiveWaveCompositionOptions): 
     loreBusy: options.loreBusy,
     achievementTracking: options.achievementTracking,
     playerOneHit: () => options.player().oneHit,
+    playerHealth: () => {
+      const player = options.player();
+      return { hp: player.hp, maxHp: player.maxHp };
+    },
     availableTierUpCount: () => {
       const run = options.run();
       return eligibleTierChoices(d.UPGRADES, run.mods.owned, run.mods.tier).length;

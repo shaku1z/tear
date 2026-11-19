@@ -4,14 +4,12 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
+import { relativeImports } from "../relative-imports.mjs";
 
-const IMPORT =
-  /(?:^|[\s;])(?:import|export)\s(?:[^"';]*?\sfrom\s*)?["'](\.{1,2}\/[^"']+)["']|import\(\s*["'](\.{1,2}\/[^"']+)["']\s*\)/gmu;
-const EXTENSIONS = ["", ".ts", ".tsx", ".mts", ".mjs", ".js", ".json", "/index.ts", "/index.mjs", "/index.js"];
-
-/** Files that decide every picture: the tool and the frame path it draws through. */
+/** Files that decide every picture: the tool, the import reader it follows, and the frame path it draws through. */
 const TOOL_FILES = [
   "scripts/asset-sheets.mjs",
+  "scripts/relative-imports.mjs",
   "src/app/replay/browser-ghost-studio-media.ts",
   "src/presentation/world/production-replay-frame.ts",
   "src/app/world/environment-layer.ts",
@@ -26,27 +24,15 @@ export function createFingerprints(repo) {
     if (entry !== undefined) return entry;
     const absolute = path.join(repo, file);
     const text = existsSync(absolute) ? readFileSync(absolute, "utf8") : "";
-    const imports = [];
-    if (/\.(?:ts|tsx|mts|mjs|js)$/u.test(file))
-      for (const match of text.matchAll(IMPORT)) {
-        const target = resolve(file, match[1] ?? match[2]);
-        if (target !== null) imports.push(target);
-      }
+    const imports = /\.(?:ts|tsx|mts|mjs|js)$/u.test(file) ? relativeImports(file, text, isFile) : [];
     entry = { hash: createHash("sha256").update(text).digest("hex"), imports };
     known.set(file, entry);
     return entry;
   }
 
-  function resolve(from, specifier) {
-    const base = path.posix.normalize(path.posix.join(path.posix.dirname(from), specifier));
-    for (const extension of EXTENSIONS) {
-      const candidate = `${base}${extension}`;
-      const absolute = path.join(repo, candidate);
-      if (existsSync(absolute) && statSync(absolute).isFile()) return candidate;
-    }
-    // TypeScript sources import "./x.js" for "./x.ts".
-    const swapped = base.replace(/\.js$/u, ".ts");
-    return swapped !== base && existsSync(path.join(repo, swapped)) ? swapped : null;
+  function isFile(candidate) {
+    const absolute = path.join(repo, candidate);
+    return existsSync(absolute) && statSync(absolute).isFile();
   }
 
   function closure(roots) {

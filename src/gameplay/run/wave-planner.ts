@@ -16,6 +16,7 @@ import type { StageId } from "../stages";
 import { campaignStageCurve } from "./campaign-stage-curve";
 import { eligibleCompositionPool, emptyCompositionBudgetState, recordCompositionKind } from "./composition-budget";
 import { describeWave } from "./wave-rules";
+import { GAUNTLET_RULES, gauntletEnemyScale, gauntletRound, gauntletWave } from "./gauntlet-trials";
 
 export interface WaveTuning {
   readonly firstWaveCount: number;
@@ -125,12 +126,20 @@ function regularWaveQueue(
   options: PlanNextWaveOptions,
 ): readonly WaveSpawnSpec[] {
   const tuning = options.tuning;
+  const trial = state.mode === "gauntlet" ? gauntletWave(wave) : null;
+  const round = trial?.round == null ? null : gauntletRound(trial.round);
   const localWave =
-    state.mode === "endless" || state.mode === "gauntlet" ? ((wave - 1) % 5) + 1 : ((wave - 1) % 10) + 1;
+    round !== null ? round.localWave : state.mode === "endless" ? ((wave - 1) % 5) + 1 : ((wave - 1) % 10) + 1;
   let count: number;
   let hpScale: number;
   let dmgScale = 1;
-  if (state.mode === "campaign") {
+  if (trial !== null && round !== null) {
+    // A Gauntlet round: the stage pool at the round's local wave, scaled by the trial index only.
+    const scale = gauntletEnemyScale(trial.trial);
+    count = tuning.firstWaveCount + Math.floor((localWave - 1) * tuning.countPerWave) + round.extraEnemies;
+    hpScale = (1 + (localWave - 1) * tuning.hpScalePerWave) * scale.health;
+    dmgScale = scale.damage;
+  } else if (state.mode === "campaign") {
     if (stageIndex === null) throw new Error("campaign wave is missing its stage curve identity");
     const curve = campaignStageCurve(stageAt(options.stages, stageIndex).id);
     count = tuning.firstWaveCount + Math.floor((localWave - 1) * tuning.countPerWave) + curve.countAdd;
@@ -139,7 +148,7 @@ function regularWaveQueue(
   } else {
     count = tuning.firstWaveCount + Math.floor((wave - 1) * tuning.countPerWave);
     hpScale = 1 + (wave - 1) * tuning.hpScalePerWave;
-    if (state.mode === "endless" || state.mode === "gauntlet") {
+    if (state.mode === "endless") {
       count += Math.floor(Math.max(0, wave - 8) * 0.4);
       if (miniBoss !== null) count = Math.floor(count * 0.5);
       if (horde) {
@@ -177,7 +186,7 @@ function regularWaveQueue(
       throw new RangeError(`${contentStage.id} composition budget excludes every available enemy`);
     }
     const stageTypes = eligiblePool?.map((entry) => entry.kind) ?? null;
-    if (wave >= 4 && options.random.next() < 0.15) {
+    if (round === null && wave >= 4 && options.random.next() < 0.15) {
       const candidates =
         stageTypes === null
           ? options.presets
@@ -200,7 +209,45 @@ function regularWaveQueue(
     queue.push({ type: kind, hpScale, dmgScale });
     if (composition !== undefined) compositionState = recordCompositionKind(composition, compositionState, kind);
   }
+  // Gatekeepers: the round's elites, each a stage enemy with exactly one affix.
+  for (let index = 0; index < (round?.gatekeepers ?? 0); index += 1) {
+    const eligible =
+      contentStage === null || composition === undefined
+        ? availableAuthoredPool
+        : eligibleCompositionPool(availableAuthoredPool ?? [], composition, localWave, compositionState);
+    const kind =
+      eligible === null || eligible.length === 0
+        ? pickEnemyKind(wave, options.random)
+        : pickEnemyKind(wave, options.random, eligible, localWave);
+    queue.push({ type: kind, hpScale, dmgScale, preset: { type: kind, affixes: [GAUNTLET_RULES.gatekeeperAffix] } });
+    if (composition !== undefined) compositionState = recordCompositionKind(composition, compositionState, kind);
+  }
   return queue;
+}
+
+/**
+ * One Gauntlet wave: the trial's boss from the run's trial order, its home stage, and on the
+ * trial's first wave the stage load and the trial card.
+ */
+function planGauntletTrialWave(
+  wave: number,
+  bossOrder: readonly BossId[],
+  stages: readonly WaveStage[],
+  intents: WavePlanIntent[],
+): Readonly<{ curBoss: BossId; stage: number; bossIdx: number; boss: boolean; opensTrial: boolean }> {
+  const trial = gauntletWave(wave);
+  const curBoss = bossOrder[trial.trial];
+  if (curBoss === undefined) throw new Error(`the Gauntlet has no trial ${String(trial.trial + 1)}`);
+  const stage = stages.findIndex((candidate) => candidate.boss === curBoss);
+  if (stage < 0) throw new Error(`${curBoss} has no home stage in the Gauntlet`);
+  if (trial.opensTrial) {
+    if (wave > 1) intents.push({ type: "begin-wipe" });
+    intents.push(
+      { type: "load-stage", stageIndex: stage },
+      { type: "set-stage-banner", duration: GAUNTLET_RULES.trialCardSeconds, name: stageAt(stages, stage).name },
+    );
+  }
+  return { curBoss, stage, bossIdx: trial.trial + 1, boss: trial.boss, opensTrial: trial.opensTrial };
 }
 
 export function planNextWave(options: PlanNextWaveOptions): PlannedWave {
@@ -235,7 +282,15 @@ export function planNextWave(options: PlanNextWaveOptions): PlannedWave {
       );
       biomeIdx = stage;
     }
-  } else if (prior.mode === "endless" || prior.mode === "gauntlet") {
+  } else if (prior.mode === "gauntlet") {
+    const trial = planGauntletTrialWave(wave, bossOrder, options.stages, intents);
+    ({ curBoss, stage } = trial);
+    if (trial.opensTrial) biomeIdx = trial.stage;
+    if (trial.boss) {
+      bossIdx = trial.bossIdx;
+      waveTag = bossName(trial.curBoss);
+    }
+  } else if (prior.mode === "endless") {
     const nextBiome = description.endlessBiome;
     if (nextBiome === null) throw new Error("endless-like wave is missing its biome");
     stage = nextBiome;

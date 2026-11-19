@@ -9,7 +9,11 @@ import {
   setMusicPreview,
   stepMusicPreview,
 } from "../../src/audio/music/preview";
-import { resolveMenuCueId, setMenuMusic } from "../../src/audio/music/loadout";
+import { parseMusicCatalog } from "../../src/audio/music/catalog";
+import { buildMusicLibrary, publishMusicLibrary } from "../../src/audio/music/library";
+import { setMusicProgressFacts } from "../../src/audio/music/music-source";
+import { progressFacts } from "../../src/domain/progress-facts";
+import { TEST_CHANNELS } from "./music-backend-harness";
 import { MUSIC_SCREEN_TITLE } from "../../src/audio/music/settings";
 import { buildMusicScreenView, musicWherePlays } from "../../src/presentation/music-snapshots";
 import { bossName } from "../../src/gameplay/run/content-director";
@@ -22,7 +26,6 @@ const songs = catalog.works.map((work) => ({ id: work.id, title: work.title }));
 
 afterEach(() => {
   setMusicPreview(null);
-  setMenuMusic("default");
 });
 
 describe("where a song plays", () => {
@@ -59,7 +62,7 @@ describe("where a song plays", () => {
 });
 
 const seconds = Object.fromEntries(songs.map((song, index) => [song.id, 20 + index]));
-const library = { songs: songs.map((song) => ({ ...song, seconds: seconds[song.id] ?? 0 })), routing: published };
+const library = buildMusicLibrary(parseMusicCatalog(catalog), published, seconds);
 const view = (page?: string, extra: Partial<Parameters<typeof buildMusicScreenView>[0]> = {}) =>
   buildMusicScreenView({
     settings: {},
@@ -83,8 +86,15 @@ describe("the MUSIC screen view", () => {
       art: { hues: ["#8b3bd6"], glyph: "◇" },
       seconds: seconds["looking-out"],
     });
-    expect(home.nowPlaying).toEqual({ title: "Fillet", where: "Menu", art: null, previewing: false, progress: null });
-    expect(home.playback.map((row) => row.key)).toEqual(["station", "menuMusic", "musicMode"]);
+    expect(home.nowPlaying).toEqual({
+      title: "Fillet",
+      where: "Menu",
+      art: null,
+      previewing: false,
+      channel: null,
+      progress: null,
+    });
+    expect(home.playback.map((row) => row.key)).toEqual(["menuMusic", "musicMode"]);
   });
 
   it("builds the collections from the catalog and routing: stages in campaign order, bosses, menus", () => {
@@ -133,6 +143,43 @@ describe("the MUSIC screen view", () => {
     expect(view("collection:nowhere").page).toBe("home");
   });
 
+  it("offers the Radio only when the player can tune to a channel, and names the channel playing", () => {
+    // No channel in the catalog: no Radio entry, and the Radio page is Home.
+    expect(view("radio")).toMatchObject({ page: "home", radio: [] });
+    expect(view().rail.some((entry) => entry.id === "radio")).toBe(false);
+
+    setMusicProgressFacts(() => progressFacts({ stats: {}, ach: {} }));
+    const radioLibrary = publishMusicLibrary(parseMusicCatalog({ ...catalog, ...TEST_CHANNELS }), published, seconds);
+    const onCalm = view("radio", {
+      library: radioLibrary,
+      settings: { menuMusic: "channel:calm" },
+      preview: null,
+      nowPlaying: { workId: "fillet", title: "Fillet", channelId: "calm", channelName: "Calm" },
+    });
+    expect(onCalm.rail.map((entry) => [entry.id, entry.selected])).toEqual([
+      ["home", false],
+      ["radio", true],
+      ["songs", false],
+      ["settings", false],
+    ]);
+    expect(onCalm.page).toBe("radio");
+    expect(onCalm.radio).toMatchObject([
+      { id: "calm", name: "Calm", description: "Easy listening", songs: 2, picked: true },
+    ]);
+    expect(onCalm.nowPlaying).toMatchObject({ channel: "Calm", previewing: false });
+    expect(onCalm.radioNext).toBe(true);
+    // A preview over the channel: the transport is the preview's, not the Radio's.
+    const previewing = view("radio", {
+      library: radioLibrary,
+      preview: "fillet",
+      nowPlaying: { workId: "fillet", title: "Fillet", channelId: "calm", channelName: "Calm" },
+    });
+    expect(previewing.nowPlaying).toMatchObject({ channel: null, previewing: true });
+    expect(previewing.radioNext).toBe(false);
+    expect(previewing.radio[0]?.picked).toBe(false);
+    setMusicProgressFacts(null);
+  });
+
   it("shows the loop position of what is playing and lets the transport step through a queue", () => {
     const length = seconds.fillet ?? 1;
     const playing = view(undefined, {
@@ -176,19 +223,14 @@ describe("the preview queue", () => {
 });
 
 describe("song preview", () => {
-  it("makes the shell slot play the previewed song while it is set, then the menu music again", () => {
-    const loaded = (id: string): boolean => id !== "missing";
+  // What the menu slot plays while a preview is set: music-source-playback.test.ts.
+  it("tells its listeners when the previewed song changes, and only then", () => {
     const changes: string[] = [];
     const stop = onMusicPreviewChange(() => changes.push(String(getMusicPreview())));
-    setMenuMusic("shopkeeper");
-    expect(resolveMenuCueId("fillet", loaded)).toBe("shopkeeper");
     setMusicPreview("spring");
-    expect(resolveMenuCueId("fillet", loaded)).toBe("spring");
     setMusicPreview("spring");
     setMusicPreview("missing");
-    expect(resolveMenuCueId("fillet", loaded)).toBe("shopkeeper");
     setMusicPreview(null);
-    expect(resolveMenuCueId("fillet", loaded)).toBe("shopkeeper");
     stop();
     expect(changes).toEqual(["spring", "missing", "null"]);
   });

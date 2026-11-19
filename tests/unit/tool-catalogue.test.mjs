@@ -7,6 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { relativeImports } from "../../scripts/relative-imports.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const catalogue = JSON.parse(fs.readFileSync(path.join(root, "config/tool-catalogue.json"), "utf8"));
@@ -81,15 +82,42 @@ describe("tool catalogue", () => {
   });
 
   it("lists for each library at least one file that imports it", () => {
+    // One pass: read each listed importer once and resolve its relative imports against the tracked
+    // scripts/ files, so the check opens one file per importer and never stats a candidate.
+    const isTracked = new Set(tracked);
+    const importsOf = new Map();
+    for (const importer of new Set(Object.values(catalogue.libraries).flat())) {
+      let text;
+      try {
+        text = fs.readFileSync(path.join(root, importer), "utf8");
+      } catch {
+        importsOf.set(importer, null);
+        continue;
+      }
+      importsOf.set(importer, new Set(relativeImports(importer, text, (candidate) => isTracked.has(candidate))));
+    }
     const problems = [];
     for (const [file, importers] of Object.entries(catalogue.libraries)) {
       if (importers.length === 0) problems.push(`${file}: a library nothing imports is dead code`);
       for (const importer of importers) {
-        const text = fs.existsSync(path.join(root, importer)) ? fs.readFileSync(path.join(root, importer), "utf8") : "";
-        if (!text.includes(path.posix.basename(file, path.extname(file))))
-          problems.push(`${file}: ${importer} does not import it`);
+        const imports = importsOf.get(importer);
+        if (imports === null) problems.push(`${file}: ${importer} does not exist`);
+        else if (!imports.has(file)) problems.push(`${file}: ${importer} does not import it`);
       }
     }
     expect(problems).toEqual([]);
+  });
+
+  it("reads an import by its specifier, not by a file name that only appears in the text", () => {
+    const isFile = (candidate) => candidate === "scripts/lib/output.mjs";
+    const importer = "scripts/tool.mjs";
+    expect(relativeImports(importer, 'import { write } from "./lib/output.mjs";\n', isFile)).toEqual([
+      "scripts/lib/output.mjs",
+    ]);
+    expect(relativeImports(importer, 'const x = await import("./lib/output.mjs");\n', isFile)).toEqual([
+      "scripts/lib/output.mjs",
+    ]);
+    expect(relativeImports(importer, '// writes the output file\nconst output = "output";\n', isFile)).toEqual([]);
+    expect(relativeImports(importer, 'import { write } from "./other/output.mjs";\n', isFile)).toEqual([]);
   });
 });

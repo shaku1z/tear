@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { BOSS_ROSTER } from "../../src/gameplay/run/content-director";
+import { bossIdsAvailableOn } from "../../src/gameplay/stages";
 import { MODE_CATALOG, PROFILE_TRACKED_MODE_IDS, tracksModeProgress } from "../../src/gameplay/run/mode-catalog";
 
 describe("mode catalog", () => {
-  it("derives Gauntlet boss copy from the canonical boss roster", () => {
+  it("derives the Gauntlet's trial count from the bosses it fields", () => {
     expect(MODE_CATALOG.find((mode) => mode.id === "gauntlet")?.blurb).toContain(
-      `cycling all ${String(BOSS_ROSTER.length)}`,
+      `${String(bossIdsAvailableOn("gauntlet").length)} trials, one per boss`,
     );
   });
 

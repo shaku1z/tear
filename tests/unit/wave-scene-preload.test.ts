@@ -18,9 +18,12 @@ describe("painted background preload", () => {
   });
 
   it("stays on the opening stage through a new run's first waves", () => {
-    for (const mode of ["campaign", "endless", "gauntlet"] as const) {
+    for (const mode of ["campaign", "endless"] as const) {
       expect(stageIdAfterWave(mode, 1, STAGES)).toBe(STAGES[0]?.id);
     }
+    // A Gauntlet trial's stage is its boss's home, read from the trial order.
+    expect(stageIdAfterWave("gauntlet", 1, STAGES, [STAGES[0]?.boss ?? ""])).toBe(STAGES[0]?.id);
+    expect(stageIdAfterWave("gauntlet", 1, STAGES)).toBeUndefined();
   });
 
   it("follows the endless stage cycle, wrapping after the last stage", () => {

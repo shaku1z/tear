@@ -290,6 +290,10 @@ export function createProductionWaveRewardRuntime(
     loreBusy: options.chapterFlowActive ?? (() => false),
     achievementTracking: () => false,
     playerOneHit: () => (world.state.player() as never as { oneHit: boolean }).oneHit,
+    playerHealth: () => {
+      const player = world.state.player() as never as { hp: number; maxHp: number };
+      return { hp: player.hp, maxHp: player.maxHp };
+    },
     availableTierUpCount: () => eligibleTierChoices(UPGRADES, run().mods.owned, run().mods.tier).length,
   });
   reward = createRewardRuntime<UpgradeDefinition>({
@@ -363,6 +367,9 @@ export function createProductionWaveRewardRuntime(
   const startNaturalOpening = () => {
     if (world.lifecycle.phase !== "idle") throw new Error("production wave runtime cannot restart an active lifecycle");
     run().wave = 0;
+    // As the live run start does, a Gauntlet opening draws its trial order.
+    const opening = run();
+    if (opening.mode === "gauntlet" && opening.bossOrder.length === 0) opening.bossOrder = content.gauntletTrials();
     world.lifecycle.start(`run-${run().runSeed.toString(36)}`);
     const session = world.lifecycle.snapshot();
     if (session.sessionId === null)

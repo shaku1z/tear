@@ -1,3 +1,5 @@
+import { parseMusicCatalog } from "../../src/audio/music/catalog";
+import { buildMusicLibrary } from "../../src/audio/music/library";
 import { describe, expect, it } from "vitest";
 import { CONFIG } from "../../src/config/game-config";
 import { createTearWorldClock } from "../../src/gameplay/runtime/tear-world-clock";
@@ -893,7 +895,7 @@ describe("phone compositions (compact density)", () => {
       const view = (page: string) =>
         buildMusicScreenView({
           settings: {},
-          library: { songs: catalog.works, routing: validateMusicRoutingManifest(routing) },
+          library: buildMusicLibrary(parseMusicCatalog(catalog), validateMusicRoutingManifest(routing)),
           nowPlaying: { workId: "fillet", title: "Fillet" },
           preview: "spring",
           page,
@@ -934,8 +936,7 @@ describe("phone compositions (compact density)", () => {
       );
       expect(top.controls.some((control) => control.label === "▶  PLAY")).toBe(true);
       const settings = offered("settings");
-      for (const key of ["station", "menuMusic", "musicMode"])
-        expect(settings.some((action) => action.key === key)).toBe(true);
+      for (const key of ["menuMusic", "musicMode"]) expect(settings.some((action) => action.key === key)).toBe(true);
     });
 
     it(`lists every entry of each Drills tab uncut and reachable by scrolling at ${phone.name}`, () => {
@@ -1448,5 +1449,37 @@ describe("button rows sized from their content (ui.buttonFitHeight)", () => {
       const { ui, scale } = phoneUi(phone.width, phone.height);
       expect(ui.buttonFitHeight(recordingCanvas([]), { label: "MOVE", w: 300 }) * scale).toBeGreaterThanOrEqual(44);
     }
+  });
+});
+
+describe("the Vault list before its saved replays have been read", () => {
+  const vault = { ...profileBase, tab: "vault", replays: [] };
+  const drawn = (view: Parameters<ReturnType<typeof createScreenRenderers>["profile"]>[0]) =>
+    [
+      render(PHONES[0], (r) => {
+        r.profile(view);
+      }),
+      renderDesktop({ width: 1600, height: 900 }, (r) => {
+        r.profile(view);
+      }),
+    ].map((frame) => frame.texts.map((glyphs) => glyphs.text).join(" | "));
+
+  it("says it is opening, and does not claim there are none, on the phone and on the desktop", () => {
+    for (const text of drawn({ ...vault, vaultList: "opening", message: "Opening your saved replays…" })) {
+      expect(text).toContain("Opening your saved replays…");
+      expect(text).not.toContain("No saved replays yet");
+    }
+  });
+
+  it("says they could not be opened, with the reason, when the Vault failed to open", () => {
+    for (const text of drawn({ ...vault, vaultList: "failed", message: "Ghost Vault could not open: blocked" })) {
+      expect(text).toContain("Saved replays could not be opened");
+      expect(text).toContain("blocked");
+      expect(text).not.toContain("No saved replays yet");
+    }
+  });
+
+  it("says there are none only once the list has been read and is empty", () => {
+    for (const text of drawn(vault)) expect(text).toContain("No saved replays yet");
   });
 });
