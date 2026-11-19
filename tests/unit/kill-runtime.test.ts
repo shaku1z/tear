@@ -31,7 +31,6 @@ function options(target: KillEnemy): KillRuntimeOptions {
     finalStageIndex: 4,
     stageAccent: "white",
     hasStageChapter: true,
-    bossRosterSize: 5,
     scoring: { scorePerKill: 100, cleanWindow: 2 },
     colors: { charger: "c", slam: "s" },
     deathShards: 12,
@@ -192,7 +191,6 @@ describe("enemy kill transaction", () => {
     resolveEnemyKill(input);
     expect(cleanupEncounter).toHaveBeenCalledWith("death");
     expect(input.run.pendingBossOutro).toBeUndefined();
-    expect(input.run._bossOnlyKills).toBe(1);
 
     const clear = planWaveClear({
       state: {

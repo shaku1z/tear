@@ -51,7 +51,7 @@ const saved = (storage: ReturnType<typeof memory>): { profile: Record<string, un
     schemaVersion: number;
   };
 
-describe("profile envelope version 4", () => {
+describe("profile envelope: the version 4 cosmetics ledger", () => {
   it("adds an empty cosmetics ledger to an old version 3 save and keeps everything else", () => {
     const result = migrateProfileEnvelope({
       schema: "tear.profile",
@@ -93,7 +93,11 @@ describe("profile envelope version 4", () => {
       value: { profile: { cosmetics: { v: 1, owned: { ok_item: 10 }, loadouts: {} } } },
     });
     expect(
-      migrateProfileEnvelope({ schema: "tear.profile", schemaVersion: 4, profile: { cosmetics: 12 } }),
+      migrateProfileEnvelope({
+        schema: "tear.profile",
+        schemaVersion: PROFILE_ENVELOPE_VERSION,
+        profile: { cosmetics: 12 },
+      }),
     ).toMatchObject({
       ok: true,
       value: {

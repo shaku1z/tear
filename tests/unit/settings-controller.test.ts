@@ -2,6 +2,30 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { LegacyAudioCompatibility } from "../../src/audio/legacy-live-audio";
 import { SettingsController } from "../../src/app/screens/settings-controller";
+import { catalog, routing } from "../../public/audio/music.json";
+import { parseMusicCatalog } from "../../src/audio/music/catalog";
+import { publishMusicLibrary } from "../../src/audio/music/library";
+import { validateMusicRoutingManifest } from "../../src/audio/music/music-routing-validate";
+import {
+  getMusicSource,
+  heardSource,
+  musicSourceValue,
+  parseMusicSource,
+  setMusicProgressFacts,
+  setMusicSource,
+} from "../../src/audio/music/music-source";
+import { progressFacts } from "../../src/domain/progress-facts";
+
+/** The menu-music row's choices before the Radio (the retired `MENU_MUSIC_CHOICES`). */
+const OLD_MENU_MUSIC_CHOICES = [
+  "default",
+  "fillet",
+  "shopkeeper",
+  "slicing-life-1",
+  "slicing-life-2",
+  "beserker",
+  "the-source",
+] as const;
 
 function fixture(serialized: string | null = null) {
   const values = new Map<string, string>();
@@ -120,5 +144,28 @@ describe("SettingsController", () => {
     const test = fixture(JSON.stringify({ cinematics: "director-cut" }));
     const controller = new SettingsController(test.dependencies);
     expect(controller.settings.cinematics).toBe("full");
+  });
+
+  it("loads a save from before the Radio: the retired station is dropped and the old menu pick is read as a pick", () => {
+    // Every value the old menu-music row offered, saved beside the station a past build kept.
+    for (const old of OLD_MENU_MUSIC_CHOICES) {
+      const test = fixture(JSON.stringify({ station: "still", menuMusic: old }));
+      const controller = new SettingsController(test.dependencies);
+      expect(controller.settings).not.toHaveProperty("station");
+      expect(controller.settings.menuMusic).toBe(old);
+      expect(getMusicSource()).toEqual(parseMusicSource(old));
+      controller.save();
+      expect(JSON.parse(test.values.get("tear_settings") ?? "{}")).not.toHaveProperty("station");
+    }
+    setMusicSource("default");
+  });
+
+  it("plays an old menu pick only if the player has found that song; any other old pick plays the default", () => {
+    setMusicProgressFacts(() => progressFacts({ stats: {}, ach: {} }));
+    const library = publishMusicLibrary(parseMusicCatalog(catalog), validateMusicRoutingManifest(routing));
+    const heard = OLD_MENU_MUSIC_CHOICES.map((old) => musicSourceValue(heardSource(parseMusicSource(old), library)));
+    // A new player: the two menu songs need nothing; the stage and boss songs are not found yet.
+    expect(heard).toEqual(["default", "fillet", "shopkeeper", "default", "default", "default", "default"]);
+    setMusicProgressFacts(null);
   });
 });

@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
-const { STATE_WAIT_MS, settleFor, trackScriptLoads, waitForScriptLoads } = require("./browser-waits");
+const { STATE_WAIT_MS, settleFor, trackScriptLoads, waitForScriptLoads, launchJourney } = require("./browser-waits");
 
 const scenarios = [
   { name: "desktop-16:9", width: 1600, height: 900, dpr: 1 },
@@ -147,7 +147,7 @@ async function main() {
   const address = server.address();
   if (!address || typeof address === "string") throw new Error("Responsive test server did not bind");
   const origin = `http://127.0.0.1:${String(address.port)}`;
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchJourney(chromium, { headless: true });
   try {
     for (const scenario of scenarios) {
       const context = await browser.newContext({

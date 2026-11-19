@@ -3,12 +3,21 @@ import { EventEmitter } from "node:events";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
 import { ESLint } from "eslint";
-import { describe, expect, it } from "vitest";
+import process from "node:process";
+import { describe, expect, it, vi } from "vitest";
 
 const root = resolve(import.meta.dirname, "../..");
 const eslint = new ESLint({ cwd: root });
-const { clickTarget, reloadPage, reportWorkerScripts, STATE_WAIT_MS, trackScriptLoads, waitForScriptLoads } =
-  createRequire(import.meta.url)("../browser-waits.js");
+const {
+  clickTarget,
+  journeyStep,
+  launchJourney,
+  reloadPage,
+  reportWorkerScripts,
+  STATE_WAIT_MS,
+  trackScriptLoads,
+  waitForScriptLoads,
+} = createRequire(import.meta.url)("../browser-waits.js");
 
 async function messages(code) {
   const [result] = await eslint.lintText(code, { filePath: resolve(root, "tests/rule-probe-browser.js") });
@@ -136,6 +145,97 @@ describe("reloadPage", () => {
       "module.exports = { run };",
     ].join(String.fromCharCode(10));
     expect(await messages(code)).toEqual([3, 4]);
+  });
+
+  it("rejects launching a browser with no journey ceiling, and accepts launchJourney", async () => {
+    const code = [
+      'const { chromium } = require("@playwright/test");',
+      'const { launchJourney } = require("./browser-waits");',
+      "async function run() {",
+      "  await chromium.launch({ headless: true });",
+      "  await chromium.launchPersistentContext('profile', { headless: true });",
+      "  await launchJourney(chromium, { headless: true });",
+      "}",
+      "module.exports = { run };",
+    ].join(String.fromCharCode(10));
+    expect(await messages(code)).toEqual([4, 5]);
+  });
+
+  it("ends a journey that runs out of time and says which step and what the page was doing", async () => {
+    const page = Object.assign(new EventEmitter(), {
+      evaluate: async () => ({ url: "http://127.0.0.1/", readyState: "complete", visibility: "visible" }),
+    });
+    const browser = Object.assign(new EventEmitter(), {
+      newContext: async () => new EventEmitter(),
+      newPage: async () => page,
+      close: async () => undefined,
+    });
+    const errors = [];
+    const exit = vi.spyOn(process, "exit").mockImplementation(() => undefined);
+    const error = vi.spyOn(console, "error").mockImplementation((line) => errors.push(line));
+    try {
+      const launched = await launchJourney({ launch: async () => browser }, {}, { name: "probe", limitMs: 20 });
+      await launched.newPage();
+      journeyStep(launched, "measuring combat");
+      await vi.waitFor(() => expect(exit).toHaveBeenCalledWith(1), { timeout: STATE_WAIT_MS });
+      expect(errors.join("\n")).toMatch(
+        /^probe did not finish within 0\.02 s, waiting in step "measuring combat": page answered .*"readyState":"complete"/u,
+      );
+    } finally {
+      exit.mockRestore();
+      error.mockRestore();
+    }
+  });
+
+  it("ends a journey at once when its page crashes, with the step and the machine's free memory", async () => {
+    const page = new EventEmitter();
+    const context = new EventEmitter();
+    const browser = Object.assign(new EventEmitter(), {
+      newContext: async () => context,
+      newPage: async () => page,
+      close: async () => undefined,
+    });
+    const errors = [];
+    const exit = vi.spyOn(process, "exit").mockImplementation(() => undefined);
+    const error = vi.spyOn(console, "error").mockImplementation((line) => errors.push(line));
+    try {
+      const launched = await launchJourney({ launch: async () => browser }, {}, { name: "probe", limitMs: 60_000 });
+      await launched.newPage();
+      journeyStep(launched, "starting the Playground");
+      page.emit("crash");
+      expect(exit).toHaveBeenCalledWith(1);
+      expect(errors[0]).toMatch(
+        /^probe failed: the page crashed in step "starting the Playground" \(free memory \d+ of \d+ MiB\)$/u,
+      );
+      // A page a context opens later is watched too.
+      await launched.newContext();
+      const later = new EventEmitter();
+      context.emit("page", later);
+      later.emit("crash");
+      expect(exit).toHaveBeenCalledTimes(2);
+    } finally {
+      exit.mockRestore();
+      error.mockRestore();
+    }
+  });
+
+  it("disarms the journey ceiling when the browser closes", async () => {
+    const browser = Object.assign(new EventEmitter(), {
+      newContext: async () => new EventEmitter(),
+      newPage: async () => new EventEmitter(),
+      close: async () => undefined,
+    });
+    const exit = vi.spyOn(process, "exit").mockImplementation(() => undefined);
+    try {
+      const launched = await launchJourney({ launch: async () => browser }, {}, { name: "probe", limitMs: 20 });
+      await launched.close();
+      await new Promise((resolve) => {
+        setTimeout(resolve, 60);
+      });
+      expect(exit).not.toHaveBeenCalled();
+    } finally {
+      exit.mockRestore();
+    }
   });
 
   it("waits for script requests in flight and ignores media that keeps loading", async () => {

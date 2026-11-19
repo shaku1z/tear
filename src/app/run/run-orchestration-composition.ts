@@ -204,6 +204,7 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
     },
     selectedBoss: options.selectedBoss,
     shuffledRoster: content.shuffledRoster,
+    gauntletTrials: content.gauntletTrials,
     bossBiome: content.bossBiome,
     trainingPlatforms: () => playgroundRuntime.homePlatforms(),
     playground: playgroundRuntime,

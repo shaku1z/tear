@@ -162,6 +162,81 @@ async function describeStall(page) {
   return `page did not answer within 5 s; ${stack}`;
 }
 
+const journeys = new WeakMap();
+
+/**
+ * Launches the browser for one journey, with one ceiling for the whole journey. Every browser test
+ * launches through this (eslint.config.mjs rejects a direct `chromium.launch`): `page.evaluate`
+ * and `page.mouse` have no timeout of their own, so a page whose main thread never comes back would
+ * otherwise hold the job until the CI limit and print nothing (nightly run 44221285956 sat two hours
+ * in the performance journey).
+ *
+ * When the ceiling passes, the test fails at once and says what it was waiting on: the step last
+ * named with `journeyStep` and what the latest page was doing (`describeStall`, with a JavaScript
+ * stack if `watchForStalls` was called for that page). Closing the browser disarms it.
+ *
+ * `limitMs` is the honest length of the whole journey with room for a slow runner, never a way to
+ * let a stuck journey pass: name a longer one as a constant beside the journey that needs it.
+ */
+async function launchJourney(chromium, launchOptions = {}, { name, limitMs = JOURNEY_LIMIT_MS } = {}) {
+  const journey = name ?? require("node:path").basename(process.argv[1] ?? "browser journey");
+  const ceiling = milliseconds("limitMs", limitMs);
+  const browser = await chromium.launch(launchOptions);
+  const state = { step: "started", page: null, timer: null };
+  const disarm = () => clearTimeout(state.timer);
+  journeys.set(browser, state);
+  const stop = (message) => {
+    disarm();
+    console.error(`${journey} ${message}`);
+    process.exit(1);
+  };
+  // A crashed page answers nothing again, so a journey waiting on it would only stop at the ceiling.
+  const track = (page) => {
+    state.page = page;
+    page.on("crash", () => stop(`failed: the page crashed in step "${state.step}" (${memoryLine()})`));
+  };
+  const follow = (context) => {
+    context.on("page", track);
+    return context;
+  };
+  const newContext = browser.newContext.bind(browser);
+  browser.newContext = async (...options) => follow(await newContext(...options));
+  const newPage = browser.newPage.bind(browser);
+  browser.newPage = async (...options) => {
+    const page = await newPage(...options);
+    track(page);
+    return page;
+  };
+  browser.on("disconnected", disarm);
+  const close = browser.close.bind(browser);
+  browser.close = async (...options) => {
+    disarm();
+    return close(...options);
+  };
+  state.timer = setTimeout(() => {
+    void (state.page ? describeStall(state.page) : Promise.resolve("no page was open")).then((stall) => {
+      stop(`did not finish within ${String(ceiling / 1000)} s, waiting in step "${state.step}": ${stall}`);
+    });
+  }, ceiling);
+  // A journey that finished but left its browser open is not held alive by its own ceiling.
+  state.timer.unref();
+  return browser;
+}
+
+/** Free and total memory of the machine, for a failure that may be the browser running out of it. */
+function memoryLine() {
+  const os = require("node:os");
+  const mib = (bytes) => String(Math.round(bytes / 2 ** 20));
+  return `free memory ${mib(os.freemem())} of ${mib(os.totalmem())} MiB`;
+}
+
+/** Names what the journey does next, so a journey that runs out of time says where it was. */
+function journeyStep(browser, step) {
+  const state = journeys.get(browser);
+  if (state === undefined) throw new Error("journeyStep needs a browser from launchJourney");
+  state.step = step;
+}
+
 function milliseconds(kind, ms) {
   if (!Number.isFinite(ms) || ms < 0) throw new RangeError(`${kind} needs a non-negative duration, got ${ms}`);
   return ms;
@@ -398,4 +473,6 @@ module.exports = {
   reloadPage,
   describeStall,
   watchForStalls,
+  launchJourney,
+  journeyStep,
 };

@@ -3,6 +3,7 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
+import { changedFiles } from "./changed-files.mjs";
 
 export const BASELINE_FORMAT = "tear-code-budget-baseline.v1";
 export const DEFAULT_BASELINE_PATH = "config/code-budget-baseline.json";
@@ -259,17 +260,24 @@ function applyMoves(baselineFiles, moves) {
 /**
  * Rebuilds the baseline from measurements. A value may rise above its previous
  * limit only for files named in allowIncrease; otherwise it is refused.
+ *
+ * With `scope` (a set of files), only those files' entries are rebuilt; every other entry is
+ * kept as recorded. A branch then lowers only what it changed, and two branches that each
+ * touch a file cannot leave main with an entry below that file's merged size.
  */
 export function updateBaseline(
   measurements,
   baselineFiles,
-  { allowIncrease = new Set(), moves = new Map(), ceilings = NEW_FILE_CEILINGS } = {},
+  { allowIncrease = new Set(), moves = new Map(), ceilings = NEW_FILE_CEILINGS, scope } = {},
 ) {
   const previous = applyMoves(baselineFiles, moves),
     files = {},
     refused = [],
     increased = [];
+  const inScope = (file) => scope === undefined || scope.has(file);
+  for (const [file, entry] of Object.entries(previous)) if (!inScope(file)) files[file] = entry;
   for (const [file, metrics] of [...measurements].sort(([left], [right]) => left.localeCompare(right, "en"))) {
+    if (!inScope(file)) continue;
     const debt = overCeiling(metrics, ceilings);
     if (Object.keys(debt).length > 0) files[file] = debt;
     for (const [metric, value] of Object.entries(debt)) {
@@ -278,7 +286,19 @@ export function updateBaseline(
       (allowIncrease.has(file) ? increased : refused).push({ file, metric, value, limit });
     }
   }
-  return { files, refused, increased };
+  const sorted = Object.fromEntries(Object.entries(files).sort(([left], [right]) => left.localeCompare(right, "en")));
+  return { files: sorted, refused, increased };
+}
+
+/**
+ * The files an `--update` rebuilds: those changed against the merge base with origin/main, the
+ * ends of every --move, and entries whose file no longer exists (deleted or moved away).
+ */
+export function updateScope(changed, measurements, baselineFiles, moves = new Map()) {
+  const scope = new Set(changed);
+  for (const [from, to] of moves) scope.add(from).add(to);
+  for (const file of Object.keys(baselineFiles)) if (!measurements.has(file)) scope.add(file);
+  return scope;
 }
 
 export function debtScore(metrics, ceilings = NEW_FILE_CEILINGS) {
@@ -351,6 +371,7 @@ export function parseArguments(argumentsList) {
     root: process.cwd(),
     baseline: DEFAULT_BASELINE_PATH,
     update: false,
+    all: false,
     initialize: false,
     allowIncrease: new Set(),
     moves: new Map(),
@@ -364,6 +385,7 @@ export function parseArguments(argumentsList) {
         return next.replaceAll("\\", "/");
       };
     if (argument === "--update") options.update = true;
+    else if (argument === "--all") options.all = true;
     else if (argument === "--initialize") options.initialize = true;
     else if (argument === "--allow-increase") options.allowIncrease.add(value());
     else if (argument === "--move") {
@@ -375,14 +397,26 @@ export function parseArguments(argumentsList) {
     else if (argument === "--help") options.help = true;
     else throw new Error(`Unknown argument: ${argument}`);
   }
-  if (!options.update && (options.allowIncrease.size > 0 || options.moves.size > 0))
-    throw new Error("--allow-increase and --move require --update");
+  if (!options.update && (options.allowIncrease.size > 0 || options.moves.size > 0 || options.all))
+    throw new Error("--allow-increase, --move and --all require --update");
   if (options.initialize && options.update) throw new Error("--initialize and --update are exclusive");
   return options;
 }
 
 function runUpdate(options, measurements, baselineFiles, baselinePath) {
-  const result = updateBaseline(measurements, baselineFiles, options);
+  let changed;
+  if (!options.all) {
+    try {
+      changed = changedFiles(options.root);
+    } catch (error) {
+      throw new Error(
+        `--update rebuilds only the files changed against origin/main, and that comparison failed (${error.message.trim()}); pass --all to rebuild every entry`,
+        { cause: error },
+      );
+    }
+  }
+  const scope = changed === undefined ? undefined : updateScope(changed, measurements, baselineFiles, options.moves);
+  const result = updateBaseline(measurements, baselineFiles, { ...options, scope });
   if (result.refused.length > 0) {
     console.error(
       [
@@ -400,7 +434,10 @@ function runUpdate(options, measurements, baselineFiles, baselinePath) {
   fs.writeFileSync(baselinePath, serializeBaseline(result.files));
   const before = Object.keys(baselineFiles).length,
     after = Object.keys(result.files).length;
-  console.log(`code budget baseline written: ${String(after)} files with recorded debt (was ${String(before)})`);
+  console.log(
+    `code budget baseline written: ${String(after)} files with recorded debt (was ${String(before)}); ` +
+      (options.all ? "every entry rebuilt (--all)" : "only entries for files this branch changes rebuilt"),
+  );
   return 0;
 }
 
@@ -420,7 +457,7 @@ function main() {
   const options = parseArguments(process.argv.slice(2));
   if (options.help) {
     console.log(
-      "Usage: node scripts/check-code-budget.mjs [--update [--allow-increase <file>]... [--move <old>=<new>]... | --initialize]" +
+      "Usage: node scripts/check-code-budget.mjs [--update [--all] [--allow-increase <file>]... [--move <old>=<new>]... | --initialize]" +
         " [--root <repo>] [--baseline <path>]",
     );
     return 0;
