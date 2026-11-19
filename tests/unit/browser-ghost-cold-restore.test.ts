@@ -3,10 +3,10 @@ import { createGhostColdRestoreBrowserPort, createBrowserGhostColdRestore } from
 import {
   createMemoryGhostVaultBackend,
   GhostLocalVault,
-  GhostStreamingRecorder,
   GHOST_VAULT_STORES,
   type GhostVaultBackend,
 } from "../../src/ghost/capsule-vault";
+import { GhostStreamingRecorder } from "../../src/ghost/streaming-recorder";
 import { GhostCapsuleReader } from "../../src/ghost/capsule-reader";
 import { inspectBrowserGhostVaultReadOnly } from "../../src/ghost/browser-capsule-vault";
 import { createIndexedDbGhostVaultBackend } from "../../src/ghost/indexeddb-vault-backend";
