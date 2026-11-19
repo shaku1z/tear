@@ -41,6 +41,7 @@ import { createBrowserInput } from "../../input/browser-input";
 import { createProfileStore } from "../../persistence/profile-store";
 import type { CloudFactory } from "../../platform/cloud-factory";
 import type { TearBuildTarget } from "../../platform/contracts";
+import type { BuildIdentity } from "../../platform/build-identity";
 import type { CrazyGamesSdkShape, createCrazyGamesPlatformServices } from "../../platform/crazygames";
 import { createLegacyPlatformCompatibility } from "../../platform/legacy-compat";
 import { browserFullscreen } from "../../platform/browser";
@@ -121,6 +122,8 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     engineeringQuery,
   } = options;
   const compositionWindow = window as CompositionWindow;
+  // The one record of which build is running: replays carry it, Settings and the error screen show it.
+  const build: BuildIdentity = Object.freeze({ version: "0.1.0", revision: __TEAR_BUILD_REVISION__, target });
   // Test storage seeding stays test-build-only even where `vite dev` admits engineering surfaces.
   const tearTestMode = __TEAR_TEST_BUILD__ && engineeringQuery.get("test") === "1";
   // Test pages may seed the isolated adapter before composition. Production never
@@ -317,7 +320,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     gameplayEvents: GAMEPLAY_EVENTS,
     defaults: {
       rulesetVersion: CURRENT_RULESET_VERSION,
-      build: { version: "0.1.0", revision: __TEAR_BUILD_REVISION__, target },
+      build,
       ticksPerSecond: 120,
       weaponId: "sword",
       weaponSchemaVersion: "final-five-v1",
@@ -394,6 +397,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     browserNavigator: navigator,
     browserStorage: window.localStorage,
     browserWindow: window,
+    build,
     CG,
     fullscreen: () => platform.services.fullscreen,
     CLOCK,
