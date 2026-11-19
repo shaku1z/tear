@@ -37,7 +37,7 @@ re-run the command instead of editing the output.
 | `.git-blame-ignore-revs` | Commits `git blame` skips (the Prettier format commit). | Hand | No |
 | `.gitattributes` | Line endings for hash-bound files and `export-ignore` for the CrazyGames archive. | Hand | No |
 | `.gitignore` | Ignored outputs: `dist/`, `artifacts/`, `node_modules/` and others. | Hand | No |
-| `.node-version` | The Node.js version (24). | Hand | No |
+| `.node-version` | The exact Node.js version every workflow and action installs (`node-version-file`). | Hand | No |
 | `.prettierignore` | Paths Prettier skips. Do not widen it to pass the format check. | Hand | No |
 | `.prettierrc.json` | Prettier settings (print width 120). | Hand | No |
 | `AGENTS.md` | The agent working guide. | Hand | No |
