@@ -129,7 +129,10 @@ describe("wave planning conformance", () => {
       }),
     );
     expect(firstVerdant.state).toMatchObject({ wave: 31, stage: 3 });
-    expect(new Set(firstVerdant.state.spawnQueue.map((spawn) => spawn.type))).toEqual(new Set(["charger"]));
+    // Verdant's first wave opens with its three scripted enemies; the fill is what the pool has unlocked.
+    const types = firstVerdant.state.spawnQueue.map((spawn) => spawn.type);
+    expect(types.slice(0, 3)).toEqual(["flyer", "ranged", "charger"]);
+    expect(new Set(types.slice(3))).toEqual(new Set(["charger"]));
 
     const matureVerdant = planNextWave(
       options({
