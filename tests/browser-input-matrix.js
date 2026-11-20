@@ -6,6 +6,7 @@ const { listenOnFreePort } = require("./local-server");
 const path = require("node:path");
 const { chapterOpeningCarriesThroughOnEveryDevice } = require("./browser-chapter-opening");
 const { STATE_WAIT_MS, holdFor, notWithin, pollEvery, launchJourney } = require("./browser-waits");
+const { TUTORIAL_SKIPPED_STORAGE } = require("./browser-journey-harness");
 
 async function moveCapturedPointer(page, from, to) {
   await page.evaluate(
@@ -623,6 +624,10 @@ async function desktopPointerAndController(browser, configure) {
       value: () => (window.__testGamepad ? [window.__testGamepad] : []),
     });
   });
+  // The controller leg drives the run setup through PLAY, so it plays as a player who skipped the tutorial.
+  await controller.addInitScript((storage) => {
+    window.__TEAR_TEST_STORAGE__ = storage;
+  }, TUTORIAL_SKIPPED_STORAGE);
   await configure(controller);
   await controller.evaluate(() => {
     const buttons = Array.from({ length: 16 }, () => ({ pressed: false, touched: false, value: 0 }));
@@ -644,7 +649,7 @@ async function desktopPointerAndController(browser, configure) {
   );
   await controller.mouse.click(260, 360);
   await controller.waitForFunction(() => window.__PANTHEON_TEST.state().game === "setup");
-  // A fresh profile is preselected onto the Tutorial; pick Endless the way a player would.
+  // A skipped tutorial preselects Adventure; pick Endless the way a player would.
   await controller.mouse.click(430, 255);
   await controller.waitForFunction(() => window.__PANTHEON_TEST.state().setup.mode === "endless");
   await controller.evaluate(() => {
