@@ -81,7 +81,7 @@ function recordedCanonicalSnapshot(value: unknown): TearSnapshotV1 | undefined {
 function isolatedCodecFactory(): TearWorldFactory {
   return Object.freeze({
     createEmpty: (): TearCodecWorld => ({ components: new Map(), references: new Map(), entityIds: new Set() }),
-    // This boundary intentionally validates only the versioned State Forge
+    // This boundary intentionally validates only the versioned State Setup
     // contract. Production hydration has host-owned constructors and must not
     // be used to decide whether untrusted capsule bytes are admissible.
     validate: () => [],

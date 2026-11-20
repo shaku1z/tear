@@ -46,7 +46,7 @@ describe("C40 Source one-HP void rescue seek evidence registry", () => {
         "src/tearbench/canonical-scenarios.json",
         "src/tearbench/evidence-routes.json",
         "tests/browser-c40-source-void-ghost-seek.js",
-        "tests/browser-c40-state-forge-source-void.js",
+        "tests/browser-c40-state-setup-source-void.js",
         "tests/unit/c40-source-void-evidence-registry.test.ts",
       ],
       scenarios: ["source-void-low-hp-rescue-seek"],

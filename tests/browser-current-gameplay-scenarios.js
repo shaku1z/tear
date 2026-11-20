@@ -20,21 +20,21 @@ const hasSharedBrowserSubject = (entry) =>
   entry.subject.kind === "gameplay" ||
   entry.subject.kind === "environment-field" ||
   entry.subject.kind === "environment-combat-object";
-const stateForgeScenarios = canonicalScenarios.filter(
-  (entry) => hasSharedBrowserSubject(entry) && entry.stateForge !== undefined,
+const stateSetupScenarios = canonicalScenarios.filter(
+  (entry) => hasSharedBrowserSubject(entry) && entry.stateSetup !== undefined,
 );
 const scenarios = canonicalScenarios.filter(
-  (entry) => hasSharedBrowserSubject(entry) && entry.stateForge === undefined,
+  (entry) => hasSharedBrowserSubject(entry) && entry.stateSetup === undefined,
 );
 
 async function main() {
   const assertionsByScenario = await loadCanonicalAssertions();
-  for (const entry of stateForgeScenarios) {
-    assert.equal(entry.stateForge.documentId, entry.id, `${entry.id} must own its matching State Forge document`);
+  for (const entry of stateSetupScenarios) {
+    assert.equal(entry.stateSetup.documentId, entry.id, `${entry.id} must own its matching State Setup document`);
     assert.equal(
       entry.evidence.command,
       `pnpm tearbench run ${entry.id}`,
-      `${entry.id} must own canonical live State Forge execution outside the natural reset journey`,
+      `${entry.id} must own canonical live State Setup execution outside the natural reset journey`,
     );
   }
   await withJourney({ name: "current canonical gameplay scenario subjects" }, async ({ page }) => {
@@ -218,7 +218,7 @@ async function main() {
             }
             case "generic-field": {
               const forge = environment.forgeEnvironmentField();
-              if (!forge.ok) throw new Error("generic field must launch through State Forge restore");
+              if (!forge.ok) throw new Error("generic field must launch through State Setup restore");
               const env = environment.environment();
               const forgedState = env.snapshot();
               const fieldId = "generic-field-state";
@@ -245,7 +245,7 @@ async function main() {
               if (scenario.maxTicks !== 744)
                 throw new Error("Bloom Well browser proof must use BLOOM_WELL_TIMING.totalTicks");
               const forge = environment.forgeBloomWellCycle();
-              if (!forge.ok) throw new Error("Bloom Well must launch through State Forge restore");
+              if (!forge.ok) throw new Error("Bloom Well must launch through State Setup restore");
               const env = environment.environment();
               const fieldId = "verdant-bloom-well";
               const states = [];
@@ -257,7 +257,7 @@ async function main() {
                 const snapshot = env.snapshot();
                 const field = snapshot.fields.find((entry) => entry.id === fieldId);
                 if (field === undefined)
-                  throw new Error("Bloom Well State Forge restore did not produce the authored field");
+                  throw new Error("Bloom Well State Setup restore did not produce the authored field");
                 states.push(field.state);
                 hashes.push(environment.stateHash());
                 return field;
@@ -300,7 +300,7 @@ async function main() {
             }
             case "generic-combat-object": {
               const forge = environment.forgeEnvironmentCombatObject();
-              if (!forge.ok) throw new Error("generic combat object must launch through State Forge restore");
+              if (!forge.ok) throw new Error("generic combat object must launch through State Setup restore");
               const env = environment.environment();
               const objectId = "generic-combat-object-state";
               const before = env.snapshot().combatObjects.find((entry) => entry.id === objectId);
@@ -329,14 +329,14 @@ async function main() {
             }
             case "verdant-root-network": {
               const forge = environment.forgeRootbinderNetwork();
-              if (!forge.ok) throw new Error("Rootbinder network must launch through State Forge restore");
+              if (!forge.ok) throw new Error("Rootbinder network must launch through State Setup restore");
               const env = environment.environment();
               const initialObjects = env.snapshot().combatObjects.filter((object) => object.kind === "root-link");
               if (initialObjects.length !== 2 || initialObjects.some((object) => object.procEligible !== false)) {
-                throw new Error("Rootbinder State Forge restore did not produce two non-proc root links");
+                throw new Error("Rootbinder State Setup restore did not produce two non-proc root links");
               }
               const first = initialObjects[0];
-              if (first === undefined) throw new Error("Rootbinder State Forge restore produced no link");
+              if (first === undefined) throw new Error("Rootbinder State Setup restore produced no link");
               const damage = env.damageCombatObject(
                 first.id,
                 2,
@@ -354,7 +354,7 @@ async function main() {
                 .events()
                 .map((event) => event.type)
                 .filter((type) => type.startsWith("world.environment-"));
-              // State Forge restores pre-existing links; it must not fabricate a
+              // State Setup restores pre-existing links; it must not fabricate a
               // causal link-created event. The live mutation chronology begins at
               // damage, proceeds to destruction, then cleans the surviving link.
               const damageIndex = eventTypes.indexOf("world.environment-combat-object-damaged");
@@ -380,7 +380,7 @@ async function main() {
             case "rootbound-graft-anchor": {
               const forge = environment.forgeRootboundGraftAnchor();
               if (!forge.ok)
-                throw new Error(`Rootbound Graft must launch through State Forge restore: ${JSON.stringify(forge)}`);
+                throw new Error(`Rootbound Graft must launch through State Setup restore: ${JSON.stringify(forge)}`);
               const env = environment.environment();
               const beforeObservation = environment.observe();
               const boss = beforeObservation.entities.find((actor) => actor.kind === "rootbound");

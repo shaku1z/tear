@@ -20,7 +20,7 @@ const scenario = {
   tags: ["c23", "state-forge", "live-restore"],
 };
 
-withJourney({ name: "C23 live State Forge" }, async ({ page, buildInfo }) => {
+withJourney({ name: "C23 live State Setup" }, async ({ page, buildInfo }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: STATE_WAIT_MS });
   await page.waitForFunction(() => window.__PANTHEON_TEST, undefined, { timeout: STATE_WAIT_MS });
   const ordinaryReset = await page.evaluate((scenarioValue) => {
@@ -85,7 +85,7 @@ withJourney({ name: "C23 live State Forge" }, async ({ page, buildInfo }) => {
     JSON.stringify(
       {
         build: buildInfo,
-        historySetup: "Class A surgical prior history through State Forge; ordinary scenario resets",
+        historySetup: "Class A surgical prior history through State Setup; ordinary scenario resets",
         ...ordinaryReset,
       },
       null,
@@ -161,11 +161,11 @@ withJourney({ name: "C23 live State Forge" }, async ({ page, buildInfo }) => {
             finished: false,
           };
           inactiveHostile.state["tear.world.v1"].runtime.chapterBinding = null;
-          inactiveHostile.state["tear.ui.v1"].screen = "invalid-state-forge-screen";
+          inactiveHostile.state["tear.ui.v1"].screen = "invalid-state-setup-screen";
           const inactiveFailure = environment.restoreSnapshot(inactiveHostile);
           const afterInactiveFailure = environment.captureSnapshot("c27a-active-after-inactive-rollback");
           const hostile = structuredClone(source);
-          hostile.state["tear.ui.v1"].screen = "invalid-state-forge-screen";
+          hostile.state["tear.ui.v1"].screen = "invalid-state-setup-screen";
           const failure = environment.restoreSnapshot(hostile);
           const afterFailure = environment.captureSnapshot("c27a-active-cinema-after-rollback");
           const success = environment.restoreSnapshot(source);
@@ -317,7 +317,7 @@ withJourney({ name: "C23 live State Forge" }, async ({ page, buildInfo }) => {
     const invalidReference = environment.restoreSnapshot(missingActor);
     const afterInvalidReference = environment.captureSnapshot("boss-intro-after-invalid-reference");
     const hostile = structuredClone(source);
-    hostile.state["tear.ui.v1"].screen = "invalid-state-forge-screen";
+    hostile.state["tear.ui.v1"].screen = "invalid-state-setup-screen";
     const commitFailure = environment.restoreSnapshot(hostile);
     const afterRollback = environment.captureSnapshot("boss-intro-after-rollback");
     const restored = environment.restoreSnapshot(source);
@@ -455,7 +455,7 @@ withJourney({ name: "C23 live State Forge" }, async ({ page, buildInfo }) => {
       const afterFailedRestore = restored.stateHash();
       const beforeCommitFailure = restored.captureSnapshot("before-mid-commit-failure").hashes.exact;
       const commitHostile = structuredClone(source.snapshot);
-      commitHostile.state["tear.ui.v1"].screen = "invalid-state-forge-screen";
+      commitHostile.state["tear.ui.v1"].screen = "invalid-state-setup-screen";
       const commitFailure = restored.restoreSnapshot(commitHostile);
       const afterCommitFailure = restored.captureSnapshot("after-mid-commit-failure").hashes.exact;
       return {
@@ -523,7 +523,7 @@ withJourney({ name: "C23 live State Forge" }, async ({ page, buildInfo }) => {
       skipping: false,
       finished: false,
     },
-    "State Forge must carry a versioned cinematic director position",
+    "State Setup must carry a versioned cinematic director position",
   );
   assert.deepEqual(Object.keys(sourceResult.snapshot.codecs).sort(), [
     "tear.blade.v1",
@@ -589,5 +589,5 @@ withJourney({ name: "C23 live State Forge" }, async ({ page, buildInfo }) => {
     ),
   );
   await page.screenshot({ path: path.join(artifactDirectory, "live-restore-600.png") });
-  console.log("C23 live State Forge 600-tick restore passed");
+  console.log("C23 live State Setup 600-tick restore passed");
 });

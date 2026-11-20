@@ -69,15 +69,15 @@ type Candidate = TearStagedWorld<
   CombatEntityIdentityState,
   LegacyGhostRuntimeState
 > & { readonly particleRestore?: PreparedParticlePresentationRestore };
-type StateForgeWorldServices = Pick<
+type StateSetupWorldServices = Pick<
   TearWorldServices<RunRandomStreamsSnapshot, RunRandomStreamName, RandomSource, GameRuntimeDependencies["CONFIG"]>,
   "configuration" | "random" | "clock"
 >;
 
-export interface LiveStateForgeAdapterOptions {
+export interface LiveStateSetupAdapterOptions {
   readonly dependencies: GameRuntimeDependencies;
   readonly entities: LiveWorldEntityConstructionPort;
-  readonly worldServices: StateForgeWorldServices;
+  readonly worldServices: StateSetupWorldServices;
   readonly state: LiveGameHostState;
   readonly actorId: (entity: object, prefix: "enemy" | "projectile") => string;
   readonly bindActorId: (entity: object, id: string) => void;
@@ -128,7 +128,7 @@ export interface LiveStateForgeAdapterOptions {
   ) => void;
 }
 
-// Input projection is owned by the live frame lifecycle, not State Forge.
+// Input projection is owned by the live frame lifecycle, not State Setup.
 // Excluding it prevents a constructor's optional undefined fields from
 // becoming codec nulls during a restore/rollback before another frame runs.
 const skippedKeys = new Set(["cfg", "weapon", "aiInput", "aimOverride", "lmbOverride", "presentation"]);
@@ -198,12 +198,12 @@ function factoryId(enemy: GameEnemy): string {
   return enemy.kind;
 }
 
-function captureWorld(options: LiveStateForgeAdapterOptions): TearCodecWorld {
+function captureWorld(options: LiveStateSetupAdapterOptions): TearCodecWorld {
   const player = options.state.player();
   const blade = options.state.blade();
   const run = options.state.run();
   if (player === undefined || blade === undefined || run === null)
-    throw new Error("State Forge capture requires a live run");
+    throw new Error("State Setup capture requires a live run");
   const enemies = options.state.enemies();
   const projectiles = options.state.projectiles();
   const environment = options.environment().snapshot();
@@ -348,7 +348,7 @@ function createWorldConstructionPort(
 }
 
 function stageWorld(
-  options: LiveStateForgeAdapterOptions,
+  options: LiveStateSetupAdapterOptions,
   world: TearCodecWorld,
   context: TearLiveRestoreContext,
 ): Candidate {
@@ -404,7 +404,7 @@ function stageWorld(
   });
 }
 
-export function createLiveStateForgeAdapter(options: LiveStateForgeAdapterOptions): TearLiveWorldAdapter<Candidate> {
+export function createLiveStateSetupAdapter(options: LiveStateSetupAdapterOptions): TearLiveWorldAdapter<Candidate> {
   const adapter: TearLiveWorldAdapter<Candidate> = {
     capture: () => captureWorld(options),
     stage: (world, context) => stageWorld(options, world, context),

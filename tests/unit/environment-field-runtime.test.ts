@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { advanceEnvironmentField, environmentFieldContainsPoint } from "../../src/gameplay/environment/field-runtime";
 import type { EnvironmentFieldState } from "../../src/gameplay/environment/environment-contracts";
-import { forgeEnvironmentFieldState } from "../../src/tearbench/state-forge-factories";
+import { forgeEnvironmentFieldState } from "../../src/tearbench/state-setup-factories";
 import { buildEnvironmentPresentationSnapshot } from "../../src/gameplay/environment/presentation-snapshot";
 import type { TearSdlDocumentV1 } from "../../src/tearbench/tearsdl";
 import { TearGameplayEventBus } from "../../src/gameplay/runtime/gameplay-events";
 import { resolveTearSdl } from "../../src/tearbench/tearsdl";
-import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-forge-live-compiler";
+import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-setup-live-compiler";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 
 const field: EnvironmentFieldState = {
@@ -56,7 +56,7 @@ describe("generic environment field kernel", () => {
     expect(() => advanceEnvironmentField(field, 1, 0)).toThrow(/duration/u);
   });
 
-  it("is State Forge-approved and produces data-only presentation facts", () => {
+  it("is State Setup-approved and produces data-only presentation facts", () => {
     const base: TearSdlDocumentV1 = {
       format: "tearsdl",
       schemaVersion: 1,
