@@ -8,6 +8,7 @@ import type { createBlade } from "../gameplay/entities/blade";
 import type { createPlayer } from "../gameplay/entities/player";
 import type { STAGES as StageValues } from "../gameplay/stages";
 import type { ParticleSystem } from "./particles";
+import type { KeepOutArea } from "./demo-keep-out";
 
 type Stage = (typeof StageValues)[number];
 type PlayerConstructor = ReturnType<typeof createPlayer>;
@@ -140,7 +141,8 @@ interface AttractController {
   _fire(foe: Foe, player: PlayerEntity): void;
   _explode(x: number, y: number): void;
   _updateShot(shot: Shot, deltaSeconds: number, player: PlayerEntity, blade: BladeEntity): void;
-  draw(context: CanvasRenderingContext2D): void;
+  /** Draws the demo; its play layer (ledges, fighters, shots, effects) stays out of `keepOut`. */
+  draw(context: CanvasRenderingContext2D, keepOut?: KeepOutArea): void;
   _drawFoe(context: CanvasRenderingContext2D, foe: Foe): void;
   _drawShot(context: CanvasRenderingContext2D, shot: Shot): void;
 }
@@ -603,12 +605,19 @@ function createAttract(dependencies: AttractDependencies): AttractController {
     },
 
     // ---- drawing ----
-    draw(ctx) {
+    draw(ctx, keepOut) {
       const stage = this.stage();
       theme.set(stage.bg);
       ctx.fillStyle = stage.bg;
       Backdrop.fillFull(ctx); // include the fullscreen overscan bleed
       Backdrop.draw(ctx, stage, this.t, (this.player ? this.player.x : this.W / 2) + this.scroll); // scrolled parallax = travel
+      ctx.save();
+      if (keepOut) {
+        ctx.beginPath();
+        ctx.rect(-overscan.x, -this.H, this.W + overscan.x * 2, this.H * 3);
+        ctx.rect(keepOut.x, keepOut.y, keepOut.w, keepOut.h);
+        ctx.clip("evenodd");
+      }
       for (const pl of this.platforms) Backdrop.platform(ctx, pl, stage, !!pl.floor);
       for (const f of this.foes) this._drawFoe(ctx, f);
       for (const s of this.shots) this._drawShot(ctx, s);
@@ -619,6 +628,7 @@ function createAttract(dependencies: AttractDependencies): AttractController {
       } catch {
         /* Attract mode remains optional if FX is unavailable. */
       }
+      ctx.restore();
       Backdrop.post(ctx, stage);
     },
     _drawFoe(ctx, f) {

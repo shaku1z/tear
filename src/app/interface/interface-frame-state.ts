@@ -1,7 +1,8 @@
 import type { AppScreen } from "../../domain/screen-catalog";
 
 export interface LiveInterfaceFrameState {
-  readonly previousScreen: () => AppScreen;
+  /** The screen the last frame drew; undefined before the first frame, so the first screen is entered too. */
+  readonly previousScreen: () => AppScreen | undefined;
   readonly setPreviousScreen: (value: AppScreen) => void;
   readonly seconds: () => number;
   readonly deltaSeconds: () => number;
@@ -13,14 +14,14 @@ export interface LiveInterfaceFrameState {
 }
 
 /** Owns menu-frame timing, previous-screen state, and entrance state. */
-export function createLiveInterfaceFrameState(initialScreen: AppScreen): LiveInterfaceFrameState {
-  let previousScreen = initialScreen;
+export function createLiveInterfaceFrameState(): LiveInterfaceFrameState {
+  let previousScreen: AppScreen | undefined;
   let seconds = 0;
   let deltaSeconds = 1 / 60;
   let enterSeconds = 0;
   let enterAmount = 1;
   return Object.freeze({
-    previousScreen: (): AppScreen => previousScreen,
+    previousScreen: (): AppScreen | undefined => previousScreen,
     setPreviousScreen: (value: AppScreen): void => {
       previousScreen = value;
     },

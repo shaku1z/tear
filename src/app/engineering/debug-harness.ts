@@ -1050,7 +1050,7 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
       },
       openSettings(tab?: string) {
         if (context.screen() !== "menu") context.setScreen("menu");
-        context.setScreen("settings", { returnTo: "menu" });
+        context.setScreen("settings");
         if (tab) context.selectSettingsTab(tab);
       },
       auditEffects: context.auditEffects,
