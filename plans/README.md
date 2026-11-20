@@ -24,6 +24,7 @@ combined transaction must remain link-checked and reviewable.
 | [RELEASE_READINESS_PLAN.md](active/RELEASE_READINESS_PLAN.md) | Release-readiness owner | Active | Every phase in the plan is done or explicitly dropped by the owner, `pnpm check` passes from the final commit, and the owner has authorised the merge and deployment. | Phased plan to make the game releasable to players: gate developer surfaces, green gates, input and first-run fixes, UI system and screen passes, payload, repository and workflow cleanup. |
 | [PLAYTEST_TOOL_PLAN.md](active/PLAYTEST_TOOL_PLAN.md) | Playtest tool owner | Active | Every "done when" line of stages 1 to 6 holds, `pnpm check` passes from the final commit, and no file, command or document is still named TearBench. | One command that plays Tear headless with scripted players and reports clear rates, time to kill, damage and comparisons between builds; replaces TearBench and the AI-player work. |
 | [DRILLED_MOVE_NAMES.md](active/DRILLED_MOVE_NAMES.md) | Training and Playground experience owner (training-ux) | Active | Every "done when" line below holds and `pnpm check:functional` passes from the final commit. | One source of display names for the moves the weapon drills train, used by the drill steps, the weapon teaching lines and the Drills WEAPONS help. |
+| [PALE_GAMEPLAY_REBUILD.md](active/PALE_GAMEPLAY_REBUILD.md) | Pale gameplay owner (verdant-gameplay session) | Active | Every "done when" line below holds and `pnpm check:functional` passes from the final commit. | Rebuild of Pale's Aurora Tracks, Rimehound, variants, White Hart and waves on the shared layers Verdant built; replaces checkpoints C2 to C8 of the Pale Revision 3 plan for gameplay; does not publish Pale. |
 | [REPLAY_OVERHAUL_PLAN.md](active/REPLAY_OVERHAUL_PLAN.md) | Replay owner (replay-overhaul session) | Active | Every "done when" line below holds, `src/ghost/` no longer exists, and `pnpm check:functional` passes from the final commit. | One plain replay system (record, store, watch, share, verify) on one versioned record, replacing Ghost 2 and the Ghost V3 capsules; the stable record for seed races, Shards cosmetics in shared replays, a later clip export and the playtest tool. |
 
 ## Completed plans
@@ -49,7 +50,7 @@ Where a plan lives:
 New plans start from [TASK_CARD_TEMPLATE.md](TASK_CARD_TEMPLATE.md) and go in
 `active/` with a row in the Active plans table.
 
-The active-plan set is exactly the twelve active rows across the two tables in
+The active-plan set is exactly the thirteen active rows across the two tables in
 this index. `check:docs` derives that set from these tables, requires each
 plan's file metadata to match its Owner/Status/Closure condition cells, and
 fails closed on duplicate, malformed, empty, or additional active rows.
