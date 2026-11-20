@@ -27,6 +27,11 @@ export interface BuildTargetDefinition {
   readonly portalSdkScript: string | null;
   readonly cloudflareHeaders: boolean;
   readonly pruneUnrequestedFiles: boolean;
+  /**
+   * Pages served beside the game, as names without ".html" (public/privacy.html is "privacy"). A build
+   * that does not list a page leaves it out of the output; the service worker skips the ones it lists.
+   */
+  readonly staticPages: readonly string[];
   readonly forbiddenModules: readonly string[];
   readonly testMode: string | null;
   readonly package: { readonly path: string; readonly maxArchiveBytes: number } | null;

@@ -3,7 +3,7 @@ import { createFirebaseCloudCompatibility, type FirebaseCompatSdk } from "../../
 import { FIREBASE_CONFIG } from "../../src/platform/firebase-config";
 import type { AccountContext } from "../../src/platform/cloud";
 
-function corruptReplaySdk(): FirebaseCompatSdk {
+function corruptReplaySdk(added: unknown[] = []): FirebaseCompatSdk {
   const user = {
     uid: "u1",
     isAnonymous: true,
@@ -21,7 +21,14 @@ function corruptReplaySdk(): FirebaseCompatSdk {
     collection: () => ({ doc: () => document, add: () => Promise.resolve(), orderBy: () => query }),
   };
   const query = { limit: () => query, get: () => Promise.resolve({ docs: [] }) };
-  const collection = { doc: () => document, add: () => Promise.resolve(), orderBy: () => query };
+  const collection = {
+    doc: () => document,
+    add: (entry: unknown) => {
+      added.push(entry);
+      return Promise.resolve();
+    },
+    orderBy: () => query,
+  };
   const auth = {
     currentUser: user,
     onAuthStateChanged: (listener: (next: typeof user) => void) => {
@@ -88,5 +95,22 @@ describe("Firebase cloud adapter", () => {
     };
     await compatibility.account.init(context);
     await expect(compatibility.account.load?.(context)).resolves.toBeNull();
+  });
+
+  it("writes a run statistic with the event and its figures and no account id", async () => {
+    const added: unknown[] = [];
+    const sdk = corruptReplaySdk(added);
+    const compatibility = createFirebaseCloudCompatibility({
+      config: FIREBASE_CONFIG,
+      getSdk: () => sdk,
+      loadScript: () => Promise.resolve(),
+      remote: {},
+      now: () => 1234,
+    });
+    compatibility.shared.logEvent("run_end", { wave: 3, score: 900 });
+    await vi.waitFor(() => {
+      expect(added).toHaveLength(1);
+    });
+    expect(added[0]).toEqual({ event: "run_end", ts: 1234, wave: 3, score: 900 });
   });
 });
