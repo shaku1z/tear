@@ -4,7 +4,14 @@
  * no recipe can make a bake slow or a layer huge.
  */
 import { shapeBounds } from "./strokes-growth";
-import { STAGE_ART_LIMITS, type StageArtRecipe, type StageArtStroke } from "./stage-art-contract";
+import {
+  STAGE_ART_LIMITS,
+  type LiveMotes,
+  type LivePart,
+  type LiveWater,
+  type StageArtRecipe,
+  type StageArtStroke,
+} from "./stage-art-contract";
 
 export class StageArtError extends Error {
   constructor(message: string) {
@@ -78,6 +85,94 @@ export function strokeOperations(stroke: StageArtStroke, layerArea: number): num
   }
 }
 
+/** Ramps, ranges and colours of one stroke, wherever it is painted. */
+function checkStroke(recipe: StageArtRecipe, stroke: StageArtStroke, path: string): void {
+  for (const name of rampsOf(stroke)) {
+    if (!Object.hasOwn(recipe.ramps, name)) fail(path, `unknown ramp "${name}"`);
+  }
+  if ("haze" in stroke) within(stroke.haze, 0, 1, `${path}.haze`);
+  if (stroke.kind === "trunk" && stroke.spine.length < 2) fail(path, "spine needs two points");
+  if (stroke.kind === "scatter")
+    [...stroke.colors, stroke.center].forEach((value) => {
+      colour(value, path);
+    });
+  if (stroke.kind === "sky")
+    [stroke.top, stroke.middle, stroke.bottom].forEach((value) => {
+      colour(value, path);
+    });
+  if (stroke.kind === "vignette") colour(stroke.color, path);
+}
+
+const LIVE = STAGE_ART_LIMITS.live;
+
+function checkWater(water: LiveWater, path: string): void {
+  if (!(water.bottom > water.top)) fail(path, "bottom must be below top");
+  within(water.rows[0], 1, water.rows[1], `${path}.rows[0]`);
+  if ((water.bottom - water.top) / water.rows[0] > LIVE.waterRows) fail(`${path}.rows`, "too many rows");
+  within(water.reach[0], 0, LIVE.waterReach, `${path}.reach[0]`);
+  within(water.reach[1], 0, LIVE.waterReach, `${path}.reach[1]`);
+  within(water.period, LIVE.minPeriod, 600, `${path}.period`);
+  within(water.glints.count, 0, LIVE.glints, `${path}.glints.count`);
+  within(water.glints.alpha, 0, LIVE.glintAlpha, `${path}.glints.alpha`);
+  within(water.glints.period, LIVE.minPeriod, 600, `${path}.glints.period`);
+}
+
+function checkMotes(motes: LiveMotes, path: string): void {
+  colour(motes.color, `${path}.color`);
+  within(motes.count, 0, LIVE.motes, `${path}.count`);
+  within(motes.size[0], 0.1, motes.size[1], `${path}.size[0]`);
+  within(motes.size[1], 0.1, LIVE.moteSize, `${path}.size[1]`);
+  within(motes.alpha, 0, LIVE.moteAlpha, `${path}.alpha`);
+  within(Math.hypot(...motes.drift), 0, LIVE.moteDrift, `${path}.drift`);
+  within(motes.period, LIVE.minPeriod, 600, `${path}.period`);
+}
+
+/** Checks a part and returns the canvas pixels it holds at full detail. */
+function checkPart(recipe: StageArtRecipe, part: LivePart, path: string): number {
+  within(part.scale, STAGE_ART_LIMITS.minScale, STAGE_ART_LIMITS.maxScale, `${path}.scale`);
+  if (!(part.area[2] > 0 && part.area[3] > 0)) fail(`${path}.area`, "width and height must be positive");
+  if (part.sway === undefined && part.breathe === undefined) fail(path, "a part needs a sway or a breathe");
+  if (part.sway !== undefined) {
+    within(part.sway.reach, 0, LIVE.swayReach, `${path}.sway.reach`);
+    within(part.sway.slices, 1, LIVE.swaySlices, `${path}.sway.slices`);
+    within(part.sway.period, LIVE.minPeriod, 600, `${path}.sway.period`);
+  }
+  if (part.breathe !== undefined) {
+    within(part.breathe.low, 0, 1, `${path}.breathe.low`);
+    within(part.breathe.period, LIVE.minPeriod, 600, `${path}.breathe.period`);
+  }
+  part.strokes.forEach((stroke, index) => {
+    checkStroke(recipe, stroke, `${path}.strokes[${String(index)}] (${stroke.kind})`);
+  });
+  return part.area[2] * part.area[3] * part.scale * part.scale;
+}
+
+/** Checks what moves and returns the brush operations its parts add to the bake. */
+function validateLive(recipe: StageArtRecipe, layerIds: ReadonlySet<string>): number {
+  const live = recipe.live ?? [];
+  if (live.length > LIVE.entries) fail("live", `more than ${String(LIVE.entries)} entries`);
+  const partIds = new Set<string>();
+  let operations = 0;
+  let pixels = 0;
+  live.forEach((entry, index) => {
+    const path = `live[${String(index)}] (${entry.kind})`;
+    if (!layerIds.has(entry.layer)) fail(path, `unknown layer "${entry.layer}"`);
+    if (entry.kind === "water") checkWater(entry, path);
+    else if (entry.kind === "motes") checkMotes(entry, path);
+    else {
+      if (layerIds.has(entry.id) || partIds.has(entry.id) || entry.id === "surface")
+        fail(path, `duplicate or reserved id "${entry.id}"`);
+      partIds.add(entry.id);
+      pixels += checkPart(recipe, entry, path);
+      for (const stroke of entry.strokes) operations += strokeOperations(stroke, entry.area[2] * entry.area[3]);
+    }
+  });
+  if (pixels > LIVE.partPixels) {
+    fail("live", `parts hold ${String(Math.round(pixels))} canvas pixels, over ${String(LIVE.partPixels)}`);
+  }
+  return operations;
+}
+
 export function validateStageArt(recipe: StageArtRecipe): void {
   for (const [name, stops] of Object.entries(recipe.ramps)) {
     if (stops.length < 2) fail(`ramps.${name}`, "needs at least two stops");
@@ -109,24 +204,11 @@ export function validateStageArt(recipe: StageArtRecipe): void {
     if (layer.strokes.length > STAGE_ART_LIMITS.strokesPerLayer) fail(path, "too many strokes");
     const area = layer.area === undefined ? COVERING_LAYER_AREA : layer.area[2] * layer.area[3];
     layer.strokes.forEach((stroke, strokeIndex) => {
-      const strokePath = `${path}.strokes[${String(strokeIndex)}] (${stroke.kind})`;
-      for (const name of rampsOf(stroke)) {
-        if (!Object.hasOwn(recipe.ramps, name)) fail(strokePath, `unknown ramp "${name}"`);
-      }
-      if ("haze" in stroke) within(stroke.haze, 0, 1, `${strokePath}.haze`);
-      if (stroke.kind === "trunk" && stroke.spine.length < 2) fail(strokePath, "spine needs two points");
-      if (stroke.kind === "scatter")
-        [...stroke.colors, stroke.center].forEach((value) => {
-          colour(value, strokePath);
-        });
-      if (stroke.kind === "sky")
-        [stroke.top, stroke.middle, stroke.bottom].forEach((value) => {
-          colour(value, strokePath);
-        });
-      if (stroke.kind === "vignette") colour(stroke.color, strokePath);
+      checkStroke(recipe, stroke, `${path}.strokes[${String(strokeIndex)}] (${stroke.kind})`);
       operations += strokeOperations(stroke, area);
     });
   });
+  operations += validateLive(recipe, ids);
   if (operations > STAGE_ART_LIMITS.operations) {
     fail(
       "layers",
