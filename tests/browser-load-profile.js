@@ -360,6 +360,9 @@ async function measureLoad(browser, target, profileId, server) {
   const page = await context.newPage();
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
+  // A script that fails to load is not a page error; index.html marks #boot failed instead.
+  const failedRequests = [];
+  page.on("requestfailed", (request) => failedRequests.push(`${request.url()} (${request.failure()?.errorText})`));
   const cdp = await context.newCDPSession(page);
   await cdp.send("Network.enable");
   // Playwright routing would disable the HTTP cache and void the warm load, so the
@@ -391,10 +394,39 @@ async function measureLoad(browser, target, profileId, server) {
       assert.ok(Date.now() < deadline, `${target}/${profileId}: game frame never attached`);
       await page.waitForTimeout(pollEvery(50));
     }
-    await frame.waitForFunction(() => performance.getEntriesByName("tear:first-frame").length > 0, undefined, {
-      timeout: SLOW_STATE_WAIT_MS,
-      polling: 100,
-    });
+    // The first frame, or a boot screen that will never give way to one: a failed boot
+    // (index.html) or the computer-only line (a device the build reads as touch-only).
+    const bootState = () =>
+      frame.evaluate(() => {
+        const boot = document.getElementById("boot");
+        return boot === null ? "removed" : `#boot.${boot.className || "loading"}: ${boot.innerText.trim()}`;
+      });
+    const outcome = await frame
+      .waitForFunction(
+        () => {
+          if (performance.getEntriesByName("tear:first-frame").length > 0) return "first-frame";
+          const boot = document.getElementById("boot");
+          if (boot?.classList.contains("failed")) return "boot-failed";
+          if (boot?.classList.contains("computer")) return "computer-only";
+          return false;
+        },
+        undefined,
+        { timeout: SLOW_STATE_WAIT_MS, polling: 100 },
+      )
+      .then((handle) => handle.jsonValue())
+      .catch(async (error) => {
+        throw new Error(
+          `${target}/${profileId}: no first frame. Boot screen: ${await bootState().catch(() => "unreadable")}; ` +
+            `page errors: ${JSON.stringify(errors)}; failed requests: ${JSON.stringify(failedRequests)}`,
+          { cause: error },
+        );
+      });
+    assert.equal(
+      outcome,
+      "first-frame",
+      `${target}/${profileId}: the game never started. Boot screen: ${await bootState()}; ` +
+        `page errors: ${JSON.stringify(errors)}; failed requests: ${JSON.stringify(failedRequests)}`,
+    );
     await frame
       .waitForFunction(() => performance.getEntriesByName("tear:loading-finished").length > 0, undefined, {
         timeout: STATE_WAIT_MS,

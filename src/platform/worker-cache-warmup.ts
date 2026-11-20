@@ -62,3 +62,20 @@ export function startWorkerCacheWarmup(idle: () => boolean, urls: readonly strin
 export function browserOnline(): boolean {
   return navigator.onLine;
 }
+
+/**
+ * Runs `task` once per page load after the plain main menu has been quiet for a few seconds, unless the
+ * connection is metered. Used to fetch code a feature loads on first use (such as the replay engine) while
+ * the player is not waiting, so the first use finds it already there.
+ */
+export function startIdleTask(idle: () => boolean, task: () => Promise<unknown>): void {
+  const connection = (navigator as Navigator & { connection?: { saveData?: boolean; type?: string } }).connection;
+  let quietPolls = 0;
+  const handle = window.setInterval(() => {
+    quietPolls = idle() ? quietPolls + 1 : 0;
+    if (quietPolls < 3) return;
+    window.clearInterval(handle);
+    if (!navigator.onLine || connection?.saveData === true || connection?.type === "cellular") return;
+    void task().catch(() => undefined);
+  }, 2000);
+}

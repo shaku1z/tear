@@ -454,6 +454,10 @@
         "seconds": 16
       },
       {
+        "id": "replay-engine-cold",
+        "run": "node tests/browser-replay-engine-cold.js"
+      },
+      {
         "id": "pale-aurora-track",
         "run": "node scripts/tearbench.mjs run pale-aurora-track-behavior"
       },

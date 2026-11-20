@@ -155,18 +155,18 @@ export interface TearClassARuntimeEnvironment extends TearStructuredRuntimeEnvir
   setCameraEffectsForTest(effects: Readonly<{ zoom: number; shake: number }>): void;
   captureSnapshot(id: string, stateClass?: TearStateClass, seed?: string): TearSnapshotV1;
   restoreSnapshot(snapshot: TearSnapshotV1): TearLiveRestoreResult;
-  forgeExitLaunch(launch: StateSetupExitLaunch): TearLiveRestoreResult;
-  forgeWave99Hammer(): TearLiveRestoreResult;
+  buildExitLaunch(launch: StateSetupExitLaunch): TearLiveRestoreResult;
+  buildWave99Hammer(): TearLiveRestoreResult;
   /** Resumes the six-stage branch's certified wave-59 frontier through the production wave controller. */
-  forgeCampaignFinalWave(): TearLiveRestoreResult;
-  forgeResolvedScenario(resolved: TearSdlResolved): TearLiveRestoreResult;
-  forgeEnvironmentField(): TearLiveRestoreResult;
-  forgeEnvironmentCombatObject(): TearLiveRestoreResult;
-  forgeBloomWellCycle(): TearLiveRestoreResult;
+  buildCampaignFinalWave(): TearLiveRestoreResult;
+  buildResolvedScenario(resolved: TearSdlResolved): TearLiveRestoreResult;
+  buildEnvironmentField(): TearLiveRestoreResult;
+  buildEnvironmentCombatObject(): TearLiveRestoreResult;
+  buildBloomWellCycle(): TearLiveRestoreResult;
   /** Restores a source-owned Rootbinder relationship fixture through State Setup. */
-  forgeRootbinderNetwork(): TearLiveRestoreResult;
+  buildRootbinderNetwork(): TearLiveRestoreResult;
   /** Restores one specialized active Graft against the real Rootbound owner. */
-  forgeRootboundGraftAnchor(): TearLiveRestoreResult;
+  buildRootboundGraftAnchor(): TearLiveRestoreResult;
 }
 
 export interface TearClassBRuntimeEnvironment extends Omit<TearStructuredRuntimeEnvironment, "accessClass" | "rng"> {

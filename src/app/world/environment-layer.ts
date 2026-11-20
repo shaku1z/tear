@@ -30,12 +30,10 @@ export function isEnvironmentDrawnEnemy(enemy: { readonly kind?: string }): bool
 /** The part of an enemy this layer reads: a Rootbinder is drawn here, not by an enemy renderer. */
 interface EnvironmentLayerEnemy {
   readonly kind?: string;
-  readonly rootbinderOwnerId?: string;
-  readonly rootbinderState?: {
-    x: number;
-    y: number;
-    state: Parameters<typeof projectRootbinderPresentation>[0]["state"];
-  };
+  readonly x?: number;
+  readonly y?: number;
+  readonly rootbinderState?: Parameters<typeof projectRootbinderPresentation>[0]["state"];
+  readonly rootLinkIds?: readonly string[];
 }
 
 /**
@@ -62,16 +60,12 @@ export function renderEnvironmentLayer(
   renderPaleEnvironmentPresentation(canvas, environmentPresentation, { ...presentationOptions, timeSeconds });
   for (const enemy of enemies) {
     if (!isEnvironmentDrawnEnemy(enemy)) continue;
-    const rootState = enemy.rootbinderState;
-    if (rootState === undefined || enemy.rootbinderOwnerId === undefined) continue;
-    const owned = snapshot.combatObjects.filter((object) => object.ownerId === enemy.rootbinderOwnerId);
-    const generationOf = (id: string): number => Number(/:(?:network|leash):g(\d+)/u.exec(id)?.[1] ?? 0);
-    const latestGeneration = owned.reduce((latest, object) => Math.max(latest, generationOf(object.id)), 0);
-    const visible =
-      latestGeneration === 0 ? owned : owned.filter((object) => generationOf(object.id) === latestGeneration);
+    const { rootbinderState: state, rootLinkIds, x, y } = enemy;
+    if (state === undefined || rootLinkIds === undefined || x === undefined || y === undefined) continue;
+    const roots = snapshot.combatObjects.filter((object) => rootLinkIds.includes(object.id));
     renderRootbinderPresentation(
       canvas,
-      projectRootbinderPresentation(rootState, visible, { ...presentationOptions, audioEnabled }),
+      projectRootbinderPresentation({ x, y, state }, roots, { ...presentationOptions, audioEnabled }),
     );
   }
 }

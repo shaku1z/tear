@@ -119,6 +119,7 @@ describe("saved keyboard settings", () => {
         },
         accessibility: { flashScale: 1, motionScale: 1, reducedMotion: false, highContrast: false },
         graphics: { low: false },
+        statistics: { share: true },
         input: { forceMode: "auto", touchAimMode: "stick" },
         gamepad: { setPreset: (value: string) => value },
         audio: { migrateSettings: (value: Record<string, unknown>) => value, applySettings: () => undefined },
@@ -165,6 +166,7 @@ describe("Controls tab keyboard rows", () => {
     touch,
     installAvailable: false,
     update: { ready: false, applying: false },
+    privacy: { privacyLink: true, termsLink: false, note: null, statistics: true },
     buildLabel: "test",
     presets: { default: { name: "DEFAULT", tag: "", line: "", map: "" } },
     keyboard: { listening, note: { row: "rebind:dash", text: "Swapped: Throw / recall now uses the old key." } },
@@ -193,6 +195,16 @@ describe("Controls tab keyboard rows", () => {
       "Swapped: Throw / recall now uses the old key.",
     );
     expect(rebindNote("throw", rebindKey({}, "throw", "KeyR"), "KeyR")).toBeNull();
+    // The Playground keys stay reserved, and the row says whose they are.
+    expect(rebindNote("jump", rebindKey({}, "jump", "KeyT"), "KeyT")).toBe(
+      "T is used by the Playground (spawn dummy). Pick another key.",
+    );
+    expect(rebindNote("jump", rebindKey({}, "jump", "Digit3"), "Digit3")).toBe(
+      "3 is used by the Playground (quick spawn). Pick another key.",
+    );
+    expect(rebindNote("jump", rebindKey({}, "jump", "KeyN"), "KeyN")).toBe(
+      "N is used by the Tutorial (skip lesson). Pick another key.",
+    );
   });
 });
 

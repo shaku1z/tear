@@ -2,6 +2,7 @@ import { assertTutorialGoldFresh } from "./scripts/tutorial-gold-compatibility.m
 import { defineConfig, type Plugin } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { readSourceIdentitySync } from "./scripts/release-artifact.mjs";
+import { applicationChunk } from "./scripts/application-chunks.mjs";
 import {
   DEVELOPER_ONLY_ROLE,
   MOBILE_ONLY_ROLE,
@@ -50,7 +51,6 @@ function targetHtml(target: TargetDefinition): Plugin {
  * a "standalone" artifact, which this is not).
  */
 export const PREVIEW_DEV_BASE = "/dev/";
-
 function headerRules(prefix: string): string[] {
   return [
     `${prefix}assets/*`,
@@ -165,56 +165,6 @@ function mobileCodeBoundary(name: TargetName): Plugin {
   );
 }
 
-const TUTORIAL_GOLD_DATA = "gameplay/training/tutorial-gold-reference-data.json";
-
-/**
- * `src/app/<folder>/` -> chunk; other folders and the app root go to runtime-app-core.
- * A group also takes the static dependencies of its modules that an earlier group
- * (in name order) has not taken, so catalog and combat hold their folders' closures
- * and core holds the rest of the application.
- */
-const APPLICATION_FOLDER_CHUNKS: Readonly<Record<string, string>> = {
-  library: "runtime-app-catalog",
-  combat: "runtime-app-combat",
-  world: "runtime-app-combat",
-};
-
-/** Keep the async application composition below the release transfer budget. */
-function applicationChunk(id: string): string | undefined {
-  const normalized = id.replaceAll("\\", "/");
-  const source = normalized.indexOf("/src/");
-  if (source < 0) return undefined;
-  const relative = normalized.slice(source + "/src/".length);
-  const topLevel = relative.split("/")[0] ?? "";
-  if (topLevel === "app") return APPLICATION_FOLDER_CHUNKS[relative.split("/")[1] ?? ""] ?? "runtime-app-core";
-  // The ~1.5 MB tutorial demonstration corpus is imported only by training
-  // preflight; its own chunk keeps it out of the startup modulepreload set.
-  if (relative === TUTORIAL_GOLD_DATA) return "tutorial-gold-reference";
-  if (topLevel === "gameplay") {
-    const area = relative.split("/").slice(1, 2)[0] ?? "core";
-    return `gameplay-${area}`;
-  }
-  if (
-    [
-      "presentation",
-      "audio",
-      "ghost",
-      "tearbench",
-      "agents",
-      "input",
-      "persistence",
-      "platform",
-      "replay",
-      "simulation",
-      "diagnostics",
-      "domain",
-      "config",
-    ].includes(topLevel)
-  )
-    return `runtime-${topLevel}`;
-  return undefined;
-}
-
 export default defineConfig(({ mode, command }) => {
   // A mode names a target or its test build; any other mode (vite dev, vitest) is the standalone game.
   const resolved = resolveBuildMode(mode);
@@ -276,8 +226,13 @@ export default defineConfig(({ mode, command }) => {
                 clientsClaim: true,
                 navigateFallback: "/index.html",
                 // On the preview origin the dev build lives below this path; its pages
-                // must reach the network, not the release build's cached index.
-                navigateFallbackDenylist: [new RegExp(`^${PREVIEW_DEV_BASE}`, "u")],
+                // must reach the network, not the release build's cached index. So must
+                // the static pages beside the game (public/privacy.html): they are not
+                // precached (see globIgnores) and the game's index must not answer for them.
+                navigateFallbackDenylist: [
+                  new RegExp(`^${PREVIEW_DEV_BASE}`, "u"),
+                  ...definition.staticPages.map((page) => new RegExp(`^/${page}(?:\\.html)?(?:[?#]|$)`, "u")),
+                ],
                 globPatterns: ["**/*.{html,js,css,woff2,png,webmanifest}"],
                 // The tutorial corpus is fetched on demand (training preflight), not at
                 // install: it is runtime-cached on first use so it then works offline.
@@ -291,6 +246,7 @@ export default defineConfig(({ mode, command }) => {
                   "assets/worker-tutorial-gold-*.js",
                   "assets/career-archive-worker-*.js",
                   "assets/live-ghost-reference-worker-*.js",
+                  ...definition.staticPages.map((page) => `${page}.html`),
                   "branding/icons/icon-512.png",
                   "branding/icons/icon-maskable-512.png",
                 ],

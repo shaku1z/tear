@@ -8,6 +8,7 @@ import type {
 } from "./environment-contracts";
 import type { TearGameplayEventPort } from "../runtime/gameplay-events";
 import { publishEnvironmentEvent } from "./environment-events";
+import { isObject } from "../../domain/records";
 import { fieldEnemyClass, type FieldEnemyClass } from "./field-runtime";
 
 /** Bloom Wells use authored fixed ticks so warning and force do not drift with render cadence. */
@@ -108,7 +109,7 @@ function assertTick(value: number, name: string): void {
 }
 
 export function isValidBloomWellForcePolicy(value: unknown): value is EnvironmentForcePolicy {
-  if (typeof value !== "object" || value === null) return false;
+  if (!isObject(value)) return false;
   const force = value as Partial<EnvironmentForcePolicy>;
   if (![force.x, force.y, force.magnitude].every((entry) => typeof entry === "number" && Number.isFinite(entry)))
     return false;
@@ -257,7 +258,8 @@ function finishedWell(state: BloomWellState, tick: number, events?: TearGameplay
     cleanupReason: "natural-expiry",
   });
 }
-function contains(state: BloomWellState, x: number, y: number): boolean {
+/** True when the point is inside the Well's area, whatever its state. */
+export function bloomWellContains(state: BloomWellState, x: number, y: number): boolean {
   if (state.geometry.radius !== undefined)
     return Math.hypot(x - state.geometry.x, y - state.geometry.y) <= state.geometry.radius;
   return (
@@ -285,7 +287,7 @@ export function applyBloomWellForce(
 ): boolean {
   const eligible =
     actor.kind === "player" ? state.eligibility.player : actor.kind === "enemy" ? state.eligibility.enemies : false;
-  if (state.state !== "active" || !eligible || !contains(state, actor.x, actor.y)) return false;
+  if (state.state !== "active" || !eligible || !bloomWellContains(state, actor.x, actor.y)) return false;
   const scale = liftScale(actor);
   if (scale <= 0 || !(seconds > 0) || !Number.isFinite(seconds)) return false;
   const rise = -BLOOM_WELL_LIFT.maxRiseSpeed * scale;

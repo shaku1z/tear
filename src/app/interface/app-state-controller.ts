@@ -52,6 +52,7 @@ export class AppStateController {
   readonly #surfaces: SurfaceAvailability;
   /** The main menu and play start the chain of opened screens over. */
   readonly #history = createScreenHistory<AppScreen>(["menu", "playing"]);
+  readonly #listeners: ((screen: AppScreen) => void)[] = [];
   #snapshot: AppStateSnapshot = Object.freeze({
     screen: "menu",
     previous: null,
@@ -75,6 +76,11 @@ export class AppStateController {
   }
   snapshot(): AppStateSnapshot {
     return this.#snapshot;
+  }
+
+  /** Calls `listener` with the new screen after every change of screen. */
+  subscribe(listener: (screen: AppScreen) => void): void {
+    this.#listeners.push(listener);
   }
 
   transition(to: AppScreen, context: AppTransitionContext = {}): AppScreen {
@@ -105,6 +111,7 @@ export class AppStateController {
       arrival,
       revision: current.revision + 1,
     });
+    for (const listener of this.#listeners) listener(to);
     return to;
   }
 

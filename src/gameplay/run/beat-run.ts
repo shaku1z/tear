@@ -1,3 +1,5 @@
+import { isRecord, requireRecord } from "../../domain/records";
+
 /** Sticky category, installed before native content/start; no progression or automatic publication. */
 export interface BeatRunBinding {
   readonly format: "tear-beat-attempt";
@@ -7,18 +9,15 @@ export interface BeatRunBinding {
 }
 export function readBeatRunBinding(value: unknown): BeatRunBinding | undefined {
   if (value === undefined) return undefined;
-  if (!value || typeof value !== "object" || Array.isArray(value)) throw new TypeError("Invalid Beat This Run binding");
-  const v = value as Record<string, unknown>,
-    s = v.source as Record<string, unknown> | undefined;
+  const v = requireRecord(value, "Invalid Beat This Run binding"),
+    s = v.source;
   if (
     Object.keys(v).sort().join() !== "codeHash,format,source,version" ||
     v.format !== "tear-beat-attempt" ||
     v.version !== 1 ||
     typeof v.codeHash !== "string" ||
     !/^[a-f0-9]{16}$/u.test(v.codeHash) ||
-    !s ||
-    typeof s !== "object" ||
-    Array.isArray(s) ||
+    !isRecord(s) ||
     Object.keys(s).sort().join() !== "capsule,manifest,root" ||
     typeof s.capsule !== "string" ||
     !s.capsule ||

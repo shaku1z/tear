@@ -10,6 +10,7 @@
     "portalSdkScript": null,
     "cloudflareHeaders": true,
     "pruneUnrequestedFiles": false,
+    "staticPages": ["privacy"],
     "forbiddenModules": ["/src/platform/crazygames.ts", "/src/platform/crazygames-cloud.ts"],
     "testMode": "test-standalone",
     "previewDev": { "mode": "test-standalone", "output": "dist/preview-dev", "env": "TEAR_PREVIEW_DEV" },
@@ -27,6 +28,7 @@
     "portalSdkScript": "https://sdk.crazygames.com/crazygames-sdk-v3.js",
     "cloudflareHeaders": false,
     "pruneUnrequestedFiles": true,
+    "staticPages": [],
     "forbiddenModules": [
       "/src/platform/firebase-cloud.ts",
       "/src/platform/firebase-config.ts",
@@ -48,6 +50,7 @@
     "portalSdkScript": null,
     "cloudflareHeaders": false,
     "pruneUnrequestedFiles": true,
+    "staticPages": [],
     "forbiddenModules": [
       "/src/platform/crazygames.ts",
       "/src/platform/crazygames-cloud.ts",

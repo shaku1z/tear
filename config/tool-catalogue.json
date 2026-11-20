@@ -188,14 +188,14 @@
       "duration": "long"
     },
     "playtest": {
-      "purpose": "Plays the real game headless and prints results; `bosses` fights the named bosses with scripted players on fixed seeds, one table per fight",
+      "purpose": "Plays boss fights on the real game headless: `bosses` prints a table per fight and a summary, `sweep` every weapon on Easy and Normal (queue it)",
       "effects": [
         "read-only"
       ],
-      "duration": "under-a-minute"
+      "duration": "minutes"
     },
     "tearbench": {
-      "purpose": "TearBench CLI (list, plan, explain, tasks, run, select, ci, parity, forge); effects depend on the subcommand",
+      "purpose": "TearBench CLI (list, plan, explain, tasks, run, select, ci, parity, setup); effects depend on the subcommand",
       "effects": [
         "writes-artifacts",
         "launches-browser"
@@ -515,6 +515,13 @@
     },
     "test:browser:ghost-vault-library": {
       "purpose": "Browser check of the Ghost Vault library screen",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:replay-engine-cold": {
+      "purpose": "Browser check that a replay opened on a cold page waits for its code, reports a failed fetch plainly and opens on retry",
       "effects": [
         "launches-browser"
       ],
@@ -1763,11 +1770,11 @@
       ]
     },
     "scripts/playtest.mjs": {
-      "purpose": "Playtest command: loads src/playtest through Vite, plays boss fights headless and prints the tables; --json also writes them to the named file",
+      "purpose": "Playtest command: loads src/playtest through Vite, plays boss fights headless, in worker processes when many, and prints them; --json writes them",
       "effects": [
         "read-only"
       ],
-      "duration": "under-a-minute",
+      "duration": "minutes",
       "via": [
         "playtest"
       ]
@@ -1878,6 +1885,10 @@
       "scripts/package-target.mjs",
       "vite.config.ts"
     ],
+    "scripts/application-chunks.mjs": [
+      "tests/unit/application-chunks.test.mjs",
+      "vite.config.ts"
+    ],
     "scripts/audio-profile.mjs": [
       "scripts/build-target.mjs"
     ],
@@ -1980,6 +1991,7 @@
     ]
   },
   "declarations": [
+    "scripts/application-chunks.d.mts",
     "scripts/build-targets.d.mts",
     "scripts/campaign-publication-boundary.d.mts",
     "scripts/music-cover.d.mts",

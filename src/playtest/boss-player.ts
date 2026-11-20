@@ -33,6 +33,7 @@ export const BOSS_PLAYER_IDS = Object.freeze([
   "cuts-objects",
   "no-dodge",
   "still",
+  "walker",
 ] as const);
 export type BossPlayerId = (typeof BOSS_PLAYER_IDS)[number];
 
@@ -163,12 +164,55 @@ export function createStillBossPlayer(): BossPlayer {
   };
 }
 
+/** How the walker walks. In simulation ticks (120 a second) and world pixels. */
+export const WALKER = Object.freeze({
+  /** It jumps once every this many ticks (4 s). */
+  jumpEveryTicks: 4 * TEAR_SIMULATION_TICKS_PER_SECOND,
+  /** It turns round after this many ticks without getting further: a wall, or a boss that blocks, is in the way. */
+  blockedTicks: 10,
+});
+
+/**
+ * Keeps walking across the arena, turns round at whatever stops it, and jumps every four seconds. It never
+ * attacks and avoids nothing on purpose, so what hits it is the pressure the boss puts on a moving player.
+ */
+export function createWalkerBossPlayer(): BossPlayer {
+  const scripted = createScriptedBossPlayer();
+  let side = 1;
+  let lastX = Number.NaN;
+  let stuck = 0;
+  let sinceJump = 0;
+  return {
+    id: "walker",
+    phaseTicks: PRESSURE_PHASE_TICKS,
+    decide(observation, boss, player) {
+      if (observation.ui?.screen !== "playing") return scripted.decide(observation, boss, player);
+      const { x, grounded } = observation.state.player;
+      stuck = Math.abs(x - lastX) < 0.25 ? stuck + 1 : 0;
+      lastX = x;
+      if (stuck >= WALKER.blockedTicks) {
+        side = -side;
+        stuck = 0;
+      }
+      const actions: GameAction[] = [{ type: "move", x: side * INPUT_AXIS_SCALE, y: 0 }];
+      // The jump waits for the ground, so one that falls due in the air is taken on landing, not lost.
+      sinceJump += 1;
+      if (grounded && sinceJump >= WALKER.jumpEveryTicks) {
+        actions.push({ type: "jump", phase: "pressed" });
+        sinceJump = 0;
+      }
+      return actions;
+    },
+  };
+}
+
 const PLAYERS: Readonly<Record<BossPlayerId, () => BossPlayer>> = {
   scripted: createScriptedBossPlayer,
   "avoids-tells": () => createTellAvoidingBossPlayer("avoids-tells"),
   "cuts-objects": () => createTellAvoidingBossPlayer("cuts-objects"),
   "no-dodge": createNoDodgeBossPlayer,
   still: createStillBossPlayer,
+  walker: createWalkerBossPlayer,
 };
 
 export function createBossPlayer(id: BossPlayerId): BossPlayer {

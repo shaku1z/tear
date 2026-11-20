@@ -8,6 +8,7 @@ import type {
   FinaleState,
 } from "./finale-controller";
 import { parseFinaleBinding, type FinaleBindingV1 } from "./finale-binding";
+import { isObject } from "../../domain/records";
 
 const finaleInputs = new WeakMap<FinaleRuntimeState, FinaleStartInput>();
 
@@ -296,7 +297,7 @@ export function createFinaleRuntime(options: FinaleRuntimeOptions): FinaleRuntim
       for (const entry of value) freezeData(entry);
       return Object.freeze(value);
     }
-    if (typeof value === "object" && value !== null) {
+    if (isObject(value)) {
       for (const entry of Object.values(value)) freezeData(entry);
       return Object.freeze(value);
     }

@@ -405,7 +405,8 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
       void passport().then(async (session) => {
         if (!session) return;
         try {
-          await session.db.collection("telemetry").add({ event: name, uid: session.uid, ts: now(), ...data });
+          // Anonymous by construction: the document carries no account id, only the event and its figures.
+          await session.db.collection("telemetry").add({ event: name, ts: now(), ...data });
         } catch {
           /* optional telemetry */
         }

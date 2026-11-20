@@ -70,11 +70,11 @@ Path to budgets: once several clean runs on the controlled release host agree, p
 
 `pnpm check:bundles` (`scripts/check-bundle-budget.mjs`, budgets in [`config/bundle-budgets.json`](../config/bundle-budgets.json)) measures both release builds, `dist/standalone` and `dist/crazygames`:
 
-- **Startup scripts.** The bytes of the entry script plus every `modulepreload` that `index.html` references are at most `startupScriptBytes` (2,300,000 bytes uncompressed; about 2.09 MB measured). The on-demand tutorial corpus may never be among them.
+- **Startup scripts.** The bytes of the entry script plus every `modulepreload` that `index.html` references are at most `startupScriptBytes` (1,990,000 bytes uncompressed; about 1.85 MB measured). The on-demand tutorial corpus may never be among them. A second rule fails the check when a dynamic import resolves into a startup chunk: code that the source loads on demand must also stay out of the startup set (the replay engine, library screens, settings and the other lazy modules).
 - **Main chunk.** The largest application JavaScript chunk, excluding worker bundles and the on-demand tutorial corpus, stays within `standaloneMainGzipBytes` / `crazygamesMainGzipBytes` gzip bytes.
 - **Workers.** The largest worker bundle (Career Archive, Chase Your Best reference, capsule encoder) is at most `workerGzipBytes` gzip bytes.
 - **Tutorial corpus.** The tutorial demonstration corpus is a separate chunk of at most `tutorialGoldGzipBytes` gzip bytes. Training preflight fetches it before a tutorial or practice run; the service worker runtime-caches it on first use, so it then works offline, rather than precaching it for every player.
-- **Precache.** The standalone service worker precaches at most `precacheEntries` files and `precacheBytes` bytes (33 entries and about 2.70 MB measured; the three large workers are cached on first use instead), and never the tutorial corpus.
+- **Precache.** The standalone service worker precaches at most `precacheEntries` files and `precacheBytes` bytes (45 entries and about 2.67 MB measured; the three large workers are cached on first use instead). The entry count rose from 36 because modules that load on demand are now separate files; the bytes did not, and never the tutorial corpus. Small modules that two or more on-demand chunks share go into one chunk (`shared-on-demand`, `scripts/application-chunks.mjs`) instead of one file each, which keeps the count down as on-demand chunks are added; its name must sort after every startup group, or it takes their dependencies and the startup path loads it.
 
 Developer-only code stays out of every release build because the build refuses it: a release build of any target fails when a module of the `release.developer-only` role (`config/architecture-roles.json`) contributes code to a bundle. The Watch Agent and the snapshot editor load only through dynamic imports guarded by the test-build constants. `pnpm check:test-isolation` then fails if a release file defines one of the test globals listed in the script.
 
@@ -86,12 +86,12 @@ Set a new ceiling about 10% above a deliberate, measured change and record why h
 
 Only byte and request counts are checked. They are identical from run to run for a given build; load times are not, so they are reported, never enforced. Checked on the desktop profile, cold (fresh browser) and warm (reload; on standalone the service worker controls it):
 
-| Ceiling | standalone | CrazyGames | Measured (main e48ca8d5) | Why this number |
+| Ceiling | standalone | CrazyGames | Measured (this change) | Why this number |
 |---|---:|---:|---|---|
-| Cold bytes to first frame | 730,000 | 730,000 | 687,330 / 688,931 | About 6% above the measured download (main e48ca8d5), so a new startup dependency of a few tens of KB fails. |
-| Cold requests to first frame | 28 | 28 | 25 / 25 | Each extra request costs a round trip on phones (150 ms in the phone profile). |
+| Cold bytes to first frame | 650,000 | 650,000 | 620,736 / 620,899 | About 5% above the measured download, so a new startup dependency of a few tens of KB fails. The replay engine (about 100 KB compressed) loads on first use and is not in this number. |
+| Cold requests to first frame | 28 | 26 | 27 / 25 | Each extra request costs a round trip on phones (150 ms in the phone profile). |
 | Cold bytes to playing, music stems excluded | 735,000 | 730,000 | 693,481 / 688,931 | Everything a first run needs besides music; stems are excluded because how many arrive while the player clicks through the menu depends on timing. |
-| Warm network requests to first frame | 3 | 26 | 0 / 23 | Requests a returning player waits for. Standalone serves everything from the service worker; CrazyGames has no service worker. |
+| Warm network requests to first frame | 3 | 26 | 0 / 22 | Requests a returning player waits for. Standalone serves everything from the service worker; CrazyGames has no service worker. |
 
 `pnpm report:load` runs every device profile and reports milestone times, bytes per category and every request (`TEAR_LOAD_PROFILES`, `TEAR_LOAD_TARGETS`, `TEAR_LOAD_REPEATS`, `TEAR_LOAD_OUTPUT`). The profiles use Chromium network and CPU throttling: desktop (40 Mbps, 20 ms, no CPU throttle), laptop (10 Mbps, 40 ms, 4x) and phone (844x390 at 3x, 1.6 Mbps, 150 ms, 4x, touch). Service-worker traffic (the precache install) is not throttled by Chromium's page emulation, so its competition with first-session downloads is invisible here; the precache size budget above covers it. Medians of three runs when the budgets were set (cold first frame / START to playing / menu music ready / warm first frame):
 

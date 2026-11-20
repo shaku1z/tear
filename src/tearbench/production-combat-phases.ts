@@ -1,3 +1,4 @@
+import { isObject } from "../domain/records";
 import { createLiveCollisionGameplayBindings } from "../gameplay/combat/live-collision-gameplay-bindings";
 import type { LiveStyleAchievementOptions } from "../gameplay/scoring/live-style-achievement-runtime";
 import { bindRunDnaShot, runDnaObserver } from "../gameplay/runtime/run-dna-observer";
@@ -247,7 +248,7 @@ export function createProductionCombatPhases(
       vx: projectile.vx,
       vy: projectile.vy,
       owner: projectile.playerOwned === true || projectile.deflected === true ? "player" : "enemy",
-      ...(source && typeof source === "object" ? { sourceEnemyId: combat.id(source, "enemy") } : {}),
+      ...(isObject(source) ? { sourceEnemyId: combat.id(source, "enemy") } : {}),
       ...(target === undefined ? {} : { targetEnemyId: combat.id(target, "enemy") }),
       ...(projectile.deflected === true ? { perfect: !!projectile.perfect } : {}),
     });
@@ -631,7 +632,7 @@ export function createProductionCombatPhases(
         x: (blade() as { x: number }).x,
         y: (blade() as { y: number }).y,
       });
-      return result && typeof result === "object" ? (result as Readonly<{ mechanic?: string }>) : null;
+      return isObject(result) ? (result as Readonly<{ mechanic?: string }>) : null;
     },
     lobExplode: () => {
       const activeBlade = blade() as { x: number; y: number };

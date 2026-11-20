@@ -1,16 +1,16 @@
 {
   "targets": {
     "standalone": {
-      "coldBytesToFirstFrame": 730000,
+      "coldBytesToFirstFrame": 650000,
       "coldRequestsToFirstFrame": 28,
-      "coldBytesToPlayingWithoutStems": 735000,
+      "coldBytesToPlayingWithoutStems": 670000,
       "warmNetworkRequestsToFirstFrame": 3
     },
     "crazygames": {
-      "coldBytesToFirstFrame": 730000,
-      "coldRequestsToFirstFrame": 28,
+      "coldBytesToFirstFrame": 650000,
+      "coldRequestsToFirstFrame": 26,
       "coldBytesToPlayingWithoutStems": 730000,
-      "warmNetworkRequestsToFirstFrame": 26
+      "warmNetworkRequestsToFirstFrame": 24
     }
   }
 }
