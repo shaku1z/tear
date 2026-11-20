@@ -23,7 +23,7 @@ const environment = {
   installAvailable: false,
   update: { ready: false, applying: false },
   privacy: { privacyLink: true, termsLink: false, note: null, statistics: true },
-  progressReset: { stage: "idle", confirmable: false, failure: null } as SettingsResetView,
+  progressReset: { stage: "idle", confirmable: false, failure: null } satisfies SettingsResetView,
   credits: [
     {
       label: "FONTS",
