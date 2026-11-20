@@ -76,11 +76,12 @@
     {
       "id": "pale-traverse",
       "name": "Pale Traverse rework",
-      "state": "Not started",
-      "summary": "Pale Traverse stays a Playground preview and is not published. The owner wants it reworked after Verdant. Its earlier migration work is on the unmerged branch codex/pale-traverse-r4.",
-      "next": "Start once the Verdant gameplay rework has landed.",
+      "state": "In progress",
+      "summary": "Pale Traverse stays a Playground preview and is not published. Its gameplay is being rebuilt the way Verdant's was. The audit found that the Aurora Tracks touch nobody standing on a platform or the floor, the White Hart gives no warning the game can check and plays the same fight on every seed, and none of Pale uses the shared layers. The plan is eight pull requests: the tracks, the Rimehound, routes in the boss move layer, the White Hart one phase at a time, the waves, then leftovers. The earlier work on the unmerged branch codex/pale-traverse-r4 is reference only.",
+      "next": "Slice 1: rebuild the Aurora Tracks as roads on a surface that raise top speed.",
       "owner_action": "",
       "evidence": [
+        "plans/active/PALE_GAMEPLAY_REBUILD.md",
         "plans/active/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md"
       ]
     },
