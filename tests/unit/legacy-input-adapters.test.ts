@@ -505,3 +505,58 @@ describe("legacy gamepad adapter", () => {
     expect(input.confirmPressed()).toBe(false);
   });
 });
+
+describe("the controller's Playground layer on View", () => {
+  const step = (fixture: ReturnType<typeof controllerFixture>, uiMode = false): Set<string> => {
+    fixture.input.pressed.clear();
+    fixture.PAD.poll(1 / 120, uiMode);
+    return new Set(fixture.input.pressed);
+  };
+
+  it("taps View for the Playground menu's key: on release, in play and in the menu", () => {
+    const fixture = controllerFixture();
+    fixture.buttons[8] = button(true);
+    expect(step(fixture).has("Tab")).toBe(false);
+    fixture.buttons[8] = button();
+    expect(step(fixture).has("Tab")).toBe(true);
+    fixture.buttons[8] = button(true);
+    step(fixture, true);
+    fixture.buttons[8] = button();
+    expect(step(fixture, true).has("Tab")).toBe(true);
+  });
+
+  it("holds View for the shortcuts, which take the D-pad from movement and do not open the menu", () => {
+    const fixture = controllerFixture();
+    fixture.buttons[8] = button(true);
+    step(fixture);
+    const shortcuts: [number, string][] = [
+      [12, "Digit1"],
+      [13, "Digit2"],
+      [14, "Digit3"],
+      [15, "Digit4"],
+      [3, "Digit5"],
+    ];
+    for (const [index, code] of shortcuts) {
+      fixture.buttons[index] = button(true);
+      const pressed = step(fixture);
+      expect(pressed.has(code), code).toBe(true);
+      expect(fixture.input.held.has("KeyA") || fixture.input.held.has("KeyW"), code).toBe(false);
+      fixture.buttons[index] = button();
+      step(fixture);
+    }
+    fixture.buttons[8] = button();
+    expect(step(fixture).has("Tab")).toBe(false);
+    // Without View the D-pad moves again and presses no shortcut.
+    fixture.buttons[14] = button(true);
+    const moving = step(fixture);
+    expect(moving.has("Digit3")).toBe(false);
+    expect(fixture.input.held.has("KeyA")).toBe(true);
+  });
+
+  it("presses no shortcut in a menu, where the D-pad navigates", () => {
+    const fixture = controllerFixture();
+    fixture.buttons[8] = button(true);
+    fixture.buttons[12] = button(true);
+    expect(step(fixture, true).has("Digit1")).toBe(false);
+  });
+});

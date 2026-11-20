@@ -37,12 +37,12 @@ export const PROMPT_ACTIONS = [
   "tab-next",
   "close-menu",
   "playground-menu",
-  "abilities",
-  "quick-spawn",
-  "spawn-dummy",
-  "summon-boss",
-  "clear-enemies",
   "heal",
+  "clear-enemies",
+  "spawn-dummy",
+  "repeat-spawn",
+  "toggle-freeze",
+  "toggle-no-damage",
   "fullscreen",
 ] as const;
 export type PromptAction = (typeof PROMPT_ACTIONS)[number];
@@ -51,10 +51,24 @@ export type PromptAction = (typeof PROMPT_ACTIONS)[number];
  * Pad bindings resolved to a glyph at draw time: the preset actions follow the player's
  * controller preset, and the menu buttons follow the glyph style (Xbox, PlayStation, generic).
  */
-export type PadBinding = "jump" | "dash" | "throw" | "tether" | "confirm" | "back" | "pause" | "tab-prev" | "tab-next";
+export type PadBinding =
+  | "jump"
+  | "dash"
+  | "throw"
+  | "tether"
+  | "confirm"
+  | "back"
+  | "pause"
+  | "tab-prev"
+  | "tab-next"
+  /** View / Create / Select: the Playground's menu, and held, its shortcut layer. */
+  | "view"
+  /** Y / △ / North. */
+  | "north";
 export type PadBindingLabel = (binding: PadBinding) => string;
 
-type Wording = string | Readonly<{ pad: PadBinding; suffix?: string; prefix?: string }>;
+/** A pad wording: one button's glyph, or a chord of two (`with`), with fixed text around it. */
+type Wording = string | Readonly<{ pad: PadBinding; with?: PadBinding; suffix?: string; prefix?: string }>;
 
 /**
  * Keyboard wording: the labels of bound keyboard actions joined in order, or a pointer
@@ -105,13 +119,15 @@ const WORDING: Readonly<Record<PromptAction, ActionWording>> = Object.freeze({
   "tab-prev": { keyboard: keys("tab-prev"), touch: null, gamepad: { pad: "tab-prev" } },
   "tab-next": { keyboard: keys("tab-next"), touch: null, gamepad: { pad: "tab-next" } },
   "close-menu": { keyboard: keys("close-menu", "back"), touch: null, gamepad: { pad: "back" } },
-  "playground-menu": { keyboard: keys("playground-menu"), touch: null, gamepad: null },
-  abilities: { keyboard: keys("abilities"), touch: null, gamepad: null },
-  "quick-spawn": { keyboard: keys("quick-spawn"), touch: null, gamepad: null },
-  "spawn-dummy": { keyboard: keys("spawn-dummy"), touch: null, gamepad: null },
-  "summon-boss": { keyboard: keys("summon-boss"), touch: null, gamepad: null },
-  "clear-enemies": { keyboard: keys("clear-enemies"), touch: null, gamepad: null },
-  heal: { keyboard: keys("heal"), touch: null, gamepad: null },
+  // The Playground: View opens the menu on a pad; held, it makes the D-pad and Y shortcuts
+  // (browser-gamepad's Playground layer). No damage has no pad shortcut: it is in the menu.
+  "playground-menu": { keyboard: keys("playground-menu"), touch: null, gamepad: { pad: "view" } },
+  heal: { keyboard: keys("heal"), touch: null, gamepad: { pad: "view", suffix: " + ↑" } },
+  "clear-enemies": { keyboard: keys("clear-enemies"), touch: null, gamepad: { pad: "view", suffix: " + ↓" } },
+  "spawn-dummy": { keyboard: keys("spawn-dummy"), touch: null, gamepad: { pad: "view", suffix: " + ←" } },
+  "repeat-spawn": { keyboard: keys("repeat-spawn"), touch: null, gamepad: { pad: "view", suffix: " + →" } },
+  "toggle-freeze": { keyboard: keys("toggle-freeze"), touch: null, gamepad: { pad: "view", with: "north" } },
+  "toggle-no-damage": { keyboard: keys("toggle-no-damage"), touch: null, gamepad: null },
   // Callers name it only where the platform can go fullscreen (not CrazyGames or iPhone Safari).
   fullscreen: { keyboard: keys("fullscreen"), touch: null, gamepad: null },
 });
@@ -126,9 +142,12 @@ export function promptLabel(action: PromptAction, device: PromptDevice, padLabel
   const wording = WORDING[action][device];
   if (wording === null) return null;
   if (typeof wording === "string") return wording;
-  const resolved = padLabel?.(wording.pad);
-  const glyph = resolved === undefined || resolved === "" ? wording.pad.toUpperCase() : resolved;
-  return `${wording.prefix ?? ""}${glyph}${wording.suffix ?? ""}`;
+  const glyph = (binding: PadBinding): string => {
+    const resolved = padLabel?.(binding);
+    return resolved === undefined || resolved === "" ? binding.toUpperCase() : resolved;
+  };
+  const chord = wording.with === undefined ? glyph(wording.pad) : `${glyph(wording.pad)} + ${glyph(wording.with)}`;
+  return `${wording.prefix ?? ""}${chord}${wording.suffix ?? ""}`;
 }
 
 function keyboardWording(wording: KeyboardWording): string {

@@ -49,7 +49,10 @@ describe("keyboard remap", () => {
     expect(rebindKey({}, "throw", "KeyF")).toMatchObject({ kind: "refused", remap: {}, by: "fullscreen" });
     expect(rebindKey({}, "throw", "Escape")).toMatchObject({ kind: "refused", by: "pause" });
     expect(rebindKey({}, "throw", "Tab")).toMatchObject({ kind: "refused", by: "playground-menu" });
-    expect(rebindKey({}, "jump", "KeyK")).toMatchObject({ kind: "refused", by: "clear-enemies" });
+    expect(rebindKey({}, "jump", "Digit2")).toMatchObject({ kind: "refused", by: "clear-enemies" });
+    // No letter is reserved by the Playground: the old shortcut letters are free for play.
+    for (const code of ["KeyT", "KeyB", "KeyH", "KeyK", "KeyM", "KeyU"])
+      expect(rebindKey({}, "jump", code), code).toMatchObject({ kind: "assigned" });
     expect(rebindKey({}, "jump", "ArrowLeft")).toMatchObject({ kind: "refused", by: "move-left" });
     expect(rebindKey({}, "jump", "not a key")).toMatchObject({ kind: "refused", by: "jump" });
   });
@@ -78,6 +81,12 @@ describe("keyboard remap", () => {
       jump: "KeyL",
     });
     expect(sanitizeKeyboardRemap({ throw: "KeyF" })).toEqual({});
+    // An entry on a fixed key goes alone; the rest of the remap stands.
+    expect(sanitizeKeyboardRemap({ throw: "KeyR", jump: "Digit5", tether: "Tab" })).toEqual({ throw: "KeyR" });
+    // A swap is two entries that only make sense together, and it stands.
+    expect(sanitizeKeyboardRemap({ dash: "KeyE", throw: "ShiftLeft" })).toEqual({ dash: "KeyE", throw: "ShiftLeft" });
+    // Two play actions on one key is the save's own clash: the whole remap goes.
+    expect(sanitizeKeyboardRemap({ dash: "KeyL", jump: "KeyL", throw: "KeyR" })).toEqual({});
     expect(sanitizeKeyboardRemap(["KeyL"])).toEqual({});
     expect(sanitizeKeyboardRemap(null)).toEqual({});
   });
@@ -99,6 +108,16 @@ describe("saved keyboard settings", () => {
     expect(readKeyboardSettings(JSON.parse(JSON.stringify(read.stored)))).toEqual(read);
     const newer = { version: 2, slots: { jump: ["KeyL", "KeyL"] } };
     expect(readKeyboardSettings(newer)).toEqual({ stored: newer, remap: {}, future: true });
+  });
+
+  it("loads an old save with a key now reserved by dropping that entry alone", () => {
+    // Written by a build where 5 was free in play and T was the Playground's dummy key.
+    const read = readKeyboardSettings({ version: 1, primary: { throw: "KeyR", jump: "Digit5", tether: "KeyT" } });
+    expect(read).toEqual({
+      stored: { version: 1, primary: { throw: "KeyR", tether: "KeyT" } },
+      remap: { throw: "KeyR", tether: "KeyT" },
+      future: false,
+    });
   });
 
   it("saves a rebind, loads it back live, and resets the keys alone", () => {
@@ -198,11 +217,11 @@ describe("Controls tab keyboard rows", () => {
     );
     expect(rebindNote("throw", rebindKey({}, "throw", "KeyR"), "KeyR")).toBeNull();
     // The Playground keys stay reserved, and the row says whose they are.
-    expect(rebindNote("jump", rebindKey({}, "jump", "KeyT"), "KeyT")).toBe(
-      "T is used by the Playground (spawn dummy). Pick another key.",
-    );
     expect(rebindNote("jump", rebindKey({}, "jump", "Digit3"), "Digit3")).toBe(
-      "3 is used by the Playground (quick spawn). Pick another key.",
+      "3 is used by the Playground (spawn dummy). Pick another key.",
+    );
+    expect(rebindNote("jump", rebindKey({}, "jump", "Digit6"), "Digit6")).toBe(
+      "6 is used by the Playground (toggle no damage). Pick another key.",
     );
     expect(rebindNote("jump", rebindKey({}, "jump", "KeyN"), "KeyN")).toBe(
       "N is used by the Tutorial (skip lesson). Pick another key.",
