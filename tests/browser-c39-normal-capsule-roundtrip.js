@@ -641,6 +641,20 @@ const linkedInput = process.env.TEAR_C39_LINKED_PAIR_FILE;
   .finally(() => {
     report.finishedAt = new Date().toISOString();
     save("summary", report);
+    // The evidence folder is temporary on CI and is not uploaded, so the reason must reach the log.
+    if (report.status === "failed")
+      console.error(
+        JSON.stringify(
+          {
+            error: report.error?.message,
+            failedPhases: report.phases
+              .filter(({ status }) => status === "failed")
+              .map(({ id, error, pageErrors }) => ({ id, error, pageErrors })),
+          },
+          null,
+          2,
+        ),
+      );
     console.log(
       JSON.stringify({
         status: report.status,

@@ -31,11 +31,11 @@ import {
   type CinematicDirectorBinding,
   type CinematicDirectorPort,
 } from "../gameplay/runtime/cinematic-director";
-import { createLiveStateForgeAdapter, captureLiveRewardSelection } from "../app/engineering/state-forge-adapter";
+import { createLiveStateSetupAdapter, captureLiveRewardSelection } from "../app/engineering/state-setup-adapter";
 import {
-  createLiveStateForgeRuntimeBridge,
-  resolveStateForgeBossIntro,
-} from "../app/engineering/state-forge-runtime-bridge";
+  createLiveStateSetupRuntimeBridge,
+  resolveStateSetupBossIntro,
+} from "../app/engineering/state-setup-runtime-bridge";
 import type { RunDifficulty } from "../gameplay/run/session";
 import { RunRandomStreams, type RunRandomStreamsSnapshot } from "../simulation/run-random";
 import {
@@ -50,7 +50,7 @@ import { stableVerificationHash } from "../domain/hash";
 import type { TearBuildIdentityV1, TearSnapshotV1 } from "./contracts";
 import type { TearCodecWorld } from "./state-codecs";
 import { applyTearCodecConfiguration, hydrateTearCodecWorld } from "./detached-world-hydrator";
-import { captureLiveStateForgeSnapshot, injectedBuildIdentity } from "./live-runtime-snapshots";
+import { captureLiveStateSetupSnapshot, injectedBuildIdentity } from "./live-runtime-snapshots";
 import { createProductionCombatSimulation } from "./production-combat-simulation";
 import type { ProductionApplicationFrameConfirm } from "./production-application-frame";
 import { createProductionRunOutcomeRuntime, type ProductionRunOutcomeRuntime } from "./production-run-outcome-runtime";
@@ -295,7 +295,7 @@ interface PreparedRuntimeOwners {
 
 function productionRuntimeState(replay: ProductionReplayWorld, prepared?: PreparedRuntimeOwners) {
   const transient = replay.world.context.transient;
-  return createLiveStateForgeRuntimeBridge({
+  return createLiveStateSetupRuntimeBridge({
     finale: {
       capture: replay.finale.runtime.captureBinding,
       clear: replay.finale.runtime.clearBinding,
@@ -382,7 +382,7 @@ function productionRuntimeState(replay: ProductionReplayWorld, prepared?: Prepar
 
 /**
  * Captures a natural C30 keyframe from the production replay composition.
- * It reuses the State Forge codec boundary; custody stays with its caller, so
+ * It reuses the State Setup codec boundary; custody stays with its caller, so
  * this creates neither durable storage nor worker/job recovery behavior.
  */
 export function captureProductionReplayCheckpoint(
@@ -394,7 +394,7 @@ export function captureProductionReplayCheckpoint(
   presentation?: Readonly<{ omitGoldCoach?: boolean }>,
 ): ProductionReplayCheckpointCapture {
   const runtime = productionRuntimeState(replay);
-  const stateForge = createLiveStateForgeAdapter({
+  const stateSetup = createLiveStateSetupAdapter({
     dependencies: replay.dependencies,
     entities: replay.world.entities,
     worldServices: replay.world.context.services,
@@ -460,13 +460,13 @@ export function captureProductionReplayCheckpoint(
     validateCinema: runtime.validate,
   });
   const tick = simulation.simulationRuntime.scheduler.tick;
-  const snapshot = captureLiveStateForgeSnapshot({
+  const snapshot = captureLiveStateSetupSnapshot({
     id,
     tick,
     stateClass: "recorded-canonical",
     seed: String(replay.world.state.run()?.runSeed ?? "unknown"),
-    stateForge,
-    world: stateForge.capture(),
+    stateSetup,
+    world: stateSetup.capture(),
     rng: replay.world.context.services.random.snapshot(),
     registry: createDefaultStateCodecRegistry(),
     observationClass: "structured-state",
@@ -487,7 +487,7 @@ export function captureProductionReplayCheckpoint(
   });
 }
 
-/** Applies a saved State Forge world transactionally to a newly composed production replay world. */
+/** Applies a saved State Setup world transactionally to a newly composed production replay world. */
 export function restoreProductionReplaySnapshot(
   replay: ProductionReplayWorld,
   snapshot: TearSnapshotV1,
@@ -533,7 +533,7 @@ export function restoreProductionReplaySnapshot(
   })();
   if (staged.tick !== snapshot.tick) throw new TypeError("recorded snapshot tick does not match its run component");
   restoreUpgradeHooks({ mods: staged.run.mods, config: replay.configuration.value });
-  const restoredBossIntro = resolveStateForgeBossIntro(staged.runtime, staged.enemies);
+  const restoredBossIntro = resolveStateSetupBossIntro(staged.runtime, staged.enemies);
   const destinationWorldId = replay.world.context.environment.worldId;
   const rebasedEnvironment = rebaseEnvironmentSnapshot(staged.environment, destinationWorldId);
   const environmentIssues = validateEnvironmentCodecPayload({ slowZones: [], walls: [], ...rebasedEnvironment });

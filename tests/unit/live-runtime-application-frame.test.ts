@@ -169,7 +169,7 @@ function contextFixture(
     skipCinematic: () => {
       calls.push("skip");
     },
-    advanceStateForgeCinematicBeat: () => {
+    advanceStateSetupCinematicBeat: () => {
       calls.push("semantic-cinema");
       return true;
     },
@@ -200,7 +200,7 @@ function contextFixture(
     emitPhysicalInput: () => undefined,
     setTimeEffectsForTest: () => undefined,
     setCameraEffectsForTest: () => undefined,
-    stateForge: {
+    stateSetup: {
       capture: () => ({ components: new Map(), references: new Map(), entityIds: new Set() }),
       validate: () => [],
       commit: () => undefined,
@@ -356,7 +356,7 @@ describe("Class-A live application-frame surface", () => {
 
     const structured = createLiveTearRuntimeEnvironment(contextFixture().context, "B");
     expect("advanceApplicationFrame" in structured).toBe(false);
-    expect("advanceStateForgeCinematicBeat" in structured).toBe(false);
+    expect("advanceStateSetupCinematicBeat" in structured).toBe(false);
     expect("finaleOutwardProjection" in structured).toBe(false);
     expect("audioDispatchProjection" in structured).toBe(false);
   });
@@ -382,7 +382,7 @@ describe("Class-A live application-frame surface", () => {
     environment.reset(SCENARIO);
     fixture.calls.length = 0;
 
-    expect(environment.advanceStateForgeCinematicBeat()).toEqual({ advanced: true, tick: 0 });
+    expect(environment.advanceStateSetupCinematicBeat()).toEqual({ advanced: true, tick: 0 });
     expect(fixture.calls).toEqual(["semantic-cinema", "render"]);
     expect(environment.metrics().fixedTicks).toBe(0);
     expect(environment.observe().tick).toBe(0);

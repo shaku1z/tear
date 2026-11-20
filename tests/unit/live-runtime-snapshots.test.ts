@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { stableVerificationHash } from "../../src/domain/hash";
-import { captureLiveStateForgeSnapshot } from "../../src/tearbench/live-runtime-snapshots";
+import { captureLiveStateSetupSnapshot } from "../../src/tearbench/live-runtime-snapshots";
 import {
   CODEC_REGISTRY,
   createDefaultStateCodecRegistry,
@@ -30,7 +30,7 @@ function input(staticBuild?: StaticBuild, configuration?: UnitConfiguration) {
     tick: 12,
     stateClass: "recorded-canonical" as const,
     seed: "snapshot-seed",
-    stateForge: { capture: () => captured },
+    stateSetup: { capture: () => captured },
     world: captured,
     rng: { combat: { algorithm: "mulberry32", state: 4 } },
     registry: createDefaultStateCodecRegistry(),
@@ -43,7 +43,7 @@ function input(staticBuild?: StaticBuild, configuration?: UnitConfiguration) {
   };
 }
 
-describe("live State Forge snapshot provenance", () => {
+describe("live State Setup snapshot provenance", () => {
   it("preserves immutable build fields while attesting the captured keyframe configuration", () => {
     const configuration = { rulesetVersion: "tear-rules-unit", values: { gravity: 1 } };
     const staticBuild: StaticBuild = {
@@ -54,21 +54,21 @@ describe("live State Forge snapshot provenance", () => {
       contentHash: "content-unit",
     };
 
-    const snapshot = captureLiveStateForgeSnapshot(input(staticBuild, configuration));
+    const snapshot = captureLiveStateSetupSnapshot(input(staticBuild, configuration));
 
     expect(snapshot.provenance.build).toEqual({ ...staticBuild, configHash: stableVerificationHash(configuration) });
     expect(snapshot.provenance.sourceId).toBe("ghost-live-bootstrap-unit");
   });
 
   it("marks snapshots explicitly unbound when no build identity is injected", () => {
-    const snapshot = captureLiveStateForgeSnapshot(input());
+    const snapshot = captureLiveStateSetupSnapshot(input());
 
     expect(snapshot.provenance.build.revision).toBe("unbound");
     expect(snapshot.provenance.build.revision).not.toBe("working-tree");
   });
 
-  it("preserves the canonical surgical class and seed for a State Forge bootstrap", () => {
-    const snapshot = captureLiveStateForgeSnapshot({
+  it("preserves the canonical surgical class and seed for a State Setup bootstrap", () => {
+    const snapshot = captureLiveStateSetupSnapshot({
       ...input(),
       stateClass: "surgical-valid",
       seed: "pale-canonical-seed",
@@ -86,11 +86,11 @@ describe("live State Forge snapshot provenance", () => {
       rulesetVersion: "tear-rules-unit",
       contentHash: "content-unit",
     };
-    const snapshot = captureLiveStateForgeSnapshot({ ...input(), buildIdentity });
+    const snapshot = captureLiveStateSetupSnapshot({ ...input(), buildIdentity });
     expect(snapshot.provenance.build).toMatchObject(buildIdentity);
 
     expect(() =>
-      captureLiveStateForgeSnapshot({
+      captureLiveStateSetupSnapshot({
         ...input(buildIdentity),
         buildIdentity: { ...buildIdentity, revision: "other" },
       }),
@@ -108,8 +108,8 @@ describe("live State Forge snapshot provenance", () => {
     const initialConfiguration = { rulesetVersion: "tear-rules-unit", values: { gravity: 1 } };
     const upgradedConfiguration = { rulesetVersion: "tear-rules-unit", values: { gravity: 1.12 } };
 
-    const initial = captureLiveStateForgeSnapshot(input(staticBuild, initialConfiguration));
-    const upgraded = captureLiveStateForgeSnapshot(input(staticBuild, upgradedConfiguration));
+    const initial = captureLiveStateSetupSnapshot(input(staticBuild, initialConfiguration));
+    const upgraded = captureLiveStateSetupSnapshot(input(staticBuild, upgradedConfiguration));
 
     expect(upgraded.provenance.build).toMatchObject(staticBuild);
     expect(upgraded.provenance.build.configHash).toBe(stableVerificationHash(upgradedConfiguration));

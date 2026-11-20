@@ -36,7 +36,7 @@ function verdantWaveScenario(
   });
 }
 
-/** Engineering-only early/middle/late State Forge entry points for the C15 wave slice. */
+/** Engineering-only early/middle/late State Setup entry points for the C15 wave slice. */
 export const VERDANT_WAVE_ENGINEERING_TEARSDL = Object.freeze([
   verdantWaveScenario(31, "early", 0, 0),
   verdantWaveScenario(35, "middle", 5, 1),

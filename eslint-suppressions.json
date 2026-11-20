@@ -19,12 +19,12 @@
       "count": 4
     }
   },
-  "src/app/engineering/state-forge-adapter.ts": {
+  "src/app/engineering/state-setup-adapter.ts": {
     "tear/one-record-guard": {
       "count": 3
     }
   },
-  "src/app/engineering/state-forge-runtime-bridge.ts": {
+  "src/app/engineering/state-setup-runtime-bridge.ts": {
     "tear/one-record-guard": {
       "count": 15
     }
@@ -219,7 +219,7 @@
       "count": 2
     }
   },
-  "src/tearbench/browser/state-forge-studio.ts": {
+  "src/tearbench/browser/state-editor.ts": {
     "tear/one-record-guard": {
       "count": 1
     }
@@ -284,17 +284,17 @@
       "count": 7
     }
   },
-  "src/tearbench/state-forge-exit-gate.ts": {
+  "src/tearbench/state-setup-exit-gate.ts": {
     "tear/one-record-guard": {
       "count": 1
     }
   },
-  "src/tearbench/state-forge-live-compiler.ts": {
+  "src/tearbench/state-setup-live-compiler.ts": {
     "tear/one-record-guard": {
       "count": 2
     }
   },
-  "src/tearbench/state-forge-studio-model.ts": {
+  "src/tearbench/state-editor-model.ts": {
     "tear/one-record-guard": {
       "count": 1
     }

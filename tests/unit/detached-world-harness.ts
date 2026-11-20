@@ -231,7 +231,7 @@ export function createDetachedWorld(options: DetachedWorldOptions) {
     cinema: new CinematicTimeline.Director(config),
     worldId: options.worldId ?? `detached:${options.seed}:${options.mode ?? "endless"}`,
   });
-  // Combat, State Forge restoration, and all detached outward adapters mutate
+  // Combat, State Setup restoration, and all detached outward adapters mutate
   // the one record the portable world core owns.
   const transient = world.context.transient;
   world.context.services.random.resetRun(options.seed);
@@ -275,7 +275,7 @@ export function createDetachedWorld(options: DetachedWorldOptions) {
 
 export type DetachedWorld = ReturnType<typeof createDetachedWorld>;
 
-/** Restores the portable per-world carry captured at a State Forge boundary. */
+/** Restores the portable per-world carry captured at a State Setup boundary. */
 export function restoreDetachedTransientRuntime(
   detached: DetachedWorld,
   runtime: Readonly<Record<string, unknown>>,

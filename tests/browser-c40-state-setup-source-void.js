@@ -21,7 +21,7 @@ const resolved = Object.freeze({
     schemaVersion: 1,
     id: "c40.source-phase-two-void",
     version: 1,
-    description: "Source phase-two State Forge cinematic handoff",
+    description: "Source phase-two State Setup cinematic handoff",
     stateClass: "reconstructed-reachable",
     executionClass: "engineering",
     seed: "c40-source-void",
@@ -36,7 +36,7 @@ const resolved = Object.freeze({
   resolvedHash: "c40-source-phase-two-void",
 });
 
-withJourney({ name: "C40 State Forge Source void" }, async ({ page }) => {
+withJourney({ name: "C40 State Setup Source void" }, async ({ page }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: STATE_WAIT_MS });
   const result = await page.evaluate((scenario) => {
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
@@ -53,7 +53,7 @@ withJourney({ name: "C40 State Forge Source void" }, async ({ page }) => {
     const collapse = environment.captureSnapshot("c40-source-collapse");
     const advances = [];
     for (let index = 0; index < 6; index += 1) {
-      advances.push(environment.advanceStateForgeCinematicBeat());
+      advances.push(environment.advanceStateSetupCinematicBeat());
       environment.advanceApplicationFrame(1 / 60);
     }
     for (let index = 0; index < 90; index += 1) environment.advanceApplicationFrame(1 / 60);
@@ -66,7 +66,7 @@ withJourney({ name: "C40 State Forge Source void" }, async ({ page }) => {
   assert.equal(
     collapseBoss.mode,
     "collapse",
-    "State Forge phase-two launch must enter Source collapse before cinema advancement",
+    "State Setup phase-two launch must enter Source collapse before cinema advancement",
   );
   assert.ok(
     result.advances.every((entry) => entry.advanced),
@@ -84,5 +84,5 @@ withJourney({ name: "C40 State Forge Source void" }, async ({ page }) => {
     result.metrics.fixedTicks >= result.voidSnapshot.tick,
     "Class-A metrics must account for authoritative continuation ticks",
   );
-  console.log("C40 State Forge Source collapse-to-void semantic advancement passed");
+  console.log("C40 State Setup Source collapse-to-void semantic advancement passed");
 });

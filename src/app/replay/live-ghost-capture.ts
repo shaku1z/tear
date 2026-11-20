@@ -2,7 +2,7 @@ import { createGhostAuthoritativeReceipt } from "../../ghost/authoritative-recei
 import { ghostLiveBootstrapEventId } from "../../ghost/live-causal-events";
 import { stableVerificationHash } from "../../domain/hash";
 import type { TearSnapshotV1 } from "../../tearbench/contracts";
-import { captureLiveStateForgeSnapshot } from "../../tearbench/live-runtime-snapshots";
+import { captureLiveStateSetupSnapshot } from "../../tearbench/live-runtime-snapshots";
 import type { TearLiveWorldAdapter } from "../../tearbench/live-state-snapshot";
 import { createDefaultStateCodecRegistry } from "../../tearbench/state-codecs";
 import type { LiveCampaignTraining } from "../campaign/campaign-training-composition";
@@ -15,7 +15,7 @@ import type { LiveGhostRecording } from "./live-ghost-recording";
 
 export interface LiveGhostCaptureOptions {
   readonly recording: Pick<LiveGhostRecording, "session" | "recorder" | "frames">;
-  readonly stateForge: TearLiveWorldAdapter<unknown>;
+  readonly stateSetup: TearLiveWorldAdapter<unknown>;
   readonly world: Pick<LiveWorldComposition, "state" | "lifecycle" | "context">;
   readonly combat: Pick<LiveCanonicalCombatHost, "authoritativeStep" | "simulationRuntime">;
   readonly canonicalState: LiveCanonicalStateCapture;
@@ -27,11 +27,11 @@ export interface LiveGhostCaptureOptions {
 }
 
 /**
- * Ghost V3 authoritative capture: result receipts, State Forge keyframes,
+ * Ghost V3 authoritative capture: result receipts, State Setup keyframes,
  * presentation keyframes, and the finale companion witness.
  */
 export function createLiveGhostCapture(options: LiveGhostCaptureOptions) {
-  const { recording, stateForge, combat, canonicalState, run: liveRun, player: livePlayer, blade: liveBlade } = options;
+  const { recording, stateSetup, combat, canonicalState, run: liveRun, player: livePlayer, blade: liveBlade } = options;
   const { session: ghostV3Session, recorder: ghostV3, frames: ghostFrames } = recording;
   const { state: hostState, lifecycle: RUN_LIFECYCLE } = options.world;
   const { services } = options.world.context;
@@ -52,12 +52,12 @@ export function createLiveGhostCapture(options: LiveGhostCaptureOptions) {
       return;
     }
     try {
-      const snapshot = captureLiveStateForgeSnapshot({
+      const snapshot = captureLiveStateSetupSnapshot({
         id: `ghost-v3-${String(liveRun().runSeed)}-keyframe-${String(tick)}`,
         tick,
         stateClass: "recorded-canonical",
         seed: String(liveRun().runSeed),
-        stateForge,
+        stateSetup,
         rng: services.random.snapshot(),
         registry,
         observationClass: "structured-state",

@@ -17,7 +17,7 @@ import { ENVIRONMENT_FADE_TICKS } from "../../src/gameplay/environment/environme
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 import { environmentSnapshotToObservation } from "../../src/tearbench/environment-codec";
 import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "../../src/tearbench/authored-environment-codec-validation";
-import { forgeRootboundGraftAnchorState } from "../../src/tearbench/state-forge-factories";
+import { forgeRootboundGraftAnchorState } from "../../src/tearbench/state-setup-factories";
 import type { TearSdlDocumentV1 } from "../../src/tearbench/tearsdl";
 
 const GEOMETRY = { x: 773, y: 610, w: 54, h: 90 } as const;

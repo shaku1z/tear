@@ -18,7 +18,7 @@ export interface LiveGhostPracticeChallengeOptions {
   readonly indexedDb: IDBFactory | undefined;
   readonly recording: Pick<LiveGhostRecording, "session" | "frames">;
   readonly capture: Pick<LiveGhostCapture, "registry" | "captureReceipt">;
-  readonly stateForge: TearLiveWorldAdapter<unknown>;
+  readonly stateSetup: TearLiveWorldAdapter<unknown>;
   readonly practice: LiveGhostPracticeSessionState;
   readonly world: Pick<LiveWorldComposition, "state" | "context">;
   readonly combat: Pick<LiveCanonicalCombatHost, "simulationRuntime">;
@@ -39,7 +39,7 @@ export function createLiveGhostPracticeChallenge(options: LiveGhostPracticeChall
   const {
     recording,
     capture,
-    stateForge,
+    stateSetup,
     navigation,
     canonicalState,
     input: Input,
@@ -53,7 +53,7 @@ export function createLiveGhostPracticeChallenge(options: LiveGhostPracticeChall
   const restoreGhostPractice = (child: Parameters<typeof launchGhostPracticeChild>[0]) =>
     launchGhostPracticeChild(child, {
       registry: capture.registry,
-      stateForge,
+      stateSetup,
       hasLiveWorld: () => hostState.run() !== null,
       practice: ghostPracticeSession,
       clearRestoredRecording: () => {
@@ -71,7 +71,7 @@ export function createLiveGhostPracticeChallenge(options: LiveGhostPracticeChall
     factory: options.indexedDb,
     recording: recording.session,
     frames: recording.frames,
-    stateForge,
+    stateSetup,
     registry: capture.registry,
     launch: restoreGhostPractice,
     rng: () => services.random.snapshot(),
