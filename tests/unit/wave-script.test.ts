@@ -90,10 +90,15 @@ describe("stage wave scripts", () => {
         expect(kindsOf(queue.slice(queue.length - last.length)), label).toEqual(last);
         // The script does not add enemies: the wave is as large as it was.
         expect(queue.length, label).toBe(count);
-        // Scripted enemies arrive plain; an elite can only come from the fill.
+        // Scripted enemies are marked plain, which the spawn step reads; an elite can only come from the fill.
         const scriptedSpawns = [...queue.slice(0, first.length), ...queue.slice(queue.length - last.length)];
         expect(
-          scriptedSpawns.every((spawn) => spawn.preset === undefined),
+          scriptedSpawns.every((spawn) => spawn.preset === undefined && spawn.plain === true),
+          label,
+        ).toBe(true);
+        const filled = queue.slice(first.length, queue.length - last.length);
+        expect(
+          filled.every((spawn) => spawn.plain === undefined),
           label,
         ).toBe(true);
       }

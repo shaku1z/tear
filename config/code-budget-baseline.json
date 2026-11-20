@@ -116,7 +116,7 @@
       "largestFunctionStatements": 105
     },
     "src/presentation/entities/blade-renderer.ts": {
-      "largestFunctionStatements": 202
+      "largestFunctionStatements": 186
     },
     "src/presentation/entities/projectile-renderer.ts": {
       "largestFunctionStatements": 471

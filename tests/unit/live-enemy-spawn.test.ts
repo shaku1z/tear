@@ -105,6 +105,16 @@ describe("live enemy spawn", () => {
     expect(installed).toEqual([target]);
   });
 
+  it("gives a plain spawn its scaling and its variant and no affixes", () => {
+    const { base } = port();
+    const target = enemy();
+    completeEnemySpawn(target, { type: "charger", hpScale: 2, plain: true }, base);
+    expect(target.maxHp).toBe(200);
+    expect(base.applyVariant).toHaveBeenCalledTimes(1);
+    expect(base.rollAffixes).not.toHaveBeenCalled();
+    expect(base.applyPreset).not.toHaveBeenCalled();
+  });
+
   it("applies structural and difficulty boss scaling without regular affixes", () => {
     const target = enemy({ kind: "boss", hp: 1000, maxHp: 1000, isBoss: true, bossId: "warden", bossName: "Warden" });
     const { base } = port({ run: () => ({ mode: "gauntlet" as const, wave: 9, bossesBeaten: 2, diffHp: 1.5 }) });
