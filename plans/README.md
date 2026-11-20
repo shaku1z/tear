@@ -5,18 +5,10 @@ disposition of Markdown files directly under `plans/` and the explicitly
 authorized `active/` and `completed/` destinations. Each placement change or
 combined transaction must remain link-checked and reviewable.
 
-## Current sequencing authority
-
-`TEAR_PROGRAM_NORMALIZATION_MASTER_PLAN.md` is the single authority for the
-G0–G8 sequence, gate semantics, production freeze, and the G5 move policy.
-The plan-specific documents below cannot reopen or close a program goal on
-their own.
-
 ## Plan classification
 
 | File | Classification | Owner | Status | Closure condition | Role |
 | --- | --- | --- | --- | --- | --- |
-| [TEAR_PROGRAM_NORMALIZATION_MASTER_PLAN.md](TEAR_PROGRAM_NORMALIZATION_MASTER_PLAN.md) | current authority | Release governance owner | Active | The master plan records the current G0–G8 state and the protected-main evidence for every closed goal. | Program sequencing and governance |
 | [MOBILE_LATER.md](MOBILE_LATER.md) | parked notes | Mobile owner (mobile-input) | Paused | The owner resumes mobile work; each item then becomes a task card or is dropped. | The one place for mobile follow-ups while mobile is paused (owner, 2026-11-19); any session may add a note |
 
 ## Active plans
@@ -52,11 +44,8 @@ Where a plan lives:
 - `active/` holds open plans and their companion files, such as the Verdant and
   Pale checkpoint ledgers.
 - `completed/` holds closed plans kept as records.
-- Directly under `plans/` stays the normalization master plan; its row is in
-  the classification table above.
-- `MOBILE_LATER.md` also stays directly under `plans/`: it is not a plan but the
+- `MOBILE_LATER.md` stays directly under `plans/`: it is not a plan but the
   notes file every session writes mobile follow-ups to while mobile is paused.
-- `archive/` remains a future G5 destination.
 
 New plans start from [TASK_CARD_TEMPLATE.md](TASK_CARD_TEMPLATE.md) and go in
 `active/` with a row in the Active plans table.
