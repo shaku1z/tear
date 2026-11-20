@@ -520,6 +520,13 @@
       ],
       "duration": "under-a-minute"
     },
+    "test:browser:replay-engine-cold": {
+      "purpose": "Browser check that a replay opened on a cold page waits for its code, reports a failed fetch plainly and opens on retry",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
     "test:preservation-corpus": {
       "purpose": "Vitest ghost preservation corpus with a JSON report under artifacts/tearbench/checkpoints",
       "effects": [
@@ -1878,6 +1885,10 @@
       "scripts/package-target.mjs",
       "vite.config.ts"
     ],
+    "scripts/application-chunks.mjs": [
+      "tests/unit/application-chunks.test.mjs",
+      "vite.config.ts"
+    ],
     "scripts/audio-profile.mjs": [
       "scripts/build-target.mjs"
     ],
@@ -1980,6 +1991,7 @@
     ]
   },
   "declarations": [
+    "scripts/application-chunks.d.mts",
     "scripts/build-targets.d.mts",
     "scripts/campaign-publication-boundary.d.mts",
     "scripts/music-cover.d.mts",

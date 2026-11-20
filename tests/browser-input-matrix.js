@@ -5,7 +5,7 @@ const http = require("node:http");
 const { listenOnFreePort } = require("./local-server");
 const path = require("node:path");
 const { chapterOpeningCarriesThroughOnEveryDevice } = require("./browser-chapter-opening");
-const { STATE_WAIT_MS, holdFor, notWithin, pollEvery, launchJourney } = require("./browser-waits");
+const { STATE_WAIT_MS, clickTarget, holdFor, notWithin, pollEvery, launchJourney } = require("./browser-waits");
 
 async function moveCapturedPointer(page, from, to) {
   await page.evaluate(
@@ -643,10 +643,10 @@ async function desktopPointerAndController(browser, configure) {
   await controller.evaluate(
     () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
   );
-  await controller.mouse.click(260, 360);
+  await clickTarget(controller, "menu", "PLAY");
   await controller.waitForFunction(() => window.__PANTHEON_TEST.state().game === "setup");
   // A fresh profile is preselected onto the Tutorial; pick Endless the way a player would.
-  await controller.mouse.click(430, 255);
+  await clickTarget(controller, "setup", "ENDLESS");
   await controller.waitForFunction(() => window.__PANTHEON_TEST.state().setup.mode === "endless");
   await controller.evaluate(() => {
     window.__testGamepad.buttons[2] = { pressed: true, touched: true, value: 1 };

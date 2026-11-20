@@ -7,7 +7,7 @@ import { createIndexedDbGhostVaultBackend } from "../../ghost/indexeddb-vault-ba
 import { prepareGhostCapsuleSourceGuards } from "../../ghost/capsule-protection";
 
 function createLiveGhostReferenceWorker(): Worker {
-  return new Worker(new URL("../../ghost/live-ghost-reference-worker.ts", import.meta.url), { type: "module" });
+  return new Worker(new URL("./live-ghost-reference-worker.ts", import.meta.url), { type: "module" });
 }
 
 export function createBrowserLiveGhostReference(factory: IDBFactory | undefined) {
