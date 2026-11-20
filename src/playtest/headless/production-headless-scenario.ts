@@ -4,7 +4,7 @@ import type { TearScenarioV1 } from "../../tearbench/contracts";
 import { validateTearContract } from "../../tearbench/validation";
 
 /** Waves in one stage of the Adventure: nine waves and the stage's boss. */
-const CAMPAIGN_WAVES_PER_STAGE = 10;
+export const CAMPAIGN_WAVES_PER_STAGE = 10;
 
 /**
  * A run may open on a later wave, and in the Adventure that fixes its stage. The run is placed just before the

@@ -126,6 +126,8 @@ export interface ProductionHeadlessEnvironment extends TearHeadlessEnvironment<
   policyUiObservation(): Readonly<{ screen: string; choices: readonly Readonly<{ id: string }>[]; focusedId?: string }>;
   /** The running world, for measurement that reads what the observation does not carry. Read only. */
   world(): ProductionReplayWorld["world"]["state"];
+  /** Everything on the stage (fields, cuttable objects, routes) as the game holds it. Read only. */
+  stageObjects(): ReturnType<ProductionReplayWorld["world"]["context"]["environment"]["snapshot"]>;
   /** True while a cinematic (a boss phase change, a chapter page) holds the simulation. */
   cinematicActive(): boolean;
   /** Build provenance remains available outside checkpointable lifecycle states. */
@@ -337,6 +339,7 @@ export function createProductionHeadlessEnvironment(
       });
     },
     world: () => requireCore().replay.world.state,
+    stageObjects: () => requireCore().replay.world.context.environment.snapshot(),
     cinematicActive: () => requireCore().replay.world.context.cinema.active,
     sourceBuild: () => Object.freeze({ ...requireCore().bootstrap.build }),
     advanceApplicationFrame: (seconds: number, confirm?: ProductionApplicationFrameConfirm) => {
