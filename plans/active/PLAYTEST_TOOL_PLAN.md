@@ -242,7 +242,8 @@ Nothing that works is rebuilt.
 
 | Part (today's path) | Disposition |
 | --- | --- |
-| `tearbench/production-headless-environment.ts`, `headless.ts` | Reused as is from stage 1; moved to `src/playtest/headless/` in stage 5 |
+| `tearbench/production-headless-environment.ts`, `production-headless-scenario.ts`, `production-policy-observation.ts`, `production-boss-practice-start.ts` | Reused as is from stage 1; moved to `src/playtest/headless/` on 2026-11-20, ahead of the replay overhaul's world move |
+| `tearbench/headless.ts` | Reused as is; moved to `src/playtest/headless/` in stage 5 |
 | `tearbench/production-world-factory.ts`, `production-combat-phases.ts`, `production-wave-reward-runtime.ts` | Reused as is from stage 1. Moved by the replay overhaul (its fourth pull request) to `src/app/world/detached/`, not by this plan: players' replays reach them, and release code cannot import `src/playtest` |
 | `agents/scripted-policy*.ts`, `hierarchical-policy-adapter.ts`, `watch-build-choice.ts`, `tearbench/scripted-agent-hierarchy.ts` | Reused from stage 1; become `src/playtest/players/scripted*.ts` in stage 5 |
 | `tearbench/canonical-scenarios.json` (35 scenarios, 8 headless today) | Become rows in `situations.json` in stage 4; the browser-only ones run headless where stage 2's starts allow, and stay browser tests where a browser is the point |
@@ -356,11 +357,25 @@ about 15 times real time a process, and 1,680 fights are 12.6 hours of game time
 on every seed with these players, and `cuts-objects` plays the same fight as `avoids-tells` wherever the stage
 holds nothing to cut; a sweep that played each distinct fight once would be about a third shorter. Not built.
 
+Built seventh (2026-11-20): the tests of the failure modes, which close the stage.
+
+- Failure mode 1 (wrong numbers): `tests/unit/playtest-hand-count.test.ts` plays three short fights, gives the
+  game the same actions again, writes down every tick from the game's own actors and counts ticks, damage and
+  hits taken, damage dealt, hits landed and boss movement from that list; the table must agree. It fails on a
+  planted error in the movement and in the damage dealt.
+- Failure mode 2 (not reproducible): `tests/unit/playtest-sweep.test.ts` plays a set whole and in three shares
+  and requires the same fights in the same order, and `playtest-bosses` requires the same table for the same
+  seed. The command on one job and on four gave byte-identical JSON twice by hand (24 fights, then 4). That
+  comparison is not a unit test: it costs about 80 s, nearly all of it five loads of the game. It belongs in
+  stage 4's `playtest check`, which loads the game once for the fixed set.
+- Failure mode 6 (changes the game): `pnpm test:determinism` passes (16 tests) and no playtest pull request
+  touched a fixture or the tutorial reference output.
+
 Done when:
 - [x] `pnpm playtest sweep` prints, for every boss, per phase and per player: clear rate, time to kill, damage and hits taken, hits landed, boss movement, share of time open; 5 weapons, Easy and Normal, in under 5 minutes on 6 jobs. Seeds were cut from 4 to 2 to hold the 5 minutes (see "Built sixth").
-- [ ] The three tests of failure modes 1, 2 and 6 pass.
-- [ ] The Rootbound's rows are sent to the Verdant gameplay work and the lead, beside Aldric's and the White Hart's.
-- [ ] Catalogue, change-impact, repository-map and layer entries exist; `pnpm check:quick` passes.
+- [x] The three tests of failure modes 1, 2 and 6 pass. For mode 2 the one-job against four-jobs comparison of the command was made by hand and waits for stage 4 to become a check (see "Built seventh").
+- [x] The Rootbound's rows are sent to the Verdant gameplay work and the lead, beside Aldric's and the White Hart's (2026-11-20, `playtest-sweep-rootbound-rows.md` in the sessions' shared notes).
+- [x] Catalogue, change-impact, repository-map and layer entries exist; `pnpm check:quick` passes.
 
 ### Stage 2: situations as data, comparison, enemies and full runs
 
