@@ -230,15 +230,30 @@ function isExactWikiSyncBotCommit(commit) {
   );
 }
 
-export function hasSuccessfulRequiredCheck(statusCheckRollup) {
-  return (
-    Array.isArray(statusCheckRollup) &&
-    statusCheckRollup.some(
-      (check) =>
-        (check?.name === "check" && check?.conclusion === "SUCCESS") ||
-        (check?.context === "check" && check?.state === "SUCCESS"),
-    )
+/**
+ * Where the required check "check" stands on a pull request's head, from its status rollup:
+ * "success", "pending" (queued or running), "failed", "skipped" (it ran but did nothing, as on a
+ * draft) or "missing" (nothing reported it). A merge needs "success"; only a push can turn
+ * "skipped", "missing" or "failed" into it.
+ */
+export function requiredCheckState(statusCheckRollup) {
+  const runs = (Array.isArray(statusCheckRollup) ? statusCheckRollup : []).filter(
+    (check) => check?.name === "check" || check?.context === "check",
   );
+  const state = (check) => {
+    const result = String(check?.conclusion ?? check?.state ?? "").toUpperCase();
+    if (result === "SUCCESS") return "success";
+    if (result === "SKIPPED" || result === "NEUTRAL") return "skipped";
+    if (result === "" || result === "PENDING" || result === "EXPECTED") return "pending";
+    return "failed";
+  };
+  const states = runs.map(state);
+  for (const wanted of ["success", "pending", "failed", "skipped"]) if (states.includes(wanted)) return wanted;
+  return "missing";
+}
+
+export function hasSuccessfulRequiredCheck(statusCheckRollup) {
+  return requiredCheckState(statusCheckRollup) === "success";
 }
 
 export function isWikiSyncException({ policyId, headRefName, changedFiles, commits, prView, authenticatedLogin }) {
