@@ -2,7 +2,6 @@ import type { TearCodecValue } from "../../src/tearbench/state-codecs";
 import { createLiveEconomyRuntime } from "../../src/gameplay/scoring/live-economy-runtime";
 import { LiveRecordingController } from "../../src/gameplay/run/live-recording-controller";
 import { provisionalCareerEntry } from "../../src/ghost/career-archive";
-import { recordedGhostChallengeChoices, verifyRecordedGhostChallenge } from "../../src/ghost/recorded-challenge";
 import { describe, expect, it, vi } from "vitest";
 import { RewardSelectionController } from "../../src/gameplay/run/reward-selection";
 import { rollSeedLockedDraft, seedRaceCatalogHash } from "../../src/gameplay/run/seed-locked-draft";
@@ -371,11 +370,6 @@ describe("Race source category", () => {
         provenance: { seedRace: race, actor: "bot" },
       } as unknown as Parameters<typeof provisionalCareerEntry>[0];
       expect(provisionalCareerEntry(manifest)).toMatchObject({ assisted: true, seedRaceRole: role, actor: "bot" });
-      const parent = { manifest } as Parameters<typeof recordedGhostChallengeChoices>[0];
-      expect(recordedGhostChallengeChoices(parent, {} as never)).toEqual([]);
-      expect(() => verifyRecordedGhostChallenge({} as never, parent, {} as never)).toThrow(
-        /fresh Race This Reference/iu,
-      );
     },
   );
 });

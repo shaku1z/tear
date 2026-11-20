@@ -12,8 +12,6 @@ export interface LiveGhostRecordingSessionState {
   readonly nextEventSequence: () => number;
   readonly replayContext: () => GhostReplayRunContextV1 | undefined;
   readonly setReplayContext: (value: GhostReplayRunContextV1 | undefined) => void;
-  readonly clockSessionId?: () => string | undefined;
-  readonly setClockSessionId?: (value: string | undefined) => void;
 }
 
 export function createLiveGhostRecordingSessionState(
@@ -23,17 +21,11 @@ export function createLiveGhostRecordingSessionState(
   const recorder = createBrowserGhostLiveRecorder(factory, options);
   let eventSequence = 0;
   let replayContext: GhostReplayRunContextV1 | undefined;
-  let clockSessionId: string | undefined;
   return Object.freeze({
     recorder: () => recorder,
     reset: () => {
       eventSequence = 0;
       replayContext = undefined;
-      clockSessionId = undefined;
-    },
-    clockSessionId: () => clockSessionId,
-    setClockSessionId: (value) => {
-      clockSessionId = value;
     },
     nextEventSequence: () => ++eventSequence,
     replayContext: () => replayContext,

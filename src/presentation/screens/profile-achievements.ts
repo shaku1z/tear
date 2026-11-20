@@ -118,30 +118,6 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
                   : { type: "profile.watchReplay", id: replay.id },
             });
           }
-          if (view.tab === "vault" && !replay.repairable) {
-            enqueueRow({
-              x: actionsX + 118,
-              y: y + 18,
-              w: 126,
-              h: 40,
-              size: ui.t.type.label,
-              label: replay.comparisonSelected ? "SELECTED" : "SELECT",
-              enabled: replay.available,
-              selected: replay.comparisonSelected,
-              action: { type: "profile.compareGhostCapsule", id: replay.id },
-            });
-            if ((replay.comparisonSourceCount ?? 0) >= 2) {
-              enqueueRow({
-                x: actionsX + 252,
-                y: y + 18,
-                w: 132,
-                h: 40,
-                size: ui.t.type.label,
-                label: `COMPARE ${String(replay.comparisonSourceCount)}`,
-                action: { type: "profile.openGhostComparison" },
-              });
-            }
-          }
           if (replay.local) {
             enqueueRow({
               x: actionsX + 118,

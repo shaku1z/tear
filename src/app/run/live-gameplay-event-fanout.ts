@@ -10,7 +10,6 @@ type GameplayEventObserver = (event: TearGameplayEvent) => void;
 
 /** Run-event observers that are constructed after the subscription is installed. */
 export interface LiveGameplayEventObservers {
-  readonly challenge: GameplayEventObserver;
   readonly chase: GameplayEventObserver;
 }
 
@@ -30,15 +29,13 @@ export interface LiveGameplayEventFanOut {
 
 /**
  * Installs the live runtime's one gameplay-event subscription. Observers run in
- * a fixed order: ghost challenge, ghost chase, career, the Ghost V3 causal
+ * a fixed order: ghost chase, career, the Ghost V3 causal
  * stream, then biome telemetry.
  */
 export function subscribeLiveGameplayEventFanOut(options: LiveGameplayEventFanOutOptions): LiveGameplayEventFanOut {
   const { career, recorder } = options;
-  let observeChallengeEvent: GameplayEventObserver = () => undefined;
   let observeChaseEvent: GameplayEventObserver = () => undefined;
   options.events.subscribe((event) => {
-    observeChallengeEvent(event);
     observeChaseEvent(event);
     career.observe(event);
     recorder?.record("events", event.tick, createLiveGhostCausalEvent(event, options.nextEventSequence()));
@@ -51,7 +48,6 @@ export function subscribeLiveGameplayEventFanOut(options: LiveGameplayEventFanOu
   });
   return Object.freeze({
     bind(observers: Partial<LiveGameplayEventObservers>): void {
-      if (observers.challenge !== undefined) observeChallengeEvent = observers.challenge;
       if (observers.chase !== undefined) observeChaseEvent = observers.chase;
     },
   });

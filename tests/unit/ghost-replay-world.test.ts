@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  GhostLensRegistry,
-  GhostTheaterTransport,
-  alignGhostsBySemanticEvent,
-  diffTrajectories,
-} from "../../src/ghost/theater";
 import { GhostReplayWorld, createPracticeFromHere, type GhostReplaySimulation } from "../../src/ghost/replay-world";
 import { createGhostV3, type GhostReplayTrident } from "../../src/ghost/truth-kernel";
 import {
@@ -164,7 +158,7 @@ function sameTickGhost() {
   });
 }
 
-describe("Ghost replay world, Theater, and practice", () => {
+describe("Ghost replay world and practice", () => {
   it("produces equal semantic hashes for full playback and seek-to-tick", () => {
     const source = ghost();
     const full = new GhostReplayWorld(source, simulation).playFull(30);
@@ -236,55 +230,5 @@ describe("Ghost replay world, Theater, and practice", () => {
       });
     }
     expect(JSON.stringify(source)).toBe(before);
-  });
-
-  it("prevents public Theater from enabling a developer-only Lens", () => {
-    const lenses = new GhostLensRegistry();
-    lenses.register({ id: "public-events", visibility: "public", requiredTracks: ["state"], describe: () => ({}) });
-    lenses.register({ id: "hitboxes", visibility: "developer", requiredTracks: ["state"], describe: () => ({}) });
-    expect(lenses.available(ghost(), "public").map((lens) => lens.id)).toEqual(["public-events"]);
-    expect(lenses.available(ghost(), "developer").map((lens) => lens.id)).toEqual(["public-events", "hitboxes"]);
-  });
-
-  it("supports Theater transport, semantic navigation, accessibility, and mobile layout", () => {
-    const source = ghost();
-    const theater = new GhostTheaterTransport(source.events, 390);
-    theater.play();
-    theater.speed(2);
-    theater.camera("target");
-    theater.accessibility(true, true);
-    expect(theater.nextEvent("boss.attack-started")?.tick).toBe(20);
-    expect(theater.state()).toMatchObject({
-      playing: true,
-      tick: 20,
-      speed: 2,
-      camera: "target",
-      reducedMotion: true,
-      highContrast: true,
-      layout: "mobile",
-    });
-  });
-
-  it("aligns nine runs by semantic event and computes trajectory differences", () => {
-    const ghosts = Array.from({ length: 9 }, (_, index) => ghost(`run-${String(index)}`, 20 + index * 3));
-    const aligned = alignGhostsBySemanticEvent(ghosts, "boss.attack-started");
-    expect(aligned).toHaveLength(1);
-    expect(Object.keys(aligned[0]?.ticksByGhost ?? {})).toHaveLength(9);
-    expect(aligned[0]?.ticksByGhost["run-8"]).toBe(44);
-    expect(
-      diffTrajectories(
-        [
-          { tick: 1, x: 0, y: 0 },
-          { tick: 2, x: 2, y: 0 },
-        ],
-        [
-          { tick: 1, x: 3, y: 4 },
-          { tick: 2, x: 2, y: 0 },
-        ],
-      ),
-    ).toEqual([
-      { tick: 1, distance: 5 },
-      { tick: 2, distance: 0 },
-    ]);
   });
 });

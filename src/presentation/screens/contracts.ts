@@ -113,8 +113,6 @@ export interface ReplayView {
   readonly repairable?: boolean;
   readonly canDownloadArchive?: boolean;
   readonly theaterUnavailable?: boolean;
-  readonly comparisonSelected?: boolean;
-  readonly comparisonSourceCount?: number;
   readonly badge?: string;
   readonly timestamp?: string;
   readonly thumbnailId?: string;
@@ -379,15 +377,7 @@ export interface ReplayChapterView {
   readonly fraction: number;
   readonly boss: boolean;
 }
-export interface ReplayComparisonView {
-  readonly eventType: string;
-  readonly occurrence: number;
-  readonly index: number;
-  readonly total: number;
-  readonly runs: readonly Readonly<{ sourceId: string; tick: number | null; semanticHash: string | null }>[];
-}
 export interface ReplayScreenView {
-  readonly finaleNavigation?: "FINALE CONTINUATION" | "BACK TO SCORED RUN";
   readonly id: "replay";
   readonly title: string;
   readonly detail: string;
@@ -407,26 +397,7 @@ export interface ReplayScreenView {
   readonly theater?: boolean;
   /** Only verified recorded checkpoints can begin an unranked practice child. */
   readonly practiceAvailable?: boolean;
-  /** C29 comparison is semantic source-simulation evidence, not output-device fidelity. */
-  readonly comparison?: ReplayComparisonView;
   readonly notice?: string;
-  /** Explicit selected-recording observations; no skill or accuracy inference. */
-  readonly challenge?: Readonly<{
-    tick: number;
-    choices: readonly Readonly<{ id: string; label: string }>[];
-    result?: string;
-    elapsedTicks?: number;
-  }>;
-  /** C37 verified, immutable Run DNA projection; absent metrics remain explicitly unavailable. */
-  readonly runDna?: Readonly<{
-    readonly available: boolean;
-    readonly formulaVersion: string;
-    readonly evidenceCustody: string;
-    readonly nativePolicy?: string;
-    readonly sourceMetrics: Readonly<Record<string, number | undefined>>;
-    readonly dimensions?: Readonly<Record<string, number>>;
-    readonly unavailable: readonly string[];
-  }>;
   readonly worldVisible?: boolean;
   readonly clipExport?: Readonly<{
     available: boolean;

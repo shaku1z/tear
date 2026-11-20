@@ -10,9 +10,6 @@ import {
   type NormalGhostArchiveLimits,
   type PreparedGhostCapsuleArchive,
 } from "./capsule-archive";
-import { GhostCapsuleReader } from "./capsule-reader";
-import { GHOST_CHUNK_CODECS } from "./capsule-codec";
-import { admitGhostFinaleCompanion, readGhostFinaleCompanion } from "./finale-companion";
 
 export interface GhostPairedArchiveBinding extends Omit<GhostArchiveBinding, "protocol"> {
   readonly protocol: "ghost-linked-archive-v1";
@@ -36,24 +33,6 @@ export function ghostPortableArchiveData(archive: PreparedGhostPortableArchive) 
   const pair = archive as PreparedGhostPairedArchive;
   if (!pairs.has(pair)) throw new TypeError("Ghost pair preparation is invalid");
   return { binding: pair.binding, limits: pair.limits, members: pair.members.map(ghostArchiveData) };
-}
-export async function readPreparedGhostCapsuleArchive(archive: PreparedGhostCapsuleArchive) {
-  const data = ghostArchiveData(archive);
-  return new GhostCapsuleReader({
-    getManifest: (id) => Promise.resolve(id === data.manifest.id ? data.manifest : undefined),
-    readChunk: async (entry) => {
-      const text = data.chunks[entry.id];
-      if (text === undefined) throw new TypeError("Missing prepared pair chunk");
-      return (
-        await GHOST_CHUNK_CODECS.decodeMeasured(
-          entry.encoding,
-          text,
-          data.limits.maxCompressedChunkBytes,
-          entry.uncompressedBytes,
-        )
-      ).value;
-    },
-  }).read(data.manifest.id);
 }
 /** The existing single archive remains unchanged; the new envelope contains its exact JSON strings. */
 export async function prepareGhostPortableArchive(
@@ -108,12 +87,6 @@ export async function prepareGhostPortableArchive(
       if (shared.has(key) && shared.get(key) !== text) throw new TypeError("Shared pair chunk bytes differ");
       shared.set(key, text);
     }
-  if (readGhostFinaleCompanion(parent.manifest.provenance) !== undefined)
-    throw new TypeError("Pair parent cannot itself be a finale companion");
-  admitGhostFinaleCompanion(
-    await readPreparedGhostCapsuleArchive(companion),
-    await readPreparedGhostCapsuleArchive(parent),
-  );
   const binding: GhostPairedArchiveBinding = Object.freeze({
     ...parent.binding,
     protocol: "ghost-linked-archive-v1",

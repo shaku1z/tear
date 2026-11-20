@@ -14,16 +14,12 @@ export interface LiveRunAbandonmentOptions {
 
 export interface LiveRunAbandonment {
   readonly abandon: (reason: string, metadata?: Readonly<Record<string, unknown>>) => void;
-  /** The ghost challenge, built later, may claim an abandon request first. */
-  readonly bindChallengeStop: (stop: () => boolean) => void;
 }
 
 /** Ends an active live run without an outcome: lifecycle, environment, event, and Ghost 2 recording. */
 export function createLiveRunAbandonment(options: LiveRunAbandonmentOptions): LiveRunAbandonment {
   const { state: hostState, lifecycle, environment } = options.world;
-  let stopChallengeRun: () => boolean = () => false;
   const abandon = (reason: string, metadata: Readonly<Record<string, unknown>> = {}): void => {
-    if (stopChallengeRun()) return;
     const snapshot = lifecycle.snapshot();
     if (snapshot.sessionId === null || snapshot.phase === "terminated") return;
     cleanupBossEncounterActors(hostState.enemies(), "exit");
@@ -48,10 +44,5 @@ export function createLiveRunAbandonment(options: LiveRunAbandonmentOptions): Li
       options.input.stopSemanticRecording();
     }
   };
-  return Object.freeze({
-    abandon,
-    bindChallengeStop(stop: () => boolean): void {
-      stopChallengeRun = stop;
-    },
-  });
+  return Object.freeze({ abandon });
 }

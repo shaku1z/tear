@@ -77,48 +77,13 @@ The subsequent Scenario Console consumer found that ordinary reset after real ap
 Captured emission continuity upgrades particle presentation to explicit version 2 with required independent cosmetic entropy: versioned mulberry32 seed/state/cursor and run-start or legacy-derived provenance. Strict version 1 parsing remains unchanged and rejects unexpected entropy. New-run seeding occurs at the existing chosen-seed world service boundary, never FX reset, menu, debug or recording. Prepared version 1/absent fallbacks use only staged run seed and tick; historical future fidelity and old version 1 exact-hash identity are not claimed. Live rollback restores the outgoing particle/entropy pair. Actual FX, Aldric charge, bleed status, shared mirror-lock feedback and production collision/death/boss feedback use this independent stream with existing draw order and trace accounting. Decorative menu FX and its real Player closure are isolated; camera/wipe/menu position randomness and gameplay streams retain their prior owners. Matching emission schedules and policy are required for continuation equality. This does not establish general visual replay or changed-setting visual equality; parent browser proof and broader scene/device/human acceptance remain separate.
 
 
-### Source-linked Campaign finale continuation
+### Campaign finale in replays
 
-Fresh V3 Campaign capture keeps the scored terminal, Ghost 2 packaging, reward
-receipt and native Run DNA terminal unchanged. The committed finale-launch
-checkpoint starts a separate streaming `tearghost-finale-companion` version-one
-capsule with the same run, held input, RNG and absolute canonical/application
-clock. Its immutable declaration binds the exact scored origin snapshot/input,
-open-frame cursor and inherited real begin witness. A bounded asynchronous tail
-binds the finalized parent manifest/root; missing parent, interruption, failed
-storage or incomplete frame coverage cannot admit the companion. No second
-`run.completed`, fresh run or durable outcome is invented. Scored closure now
-explicitly retains semantic input until actual final termination or cancellation;
-the default Ghost 2 stop behavior is unchanged.
-
-Playback reconstructs the actual shared FinaleController, Source phase owner,
-cinematic director and versioned recorded confirm latch, then executes from the
-single origin using real recorded application-frame seconds/confirm and original
-commands. It compares each closed-frame canonical/finale/director/RNG witness;
-zero-tick frames remain distinct source-time positions. It neither restores later
-keyframes nor injects receipt state/input. Fresh restore validates candidate
-configuration and binding before destination replacement, clears outgoing finale
-ownership for ordinary snapshots, and preserves rollback. Historical snapshots
-without reconstructible Source/finale behavior or recorded latch are explicitly
-unsupported; ordinary legacy director capture/reset bytes remain unchanged.
-
-Profile → Vault can open the companion in Theater, render anchors/restoration
-through the existing world/cinema renderers, seek source frames and return to the
-scored run. Exact parent/chunk/manifest custody is checked again after synchronous
-reconstruction before presenting the result. Deleting the parent preserves child
-bytes but refuses a new companion open. Pair portability is not implemented.
-The Watch cinema path advances the actual application-frame owner instead of
-only draining fixed simulation ticks.
-
-Direct controls cover real owner continuation, Source confirm/stream restoration,
-periodic tick-120 origin deduplication, a mid-frame launch with already-applied
-prelude, streaming parent/child seals, zero-tick completion and source-root refusal.
-The Source confirm control first exposed a resumed-frame-six latch divergence.
-`TEAR_R07_FINALE_COMPANION=1` adds an optional constructed final-wave/surgical
-Source branch to the existing campaign-victory browser journey; parent execution
-and visual inspection remain pending for this source. This does not establish a
-natural sixty-wave Campaign, ten-minute recording, device capacity or full R07
-closure.
+The separate finale companion capsule was removed with the replay overhaul
+(plans/active/REPLAY_OVERHAUL_PLAN.md, PR 2). A scored Campaign record ends at
+its scored terminal; the Theater refuses an existing companion capsule instead
+of opening it, and a linked file still imports both members. PR 5 records the
+finale as actions at ticks so the one record runs to the run's real end.
 
 
 Source restoration preserves the frozen run-owned void graph after the actual

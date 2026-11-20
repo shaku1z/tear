@@ -29,7 +29,7 @@ import { createBrowserGhostVaultLibrary } from "../library/ghost-vault-library-c
 import { createLiveGhostPracticeSessionState } from "../replay/ghost-practice-session-state";
 import { createLiveGhostCapture } from "../replay/live-ghost-capture";
 import { createLiveGhostChaseRuntime } from "../replay/live-ghost-chase";
-import { createLiveGhostPracticeChallenge } from "../replay/live-ghost-practice-challenge";
+import { createLiveGhostPractice } from "../replay/live-ghost-practice";
 import { createLiveGhostRecording, observeLiveGhostRecordingBoundaries } from "../replay/live-ghost-recording";
 import { createTearRunScreenFactPublisher } from "../../gameplay/runtime/gameplay-event-publishers";
 import { subscribeLiveGameplayEventFanOut } from "../run/live-gameplay-event-fanout";
@@ -103,7 +103,6 @@ export function startLiveGame(
     enemyId: (actor) => combatHost.combatEntityRuntime.id(actor, "enemy"),
     practiceActive: () => ghostPracticeSession.active() !== null,
     bossIntroActive: () => hostState.bossIntro() !== null,
-    finale: () => ghostCapture.finale,
   });
   const { session: ghostV3Session, recorder: ghostV3, career, frames: ghostFrames } = ghostRecording;
   observeLiveGhostRecordingBoundaries(ghostRecording, {
@@ -118,7 +117,6 @@ export function startLiveGame(
     captureReceipt: (tick) => {
       ghostCapture.captureReceipt(tick);
     },
-    finale: () => ghostCapture.finale,
   });
   const gameplayEvents = subscribeLiveGameplayEventFanOut({
     events: GAMEPLAY_EVENTS,
@@ -411,7 +409,6 @@ export function startLiveGame(
     run: liveRun,
     player: livePlayer,
     blade: liveBlade,
-    challenge: () => ghostPracticeChallenge.challenge,
     ghostCapture: () => ghostCapture,
   });
   const coordinatorContext = {
@@ -548,29 +545,19 @@ export function startLiveGame(
     world,
     combat: combatHost,
     canonicalState: captureLiveCanonicalState,
-    campaign: campaignTraining.campaign,
-    navigation,
     run: liveRun,
     player: livePlayer,
     blade: liveBlade,
   });
-  const ghostPracticeChallenge = createLiveGhostPracticeChallenge({
-    indexedDb: browserIndexedDb,
-    recording: ghostRecording,
+  const ghostPractice = createLiveGhostPractice({
     capture: ghostCapture,
     stateSetup: liveStateSetup,
     practice: ghostPracticeSession,
     world,
-    combat: combatHost,
-    canonicalState: captureLiveCanonicalState,
     navigation,
-    gameplayEvents,
-    abandonment: runAbandonment,
     ghost: GHOST,
     input: Input,
     requestPointerLock: requestLock,
-    player: livePlayer,
-    addFloater: campaignTraining.addFloater,
   });
   const interfaceComposition = assembleLiveInterface({
     dependencies,
@@ -589,7 +576,7 @@ export function startLiveGame(
     chase,
     career,
     ghostLibrary: { vault: ghostVault },
-    launchGhostPractice: ghostPracticeChallenge.launch,
+    launchGhostPractice: ghostPractice.launch,
     abandonRun: (reason) => {
       runAbandonment.abandon(reason);
     },

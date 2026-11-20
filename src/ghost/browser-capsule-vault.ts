@@ -12,9 +12,6 @@ import {
   verifyGhostCapsuleProductionReplay,
   type GhostProductionReplayVerification,
 } from "./production-replay-verification";
-import { readGhostFinaleCompanion, finaleFrameWitnesses } from "./finale-companion";
-import { reopenGhostFinaleCompanion } from "./browser-finale-companion";
-import { createGhostFinalePlayback } from "./finale-playback";
 import { createGhostProductionReplaySession } from "./production-replay-session";
 import type { GhostPracticeChild, GhostPracticeMode } from "./replay-world";
 import { GhostDoctor, ghostDoctorManifestIndexWrite } from "./ghost-doctor";
@@ -233,32 +230,6 @@ export async function verifyBrowserGhostCapsuleProductionReplay(
   id: string,
 ): Promise<GhostProductionReplayVerification | undefined> {
   const capsule = await readBrowserGhostCapsule(factory, id);
-  if (capsule !== undefined && readGhostFinaleCompanion(capsule.manifest.provenance) !== undefined) {
-    try {
-      const lease = await reopenGhostFinaleCompanion(factory, capsule);
-      const playback = createGhostFinalePlayback(capsule, lease.permit);
-      const last = playback.seekFrame(playback.positions.length - 1);
-      await lease.confirm();
-      return {
-        status: "verified",
-        mappingIssues: [],
-        comparisons: finaleFrameWitnesses(capsule).map((witness) => ({
-          tick: witness.tick,
-          expectedHash: witness.stateHash,
-          equal: true,
-          ...(witness.cursor.ordinal === playback.positions.at(-1)?.ordinal
-            ? { actualHash: last.result.semanticHash }
-            : {}),
-        })),
-      };
-    } catch (error) {
-      return {
-        status: "mismatch",
-        comparisons: [],
-        mappingIssues: [error instanceof Error ? error.message : String(error)],
-      };
-    }
-  }
   return capsule === undefined ? undefined : verifyGhostCapsuleProductionReplay(capsule);
 }
 
@@ -269,15 +240,6 @@ export async function seekBrowserGhostCapsuleProductionReplay(
   tick: number,
 ): Promise<ReturnType<ReturnType<typeof createGhostProductionReplaySession>["seek"]> | undefined> {
   const capsule = await readBrowserGhostCapsule(factory, id);
-  if (capsule !== undefined && readGhostFinaleCompanion(capsule.manifest.provenance) !== undefined) {
-    const lease = await reopenGhostFinaleCompanion(factory, capsule);
-    const playback = createGhostFinalePlayback(capsule, lease.permit);
-    const index = playback.positions.findIndex((position) => position.tick === tick);
-    if (index < 0) throw new RangeError("Finale seek requires a captured frame position");
-    const selected = playback.seekFrame(index);
-    await lease.confirm();
-    return selected.result;
-  }
   return capsule === undefined ? undefined : createGhostProductionReplaySession(capsule).seek(tick);
 }
 

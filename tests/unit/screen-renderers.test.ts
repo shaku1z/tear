@@ -1081,7 +1081,6 @@ describe("legacy screen renderer registry", () => {
         "replay.togglePause",
         "replay.restart",
         "replay.practice",
-        "replay.runDna.toggle",
         "replay.toggleInfo",
         "replay.exit",
         "settings.activate",
@@ -1340,8 +1339,6 @@ describe("legacy screen renderer registry", () => {
       const rowTypes = new Set([
         "profile.watchGhostCapsule",
         "profile.downloadGhostArchive",
-        "profile.compareGhostCapsule",
-        "profile.openGhostComparison",
         "profile.repairGhostCapsule",
         "profile.watchReplay",
         "profile.pinReplay",
@@ -1642,11 +1639,11 @@ describe("release and engineering surface rendering", () => {
     const row = controls.filter(
       (control) =>
         control.action.type === "career.control" &&
-        ["watch", "challenge", "download", "chase", "race"].includes(control.action.command),
+        ["watch", "download", "chase", "race"].includes(control.action.command),
     );
-    expect(row.map((control) => control.label)).toEqual(["THEATER", "CHALLENGE", "DOWNLOAD", "CHASE BEST"]);
+    expect(row.map((control) => control.label)).toEqual(["THEATER", "DOWNLOAD", "CHASE BEST"]);
     // The page pattern content column is 1120 wide.
-    expect(row[3]).toMatchObject({ w: (1120 - 3 * 8) / 4 });
+    expect(row[2]).toMatchObject({ w: (1120 - 2 * 8) / 3 });
   });
 });
 

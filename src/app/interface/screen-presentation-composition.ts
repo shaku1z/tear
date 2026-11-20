@@ -33,10 +33,7 @@ import { isAppScreen, type AppScreen } from "../../domain/screen-catalog";
 
 type RendererBase = Omit<LiveScreenRendererOptions, "dispatch" | "renderPreview">;
 type ReplayBase = Omit<ReplayScreenServices, "renderers" | "categories" | "fallbackCategory" | "specialColor">;
-type LibraryBase = Omit<
-  LibraryScreenServices,
-  "renderers" | "enterReplay" | "enterGhostTheater" | "enterGhostComparison"
->;
+type LibraryBase = Omit<LibraryScreenServices, "renderers" | "enterReplay" | "enterGhostTheater">;
 type SettingsBase = Omit<SettingsRenameServices, "renderers" | "setCodexGuide">;
 type RunServicesBase = Omit<
   RunScreenServices,
@@ -134,9 +131,7 @@ export function createLiveScreenPresentationComposition(
       }
       const result = await replay.enterGhostCapsule(id, "profile");
       if (result.kind === "refused") throw new Error(result.detail);
-      if (command === "challenge") replay.openChallenges();
     },
-    enterGhostComparison: (ids) => replay.enterGhostComparison(ids, "profile"),
   });
   const settings: SettingsRenameAdapters = createLiveSettingsRenameAdapters({
     ...options.settings,

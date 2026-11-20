@@ -1,4 +1,3 @@
-import type { RecordedGhostChallenge } from "./recorded-challenge";
 import type { ReplayActionEnvelope } from "../replay/envelope";
 import { stableVerificationHash } from "../domain/hash";
 import type {
@@ -304,7 +303,6 @@ export class GhostProductionReplayWorld<State> {
 export type GhostPracticeMode = "exact-practice" | "repetition-drill" | "counterfactual-sandbox" | "race-practice";
 
 export interface GhostPracticeChild {
-  readonly challenge?: RecordedGhostChallenge;
   readonly id: string;
   readonly sourceGhostId: string;
   readonly sourceRootHash: string;
