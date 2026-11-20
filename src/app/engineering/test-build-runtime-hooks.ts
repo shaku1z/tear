@@ -239,6 +239,9 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
         presentationHost.render();
         return interfaceInteraction.buttons().length > 0;
       },
+      skipTutorial: () => {
+        dependencies.PROFILE.skipTutorial();
+      },
       activateControl: (action) => {
         presentationHost.render();
         const encoded = JSON.stringify(action);

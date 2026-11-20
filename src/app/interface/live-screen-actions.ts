@@ -82,6 +82,9 @@ export function createLiveScreenActions(
         startRunWithPreflight(session.selectedMode(), session.selectedDifficulty());
       });
     },
+    skipTutorial: () => {
+      dependencies.PROFILE.skipTutorial();
+    },
     startRun: (mode, difficulty) => {
       if (isRunModeSelection(mode) && isRunDifficultySelection(difficulty)) startRunWithPreflight(mode, difficulty);
     },

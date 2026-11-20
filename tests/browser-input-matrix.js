@@ -6,6 +6,7 @@ const { listenOnFreePort } = require("./local-server");
 const path = require("node:path");
 const { chapterOpeningCarriesThroughOnEveryDevice } = require("./browser-chapter-opening");
 const { STATE_WAIT_MS, clickTarget, holdFor, notWithin, pollEvery, launchJourney } = require("./browser-waits");
+const { TUTORIAL_SKIPPED_STORAGE } = require("./browser-journey-harness");
 
 async function moveCapturedPointer(page, from, to) {
   await page.evaluate(
@@ -236,7 +237,8 @@ async function pointerBelongsToTheMouseAlone(browser, configure) {
  * A tablet starts on touch, so its first tap meets the touch layout it was drawn. A laptop with
  * a touch screen starts on the mouse; its first tap is resolved against the mouse layout the
  * player saw, and the menu changes to its touch layout only afterwards. Either way the first
- * tap on PLAY opens the run setup (it once opened the Shop, which sat under the moved layout).
+ * tap on PLAY presses PLAY, which starts the tutorial on a fresh profile (it once opened the
+ * Shop, which sat under the moved layout).
  */
 async function firstTapLandsOnTheControlsThePlayerSaw(browser, configure) {
   for (const device of [
@@ -286,13 +288,11 @@ async function firstTapLandsOnTheControlsThePlayerSaw(browser, configure) {
     });
     await page.waitForTimeout(holdFor(60));
     await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
-    await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.app.snapshot().screen !== "menu", undefined, {
-      timeout: STATE_WAIT_MS,
-    });
-    assert.equal(
-      await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.app.snapshot().screen),
-      "setup",
-      `${device.name}: the first tap on PLAY opens the run setup`,
+    // A fresh profile is tutorial-first, so PLAY starts the tutorial.
+    await page.waitForFunction(
+      () => window.__PANTHEON_TEST.state().mode === "tutorial" && window.__PANTHEON_TEST.state().game === "playing",
+      undefined,
+      { timeout: STATE_WAIT_MS },
     );
     const after = await input();
     assert.equal(after.mode, "touch", `${device.name}: touch owns the interface after a tap`);
@@ -624,6 +624,10 @@ async function desktopPointerAndController(browser, configure) {
       value: () => (window.__testGamepad ? [window.__testGamepad] : []),
     });
   });
+  // The controller leg drives the run setup through PLAY, so it plays as a player who skipped the tutorial.
+  await controller.addInitScript((storage) => {
+    window.__TEAR_TEST_STORAGE__ = storage;
+  }, TUTORIAL_SKIPPED_STORAGE);
   await configure(controller);
   await controller.evaluate(() => {
     const buttons = Array.from({ length: 16 }, () => ({ pressed: false, touched: false, value: 0 }));
@@ -645,7 +649,7 @@ async function desktopPointerAndController(browser, configure) {
   );
   await clickTarget(controller, "menu", "PLAY");
   await controller.waitForFunction(() => window.__PANTHEON_TEST.state().game === "setup");
-  // A fresh profile is preselected onto the Tutorial; pick Endless the way a player would.
+  // A skipped tutorial preselects Adventure; pick Endless the way a player would.
   await clickTarget(controller, "setup", "ENDLESS");
   await controller.waitForFunction(() => window.__PANTHEON_TEST.state().setup.mode === "endless");
   await controller.evaluate(() => {

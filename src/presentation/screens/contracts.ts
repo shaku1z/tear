@@ -112,7 +112,6 @@ export interface ReplayView {
   readonly available?: boolean;
   readonly repairable?: boolean;
   readonly canDownloadArchive?: boolean;
-  readonly canDownloadLinkedPair?: boolean;
   readonly theaterUnavailable?: boolean;
   readonly comparisonSelected?: boolean;
   readonly comparisonSourceCount?: number;
@@ -184,6 +183,8 @@ export interface MenuScreenView {
   readonly biome?: string;
   /** Replaces the PLAY sub-label (mode · difficulty), e.g. the first-run tutorial nudge. */
   readonly playSub?: string;
+  /** Tutorial-first: PLAY starts the tutorial at its next lesson instead of opening run setup. */
+  readonly playTutorial?: boolean;
   readonly pendingFinale?: boolean;
   readonly nowPlaying?: Readonly<{ label: string; detail: string }>;
 }
@@ -410,7 +411,6 @@ export interface ReplayScreenView {
   readonly comparison?: ReplayComparisonView;
   readonly notice?: string;
   /** Explicit selected-recording observations; no skill or accuracy inference. */
-  readonly bossMemory?: Readonly<{ available: boolean; title?: string; notes?: string; result?: string }>;
   readonly challenge?: Readonly<{
     tick: number;
     choices: readonly Readonly<{ id: string; label: string }>[];
@@ -463,6 +463,8 @@ export interface SettingRowView {
 export interface SettingsScreenView {
   readonly id: "settings";
   readonly tab: string;
+  /** False on a read-only tab (Credits): RESET DEFAULTS is not drawn there. */
+  readonly resettable: boolean;
   readonly tabs: readonly ChoiceView[];
   readonly sections: readonly { readonly label: string; readonly rows: readonly SettingRowView[] }[];
   readonly canScrollUp?: boolean;
@@ -608,6 +610,8 @@ export interface PausedScreenView {
 export interface ConfirmQuitScreenView {
   readonly id: "confirmquit";
   readonly practice?: boolean;
+  /** Leaving the tutorial: a course in progress keeps its finished lessons; drills keep nothing to lose. */
+  readonly tutorial?: "course" | "drills";
 }
 export interface ContinueScreenView {
   readonly id: "continue";

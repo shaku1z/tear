@@ -241,11 +241,7 @@ export function buildProfileSnapshot(input: {
 }): ProfileSnapshotResult {
   // Visible list height: page body bottom (height - 110) minus the content top (306),
   // a possible notice line (24) and the vault toolbar inset.
-  const maximumScroll = Math.max(
-    0,
-    input.replays.length * (input.tab === "vault" && input.replays.some((r) => r.canDownloadLinkedPair) ? 128 : 96) -
-      (input.height - 440 - (input.replayListInset ?? 0)),
-  );
+  const maximumScroll = Math.max(0, input.replays.length * 96 - (input.height - 440 - (input.replayListInset ?? 0)));
   const scroll = Math.max(0, Math.min(maximumScroll, input.scroll));
   const rarityRank: Readonly<Record<string, number>> = { legendary: 0, epic: 1, rare: 2, uncommon: 3, common: 4 };
   const showcases = input.achievements

@@ -119,6 +119,17 @@
       ]
     },
     {
+      "id": "replays",
+      "name": "Replays",
+      "state": "Planning: draft plan up for the lead's review; no code yet",
+      "summary": "Players reach two replay systems today: Ghost 2 (position samples in localStorage, used by the REPLAYS tab, the feed and leaderboard links) and the Ghost V3 capsules (re-simulated, in IndexedDB, used by VAULT, CAREER and the Theater). The plan replaces both with one versioned record and five plain modules (record, store, watch, share, verify), moves the replay world and snapshot codecs out of TearBench, and deletes src/ghost (118 replay modules and about 800,000 characters today).",
+      "next": "The lead's answers to the plan's six questions, then PR 1 (remove the hidden replay features).",
+      "owner_action": "Product calls in the plan: one Replays tab, removing COMPARE, challenges, RUN DNA, the finale companion and REPAIR, deleting old local replays at the switch; the Firestore chunk-write rule.",
+      "evidence": [
+        "plans/active/REPLAY_OVERHAUL_PLAN.md"
+      ]
+    },
+    {
       "id": "tearbench-program",
       "name": "TearBench C21 to C40 program",
       "state": "Paused at the 2026-08-30 state",

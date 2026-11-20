@@ -6,12 +6,11 @@ import {
   calculateRunDna,
   createChallengeAttemptProof,
   createFairLiveGhostOverlay,
-  createGhostV3,
   distillNemesisGrammar,
   verifyChallengeAttemptProof,
   type GhostChallengeDefinition,
-  type GhostReplayTrident,
-} from "../../src/ghost";
+} from "../../src/ghost/player-experiences";
+import { createGhostV3, type GhostReplayTrident } from "../../src/ghost/truth-kernel";
 import type { TearCausalEventV1 } from "../../src/tearbench";
 
 const trident: GhostReplayTrident = {

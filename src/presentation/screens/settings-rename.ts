@@ -84,7 +84,9 @@ export function createSettingsRenameRenderers(context: ScreenRenderContext) {
         section.rows.forEach((row) => {
           const controlY = y + (rowHeight - controlHeight) / 2 - 4;
           const visible = controlY >= top - 2 && controlY + controlHeight <= bottom;
-          const labelRight = controlX - (row.muteKey ? 128 : 20) - (left + 12);
+          // A row with nothing to draw in the control column (a credit) gives its text the full width.
+          const bare = row.kind === "info" && row.value === "";
+          const labelRight = bare ? panelWidth - 24 : controlX - (row.muteKey ? 128 : 20) - (left + 12);
           ui.textBox(canvas, row.label, left + 12, y + (row.note ? 22 : 30), labelRight, {
             size: ui.t.type.body,
             maxLines: 1,
@@ -142,18 +144,20 @@ export function createSettingsRenameRenderers(context: ScreenRenderContext) {
     });
     // Enqueued after the rows so keyboard focus starts on the first setting, not on RESET.
     // RESET sits in the header, away from BACK; it keeps the shared minimum target and fits its label.
-    context.canvas.font = ui.font(ui.t.type.label, true);
-    const resetW = Math.max(210, Math.ceil(context.canvas.measureText("RESET DEFAULTS").width) + 32),
-      resetH = Math.max(40, ui.t.metric.minTarget);
-    context.enqueue({
-      x: layout.sheet.x + layout.sheet.w - 48 - resetW,
-      y: layout.sheet.y + 14,
-      w: resetW,
-      h: resetH,
-      label: "RESET DEFAULTS",
-      size: ui.t.type.label,
-      action: { type: "settings.reset" },
-    });
+    if (view.resettable) {
+      context.canvas.font = ui.font(ui.t.type.label, true);
+      const resetW = Math.max(210, Math.ceil(context.canvas.measureText("RESET DEFAULTS").width) + 32),
+        resetH = Math.max(40, ui.t.metric.minTarget);
+      context.enqueue({
+        x: layout.sheet.x + layout.sheet.w - 48 - resetW,
+        y: layout.sheet.y + 14,
+        w: resetW,
+        h: resetH,
+        label: "RESET DEFAULTS",
+        size: ui.t.type.label,
+        action: { type: "settings.reset" },
+      });
+    }
     pageFooter(context, {
       back: { type: "navigate.back" },
       canScrollUp: view.canScrollUp,
