@@ -18,6 +18,33 @@ export interface BladeRendererDependencies {
   readonly lerp: (from: number, to: number, amount: number) => number;
 }
 
+type Point = Readonly<{ x: number; y: number }>;
+
+/**
+ * The tone opposite the theme's ink, and how blades use it. The theme takes its polarity from the stage background,
+ * so ink alone vanishes where a floor or platform has the ink's own tone (a black floor on a light stage).
+ * - `edge`: every blade and weapon silhouette sits on a soft rim of this tone, a faint outer band under a firmer
+ *   inner one, so it separates from any ground without reading as a cut-out outline. `spread` is added on each
+ *   side of the silhouette in logical pixels, so the rim scales with the canvas like the blade does.
+ * - `accent`: the authored detail lines of the heavier weapons (grip wraps, guards, outlines between parts).
+ */
+export const BLADE_TONE = {
+  light: { rgb: "255,255,255", accent: 1 },
+  dark: { rgb: "10,12,20", accent: 0.9 },
+  edge: [
+    { spread: 2.4, alpha: 0.2 },
+    { spread: 1.1, alpha: 0.55 },
+  ],
+} as const;
+
+type ToneStyle = Readonly<{ accent: string; edge: readonly Readonly<{ spread: number; color: string }>[] }>;
+const toneStyle = (tone: Readonly<{ rgb: string; accent: number }>): ToneStyle => ({
+  accent: `rgba(${tone.rgb},${String(tone.accent)})`,
+  edge: BLADE_TONE.edge.map((band) => ({ spread: band.spread, color: `rgba(${tone.rgb},${String(band.alpha)})` })),
+});
+/** The resolved colours for each theme polarity, built once. */
+export const BLADE_TONE_STYLES = { light: toneStyle(BLADE_TONE.light), dark: toneStyle(BLADE_TONE.dark) } as const;
+
 export function createBladeRenderer({
   policy,
   graphics,
@@ -30,6 +57,42 @@ export function createBladeRenderer({
   const trailAlpha = policy.juice.trailAlpha;
   const chainSegments = policy.chainSegments ?? 14;
   const chamberCount = policy.chamberCount ?? 4;
+  /** The opposite-tone colours for the current theme; the theme can change between frames. */
+  const tone = (): ToneStyle => (theme.dark ? BLADE_TONE_STYLES.dark : BLADE_TONE_STYLES.light);
+  /**
+   * The one edge rule: draws the soft rim under a silhouette, before its ink. `trace` adds the silhouette to the
+   * current path (several pieces may share one path, so where they cross the rim is laid once, with no joints);
+   * `width` is the ink stroke's width, or 0 for a filled shape, whose fill then covers the rim's inner half. The rim
+   * never carries the rim shadow, which stays on the ink as before.
+   */
+  function drawEdge(context: CanvasRenderingContext2D, width: number, trace: () => void): void {
+    context.save();
+    context.shadowBlur = 0;
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    for (const band of tone().edge) {
+      context.strokeStyle = band.color;
+      context.lineWidth = width + band.spread * 2;
+      context.beginPath();
+      trace();
+      context.stroke();
+    }
+    context.restore();
+  }
+  /** A straight ink stroke on its rim. Only the first ink drawn in a frame carries the rim shadow, as before. */
+  function edgedLine(context: CanvasRenderingContext2D, from: Point, to: Point, width: number): void {
+    drawEdge(context, width, () => {
+      context.moveTo(from.x, from.y);
+      context.lineTo(to.x, to.y);
+    });
+    context.strokeStyle = theme.ink;
+    context.lineWidth = width;
+    context.beginPath();
+    context.moveTo(from.x, from.y);
+    context.lineTo(to.x, to.y);
+    context.stroke();
+    context.shadowBlur = 0;
+  }
   function drawBody(context: CanvasRenderingContext2D, blade: BladeRenderSnapshot): void {
     const scale = blade.state === "held" ? 1 : blade.throwSizeMult;
     if (!graphics.low) {
@@ -39,21 +102,22 @@ export function createBladeRenderer({
     context.strokeStyle = theme.ink;
     context.fillStyle = theme.ink;
     context.lineCap = "round";
+    const outline = tone().accent;
+    const tip = { x: blade.tipX, y: blade.tipY };
 
     if (blade.model === "hammer") {
-      context.lineWidth = 7 * scale;
-      context.beginPath();
-      context.moveTo(blade.x, blade.y);
-      context.lineTo(blade.tipX, blade.tipY);
-      context.stroke();
-      context.shadowBlur = 0;
+      edgedLine(context, blade, tip, 7 * scale);
       context.save();
       context.translate(blade.tipX, blade.tipY);
       context.rotate(blade.angle);
       const headLength = 22 * scale;
       const headHeight = 16 * scale;
+      drawEdge(context, 0, () => {
+        context.rect(-headLength * 0.35, -headHeight, headLength, headHeight * 2);
+      });
+      context.fillStyle = theme.ink;
       context.fillRect(-headLength * 0.35, -headHeight, headLength, headHeight * 2);
-      context.strokeStyle = theme.dark ? "rgba(10,12,20,0.9)" : "#fff";
+      context.strokeStyle = outline;
       context.lineWidth = 2;
       context.strokeRect(-headLength * 0.35, -headHeight, headLength, headHeight * 2);
       context.restore();
@@ -66,7 +130,23 @@ export function createBladeRenderer({
       context.rotate(blade.angle);
       const length = len(blade.tipX - blade.x, blade.tipY - blade.y),
         width = 14 * scale;
-      const outline = theme.dark ? "rgba(10,12,20,0.9)" : "#fff";
+      // Broad shouldered blade with a central fuller and a clipped, weighty point.
+      const bladeShape = (): void => {
+        context.moveTo(4 * scale, -width * 0.6);
+        context.lineTo(length * 0.2, -width);
+        context.lineTo(length * 0.76, -width * 0.82);
+        context.lineTo(length, 0);
+        context.lineTo(length * 0.76, width * 0.82);
+        context.lineTo(length * 0.2, width);
+        context.lineTo(4 * scale, width * 0.6);
+        context.closePath();
+      };
+      drawEdge(context, 0, () => {
+        context.moveTo(-19.5 * scale, 0);
+        context.arc(-25 * scale, 0, 5.5 * scale, 0, Math.PI * 2);
+        context.rect(-24 * scale, -4.5 * scale, 24 * scale, 9 * scale);
+        bladeShape();
+      });
       // A readable two-handed hilt: pommel, wrapped grip, shoulders, and a broad
       // crossguard remain visible even when the weapon is spinning at throw scale.
       context.fillStyle = theme.ink;
@@ -96,16 +176,8 @@ export function createBladeRenderer({
       context.lineTo(8 * scale, 10 * scale);
       context.stroke();
 
-      // Broad shouldered blade with a central fuller and a clipped, weighty point.
       context.beginPath();
-      context.moveTo(4 * scale, -width * 0.6);
-      context.lineTo(length * 0.2, -width);
-      context.lineTo(length * 0.76, -width * 0.82);
-      context.lineTo(length, 0);
-      context.lineTo(length * 0.76, width * 0.82);
-      context.lineTo(length * 0.2, width);
-      context.lineTo(4 * scale, width * 0.6);
-      context.closePath();
+      bladeShape();
       context.fill();
       context.strokeStyle = outline;
       context.lineWidth = 2 * scale;
@@ -140,11 +212,15 @@ export function createBladeRenderer({
             y: lerp(hand.y, blade.tipY, amount) + Math.sin(amount * Math.PI) * sagAmount,
           });
         }
+      const chain = (): void => {
+        context.moveTo(points[0]?.x ?? hand.x, points[0]?.y ?? hand.y);
+        for (const point of points.slice(1)) context.lineTo(point.x, point.y);
+      };
+      drawEdge(context, 2 * scale, chain);
       context.lineWidth = 2 * scale;
       context.strokeStyle = chainColor;
       context.beginPath();
-      context.moveTo(points[0]?.x ?? hand.x, points[0]?.y ?? hand.y);
-      for (const point of points.slice(1)) context.lineTo(point.x, point.y);
+      chain();
       context.stroke();
       // Alternating elongated links make the chain articulate instead of reading as
       // a single rubber tether. Link positions are deterministic simulation output.
@@ -166,12 +242,17 @@ export function createBladeRenderer({
       context.save();
       context.translate(blade.tipX, blade.tipY);
       context.rotate(blade.angle);
+      const head = (): void => {
+        context.moveTo(13 * scale, 0);
+        context.lineTo(-7 * scale, -11 * scale);
+        context.lineTo(-3 * scale, 0);
+        context.lineTo(-7 * scale, 11 * scale);
+        context.closePath();
+      };
+      drawEdge(context, 0, head);
       context.beginPath();
-      context.moveTo(13 * scale, 0);
-      context.lineTo(-7 * scale, -11 * scale);
-      context.lineTo(-3 * scale, 0);
-      context.lineTo(-7 * scale, 11 * scale);
-      context.closePath();
+      head();
+      context.fillStyle = theme.ink;
       context.fill();
       context.restore();
       return;
@@ -182,17 +263,40 @@ export function createBladeRenderer({
       context.translate(blade.x, blade.y);
       context.rotate(blade.angle);
       const length = len(blade.tipX - blade.x, blade.tipY - blade.y);
-      const outline = theme.dark ? "rgba(10,12,20,0.9)" : "#fff";
       // Heavy pistol silhouette: angled grip, beavertail, trigger guard, slide,
       // squared muzzle, and a blade beneath the barrel.
+      const grip = (): void => {
+        context.moveTo(8 * scale, 2 * scale);
+        context.lineTo(28 * scale, 4 * scale);
+        context.lineTo(22 * scale, 30 * scale);
+        context.lineTo(8 * scale, 27 * scale);
+        context.lineTo(2 * scale, 8 * scale);
+        context.closePath();
+      };
+      const underBlade = (): void => {
+        context.moveTo(-3 * scale, 4 * scale);
+        context.lineTo(length * 0.55, 4 * scale);
+        context.lineTo(length * 0.48, 10 * scale);
+        context.lineTo(18 * scale, 10 * scale);
+        context.lineTo(12 * scale, 4 * scale);
+        context.closePath();
+      };
+      const point = (): void => {
+        context.moveTo(length * 0.49, 9 * scale);
+        context.lineTo(length, 0);
+        context.lineTo(length * 0.6, 15 * scale);
+        context.closePath();
+      };
+      drawEdge(context, 0, () => {
+        grip();
+        context.rect(-7 * scale, -13 * scale, length * 0.68, 17 * scale);
+        context.rect(length * 0.58, -10 * scale, length * 0.13, 13 * scale);
+        underBlade();
+        point();
+      });
       context.fillStyle = theme.ink;
       context.beginPath();
-      context.moveTo(8 * scale, 2 * scale);
-      context.lineTo(28 * scale, 4 * scale);
-      context.lineTo(22 * scale, 30 * scale);
-      context.lineTo(8 * scale, 27 * scale);
-      context.lineTo(2 * scale, 8 * scale);
-      context.closePath();
+      grip();
       context.fill();
       context.strokeStyle = outline;
       context.lineWidth = 1.5 * scale;
@@ -214,12 +318,7 @@ export function createBladeRenderer({
       context.fillRect(length * 0.58, -10 * scale, length * 0.13, 13 * scale);
       context.strokeRect(length * 0.58, -10 * scale, length * 0.13, 13 * scale);
       context.beginPath();
-      context.moveTo(-3 * scale, 4 * scale);
-      context.lineTo(length * 0.55, 4 * scale);
-      context.lineTo(length * 0.48, 10 * scale);
-      context.lineTo(18 * scale, 10 * scale);
-      context.lineTo(12 * scale, 4 * scale);
-      context.closePath();
+      underBlade();
       context.fill();
       context.strokeStyle = outline;
       context.stroke();
@@ -238,10 +337,7 @@ export function createBladeRenderer({
       }
       context.fillStyle = theme.ink;
       context.beginPath();
-      context.moveTo(length * 0.49, 9 * scale);
-      context.lineTo(length, 0);
-      context.lineTo(length * 0.6, 15 * scale);
-      context.closePath();
+      point();
       context.fill();
       context.strokeStyle = outline;
       context.lineWidth = 1.8 * scale;
@@ -250,14 +346,22 @@ export function createBladeRenderer({
       return;
     }
 
+    const guardX = Math.cos(blade.angle + Math.PI / 2) * 9;
+    const guardY = Math.sin(blade.angle + Math.PI / 2) * 9;
+    // Blade and guard share one rim, so it runs round the cross without a joint.
+    drawEdge(context, 7 * scale, () => {
+      context.moveTo(blade.x, blade.y);
+      context.lineTo(blade.tipX, blade.tipY);
+      context.moveTo(blade.x - guardX, blade.y - guardY);
+      context.lineTo(blade.x + guardX, blade.y + guardY);
+    });
+    context.strokeStyle = theme.ink;
     context.lineWidth = 7 * scale;
     context.beginPath();
     context.moveTo(blade.x, blade.y);
     context.lineTo(blade.tipX, blade.tipY);
     context.stroke();
     context.shadowBlur = 0;
-    const guardX = Math.cos(blade.angle + Math.PI / 2) * 9;
-    const guardY = Math.sin(blade.angle + Math.PI / 2) * 9;
     context.lineWidth = 5;
     context.beginPath();
     context.moveTo(blade.x - guardX, blade.y - guardY);
