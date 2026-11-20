@@ -112,7 +112,6 @@ export interface ReplayView {
   readonly available?: boolean;
   readonly repairable?: boolean;
   readonly canDownloadArchive?: boolean;
-  readonly canDownloadLinkedPair?: boolean;
   readonly theaterUnavailable?: boolean;
   readonly comparisonSelected?: boolean;
   readonly comparisonSourceCount?: number;
@@ -410,7 +409,6 @@ export interface ReplayScreenView {
   readonly comparison?: ReplayComparisonView;
   readonly notice?: string;
   /** Explicit selected-recording observations; no skill or accuracy inference. */
-  readonly bossMemory?: Readonly<{ available: boolean; title?: string; notes?: string; result?: string }>;
   readonly challenge?: Readonly<{
     tick: number;
     choices: readonly Readonly<{ id: string; label: string }>[];

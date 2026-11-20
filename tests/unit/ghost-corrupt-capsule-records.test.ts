@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  GhostCorruptCapsuleRecords,
-  corruptCapsuleRecordKey,
-  createMemoryGhostVaultBackend,
-  type TearGhostManifest,
-} from "../../src/ghost";
+import { GhostCorruptCapsuleRecords, corruptCapsuleRecordKey } from "../../src/ghost/corrupt-capsule-records";
+import { createMemoryGhostVaultBackend, type TearGhostManifest } from "../../src/ghost/capsule-vault";
 
 function corruptedManifest(): TearGhostManifest {
   return Object.freeze({

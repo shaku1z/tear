@@ -253,12 +253,6 @@ export function createCompactProfile(context: ScreenRenderContext) {
       items.push({ label: `COMPARE ${String(sources)}`, action: { type: "profile.openGhostComparison" } });
     if (replay.canDownloadArchive)
       items.push({ label: "DOWNLOAD", action: { type: "profile.downloadGhostArchive", id: replay.id } });
-    if (replay.canDownloadLinkedPair) {
-      items.push({
-        label: "DOWNLOAD RUN + FINALE",
-        action: { type: "profile.downloadGhostArchive", id: replay.id, paired: true },
-      });
-    }
     return items;
   }
 

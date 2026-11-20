@@ -1,4 +1,3 @@
-import { createBrowserBossMemory } from "./browser-boss-memory";
 import { replayTransportScrub } from "../library/replay-transport-controller";
 import { reopenGhostFinaleCompanion } from "../../ghost/browser-finale-companion";
 import { createGhostFinaleScreenAdapter } from "./ghost-finale-screen-adapter";
@@ -133,7 +132,6 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
     return source !== undefined && stableVerificationHash(source.manifest) === hash;
   });
   const theater = createGhostTheaterScreenAdapter({
-    bossMemory: createBrowserBossMemory(services.browserIndexedDb, services.document),
     presentation: createBrowserGhostReplayPresentation(services.document, d.UI),
     clipExport,
     drawWorld: (frame) => {

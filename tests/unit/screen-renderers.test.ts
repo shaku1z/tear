@@ -1223,7 +1223,7 @@ describe("legacy screen renderer registry", () => {
         });
     }
   });
-  it("offers a separate linked-pair download and named RESTORE BOTH while keeping the single download", () => {
+  it("offers the single download and names RESTORE BOTH for an imported linked file", () => {
     const controls: ScreenControl[] = [],
       renderer = createScreenRenderers(createRenderContext(controls));
     renderer.profile({
@@ -1240,7 +1240,6 @@ describe("legacy screen renderer registry", () => {
           detail: "Complete",
           available: true,
           canDownloadArchive: true,
-          canDownloadLinkedPair: true,
         },
       ],
       archive: {
@@ -1254,11 +1253,8 @@ describe("legacy screen renderer registry", () => {
       },
     });
     const downloads = controls.filter((control) => control.action.type === "profile.downloadGhostArchive");
-    expect(downloads).toHaveLength(2);
+    expect(downloads).toHaveLength(1);
     expect(downloads.find((c) => c.label === "DOWNLOAD")).toMatchObject({ action: { id: "parent" } });
-    expect(downloads.find((c) => c.label === "DOWNLOAD RUN + FINALE")).toMatchObject({
-      action: { id: "parent", paired: true },
-    });
     expect(controls.find((c) => c.action.type === "profile.restoreGhostArchive")).toMatchObject({
       label: "RESTORE BOTH",
       action: { id: "pair", revision: 0 },

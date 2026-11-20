@@ -22,13 +22,7 @@ Race-derived local
 challenge/practice forks are explicitly unsupported; this is not full R16 closure.
 See the [current C37 contract](checkpoints/C37_COACH_PRACTICE_FOUNDATION.md#seed-locked-race-local-source-implementation-browser-acceptance-pending).
 
-Boss Memory now saves a named, annotated derived encounter from a verified
-living-boss checkpoint through native boss or player defeat. Recording history
-is removed; normal segment-only download/import, bounded Watch and independent
-entry Practice reuse existing owners. Source membership is explicitly unproven
-without original bytes; necessary entry gameplay state remains. Focused native
-construction controls are engineering evidence; fresh normal browser acceptance
-is pending. See the current C37 checkpoint for provenance and legacy limits.
+Boss Memory was removed in the replay overhaul (PR 1 of [the replay overhaul plan](../plans/active/REPLAY_OVERHAUL_PLAN.md)); it was never released.
 
 This is the migration checklist for the architectural redesign. A checked feature has characterization, contract, deterministic, or built-artifact browser coverage in the redesigned runtime and is included in `pnpm check`. Presence in a compatibility bundle alone does not count. A check records the existence of credible automated evidence; release readiness still requires that the complete gate pass from the final clean commit.
 
@@ -39,8 +33,8 @@ This is the migration checklist for the architectural redesign. A checked featur
   the release channel; test builds and `vite dev` use the engineering channel.
   Engineering-only (not drawn, not focusable, actions inert, screens refused):
   Boss Test and Enemy Test (still catalog modes) with the
-  boss picker, Seed-Locked Race, Boss Memory, Replay
-  Editor, linked-pair download, every engineering URL parameter (`test`, `stemcue`,
+  boss picker, Seed-Locked Race, Replay
+  Editor, every engineering URL parameter (`test`, `stemcue`,
   `stems`, `foundry*`, surface routes) and the weapon/audio-preview debug
   globals.
 - [x] The published Adventure is exactly six stages and 60 waves: Grounds,
