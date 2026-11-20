@@ -250,9 +250,6 @@ export function createPlaygroundRuntimeBridge(dependencies: PlaygroundRuntimeDep
     } else if (kind === "toggle") {
       if (value === "god" || value === "freeze" || value === "slow") controller.toggle(value);
       else if (value === "onehit") dependencies.player.oneHit = !dependencies.player.oneHit;
-    } else if (kind === "lab") {
-      tab = "abilities";
-      actions.openLab();
     } else if (kind === "clear") {
       for (const enemy of dependencies.enemies) enemy.dead = true;
       dependencies.clearProjectiles();
