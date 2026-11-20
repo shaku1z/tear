@@ -16,8 +16,8 @@ import {
   type TutorialGhostSnapshot,
   type TutorialLesson,
   type TutorialSessionView,
-  parseTutorialSessionCheckpoint,
 } from "./tutorial-controller";
+import { parseTutorialSessionCheckpoint } from "./tutorial-session-checkpoint";
 import { tutorialArenaDefinition, type TutorialArenaId } from "./tutorial-arenas";
 import type { TutorialMark } from "./tutorial-marks";
 import type { CONFIG as GameConfiguration } from "../../config/game-config";

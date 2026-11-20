@@ -13,7 +13,7 @@ import {
   parseParticlePresentationCheckpoint,
   type ParticlePresentationCheckpoint,
 } from "./particle-presentation-checkpoint";
-import { parseTutorialSessionCheckpoint } from "../gameplay/training/tutorial-controller";
+import { parseTutorialSessionCheckpoint } from "../gameplay/training/tutorial-session-checkpoint";
 
 /**
  * The identity graph is validated before construction. Hydration only needs
