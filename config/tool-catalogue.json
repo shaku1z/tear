@@ -195,7 +195,7 @@
       "duration": "minutes"
     },
     "tearbench": {
-      "purpose": "TearBench CLI (list, plan, explain, tasks, run, select, ci, parity, forge); effects depend on the subcommand",
+      "purpose": "TearBench CLI (list, plan, explain, tasks, run, select, ci, parity, setup); effects depend on the subcommand",
       "effects": [
         "writes-artifacts",
         "launches-browser"

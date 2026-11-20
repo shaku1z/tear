@@ -40,7 +40,7 @@ withJourney({ name: "C40 State Setup Source void" }, async ({ page }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: STATE_WAIT_MS });
   const result = await page.evaluate((scenario) => {
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
-    const launched = environment.forgeResolvedScenario(scenario);
+    const launched = environment.buildResolvedScenario(scenario);
     if (!launched.ok) return { launched };
     let collapseFrame;
     for (let index = 0; index < 120; index += 1) {

@@ -3,11 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   DECLARED_ONE_FRAME_BOUNDARIES,
   evaluateTearStateValidity,
-  forgeBladeAbilityState,
-  forgeBossFrameState,
-  forgeOneFrameBoundaryStates,
-  forgeUiDeviceState,
-  forgeWaveState,
+  buildBladeAbilityState,
+  buildBossFrameState,
+  buildOneFrameBoundaryStates,
+  buildUiDeviceState,
+  buildWaveState,
   type TearSdlDocumentV1,
 } from "../../src/tearbench";
 
@@ -44,27 +44,27 @@ describe("State Setup validity and exact factories", () => {
   });
 
   it("authors exact wave, composition, boss attack, blade, ability, UI, and device state", () => {
-    const wave = forgeWaveState(base, 99, [
+    const wave = buildWaveState(base, 99, [
       { kind: "armored", count: 4, hpScale: 3 },
       { kind: "warden", count: 1 },
     ]);
     expect(wave.start.wave).toBe(99);
     expect(wave.state?.enemyComposition).toHaveLength(2);
 
-    const boss = forgeBossFrameState(wave, "warden", "2", "mortar", 37);
+    const boss = buildBossFrameState(wave, "warden", "2", "mortar", 37);
     expect(boss).toMatchObject({
       start: { boss: "warden", bossPhase: "2" },
       state: { boss: { attack: "mortar", frame: 37 } },
     });
 
-    const blade = forgeBladeAbilityState(
+    const blade = buildBladeAbilityState(
       boss,
       { state: "returning", x: 400, y: 220 },
       {
         slam: { active: false, cooldownTicks: 1 },
       },
     );
-    const ui = forgeUiDeviceState(
+    const ui = buildUiDeviceState(
       blade,
       { screen: "paused", focusedId: "resume" },
       {
@@ -82,7 +82,7 @@ describe("State Setup validity and exact factories", () => {
   });
 
   it("materializes every declared one-frame boundary as before/at/after states", () => {
-    const states = DECLARED_ONE_FRAME_BOUNDARIES.flatMap((boundary) => forgeOneFrameBoundaryStates(base, boundary));
+    const states = DECLARED_ONE_FRAME_BOUNDARIES.flatMap((boundary) => buildOneFrameBoundaryStates(base, boundary));
     expect(states).toHaveLength(DECLARED_ONE_FRAME_BOUNDARIES.length * 3);
     expect(new Set(states.map((entry) => entry.id)).size).toBe(states.length);
     for (const state of states)

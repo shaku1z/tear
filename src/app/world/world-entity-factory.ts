@@ -102,7 +102,7 @@ export function createLiveWorldEntityFactory(
         throw new RangeError(`unknown ${factoryId} variant during live State Setup restore: ${variantId}`);
       // Complete snapshots already carry the source-applied behavior and
       // stats. Reapplying a stat-scaling variant would drift their hashes;
-      // freshly forged payloads omit variantName and still need application.
+      // freshly built payloads omit variantName and still need application.
       if (actor.variantName === variant.name && typeof actor.behavior === "string" && actor.behavior !== "") return;
       applyVariant(actor, variant);
     },

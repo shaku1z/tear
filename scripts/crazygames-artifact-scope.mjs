@@ -31,8 +31,12 @@ function cueReferences(cueName, cue) {
   return urls.map((url) => posix.normalize(posix.join(base, url.replaceAll("\\", "/"))));
 }
 
-/** Files in a CrazyGames build that nothing in that build requests. */
-export async function unrequestedCrazyGamesFiles(directory) {
+/**
+ * Files in a portal build that nothing in that build requests. `staticPages` are the pages the target
+ * serves beside the game (its `staticPages` in config/build-targets.json); any other top-level page
+ * in public/ belongs to a different target and goes.
+ */
+export async function unrequestedCrazyGamesFiles(directory, staticPages = []) {
   const files = await filesBelow(directory);
   const requested = new Set();
   const cueNames = files.filter((name) => /^audio\/cues\/[^/]+\/cue\.json$/u.test(name));
@@ -53,14 +57,19 @@ export async function unrequestedCrazyGamesFiles(directory) {
     )
   ).join("\n");
   const brandingRequested = (name) => text.includes(name);
+  const keptPages = new Set(["index.html", ...staticPages.map((page) => `${page}.html`)]);
+  const foreignPage = (name) => /^[^/]+\.html$/u.test(name) && !keptPages.has(name);
   return files.filter(
-    (name) => (cueAudio(name) && !requested.has(name)) || (name.startsWith("branding/") && !brandingRequested(name)),
+    (name) =>
+      (cueAudio(name) && !requested.has(name)) ||
+      (name.startsWith("branding/") && !brandingRequested(name)) ||
+      foreignPage(name),
   );
 }
 
 /** Removes unrequested files from a CrazyGames build directory; returns what went. */
-export async function pruneCrazyGamesArtifact(directory) {
-  const files = await unrequestedCrazyGamesFiles(directory);
+export async function pruneCrazyGamesArtifact(directory, staticPages = []) {
+  const files = await unrequestedCrazyGamesFiles(directory, staticPages);
   let bytes = 0;
   for (const name of files) {
     const path = join(directory, ...name.split("/"));

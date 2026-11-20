@@ -50,7 +50,7 @@ withJourney({ name: "C40 Source void Ghost seek", query: { "ghost-v3-profile": "
   });
   const capture = await page.evaluate((scenario) => {
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
-    const launched = environment.forgeResolvedScenario(scenario);
+    const launched = environment.buildResolvedScenario(scenario);
     if (!launched.ok) return { launched };
     for (let index = 0; index < 120; index += 1) {
       environment.advanceApplicationFrame(1 / 60);
