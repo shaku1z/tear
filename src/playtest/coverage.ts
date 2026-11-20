@@ -114,13 +114,28 @@ export const COVERAGE_SETS: Readonly<Record<CoverageReport, readonly Readonly<Re
 
 /** Everything the given reports' results brought into play, sorted by name. */
 export function appearedIn(results: Readonly<Partial<Record<CoverageReport, readonly unknown[]>>>): CoverageNames {
-  const sets = new Map<CoverageKind, Set<string>>(COVERAGE_KINDS.map((kind) => [kind, new Set<string>()]));
+  const sets: Record<CoverageKind, Set<string>> = {
+    enemy: new Set(),
+    "enemy affix": new Set(),
+    boss: new Set(),
+    "boss phase": new Set(),
+    upgrade: new Set(),
+    "stage object": new Set(),
+  };
   const note: Note = (kind, names) => {
-    for (const name of names) sets.get(kind)?.add(name);
+    for (const name of names) sets[kind].add(name);
   };
   for (const report of COVERAGE_REPORTS)
     (APPEARED[report] as (results: readonly unknown[], note: Note) => void)(results[report] ?? [], note);
-  return Object.fromEntries(COVERAGE_KINDS.map((kind) => [kind, [...(sets.get(kind) ?? [])].sort()])) as CoverageNames;
+  const sorted = (kind: CoverageKind): readonly string[] => [...sets[kind]].sort();
+  return {
+    enemy: sorted("enemy"),
+    "enemy affix": sorted("enemy affix"),
+    boss: sorted("boss"),
+    "boss phase": sorted("boss phase"),
+    upgrade: sorted("upgrade"),
+    "stage object": sorted("stage object"),
+  };
 }
 
 export interface CoverageRow {
