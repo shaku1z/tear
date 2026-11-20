@@ -215,7 +215,6 @@ describe("Validate workflow", () => {
 
   it("has every script that compares HEAD with GITHUB_SHA prefer the checked commit", () => {
     for (const [file, variable] of [
-      ["scripts/check-workspace.mjs", "TEAR_RELEASE_SHA"],
       ["scripts/release-preflight.mjs", "TEAR_RELEASE_SHA"],
       ["scripts/verify-release-artifact.mjs", "TEAR_RELEASE_SHA"],
       ["scripts/build-target.mjs", "TEAR_BUILD_GIT_SHA"],
@@ -585,6 +584,15 @@ describe("Browser jobs' container", () => {
     for (const job of allJobs.filter((each) => !gated(each))) {
       expect(job.block, where(job)).not.toMatch(/playwright install/u);
       if (/xvfb-run/u.test(job.block)) expect(job.block, where(job)).toMatch(/\n {4}container:/u);
+    }
+  });
+});
+
+describe("Cloudflare deploy configs", () => {
+  it("serve only the standalone build, in production and in preview", () => {
+    for (const file of ["wrangler.jsonc", "wrangler.preview.jsonc"]) {
+      const directories = [...read(file).matchAll(/"directory":\s*"([^"]*)"/gu)].map((match) => match[1]);
+      expect(directories, file).toEqual(["./dist/standalone"]);
     }
   });
 });

@@ -5,7 +5,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { checkSizeCaps, mappedEntries, trackedTopLevelEntries } from "../../scripts/check-repository.mjs";
+import {
+  checkSizeCaps,
+  mappedEntries,
+  trackedGeneratedEntries,
+  trackedTopLevelEntries,
+  untrackedEntries,
+} from "../../scripts/check-repository.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const map = fs.readFileSync(path.join(root, "docs/REPOSITORY_MAP.md"), "utf8");
@@ -28,6 +34,31 @@ describe("repository map", () => {
     const withNew = [...tracked, "newtool/run.mjs", "NOTES.md"];
     const mapped = new Set(mappedEntries(map));
     expect(trackedTopLevelEntries(withNew).filter((entry) => !mapped.has(entry))).toEqual(["NOTES.md", "newtool/"]);
+  });
+});
+
+describe("generated folders", () => {
+  it("lists the build, cache and evidence folders as not tracked", () => {
+    expect(untrackedEntries(map)).toEqual(
+      expect.arrayContaining([
+        ".tmp-tone-host-esm/",
+        ".wrangler/",
+        "artifacts/",
+        "coverage/",
+        "dist/",
+        "node_modules/",
+        "test-results/",
+      ]),
+    );
+  });
+
+  it("tracks none of them", () => {
+    expect(trackedGeneratedEntries(map, tracked)).toEqual([]);
+  });
+
+  it("flags a committed build output or evidence file", () => {
+    const withOutput = [...tracked, "dist/standalone/index.html", "artifacts/tearbench/run.json"];
+    expect(trackedGeneratedEntries(map, withOutput)).toEqual(["artifacts/", "dist/"]);
   });
 });
 
