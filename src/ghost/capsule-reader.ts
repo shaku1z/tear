@@ -1,5 +1,6 @@
 import { isObject, requireRecord } from "../domain/records";
 import type { GhostLocalVault, GhostChunkKind, TearGhostManifest } from "./capsule-vault";
+import { replayEngine } from "./replay-engine";
 
 export interface GhostCapsuleEntry {
   readonly kind: GhostChunkKind;
@@ -16,10 +17,23 @@ export interface GhostCapsuleTracks {
   readonly presentation: readonly GhostCapsuleEntry[];
 }
 
-export interface GhostReadCapsule {
+/**
+ * Not exported: only `GhostCapsuleReader.read` can name it, so only the reader can make a capsule the
+ * replay code accepts. That is how the compiler proves every replay starts from a read, and a read
+ * waits for the replay engine.
+ */
+const readByReader: unique symbol = Symbol("capsule read by GhostCapsuleReader");
+
+/** What a capsule holds. Code that only reads its contents (a mapper, a check) can take this. */
+export interface GhostCapsuleContents {
   readonly manifest: TearGhostManifest;
   readonly tracks: GhostCapsuleTracks;
   readonly maxTick: number;
+}
+
+/** A capsule `GhostCapsuleReader.read` returned; replay code that needs the engine takes only this. */
+export interface GhostReadCapsule extends GhostCapsuleContents {
+  readonly [readByReader]: true;
 }
 
 function record(value: unknown): Readonly<Record<string, unknown>> {
@@ -59,14 +73,14 @@ function deepFreeze<T>(value: T, visited = new Set<object>()): T {
   return value;
 }
 
-const UNCHANGED_READS = new WeakSet<GhostReadCapsule>();
+const UNCHANGED_READS = new WeakSet<GhostCapsuleContents>();
 
 /**
  * True only for the object a `GhostCapsuleReader` returned. Its chunks passed the Vault's
  * integrity check and it is frozen all the way down, so it cannot differ from what was read.
  * A copy, or a capsule assembled any other way, is not one, whatever it contains.
  */
-export function isUnchangedGhostRead(capsule: GhostReadCapsule): boolean {
+export function isUnchangedGhostRead(capsule: GhostCapsuleContents): boolean {
   return UNCHANGED_READS.has(capsule);
 }
 
@@ -91,6 +105,9 @@ export class GhostCapsuleReader {
   }
 
   async read(id: string): Promise<GhostReadCapsule> {
+    // Every replay, verification and import starts from a capsule read here, so this is the one
+    // place that makes sure the replay engine is there; no replay code depends on timing.
+    await replayEngine.ensure();
     const manifest = await this.#vault.getManifest(id);
     if (manifest === undefined) throw new RangeError(`capsule does not exist: ${id}`);
     const mutable: Record<GhostChunkKind, GhostCapsuleEntry[]> = {
@@ -116,7 +133,7 @@ export class GhostCapsuleReader {
       presentation: ordered("presentation"),
     });
     const maxTick = Math.max(0, ...manifest.chunks.map((chunk) => chunk.toTick));
-    const capsule = Object.freeze({ manifest: deepFreeze(manifest), tracks, maxTick });
+    const capsule = Object.freeze({ [readByReader]: true as const, manifest: deepFreeze(manifest), tracks, maxTick });
     UNCHANGED_READS.add(capsule);
     return capsule;
   }

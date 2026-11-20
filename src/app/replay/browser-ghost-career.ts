@@ -21,7 +21,7 @@ export interface CareerLivePorts {
 }
 /** Local-only metadata and passive recording composition; no profile/account mutations. */
 function createCareerArchiveWorker(): Worker {
-  return new Worker(new URL("../../ghost/career-archive-worker.ts", import.meta.url), { type: "module" });
+  return new Worker(new URL("./career-archive-worker.ts", import.meta.url), { type: "module" });
 }
 
 export function createBrowserGhostCareer(factory: IDBFactory | undefined, document: Document, live: CareerLivePorts) {
