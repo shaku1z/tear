@@ -18,7 +18,7 @@ export function bindLiveVerdantActors(
   config: typeof CONFIG,
 ): void {
   bindLiveBloomWellActors(environment, player, enemies, actorId);
-  bindLiveRootbinderActors(environment, player, enemies, actorId);
+  bindLiveRootbinderActors(environment, enemies, actorId);
   bindLiveRootboundActors(environment, player, enemies, actorId, config);
 }
 

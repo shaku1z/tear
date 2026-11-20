@@ -919,7 +919,7 @@
         "executable": "node_modules/vitest/vitest.mjs",
         "args": [
           "run",
-          "tests/unit/rootbinder-network.test.ts",
+          "tests/unit/rootbinder-roots.test.ts",
           "tests/unit/rootbinder-runtime.test.ts",
           "tests/unit/environment-runtime.test.ts",
           "tests/unit/gameplay-causal-events.test.ts"

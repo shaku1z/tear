@@ -1,5 +1,5 @@
 import type { EnvironmentCombatObjectState, EnvironmentGeometry } from "./environment-contracts";
-import type { RootbinderPhase } from "../entities/rootbinder-runtime";
+import { rootbinderStandsStill, rootbinderWindup, type RootbinderState } from "../entities/rootbinder-runtime";
 
 export interface RootbinderPresentationOptions {
   readonly highContrast?: boolean;
@@ -10,11 +10,14 @@ export interface RootbinderPresentationOptions {
 
 export interface RootbinderPresentationFacts {
   readonly sourceNode: { readonly x: number; readonly y: number; readonly color: "gold" };
-  readonly state: RootbinderPhase;
-  readonly warningGeometry: readonly EnvironmentGeometry[];
-  readonly activeSegments: readonly EnvironmentGeometry[];
-  readonly severFeedback: readonly string[];
-  readonly boundaryVisible: boolean;
+  /** It stands in the ground: winding up, planted or uprooted. */
+  readonly planted: boolean;
+  /** How far through its plant wind-up it is, 0 to 1; the warning that roots are coming. */
+  readonly windup: number;
+  /** Its roots were cut or it took a heavy hit: it is stunned where it stands. */
+  readonly uprooted: boolean;
+  /** One line per live root, from the Rootbinder to the ally it holds. */
+  readonly roots: readonly EnvironmentGeometry[];
   readonly highContrast: boolean;
   readonly lowGraphics: boolean;
   readonly motionScale: number;
@@ -24,25 +27,16 @@ export interface RootbinderPresentationFacts {
 
 /** Renderer/audio-neutral Rootbinder facts; accessibility settings never hide gameplay geometry. */
 export function projectRootbinderPresentation(
-  source: Readonly<{ x: number; y: number; state: RootbinderPhase }>,
-  segments: readonly EnvironmentCombatObjectState[],
+  source: Readonly<{ x: number; y: number; state: RootbinderState }>,
+  links: readonly EnvironmentCombatObjectState[],
   options: RootbinderPresentationOptions = {},
 ): RootbinderPresentationFacts {
-  const warningGeometry: EnvironmentGeometry[] = [];
-  const activeSegments: EnvironmentGeometry[] = [];
-  const severFeedback: string[] = [];
-  for (const segment of segments) {
-    if (segment.state === "warning") warningGeometry.push(segment.geometry);
-    if (segment.state === "active") activeSegments.push(segment.geometry);
-    if (segment.state === "destroyed" || segment.state === "expired") severFeedback.push(segment.id);
-  }
   return Object.freeze({
     sourceNode: Object.freeze({ x: source.x, y: source.y, color: "gold" as const }),
-    state: source.state,
-    warningGeometry: Object.freeze(warningGeometry),
-    activeSegments: Object.freeze(activeSegments),
-    severFeedback: Object.freeze(severFeedback),
-    boundaryVisible: true,
+    planted: rootbinderStandsStill(source.state.state),
+    windup: rootbinderWindup(source.state),
+    uprooted: source.state.state === "uprooted",
+    roots: Object.freeze(links.filter((link) => link.state === "active").map((link) => link.geometry)),
     highContrast: options.highContrast === true,
     lowGraphics: options.lowGraphics === true,
     motionScale: options.reducedMotion === true ? 0 : 1,

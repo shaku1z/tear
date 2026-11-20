@@ -8,9 +8,14 @@
  * of trials, one per boss (see `gauntlet-trials.ts`). v7: a boss body hurts only inside a declared move (the
  * Rootbound's blocks instead), and a move the target could not walk out of is not chosen. v8: a Bloom Well
  * stands on the floor and lifts whoever stands in it (the player and light enemies). v9: a run's first wave,
- * and a wave that follows a story, opens with a grace in which enemies close in but cannot attack.
+ * and a wave that follows a story, opens with a grace in which enemies close in but cannot attack. v10: a
+ * planted Rootbinder roots the allies near it (they cannot be flung or lifted until the root is cut) and no
+ * longer leashes the player.
  */
-export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v9";
+export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v10";
+
+/** The identity while a Rootbinder leashed the player and shared knockback among its allies; historical replays only. */
+export const SIX_BIOME_PALE_PREVIEW_V9_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v9";
 
 /** The identity while an enemy could attack the moment it arrived in a run's first wave; historical replays only. */
 export const SIX_BIOME_PALE_PREVIEW_V8_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v8";
@@ -71,7 +76,8 @@ export const RULESET_STEPS: readonly RulesetStep[] = Object.freeze(
     { version: SIX_BIOME_PALE_PREVIEW_V6_RULESET_VERSION, change: "the Gauntlet became a run of trials" },
     { version: SIX_BIOME_PALE_PREVIEW_V7_RULESET_VERSION, change: "a boss's body stopped hurting outside its moves" },
     { version: SIX_BIOME_PALE_PREVIEW_V8_RULESET_VERSION, change: "Bloom Wells began lifting from the floor" },
-    { version: CURRENT_RULESET_VERSION, change: "a run's first wave began with a grace" },
+    { version: SIX_BIOME_PALE_PREVIEW_V9_RULESET_VERSION, change: "a run's first wave began with a grace" },
+    { version: CURRENT_RULESET_VERSION, change: "Rootbinders began rooting their allies" },
   ].map((step) => Object.freeze(step)),
 );
 
