@@ -1,6 +1,5 @@
 import { isObject, isRecord } from "../domain/records";
 import { stableVerificationHash } from "../domain/hash";
-import { readGhostFinaleCompanion } from "./finale-companion";
 import type { TearSnapshotV1 } from "../tearbench/contracts";
 import { rebaseEnvironmentSnapshot } from "../tearbench/environment-codec";
 import type { GhostReadCapsule } from "./capsule-reader";
@@ -93,11 +92,7 @@ export function readGhostForkOrigin(provenance: unknown): GhostForkOriginV1 | un
   return Object.freeze(structuredClone(raw)) as unknown as GhostForkOriginV1;
 }
 export function ghostRecordingFirstTick(capsule: GhostReadCapsule): number {
-  return (
-    readGhostFinaleCompanion(capsule.manifest.provenance)?.origin.tick ??
-    readGhostForkOrigin(capsule.manifest.provenance)?.checkpoint.tick ??
-    0
-  );
+  return readGhostForkOrigin(capsule.manifest.provenance)?.checkpoint.tick ?? 0;
 }
 declare const brand: unique symbol;
 export interface GhostForkPermit {

@@ -290,7 +290,6 @@
       "src/audio/signal/*.ts",
       "src/audio/music/*.ts",
       "src/agents/live-watch-agent-*.ts",
-      "src/ghost/player-experiences.ts",
       "src/tearbench/browser/*.ts",
       "src/tearbench/canonical-scenarios.json",
       "public/**/*.json",

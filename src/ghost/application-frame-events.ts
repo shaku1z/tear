@@ -1,7 +1,5 @@
 import { isRecord } from "../domain/records";
 import { ghostRecordingFirstTick } from "./fork-origin";
-import { readGhostFinaleCompanion } from "./finale-companion";
-import { stableVerificationHash } from "../domain/hash";
 import type { TearCausalEventV1 } from "../tearbench/contracts";
 import type { GhostReadCapsule } from "./capsule-reader";
 
@@ -295,7 +293,6 @@ export function readGhostApplicationClockSchedule(
   runId: string,
   declared: boolean,
 ): GhostApplicationClockSchedule | undefined {
-  const finale = readGhostFinaleCompanion(capsule.manifest.provenance);
   const events = capsule.tracks.events.flatMap((entry) => {
     const event = parseGhostApplicationClockEvent(entry.value);
     if (event !== undefined && event.tick !== entry.tick) throw new TypeError("application clock entry tick mismatch");
@@ -311,13 +308,7 @@ export function readGhostApplicationClockSchedule(
   }
   const firstTick = ghostRecordingFirstTick(capsule);
   if (
-    events.some(
-      (event) =>
-        event.tick < firstTick &&
-        !finale?.origin.inherited.some(
-          (inherited) => stableVerificationHash(inherited) === stableVerificationHash(event),
-        ),
-    ) ||
+    events.some((event) => event.tick < firstTick) ||
     capsule.tracks.results.some((entry) => entry.tick < firstTick)
   )
     throw new TypeError("Application clock precedes recording origin.");
@@ -336,18 +327,17 @@ export function readGhostApplicationClockSchedule(
       throw new TypeError("application-clock sequence collides with another engine event");
     seenSequences.add(value.sequence);
   }
-  let ordinal = finale === undefined ? 0 : finale.origin.cursor.ordinal - (finale.origin.inherited.length > 0 ? 1 : 0),
+  let ordinal = 0,
     sequence = 0;
   let open: GhostApplicationClockEvent | undefined;
   const cursors = new Map<number, GhostApplicationFrameCursor>([
     [0, Object.freeze({ version: 1, ordinal: 0, sequence: 0 })],
   ]);
-  if (finale !== undefined) cursors.set(finale.origin.cursor.sequence, finale.origin.cursor);
   for (const event of events) {
     const value = event.payload;
     if (
       value.runId !== runId ||
-      value.sessionId !== (finale?.sourceSessionId ?? capsule.manifest.id) ||
+      value.sessionId !== capsule.manifest.id ||
       event.sequence <= sequence
     )
       throw new TypeError("application clock run/session/causal sequence mismatch");

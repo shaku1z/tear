@@ -27,7 +27,6 @@ export const labels: Readonly<Record<string, string>> = {
 const PROFILE_HUE = "#b06cff";
 export const SOURCE_COMMANDS = Object.freeze([
   ["THEATER", "watch"],
-  ["CHALLENGE", "challenge"],
   ["DOWNLOAD", "download"],
   ["CHASE BEST", "chase"],
   ["RACE THIS REFERENCE", "race"],

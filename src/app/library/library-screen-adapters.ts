@@ -70,7 +70,6 @@ export interface LibraryScreenServices {
   readonly ghostVault: GhostVaultLibraryPort;
   readonly enterReplay: (record: unknown, from: string) => boolean;
   readonly enterGhostTheater: (id: string) => Promise<GhostTheaterOpenResult>;
-  readonly enterGhostComparison: (ids: readonly string[]) => Promise<boolean>;
 }
 
 export interface LibraryScreenAdapters {
@@ -105,8 +104,6 @@ export interface LibraryScreenAdapters {
   readonly selectLeaderboardBoard: (id: string) => void;
   readonly watchReplay: (id: string, from?: "profile" | "leaderboards") => void;
   readonly watchGhostCapsule: (id: string) => void;
-  readonly compareGhostCapsule: (id: string) => void;
-  readonly openGhostComparison: () => void;
   readonly publishReplay: (id: string) => void;
   readonly repairGhostCapsule: (id: string) => void;
 }
@@ -253,16 +250,6 @@ export function createLiveLibraryScreenAdapters(services: LibraryScreenServices)
     watchGhostCapsule: (id) => {
       invokeReplay((value) => {
         value.watchGhostCapsule(id);
-      });
-    },
-    compareGhostCapsule: (id) => {
-      invokeReplay((value) => {
-        value.compareGhostCapsule(id);
-      });
-    },
-    openGhostComparison: () => {
-      invokeReplay((value) => {
-        value.openGhostComparison();
       });
     },
     publishReplay: (id) => {

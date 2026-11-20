@@ -91,7 +91,6 @@ export interface LibraryScreenServices {
   readonly ghostVault: GhostVaultLibraryPort;
   readonly enterReplay: (record: unknown, from: string) => boolean;
   readonly enterGhostTheater: (id: string) => Promise<GhostTheaterOpenResult>;
-  readonly enterGhostComparison: (ids: readonly string[]) => Promise<boolean>;
 }
 
 export interface LibraryScreenAdapters {
@@ -126,8 +125,6 @@ export interface LibraryScreenAdapters {
   readonly selectLeaderboardBoard: (id: string) => void;
   readonly watchReplay: (id: string, from?: "profile" | "leaderboards") => void;
   readonly watchGhostCapsule: (id: string) => void;
-  readonly compareGhostCapsule: (id: string) => void;
-  readonly openGhostComparison: () => void;
   readonly publishReplay: (id: string) => void;
   readonly repairGhostCapsule: (id: string) => void;
 }
@@ -204,7 +201,6 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
   const codexTierView: Record<string, number> = {};
   let profileTab = "bests",
     profileMessage = "",
-    comparisonSources: string[] = [],
     achievementFilter = "all";
   let leaderboardTab = "global",
     leaderboardMode = "",
@@ -306,12 +302,6 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       services.ghostVault.refresh();
       ghostVault = services.ghostVault.snapshot();
     }
-    const healthyCapsuleIds = new Set(
-      ghostVault.capsules
-        .filter((capsule) => capsule.healthy && capsule.status === "complete")
-        .map((capsule) => capsule.id),
-    );
-    comparisonSources = comparisonSources.filter((id) => healthyCapsuleIds.has(id));
     const vaultReplays = ghostVault.capsules.map((capsule) =>
       Object.freeze({
         id: capsule.id,
@@ -324,8 +314,6 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
         repairable: capsule.repairable,
         canDownloadArchive: capsule.healthy && capsule.status === "complete",
         timestamp: new Date(capsule.createdAt).toLocaleDateString(),
-        comparisonSelected: comparisonSources.includes(capsule.id),
-        comparisonSourceCount: comparisonSources.length,
       }),
     );
     if (profileTab === "vault" && ghostVault.message !== undefined) profileMessage = ghostVault.message;
@@ -612,17 +600,13 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       if (command !== "chase" && command !== "race") services.chase?.cancelPreparation();
       if (command === "suspend") career?.close();
       else if (command === "select" && id) career?.select(id);
-      else if (["watch", "challenge", "download", "chase", "race"].includes(command)) {
+      else if (["watch", "download", "chase", "race"].includes(command)) {
         void career?.sourceAction(async (source) => {
           if (career.snapshot().selected?.entry.kind === "legacy-visual") {
             if (command !== "watch") throw new Error("This tool requires a canonical capsule");
             replayLibrary.watch(source, "profile");
             return undefined;
           } else {
-            if (command === "challenge" && career.snapshot().selected?.entry.seedRaceRole)
-              throw new Error(
-                "Seed-Locked Race requires a fresh Race This Reference start; local challenge forks are unsupported",
-              );
             await services.enterCareerSource?.(source, command, career.snapshot().selected?.entry.manifestHash);
             if (
               (command === "chase" || command === "race") &&
@@ -670,42 +654,6 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
           profileMessage =
             result.category === "ruleset-retired" ? result.detail : "This replay can't be played back right now.";
         }
-      });
-    },
-    compareGhostCapsule: (id) => {
-      const capsule = services.ghostVault.snapshot().capsules.find((entry) => entry.id === id);
-      if (capsule?.healthy !== true || capsule.status !== "complete" || !capsule.theaterEligible) {
-        profileMessage = "Only complete saved replays can be compared.";
-        return;
-      }
-      if (comparisonSources.includes(id)) {
-        comparisonSources = comparisonSources.filter((source) => source !== id);
-        profileMessage =
-          comparisonSources.length === 0
-            ? "Comparison selection cleared."
-            : `${String(comparisonSources.length)} comparison source(s) selected.`;
-        return;
-      }
-      if (comparisonSources.length >= 9) {
-        profileMessage = "You can compare up to nine replays at once.";
-        return;
-      }
-      comparisonSources = [...comparisonSources, id];
-      profileMessage =
-        comparisonSources.length < 2
-          ? "Replay selected. Choose at least one more to compare."
-          : `${String(comparisonSources.length)} comparison sources selected. Press COMPARE to open them.`;
-    },
-    openGhostComparison: () => {
-      if (comparisonSources.length < 2) {
-        profileMessage = "Choose at least two saved replays to compare.";
-        return;
-      }
-      const sources = Object.freeze([...comparisonSources]);
-      profileMessage = "Opening the comparison…";
-      void services.enterGhostComparison(sources).then((opened) => {
-        if (opened) comparisonSources = [];
-        else profileMessage = "Those replays could not be opened for comparison.";
       });
     },
     publishReplay: (id) => {
