@@ -199,10 +199,25 @@ Each phase slice says which old moves were kept in name, which were cut and why.
 
 ### With the stage drawing session
 
-Agreed with the session drawing Pale (`verdant-drawn`), which starts after pull request 305:
-platform collision in `stages.ts` does not change without the lead; the tracks are drawn by the
-gameplay presentation layer on top of the picture; the picture keeps the 70 px above each track
-surface calm. Open with that session: one platform set for the stage and the boss fight.
+Agreed on 2026-11-20 with the session drawing Pale (`verdant-drawn`), which starts after pull
+request 305 and the owner's reference illustration:
+
+- Platform collision in `stages.ts` does not change without the lead.
+- One picture serves the stage and the boss fight, and the fight uses the stage's own six
+  platforms (the separate White Hart set in `arena-rules.ts` goes, in the first White Hart slice).
+- The roads, their arrows and their warnings are drawn by the gameplay presentation layer on top
+  of the picture. The readability check measures the picture without them, so the road's contrast
+  against the picture is checked in slice 1, and the road colours go to the drawing session.
+- The picture keeps these bands calm (no glints, streaks or motes, nothing that reads as a road or
+  a ledge). They are the starting roads of slice 1, each from its surface up 70 px:
+
+  | Road | Surface | Direction | Band (x, y, w, h) |
+  | --- | --- | --- | --- |
+  | floor | the floor, y 800 | east | 200, 730, 1200, 70 |
+  | crossing | platform 560, 510, w 480 | west | 560, 440, 480, 70 |
+  | low west | platform 140, 640, w 400 | east | 140, 570, 400, 70 |
+
+  A change to this list goes to the drawing session before it lands.
 
 ## Failure modes (write these first)
 
