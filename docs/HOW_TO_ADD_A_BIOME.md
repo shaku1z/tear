@@ -1,7 +1,8 @@
 # How to add a biome: stage, enemies, boss
 
 A biome is a stage, the stage objects that live in it, its enemies and its boss. Verdant Sanctum and the
-Pale Traverse are the two in the game; copy the shape of the Pale Traverse, which is the smaller one. The
+Pale Traverse are the two in the game; copy the shape of Verdant Sanctum, which is built on these rules. The
+Pale Traverse is not yet (`plans/active/PALE_GAMEPLAY_REBUILD.md`). The
 rules below are the shared layer every biome uses. A biome adds content to it and never works around it.
 
 ## 1. The stage
