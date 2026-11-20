@@ -1337,6 +1337,17 @@
         ".github/workflows/nightly.yml"
       ]
     },
+    "scripts/gate-files.mjs": {
+      "purpose": "The gate file list (config/gate-files.json): flags changed gate files in Validate; merge:ready reads it",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [],
+      "runBy": [
+        ".github/workflows/ci.yml"
+      ]
+    },
     "scripts/ci-verdict.mjs": {
       "purpose": "Validate's required check: fails unless every needed job ended as it should",
       "effects": [

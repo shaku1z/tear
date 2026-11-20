@@ -227,13 +227,35 @@ describe("Validate workflow", () => {
 
   it("runs every gate group of config/checks.json as its own job, and nothing else", () => {
     const config = loadChecks();
-    const groups = [...workflow.matchAll(/node scripts\/run-checks\.mjs (\w+)/gu)].map((match) => match[1]);
+    const groups = [...workflow.matchAll(/node "\$TEAR_GATE\/run-checks\.mjs" (\w+)/gu)].map((match) => match[1]);
     expect([...groups].sort()).toEqual([...config.gate].sort());
-    for (const group of config.gate) expect(jobBlocks[group], `job ${group}`).toContain(`run-checks.mjs ${group}`);
+    for (const group of config.gate) expect(jobBlocks[group], `job ${group}`).toContain(`run-checks.mjs" ${group}`);
     // The browser shards serve the builds, so they wait for the build job.
     expect(needsOf(jobBlocks.browser)).toContain("build");
     expect(config.groups.static.slice(0, 3).map((check) => check.id)).toEqual(["format", "docs", "terminology"]);
     expect(workflow).not.toMatch(/check:functional|tearbench (?:ci|tasks)/u);
+  });
+
+  it("runs every gate job and the verdict with main's copy of the gate, made from the scope job's main", () => {
+    // .github/actions/main-gate copies main's fromMain files and sets TEAR_GATE; see config/gate-files.json.
+    for (const id of [...loadChecks().gate, "check"]) {
+      const block = jobBlocks[id];
+      const copy = block.indexOf(
+        "uses: ./.github/actions/main-gate\n        with:\n          main: ${{ needs.scope.outputs.main }}\n",
+      );
+      expect(copy, id).toBeGreaterThan(0);
+      expect(copy, id).toBeGreaterThan(block.indexOf("actions/checkout@v4"));
+      const runner = block.search(/node "\$TEAR_GATE\/(?:run-checks|ci-verdict)\.mjs"/u);
+      expect(runner, id).toBeGreaterThan(copy);
+      expect(block, id).not.toMatch(/node scripts\/(?:run-checks|ci-verdict)\.mjs/u);
+    }
+    const action = read(".github/actions/main-gate/action.yml");
+    expect(action).toContain('git show "$MAIN:config/gate-files.json"');
+    expect(action).toContain("TEAR_CHECKED_ROOT=$PWD");
+    // The scope job flags changed gate files with main's list.
+    expect(jobBlocks.scope).toContain(
+      'git diff --name-only origin/main HEAD | node scripts/gate-files.mjs --flag "$TEAR_GATE_LIST"',
+    );
   });
 
   it("splits the browser group into shards that together run every browser check once", () => {
@@ -339,7 +361,7 @@ describe("Validate workflow", () => {
     const shard = jobBlocks.browser;
     const download = shard.indexOf("name: tear-release-targets-${{ needs.scope.outputs.commit }}");
     const verify = shard.indexOf('run: node scripts/ci-build-hashes.mjs --expect "$EXPECTED"');
-    const tests = shard.indexOf("run-checks.mjs browser");
+    const tests = shard.indexOf('run-checks.mjs" browser');
     expect(download).toBeGreaterThan(0);
     expect(verify).toBeGreaterThan(download);
     expect(tests).toBeGreaterThan(verify);
@@ -446,7 +468,7 @@ describe("the required check job", () => {
   it("needs the scope and docs jobs and every gate group", () => {
     expect(needsOf(jobBlocks.check).sort()).toEqual([...FIXED_JOBS, ...gate].sort());
     expect(jobBlocks.check).toContain("NEEDS: ${{ toJSON(needs) }}");
-    expect(jobBlocks.check).toMatch(/\n {8}run: node scripts\/ci-verdict\.mjs\n?$/u);
+    expect(jobBlocks.check).toMatch(/\n {8}run: node "\$TEAR_GATE\/ci-verdict\.mjs"\n?$/u);
   });
 
   it("passes when every gate job passed, or when a documents-only change passed its document checks", () => {
@@ -491,8 +513,10 @@ describe("the required check job", () => {
   });
 
   it("exits non-zero on a failing verdict and zero on a passing one, as the job runs it", () => {
-    // The job runs `node scripts/ci-verdict.mjs`, which is main() with the job's environment.
-    expect(workflow).toMatch(/\n {10}NEEDS: \$\{\{ toJSON\(needs\) \}\}\n {8}run: node scripts\/ci-verdict\.mjs\n/u);
+    // The job runs main's copy of `scripts/ci-verdict.mjs`, which is main() with the job's environment.
+    expect(workflow).toMatch(
+      /\n {10}NEEDS: \$\{\{ toJSON\(needs\) \}\}\n {8}run: node "\$TEAR_GATE\/ci-verdict\.mjs"\n/u,
+    );
     const run = (value) => {
       const lines = [];
       const status = verdictMain({ NEEDS: JSON.stringify(value) }, (line) => lines.push(line));
@@ -538,7 +562,7 @@ describe("Nightly checks workflow", () => {
   });
 
   it("is the only workflow that keeps going past a failing check", () => {
-    const runs = [...workflow.matchAll(/run-checks\.mjs (\w+)[^\n]*/gu)].map((match) => match[0]);
+    const runs = [...workflow.matchAll(/run-checks\.mjs"? (\w+)[^\n]*/gu)].map((match) => match[0]);
     expect(new Set(runs.map((run) => run.split(" ")[1]))).toEqual(new Set(loadChecks().gate));
     for (const run of runs) expect(run).not.toMatch(/--keep-going/u);
   });
