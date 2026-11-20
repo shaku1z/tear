@@ -46,6 +46,21 @@ export type ProductionWaveRewardIntent =
   | Readonly<{ sequence: number; tick: number; channel: "plan"; intent: WavePlanIntent }>
   | Readonly<{ sequence: number; tick: number; channel: "clear"; intent: WaveClearIntent }>;
 
+/** How a headless playtest opens a run. A player's run, and its replay, has none of this. */
+export interface ProductionRunOpening {
+  /**
+   * The wave the run opens on: the run is placed just before it and the game's own wave planner starts it, so
+   * the stage, the chapter and the wave are the game's.
+   */
+  readonly firstWave?: number;
+  /**
+   * Gives the player a build for a later wave: for each wave before it the game's draft is rolled and this picks
+   * one of the upgrades on offer, by index, which is applied as a pick in a run is. Without it the player arrives
+   * with no upgrades. Tier-ups and anything bought are not part of it.
+   */
+  readonly build?: (choices: readonly UpgradeDefinition[]) => number;
+}
+
 export interface ProductionWaveRewardRuntime {
   readonly waves: LiveWaveController;
   readonly reward: RewardRuntime<UpgradeDefinition>;
@@ -55,7 +70,8 @@ export interface ProductionWaveRewardRuntime {
   readonly restoreScreen: (screen: string) => void;
   readonly focus: () => number;
   readonly restoreUi: (screen: string, focus: number) => void;
-  readonly startNaturalOpening: () => void;
+  /** Starts the run; `opening` is for a headless playtest that opens on a later wave. */
+  readonly startNaturalOpening: (opening?: ProductionRunOpening) => void;
   readonly spawnTutorial: (
     kind: EnemyKind,
     hpScale: number,
@@ -364,9 +380,16 @@ export function createProductionWaveRewardRuntime(
     controls: () => [],
     focus: () => focus,
   };
-  const startNaturalOpening = () => {
+  const draftForBuild = (build: NonNullable<ProductionRunOpening["build"]>): void => {
+    const mods = run().mods;
+    const choices = rollUpgrades(mods.expandedDraft ? 4 : 3, mods, { random: random.streams.stream("draft") });
+    const choice = choices[build(choices)];
+    if (choice === undefined) throw new RangeError("the build picked an upgrade that was not on offer");
+    applyUpgrade(choice, { config, player: world.state.player() as never, blade: world.state.blade() as never, mods });
+  };
+  const startNaturalOpening = ({ firstWave = 1, build }: ProductionRunOpening = {}) => {
     if (world.lifecycle.phase !== "idle") throw new Error("production wave runtime cannot restart an active lifecycle");
-    run().wave = 0;
+    run().wave = firstWave - 1;
     // As the live run start does, a Gauntlet opening draws its trial order.
     const opening = run();
     if (opening.mode === "gauntlet" && opening.bossOrder.length === 0) opening.bossOrder = content.gauntletTrials();
@@ -391,7 +414,10 @@ export function createProductionWaveRewardRuntime(
       world.lifecycle.activateTraining();
       replay.installTrainingHome();
       if (active.mode === "tutorial") replay.tutorial.start("unissued");
-    } else waves.startNextWave();
+    } else {
+      if (build !== undefined) for (let wave = 1; wave < firstWave; wave += 1) draftForBuild(build);
+      waves.startNextWave();
+    }
   };
   return Object.freeze({
     waves,

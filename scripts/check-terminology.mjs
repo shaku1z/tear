@@ -165,7 +165,6 @@ function validateAllowlistEntries(entries, label, termIds, options = {}) {
         "docs/ghost3/",
         "docs/source/",
         "docs/TEARBENCH_GHOST3_",
-        "docs/TEARBENCH_RUNTIME_ARCHITECTURE_ALIGNMENT.md",
         "docs/TEARBENCH_WEAPON_ROSTER_EVIDENCE_INDEX.md",
         "src/tearbench/evidence-routes.json",
       ];

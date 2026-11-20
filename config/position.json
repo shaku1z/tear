@@ -110,7 +110,7 @@
     {
       "id": "playtest-tool",
       "name": "Playtest tool",
-      "state": "Stage 1 built: pnpm playtest bosses prints a table per boss fight and phase; pnpm playtest sweep plays every boss, weapon, Easy and Normal with six scripted players and prints a summary",
+      "state": "Stage 1 done: pnpm playtest bosses prints a table per boss fight and phase; pnpm playtest sweep plays every boss, weapon, Easy and Normal with six scripted players and prints a summary",
       "summary": "One command, pnpm playtest, that plays the game headless with scripted players on fixed seeds and reports clear rates, time to kill, damage taken and differences between builds. It is built from the working parts of TearBench and the scripted player and replaces both names. Verified on 2026-11-16: the scripted player runs headless at 13 to 15 times real time and the same seed reproduces exactly.",
       "next": "Stage 2: every boss phase, wave and enemy kind as a row that starts directly, and pnpm playtest runs.",
       "owner_action": "",
@@ -127,19 +127,6 @@
       "owner_action": "Deploy the Firestore chunk-write rules from the merged rules PR.",
       "evidence": [
         "plans/active/REPLAY_OVERHAUL_PLAN.md"
-      ]
-    },
-    {
-      "id": "tearbench-program",
-      "name": "TearBench C21 to C40 program",
-      "state": "Paused at the 2026-08-30 state",
-      "summary": "The TearBench certification program state is recorded for the production build and is still checked by check:docs. Pull request 84 (five-run canary qualification) is open; its commits are already in main.",
-      "next": "Land or close pull request 84.",
-      "owner_action": "",
-      "evidence": [
-        "config/tearbench-current-program-state.json",
-        "plans/TEARBENCH_MASTER_HANDOFF.md",
-        "https://github.com/shaku1z/tear/pull/84"
       ]
     },
     {

@@ -7,7 +7,10 @@ import type { WeaponId } from "../gameplay/weapon-selection";
 import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION, type TearScenarioV1 } from "../tearbench/contracts";
 import { requireProductionHeadlessScenario } from "./headless/production-headless-scenario";
 import { TEAR_SIMULATION_TICKS_PER_SECOND } from "../tearbench/simulation-profile";
-import { createProductionHeadlessEnvironment } from "./headless/production-headless-environment";
+import {
+  createProductionHeadlessEnvironment,
+  type ProductionHeadlessEnvironment,
+} from "./headless/production-headless-environment";
 import { createObjectCounter, readCuttableObjects, type ObjectCount } from "./boss-objects";
 import { BOSS_PLAYER_IDS, createBossPlayer, type BossPlayer, type BossPlayerId } from "./boss-player";
 import { boxOverlaps, readBoss, readPlayerBox, trainingResets, type BossView, type PlayerBox } from "./boss-view";
@@ -133,6 +136,21 @@ export function bossFightScenario(request: BossFightRequest): TearScenarioV1 {
   });
 }
 
+/**
+ * What a scripted player is shown each tick: the game's observation, and the screen with every upgrade on
+ * offer scored for the weapon, so the player picks its build the way the game's watch player does.
+ */
+export function agentView(environment: ProductionHeadlessEnvironment, weapon: WeaponId) {
+  const ui = environment.policyUiObservation();
+  return {
+    state: environment.policyObservation(),
+    ui: {
+      ...ui,
+      choices: ui.choices.map((choice) => ({ ...choice, score: buildWatchChoiceScore(choice.id, weapon) })),
+    },
+  };
+}
+
 /** How many phases the boss has, from its definition: one more than its phase marks. */
 export function bossPhaseCount(boss: BossId): number {
   return bossDefinition(boss).phaseMarks.length + 1;
@@ -215,15 +233,7 @@ export function playBossFight(
     let lastHit: BossFightResult["killingHit"];
     const countObjects = createObjectCounter();
     while (end === undefined) {
-      const state = environment.policyObservation();
-      const rawUi = environment.policyUiObservation();
-      const ui = {
-        ...rawUi,
-        choices: rawUi.choices.map((choice) => ({
-          ...choice,
-          score: buildWatchChoiceScore(choice.id, request.weapon),
-        })),
-      };
+      const { state, ui } = agentView(environment, request.weapon);
       const before = readBoss(environment.world());
       if (before !== null && before.id !== request.boss) {
         end = "broken";
