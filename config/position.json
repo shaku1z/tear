@@ -38,12 +38,13 @@
       "id": "verdant-visuals",
       "name": "Verdant Sanctum visuals",
       "state": "In progress",
-      "summary": "The game draws Verdant itself at load from a stage art recipe (src/presentation/stage-art): a key light, an atmosphere, colour ramps and layers of shared strokes (foliage, trunks, ruined arcades, water, light), painted in short slices into layers the scene renderer composes. The painted image package is gone. Any biome reaches the same look with a recipe; Pale Traverse is next. Boss warnings and strikes on Verdant are drawn as roots and thorns rising from the floor, from a table on the stage's presentation definition that any biome can supply. The background does not move yet.",
-      "next": "Keep closing the look toward the owner's reference illustration, then a live layer (light shafts, water glints, sway) as recipe data, then Pale Traverse from a recipe.",
+      "summary": "The game draws Verdant itself at load from a stage art recipe (src/presentation/stage-art): a key light, an atmosphere, colour ramps and layers of shared strokes (foliage, trunks, ruined arcades, water, light), painted in short slices into layers the scene renderer composes. The painted image package is gone. Any biome reaches the same look with a recipe; Pale Traverse is next. Boss warnings and strikes on Verdant are drawn as roots and thorns rising from the floor, from a table on the stage's presentation definition that any biome can supply. The stage also moves, from a `live` list in the same recipe: water rows that ripple and glint, drifting pollen, vines that sway and light shafts that fade in and out, all bounded by limits and by a measured ceiling in config/stage-readability.json, and all held still by reduced motion and low graphics.",
+      "next": "The owner judges the moving stage; then Pale Traverse from a recipe, with its own live list.",
       "owner_action": "Judge the drawn look against the reference illustration: the owner's taste decides visual work.",
       "evidence": [
         "docs/BACKGROUND_WORKFLOW.md",
         "tests/unit/stage-art.test.ts",
+        "tests/unit/stage-live.test.ts",
         "tests/unit/scene-library.test.ts",
         "tests/unit/boss-tell-skin.test.ts",
         "plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md"
@@ -75,11 +76,12 @@
     {
       "id": "pale-traverse",
       "name": "Pale Traverse rework",
-      "state": "Not started",
-      "summary": "Pale Traverse stays a Playground preview and is not published. The owner wants it reworked after Verdant. Its earlier migration work is on the unmerged branch codex/pale-traverse-r4.",
-      "next": "Start once the Verdant gameplay rework has landed.",
+      "state": "In progress",
+      "summary": "Pale Traverse stays a Playground preview and is not published. Its gameplay is being rebuilt the way Verdant's was. The audit found that the Aurora Tracks touch nobody standing on a platform or the floor, the White Hart gives no warning the game can check and plays the same fight on every seed, and none of Pale uses the shared layers. The plan is eight pull requests: the tracks, the Rimehound, routes in the boss move layer, the White Hart one phase at a time, the waves, then leftovers. The earlier work on the unmerged branch codex/pale-traverse-r4 is reference only.",
+      "next": "Slice 1: rebuild the Aurora Tracks as roads on a surface that raise top speed.",
       "owner_action": "",
       "evidence": [
+        "plans/active/PALE_GAMEPLAY_REBUILD.md",
         "plans/active/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md"
       ]
     },
@@ -110,9 +112,9 @@
     {
       "id": "playtest-tool",
       "name": "Playtest tool",
-      "state": "Stage 2 under way: stage 1 is done (pnpm playtest bosses and sweep); pnpm playtest waves opens any Adventure wave directly and prints a row per wave of a stage",
+      "state": "Stage 2 under way: stage 1 is done (pnpm playtest bosses and sweep); pnpm playtest waves opens any Adventure wave directly, runs plays whole runs from wave 1, and enemies meets each enemy kind alone",
       "summary": "One command, pnpm playtest, that plays the game headless with scripted players on fixed seeds and reports clear rates, time to kill, damage taken and differences between builds. It is built from the working parts of TearBench and the scripted player and replaces both names. Verified on 2026-11-16: the scripted player runs headless at 13 to 15 times real time and the same seed reproduces exactly.",
-      "next": "pnpm playtest runs (full runs: where they end, time and health cost per wave), then the enemies report, the coverage list and --compare.",
+      "next": "The coverage list (content that never appeared in any report), then --compare.",
       "owner_action": "",
       "evidence": [
         "plans/active/PLAYTEST_TOOL_PLAN.md"

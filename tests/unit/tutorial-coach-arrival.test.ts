@@ -7,6 +7,11 @@ import {
   shippingTutorialGoldStatus,
 } from "../../src/gameplay/training/tutorial-gold-shipping";
 
+// The game's copy comes through its own loader; the bundler's transform of the JSON is skipped (see the helper).
+vi.mock(
+  "../../src/gameplay/training/tutorial-gold-reference-data.json",
+  () => import("../support/tutorial-gold-data-from-disk"),
+);
 // This file never loads the corpus before a lesson: the game does not either (training-host.ts).
 describe("the coach's demonstrations arriving after the lesson starts", () => {
   it("plays the lesson without them, then shows them mid-lesson once they arrive", async () => {

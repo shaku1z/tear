@@ -188,7 +188,7 @@
       "duration": "long"
     },
     "playtest": {
-      "purpose": "Plays the real game headless: `bosses` a table per fight, `sweep` every weapon on Easy and Normal (queue it), `waves` a row per wave of a stage",
+      "purpose": "Plays the real game headless: `bosses`, `sweep` boss fights, `waves` a stage's waves, `runs` whole runs, `enemies` each kind alone (queue sweep and runs)",
       "effects": [
         "read-only"
       ],
@@ -1000,7 +1000,7 @@
       "duration": "long"
     },
     "check:weekly": {
-      "purpose": "Weekly group of config/checks.json: endurance plus ghost replay and vault suites",
+      "purpose": "Weekly group of config/checks.json: endurance, replay and vault suites, and the scripted-agent autonomy journey on a test build",
       "effects": [
         "read-only"
       ],
@@ -1334,8 +1334,7 @@
       "via": [],
       "runBy": [
         ".github/workflows/ci.yml",
-        ".github/workflows/nightly.yml",
-        ".github/workflows/tearbench-program.yml"
+        ".github/workflows/nightly.yml"
       ]
     },
     "scripts/ci-verdict.mjs": {
@@ -1483,7 +1482,7 @@
       ]
     },
     "scripts/playtest.mjs": {
-      "purpose": "Playtest command: loads src/playtest through Vite, plays boss fights or waves headless, in worker processes when many; --json writes them",
+      "purpose": "Playtest command: loads src/playtest through Vite, plays fights, waves, runs or enemy meetings headless, in worker processes when many; --json writes them",
       "effects": [
         "read-only"
       ],
@@ -1581,6 +1580,10 @@
     "scripts/eslint-rules/one-record-guard.mjs": [
       "eslint.config.mjs",
       "tests/unit/one-record-guard.test.mjs"
+    ],
+    "scripts/eslint-rules/replay-engine-loaded.mjs": [
+      "eslint.config.mjs",
+      "tests/unit/replay-engine-loaded-rule.test.mjs"
     ],
     "scripts/build-targets.mjs": [
       "scripts/build-target.mjs",

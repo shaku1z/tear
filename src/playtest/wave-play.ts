@@ -76,6 +76,7 @@ const ATTRIBUTION_MARGIN_PIXELS = 12;
 
 interface EnemyActor {
   readonly kind?: string;
+  readonly supportType?: string;
   readonly affixes?: readonly string[];
   readonly x: number;
   readonly y: number;
@@ -104,14 +105,16 @@ interface RunView {
   readonly waveLog: readonly Readonly<{ wave: number | string; time: number; kills: number }>[];
 }
 
-interface WaveWorld {
+export interface WaveWorld {
   enemies(): readonly unknown[];
   projectiles(): readonly unknown[];
   player(): unknown;
   run(): unknown;
 }
 
-const kindOf = (enemy: EnemyActor | null | undefined): string => enemy?.kind ?? "unknown";
+/** The name the game's enemy lists use: the four support enemies share one kind and differ by `supportType`. */
+export const kindOf = (enemy: Readonly<{ kind?: string; supportType?: string }> | null | undefined): string =>
+  enemy?.supportType ?? enemy?.kind ?? "unknown";
 
 /** The stage's waves a `waves` report plays: its nine waves before the boss wave. */
 export function stageWaves(stage: string): readonly number[] {
@@ -168,7 +171,7 @@ export function attributeWaveHit(
 }
 
 /** A copy of what attribution reads, taken before the step: the game moves and removes the actors themselves. */
-function before(world: WaveWorld): Readonly<{ projectiles: ProjectileActor[]; enemies: EnemyActor[] }> {
+export function copyActors(world: WaveWorld): Readonly<{ projectiles: ProjectileActor[]; enemies: EnemyActor[] }> {
   return {
     projectiles: (world.projectiles() as readonly ProjectileActor[])
       .filter((projectile) => projectile.dead !== true)
@@ -182,8 +185,9 @@ function before(world: WaveWorld): Readonly<{ projectiles: ProjectileActor[]; en
       })),
     enemies: (world.enemies() as readonly EnemyActor[])
       .filter((enemy) => enemy.dead !== true && enemy.dying !== true)
-      .map(({ kind, x, y, hw, hh, contactReach }) => ({
+      .map(({ kind, supportType, x, y, hw, hh, contactReach }) => ({
         ...(kind === undefined ? {} : { kind }),
+        ...(supportType === undefined ? {} : { supportType }),
         x,
         y,
         hw,
@@ -247,7 +251,7 @@ export function playWave(request: WaveRequest, player: BossPlayer = createBossPl
       const view = agentView(environment, request.weapon);
       const box = readPlayerBox(world);
       const hpBefore = view.state.player.hp;
-      const actors = before(world);
+      const actors = copyActors(world);
       const step = environment.step(player.decide(view, null, box));
       ticks += 1;
       const after = environment.policyObservation().player;
