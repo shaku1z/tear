@@ -272,83 +272,6 @@
       ],
       "duration": "seconds"
     },
-    "test:workspace": {
-      "purpose": "Node tests for the workspace checker",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds"
-    },
-    "test:parent-layout": {
-      "purpose": "Node tests for the parent workspace layout checker",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds"
-    },
-    "test:artifact-retention": {
-      "purpose": "Node tests for the artifact retention report",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds"
-    },
-    "test:artifact-disposition": {
-      "purpose": "Node tests for artifact disposition validation",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds"
-    },
-    "test:workspace-recovery": {
-      "purpose": "Node tests for the workspace recovery report",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds"
-    },
-    "test:workspace-recovery-second-wave": {
-      "purpose": "Node tests for the second-wave workspace recovery flow",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds"
-    },
-    "test:deferred-workspace-dependency": {
-      "purpose": "Node tests for the deferred workspace dependency report",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds"
-    },
-    "test:preserved-copy-comparison": {
-      "purpose": "Node tests for the preserved-copy comparison tool",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds"
-    },
-    "test:remaining-workspace-inventory": {
-      "purpose": "Node tests for the remaining workspace inventory report",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds"
-    },
-    "test:workspace-quarantine": {
-      "purpose": "Node tests for preparing a workspace quarantine",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds"
-    },
-    "test:workspace-preservation-quarantine": {
-      "purpose": "Node tests for applying a preservation quarantine",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds"
-    },
     "test:serve": {
       "purpose": "Node tests for the scripts/serve.py loopback server contract (starts it briefly on temp dirs)",
       "effects": [
@@ -1040,97 +963,6 @@
       ],
       "duration": "under-a-minute"
     },
-    "check:artifact-disposition": {
-      "purpose": "Validates the artifact disposition records",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds"
-    },
-    "check:artifacts": {
-      "purpose": "Checks config/artifact-layout.json against the tree and ignore rules",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds"
-    },
-    "check:parent-layout": {
-      "purpose": "Checks the parent workspace folder layout policy",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds"
-    },
-    "check:parent-layout:local": {
-      "purpose": "Strict local check of the parent workspace layout",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds"
-    },
-    "report:artifacts": {
-      "purpose": "Reports artifact retention status (stdout, or a file with --output)",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds"
-    },
-    "report:workspace-recovery": {
-      "purpose": "Reports recoverable work in sibling worktrees and preserved copies",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "under-a-minute"
-    },
-    "report:deferred-workspace-dependency": {
-      "purpose": "Reports workspace items deferred on a dependency",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "under-a-minute"
-    },
-    "compare:preserved-copies": {
-      "purpose": "Compares preserved repository copies against the canonical checkout",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "under-a-minute"
-    },
-    "report:remaining-workspace-inventory": {
-      "purpose": "Inventories what remains in the parent workspace",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "under-a-minute"
-    },
-    "prepare:workspace-quarantine": {
-      "purpose": "Builds a workspace quarantine manifest (dry run unless --apply)",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "under-a-minute"
-    },
-    "quarantine:workspace": {
-      "purpose": "Moves preserved workspace entries into quarantine with --apply (outside the repository)",
-      "effects": [
-        "writes-artifacts"
-      ],
-      "duration": "under-a-minute"
-    },
-    "check:workspace": {
-      "purpose": "Workspace hygiene gate: docs, workspace tool tests and checks",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "minutes"
-    },
-    "check:workspace:local": {
-      "purpose": "Strict local workspace check",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds"
-    },
     "check:reproducible": {
       "purpose": "Builds each target twice plus CrazyGames packages and certifies byte-identical output",
       "effects": [
@@ -1236,16 +1068,6 @@
     }
   },
   "entryPoints": {
-    "scripts/apply-workspace-quarantine.mjs": {
-      "purpose": "Applies a prepared preservation quarantine manifest, moving workspace entries aside (dry run without --apply)",
-      "effects": [
-        "writes-artifacts"
-      ],
-      "duration": "under-a-minute",
-      "via": [
-        "quarantine:workspace"
-      ]
-    },
     "scripts/build-target.mjs": {
       "purpose": "Runs a Vite build for one target mode with tutorial gold and build-info checks",
       "effects": [
@@ -1268,16 +1090,6 @@
       "duration": "seconds",
       "via": [
         "check:active-roster"
-      ]
-    },
-    "scripts/check-artifact-layout.mjs": {
-      "purpose": "Checks config/artifact-layout.json against the tree and ignore rules",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds",
-      "via": [
-        "check:artifacts"
       ]
     },
     "scripts/check-bundle-budget.mjs": {
@@ -1340,17 +1152,6 @@
         "check:music"
       ]
     },
-    "scripts/check-parent-layout.mjs": {
-      "purpose": "Checks the parent workspace layout policy",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds",
-      "via": [
-        "check:parent-layout",
-        "check:parent-layout:local"
-      ]
-    },
     "scripts/check-production-test-isolation.mjs": {
       "purpose": "Fails if engineering or test-only markers reached production bundles",
       "effects": [
@@ -1389,27 +1190,6 @@
       "duration": "seconds",
       "via": [
         "check:terminology"
-      ]
-    },
-    "scripts/check-workspace.mjs": {
-      "purpose": "Workspace hygiene checker",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds",
-      "via": [
-        "check:workspace",
-        "check:workspace:local"
-      ]
-    },
-    "scripts/compare-preserved-copies.mjs": {
-      "purpose": "Compares preserved repository copies against the canonical checkout",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "under-a-minute",
-      "via": [
-        "compare:preserved-copies"
       ]
     },
     "scripts/export-game-reference.mjs": {
@@ -1579,16 +1359,6 @@
         "merge:batch"
       ]
     },
-    "scripts/merge-ready.mjs": {
-      "purpose": "Merge readiness behind pnpm merge:ready: a red main stops merges and a stale pass is not a pass",
-      "effects": [
-        "network"
-      ],
-      "duration": "seconds",
-      "via": [
-        "merge:ready"
-      ]
-    },
     "scripts/package-crazygames.mjs": {
       "purpose": "Zips dist/crazygames into the CrazyGames upload package and checks its size",
       "effects": [
@@ -1632,16 +1402,6 @@
         "check:position"
       ]
     },
-    "scripts/prepare-workspace-quarantine.mjs": {
-      "purpose": "Builds a workspace quarantine manifest (dry run unless --apply)",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "under-a-minute",
-      "via": [
-        "prepare:workspace-quarantine"
-      ]
-    },
     "scripts/release-preflight.mjs": {
       "purpose": "Release preflight checks",
       "effects": [
@@ -1650,46 +1410,6 @@
       "duration": "seconds",
       "via": [
         "release:preflight"
-      ]
-    },
-    "scripts/report-artifacts.mjs": {
-      "purpose": "Artifact retention report",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds",
-      "via": [
-        "report:artifacts"
-      ]
-    },
-    "scripts/report-deferred-workspace-dependency.mjs": {
-      "purpose": "Deferred workspace dependency report",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "under-a-minute",
-      "via": [
-        "report:deferred-workspace-dependency"
-      ]
-    },
-    "scripts/report-remaining-workspace-inventory.mjs": {
-      "purpose": "Remaining parent workspace inventory report",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "under-a-minute",
-      "via": [
-        "report:remaining-workspace-inventory"
-      ]
-    },
-    "scripts/report-workspace-recovery.mjs": {
-      "purpose": "Workspace recovery report over sibling worktrees and preserved copies",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "under-a-minute",
-      "via": [
-        "report:workspace-recovery"
       ]
     },
     "scripts/run-checks.mjs": {
@@ -1781,16 +1501,6 @@
       "duration": "minutes",
       "via": [
         "tearbench"
-      ]
-    },
-    "scripts/validate-artifact-disposition.mjs": {
-      "purpose": "Validates artifact disposition records",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds",
-      "via": [
-        "check:artifact-disposition"
       ]
     },
     "scripts/verify-release-artifact.mjs": {
@@ -1922,19 +1632,12 @@
       "vite.config.ts"
     ],
     "scripts/release-artifact.mjs": [
-      "scripts/apply-workspace-quarantine.mjs",
       "scripts/build-target.mjs",
       "scripts/check-bundle-budget.mjs",
       "scripts/check-cloudflare-dry-run.mjs",
       "scripts/check-reproducible-build.mjs",
-      "scripts/check-workspace.mjs",
       "scripts/package-target.mjs",
-      "scripts/prepare-workspace-quarantine.mjs",
       "scripts/release-preflight.mjs",
-      "scripts/report-artifacts.mjs",
-      "scripts/report-deferred-workspace-dependency.mjs",
-      "scripts/report-remaining-workspace-inventory.mjs",
-      "scripts/report-workspace-recovery.mjs",
       "scripts/tearbench-build-artifact.mjs",
       "scripts/tearbench.mjs",
       "scripts/verify-release-artifact.mjs",
@@ -1943,16 +1646,6 @@
       "tests/tearbench-build-artifact.test.mjs",
       "tests/unit/current-live-detached-mechanic-parity.test.ts",
       "vite.config.ts"
-    ],
-    "scripts/repository-identity.mjs": [
-      "scripts/apply-workspace-quarantine.mjs",
-      "scripts/check-parent-layout.mjs",
-      "scripts/check-workspace.mjs",
-      "scripts/prepare-workspace-quarantine.mjs",
-      "scripts/report-artifacts.mjs",
-      "scripts/report-deferred-workspace-dependency.mjs",
-      "scripts/report-remaining-workspace-inventory.mjs",
-      "scripts/report-workspace-recovery.mjs"
     ],
     "scripts/tearbench-build-artifact.mjs": [
       "scripts/build-target.mjs",
