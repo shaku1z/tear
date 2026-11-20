@@ -167,6 +167,7 @@ describe("Controls tab keyboard rows", () => {
     installAvailable: false,
     update: { ready: false, applying: false },
     privacy: { privacyLink: true, termsLink: false, note: null, statistics: true },
+    credits: [],
     buildLabel: "test",
     presets: { default: { name: "DEFAULT", tag: "", line: "", map: "" } },
     keyboard: { listening, note: { row: "rebind:dash", text: "Swapped: Throw / recall now uses the old key." } },

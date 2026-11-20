@@ -1104,7 +1104,6 @@ describe("legacy screen renderer registry", () => {
         tab: resettable ? "general" : "credits",
         resettable,
         tabs: [{ id: "general", label: "GENERAL" }],
-        returnTo: "menu",
         sections: [{ label: "CREDITS", rows: [{ key: "credit:vite", label: "Vite", value: "", kind: "info" }] }],
       });
       return controls.map((control) => control.label);
