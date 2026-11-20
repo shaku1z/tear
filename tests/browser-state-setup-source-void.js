@@ -36,7 +36,7 @@ const resolved = Object.freeze({
   resolvedHash: "c40-source-phase-two-void",
 });
 
-withJourney({ name: "C40 State Setup Source void" }, async ({ page }) => {
+withJourney({ name: "State Setup Source void" }, async ({ page }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: STATE_WAIT_MS });
   const result = await page.evaluate((scenario) => {
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
@@ -84,5 +84,5 @@ withJourney({ name: "C40 State Setup Source void" }, async ({ page }) => {
     result.metrics.fixedTicks >= result.voidSnapshot.tick,
     "Class-A metrics must account for authoritative continuation ticks",
   );
-  console.log("C40 State Setup Source collapse-to-void semantic advancement passed");
+  console.log("State Setup Source collapse-to-void semantic advancement passed");
 });

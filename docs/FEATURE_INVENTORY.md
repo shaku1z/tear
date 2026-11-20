@@ -781,7 +781,7 @@ frozen evidence record.
 - [x] Class-A semantic cinematic advancement — `live-runtime-application-frame.test.ts`
   exposes one test-build-only authored director beat through the typed live
   runtime, without a debug global, renderer clock, or synthetic fixed tick.
-  `browser-c40-state-setup-source-void.js` proves a resolved Source phase-two
+  `browser-state-setup-source-void.js` proves a resolved Source phase-two
   State Setup launch enters collapse, then reaches live void hazard/navigation
   state through bounded semantic beats and real authoritative application
   frames. This is a replay-seek foundation, not C40 certification.

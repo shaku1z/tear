@@ -1,10 +1,10 @@
-# C40 Weapon-Roster Engineering Evidence Index
+# Weapon-Roster Engineering Evidence Index
 
 **Status:** engineering-only, non-certifying
 
 This is a compact index of five real production-path Ghost V3 capture and
 fresh C29 seek proofs. The machine-readable source is
-`docs/tearbench-c40-weapon-roster-evidence-index.json`.
+`docs/tearbench-weapon-roster-evidence-index.json`.
 
 | Weapon | Action family | Scenario | Retained receipt labels |
 |---|---|---|---|

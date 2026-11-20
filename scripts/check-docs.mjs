@@ -76,8 +76,8 @@ const PATH_BOUND_TEARBENCH_ARTIFACTS = Object.freeze([
   "plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md",
   "docs/tearbench-ghost3-evidence-catalog.json",
   "docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md",
-  "docs/tearbench-c40-weapon-roster-evidence-index.json",
-  "docs/TEARBENCH_C40_WEAPON_ROSTER_EVIDENCE_INDEX.md",
+  "docs/tearbench-weapon-roster-evidence-index.json",
+  "docs/TEARBENCH_WEAPON_ROSTER_EVIDENCE_INDEX.md",
   "src/tearbench/canonical-scenarios.json",
   "src/tearbench/evidence-routes.json",
 ]);

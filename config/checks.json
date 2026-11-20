@@ -440,6 +440,10 @@
         "run": "node tests/browser-state-setup-exit-matrix.js"
       },
       {
+        "id": "state-setup-source-void",
+        "run": "node tests/browser-state-setup-source-void.js"
+      },
+      {
         "id": "source-void-replay-seek",
         "run": "node tests/browser-c40-source-void-ghost-seek.js"
       },
