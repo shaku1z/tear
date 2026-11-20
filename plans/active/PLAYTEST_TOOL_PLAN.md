@@ -387,7 +387,7 @@ line for every run with where the player fell and the arrival order; `--json` wr
 snares are read by the shared names of the parts (`root-link`, `root-snare`, `rootPhase`), so another enemy or
 stage that uses them is counted with no edit. Damage by source is attributed, as for bosses: the game does not
 record what hit the player, so it goes to the owner of a shot on the player, else an enemy touching the
-player, else "unmarked". Verdant, sword, Normal, three seeds, two players: 54 waves in 53 s on five
+player, else "unmarked". Verdant, sword, Normal, three seeds, two players: 54 waves in 71 s on five
 jobs. Tests: `tests/unit/playtest-waves.test.ts`.
 
 Done when:
