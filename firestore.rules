@@ -1,42 +1,131 @@
 rules_version = '2';
+// Every collection the game uses is matched below; anything else is refused. Each rule is tested,
+// allowed and refused writes both, under the Firestore emulator: tests/rules/firestore-rules.test.ts
+// (`pnpm test:rules`). Change a rule and its tests in the same pull request. Deploying is the owner's step.
 service cloud.firestore {
   match /databases/{database}/documents {
-    // each player owns their cloud save (the display name lives inside the profile blob
-    // and is validated client-side, so this stays a plain owner-only rule — a validation
-    // clause here referencing request.resource.data would break READS, which have none).
-    match /users/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+    function signedIn() {
+      return request.auth != null;
     }
-    // public leaderboards; you may only write/delete your own entry, score must be numeric
+    function isUser(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+    function incoming() {
+      return request.resource.data;
+    }
+    // The keys this write changes, adds or removes (the whole document on a create).
+    function changedKeys() {
+      return resource == null ? incoming().keys() : incoming().diff(resource.data).affectedKeys();
+    }
+    function intIn(value, low, high) {
+      return value is int && value >= low && value <= high;
+    }
+    function stringIn(value, low, high) {
+      return value is string && value.size() >= low && value.size() <= high;
+    }
+    // A client clock reading (Date.now()) within ten minutes of the server's.
+    function nearNow(ms) {
+      return ms is int && ms > request.time.toMillis() - 600000 && ms < request.time.toMillis() + 600000;
+    }
+
+    // Each player owns their cloud save: exactly a profile blob and a meta blob. The display name lives
+    // inside the profile and is validated in the game. A write may change only those two fields, so
+    // documents from older builds that hold other fields still save.
+    match /users/{uid} {
+      allow read, delete: if isUser(uid);
+      allow create, update: if isUser(uid)
+                            && changedKeys().hasOnly(['profile', 'meta'])
+                            && incoming().profile is map
+                            && incoming().meta is map;
+    }
+
+    // Public leaderboards, one board per published mode and difficulty (the modes the LEADERBOARDS
+    // screen lists, times DIFFICULTY_IDS; the rules test fails when either list changes without this
+    // one). A player writes only their own row, and only two kinds of write:
+    //  - a new best: every score field, a higher score than the row holds, at least 10 s after the last;
+    //  - the replay link: only replayId, naming a replay this player owns.
+    function isBoard(board) {
+      return board in [
+        'campaign_easy', 'campaign_normal', 'campaign_hard', 'campaign_extreme', 'campaign_onehit',
+        'endless_easy', 'endless_normal', 'endless_hard', 'endless_extreme', 'endless_onehit',
+        'gauntlet_easy', 'gauntlet_normal', 'gauntlet_hard', 'gauntlet_extreme', 'gauntlet_onehit'
+      ];
+    }
+    function isScoreRow(row, uid) {
+      return stringIn(row.name, 1, 16) && row.name.matches('[A-Za-z0-9 _-]+')
+          && intIn(row.score, 1, 1000000000)
+          && intIn(row.wave, 0, 100000)
+          && intIn(row.time, 0, 10000000)
+          && row.uid == uid
+          && nearNow(row.ts);
+    }
+    function isNewBest(uid) {
+      return changedKeys().hasOnly(['name', 'score', 'wave', 'time', 'uid', 'ts'])
+          && isScoreRow(incoming(), uid)
+          && (resource == null || (incoming().score > resource.data.get('score', 0)
+                                   && incoming().ts >= resource.data.get('ts', 0) + 10000));
+    }
+    function isReplayLink(uid) {
+      return resource != null
+          && changedKeys().hasOnly(['replayId'])
+          && stringIn(incoming().replayId, 1, 128)
+          && get(/databases/$(database)/documents/replays/$(incoming().replayId)).data.ownerUid == uid;
+    }
     match /leaderboards/{board}/scores/{uid} {
       allow read: if true;
-      allow create, update: if request.auth != null && request.auth.uid == uid
-                            && request.resource.data.score is number;
-      allow delete: if request.auth != null && request.auth.uid == uid;
+      allow create: if isUser(uid) && isBoard(board)
+                    && incoming().keys().hasAll(['name', 'score', 'wave', 'time', 'uid', 'ts'])
+                    && isNewBest(uid);
+      allow update: if isUser(uid) && isBoard(board) && (isNewBest(uid) || isReplayLink(uid));
+      allow delete: if isUser(uid);
     }
-    // append-only balancing telemetry (developer reads in the console only)
+
+    // Append-only balancing statistics, anonymous by construction (no account id). The developer reads
+    // them in the console. Only the events the game sends, a clock reading and a bounded number of fields.
     match /telemetry/{doc} {
-      allow create: if request.auth != null;
+      allow create: if signedIn()
+                    && incoming().event in ['run_end']
+                    && nearNow(incoming().ts)
+                    && incoming().size() <= 32;
       allow read, update, delete: if false;
     }
-    // one replay ghost per board — legacy, superseded by /replays; the game only reads it, nobody writes
+
+    // One replay ghost per board: legacy, superseded by /replays. The game only reads it; nobody writes.
     match /ghosts/{board} {
       allow read: if true;
       allow write: if false;
     }
-    // published replays: a RunSummary doc + the recording chunked underneath.
-    // Anyone can watch; only the owner (the Replay Passport uid) can create/replace/delete.
+
+    // Published replays: a summary document, with the recording in up to 8 chunks of at most 500,000
+    // characters underneath. Anyone can watch; only the owner (the Replay Passport uid) writes. A
+    // leaderboard replay has the fixed id lb_<mode>_<difficulty>_<uid>, so only that player can hold it;
+    // any other replay id is r followed by base-36 characters.
+    function isReplayId(id) {
+      return id.matches('lb_[a-z]+_[a-z]+_' + request.auth.uid) || id.matches('r[0-9a-z]{1,32}');
+    }
+    // The fields publishReplay writes (src/platform/firebase-cloud.ts).
+    function isReplaySummary() {
+      return incoming().keys().hasOnly(['ownerUid', 'createdAt', 'chunkCount', 'mode', 'diff', 'wave', 'score',
+                                        'time', 'won', 'kills', 'peak', 'name', 'thumb', 'lb'])
+          && incoming().ownerUid == request.auth.uid
+          && intIn(incoming().chunkCount, 1, 8)
+          && stringIn(incoming().name, 1, 32)
+          && nearNow(incoming().createdAt);
+    }
     match /replays/{id} {
       allow read: if true;
-      allow create: if request.auth != null && request.resource.data.ownerUid == request.auth.uid;
-      allow update: if request.auth != null && resource.data.ownerUid == request.auth.uid
-                    && request.resource.data.ownerUid == request.auth.uid;
-      allow delete: if request.auth != null && request.auth.uid == resource.data.ownerUid;
+      allow create: if signedIn() && isReplayId(id) && isReplaySummary();
+      allow update: if signedIn() && resource.data.ownerUid == request.auth.uid && isReplaySummary();
+      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
       match /chunks/{n} {
         allow read: if true;
-        // only the parent replay's owner may write its chunks (the parent is written first)
-        allow create, update: if request.auth != null
-                              && get(/databases/$(database)/documents/replays/$(id)).data.ownerUid == request.auth.uid;
+        // Only the parent replay's owner writes its chunks (the parent is written first).
+        allow create, update: if signedIn()
+                              && n.matches('[0-7]')
+                              && get(/databases/$(database)/documents/replays/$(id)).data.ownerUid == request.auth.uid
+                              && int(n) < get(/databases/$(database)/documents/replays/$(id)).data.chunkCount
+                              && incoming().keys().hasOnly(['d'])
+                              && stringIn(incoming().d, 0, 500000);
         allow delete: if false;
       }
     }
