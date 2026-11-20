@@ -976,7 +976,7 @@
       },
       {
         "id": "roster-history-docs",
-        "pathPattern": "docs/TEARBENCH_C40_WEAPON_ROSTER_EVIDENCE_INDEX.md",
+        "pathPattern": "docs/TEARBENCH_WEAPON_ROSTER_EVIDENCE_INDEX.md",
         "termIds": [
           "spear",
           "ringblade"
