@@ -1,5 +1,5 @@
-import type { TearScenarioV1 } from "./contracts";
-import { validateTearContract } from "./validation";
+import type { TearScenarioV1 } from "../../tearbench/contracts";
+import { validateTearContract } from "../../tearbench/validation";
 
 function requireNaturalScenario(value: TearScenarioV1): TearScenarioV1 {
   if (value.backends !== undefined && !value.backends.includes("headless")) {
