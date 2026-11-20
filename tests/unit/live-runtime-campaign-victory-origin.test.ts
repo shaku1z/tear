@@ -299,7 +299,7 @@ describe("live runtime campaign victory State Setup origin", () => {
     const unit = fixture();
     const environment = createLiveTearRuntimeEnvironment(unit.context, "A");
 
-    const result = environment.forgeCampaignFinalWave();
+    const result = environment.buildCampaignFinalWave();
 
     expect(result.ok).toBe(true);
     expect(unit.replayed).toHaveLength(1);
@@ -343,15 +343,15 @@ describe("live runtime campaign victory State Setup origin", () => {
     expect(unit.active().components.get("tear.run.v1")).toMatchObject({ wave: 60, stage: 5 });
   });
 
-  it("keeps the forge out of Class B and propagates restoration failure before wave start", () => {
-    expect("forgeCampaignFinalWave" in createLiveTearRuntimeEnvironment(fixture().context, "B")).toBe(false);
+  it("keeps the setup out of Class B and propagates restoration failure before wave start", () => {
+    expect("buildCampaignFinalWave" in createLiveTearRuntimeEnvironment(fixture().context, "B")).toBe(false);
 
     const unit = fixture({ rejectFrontier: true, mutateDuringLoadStage: true });
     const originalPlayer = structuredClone(unit.active().components.get("tear.player.v1"));
     const originalBlade = structuredClone(unit.active().components.get("tear.blade.v1"));
     const originalRun = runWithoutProgressionRuntime(unit.active().components.get("tear.run.v1"));
     const originalConfiguration = structuredClone(unit.active().components.get("tear.configuration.v1"));
-    const result = createLiveTearRuntimeEnvironment(unit.context, "A").forgeCampaignFinalWave();
+    const result = createLiveTearRuntimeEnvironment(unit.context, "A").buildCampaignFinalWave();
 
     expect(result).toMatchObject({ ok: false, phase: "validate", rolledBack: true });
     expect(unit.calls).toEqual([
@@ -380,7 +380,7 @@ describe("live runtime campaign victory State Setup origin", () => {
     const originalConfiguration = structuredClone(unit.active().components.get("tear.configuration.v1"));
 
     expect(() =>
-      createLiveTearRuntimeEnvironment(unit.context, "A").forgeExitLaunch({
+      createLiveTearRuntimeEnvironment(unit.context, "A").buildExitLaunch({
         id: "source-finisher-mismatch",
         kind: "boss-finisher",
         boss: "source",

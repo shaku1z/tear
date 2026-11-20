@@ -22,6 +22,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { requiredCheckState } from "./governance/owner-safe-pr-merge.mjs";
 import { CANONICAL } from "./governance/setup-hooks.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -66,6 +67,11 @@ export function batchBranch(date = new Date()) {
  * Which pull requests go in, in which order. With numbers, those (in the order given) less any
  * `--without`; without numbers, every open, non-draft pull request into main from this repository,
  * in number order. Each choice that cannot be a member is reported with its reason.
+ *
+ * A member must be able to merge once the batch passes, and the merge helper needs its own required
+ * check to be SUCCESS (`requiredCheckState`). A check that was skipped, never reported or failed on
+ * the member's head cannot become SUCCESS without a push, so that member is left out here, the way a
+ * conflicting one is, instead of stopping `--merge` half way. A check still running stays in.
  */
 export function chooseMembers(open, { numbers = [], without = [] } = {}) {
   const byNumber = new Map(open.map((pr) => [pr.number, pr]));
@@ -84,11 +90,19 @@ export function chooseMembers(open, { numbers = [], without = [] } = {}) {
             ? `targets ${pr.baseRefName}, not main`
             : pr.isCrossRepository
               ? "from a fork"
-              : undefined;
+              : ownCheckRefusal(requiredCheckState(pr.statusCheckRollup));
     if (reason === undefined) chosen.push({ pr: number, head: pr.headRefOid, branch: pr.headRefName });
     else if (numbers.length > 0 || reason !== "a draft") refused.push({ pr: number, reason });
   }
   return { chosen, refused };
+}
+
+/** Why a member whose own required check is in `state` cannot merge, or undefined when it can. */
+function ownCheckRefusal(state) {
+  if (state === "skipped" || state === "missing")
+    return "its own checks did not run (skipped, likely a draft); push to start them";
+  if (state === "failed") return "its own required check failed; fix it and push";
+  return undefined;
 }
 
 /** Validate's step: keeps only members whose head is in the checked commit, and fails if none is. */
@@ -236,7 +250,7 @@ function create(numbers, without) {
       "--limit",
       "100",
       "--json",
-      "number,isDraft,headRefOid,headRefName,baseRefName,isCrossRepository",
+      "number,isDraft,headRefOid,headRefName,baseRefName,isCrossRepository,statusCheckRollup",
     ]),
   );
   const { chosen, refused } = chooseMembers(open, { numbers, without });
