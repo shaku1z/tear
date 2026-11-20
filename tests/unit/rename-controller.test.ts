@@ -9,8 +9,8 @@ class FakeInput {
   maxLength = MAX_PLAYER_NAME;
   readonly style: Record<string, string> = {};
   onkeydown: unknown = null;
-  focus(): void {}
-  blur(): void {}
+  readonly focus = (): void => undefined;
+  readonly blur = (): void => undefined;
 }
 
 function harness(options: Readonly<{ loggedIn?: boolean; setAt?: number; canRename?: boolean }> = {}) {

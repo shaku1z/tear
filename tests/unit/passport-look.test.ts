@@ -12,7 +12,7 @@ const FIXTURE = new URL("../fixtures/passport-default-draw-calls.json", import.m
 
 const round = (value: unknown): unknown => (typeof value === "number" ? Math.round(value * 1e4) / 1e4 : value);
 const show = (value: unknown): string =>
-  JSON.stringify(value, (_key, entry: unknown) => (typeof entry === "function" ? String(entry) : round(entry))) ?? "";
+  JSON.stringify(value, (_key, entry: unknown) => (typeof entry === "function" ? String(entry) : round(entry)));
 
 /**
  * A stand-in for any value the renderer reads from the UI: every property is another stand-in and it reads

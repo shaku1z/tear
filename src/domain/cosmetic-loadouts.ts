@@ -85,7 +85,9 @@ export function createLoadout(state: CosmeticState, now: number): CosmeticState 
   if (id === undefined) return null;
   const previous = ownValue(state.loadouts, id);
   const at = stampAfter(now, previous ? latestChange(previous) : -1, previous?.deletedAt ?? -1, state.active.at);
-  const copied = Object.entries(activeLoadout(state)?.slots ?? {}).map(([slot, entry]) => [slot, { id: entry.id, at }]);
+  const copied = Object.entries(activeLoadout(state)?.slots ?? {}).map(
+    ([slot, entry]): [string, SavedLoadout["slots"][string]] => [slot, { id: entry.id, at }],
+  );
   const loadout: SavedLoadout = {
     name: `${LOADOUT_NAME_PREFIX} ${String(index + 1)}`,
     nameAt: at,
