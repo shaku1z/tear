@@ -145,6 +145,14 @@ describe("a wave played headless", () => {
     expect(playWave(short)).toEqual(playWave(short));
     expect(playWave(wave({ maxTicks: 900, seed: "2" })).spawned).not.toEqual(playWave(short).spawned);
   }, 60_000);
+
+  it("plays a wave of the Grounds past its first, where the stage shows no story chapter to skip", () => {
+    const result = playWave(wave({ stage: "grounds", wave: 2, maxTicks: 600 }));
+    expect(result.end).not.toBe("broken");
+    expect(result.spawned.length).toBeGreaterThan(0);
+    // The drafts before the wave are recorded for the coverage list: more offered than taken.
+    expect(result.offered.length).toBeGreaterThan(result.upgrades);
+  }, 60_000);
 });
 
 describe("the wave report", () => {
