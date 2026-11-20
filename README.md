@@ -107,7 +107,7 @@ A property that finds a bug lands with the fix, in its own pull request that nam
 | `src/replay/`, `src/ghost/` | Run recording and replay. `ghost/` also holds the replay vault and several unfinished replay-based features. |
 | `src/agents/` | The scripted test player: a bot that plays the real game in test builds and headless runs. |
 | `src/playtest/` | The playtest tool: plays boss fights headless with scripted players and measures them. Run it with `pnpm playtest bosses`, or `pnpm playtest sweep` for every weapon on Easy and Normal. |
-| `src/tearbench/` | TearBench, the game's verification system (scenarios, headless runs, CI evidence selection). |
+| `src/tearbench/` | TearBench, the scenario runner: named situations with their proof, and the selection of proofs a change needs. [docs/TEARBENCH.md](docs/TEARBENCH.md) says what a scenario is and how to run or add one. |
 | `src/config/`, `src/game-reference/` | Tuning values, and the exported game data the wiki consumes. |
 | `tests/` | Vitest tests in `tests/unit/` and `tests/contract/`; browser tests are `tests/*.js`; Node tests for scripts are `tests/*.mjs`. |
 | `scripts/` | Build, gate and release scripts called from `package.json` and CI. |
