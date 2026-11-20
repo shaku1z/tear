@@ -1,6 +1,4 @@
 import { isObject } from "../domain/records";
-import { readGhostBossMemory } from "./boss-memory-origin";
-import { bossMemoryReplay, verifyBossMemory } from "./boss-memory";
 import { readSeedRaceDecisions } from "./seed-race-decisions";
 import { ghostRecordingFirstTick, requireGhostForkPermit, type GhostForkPermit } from "./fork-origin";
 import type { ProductionGhostReplayCompositionOptions } from "../tearbench/production-replay-composition";
@@ -50,55 +48,6 @@ export function createGhostProductionReplaySession(
   presentation: Pick<ProductionGhostReplayCompositionOptions, "presentation" | "renderView"> = {},
   forkPermit?: GhostForkPermit,
 ): GhostVerifiedProductionReplaySession {
-  if (readGhostBossMemory(capsule.manifest.provenance)) {
-    const checked = verifyBossMemory(capsule);
-    if (checked.status !== "verified")
-      throw new TypeError(`Boss Memory continuation unavailable: ${checked.mappingIssues.join("; ")}`);
-    const { d, mapped, composition } = bossMemoryReplay(capsule, presentation);
-    const ghost = createGhostV3({
-      ...mapped.ghost,
-      snapshots: mapped.ghost.snapshots.filter((s) => s.tick === d.origin.tick),
-    });
-    const world = new GhostProductionReplayWorld(ghost, composition);
-    const requireTick = (tick: number) => {
-      if (!Number.isSafeInteger(tick) || tick < d.origin.tick || tick > d.endpoint.tick)
-        throw new RangeError("Boss Memory seek outside encounter");
-    };
-    const seek = (tick: number) => {
-      requireTick(tick);
-      return world.advanceTo(tick);
-    };
-    return Object.freeze({
-      sourceId: capsule.manifest.id,
-      sourceCapsuleRootIntegrity: capsule.manifest.rootIntegrity,
-      sourceRootHash: mapped.ghost.rootHash,
-      firstTick: d.origin.tick,
-      lastTick: d.endpoint.tick,
-      verifiedReceiptTicks: Object.freeze(checked.comparisons.filter((c) => c.equal).map((c) => c.tick)),
-      seek,
-      ...(presentation.renderView
-        ? {
-            renderFrame(tick: number) {
-              const result = seek(tick);
-              return {
-                ...world.renderView(),
-                sourceId: capsule.manifest.id,
-                sourceRootHash: mapped.ghost.rootHash,
-                sourceCapsuleRootIntegrity: capsule.manifest.rootIntegrity,
-                semanticHash: result.semanticHash,
-              };
-            },
-          }
-        : {}),
-      forkPractice(tick: number, mode: GhostPracticeMode) {
-        if (tick !== d.origin.tick) throw new RangeError("Boss Memory practice starts only at encounter entry");
-        const anchor = ghost.snapshots[0];
-        if (!anchor) throw new Error("Boss Memory entry missing");
-        seek(tick);
-        return createPracticeFromHere(ghost, anchor, mode);
-      },
-    });
-  }
   if (!Number.isSafeInteger(capsule.maxTick) || capsule.maxTick < 0)
     throw new RangeError("production replay source range is invalid");
   const forkOrigin = requireGhostForkPermit(capsule, forkPermit),

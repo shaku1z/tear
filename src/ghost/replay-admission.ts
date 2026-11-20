@@ -1,6 +1,4 @@
 import { asRecord } from "../domain/records";
-import { readGhostBossMemory } from "./boss-memory-origin";
-import { assertBossMemory } from "./boss-memory";
 import { readSeedRaceRun } from "./seed-race-contract";
 import { assertGhostForkAnchor, readGhostForkOrigin } from "./fork-origin";
 import { ghostRootIntegrity, type TearGhostManifest } from "./capsule-vault";
@@ -340,10 +338,6 @@ const openingPermits = new WeakMap<
 
 /** Requires complete, reader-verified capsule linkage before allowing the exceptional opening UI. */
 export function issueGhostRecordedOpeningPermit(capsule: GhostReadCapsule): GhostRecordedOpeningPermit | undefined {
-  if (readGhostBossMemory(capsule.manifest.provenance)) {
-    assertBossMemory(capsule);
-    return undefined;
-  }
   if (readGhostForkOrigin(capsule.manifest.provenance) !== undefined) return undefined;
   const mapping = mapGhostCapsuleToReplayEnvelope(capsule);
   if (mapping.issues.length > 0)
@@ -646,14 +640,6 @@ export function assessGhostReplayBootstrap(
   capsule: GhostReadCapsule,
   context: GhostReplayRunContextV1,
 ): string | undefined {
-  try {
-    if (readGhostBossMemory(capsule.manifest.provenance)) {
-      assertBossMemory(capsule);
-      return undefined;
-    }
-  } catch (error) {
-    return error instanceof Error ? error.message : "Invalid Boss Memory";
-  }
   try {
     const origin = readGhostForkOrigin(capsule.manifest.provenance);
     if (origin !== undefined) {

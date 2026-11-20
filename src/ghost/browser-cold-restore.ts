@@ -1,8 +1,4 @@
-import {
-  prepareCompleteGhostPairedArchive,
-  prepareGhostPortableArchive,
-  type GhostPortableArchiveBinding,
-} from "./capsule-paired-archive";
+import { prepareGhostPortableArchive, type GhostPortableArchiveBinding } from "./capsule-paired-archive";
 import { canonicalStringify } from "../domain/hash";
 import { prepareCompleteGhostCapsuleArchive } from "./capsule-archive";
 import { GhostColdRestore, GhostColdRestoreError } from "./cold-restore";
@@ -20,10 +16,7 @@ export interface BrowserGhostColdRestorePort {
   readonly reselect: (id: string, bytes: Uint8Array) => Promise<GhostArchiveSelection>;
   readonly restore: (job: GhostColdRestoreJob, bytes: Uint8Array) => Promise<void>;
   readonly cancel: (job: GhostColdRestoreJob) => Promise<GhostColdRestoreJob>;
-  readonly download: (
-    id: string,
-    paired?: boolean,
-  ) => Promise<Readonly<{ bytes: Uint8Array; binding: GhostPortableArchiveBinding }>>;
+  readonly download: (id: string) => Promise<Readonly<{ bytes: Uint8Array; binding: GhostPortableArchiveBinding }>>;
 }
 
 /** Explicit local operations over the production backend; no maintenance or automatic work. */
@@ -110,8 +103,7 @@ export function createGhostColdRestoreBrowserPort(vault: GhostLocalVault): Brows
         throw new GhostColdRestoreError("conflict", "Restore cancellation revision changed.");
       return service.cancel(current.id, current.revision);
     },
-    download: (id, paired) =>
-      paired ? prepareCompleteGhostPairedArchive(vault, id) : prepareCompleteGhostCapsuleArchive(vault, id),
+    download: (id) => prepareCompleteGhostCapsuleArchive(vault, id),
   } satisfies BrowserGhostColdRestorePort);
 }
 
@@ -131,6 +123,6 @@ export function createBrowserGhostColdRestore(factory: IDBFactory | undefined): 
     reselect: async (id, bytes) => (await open()).reselect(id, bytes),
     restore: async (job, bytes) => (await open()).restore(job, bytes),
     cancel: async (job) => (await open()).cancel(job),
-    download: async (id, paired) => (await open()).download(id, paired),
+    download: async (id) => (await open()).download(id),
   } satisfies BrowserGhostColdRestorePort);
 }

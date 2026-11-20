@@ -1,17 +1,15 @@
 import { describe, expect, it } from "vitest";
 
+import { GhostCapsuleReader } from "../../src/ghost/capsule-reader";
+import { GhostLocalVault, createMemoryGhostVaultBackend } from "../../src/ghost/capsule-vault";
+import { GhostStreamingRecorder } from "../../src/ghost/streaming-recorder";
+import { createLiveGhostBootstrapEvent, ghostLiveBootstrapEventId } from "../../src/ghost/live-causal-events";
 import {
-  GhostCapsuleReader,
-  GhostLocalVault,
-  GhostStreamingRecorder,
-  createLiveGhostBootstrapEvent,
-  createMemoryGhostVaultBackend,
-  ghostLiveBootstrapEventId,
   mapGhostCapsuleToReplayEnvelope,
   preflightGhostRecordedCanonicalSnapshot,
-  verifyGhostCapsuleProductionReplay,
-  createGhostProductionReplaySession,
-} from "../../src/ghost";
+} from "../../src/ghost/capsule-replay-envelope";
+import { verifyGhostCapsuleProductionReplay } from "../../src/ghost/production-replay-verification";
+import { createGhostProductionReplaySession } from "../../src/ghost/production-replay-session";
 import { stableVerificationHash } from "../../src/domain/hash";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
 import {

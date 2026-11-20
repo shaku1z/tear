@@ -177,7 +177,7 @@ describe("light commands", () => {
     [["pnpm", "exec", "vitest", "run"]],
     [["pnpm", "exec", "vitest", "run", "tests/unit/a.test.ts", "tests/unit/b.test.ts"]],
     [["pnpm", "exec", "vitest", "run", "tests/unit"]],
-    [["pnpm", "test:unit:without-preservation-corpus"]],
+    [["pnpm", "test:unit:serial"]],
     [["pnpm", "check:functional"]],
     [["node", "scripts/run-checks.mjs", "static"]],
     [["node", "tests/browser-playground-journeys.js"]],
