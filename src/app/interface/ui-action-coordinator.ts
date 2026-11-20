@@ -10,6 +10,8 @@ import { anyKeyIn, rangeKeyIn } from "../../domain/keyboard-bindings";
 export interface UiActionButton extends FocusableRect {
   readonly label?: string;
   readonly confirm?: boolean;
+  /** The control a screen opens on, unless the player is returning to it (see screenEntryFocus). */
+  readonly entryFocus?: boolean;
 }
 
 export interface UiPoint {

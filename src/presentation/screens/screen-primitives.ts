@@ -148,7 +148,7 @@ export function overlayHeader(context: ScreenRenderContext, header: OverlayHeade
 /** A centred row of equal buttons in the overlay footer (or at `y`). */
 export function actionRow(
   context: ScreenRenderContext,
-  items: readonly Readonly<{ label: string; action: ScreenAction; enabled?: boolean }>[],
+  items: readonly Readonly<{ label: string; action: ScreenAction; enabled?: boolean; entryFocus?: boolean }>[],
   y: number,
   maxWidth: number,
 ): void {
@@ -165,6 +165,7 @@ export function actionRow(
       label: item.label,
       action: item.action,
       ...(item.enabled === undefined ? {} : { enabled: item.enabled }),
+      ...(item.entryFocus === undefined ? {} : { entryFocus: item.entryFocus }),
     });
   });
 }
@@ -251,7 +252,8 @@ export function pageFooter(
   return layout;
 }
 
-export function backControl(context: ScreenRenderContext, to: ScreenAction = { type: "navigate", to: "menu" }): void {
+/** The page's BACK control. By default it returns to the screen the page was opened from. */
+export function backControl(context: ScreenRenderContext, to: ScreenAction = { type: "navigate.back" }): void {
   const metric = context.ui.t.metric,
     layout = pageLayout(context);
   context.enqueue({

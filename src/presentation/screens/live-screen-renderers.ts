@@ -88,6 +88,7 @@ function toButton(control: ScreenControl, dispatch: (action: ScreenAction) => vo
     ...(control.pips === undefined ? {} : { pips: control.pips }),
     ...(control.accent === undefined ? {} : { accent: control.accent }),
     ...(control.confirm === undefined ? {} : { confirm: control.confirm }),
+    ...(control.entryFocus === undefined ? {} : { entryFocus: control.entryFocus }),
     ...(control.hiddenBox === undefined ? {} : { _hideBox: control.hiddenBox }),
     ...(control.size === undefined ? {} : { size: control.size }),
     semanticAction: control.action,

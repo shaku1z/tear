@@ -198,7 +198,7 @@ export function buildMusicScreenView(source: MusicScreenSource): MusicScreenView
         ? "radio"
         : "home";
   const railTab = openedId !== null ? "" : page === "home" ? "home" : requested;
-  const back = openedId !== null ? musicTab(source.openedFrom ?? "home") : ({ type: "navigate", to: "menu" } as const);
+  const back = openedId !== null ? musicTab(source.openedFrom ?? "home") : ({ type: "navigate.back" } as const);
   const seconds = playing?.seconds ?? null;
   const since = nowPlaying.since ?? 0;
   const progress =
