@@ -51,6 +51,127 @@ plus reading the screens. Numbers are non-whitespace characters, as the module s
 
 The same run is therefore recorded twice, kept in two stores, and listed in three tabs.
 
+## What the owner saw (defects the new design must fix)
+
+The owner, 2026-11-19, in their words. Both are in Ghost 2, which is what Profile > REPLAYS, the
+feed and leaderboard replays show today. The causes below were found in the code on `92eddb5c`.
+
+### Defect 1: the replay shows the stage the run ended on, not the stage at that moment
+
+> "it doesn't show the actual stage in the replay, it only show the last stage before the replay
+> ended. for example if i did adventure and got to the crimson stage, the first second of the replay
+> would still show crimson though it would be the grounds."
+
+**Cause (frame data and playback):**
+
+1. **The opening stage is never recorded.** `LiveRunStartController.start`
+   (`gameplay/run/live-run-start-controller.ts`) loads the first stage in `finishWorldReset`
+   (`app/run/run-start-host.ts:228`, `loadStage(0)`), and boss modes load the boss biome in
+   `configureMode` (`run-start-host.ts:475`). Each load emits the stage event
+   (`app/world/stage-controller.ts:79`, through `recordReplayStage` in `app/campaign/campaign-host.ts`).
+   Both loads happen before `startRecording` (`live-run-start-controller.ts:75`). At that point
+   Ghost 2 has no recording, so `this.rec?.stages.push` (`replay/legacy-compat.ts:243`) drops the event.
+2. **Playback falls back to the end stage.** `LegacyGhostEngine.stageAt` (`legacy-compat.ts:606`)
+   starts from `playback.d.stage`, the run summary's stage at the run's end
+   (`gameplay/run/outcome-planner.ts:141`). It shows that stage until the first stage change it has
+   a record of, so the first stage of an Adventure run is drawn as the stage the run ended on.
+3. **Long runs lose earlier stages.** When a recording passes 9,000 samples (15 minutes at 10 Hz),
+   `#trim` (`legacy-compat.ts:330`) drops the first quarter. It filters out the stage events before
+   the cut and keeps no "stage at the cut" entry, so the fallback in cause 2 applies again.
+
+**Fix in the new design:** the record has no stage track. The stage at any tick is the stage of the
+re-simulated world at that tick. Watch reads it from the world, never from the summary or the end
+state.
+
+**Permanent check (fails on today's code):** `tests/unit/replay-shows-the-moment.test.ts`.
+
+- It plays an Adventure run headless across at least two stage changes (and one Boss mode run,
+  whose first stage is a boss biome).
+- For ticks before, at and after each change, it asserts that the replay's stage equals the live
+  run's stage at that tick.
+- It runs one contract through two drivers: one for today's Ghost 2 playback and one for `watch`.
+- The Ghost 2 driver fails today; the PR that adds the check pastes that failure. The driver is
+  deleted with Ghost 2 in PR 8.
+- The browser journey adds a check on the built game: open an Adventure replay, seek to 0:01, and
+  read the replay bar's stage name.
+
+### Defect 2: the replay draws a line, not the weapon, and throws are wrong
+
+> "it doesn't show the actual weapon, just a line, throwing and whatnot is wonky in reply too, not
+> truly supported. Overall, the replay could use a lot more"
+
+**Cause (frame data and renderer):**
+
+1. **Too little is recorded.** Ghost 2 records, every 0.1 s, only the player's position, facing and
+   the blade tip's position (`legacy-compat.ts:309-314`). It keeps no weapon per frame (only a
+   loadout list), no blade state (held, swinging, thrown, recalling, tethered, stuck), no swing
+   angle and no abilities.
+2. **A separate drawer.** `presentation/replay-world-frame.ts:104-124` draws the player as a 26 by
+   48 translucent rectangle and the weapon as one glowing line from the chest to the sampled tip. It
+   never calls the game's player, blade or weapon renderers.
+3. **Straight-line in-betweens.** Between samples it moves in a straight line
+   (`LegacyGhostEngine.pose`), so a thrown blade's arc, a recall and a tether pull show as a straight
+   line that jumps every 0.1 s.
+4. **Enemies and bosses are stand-ins.** They are puppets at sampled positions
+   (`replay-puppet-factory.ts`), with an unknown boss drawn as the Warden. There are no attacks,
+   tells, projectiles, stage objects, HUD or cinematics.
+
+The V3 Theater is closer. It re-simulates the run and draws through the live `world-frame.ts` with
+the real `player.draw` and `blade.draw`. But it builds the frame input in its own 321-line copy
+(`app/replay/browser-ghost-replay-presentation.ts`), beside the live builder
+(`app/world/world-presentation-adapters.ts`), and that copy draws no HUD and no enemy status
+(`drawStatus: () => undefined`).
+
+**Fix in the new design:**
+
+- Watch re-simulates the run, so the blade's real state (throw, recall, tether, stuck) and every
+  ability are in the world at each tick.
+- It draws that world through the live drawing code (the rule below).
+
+**Permanent check (fails on today's code):** `tests/browser-replay-matches-live.js`, run on
+`pnpm build:test:standalone`.
+
+- It plays one short scripted segment per weapon that throws, recalls and tethers the blade and
+  uses the weapon's ability, and captures the canvas at fixed ticks.
+- It then watches the replay of that run and captures the same ticks.
+- Each pair must match within a small pixel tolerance. The replay bar's area is excluded, and
+  presentation randomness is seeded the same way on both sides.
+- It runs against the REPLAYS tab's player (Ghost 2 today), where it fails on the first weapon, and
+  against `watch` from PR 7.
+
+## Parity with live play
+
+**One rule: a replay draws through the live drawing code, never a separate copy.**
+
+- Watch gives the detached world to the same frame builder the live game uses
+  (`createLiveWorldPresentationAdapters`, `app/world/world-presentation-adapters.ts`), HUD included.
+- Anything live play draws, a replay draws.
+- An architecture rule enforces it: modules under `src/replay/`, `src/app/replay/` and the replay
+  presentation modules may not import the world, player, blade, enemy, boss, environment or HUD
+  renderers directly, only that one builder.
+- `tests/browser-replay-matches-live.js` checks the result.
+
+| What live play shows | Ghost 2 today (REPLAYS, feed, leaderboards) | V3 Theater today | After the overhaul |
+| --- | --- | --- | --- |
+| The stage and biome at each moment | Wrong at the start and after a trim (defect 1) | From the world | From the world (PR 7, PR 8) |
+| Stage changes and transitions | A swap at a recorded time | Yes | Yes |
+| Stage objects (Bloom Wells, Root Links, Grafts, Aurora Tracks) | None | Yes (environment layer) | Yes |
+| The player figure | A rectangle | Real | Real, with the recorded Shards cosmetics (PR 10) |
+| The weapon and blade: swing, throw, recall, tether, stuck | A line to a sampled tip (defect 2) | Real | Real (PR 7) |
+| Abilities | A few recorded effect events | Real, from the simulation | Real |
+| Enemies and their attacks | Puppets at sampled positions, no attacks | Real | Real, with status |
+| Bosses: moves, tells, phases | A puppet (unknown bosses drawn as the Warden) | Real | Real |
+| Projectiles | None | Yes | Yes |
+| Effects and particles | A few recorded events | Real | Real |
+| HUD: health, multiplier, wave, score | None | None | The live HUD under the replay bar (PR 7) |
+| Cinematics, boss intros, story chapters, the finale | None | Partly (the finale through the companion) | Yes, as actions in the record (failure mode 2) |
+| Camera | Fixed framing | Reconstructed player-follow | The live camera |
+| Music | None | None (the detached world has no music director) | The recorded pick for the watched stage; in a race the racer's own pick (PR 7) |
+| Sound effects | None | None | Not in this plan: a named follow-up after PR 7 |
+
+Everything in the table reaches parity in this plan except sound effects, which are listed as the
+one gap.
+
 ## Goal
 
 One plain replay system that does five things well:
@@ -140,7 +261,7 @@ Decisions behind the shape:
 | `src/gameplay/snapshot/` | gameplay | World state to data and back (the State Setup codecs and hydrators, renamed "snapshots" as the playtest plan says); used by the seek cache, practice from here, State Setup and the playtest tool's phase starts |
 | `src/app/world/detached/` | app | The one detached production world (from `production-replay-composition.ts`, `production-world-factory.ts` and the runtimes they build); implements watch's world port; the playtest headless environment wraps it |
 | `src/app/replay/` | app | Composition only: `live-recording.ts`, `replay-screen.ts`, `replay-library.ts`, `race-composition.ts`, `practice-launch.ts`, one worker entry, and clip export (engineering-only, see below) |
-| `src/presentation/replay-frame.ts`, `screens/replay.ts` | presentation | Draw a watch frame; the replay bar and the one Replays list |
+| `src/presentation/replay-frame.ts`, `screens/replay.ts` | presentation | Hand the watched world to the live frame builder (it draws nothing itself); the replay bar and the one Replays list |
 
 ### Watch and the seek cache
 
@@ -453,10 +574,16 @@ before this PR are refused as "recorded before this update".
 Play, pause, speed, seek, chapter jump and practice over the detached world, with the seek cache.
 Clip export rewired to `watch.frameAt` and still engineering-only.
 
+- Frames are drawn by the live frame builder, HUD included, per the parity rule.
+- The Theater's copy of the frame input (`browser-ghost-replay-presentation.ts`) is deleted.
+- Adds `tests/browser-replay-matches-live.js` and the `watch` driver of
+  `replay-shows-the-moment.test.ts`. Each is run on main first and the failure pasted into the PR.
+- Adds the architecture rule against direct renderer imports.
+
 - **General case:** One playback for own, imported, published and leaderboard replays, and later clips.
 - **One owner:** `src/replay/watch.ts`.
 - **The next one:** A new control is one transport command; a new draw layer is one entry in `replay-frame.ts`.
-- **Cause:** Session, replay world, Theater transport, envelope mapping and three frame drawers each owned part of playback.
+- **Cause:** Session, replay world, Theater transport, envelope mapping and three frame drawers each owned part of playback, and two of the drawers copied or replaced the live drawing code (defects 1 and 2).
 - **Measured:** Open to first frame, seek time near and far, replay frame cost (p95), desktop.
 - **Removed:** About 12 modules (session, replay world, transport, puppet factory, frame drawers, theater adapter, cut list).
 
@@ -464,7 +591,9 @@ Clip export rewired to `watch.frameAt` and still engineering-only.
 
 Profile REPLAYS, VAULT and CAREER become one REPLAYS tab (WATCH, PIN, SHARE, DOWNLOAD, DELETE,
 IMPORT A REPLAY FILE). Publishing, the feed and leaderboard links use `share.ts`. Ghost 2 recording
-and playback go, with the one-time notice and the old-store cleanup.
+and playback go, with the one-time notice and the old-store cleanup. This is the PR that fixes the
+owner's two defects for players: REPLAYS and leaderboard replays now open in `watch`. The Ghost 2
+driver of `replay-shows-the-moment.test.ts` goes with Ghost 2.
 
 - **General case:** One list and one share path for every replay.
 - **One owner:** `app/library/replay-library-controller.ts` for the list, `src/replay/share.ts` for sharing.
@@ -503,8 +632,8 @@ position file and moves this card to `plans/completed/`.
 | 3, 4 | green (pure moves) | `production-replay-composition`, `ghost-production-replay-world`, `replay-codecs.property` tests | same | architecture and code-budget baselines lower |
 | 5 | green | **new** `tests/unit/replay-round-trip.test.ts` | same, opening a new record | record bytes, live frame cost |
 | 6 | green | round-trip through the memory and IndexedDB storage | **new** `tests/browser-replay-journey.js` (record a short run, list, watch, download, import) | store timings |
-| 7 | green | round-trip plus a seek test at near and far ticks | journey adds pause, speed, seek, chapter, practice | open and seek times, frame p95 |
-| 8 | green | round-trip plus share encode and decode, old-format refusals | journey adds publish to the local provider, feed and a leaderboard link; the one-time notice | localStorage freed, precache bytes |
+| 7 | green | round-trip plus a seek test at near and far ticks; `replay-shows-the-moment` (watch driver) | journey adds pause, speed, seek, chapter, practice; **new** `browser-replay-matches-live.js` (its failure on main pasted) | open and seek times, frame p95 |
+| 8 | green | round-trip plus share encode and decode, old-format refusals | journey adds publish to the local provider, feed and a leaderboard link, the one-time notice, and the stage name at 0:01 of an Adventure replay; `browser-replay-matches-live.js` on the REPLAYS tab and a leaderboard replay | localStorage freed, precache bytes |
 | 9 | green | round-trip of a raced run | journey adds a race against a saved replay | live frame p95 with a ghost |
 | 10 | green | round-trip with `look` changed: hashes equal | journey shows a cosmetic in a watched replay | `pnpm check:docs`, terminology |
 
@@ -600,6 +729,10 @@ the modules it touches, and CI's `pnpm check:functional`. Heavy commands go thro
    on every build.
 8. **A second replay format creeps back.** Caught by the guard test that only `record.ts` declares a
    replay format id or version.
+9. **The replay shows a stage, weapon or effect the run did not have at that moment** (the owner's
+   defects). Caught by `replay-shows-the-moment.test.ts` and `browser-replay-matches-live.js`.
+10. **A replay drawer drifts from the live one.** Caught by the architecture rule that replay modules
+    import only the live frame builder, and by the match-live journey.
 
 ## Done when
 
@@ -607,6 +740,10 @@ the modules it touches, and CI's `pnpm check:functional`. Heavy commands go thro
 - [ ] `git grep -n "tear_vault_\|tear-ghost-v3"` finds only the one-time cleanup in `store.ts` and its test.
 - [ ] `pnpm exec vitest run tests/unit/replay-round-trip.test.ts` passes and fails on a planted one-action change.
 - [ ] `pnpm test:determinism` passes on the final commit.
+- [ ] `pnpm exec vitest run tests/unit/replay-shows-the-moment.test.ts` passes, and its recorded run on main failed (owner defect 1).
+- [ ] `node tests/browser-replay-matches-live.js` passes for all five weapons, with a throw, a recall, a tether and an ability each, from the REPLAYS tab and a leaderboard replay, and its recorded run on main failed (owner defect 2).
+- [ ] `pnpm check:architecture` passes the rule that no module under `src/replay/`, `src/app/replay/` or the replay presentation modules imports a renderer other than the live frame builder.
+- [ ] The owner has watched a replay of an Adventure run that changed stage, and said the stage, the weapon and the throws are right.
 - [ ] `node tests/browser-replay-journey.js` passes on `pnpm build:test:standalone`: record, list, watch, pause, speed, seek, practice, download, import, publish to the local provider, leaderboard link, race.
 - [ ] The architecture baseline has no `ghost` edges and no replay import cycle; the code budget and architecture baselines are lower than on `92eddb5c`.
 - [ ] The replay system outside `app/world/detached/` and `gameplay/snapshot/` is under 200,000 characters (about 677,000 today), counted the code budget's way.
@@ -633,3 +770,4 @@ the modules it touches, and CI's `pnpm check:functional`. Heavy commands go thro
 ## Log
 
 - 2026-11-19 Plan written from main `92eddb5c`; draft PR opened for the lead's review. No code until the lead says go.
+- 2026-11-19 Added the owner's two defects (the stage at each moment; the real weapon and throws) with their causes, the parity table and the live-drawing rule.
