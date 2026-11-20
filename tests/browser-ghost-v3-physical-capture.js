@@ -33,6 +33,16 @@ withJourney({ name: "C27 Ghost V3 physical live capture", tutorialSkipped: true 
     physical.physicalInput({ type: "pointer", x: 260, y: 360, button: 0, phase: "released" });
   });
   await waitScreen("setup");
+  // The setup preselects a mode from the profile; this capture records Endless, so it picks
+  // ENDLESS itself, physically, rather than relying on the preselected mode.
+  await page.evaluate(() => {
+    const physical = window.__TEAR_RUNTIME_ENVIRONMENT__.create("C");
+    physical.physicalInput({ type: "pointer", x: 430, y: 255, button: 0, phase: "pressed" });
+    physical.physicalInput({ type: "pointer", x: 430, y: 255, button: 0, phase: "released" });
+  });
+  await page.waitForFunction(() => window.__PANTHEON_TEST.state().setup.mode === "endless", undefined, {
+    timeout: STATE_WAIT_MS,
+  });
   await page.evaluate(() => {
     const physical = window.__TEAR_RUNTIME_ENVIRONMENT__.create("C");
     physical.physicalInput({ type: "pointer", x: 800, y: 755, button: 0, phase: "pressed" });

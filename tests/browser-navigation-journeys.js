@@ -131,7 +131,9 @@ withJourney(
       await page.keyboard.press("p");
       await waitScreen("paused");
       await clickAndWait(200, mode === "tutorial" ? 431 : 331, "confirmquit");
-      await clickAndWait(644, 175, "menu");
+      // The confirm's actions are one centred row; the tutorial's adds SKIP TUTORIAL after QUIT,
+      // so its row of three (300 wide, 12 apart) centres QUIT at 488 instead of 644.
+      await clickAndWait(mode === "tutorial" ? 488 : 644, 175, "menu");
     }
 
     await boot();

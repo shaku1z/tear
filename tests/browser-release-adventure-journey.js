@@ -296,6 +296,8 @@ async function runTouchLeg(browser, origin, viewport, shot) {
     await tapLabel(/^PLAY$/u, "PLAY");
     await waitForText(/^LESSON 1 OF \d+$/u, STATE_WAIT_MS, "PLAY starts the tutorial");
     await tapLabel(/^PAUSE$/u, "tutorial: PAUSE");
+    await tapLabel(/^MAIN MENU$/u, "tutorial: MAIN MENU");
+    await page.waitForTimeout(settleFor(700));
     await tapLabel(/^SKIP TUTORIAL$/u, "tutorial: SKIP TUTORIAL");
     await page.waitForTimeout(settleFor(900));
     await tapLabel(/^ADVENTURE$/u, "Adventure mode");
@@ -499,10 +501,13 @@ async function main() {
     await page.waitForTimeout(settleFor(800));
     await clickLabel(/^PLAY$/u, `${leg}: PLAY`);
     if (tutorialFirst) {
-      // A fresh profile is tutorial-first: PLAY starts the tutorial, and skipping it on purpose
-      // from its pause menu opens the run setup. Afterwards PLAY opens the setup directly.
+      // A fresh profile is tutorial-first: PLAY starts the tutorial. Skipping it on purpose, on
+      // the quit confirm that the pause's MAIN MENU opens, opens the run setup. Afterwards PLAY
+      // opens the setup directly.
       await waitForText(/^LESSON 1 OF \d+$/u, STATE_WAIT_MS, `${leg}: PLAY starts the tutorial`);
       await press("KeyP", 80);
+      await clickLabel(/^MAIN MENU$/u, `${leg}: MAIN MENU`);
+      await page.waitForTimeout(settleFor(700));
       await clickLabel(/^SKIP TUTORIAL$/u, `${leg}: SKIP TUTORIAL`);
     }
     await page.waitForTimeout(settleFor(900));

@@ -56,6 +56,12 @@ export interface ScreenActionBindingPorts {
 }
 
 export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) {
+  /** Ends the run from the quit confirm (the menu is the one screen that ends a run), then opens the run setup. */
+  const quitToSetup = (): void => {
+    ports.quitRun();
+    ports.setSetupSelection("mode", "campaign");
+    ports.setScreen("setup");
+  };
   return createScreenActionRouter({
     navigate: (action) => {
       ports.setScreen(action.to);
@@ -120,11 +126,8 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
       ports.startRun(run.mode, run.diff);
     },
     "run.quit": (action) => {
-      ports.quitRun();
-      if (action.next === "setup") {
-        ports.setSetupSelection("mode", "campaign");
-        ports.setScreen("setup");
-      }
+      if (action.next === "setup") quitToSetup();
+      else ports.quitRun();
     },
     "tutorial.continue": () => {
       ports.setSetupSelection("mode", "tutorial");
@@ -132,9 +135,7 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     },
     "tutorial.skip": () => {
       ports.skipTutorial();
-      ports.quitRun();
-      ports.setSetupSelection("mode", "campaign");
-      ports.setScreen("setup");
+      quitToSetup();
     },
     "continue.revive": () => {
       ports.revive();

@@ -98,8 +98,8 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
       session.annex !== undefined || session.enemyPractice !== undefined || session.bossPractice !== undefined;
     const exercise = current?.canPractice === true || drill;
     // The finished course leads into a real run. A course in progress can skip a lesson (it
-    // stays unfinished and is listed for replay, never earned), or skip the whole tutorial on
-    // purpose, which ends tutorial-first PLAY.
+    // stays unfinished and is listed for replay, never earned); skipping the whole tutorial is
+    // chosen on the quit confirm that MAIN MENU opens, as leaving a run always is.
     const menu: { label: string; action: ScreenAction }[] = [
       ...(complete && !lab ? [{ label: "START A RUN", action: { type: "run.quit", next: "setup" } as const }] : []),
       {
@@ -123,7 +123,6 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
             },
           ]
         : []),
-      ...(!complete && !lab ? [{ label: "SKIP TUTORIAL", action: { type: "tutorial.skip" } as const }] : []),
       { label: "SETTINGS", action: { type: "navigate", to: "settings" } },
       { label: "MAIN MENU", action: { type: "navigate", to: "confirmquit" } },
     ];
@@ -369,7 +368,7 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
       title: view.tutorial === "course" ? "QUIT TUTORIAL?" : view.tutorial === "drills" ? "LEAVE DRILLS?" : "QUIT RUN?",
       subtitle: [
         view.tutorial === "course"
-          ? "Your finished lessons are kept. PLAY continues at the next one."
+          ? "Your finished lessons are kept. PLAY continues at the next one, unless you skip the tutorial."
           : view.tutorial === "drills"
             ? "Every lesson you finished stays learned."
             : view.practice
@@ -381,6 +380,8 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
       context,
       [
         { label: "QUIT", action: { type: "run.quit" } },
+        // Skipping on purpose ends tutorial-first PLAY: the run setup opens, and PLAY opens it from now on.
+        ...(view.tutorial === "course" ? [{ label: "SKIP TUTORIAL", action: { type: "tutorial.skip" } as const }] : []),
         // A confirm opens on its safe choice, so a stray confirm press never quits.
         { label: "CANCEL", action: { type: "navigate", to: "paused" }, entryFocus: true },
       ],

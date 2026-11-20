@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
-const { STATE_WAIT_MS, launchJourney } = require("./browser-waits");
+const { STATE_WAIT_MS, launchJourney, settleFor } = require("./browser-waits");
 
 const repositoryRoot = path.resolve(__dirname, "..");
 const targets = ["standalone", "crazygames"];
@@ -201,8 +201,8 @@ async function assertReleaseSurfaces(page, target) {
     `${target} production main menu rendered engineering entries`,
   );
   await clickVirtual(page, 260, 361);
-  // A fresh profile is tutorial-first: PLAY starts the tutorial, and skipping it on purpose from
-  // its pause menu opens the run setup.
+  // A fresh profile is tutorial-first: PLAY starts the tutorial. Skipping it on purpose, on the
+  // quit confirm that the pause's MAIN MENU opens, opens the run setup.
   await page
     .waitForFunction(() => window.__isolationDrawnText.some((text) => /^LESSON 1 OF \d+$/u.test(text)), undefined, {
       timeout: STATE_WAIT_MS,
@@ -211,9 +211,12 @@ async function assertReleaseSurfaces(page, target) {
       throw new Error(`${target} PLAY did not start the tutorial`);
     });
   await page.keyboard.press("KeyP");
-  await waitForDrawnText(page, "SKIP TUTORIAL", `${target} tutorial pause`);
-  const skip = await page.evaluate(() => window.__isolationDrawnAt.get("SKIP TUTORIAL"));
-  await page.mouse.click(skip.x, skip.y);
+  for (const label of ["MAIN MENU", "SKIP TUTORIAL"]) {
+    await waitForDrawnText(page, label, `${target} leaving the tutorial`);
+    await page.waitForTimeout(settleFor(700)); // the pause and the confirm arm before a press counts
+    const point = await page.evaluate((text) => window.__isolationDrawnAt.get(text), label);
+    await page.mouse.click(point.x, point.y);
+  }
   await waitForDrawnText(page, "START", `${target} setup`);
   const setup = await drawnTextAfterFrames(page);
   assert.ok(setup.includes("ADVENTURE"), `${target} setup did not render its modes`);

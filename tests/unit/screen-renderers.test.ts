@@ -17,6 +17,12 @@ import { buildShopSnapshot, SHOP_LIST_TOP } from "../../src/presentation/shop-sn
 import { DESKTOP } from "../../src/presentation/screens/codex-shop-metrics";
 import { CONFIG } from "../../src/config/game-config";
 import { TutorialController } from "../../src/gameplay/training/tutorial-controller";
+import { AppStateController } from "../../src/app/interface/app-state-controller";
+import {
+  createLiveScreenActionBindings,
+  type ScreenActionBindingPorts,
+} from "../../src/app/interface/screen-action-bindings";
+import { createSurfaceAvailability } from "../../src/domain/surface-availability";
 import { backControl, tabs, verticalMenu } from "../../src/presentation/screens/screen-primitives";
 import { keyboardLabel } from "../../src/domain/keyboard-bindings";
 
@@ -1592,5 +1598,52 @@ describe("release and engineering surface rendering", () => {
     expect(row.map((control) => control.label)).toEqual(["THEATER", "CHALLENGE", "DOWNLOAD", "CHASE BEST"]);
     // The page pattern content column is 1120 wide.
     expect(row[3]).toMatchObject({ w: (1120 - 3 * 8) / 4 });
+  });
+});
+
+describe("leaving the tutorial on purpose", () => {
+  it("walks SKIP TUTORIAL from the course pause to the run setup through allowed screens only", () => {
+    // The real screen rules: a screen change they do not allow throws, as it stops the live game.
+    const app = new AppStateController(createSurfaceAvailability("engineering"));
+    app.transition("playing");
+    app.transition("paused");
+    const kept = { skipped: false, mode: "" };
+    const ports: Partial<ScreenActionBindingPorts> = {
+      setScreen: (screen) => void app.transition(screen),
+      // Ending a run returns to the main menu, as the live run adapter does.
+      quitRun: () => void app.transition("menu"),
+      skipTutorial: () => {
+        kept.skipped = true;
+      },
+      setSetupSelection: (kind, id) => {
+        if (kind === "mode") kept.mode = id;
+      },
+    };
+    const dispatch = createLiveScreenActionBindings(ports as ScreenActionBindingPorts);
+    const controller = new TutorialController(CONFIG);
+    controller.start(1600);
+    const drawn = (): ScreenControl[] => {
+      const controls: ScreenControl[] = [],
+        renderer = createScreenRenderers(createControlContext(controls));
+      if (app.screen === "paused")
+        renderer.paused({ id: "paused", abilities: [], progress: [], tutorial: controller.session() });
+      else if (app.screen === "confirmquit") renderer.confirmquit({ id: "confirmquit", tutorial: "course" });
+      return controls;
+    };
+    // The player presses SKIP TUTORIAL where it is drawn, reached through MAIN MENU if the pause lacks it.
+    const pressed: string[] = [];
+    for (let step = 0; step < 3 && !kept.skipped; step += 1) {
+      const controls = drawn(),
+        control =
+          controls.find((entry) => entry.label === "SKIP TUTORIAL") ??
+          controls.find((entry) => entry.label === "MAIN MENU");
+      if (control === undefined) break;
+      pressed.push(`${app.screen}: ${control.label}`);
+      dispatch(control.action);
+    }
+    expect(app.screen).toBe("setup");
+    expect(kept).toEqual({ skipped: true, mode: "campaign" });
+    // Skipping ends the run as MAIN MENU > QUIT does: through the confirm, never from the pause.
+    expect(pressed).toEqual(["paused: MAIN MENU", "confirmquit: SKIP TUTORIAL"]);
   });
 });
