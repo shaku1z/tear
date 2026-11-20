@@ -48,3 +48,4 @@ The weapon definitions (`src/gameplay/weapons.ts`) have `name` and `mechanics`. 
 
 - 2026-11-18 Card written after the lead accepted #203's generic WEAPONS help and asked for this follow-up; placed in `plans/active` because it spans pull requests.
 - 2026-11-18 `drillMoves` on each weapon definition, built into the annex steps and titles, the drill's teaching line and the WEAPONS help (first pull request). The combat floaters still spell "REVERSAL" and "BREAK" by hand in the combat runtime; that is outside this card's scope and is noted for the lead.
+- 2026-11-18 The lead asked for the floaters as the next small pull request: `drillMoveCallout(weaponId, effect)` in `weapons.ts` names a landed drilled move from `drillMoves`, and the Reversal and Break floaters read it. `weapon-drill-moves.test.ts` fails on any floater call that spells a drilled move's name. Presentation only: the floater text is the same, so determinism and the tutorial gold are unchanged.
