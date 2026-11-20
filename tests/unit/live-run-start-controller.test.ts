@@ -52,6 +52,9 @@ import { AppStateController } from "../../src/app/interface/app-state-controller
 import { createLiveGhostReferenceController } from "../../src/app/replay/ghost-reference-controller";
 import type { GhostLiveReference } from "../../src/ghost/live-ghost-reference-data";
 import type { GameRun } from "../../src/gameplay/runtime/game-runtime-state";
+import { emptyCosmeticState } from "../../src/domain/cosmetics";
+import { COSMETIC_CATALOG } from "../../src/gameplay/progression/cosmetic-catalog";
+import { createCosmeticWardrobe } from "../../src/presentation/cosmetic-styles";
 
 /** Disclosed legacy-format model, authored before sealing. No historical archive is rewritten. */
 async function sealedLegacyAim(
@@ -318,7 +321,8 @@ function actualOpeningHost(
     ...replay.dependencies,
     REMOTE,
     surfaces: createSurfaceAvailability("engineering"),
-    PROFILE: { data: { stats: {}, ach: {}, rewards: {} }, markMode },
+    PROFILE: { data: { stats: {}, ach: {}, rewards: {} }, markMode, cosmetics: emptyCosmeticState },
+    COSMETICS: createCosmeticWardrobe(COSMETIC_CATALOG, () => false),
     META: { level: () => 0, apply: noop },
     SFX: { setVoidDescent: noop, setMusicDuck: noop, musicScoreVersion: () => "unit" },
     newMods,

@@ -10,6 +10,7 @@ import { RunLifecycleController } from "../../src/gameplay/run/lifecycle";
 import { createParticleSystem, type ParticleSystem } from "../../src/presentation/particles";
 import { CONFIG } from "../../src/config/game-config";
 import { createCosmeticEmissionRandom } from "../../src/domain/cosmetic-emission-random";
+import { DEFAULT_COSMETIC_LOOKS } from "../../src/presentation/cosmetic-defaults";
 
 const variantFields = {
   spark: { vx: 2, vy: -3 },
@@ -95,6 +96,7 @@ describe("read-only live particle diagnostics", () => {
   it("observes real owner damage burst/drips without entropy, admission, update or draw calls", () => {
     const random = vi.fn(() => 0.5);
     const owner = createParticleSystem({
+      looks: DEFAULT_COSMETIC_LOOKS,
       effects: CONFIG.effects,
       lowGraphics: () => false,
       reducedMotion: () => false,

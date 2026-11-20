@@ -57,3 +57,20 @@ export function safeEntries<T>(map: Readonly<Record<string, T>>): [string, T][] 
 export function finiteOrZero(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
+
+/**
+ * The fields of `source` named in `keys` that are set (neither undefined nor null), to spread into another options
+ * object: an unset optional field stays absent instead of being passed on as `undefined` (the project compiles with
+ * exactOptionalPropertyTypes).
+ */
+export function definedFields<T extends object, K extends keyof T>(
+  source: T,
+  keys: readonly K[],
+): { [P in K]?: NonNullable<T[P]> } {
+  const output: { [P in K]?: NonNullable<T[P]> } = {};
+  for (const key of keys) {
+    const value = source[key];
+    if (value !== undefined && value !== null) output[key] = value;
+  }
+  return output;
+}

@@ -11,6 +11,7 @@ import {
 import type { TearCodecId } from "../../src/gameplay/snapshot/codec-ids";
 import type { TearCodecValue, TearCodecWorld } from "../../src/gameplay/snapshot/state-codec";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
+import { DEFAULT_COSMETIC_LOOKS } from "../../src/presentation/cosmetic-defaults";
 
 interface FakePlayer extends Record<string, unknown> {
   kind: "player";
@@ -199,6 +200,7 @@ describe("detached Tear codec world hydrator", () => {
     const source = completeCodecWorld(),
       effects = { highBudget: 3, lowBudget: 1, cullMargin: 180 };
     const fx = createParticleSystem({
+      looks: DEFAULT_COSMETIC_LOOKS,
       effects,
       lowGraphics: () => false,
       reducedMotion: () => false,
