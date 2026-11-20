@@ -18,15 +18,15 @@ const ARROWS: Readonly<Record<string, readonly [number, number]>> = Object.freez
 const ARROW = Object.freeze({
   /** Horizontal room an arrow takes: about a bold capital's advance. */
   advance: 0.78,
-  /** Tip-to-tail length. */
-  length: 0.6,
+  /** Tip-to-tail length: a capital's height, so an up or down arrow stands as tall as the letters. */
+  length: 0.66,
   /** Shaft weight: a bold capital's stem. */
-  weight: 0.14,
+  weight: 0.15,
   /** Head length along the shaft, and its half-width across it. */
-  head: 0.28,
-  headHalf: 0.22,
+  head: 0.3,
+  headHalf: 0.25,
   /** Height of the arrow's centre above the baseline: half a capital's height. */
-  middle: 0.36,
+  middle: 0.32,
 });
 
 type LegendRun = Readonly<{ text: string }> | Readonly<{ arrow: readonly [number, number] }>;
