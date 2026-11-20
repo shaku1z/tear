@@ -194,7 +194,7 @@ export interface HeldBladeTuning {
 }
 
 export interface HeldBladeCollisionEffects {
-  burst(x: number, y: number, dx: number, dy: number, count: number, color?: string): void;
+  burst(x: number, y: number, dx: number, dy: number, count: number, color?: string, kind?: BurstKind): void;
   ring(x: number, y: number, radius: number, color?: string): void;
   flash(x: number, y: number, radius: number, color: string): void;
   ribbon(x1: number, y1: number, x2: number, y2: number, color: string): void;
@@ -263,4 +263,5 @@ export interface HeldBladeCollisionInput {
   weaponSegmentContact(segment: BatonSegment, x1: number, y1: number, x2: number, y2: number): boolean;
   distance(x: number, y: number): number;
 }
+import type { BurstKind } from "../../domain/cosmetic-types";
 import type { AttackPresentationCue } from "./attack-presentation-cue";

@@ -18,11 +18,10 @@ re-run the command instead of editing the output.
 | `.github/` | CI workflows (Validate, deploys, wiki dispatch, TearBench canary and program), one composite action and the pull request template. | Hand | No |
 | `analysis/` | A reproducible model of the coin and shop economy (`node analysis/economy_model.js`). | Hand | No |
 | `branding/` | Store covers, the cover page and the favicon source. | Hand | No |
-| `config/` | Gate configuration and curated data: architecture roles and baselines, code-budget baseline, bundle budgets, checkpoints, terminology, workspace contract, the program position, the asset manifest (`asset-manifest.json`, read by `pnpm assets:sheets`). | Mostly hand; baselines lowered by their `--update` commands | Partly: `architecture-baseline.json`, `code-budget-baseline.json` |
+| `config/` | Gate configuration and curated data: architecture roles and baselines, code-budget baseline, bundle budgets, checkpoints, terminology, the program position, the asset manifest (`asset-manifest.json`, read by `pnpm assets:sheets`). | Mostly hand; baselines lowered by their `--update` commands | Partly: `architecture-baseline.json`, `code-budget-baseline.json` |
 | `docs/` | Authority documents (index: [README.md](README.md)), TearBench records, checkpoint history. | Hand, plus generated files listed in the index | Partly: `POSITION.md`, `TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md`, the requirements digest |
 | `experiments/` | `coop-lab.html`, an online co-op proof that never ships (excluded from the CrazyGames archive). | Hand | No |
-| `plans/` | Plans and task cards: open ones in `active/`, closed ones in `completed/`, the normalization master plan and `MOBILE_LATER.md` at the top level; new cards start from `TASK_CARD_TEMPLATE.md` (index: [plans/README.md](../plans/README.md)). | Hand | No |
-| `preservation/` | Workspace preservation and artifact-retention policies from the G5 normalization. | Hand | No |
+| `plans/` | Plans and task cards: open ones in `active/`, closed ones in `completed/`, the mobile notes `MOBILE_LATER.md` at the top level; new cards start from `TASK_CARD_TEMPLATE.md` (index: [plans/README.md](../plans/README.md)). | Hand | No |
 | `public/` | Static files served as-is: the music index and audio cues, fonts, branding. | Music is published from the tear-music repository and checked by `pnpm check:music` | Vendored |
 | `scripts/` | Build, gate, report and TearBench command-line tools, and the owner guard, Git hooks and merge helper (`scripts/governance/`) (catalogue: `config/tool-catalogue.json`). | Hand | No |
 | `src/` | The game (see README). | Hand, plus generated data such as the tutorial gold binding | Partly |
@@ -72,10 +71,11 @@ re-run the command instead of editing the output.
 | `dist/` | Build outputs (`pnpm build`, `pnpm build:test:standalone`). |
 | `artifacts/` | Generated evidence, packages and TearBench outputs. |
 | `coverage/`, `test-results/`, `playwright-report/` | Test tool outputs. |
+| `.wrangler/`, `.tmp-tone-host-esm/` | Wrangler's local state and a temporary build folder. |
 
 ## Size caps
 
-Tracked files under `docs/`, `plans/`, `config/`, `preservation/`, `analysis/`, `experiments/`,
+Tracked files under `docs/`, `plans/`, `config/`, `analysis/`, `experiments/`,
 `.agents/` and `tests/fixtures/` may not exceed 512 KiB each, except the files listed in
 `config/size-caps.json`, each with its own ceiling. `pnpm check:docs` enforces this. Large generated
 evidence belongs in `artifacts/` (ignored) with a small tracked digest, as the requirements annex does.

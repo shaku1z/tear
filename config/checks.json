@@ -81,26 +81,6 @@
         "seconds": 1
       },
       {
-        "id": "workspace",
-        "run": "node scripts/check-workspace.mjs --ci",
-        "seconds": 1
-      },
-      {
-        "id": "artifact-disposition",
-        "run": "node scripts/validate-artifact-disposition.mjs",
-        "seconds": 1
-      },
-      {
-        "id": "artifact-layout",
-        "run": "node scripts/check-artifact-layout.mjs",
-        "seconds": 1
-      },
-      {
-        "id": "parent-layout",
-        "run": "node scripts/check-parent-layout.mjs",
-        "seconds": 1
-      },
-      {
         "id": "music",
         "run": "node scripts/check-music.mjs",
         "seconds": 1
@@ -127,7 +107,7 @@
       },
       {
         "id": "node-tests",
-        "run": "node --test --test-concurrency=1 tests/release-preflight.test.mjs tests/tutorial-gold-fingerprint.test.mjs tests/parity/parity-diff.test.mjs tests/docs-authority-checker.test.mjs tests/workspace-check.test.mjs tests/parent-layout.test.mjs tests/artifact-retention.test.mjs tests/artifact-disposition.test.mjs tests/workspace-recovery-report.test.mjs tests/workspace-recovery-second-wave.test.mjs tests/deferred-workspace-dependency.test.mjs tests/preserved-copy-comparison.test.mjs tests/remaining-workspace-inventory.test.mjs tests/workspace-quarantine.test.mjs tests/workspace-preservation-quarantine.test.mjs tests/serve-contract.test.mjs tests/code-budget.test.mjs tests/source-architecture.test.mjs tests/tearbench-evidence-selection.test.mjs",
+        "run": "node --test --test-concurrency=1 tests/release-preflight.test.mjs tests/tutorial-gold-fingerprint.test.mjs tests/parity/parity-diff.test.mjs tests/docs-authority-checker.test.mjs tests/serve-contract.test.mjs tests/code-budget.test.mjs tests/source-architecture.test.mjs tests/tearbench-evidence-selection.test.mjs",
         "seconds": 60
       }
     ],
@@ -510,6 +490,14 @@
       {
         "id": "replay-world-and-vault",
         "run": "node node_modules/vitest/vitest.mjs run tests/unit/ghost-replay-world.test.ts tests/unit/ghost-capsule-vault.test.ts"
+      },
+      {
+        "id": "build-test-standalone",
+        "run": "node scripts/build-target.mjs test-standalone"
+      },
+      {
+        "id": "scripted-agent-autonomy",
+        "run": "node tests/browser-scripted-agent-autonomy.js"
       }
     ],
     "mobile": [

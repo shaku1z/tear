@@ -1,7 +1,7 @@
 import { secondsOf } from "./boss-fight";
 import type { BossPlayerId } from "./boss-player";
 import { sliceOf } from "./boss-report";
-import { median, sum, table } from "./report-text";
+import { groups, median, sum, table } from "./report-text";
 import { playWave, stageWaves, waveScenario, type WaveBuild, type WaveRequest, type WaveResult } from "./wave-play";
 
 export interface WaveReportRequest {
@@ -127,12 +127,6 @@ function waveRow(wave: number, runs: readonly WaveResult[]): readonly string[] {
     binderText(runs),
     sources(runs),
   ];
-}
-
-function groups<T>(items: readonly T[], key: (item: T) => string): readonly (readonly T[])[] {
-  const byKey = new Map<string, T[]>();
-  for (const item of items) byKey.set(key(item), [...(byKey.get(key(item)) ?? []), item]);
-  return [...byKey.values()];
 }
 
 /** One run in a line: how it ended, where the player fell, and the wave as it arrived. */

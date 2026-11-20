@@ -13,6 +13,7 @@ import { MusicDirector } from "../../src/audio/music-director";
 import { createCosmeticEmissionRandom } from "../../src/domain/cosmetic-emission-random";
 import { createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
 import type { TearGameplayEventPort } from "../../src/gameplay/runtime/gameplay-events";
+import { DEFAULT_COSMETIC_LOOKS } from "../../src/presentation/cosmetic-defaults";
 
 function createWorldDependencies() {
   const random = createRunRandom();
@@ -22,6 +23,7 @@ function createWorldDependencies() {
     GAME_RANDOM: random.service,
     GAME_RANDOM_STREAMS: random.streams,
     FX: createParticleSystem({
+      looks: DEFAULT_COSMETIC_LOOKS,
       effects: { highBudget: 1, lowBudget: 1, cullMargin: 0 },
       lowGraphics: () => false,
       reducedMotion: () => false,

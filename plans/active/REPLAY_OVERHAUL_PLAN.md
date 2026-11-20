@@ -542,9 +542,10 @@ DNA calculation and recording stay until PR 8, because CAREER reads them. REPAIR
 ### PR 2b: remove REPAIR (decision 2)
 
 The REPAIR action, the repair-copy writer in the vault, `ghost-doctor.ts` and
-`corrupt-capsule-records.ts`. A damaged record is shown as damaged and can be deleted; the health
-scan and index rebuild it still needs move into the vault's own read until PR 6's store replaces
-them. Split from PR 2 because it reaches into vault maintenance and custody, not the Theater.
+`corrupt-capsule-records.ts`. A damaged record is shown as damaged (CAN'T PLAY); deleting it
+arrives with PR 6's store, which lists such a record as delete only. The health scan and index
+rebuild move into `vault-maintenance.ts` until PR 6's store replaces them. Split from PR 2
+because it reaches into vault maintenance and custody, not the Theater.
 
 ### PR 3: move the snapshot codecs to `src/gameplay/snapshot/` (no behaviour change)
 
@@ -806,5 +807,6 @@ writes are closed. Deploying the rules is the owner's step.
 - 2026-11-19 Added the owner's two defects (the stage at each moment; the real weapon and throws) with their causes, the parity table and the live-drawing rule.
 - 2026-11-20 PR 1 (`codex/replay-hidden-features`): Boss Memory, the linked-pair download, the preservation corpus and both barrels removed. Importing an existing linked file stays until PR 6. PR 4's layer shape agreed with the lead: playtest-tool's headless move lands first; the narrowest `playtest -> app/world/detached` edge; `tearbench -> app` never; the baseline only shrinks.
 - 2026-11-20 PR 2 (`codex/replay-extras`): COMPARE, recorded challenges (and CAREER's CHALLENGE), the Theater's RUN DNA panel and the finale companion removed; practice from a replay stays. The Run DNA calculation and recording stay until PR 8 because CAREER reads them. REPAIR split into PR 2b because it reaches into vault maintenance and custody. A linked file still imports both members, but its companion no longer opens. The architecture baseline went from 44 to 37 edges.
+- 2026-11-20 PR 2b (`codex/replay-repair`): REPAIR removed, with the repair-copy writer, `ghost-doctor.ts` and `corrupt-capsule-records.ts`. The health scan and index rebuild moved into `vault-maintenance.ts`. A damaged capsule shows CAN'T PLAY; deleting it waits for PR 6, because the Vault has no delete today.
 - 2026-11-20 PR 3 (`codex/replay-snapshot`): the snapshot codecs, the snapshot contract, the codec and factory ids, the checkpoint parsers and `seed-race-contract.ts` moved to `src/gameplay/snapshot/` and `src/gameplay/run/`, as agreed with the lead and playtest-tool. The two hydrators move in PR 4. The layer allowlist went from 37 to 32 edges.
 - 2026-11-20 PR 4 (`codex/replay-detached-world`): the detached world moved to `src/app/world/detached/`, its own `detached-world` layer, so the one new edge is `playtest -> detached-world`. No `tearbench -> app` or `ghost -> app` edge; the layer allowlist went from 32 to 18 edges. The remaining ghost cycle (7 files) goes with `src/ghost` in PRs 5 to 8.

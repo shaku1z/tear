@@ -7,6 +7,7 @@ import { createTearWorldConfiguration } from "../../src/gameplay/runtime/tear-wo
 import { createRunRandom } from "../../src/simulation/run-random";
 import { createParticleSystem } from "../../src/presentation/particles";
 import { CinematicTimeline } from "../../src/gameplay/runtime/cinematic-director";
+import { DEFAULT_COSMETIC_LOOKS } from "../../src/presentation/cosmetic-defaults";
 
 function createConfiguration() {
   return createTearWorldConfiguration({} as GameRuntimeDependencies["CONFIG"]);
@@ -20,6 +21,7 @@ function createDependencies(config: GameRuntimeDependencies["CONFIG"]) {
     GAME_RANDOM: random.service,
     GAME_RANDOM_STREAMS: random.streams,
     FX: createParticleSystem({
+      looks: DEFAULT_COSMETIC_LOOKS,
       effects: { highBudget: 1, lowBudget: 1, cullMargin: 0 },
       lowGraphics: () => false,
       reducedMotion: () => false,

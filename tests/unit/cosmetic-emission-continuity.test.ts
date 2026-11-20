@@ -17,6 +17,7 @@ import { LiveKillRuntime } from "../../src/gameplay/combat/live-kill-runtime";
 import { runLiveCollisionPhase } from "../../src/gameplay/combat/live-collision-phase";
 import { runLiveOpeningPhase } from "../../src/gameplay/combat/live-opening-phase";
 import { GFX, THEME } from "../../src/config/game-config";
+import { DEFAULT_COSMETIC_LOOKS } from "../../src/presentation/cosmetic-defaults";
 
 function liveActions(replay: ReturnType<typeof createProductionReplayWorld>) {
   // The real emission callbacks are exercised. Unrelated device and
@@ -156,6 +157,7 @@ describe("captured cosmetic emission continuity", () => {
     const entropy = createCosmeticEmissionRandom(),
       effects = { highBudget: disposition === "budget" ? 0 : 10, lowBudget: 0, cullMargin: 0 };
     const fx = createParticleSystem({
+      looks: DEFAULT_COSMETIC_LOOKS,
       effects,
       random: entropy.next,
       lowGraphics: () => false,
@@ -184,6 +186,7 @@ describe("captured cosmetic emission continuity", () => {
     const entropy = createCosmeticEmissionRandom(),
       effects = { highBudget: 3, lowBudget: 1, cullMargin: 180 };
     const fx = createParticleSystem({
+      looks: DEFAULT_COSMETIC_LOOKS,
       effects,
       random: entropy.next,
       lowGraphics: () => false,

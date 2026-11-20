@@ -110,11 +110,13 @@ export function parseTutorialCoachCheckpoint(value: unknown): TutorialCoachCheck
     throw new TypeError("Invalid gold coach cursor");
   if (version === 2) parseTutorialFailures(data.failures);
   else if (data.failures !== undefined) throw new TypeError("Historical coach cannot contain adaptive failures");
+  if (data.mode === "comparison" && data.best === undefined) throw new RangeError("Gold coach reference incompatible");
+  // The corpus arrives after a lesson starts. Until it has, the reference is checked when it does
+  // (TutorialGhostCoach.select); once it has, a state for a reference it lacks is refused here.
+  const gold = shippingTutorialGold();
   if (
-    (data.mode === "comparison" && data.best === undefined) ||
-    !shippingTutorialGold()?.references.some(
-      (reference) => reference.contentHash === data.reference && data.to <= reference.durationTicks,
-    )
+    gold !== undefined &&
+    !gold.references.some((reference) => reference.contentHash === data.reference && data.to <= reference.durationTicks)
   )
     throw new RangeError("Gold coach reference incompatible");
   for (const raw of [data.current, data.best] as readonly unknown[])
@@ -167,6 +169,8 @@ export class TutorialGhostCoach {
   private origin = 0;
   private completed = false;
   private commands: readonly GameAction[] = [];
+  /** A state restored before the corpus arrived; applied when it does, if it belongs to the lesson's reference. */
+  private pending: TutorialCoachCheckpoint | undefined;
   private readonly failures: TutorialFailureCoach;
   constructor(
     private readonly corpus: () => TutorialGoldCorpus | undefined = shippingTutorialGold,
@@ -187,12 +191,17 @@ export class TutorialGhostCoach {
       this.selection = selection;
       return;
     }
+    const pending = this.pending;
     this.clear(true);
     this.selection = selection;
     this.reference = next;
     if (next) {
       [this.from, this.to] = this.segment();
       this.cursor = this.from;
+      if (pending?.reference === next.contentHash && pending.to <= next.durationTicks) {
+        this.failures.restore(pending.failures);
+        this.apply(pending);
+      }
     }
   }
   clear(preserveFailures = false): void {
@@ -209,6 +218,7 @@ export class TutorialGhostCoach {
     this.from = 0;
     this.to = 0;
     this.diagnosis = "No attempt yet.";
+    this.pending = undefined;
     if (preserveFailures) this.failures.abort();
     else this.failures.restore();
   }
@@ -392,7 +402,7 @@ export class TutorialGhostCoach {
   get showing(): boolean {
     return this.visible;
   }
-  view(lab: boolean, reducedMotion: boolean): TutorialCoachView {
+  view(practice: boolean, reducedMotion: boolean): TutorialCoachView {
     return {
       available: !!this.reference,
       visible: this.visible,
@@ -400,14 +410,14 @@ export class TutorialGhostCoach {
       rate: this.rate,
       diagnosis: this.diagnosis,
       adaptive: this.failures.view(),
-      canCompare: lab && !!this.best,
+      canCompare: practice && !!this.best,
       reducedMotion,
       tick: Math.floor(this.cursor),
       fromTick: this.from,
       toTick: this.to,
     };
   }
-  display(lab: boolean, reducedMotion: boolean): TutorialGoldDisplay | undefined {
+  display(practice: boolean, reducedMotion: boolean): TutorialGoldDisplay | undefined {
     const ref = this.reference;
     if (!ref || !this.visible) return undefined;
     const { frame, tick } = sampleTutorialGold(ref, this.cursor / 120);
@@ -454,7 +464,7 @@ export class TutorialGhostCoach {
     });
     if (apex) markers.push({ kind: "apex", frame: apex });
     return {
-      ...this.view(lab, reducedMotion),
+      ...this.view(practice, reducedMotion),
       frame,
       platforms: stage?.platforms ?? ref.platforms,
       glyphs: [...glyphs],
@@ -470,31 +480,40 @@ export class TutorialGhostCoach {
     };
   }
   capture(): TutorialCoachCheckpoint | undefined {
-    return this.reference
-      ? {
-          version: 2,
-          failures: this.failures.capture(),
-          reference: this.reference.contentHash,
-          mode: this.mode,
-          rate: this.rate,
-          cursor: this.cursor,
-          from: this.from,
-          to: this.to,
-          visible: this.visible,
-          diagnosis: this.diagnosis,
-          ...(this.best ? { best: structuredClone(this.best) } : {}),
-        }
-      : undefined;
+    if (!this.reference) return this.pending && structuredClone(this.pending);
+    return {
+      version: 2,
+      failures: this.failures.capture(),
+      reference: this.reference.contentHash,
+      mode: this.mode,
+      rate: this.rate,
+      cursor: this.cursor,
+      from: this.from,
+      to: this.to,
+      visible: this.visible,
+      diagnosis: this.diagnosis,
+      ...(this.best ? { best: structuredClone(this.best) } : {}),
+    };
   }
   restore(value: unknown): void {
     const saved = parseTutorialCoachCheckpoint(value);
     this.restart();
     this.best = undefined;
     this.completed = true; // A partially restored objective is not a new full attempt; explicit reset starts recording again.
+    this.pending = undefined;
     this.failures.restore(saved?.failures);
     if (!saved) return;
+    // A world restored before the corpus arrives (State Setup, a staged replay) keeps its coach state
+    // until it does; capture() returns it unchanged meanwhile.
+    if (this.reference === undefined && !this.corpusArrived()) {
+      this.pending = structuredClone(saved);
+      return;
+    }
     if (saved.reference !== this.reference?.contentHash || saved.to > this.reference.durationTicks)
       throw new RangeError("Gold coach reference incompatible");
+    this.apply(saved);
+  }
+  private apply(saved: TutorialCoachCheckpoint): void {
     this.mode = saved.mode;
     this.rate = saved.rate;
     this.cursor = saved.cursor;

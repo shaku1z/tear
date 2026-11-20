@@ -6,6 +6,7 @@ import type { ProductionCombatPhaseOptions } from "./combat-phases";
 import type { GhostForkOriginV1 } from "../../../ghost/fork-origin";
 import type { GhostReplayRenderView } from "../../../ghost/replay-world";
 import type { ProductionReplayWorldOptions } from "./world-factory";
+import { definedFields } from "../../../domain/records";
 import { applyWeapon } from "../../../gameplay/weapons";
 import { A11Y, GFX } from "../../../config/game-config";
 import { launchCampaignChapter } from "../../../gameplay/campaign/campaign-sequences";
@@ -118,6 +119,7 @@ export interface ProductionGhostReplayCompositionOptions {
   readonly raceDecisions?: readonly SeedRaceDecision[];
   readonly applicationClock?: GhostApplicationClockSchedule;
   readonly requireRecordedApplicationFrames?: boolean;
+  readonly looks?: ProductionReplayWorldOptions["looks"];
 }
 
 export interface ProductionReplayCheckpointCapture {
@@ -727,13 +729,16 @@ export function createProductionGhostReplayComposition(options: ProductionGhostR
       let waveReward: ProductionWaveRewardRuntime | null = null;
       let clockPlayback: ReturnType<typeof createGhostApplicationClockPlayback> | undefined;
       const replay = createProductionReplayWorld({
-        ...(options.presentation === undefined ? {} : { presentation: options.presentation }),
-        ...(options.gameplayEvents === undefined ? {} : { gameplayEvents: options.gameplayEvents }),
+        ...definedFields(options, [
+          "presentation",
+          "gameplayEvents",
+          "mode",
+          "weaponId",
+          "difficulty",
+          "firstBoss",
+          "looks",
+        ]),
         seed: snapshot?.seed ?? options.seed,
-        ...(options.mode === undefined ? {} : { mode: options.mode }),
-        ...(options.weaponId === undefined ? {} : { weaponId: options.weaponId }),
-        ...(options.difficulty === undefined ? {} : { difficulty: options.difficulty }),
-        ...(options.firstBoss === undefined ? {} : { firstBoss: options.firstBoss }),
         tutorialHandoff: () => {
           waveReward?.restoreScreen("paused");
         },

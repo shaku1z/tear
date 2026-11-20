@@ -1,4 +1,5 @@
 import { layerTransform, type Rect, type SceneCamera, type SceneLayer, type SceneLayout } from "./scene-contract";
+import { drawLive } from "./scene-live";
 
 /** An image the renderer can draw; canvases and ImageBitmap qualify. */
 export type SceneBitmap = CanvasImageSource & { readonly width: number; readonly height: number };
@@ -74,6 +75,15 @@ function drawLayer(context: CanvasRenderingContext2D, loaded: LoadedScene, layer
   context.scale(k, k);
   context.globalAlpha = layer.opacity * frame.opacity;
   context.drawImage(bitmap, x, y, w, h);
+  // What moves in this layer draws over it, in the layer's own coordinates.
+  const liveFrame = {
+    timeSeconds: frame.timeSeconds,
+    still: frame.reducedMotion || frame.lowGraphics,
+    opacity: layer.opacity * frame.opacity,
+  };
+  for (const live of loaded.scene.live) {
+    if (live.layer === layer.id) drawLive(context, live, { bitmap, rect: layer.rect }, loaded.images, liveFrame);
+  }
   if (layer.covers) featherEdges(context, loaded.scene, layer.rect, layerSpaceView(frame, k, tx, ty));
   context.restore();
 }

@@ -14,6 +14,7 @@ owning test/script references in one reviewable transaction.
 | Pitfalls and the guard behind each rule | [PITFALLS.md](PITFALLS.md) | `tests/unit/pitfall-guards.test.mjs`; [AGENTS.md](../AGENTS.md) "Known traps" |
 | Repository layout, generated files and size caps | [REPOSITORY_MAP.md](REPOSITORY_MAP.md) | `config/size-caps.json`; `scripts/check-repository.mjs` (run by `check:docs`) |
 | What a build promises about earlier releases' saves and replays | [RELEASE_COMPATIBILITY.md](RELEASE_COMPATIBILITY.md) | `tests/contract/release-compatibility.test.ts`; `tests/fixtures/releases/` |
+| TearBench, the scenario runner: what a scenario is, how to run and add one | [TEARBENCH.md](TEARBENCH.md) | `src/tearbench/canonical-scenarios.json` |
 | How changed files select evidence, and unrouted paths | [CHANGE_IMPACT.md](CHANGE_IMPACT.md) | `config/change-impact-defaults.json`; `tests/unit/change-impact.test.mjs` |
 | Developer orientation and routine commands | [README.md](../README.md) | [CONTRIBUTING.md](../CONTRIBUTING.md); `package.json` scripts |
 | AI agent working guide | [AGENTS.md](../AGENTS.md) | [CLAUDE.md](../CLAUDE.md); `.agents/skills/`; the parent-directory `AGENTS.md` and the governance skill remain authoritative |
@@ -28,7 +29,7 @@ owning test/script references in one reviewable transaction.
 | Performance budgets | [PERFORMANCE_BUDGETS.md](PERFORMANCE_BUDGETS.md) | — |
 | itch.io package and upload steps | [ITCH_UPLOAD.md](ITCH_UPLOAD.md) | `config/build-targets.json` (`itch`); `scripts/package-target.mjs` |
 | Browser journey coverage | [BROWSER_JOURNEY_COVERAGE.md](BROWSER_JOURNEY_COVERAGE.md) | — |
-| Artifact and checkpoint-evidence organization | [ARTIFACTS.md](ARTIFACTS.md) | `config/artifact-layout.json`; G5 retention and disposition records |
+| Artifact and checkpoint-evidence organization | [ARTIFACTS.md](ARTIFACTS.md) | — |
 
 `docs/checkpoints/` and `docs/checkpoints/program-normalization/` are
 append-only checkpoint/history locations. `docs/source/` is the preserved
@@ -51,6 +52,7 @@ current paths and hashes until a separately authorized atomic migration.
 | [RELEASE_READINESS_PLAN.md](../plans/active/RELEASE_READINESS_PLAN.md) | Active phased plan to make the game releasable to players; records the 2026-11-11 audit baseline, phase states, and the decisions reserved for the owner. |
 | [PHASE_F_MIRROR_PLAN.md](../plans/completed/PHASE_F_MIRROR_PLAN.md) | Completed historical record; not an active plan or typed-code authority. |
 | [Verdant Sanctum Revision 3](../plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md) | Active Verdant biome, shared environment-runtime, TearBench, and engineering-freeze implementation authority; current publication follows the tracked six-stage boundary and does not publish Pale. |
+| [Pale gameplay rebuild](../plans/active/PALE_GAMEPLAY_REBUILD.md) | Active plan for rebuilding Pale's stage mechanic, enemies, boss and waves on the shared layers; replaces the gameplay checkpoints of Revision 3 below. |
 | [Pale Traverse Revision 3](../plans/active/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md) | Active Pale biome and engineering-freeze authority; current publication follows the tracked boundary and keeps Pale preview-only. |
 | [plans/README.md](../plans/README.md) | Index for direct, active, completed, and future archived plan locations. |
 

@@ -111,7 +111,6 @@ describe("normal browser cold restore facade", () => {
         },
         download: () => undefined,
       },
-      repair: () => Promise.reject(new Error("not requested")),
       inspect: () =>
         Promise.resolve({
           manifests: [],

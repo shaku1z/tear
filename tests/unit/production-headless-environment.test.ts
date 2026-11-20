@@ -900,7 +900,7 @@ describe("C30 production headless environment", () => {
     ]);
     expect(terminal?.terminal.semanticHash).toMatch(/^[a-f0-9]{16}$/u);
     const fixture: unknown = JSON.parse(
-      readFileSync(resolve("tests", "fixtures", "c30-production-headless-terminal-movement-jump.json"), "utf8"),
+      readFileSync(resolve("tests", "fixtures", "production-headless-terminal-movement-jump.json"), "utf8"),
     );
     expectLegacyTerminalFixture(fixture, terminal);
   });
@@ -928,7 +928,7 @@ describe("C30 production headless environment", () => {
     environment.dispose();
 
     const fixture: unknown = JSON.parse(
-      readFileSync(resolve("tests", "fixtures", "c30-production-headless-terminal-onehit-failure.json"), "utf8"),
+      readFileSync(resolve("tests", "fixtures", "production-headless-terminal-onehit-failure.json"), "utf8"),
     );
     expectLegacyTerminalFixture(fixture, terminal);
     expect(terminal?.terminal).toEqual({

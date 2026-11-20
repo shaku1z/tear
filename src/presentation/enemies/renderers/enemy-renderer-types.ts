@@ -80,7 +80,6 @@ export type EnemyClassName =
   | "Flyer"
   | "Bomber"
   | "Armored"
-  | "Boss"
   | "Support"
   | "Wraith"
   | "Chimera"

@@ -416,7 +416,6 @@ describe("linked parent/finale portable archive", () => {
             rebuiltIndexes: 0,
           },
         }),
-      repair: vi.fn(),
     });
     controller.pickArchive();
     selected?.({

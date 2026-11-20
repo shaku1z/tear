@@ -1,17 +1,25 @@
 name: Nightly checks
 
-# The nightly group of config/checks.json: slower browser journeys and scenario runs that pull
-# requests do not run. Once a day on main at an off-peak minute, or by hand with "Run workflow".
-# The result is read from the run and its check-results artifact; nothing opens issues.
+# The nightly and weekly groups of config/checks.json: slower browser journeys, scenario runs and
+# endurance suites that pull requests do not run. The nightly group runs once a day on main at an
+# off-peak minute, the weekly group once a week on its own schedule; either runs by hand with
+# "Run workflow". The result is read from the run and its check-results artifact; nothing opens issues.
 on:
   schedule:
     - cron: "41 7 * * *"
+    # The weekly group. Its job and the nightly job each run only on their own schedule.
+    - cron: "23 8 * * 0"
   workflow_dispatch:
     inputs:
       ref:
         description: "Commit, branch or tag to check; empty checks the branch the run was started on"
         required: false
         type: string
+      group:
+        description: "Which group to run by hand"
+        required: false
+        type: choice
+        options: [nightly, weekly]
 
 permissions:
   contents: read
@@ -38,6 +46,7 @@ jobs:
         run: node scripts/ci-playwright-image.mjs >> "$GITHUB_OUTPUT"
 
   nightly:
+    if: github.event.schedule != '23 8 * * 0' && inputs.group != 'weekly'
     runs-on: ubuntu-latest
     needs: image
     # Playwright's own image for the lockfile's version: Chromium and its system packages are in it.
@@ -88,6 +97,52 @@ jobs:
         if: always()
         with:
           name: nightly-check-results-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/check-results/results.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # The weekly group: endurance suites, the replay world and vault suites, and the scripted-agent
+  # autonomy journey on a test build. It replaces the TearBench Evidence Program workflow, whose
+  # TearBench selection over the whole history picked nothing else that a group does not already run.
+  weekly:
+    name: Weekly checks
+    if: github.event.schedule == '23 8 * * 0' || inputs.group == 'weekly'
+    runs-on: ubuntu-latest
+    needs: image
+    container:
+      image: ${{ needs.image.outputs.playwright_image }}
+      options: --ipc=host
+    env:
+      GIT_CONFIG_COUNT: 1
+      GIT_CONFIG_KEY_0: safe.directory
+      GIT_CONFIG_VALUE_0: "*"
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - name: Name the checked commit
+        shell: bash
+        run: echo "Checked commit $(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Record check results
+        shell: bash
+        run: echo "TEAR_CHECK_RESULTS=$RUNNER_TEMP/check-results/results.json" >> "$GITHUB_ENV"
+      - name: Weekly checks
+        env:
+          DEBUG: pw:browser
+        run: xvfb-run -a node scripts/run-checks.mjs weekly --keep-going
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: weekly-check-results-${{ github.run_attempt }}
           path: ${{ runner.temp }}/check-results/results.json
           if-no-files-found: ignore
           retention-days: 14

@@ -21,7 +21,9 @@ const expectedPublished = expected.filter(({ id }) => id !== "white-hart");
 
 describe("authored boss reference", () => {
   it("keeps authored seven-entry identity while exposing only six public bosses", () => {
-    expect(BOSS_DEFINITIONS).toEqual(expected.map(({ id, name, phaseMarks }) => ({ id, name, phaseMarks })));
+    expect(BOSS_DEFINITIONS.map(({ id, name, phaseMarks }) => ({ id, name, phaseMarks }))).toEqual(
+      expected.map(({ id, name, phaseMarks }) => ({ id, name, phaseMarks })),
+    );
     expect(Object.isFrozen(BOSS_DEFINITIONS)).toBe(true);
     for (const definition of BOSS_DEFINITIONS) expect(Object.isFrozen(definition.phaseMarks)).toBe(true);
     expect(BOSS_ROSTER).toEqual(expectedPublished.map(({ id, name }) => ({ id, name })));
@@ -37,6 +39,8 @@ describe("authored boss reference", () => {
   it("projects the exact stage bijection and imported shape", () => {
     const result = projectBossReference({ bossDefinitions: BOSS_DEFINITIONS, stages: STAGES });
     expect(result).toEqual(expectedPublished);
+    // Spawn placement is engine data on the definition; the reference publishes none of it.
+    expect(result.every((boss) => !("spawn" in boss))).toBe(true);
     expect(result.some((boss) => boss.id === "rootbound")).toBe(true);
     expect(Object.isFrozen(result)).toBe(true);
     expect(Object.isFrozen(result[0])).toBe(true);

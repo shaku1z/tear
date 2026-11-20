@@ -13,10 +13,10 @@ const artifact = resolve(
 );
 const environment = {
   ...process.env,
-  TEAR_C27A_SCENARIO_ID: scenarioId,
-  TEAR_C27A_MAX_TICKS: "180",
-  TEAR_C27A_PARITY_ARTIFACT: artifact,
-  TEAR_C27A_PARITY_REQUIRED: "1",
+  TEAR_LIVE_PARITY_SCENARIO_ID: scenarioId,
+  TEAR_LIVE_PARITY_MAX_TICKS: "180",
+  TEAR_LIVE_PARITY_ARTIFACT: artifact,
+  TEAR_LIVE_PARITY_REQUIRED: "1",
 };
 
 function run(command, args, options = {}) {
@@ -25,7 +25,7 @@ function run(command, args, options = {}) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
-run(process.execPath, ["tests/browser-c27a-live-parity-trace.js"]);
+run(process.execPath, ["tests/browser-live-parity-trace.js"]);
 const parityArgs = ["exec", "vitest", "run", "tests/unit/current-live-detached-mechanic-parity.test.ts"];
 if (process.platform === "win32") {
   run(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", `pnpm ${parityArgs.join(" ")}`]);
