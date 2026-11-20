@@ -35,6 +35,12 @@ export interface AccountContext {
   sync(): Promise<void>;
 }
 
+/**
+ * What replacing the online copy of the save came to: it was replaced, this account has no online copy to
+ * replace, or it could not be done (offline, signed out of the service, refused) and the copy is unchanged.
+ */
+export type CloudReplaceResult = "replaced" | "no-online-copy" | "failed";
+
 export type SignInResult = boolean | Readonly<{ status: "needsRetry"; code: string }>;
 
 export interface AccountProvider {
@@ -45,6 +51,11 @@ export interface AccountProvider {
   signOut?(context: AccountContext): Promise<void>;
   load?(context: AccountContext): Promise<CloudSavePayload | null>;
   save?(context: AccountContext, payload: CloudSavePayload): Promise<void>;
+  /**
+   * Overwrites the online copy with `payload` outright. `save` merges, which keeps the highest value of each
+   * statistic, so it cannot take progress away. Only an account with an online copy has this.
+   */
+  replace?(context: AccountContext, payload: CloudSavePayload): Promise<boolean>;
   dispose?(): void;
 }
 
@@ -106,6 +117,8 @@ export interface LegacyCloudFacade {
   setCustomUsername(name: string): Promise<void>;
   sync(): Promise<void>;
   push(): Promise<void>;
+  /** Overwrites the online copy of the save (see `AccountProvider.replace`); never throws. */
+  replaceSave(payload: CloudSavePayload): Promise<CloudReplaceResult>;
   hasLeaderboards(): boolean;
   submitScore(mode: string, difficulty: string, entry: ScoreEntry): Promise<boolean>;
   topScores(mode: string, difficulty: string, limit: number): Promise<readonly Record<string, unknown>[] | null>;
@@ -332,6 +345,14 @@ export function createCloudCompatibility(options: CloudCompatibilityOptions): Cl
         });
       } catch {
         /* local save is already authoritative */
+      }
+    },
+    async replaceSave(payload) {
+      if (!this.provider?.replace) return "no-online-copy";
+      try {
+        return (await this.provider.replace(this, payload)) ? "replaced" : "failed";
+      } catch {
+        return "failed";
       }
     },
     hasLeaderboards() {

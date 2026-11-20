@@ -39,6 +39,9 @@ export const createStandaloneCloud: CloudFactory = (options) => {
     async save(context, payload) {
       await (await load()).account.save?.(context, payload);
     },
+    async replace(context, payload) {
+      return (await (await load()).account.replace?.(context, payload)) ?? false;
+    },
     dispose() {
       firebase?.account.dispose?.();
     },
