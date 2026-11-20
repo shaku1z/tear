@@ -12,7 +12,7 @@ import {
 } from "../../src/playtest/boss-player";
 import { formatBossReport } from "../../src/playtest/boss-report";
 import { readBoss, readPlayerBox } from "../../src/playtest/boss-view";
-import { createProductionHeadlessEnvironment } from "../../src/tearbench/production-headless-environment";
+import { createProductionHeadlessEnvironment } from "../../src/playtest/headless/production-headless-environment";
 
 const FIGHT = {
   boss: "rootbound",

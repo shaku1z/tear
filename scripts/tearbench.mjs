@@ -537,7 +537,7 @@ function validateScenarioMetadata(scenario) {
   if (proof === undefined) return;
   // Surgical State Setup scenarios are materialized by the typed live bridge;
   // their complementary browser journeys intentionally begin from a natural
-  // UI setup and cannot prove the forged coordinates through source text.
+  // UI setup and cannot prove the built coordinates through source text.
   if (stateSetup !== undefined) return;
   const source = readFileSync(proof.file, "utf8");
   if (
@@ -1730,7 +1730,7 @@ try {
       prior.rerun?.actionTrace ?? undefined,
       resolve(artifactPath),
     );
-  } else if (command === "forge" && process.argv[3] === "wave99") {
+  } else if (command === "setup" && process.argv[3] === "wave99") {
     const artifactPath = resolve(
       option("--artifact", resolve(root, "artifacts", "tearbench", "hard-endless-wave-99-hammer.json")),
     );
@@ -1747,14 +1747,14 @@ try {
       generatedBy: "createWave99HammerPackage",
       artifacts: Object.fromEntries(
         [
-          ["legal-ledger", "The forge does not materialize a legal-ledger artifact."],
-          ["opportunity-counts", "The forge does not materialize opportunity-counts."],
-          ["configuration-trace", "The forge does not materialize a configuration trace."],
+          ["legal-ledger", "State setup does not materialize a legal-ledger artifact."],
+          ["opportunity-counts", "State setup does not materialize opportunity-counts."],
+          ["configuration-trace", "State setup does not materialize a configuration trace."],
           ["validation-report", "Test output is captured, but no report file is created."],
-          ["visible-episode", "The forge does not launch a visible episode."],
-          ["snapshot", "The forge does not materialize a snapshot."],
-          ["replay", "The forge does not materialize a replay."],
-          ["metrics", "The forge does not materialize metrics."],
+          ["visible-episode", "State setup does not launch a visible episode."],
+          ["snapshot", "State setup does not materialize a snapshot."],
+          ["replay", "State setup does not materialize a replay."],
+          ["metrics", "State setup does not materialize metrics."],
         ].map(([id, reason]) => [id, { status: "unavailable", reason }]),
       ),
       status: passed ? "passed" : "failed",
@@ -1833,7 +1833,7 @@ try {
       process.exitCode = 1;
     }
     console.log(
-      "TearBench CLI\n  list\n  run <scenario-id> [--seed value] [--repeat count] [--actions path] [--artifact path]\n  rerun --artifact <run.json>\n  forge wave99 [--artifact path]\n  select [--files comma,list | --files-from path] [--artifact path]\n  ci [--files comma,list | --files-from path] [--registry path] [--artifact path]",
+      "TearBench CLI\n  list\n  run <scenario-id> [--seed value] [--repeat count] [--actions path] [--artifact path]\n  rerun --artifact <run.json>\n  setup wave99 [--artifact path]\n  select [--files comma,list | --files-from path] [--artifact path]\n  ci [--files comma,list | --files-from path] [--registry path] [--artifact path]",
     );
   }
 } catch (error) {

@@ -151,13 +151,7 @@ export const STANDARD_ACTOR_FACTORIES: Readonly<Record<FactoryEnemyKind, ActorFa
   mender: (types) => new types.Support(360, CONFIG.world.groundY - CONFIG.support.h / 2, "mender") as BehaviorActor,
   herald: (types) => new types.Support(360, CONFIG.world.groundY - CONFIG.support.h / 2, "herald") as BehaviorActor,
   anchor: (types) => new types.Support(360, CONFIG.world.groundY - CONFIG.support.h / 2, "anchor") as BehaviorActor,
-  rootbinder: (types) =>
-    new types.Rootbinder(
-      360,
-      CONFIG.world.groundY - CONFIG.rootbinder.h / 2,
-      "test",
-      "verdant-sanctum",
-    ) as BehaviorActor,
+  rootbinder: (types) => new types.Rootbinder(360, CONFIG.world.groundY - CONFIG.rootbinder.h / 2) as BehaviorActor,
   wraith: (types) => new types.Wraith(360, 300) as BehaviorActor,
   chimera: (types) => new types.Chimera(360, CONFIG.world.groundY - CONFIG.chimera.h / 2) as BehaviorActor,
 });

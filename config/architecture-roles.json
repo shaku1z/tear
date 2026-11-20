@@ -40,7 +40,7 @@
       ]
     },
     "biome.verdant.implementation": {
-      "purpose": "Every module that implements Verdant-specific behaviour (gameplay, presentation, app wiring, TearBench forge); forbidden targets for Pale and neutral code.",
+      "purpose": "Every module that implements Verdant-specific behaviour (gameplay, presentation, app wiring, TearBench state setup); forbidden targets for Pale and neutral code.",
       "include": [
         "src/gameplay/environment/bloom-well.ts",
         "src/gameplay/environment/bloom-well-presentation-facts.ts",
@@ -54,7 +54,7 @@
         "src/gameplay/entities/enemy-types/rootbound-moves.ts",
         "src/presentation/environment/bloom-well-presentation.ts",
         "src/gameplay/environment/biome-actors/bloom-well-actors.ts",
-        "src/tearbench/rootbound-graft-anchor-forge.ts"
+        "src/tearbench/rootbound-graft-anchor-setup.ts"
       ]
     },
     "environment.neutral-foundation": {
@@ -114,7 +114,7 @@
     },
     "tearbench.production-headless-entry": {
       "purpose": "The production headless environment entry, run outside any browser.",
-      "include": ["src/tearbench/production-headless-environment.ts"]
+      "include": ["src/playtest/headless/production-headless-environment.ts"]
     },
     "tearbench.portable-live-runtime": {
       "purpose": "Portable live TearBench environment and action routing.",

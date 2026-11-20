@@ -5,8 +5,8 @@ import {
   createProductionGhostReplayComposition,
 } from "../../src/tearbench/production-replay-composition";
 import {
-  PALE_AURORA_TRACK_FORGE_TEARSDL,
-  PALE_RIMEHOUND_PACK_FORGE_TEARSDL,
+  PALE_AURORA_TRACK_SETUP_TEARSDL,
+  PALE_RIMEHOUND_PACK_SETUP_TEARSDL,
   PALE_VARIANT_STATE_SETUP_SCENARIOS,
   WHITE_HART_PHASE_STATE_SETUP_SCENARIOS,
 } from "../../src/tearbench/pale-state-setup-scenarios";
@@ -26,7 +26,7 @@ function sourceSnapshot() {
 
 describe("Pale source-owned State Setup scenarios", () => {
   it("compiles the surgical Aurora and Rimehound cases through existing codecs", () => {
-    const aurora = compileResolvedTearSdlSnapshot(sourceSnapshot(), resolveTearSdl(PALE_AURORA_TRACK_FORGE_TEARSDL));
+    const aurora = compileResolvedTearSdlSnapshot(sourceSnapshot(), resolveTearSdl(PALE_AURORA_TRACK_SETUP_TEARSDL));
     expect(aurora.state["tear.run.v1"]).toMatchObject({ mode: "playground", wave: 41, stage: 6, _biomeIdx: 6 });
     expect(aurora.state["tear.hazard.v1"]).toMatchObject({
       fields: [expect.objectContaining({ kind: "aurora-track", direction: 1, ownerId: "pale-traverse" })],
@@ -34,7 +34,7 @@ describe("Pale source-owned State Setup scenarios", () => {
       routes: [],
     });
 
-    const pack = compileResolvedTearSdlSnapshot(sourceSnapshot(), resolveTearSdl(PALE_RIMEHOUND_PACK_FORGE_TEARSDL));
+    const pack = compileResolvedTearSdlSnapshot(sourceSnapshot(), resolveTearSdl(PALE_RIMEHOUND_PACK_SETUP_TEARSDL));
     expect(pack.state["tear.enemy.v1"]).toEqual([
       expect.objectContaining({ id: "enemy:1", factoryId: "rimehound" }),
       expect.objectContaining({ id: "enemy:2", factoryId: "rimehound" }),

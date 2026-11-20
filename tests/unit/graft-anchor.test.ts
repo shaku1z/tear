@@ -17,7 +17,7 @@ import { ENVIRONMENT_FADE_TICKS } from "../../src/gameplay/environment/environme
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 import { environmentSnapshotToObservation } from "../../src/tearbench/environment-codec";
 import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "../../src/tearbench/authored-environment-codec-validation";
-import { forgeRootboundGraftAnchorState } from "../../src/tearbench/state-setup-factories";
+import { buildRootboundGraftAnchorState } from "../../src/tearbench/state-setup-factories";
 import type { TearSdlDocumentV1 } from "../../src/tearbench/tearsdl";
 
 const GEOMETRY = { x: 773, y: 610, w: 54, h: 90 } as const;
@@ -178,9 +178,9 @@ describe("Grafts on the stage", () => {
       seed: "rootbound-graft-anchor-destruction",
       start: { mode: "bossonly", difficulty: "normal", weapon: "sword", boss: "rootbound" },
     };
-    const forged = forgeRootboundGraftAnchorState(base);
-    expect(forged.id).toBe("rootbound-graft-anchor-destruction-graft-mercy");
-    expect(forged.state?.environment).toMatchObject({
+    const built = buildRootboundGraftAnchorState(base);
+    expect(built.id).toBe("rootbound-graft-anchor-destruction-graft-mercy");
+    expect(built.state?.environment).toMatchObject({
       combatObjects: [
         expect.objectContaining({
           id: "enemy:1:graft:mercy",

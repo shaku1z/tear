@@ -20,7 +20,7 @@ import type { TearObservationV1, TearScenarioV1 } from "../../src/tearbench/cont
 import {
   createProductionHeadlessEnvironment,
   type ProductionHeadlessEnvironment,
-} from "../../src/tearbench/production-headless-environment";
+} from "../../src/playtest/headless/production-headless-environment";
 
 const FIXTURE_PATH = "tests/fixtures/canonical-hash-stream.json";
 const FIXTURE_FORMAT = "tear-canonical-hash-stream.v1";

@@ -733,32 +733,8 @@ const CONFIG = {
     anchorDR: 0.4,
     anchorRegen: 9,
   }, // Anchor: shields + regens + immobilizes its bonded ally (shared fate)
-  // Rootbinder is a separate controller family: it creates bounded, severable
-  // links and never inherits Support's aura/heal/Anchor capability fields.
-  rootbinder: {
-    w: 34,
-    h: 46,
-    hp: 72,
-    speed: 105,
-    contactDmg: 7,
-    knockbackTaken: 8,
-    weight: 1.8,
-    ticksPerSecond: 120,
-    repositionTicks: 60,
-    plantWindupTicks: 36,
-    plantedTicks: 48,
-    linkWarningTicks: 48,
-    linkedTicks: 240,
-    brokenTicks: 36,
-    recoverTicks: 60,
-    maxLeashForce: 80,
-    maxNetworkRedistribution: 80,
-    leashRadius: 120,
-    lineMaxLength: 520,
-    maxNetworksPerRootbinder: 1,
-    maxPlayerLeashes: 1,
-    maxNetworkTargets: 3,
-  },
+  // Rootbinder: its body only. How it plants and roots is in ROOTBINDER_RULES (rootbinder-runtime.ts).
+  rootbinder: { w: 34, h: 46, hp: 72, speed: 105, contactDmg: 7, knockbackTaken: 8, weight: 1.8 },
   // wraith: immune to direct blade hits — only your thrown blade or a deflected shot kills it
   wraith: { w: 36, h: 42, hp: 64, speed: 170, contactDmg: 12, knockbackTaken: 0, weight: 1.4, hoverY: 70 },
   // chimera: a beast that adopts the attacks of the enemy types in its wave (often several),

@@ -8,7 +8,7 @@ import {
   type BossFightResult,
 } from "../../src/playtest/boss-fight";
 import { createBossPlayer, type BossPlayer } from "../../src/playtest/boss-player";
-import { createProductionHeadlessEnvironment } from "../../src/tearbench/production-headless-environment";
+import { createProductionHeadlessEnvironment } from "../../src/playtest/headless/production-headless-environment";
 
 /** What the test reads of the boss, straight from the game's own actor and not through the tool. */
 interface RawBoss {

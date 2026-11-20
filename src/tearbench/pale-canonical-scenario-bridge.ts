@@ -28,7 +28,7 @@ export function launchCanonicalLiveScenario(environment: TearClassARuntimeEnviro
   if (resolved.scenario.id !== scenario.id || resolved.scenario.seed !== scenario.seed) {
     throw new Error(`Pale canonical State Setup document identity does not match scenario ${scenario.id}`);
   }
-  const result = environment.forgeResolvedScenario(resolved);
+  const result = environment.buildResolvedScenario(resolved);
   if (!result.ok) throw new Error(`Pale canonical State Setup launch failed for ${scenario.id}`);
 }
 

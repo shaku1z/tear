@@ -5,6 +5,7 @@ import { sanitizeCinematicPreference, type CinematicPreference } from "../../gam
 import { applyKeyboardRemap, rebindKey, type RebindOutcome, type RebindableAction } from "../../domain/keyboard-remap";
 import { keyboardSettings, readKeyboardSettings, type KeyboardSettingsRead } from "../../persistence/keyboard-settings";
 import { asRecord } from "../../domain/records";
+import type { StatisticsChoice } from "../../platform/statistics-consent";
 
 export type { CinematicPreference } from "../../gameplay/campaign/cinematic-preference";
 
@@ -52,6 +53,8 @@ export interface GameSettings extends Record<string, unknown> {
   vibration: VibrationPreference;
   glyphStyle: GlyphPreference;
   autoPauseDisconnect: boolean;
+  /** Anonymous run statistics: on until the player turns them off (the first-run notice says so). */
+  shareStatistics: boolean;
   musicMode: MusicModePreference;
   /**
    * Music: the player's pick, in menus and in runs: `default`, a song's id, or `channel:<id>`
@@ -106,6 +109,8 @@ export interface SettingsControllerDependencies {
   input: InputSettingsPort;
   gamepad: GamepadSettingsPort;
   audio: Pick<LegacyAudioCompatibility, "migrateSettings" | "applySettings">;
+  /** Where the statistics choice is published for the cloud's send gate. */
+  statistics: StatisticsChoice;
   store: SettingsStore;
   navigator: Pick<Navigator, "hardwareConcurrency">;
   matchMedia(query: string): Pick<MediaQueryList, "matches">;
@@ -149,6 +154,7 @@ function defaults(aimSensitivity: number): GameSettings {
     vibration: "medium",
     glyphStyle: "auto",
     autoPauseDisconnect: true,
+    shareStatistics: true,
     musicMode: "adaptive",
     menuMusic: "default",
     keyboard: keyboardSettings(),
@@ -245,6 +251,7 @@ export class SettingsController {
     // or channel from a later catalog) is kept and plays as the default until it can be heard.
     settings.menuMusic = musicSourceValue(parseMusicSource(settings.menuMusic));
     setMusicSource(settings.menuMusic);
+    this.dependencies.statistics.share = settings.shareStatistics;
     const keyboard = readKeyboardSettings(settings.keyboard);
     settings.keyboard = keyboard.stored;
     applyKeyboardRemap(keyboard.remap);
@@ -266,8 +273,10 @@ export class SettingsController {
   }
 
   reset(): void {
+    // A privacy choice is not a preference to put back: resetting the game's settings never turns statistics on again.
+    const { shareStatistics } = this.settings;
     for (const key of Object.keys(this.settings)) Reflect.deleteProperty(this.settings, key);
-    Object.assign(this.settings, defaults(this.#defaultAimSensitivity));
+    Object.assign(this.settings, defaults(this.#defaultAimSensitivity), { shareStatistics });
     this.apply();
     this.save();
   }

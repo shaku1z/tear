@@ -1,11 +1,11 @@
-import { isRecord } from "../domain/records";
-import type { CommandEnvelope } from "../domain/envelopes";
-import { AIM_MAGNITUDE_SCALE, normalizeGameAction, type GameAction } from "../input/game-action";
-import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
-import type { AuthoritativeInputSnapshot } from "../gameplay/runtime/authoritative-input";
-import { TearGameplayEventBus, type TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
-import { stableVerificationHash } from "../domain/hash";
-import type { createProductionCombatSimulation } from "./production-combat-simulation";
+import { isRecord } from "../../domain/records";
+import type { CommandEnvelope } from "../../domain/envelopes";
+import { AIM_MAGNITUDE_SCALE, normalizeGameAction, type GameAction } from "../../input/game-action";
+import type { CanonicalGameplayState } from "../../gameplay/runtime/canonical-state";
+import type { AuthoritativeInputSnapshot } from "../../gameplay/runtime/authoritative-input";
+import { TearGameplayEventBus, type TearGameplayEvent } from "../../gameplay/runtime/gameplay-events";
+import { stableVerificationHash } from "../../domain/hash";
+import type { createProductionCombatSimulation } from "../../tearbench/production-combat-simulation";
 import {
   captureProductionReplayCheckpoint,
   captureProductionRewardSelection,
@@ -13,26 +13,26 @@ import {
   projectProductionReplayCanonicalState,
   type ProductionReplayBootstrap,
   type ProductionApplicationFrameConfirm,
-} from "./production-replay-composition";
-import { productionRunSeed, type ProductionReplayWorld } from "./production-world-factory";
-import type { ProductionWaveRewardRuntime } from "./production-wave-reward-runtime";
-import type { ProductionWaveRewardIntent } from "./production-wave-reward-runtime";
-import type { TearCausalEventV1, TearObservationV1, TearScenarioV1, TearSnapshotV1 } from "./contracts";
+} from "../../tearbench/production-replay-composition";
+import { productionRunSeed, type ProductionReplayWorld } from "../../tearbench/production-world-factory";
+import type { ProductionWaveRewardRuntime } from "../../tearbench/production-wave-reward-runtime";
+import type { ProductionWaveRewardIntent } from "../../tearbench/production-wave-reward-runtime";
+import type { TearCausalEventV1, TearObservationV1, TearScenarioV1, TearSnapshotV1 } from "../../tearbench/contracts";
 import {
   TearHeadlessEnvironmentPool,
   type TearHeadlessEnvironment,
   type TearHeadlessEpisode,
   type TearHeadlessJob,
   type TearHeadlessTransition,
-} from "./headless";
-import { validateTearContract } from "./validation";
+} from "../../tearbench/headless";
+import { validateTearContract } from "../../tearbench/validation";
 import { requireProductionHeadlessScenario } from "./production-headless-scenario";
 import { beginProductionBossPractice } from "./production-boss-practice-start";
-import { requireProductionReplayBootstrap as requireBootstrap } from "./production-replay-bootstrap-check";
-import type { PracticeBossId, PracticeBossPhase } from "../gameplay/training/boss-phase-practice-runtime";
+import { requireProductionReplayBootstrap as requireBootstrap } from "../../tearbench/production-replay-bootstrap-check";
+import type { PracticeBossId, PracticeBossPhase } from "../../gameplay/training/boss-phase-practice-runtime";
 import { projectProductionPolicyObservation } from "./production-policy-observation";
-import { createGameplayCausalEvent } from "./gameplay-causal-events";
-import { assertTearSimulationStepSeconds, TEAR_SIMULATION_TICKS_PER_SECOND } from "./simulation-profile";
+import { createGameplayCausalEvent } from "../../tearbench/gameplay-causal-events";
+import { assertTearSimulationStepSeconds, TEAR_SIMULATION_TICKS_PER_SECOND } from "../../tearbench/simulation-profile";
 
 type ProductionHeadlessCore = Readonly<{
   replay: ProductionReplayWorld;
@@ -170,7 +170,7 @@ export function validateProductionHeadlessCheckpointRequest(
 /** A State Setup recovery frontier bound to one natural source checkpoint; arbitrary surgical snapshot execution stays unavailable. */
 export interface ProductionHeadlessStateSetupEvaluation {
   readonly source: ProductionHeadlessCheckpoint;
-  readonly forgedSnapshot: TearSnapshotV1;
+  readonly builtSnapshot: TearSnapshotV1;
 }
 
 export interface ProductionHeadlessEnvironment extends TearHeadlessEnvironment<
@@ -389,28 +389,28 @@ export function validateProductionHeadlessCheckpoint(value: unknown): Production
 
 function validateStateSetupEvaluation(
   value: unknown,
-): Readonly<{ source: ProductionHeadlessCheckpoint; forgedSnapshot: TearSnapshotV1 }> {
+): Readonly<{ source: ProductionHeadlessCheckpoint; builtSnapshot: TearSnapshotV1 }> {
   if (!isRecord(value)) throw new TypeError("production State Setup evaluation is invalid");
   const source = validateProductionHeadlessCheckpoint(value.source);
-  const parsed = validateTearContract(value.forgedSnapshot);
+  const parsed = validateTearContract(value.builtSnapshot);
   if (!parsed.ok || parsed.value.kind !== "snapshot")
     throw new TypeError("production State Setup evaluation snapshot is invalid");
-  const forged = parsed.value;
+  const built = parsed.value;
   if (
-    forged.stateClass !== "surgical-valid" ||
-    forged.tick !== source.checkpoint.tick ||
-    forged.seed !== source.snapshot.seed ||
-    forged.provenance.actor !== "state-forge" ||
-    forged.provenance.producer !== "forgeExitLaunchSnapshot" ||
-    forged.provenance.sourceId !== source.snapshot.id ||
-    forged.lineage?.parentId !== source.snapshot.id ||
-    forged.lineage.parentRootHash !== source.snapshot.hashes.exact ||
-    forged.lineage.forkTick !== source.checkpoint.tick ||
-    forged.hashes.exact !== stableVerificationHash(forged.state)
+    built.stateClass !== "surgical-valid" ||
+    built.tick !== source.checkpoint.tick ||
+    built.seed !== source.snapshot.seed ||
+    built.provenance.actor !== "state-forge" ||
+    built.provenance.producer !== "forgeExitLaunchSnapshot" ||
+    built.provenance.sourceId !== source.snapshot.id ||
+    built.lineage?.parentId !== source.snapshot.id ||
+    built.lineage.parentRootHash !== source.snapshot.hashes.exact ||
+    built.lineage.forkTick !== source.checkpoint.tick ||
+    built.hashes.exact !== stableVerificationHash(built.state)
   ) {
     throw new RangeError("production State Setup evaluation requires a lineage-bound surgical snapshot");
   }
-  return Object.freeze({ source, forgedSnapshot: forged });
+  return Object.freeze({ source, builtSnapshot: built });
 }
 
 /**
@@ -769,7 +769,7 @@ export function createProductionHeadlessEnvironment(
       const evaluation = validateStateSetupEvaluation(value);
       const restored = compose(
         evaluation.source.scenario,
-        evaluation.forgedSnapshot,
+        evaluation.builtSnapshot,
         evaluation.source.input,
         evaluation.source.bootstrap,
       );

@@ -1,5 +1,5 @@
 import { createAuroraTrackFieldState } from "../gameplay/environment/aurora-track";
-import { forgeEnvironmentFieldState, forgeWaveState } from "./state-setup-factories";
+import { buildEnvironmentFieldState, buildWaveState } from "./state-setup-factories";
 import type { TearSdlDocumentV1 } from "./tearsdl";
 
 const PALE_SURGICAL_BASE: TearSdlDocumentV1 = Object.freeze({
@@ -13,7 +13,7 @@ const PALE_SURGICAL_BASE: TearSdlDocumentV1 = Object.freeze({
 });
 
 /** Surgical stage-owned Aurora lane at the frozen Pale engineering wave coordinate. */
-export const PALE_AURORA_TRACK_FORGE_TEARSDL = forgeEnvironmentFieldState(
+export const PALE_AURORA_TRACK_SETUP_TEARSDL = buildEnvironmentFieldState(
   PALE_SURGICAL_BASE,
   createAuroraTrackFieldState({
     id: "pale-traverse:aurora-track:surgical-east",
@@ -27,7 +27,7 @@ export const PALE_AURORA_TRACK_FORGE_TEARSDL = forgeEnvironmentFieldState(
 );
 
 /** Surgical three-member Rimehound pack, bounded by the production Pale composition cap. */
-export const PALE_RIMEHOUND_PACK_FORGE_TEARSDL = forgeWaveState(PALE_SURGICAL_BASE, 41, [
+export const PALE_RIMEHOUND_PACK_SETUP_TEARSDL = buildWaveState(PALE_SURGICAL_BASE, 41, [
   { kind: "rimehound", count: 3 },
 ]);
 
@@ -119,13 +119,13 @@ const PALE_CANONICAL_BASE: TearSdlDocumentV1 = Object.freeze({
 /** Canonical TC-9 documents. Their IDs are the descriptor IDs in canonical-scenarios.json. */
 export const PALE_CANONICAL_STATE_SETUP_SCENARIOS = Object.freeze({
   "pale-aurora-track-behavior": canonicalDocument(
-    PALE_AURORA_TRACK_FORGE_TEARSDL,
+    PALE_AURORA_TRACK_SETUP_TEARSDL,
     "pale-aurora-track-behavior",
     "pale-aurora-track-behavior-seed",
   ),
   "pale-rimehound-aurora-interaction": canonicalDocument(
-    forgeWaveState(
-      forgeEnvironmentFieldState(
+    buildWaveState(
+      buildEnvironmentFieldState(
         PALE_CANONICAL_BASE,
         createAuroraTrackFieldState({
           id: "pale-traverse:aurora-track:rimehound-lane",
@@ -144,27 +144,27 @@ export const PALE_CANONICAL_STATE_SETUP_SCENARIOS = Object.freeze({
     "pale-rimehound-aurora-interaction-seed",
   ),
   "pale-rime-runner-behavior": canonicalDocument(
-    forgeWaveState(PALE_CANONICAL_BASE, 6, [{ kind: "charger", count: 1, variantId: "rime-runner" }]),
+    buildWaveState(PALE_CANONICAL_BASE, 6, [{ kind: "charger", count: 1, variantId: "rime-runner" }]),
     "pale-rime-runner-behavior",
     "pale-rime-runner-behavior-seed",
   ),
   "pale-prism-seer-behavior": canonicalDocument(
-    forgeWaveState(PALE_CANONICAL_BASE, 6, [{ kind: "ranged", count: 1, variantId: "prism-seer" }]),
+    buildWaveState(PALE_CANONICAL_BASE, 6, [{ kind: "ranged", count: 1, variantId: "prism-seer" }]),
     "pale-prism-seer-behavior",
     "pale-prism-seer-behavior-seed",
   ),
   "pale-snowfall-kite-behavior": canonicalDocument(
-    forgeWaveState(PALE_CANONICAL_BASE, 6, [{ kind: "flyer", count: 1, variantId: "snowfall-kite" }]),
+    buildWaveState(PALE_CANONICAL_BASE, 6, [{ kind: "flyer", count: 1, variantId: "snowfall-kite" }]),
     "pale-snowfall-kite-behavior",
     "pale-snowfall-kite-behavior-seed",
   ),
   "pale-hailcaster-behavior": canonicalDocument(
-    forgeWaveState(PALE_CANONICAL_BASE, 6, [{ kind: "bomber", count: 1, variantId: "hailcaster" }]),
+    buildWaveState(PALE_CANONICAL_BASE, 6, [{ kind: "bomber", count: 1, variantId: "hailcaster" }]),
     "pale-hailcaster-behavior",
     "pale-hailcaster-behavior-seed",
   ),
   "pale-glacier-guard-behavior": canonicalDocument(
-    forgeWaveState(PALE_CANONICAL_BASE, 6, [{ kind: "armored", count: 1, variantId: "glacier-guard" }]),
+    buildWaveState(PALE_CANONICAL_BASE, 6, [{ kind: "armored", count: 1, variantId: "glacier-guard" }]),
     "pale-glacier-guard-behavior",
     "pale-glacier-guard-behavior-seed",
   ),

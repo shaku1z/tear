@@ -1,93 +1,139 @@
 import type { EnvironmentRuntime } from "../environment-runtime";
-import { createVerdantEnvironmentFeature, type RootbinderEnvironmentActor } from "../verdant-environment-feature";
-import { severRootbinder, type RootbinderCandidate } from "../../entities/rootbinder-runtime";
+import {
+  createVerdantEnvironmentFeature,
+  type RootbinderEnvironmentActor,
+  type RootbinderEnvironmentAlly,
+} from "../verdant-environment-feature";
+import type { RootbinderPhase } from "../../entities/rootbinder-runtime";
+import type { RootSnarePlayer } from "../root-snare";
 import type { BiomeActorEnemy, BiomeActorPlayer } from "./actor-entities";
 
-/** Binds live actors to the authoritative environment relationship phase. */
+/** What a root reads and writes on a live enemy. Every enemy has these through the enemy base. */
+export interface RootableEnemy extends BiomeActorEnemy {
+  readonly flies?: boolean;
+  readonly spawnT?: number;
+  /** False for an enemy that is never rooted (one that plants itself or stands apart from the fight). */
+  readonly rootable?: boolean;
+  readonly anchored?: boolean;
+  readonly rooted?: boolean;
+  stun?: number;
+  onGround?: boolean;
+  setRooted?(rooted: boolean): void;
+}
+
+/** A live enemy that roots others: it reports its phase and is told its roots and when they are all cut. */
+export interface RootingEnemy extends RootableEnemy {
+  readonly rootPhase: RootbinderPhase;
+  rootLinkIds: readonly string[];
+  uproot(): void;
+  readonly snareReady: boolean;
+  snareStarted(): void;
+}
+
+function snarePlayer(player: BiomeActorPlayer): RootSnarePlayer {
+  return {
+    get x() {
+      return player.x;
+    },
+    get y() {
+      return player.y;
+    },
+    get vx() {
+      return player.vx;
+    },
+    hh: player.hh,
+    get onGround() {
+      return player.onGround === true;
+    },
+    get alive() {
+      return player.hp > 0;
+    },
+    hold: (x, vx) => {
+      player.x = x;
+      player.vx = vx;
+    },
+  };
+}
+
+function roots(enemy: RootableEnemy): enemy is RootingEnemy {
+  return "rootPhase" in enemy;
+}
+
+/** An enemy can be rooted when it stands in the fight on the ground and nothing else holds it in place. */
+function rootable(enemy: RootableEnemy): boolean {
+  if (enemy.dead || enemy.dying || enemy.isBoss === true || enemy.flies === true || enemy.rootable === false)
+    return false;
+  if ((enemy.spawnT ?? 0) > 0) return false;
+  return enemy.rooted === true || enemy.anchored !== true;
+}
+
+function ally(enemy: RootableEnemy, id: string): RootbinderEnvironmentAlly {
+  return {
+    id,
+    get x() {
+      return enemy.x;
+    },
+    get y() {
+      return enemy.y;
+    },
+    get rootable() {
+      return rootable(enemy);
+    },
+    setRooted: (value) => enemy.setRooted?.(value),
+    stagger: (seconds) => {
+      enemy.stun = Math.max(enemy.stun ?? 0, seconds);
+    },
+    launch: (speed) => {
+      enemy.vy = -speed;
+      enemy.onGround = false;
+    },
+  };
+}
+
+/** Binds live enemies and the player to the environment phase that owns roots and snares. */
 export function bindLiveRootbinderActors(
   environment: EnvironmentRuntime,
   player: () => BiomeActorPlayer | null,
-  enemies: () => readonly BiomeActorEnemy[],
-  actorId: (enemy: BiomeActorEnemy) => string,
+  enemies: () => readonly RootableEnemy[],
+  actorId: (enemy: RootableEnemy) => string,
 ): void {
   environment.addFeature(createVerdantEnvironmentFeature());
   environment.setFeatureActorSource("verdant", "rootbinder", () => {
     const values = enemies();
-    const rootbinders = values.filter((enemy) => enemy.kind === "rootbinder");
-    if (rootbinders.length === 0) return [];
-    const candidates: RootbinderCandidate[] = values.map((enemy) => {
-      const supportType = (enemy as BiomeActorEnemy & { supportType?: string }).supportType;
-      const kind: RootbinderCandidate["kind"] =
-        enemy.kind === "rootbinder"
-          ? "rootbinder"
-          : enemy.isBoss
-            ? "boss"
-            : enemy.kind === "flyer" || enemy.kind === "wraith"
-              ? "flyer"
-              : "ordinary";
-      return {
-        id: actorId(enemy),
-        worldId: environment.worldId,
-        stageId: environment.stageId,
-        kind,
-        x: enemy.x,
-        y: enemy.y,
-        dead: enemy.dead,
-        dying: enemy.dying,
-        vx: enemy.vx,
-        vy: enemy.vy,
-        weight: enemy.weight,
-        applyVelocity: (vx: number, vy: number) => {
-          enemy.vx = vx;
-          enemy.vy = vy;
-        },
-        ...(supportType === undefined
-          ? {}
-          : { supportKinds: [supportType as NonNullable<RootbinderCandidate["supportKinds"]>[number]] }),
-      };
-    });
-    return rootbinders.map((enemy): RootbinderEnvironmentActor => {
-      const id = actorId(enemy);
-      const state = (enemy as BiomeActorEnemy & { rootbinderState?: RootbinderEnvironmentActor["state"] })
-        .rootbinderState;
-      if (state === undefined) throw new Error("live Rootbinder is missing its deterministic state");
-      (enemy as BiomeActorEnemy & { rootbinderOwnerId?: string }).rootbinderOwnerId = id;
-      return Object.freeze({
-        id,
-        state: Object.freeze({
-          ...state,
-          id,
-          worldId: environment.worldId,
-          stageId: environment.stageId,
-          x: enemy.x,
-          y: enemy.y,
-        }),
-        candidates: Object.freeze(candidates.filter((candidate) => candidate.id !== id)),
-        sever: () => {
-          const live = enemy as BiomeActorEnemy & { rootbinderState: RootbinderEnvironmentActor["state"] };
-          live.rootbinderState = severRootbinder(live.rootbinderState);
-        },
-        ...(() => {
-          const target = player();
-          if (target === null) return {};
-          return {
-            player: {
-              id: "player",
-              x: target.x,
-              y: target.y,
-              vx: target.vx,
-              vy: target.vy,
-              jumpEnabled: true,
-              dashEnabled: true,
-              alive: target.hp > 0,
-              apply: (value: { readonly vx: number; readonly vy: number }) => {
-                target.vx = value.vx;
-                target.vy = value.vy;
-              },
-            },
-          };
-        })(),
-      });
-    });
+    const rooting = values.filter(roots).filter((enemy) => !enemy.dead && !enemy.dying);
+    if (rooting.length === 0) {
+      // No one roots any more: nothing stays held.
+      for (const enemy of values) if (enemy.rooted === true) enemy.setRooted?.(false);
+      return [];
+    }
+    const allies = values.map((enemy) => ({ enemy, port: ally(enemy, actorId(enemy)) }));
+    const target = player();
+    const snared = target === null ? undefined : snarePlayer(target);
+    return rooting.map((enemy): RootbinderEnvironmentActor => ({
+      id: actorId(enemy),
+      get x() {
+        return enemy.x;
+      },
+      get y() {
+        return enemy.y;
+      },
+      get phase() {
+        return enemy.rootPhase;
+      },
+      get snareReady() {
+        return enemy.snareReady;
+      },
+      snareStarted: () => {
+        enemy.snareStarted();
+      },
+      ...(snared === undefined ? {} : { player: snared }),
+      allies: allies.filter((entry) => entry.enemy !== enemy).map((entry) => entry.port),
+      reportLinks: (ids) => {
+        enemy.rootLinkIds = ids;
+      },
+      uproot: () => {
+        enemy.uproot();
+      },
+    }));
   });
 }

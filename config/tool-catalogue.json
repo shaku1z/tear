@@ -195,7 +195,7 @@
       "duration": "minutes"
     },
     "tearbench": {
-      "purpose": "TearBench CLI (list, plan, explain, tasks, run, select, ci, parity, forge); effects depend on the subcommand",
+      "purpose": "TearBench CLI (list, plan, explain, tasks, run, select, ci, parity, setup); effects depend on the subcommand",
       "effects": [
         "writes-artifacts",
         "launches-browser"
@@ -515,6 +515,13 @@
     },
     "test:browser:ghost-vault-library": {
       "purpose": "Browser check of the Ghost Vault library screen",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:replay-engine-cold": {
+      "purpose": "Browser check that a replay opened on a cold page waits for its code, reports a failed fetch plainly and opens on retry",
       "effects": [
         "launches-browser"
       ],
@@ -1878,6 +1885,10 @@
       "scripts/package-target.mjs",
       "vite.config.ts"
     ],
+    "scripts/application-chunks.mjs": [
+      "tests/unit/application-chunks.test.mjs",
+      "vite.config.ts"
+    ],
     "scripts/audio-profile.mjs": [
       "scripts/build-target.mjs"
     ],
@@ -1980,6 +1991,7 @@
     ]
   },
   "declarations": [
+    "scripts/application-chunks.d.mts",
     "scripts/build-targets.d.mts",
     "scripts/campaign-publication-boundary.d.mts",
     "scripts/music-cover.d.mts",
