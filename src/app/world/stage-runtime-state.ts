@@ -20,7 +20,7 @@ export class StageRuntimeState<TStage, TPlatforms> {
     this.platforms = this.#platformsAt(index);
   }
 
-  /** Restores stage identity while State Forge supplies the captured platform array separately. */
+  /** Restores stage identity while State Setup supplies the captured platform array separately. */
   restoreIndex(index: number): void {
     this.index = index;
     this.current = this.#stageAt(index);

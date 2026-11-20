@@ -2,8 +2,8 @@
  * The one keyboard binding table: every action the keyboard performs, mapped to the
  * physical keys (`KeyboardEvent.code`) that perform it. The input adapter, the frame
  * coordinator, the Playground, the menus and the prompt vocabulary all read this
- * table at the moment they need it and never keep a copy, so rebinding a key later
- * means writing to this table and nothing else.
+ * table at the moment they need it and never keep a copy, so a rebind (the player's
+ * remap, `keyboard-remap.ts`) replaces the live table and every reader follows.
  *
  * Codes are physical positions: on an AZERTY keyboard `KeyQ` is the key labelled A.
  * Labels name the US QWERTY legend (see `keyCodeLabel`).
@@ -83,7 +83,22 @@ const BINDINGS = {
 
 export type KeyboardAction = keyof typeof BINDINGS;
 
-export const KEYBOARD_BINDINGS: Readonly<Record<KeyboardAction, KeyboardBinding>> = BINDINGS;
+export type KeyboardTable = Readonly<Record<KeyboardAction, KeyboardBinding>>;
+
+/** The shipped bindings. The live table starts here and returns here on a reset. */
+export const KEYBOARD_DEFAULTS: KeyboardTable = BINDINGS;
+
+let live: KeyboardTable = BINDINGS;
+
+/** The live table: the defaults with the player's remap applied. */
+export function keyboardBindings(): KeyboardTable {
+  return live;
+}
+
+/** Replaces the live table; only the remap (`applyKeyboardRemap`) calls this. */
+export function useKeyboardBindings(table: KeyboardTable): void {
+  live = table;
+}
 
 export const KEYBOARD_ACTIONS = Object.freeze(Object.keys(BINDINGS)) as readonly KeyboardAction[];
 
@@ -105,26 +120,26 @@ export const KEYBOARD_SHARED_KEYS: readonly Readonly<{ actions: readonly Keyboar
   Object.freeze([{ actions: ["jump", "move-up"], why: "Up jumps and aims a dash up." }]);
 
 export function keyCodes(action: KeyboardAction): readonly string[] {
-  return KEYBOARD_BINDINGS[action].codes;
+  return live[action].codes;
 }
 
 export function bindsKey(action: KeyboardAction, code: string): boolean {
-  return KEYBOARD_BINDINGS[action].codes.includes(code);
+  return live[action].codes.includes(code);
 }
 
 /** True when any key bound to the action is in the set (held keys or this frame's presses). */
 export function anyKeyIn(keys: ReadonlySet<string>, action: KeyboardAction): boolean {
-  return KEYBOARD_BINDINGS[action].codes.some((code) => keys.has(code));
+  return live[action].codes.some((code) => keys.has(code));
 }
 
 /** True when any key bound to an action of the context is in the set. */
 export function anyContextKeyIn(keys: ReadonlySet<string>, context: KeyboardContext): boolean {
-  return KEYBOARD_ACTIONS.some((action) => KEYBOARD_BINDINGS[action].context === context && anyKeyIn(keys, action));
+  return KEYBOARD_ACTIONS.some((action) => live[action].context === context && anyKeyIn(keys, action));
 }
 
 /** The index of the first key of an ordered range (`quick-spawn`, `choose`) in the set, below `limit`. */
 export function rangeKeyIn(keys: ReadonlySet<string>, action: KeyboardAction, limit = Infinity): number | null {
-  const codes = KEYBOARD_BINDINGS[action].codes;
+  const codes = live[action].codes;
   for (let index = 0; index < Math.min(limit, codes.length); index += 1) {
     const code = codes[index];
     if (code !== undefined && keys.has(code)) return index;
@@ -163,7 +178,7 @@ export function keyCodeLabel(code: string): string {
 
 /** The keys a prompt names for the action, each once: ["A", "←"], ["SHIFT"], ["1–8"]. */
 export function keyboardLabels(action: KeyboardAction): readonly string[] {
-  const binding = KEYBOARD_BINDINGS[action];
+  const binding = live[action];
   const codes = binding.codes;
   if (binding.range === true && codes.length > 1)
     return [`${keyCodeLabel(codes[0] ?? "")}–${keyCodeLabel(codes.at(-1) ?? "")}`];
@@ -180,10 +195,8 @@ export function keyboardLabel(action: KeyboardAction): string {
   return keyboardLabels(action).join(" / ");
 }
 
-/** Every key used twice on one screen that `KEYBOARD_SHARED_KEYS` does not explain; `bindings` defaults to the table. */
-export function keyboardCollisions(
-  bindings: Readonly<Record<KeyboardAction, KeyboardBinding>> = KEYBOARD_BINDINGS,
-): readonly Readonly<{
+/** Every key used twice on one screen that `KEYBOARD_SHARED_KEYS` does not explain; `bindings` defaults to the live table. */
+export function keyboardCollisions(bindings: KeyboardTable = live): readonly Readonly<{
   screen: string;
   code: string;
   actions: readonly string[];

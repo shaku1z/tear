@@ -144,3 +144,14 @@ export function stepRuntimeTab<Key>(
 export function firstEnabledUiButton(buttons: readonly UiActionButton[]): number {
   return buttons.findIndex((button) => button.enabled !== false);
 }
+
+/**
+ * The control focused when a screen opens, for every screen: on a return, the control the
+ * player left; otherwise the control the screen marks as its entry; otherwise the first enabled.
+ */
+export function screenEntryFocus(buttons: readonly UiActionButton[], restored: number | undefined): number {
+  const usable = (index: number): boolean => buttons[index] !== undefined && buttons[index].enabled !== false;
+  if (restored !== undefined && usable(restored)) return restored;
+  const marked = buttons.findIndex((button, index) => button.entryFocus === true && usable(index));
+  return marked >= 0 ? marked : firstEnabledUiButton(buttons);
+}

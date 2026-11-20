@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 const { STATE_WAIT_MS } = require("./browser-waits");
 
-// State Forge supplies only one legal normal Sword/charger encounter. The
+// State Setup supplies only one legal normal Sword/charger encounter. The
 // primary throw, Threadcut retrace, and catch are the current live Sword
 // transport semantics. The filename remains the historical compatibility entry.
 const resolved = Object.freeze({

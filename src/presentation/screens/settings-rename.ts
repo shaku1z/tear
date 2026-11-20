@@ -159,7 +159,7 @@ export function createSettingsRenameRenderers(context: ScreenRenderContext) {
       });
     }
     pageFooter(context, {
-      back: { type: "navigate", to: view.returnTo },
+      back: { type: "navigate.back" },
       canScrollUp: view.canScrollUp,
       canScrollDown: view.canScrollDown,
     });

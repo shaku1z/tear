@@ -22,7 +22,7 @@ const base: TearSdlDocumentV1 = {
   constraints: { legalProgression: true },
 };
 
-describe("State Forge validity and exact factories", () => {
+describe("State Setup validity and exact factories", () => {
   it("keeps structural validity, reachability, and population plausibility independent", () => {
     const invalid = evaluateTearStateValidity({
       stateClass: "plausible-population",

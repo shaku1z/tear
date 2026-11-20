@@ -166,8 +166,8 @@ export function validateProductionHeadlessCheckpointRequest(
   return checkpoint;
 }
 
-/** A State Forge recovery frontier bound to one natural source checkpoint; arbitrary surgical snapshot execution stays unavailable. */
-export interface ProductionHeadlessStateForgeEvaluation {
+/** A State Setup recovery frontier bound to one natural source checkpoint; arbitrary surgical snapshot execution stays unavailable. */
+export interface ProductionHeadlessStateSetupEvaluation {
   readonly source: ProductionHeadlessCheckpoint;
   readonly forgedSnapshot: TearSnapshotV1;
 }
@@ -198,7 +198,7 @@ export interface ProductionHeadlessEnvironment extends TearHeadlessEnvironment<
   replaceEnemies(spawns: readonly Readonly<{ id: string; x: number; y: number }>[]): void;
   captureCheckpoint(): ProductionHeadlessCheckpoint;
   restoreCheckpoint(checkpoint: ProductionHeadlessCheckpoint): CanonicalGameplayState;
-  restoreStateForgeEvaluation(evaluation: ProductionHeadlessStateForgeEvaluation): CanonicalGameplayState;
+  restoreStateSetupEvaluation(evaluation: ProductionHeadlessStateSetupEvaluation): CanonicalGameplayState;
   /** Available only when the environment was explicitly created for source-track capture. */
   sourceTracks(): ProductionHeadlessSourceTracks;
 }
@@ -390,14 +390,14 @@ export function validateProductionHeadlessCheckpoint(value: unknown): Production
   return Object.freeze({ ...valid, delivery });
 }
 
-function validateStateForgeEvaluation(
+function validateStateSetupEvaluation(
   value: unknown,
 ): Readonly<{ source: ProductionHeadlessCheckpoint; forgedSnapshot: TearSnapshotV1 }> {
-  if (!record(value)) throw new TypeError("production State Forge evaluation is invalid");
+  if (!record(value)) throw new TypeError("production State Setup evaluation is invalid");
   const source = validateProductionHeadlessCheckpoint(value.source);
   const parsed = validateTearContract(value.forgedSnapshot);
   if (!parsed.ok || parsed.value.kind !== "snapshot")
-    throw new TypeError("production State Forge evaluation snapshot is invalid");
+    throw new TypeError("production State Setup evaluation snapshot is invalid");
   const forged = parsed.value;
   if (
     forged.stateClass !== "surgical-valid" ||
@@ -411,7 +411,7 @@ function validateStateForgeEvaluation(
     forged.lineage.forkTick !== source.checkpoint.tick ||
     forged.hashes.exact !== stableVerificationHash(forged.state)
   ) {
-    throw new RangeError("production State Forge evaluation requires a lineage-bound surgical snapshot");
+    throw new RangeError("production State Setup evaluation requires a lineage-bound surgical snapshot");
   }
   return Object.freeze({ source, forgedSnapshot: forged });
 }
@@ -768,8 +768,8 @@ export function createProductionHeadlessEnvironment(
       origin = "checkpoint-suffix";
       return restoredObservation;
     },
-    restoreStateForgeEvaluation(value: ProductionHeadlessStateForgeEvaluation): CanonicalGameplayState {
-      const evaluation = validateStateForgeEvaluation(value);
+    restoreStateSetupEvaluation(value: ProductionHeadlessStateSetupEvaluation): CanonicalGameplayState {
+      const evaluation = validateStateSetupEvaluation(value);
       const restored = compose(
         evaluation.source.scenario,
         evaluation.forgedSnapshot,
@@ -777,7 +777,7 @@ export function createProductionHeadlessEnvironment(
         evaluation.source.bootstrap,
       );
       const restoredObservation = observation(restored);
-      // State Forge's exact hash covers its codec payload while this adapter
+      // State Setup's exact hash covers its codec payload while this adapter
       // projects CanonicalGameplayState. The former was checked before
       // hydration; comparing those intentionally distinct representations here
       // would create a false equivalence claim.

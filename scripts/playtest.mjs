@@ -12,7 +12,8 @@ const USAGE = `Usage: pnpm playtest bosses [options]
   --difficulty <id>    easy, normal, hard or extreme; default normal
   --weapon <ids>       comma list, default sword
   --seed <seeds>       comma list, default 1
-  --player <ids>       comma list of scripted, avoids-tells, cuts-objects; default all
+  --player <ids>       comma list of scripted, avoids-tells, cuts-objects, no-dodge, still;
+                       default all
   --phase <phases>     comma list of phase numbers: start there through the game's boss practice
                        (Sword on Normal only); default: start at Phase I in boss-only mode
   --seconds <n>        game seconds before a fight is stopped; default 180

@@ -78,15 +78,39 @@ describe("design-check verdict", () => {
     expect(designCheckVerdict(bareNested, "enforce").refuse).toContain('Removed ("n/a" without a reason)');
   });
 
+  it("reads a label written as a bold sentence, and never takes a later colon in the prose as the label's", () => {
+    // The shape of #240, which observe mode wrongly reported as "Cause (empty)".
+    const summary = answered.replace(
+      "- **Cause:** an answer",
+      "**Cause: the test, not the load.** The wait was 250 ms.",
+    );
+    expect(designCheckVerdict(summary, "enforce")).toEqual({});
+    // The shape of #262, read as answered only because of a colon later in the sentence.
+    const sentence = answered.replace("- **Cause:** an answer", "**Cause.** A full checkpoint on every look.");
+    expect(designCheckVerdict(sentence, "enforce")).toEqual({});
+    const sentenceOnly = answered.replace("- **Cause:** an answer", "**Cause.**\n\n## Checks");
+    expect(designCheckVerdict(sentenceOnly, "enforce").refuse).toContain("Cause (empty)");
+    const prose = answered.replace(
+      "- **Cause:** an answer",
+      "- **Cause** was hidden by the profile: 1,403 ms in total",
+    );
+    expect(designCheckVerdict(prose, "enforce").refuse).toContain("Cause (missing)");
+    const colonInQualifier = answered.replace(
+      "- **Measured:** an answer",
+      "- **Measured** (`pnpm build:test`):\n  - 3 s",
+    );
+    expect(designCheckVerdict(colonInQualifier, "enforce")).toEqual({});
+  });
+
   it("throws on an unknown mode instead of switching the gate off", () => {
     expect(() => designCheckVerdict(answered, "warn")).toThrow(/unknown design-check mode/u);
   });
 });
 
 describe("design-check setting", () => {
-  it("is observe in the repository for now, observing since the template gained the check", () => {
+  it("is enforce in the repository, observing since the template gained the check", () => {
     const text = fs.readFileSync(path.join(root, DESIGN_CHECK_CONFIG), "utf8");
-    expect(parseDesignCheckConfig(text)).toEqual({ mode: "observe", observingSince: "2026-11-18T01:53:47Z" });
+    expect(parseDesignCheckConfig(text)).toEqual({ mode: "enforce", observingSince: "2026-11-18T01:53:47Z" });
     const about = JSON.parse(text).about;
     expect(about).toContain("Switching to enforce is the lead's decision");
   });

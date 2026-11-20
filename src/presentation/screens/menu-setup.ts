@@ -117,6 +117,7 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
       glyph: "▶",
       hero: true,
       ghost: true,
+      entryFocus: true,
       sub: (view.playSub ?? `${view.modeLabel} · ${view.difficultyLabel}`).toUpperCase(),
       action: { type: "navigate", to: "setup" },
     });
