@@ -10,7 +10,8 @@ import { profileListEmptyState } from "./profile-list-empty-state";
 
 const PROFILE_HUE = "#b06cff",
   GOLD = "#e0a326";
-const ARCHIVE_STATUS: Readonly<Record<string, string>> = Object.freeze({
+// Pure, so a build without the phone layout drops this module (plans/MOBILE_LATER.md).
+const ARCHIVE_STATUS: Readonly<Record<string, string>> = /* @__PURE__ */ Object.freeze({
   idle: "",
   unavailable: "Importing replay files isn't available in this browser.",
   picking: "Choosing a file…",

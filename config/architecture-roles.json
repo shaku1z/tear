@@ -238,6 +238,29 @@
       "include": ["@tearbench.developer-surfaces", "src/agents/**", "src/playtest/**", "src/app/engineering/debug-*.ts"],
       "anticipate": ["src/app/engineering/*-channel-entry.ts"]
     },
+    "release.mobile-only": {
+      "purpose": "Phone and tablet code that a production build leaves out while mobile is paused (owner, 2026-11-19; plans/MOBILE_LATER.md): the touch input layer and its control layout, the drawn touch controls and their coaching, the rotate gate and the phone profile layout. Other code reaches it only behind __TEAR_MOBILE__, and a build of a target whose mobile is false in config/build-targets.json fails when one of these modules contributes code to a bundle (scripts/release-developer-code.mjs).",
+      "include": [
+        "src/input/browser-touch.ts",
+        "src/input/touch-control-layout.ts",
+        "src/presentation/world/touch-controls.ts",
+        "src/presentation/rotate-gate.ts",
+        "src/presentation/screens/compact-profile.ts",
+        "src/app/training/touch-onboarding-controller.ts"
+      ]
+    },
+    "release.mobile-guarded-importers": {
+      "purpose": "Shared modules that value-import mobile-only code and reach it only behind __TEAR_MOBILE__, so a production build shakes it out. A new importer goes through one of these.",
+      "include": [
+        "src/input/browser-input.ts",
+        "src/presentation/world/index.ts",
+        "src/presentation/render-pipeline.ts",
+        "src/presentation/screens/profile-achievements.ts",
+        "src/app/interface/interface-composition.ts",
+        "src/app/interface/presentation-composition.ts",
+        "src/app/shell/composition.ts"
+      ]
+    },
     "release.build-guarded-importers": {
       "purpose": "Release modules that still import developer-only code with a static import and rely on a build constant and tree-shaking to drop it. Ratchet target: empty.",
       "include": ["src/app/engineering/test-build-runtime-hooks.ts", "src/app/shell/composition.ts"]

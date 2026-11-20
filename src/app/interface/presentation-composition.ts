@@ -12,6 +12,7 @@ import { cinematicPromptForDevice } from "../../presentation/cinematic-prompts";
 import { createLivePresentationHost, type LivePresentationHost } from "./presentation-host";
 import { isSheetScreen, screenDensity } from "../../domain/screen-catalog";
 import { controlsKeepOut, type KeepOutArea } from "../../presentation/demo-keep-out";
+import { drawRotateGate } from "../../presentation/rotate-gate";
 
 export interface LivePresentationSurface {
   readonly wipe: TearWipe;
@@ -84,7 +85,6 @@ interface PresentationUi extends ButtonLayerUiPort, CinematicUiPort {
     alignment: CanvasTextAlign,
     size: number,
   ): void;
-  rotateGate(context: CanvasRenderingContext2D, rectangle: ScreenRectangle, seconds: number): void;
 }
 
 export interface LiveCaptureLayerPolicy {
@@ -396,8 +396,8 @@ export function createLivePresentationFrameHost<Screen extends string, Stage ext
         context.globalAlpha = 1;
       },
       drawRotationGate: () => {
-        if (services.capturePolicy().ui === "include")
-          ui.rotateGate(context, host.screenRectangle(), state.timeSeconds());
+        if (__TEAR_MOBILE__ && services.capturePolicy().ui === "include")
+          drawRotateGate(ui, context, host.screenRectangle(), state.timeSeconds());
       },
       entryFocus: host.entryFocus,
       setFocus: state.setFocus,

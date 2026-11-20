@@ -13,6 +13,7 @@ import {
   type LiveInterfaceCompositionOptions,
 } from "../../src/app/interface/interface-composition";
 import * as pipelineModule from "../../src/presentation/render-pipeline";
+import * as rotateGateModule from "../../src/presentation/rotate-gate";
 import * as buttonLayerModule from "../../src/presentation/screens/button-layer";
 import * as uiRuntimeModule from "../../src/app/interface/ui-runtime-controller";
 
@@ -123,7 +124,7 @@ describe("live presentation host", () => {
     const screen = vi.fn(),
       buttons = vi.fn(),
       badge = vi.fn(),
-      rotation = vi.fn();
+      rotation = vi.spyOn(rotateGateModule, "drawRotateGate").mockImplementation(() => undefined);
     vi.spyOn(hostModule, "createLivePresentationHost").mockImplementation((options) => {
       const host = { screenRectangle: () => ({ x: 0, y: 0, w: 1600, h: 900 }), drawButtons: buttons };
       ports = options.framePorts(host as never);
@@ -134,7 +135,7 @@ describe("live presentation host", () => {
         { timeSeconds: () => 1, screen: () => "mainmenu", controls: () => [] } as never,
         {
           context: { save: vi.fn(), restore: vi.fn() },
-          ui: { badge, rotateGate: rotation, t: { color: { accent: "#abc" } } },
+          ui: { badge, t: { color: { accent: "#abc" } } },
           capturePolicy: () => ({ ui }),
           controller: () => ({ active: true, toastSeconds: 1, toastText: "Connected" }),
           width: 1600,

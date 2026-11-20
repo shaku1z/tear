@@ -19,7 +19,7 @@
  *   node tests/browser-load-profile.js            report every target and profile
  *   node tests/browser-load-profile.js --check    also enforce config/load-budgets.json
  *
- * TEAR_LOAD_TARGETS=standalone,crazygames  TEAR_LOAD_PROFILES=desktop,laptop,phone
+ * TEAR_LOAD_TARGETS=standalone,crazygames  TEAR_LOAD_PROFILES=desktop,laptop (phone: parked with mobile)
  * TEAR_LOAD_REPEATS (default 1)  TEAR_LOAD_OUTPUT (report path)  TEAR_LOAD_START=0 (skip START)
  */
 const { chromium } = require("@playwright/test");
@@ -54,7 +54,9 @@ const TARGETS = Object.freeze({
 const selectedTargets = (process.env.TEAR_LOAD_TARGETS || Object.keys(TARGETS).join(","))
   .split(",")
   .filter((target) => fs.existsSync(path.join(projectRoot, TARGETS[target]?.directory ?? "missing", "index.html")));
-const selectedProfiles = (process.env.TEAR_LOAD_PROFILES || Object.keys(PROFILES).join(",")).split(",");
+// The phone profile is off by default while mobile is paused (plans/MOBILE_LATER.md): a release
+// build shows a phone the computer-only line and never starts, so there is no START to time.
+const selectedProfiles = (process.env.TEAR_LOAD_PROFILES || "desktop,laptop").split(",");
 assert.ok(
   selectedProfiles.every((profile) => profile in PROFILES),
   `TEAR_LOAD_PROFILES accepts ${Object.keys(PROFILES).join(", ")}`,

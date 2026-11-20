@@ -233,7 +233,10 @@ export function buildSettingsSections(
         kind: "cycle",
       },
       { key: "sens", label: "Blade / mouse sensitivity", value: settings.sens.toFixed(2), kind: "stepper" },
-      {
+    ];
+    // Touch or desktop controls is a choice only where the build has touch (mobile is paused).
+    if (__TEAR_MOBILE__)
+      rows.push({
         key: "controls",
         label: "Control mode",
         value:
@@ -241,8 +244,7 @@ export function buildSettingsSections(
             ? "AUTO (" + (environment.touch ? "TOUCH" : "DESKTOP") + ")"
             : settings.controls.toUpperCase(),
         kind: "cycle",
-      },
-    ];
+      });
     if (environment.touch)
       rows.push({
         key: "touchAim",
