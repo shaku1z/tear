@@ -44,6 +44,21 @@ export function startsOnTouch(matchMedia: ((query: string) => { readonly matches
   }
 }
 
+/**
+ * Every pointer the device has is a finger: a phone or tablet with no mouse or trackpad. A
+ * touchscreen laptop also reports a fine pointer, and a device with no pointer at all (a TV with a
+ * controller) reports neither, so neither is touch-only. Unreadable media queries count as not
+ * touch-only. Production builds show this device a computer-only line while mobile is paused.
+ */
+export function touchOnlyDevice(matchMedia: ((query: string) => { readonly matches: boolean }) | undefined): boolean {
+  try {
+    if (matchMedia === undefined) return false;
+    return matchMedia("(any-pointer: coarse)").matches && !matchMedia("(any-pointer: fine)").matches;
+  } catch {
+    return false;
+  }
+}
+
 export interface RelativeTravel {
   readonly distance: number;
   readonly at: number;

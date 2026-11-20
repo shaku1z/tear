@@ -124,7 +124,8 @@ export interface WorldPresentationServices {
   readonly tutorial: LiveTutorialRuntime;
   readonly finale: () => Finale | null;
   readonly achievementToast: AchievementToastController;
-  readonly touchOnboarding: TouchOnboardingController;
+  /** The first-touch coaching; null in a build without touch. */
+  readonly touchOnboarding: TouchOnboardingController | null;
   readonly formatTime: (seconds: number) => string;
   readonly trickColor: (multiplier: number) => string;
   readonly ease: (amount: number) => number;
@@ -503,7 +504,10 @@ export function createLiveWorldPresentationAdapters(
       }
     },
     drawTouchControls(): void {
-      const onboarding = services.touchOnboarding.step(state.lastUiDelta(), !!d.PROFILE.stat("touchOnboarded"));
+      const onboarding = services.touchOnboarding?.step(state.lastUiDelta(), !!d.PROFILE.stat("touchOnboarded")) ?? {
+        alpha: 0,
+        completed: false,
+      };
       if (onboarding.completed) d.profileStatsPersistence.add("touchOnboarded", 1);
       world.touchControls(
         buildTouchControlsSnapshot({

@@ -12,6 +12,7 @@ import { installBiomeStemBackend, installStemCueMusicBackend, requestedStemsMode
 import { warmChapterFonts } from "../presentation/font-loader";
 import { createEngineeringQuery, type EngineeringQuery } from "../app/shell/engineering-query";
 import { createSurfaceAvailability, type SurfaceAvailability } from "../domain/surface-availability";
+import { waitForComputerInput } from "./computer-only";
 
 /** The build's surface policy, resolved once here and injected into composition. */
 export interface TearBootstrapSurfaces {
@@ -44,5 +45,7 @@ export async function bootstrapTear(
   const stems = requestedStemsMode(engineeringQuery.search);
   if (stems.mode === "biome") installBiomeStemBackend();
   else if (stems.mode === "single") await installStemCueMusicBackend(stems.cueId);
+  // Mobile is paused: a production build waits on a touch-only device until a mouse or controller appears.
+  if (!__TEAR_MOBILE__) await waitForComputerInput(window, document);
   await compose(Object.freeze({ surfaces, engineeringQuery }));
 }
