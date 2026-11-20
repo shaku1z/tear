@@ -1,5 +1,5 @@
-import type { TearSnapshotV1 } from "../gameplay/snapshot/snapshot-contract";
-import type { CinematicDirectorStateV1 } from "../gameplay/runtime/cinematic-director";
+import type { TearSnapshotV1 } from "./snapshot-contract";
+import type { CinematicDirectorStateV1 } from "../runtime/cinematic-director";
 import {
   buildTearIdentityGraph,
   restoreSnapshotTransactionally,
@@ -9,7 +9,7 @@ import {
   type TearIdentityGraph,
   type TearStateCodecRegistry,
   type TearWorldFactory,
-} from "../gameplay/snapshot/state-codec";
+} from "./state-codec";
 
 type TearStateRecord = Readonly<Record<string, TearCodecValue>>;
 interface TearTransformState extends TearStateRecord {

@@ -164,20 +164,6 @@ export const NATIVE_GAMEPLAY_EVENT_KIND_REGISTRY = createStableRegistry(
   NATIVE_GAMEPLAY_EVENT_KIND_IDS,
 );
 
-export const ENTITY_KIND_IDS = Object.freeze([
-  "player",
-  "blade",
-  "projectile",
-  "platform",
-  "hazard",
-  ...GAME_ENEMY_IDENTITY_IDS,
-  "reflection",
-  "void-wisp",
-  ...BOSS_IDENTITY_IDS,
-] as const);
-export const ENTITY_KIND_REGISTRY = createStableRegistry("entity kind", ENTITY_KIND_IDS);
-export type TearEntityKindId = (typeof ENTITY_KIND_IDS)[number];
-
 /** Environment object kinds are owned by gameplay/environment, then projected here for TearBench. */
 export const ENVIRONMENT_OBJECT_KIND_IDS = GAME_ENVIRONMENT_OBJECT_KIND_IDS;
 export const ENVIRONMENT_OBJECT_KIND_REGISTRY = createStableRegistry(

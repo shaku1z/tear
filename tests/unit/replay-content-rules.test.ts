@@ -3,7 +3,7 @@ import { CONFIG } from "../../src/config/game-config";
 import { EnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 import { ENEMY_IDENTITY_IDS } from "../../src/gameplay/run/content-director";
 import { bindBiomeActors } from "../../src/gameplay/environment/biome-actors/bind-biome-actors";
-import { createProductionGhostReplayComposition } from "../../src/tearbench/production-replay-composition";
+import { createProductionGhostReplayComposition } from "../../src/app/world/detached/replay-composition";
 
 // Rules over all content: whatever live play can build or bind, the production replay world must
 // build and bind the same way. A new enemy or biome actor is covered without adding a case here.

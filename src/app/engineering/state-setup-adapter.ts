@@ -1,7 +1,7 @@
 import { readBeatRunBinding } from "../../gameplay/run/beat-run";
 import { seedRaceLegality } from "../../gameplay/run/seed-locked-draft";
 import { readSeedRaceRun, validateSeedRaceState } from "../../gameplay/run/seed-race-contract";
-import { hydrateRewardCodecPayload } from "../../tearbench/reward-codec-hydrator";
+import { hydrateRewardCodecPayload } from "../world/detached/reward-hydrator";
 import { restoreUpgradeHooks, upgradeHookIdentity } from "../../gameplay/upgrade-hooks";
 import type { UpgradeEventHandler } from "../../gameplay/upgrades";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
@@ -28,13 +28,13 @@ import type { RewardSelectionSnapshot } from "../../gameplay/run/reward-selectio
 import type { UpgradeDefinition } from "../../gameplay/upgrades";
 import type { TearCodecValue, TearCodecWorld } from "../../gameplay/snapshot/state-codec";
 import type { EnvironmentRuntimeState, EnvironmentSnapshot } from "../../gameplay/environment/environment-contracts";
-import type { TearLiveRestoreContext, TearLiveWorldAdapter } from "../../tearbench/live-state-snapshot";
+import type { TearLiveRestoreContext, TearLiveWorldAdapter } from "../../gameplay/snapshot/live-restore";
 import {
   applyTearCodecConfiguration,
   hydrateTearCodecWorld,
   type TearStagedWorld,
   type TearWorldConstructionPort,
-} from "../../tearbench/detached-world-hydrator";
+} from "../world/detached/world-hydrator";
 import { cleanupBossEncounterActors } from "../../gameplay/run/boss-encounter";
 import type {
   UiTutorialPresentationCheckpoint,
@@ -44,7 +44,7 @@ import {
   parseParticlePresentationCheckpoint,
   validateParticlePresentationBinding,
 } from "../../gameplay/snapshot/particle-checkpoint";
-import type { LiveParticlePresentationState } from "../../tearbench/particle-presentation-state";
+import type { LiveParticlePresentationState } from "../world/detached/particle-state";
 import type { PreparedParticlePresentationRestore } from "../../gameplay/snapshot/particle-checkpoint";
 
 interface Platform {

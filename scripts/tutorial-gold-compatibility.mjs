@@ -20,7 +20,7 @@ export const TUTORIAL_GOLD_ROOTS = Object.freeze([
   "src/tearbench/tutorial-gold-generation.ts",
   "src/gameplay/training/tutorial-controller.ts",
   "src/gameplay/training/tutorial-arenas.ts",
-  "src/tearbench/production-replay-composition.ts",
+  "src/app/world/detached/replay-composition.ts",
 ]);
 export const SHIPPING_CORPUS = "src/gameplay/training/tutorial-gold-reference-data.json";
 export const SHIPPING_BINDING = "src/gameplay/training/tutorial-gold-binding.json";

@@ -1,82 +1,85 @@
-import { validateSeedRaceState } from "../gameplay/run/seed-race-contract";
-import { createSeedRaceDecisionPlayback, type SeedRaceDecision } from "../ghost/seed-race-decisions";
-import { FinaleController } from "../gameplay/campaign/finale-controller";
-import type { ProductionCombatPhaseOptions } from "./production-combat-phases";
-import type { GhostForkOriginV1 } from "../ghost/fork-origin";
-import type { GhostReplayRenderView } from "../ghost/replay-world";
-import type { ProductionReplayWorldOptions } from "./production-world-factory";
-import { definedFields } from "../domain/records";
-import { applyWeapon } from "../gameplay/weapons";
-import { A11Y, GFX } from "../config/game-config";
-import { launchCampaignChapter } from "../gameplay/campaign/campaign-sequences";
-import { createCampaignChapterController } from "../gameplay/campaign/campaign-controller-factory";
-import { createUiState } from "../presentation/ui-tokens";
-import { createLiveParticlePresentationState } from "./particle-presentation-state";
-import { validateParticlePresentationBinding } from "../gameplay/snapshot/particle-checkpoint";
-import { prepareParticlePresentationRestore } from "../gameplay/snapshot/particle-checkpoint";
-import { createTearWorldConfiguration } from "../gameplay/runtime/tear-world-configuration";
-import { UPGRADES, type UpgradeDefinition } from "../gameplay/upgrades";
-import { eligibleTierChoices, type RewardSelectionSnapshot } from "../gameplay/run/reward-selection";
-import { restoreUpgradeHooks } from "../gameplay/upgrade-hooks";
-import { hydrateRewardCodecPayload, hydrateRewardUpgrade } from "./reward-codec-hydrator";
+import type { ProductionReplayBootstrap } from "../../../gameplay/snapshot/snapshot-contract";
+import { validateSeedRaceState } from "../../../gameplay/run/seed-race-contract";
+import { createSeedRaceDecisionPlayback, type SeedRaceDecision } from "../../../ghost/seed-race-decisions";
+import { FinaleController } from "../../../gameplay/campaign/finale-controller";
+import type { ProductionCombatPhaseOptions } from "./combat-phases";
+import type { GhostForkOriginV1 } from "../../../ghost/fork-origin";
+import type { GhostReplayRenderView } from "../../../ghost/replay-world";
+import type { ProductionReplayWorldOptions } from "./world-factory";
+import { definedFields } from "../../../domain/records";
+import { applyWeapon } from "../../../gameplay/weapons";
+import { A11Y, GFX } from "../../../config/game-config";
+import { launchCampaignChapter } from "../../../gameplay/campaign/campaign-sequences";
+import { createCampaignChapterController } from "../../../gameplay/campaign/campaign-controller-factory";
+import { createUiState } from "../../../presentation/ui-tokens";
+import { createLiveParticlePresentationState } from "./particle-state";
+import { validateParticlePresentationBinding } from "../../../gameplay/snapshot/particle-checkpoint";
+import { prepareParticlePresentationRestore } from "../../../gameplay/snapshot/particle-checkpoint";
+import { createTearWorldConfiguration } from "../../../gameplay/runtime/tear-world-configuration";
+import { UPGRADES, type UpgradeDefinition } from "../../../gameplay/upgrades";
+import { eligibleTierChoices, type RewardSelectionSnapshot } from "../../../gameplay/run/reward-selection";
+import { restoreUpgradeHooks } from "../../../gameplay/upgrade-hooks";
+import { hydrateRewardCodecPayload, hydrateRewardUpgrade } from "./reward-hydrator";
 import {
   captureCampaignChapterBindingSpec,
   parseCampaignChapterBindingSpec,
   stageCampaignChapterBinding,
   type StagedCampaignChapterBinding,
-} from "../gameplay/campaign/chapter-cinematic-binding";
-import type { ChapterIntent } from "../gameplay/campaign/chapter-controller";
-import { validateRunLifecycleSnapshot, type RunLifecycleSnapshot } from "../gameplay/run/lifecycle";
+} from "../../../gameplay/campaign/chapter-cinematic-binding";
+import type { ChapterIntent } from "../../../gameplay/campaign/chapter-controller";
+import { validateRunLifecycleSnapshot, type RunLifecycleSnapshot } from "../../../gameplay/run/lifecycle";
 import {
   CinematicTimeline,
   type CinematicDirectorBinding,
   type CinematicDirectorPort,
-} from "../gameplay/runtime/cinematic-director";
-import { createLiveStateSetupAdapter, captureLiveRewardSelection } from "../app/engineering/state-setup-adapter";
+} from "../../../gameplay/runtime/cinematic-director";
+import { createLiveStateSetupAdapter, captureLiveRewardSelection } from "../../engineering/state-setup-adapter";
 import {
   createLiveStateSetupRuntimeBridge,
   resolveStateSetupBossIntro,
-} from "../app/engineering/state-setup-runtime-bridge";
-import type { RunDifficulty } from "../gameplay/run/session";
-import { RunRandomStreams, type RunRandomStreamsSnapshot } from "../simulation/run-random";
+} from "../../engineering/state-setup-runtime-bridge";
+import type { RunDifficulty } from "../../../gameplay/run/session";
+import { RunRandomStreams, type RunRandomStreamsSnapshot } from "../../../simulation/run-random";
 import {
   captureCanonicalGameplayState,
   type CanonicalGameplayState,
   type RuntimeEnemyState,
-} from "../gameplay/runtime/canonical-state";
-import type { AuthoritativeInputSnapshot, AuthoritativeInputState } from "../gameplay/runtime/authoritative-input";
-import type { TearGameplayEventPort } from "../gameplay/runtime/gameplay-events";
-import { CAMPAIGN_STAGE_IDS, stageAt } from "../gameplay/stages";
-import { stableVerificationHash } from "../domain/hash";
-import type { TearBuildIdentityV1, TearSnapshotV1 } from "../gameplay/snapshot/snapshot-contract";
-import type { TearCodecWorld } from "../gameplay/snapshot/state-codec";
-import { applyTearCodecConfiguration, hydrateTearCodecWorld } from "./detached-world-hydrator";
-import { captureLiveStateSetupSnapshot, injectedBuildIdentity } from "./live-runtime-snapshots";
-import { createProductionCombatSimulation } from "./production-combat-simulation";
-import type { ProductionApplicationFrameConfirm } from "./production-application-frame";
-import { createProductionRunOutcomeRuntime, type ProductionRunOutcomeRuntime } from "./production-run-outcome-runtime";
-import { createProductionReplayWorld, type ProductionReplayWorld } from "./production-world-factory";
+} from "../../../gameplay/runtime/canonical-state";
+import type {
+  AuthoritativeInputSnapshot,
+  AuthoritativeInputState,
+} from "../../../gameplay/runtime/authoritative-input";
+import type { TearGameplayEventPort } from "../../../gameplay/runtime/gameplay-events";
+import { CAMPAIGN_STAGE_IDS, stageAt } from "../../../gameplay/stages";
+import { stableVerificationHash } from "../../../domain/hash";
+import type { TearBuildIdentityV1, TearSnapshotV1 } from "../../../gameplay/snapshot/snapshot-contract";
+import type { TearCodecWorld } from "../../../gameplay/snapshot/state-codec";
+import { applyTearCodecConfiguration, hydrateTearCodecWorld } from "./world-hydrator";
+import { captureLiveStateSetupSnapshot, injectedBuildIdentity } from "../../../gameplay/snapshot/live-capture";
+import { createProductionCombatSimulation } from "./combat-simulation";
+import type { ProductionApplicationFrameConfirm } from "./application-frame";
+import { createProductionRunOutcomeRuntime, type ProductionRunOutcomeRuntime } from "./run-outcome-runtime";
+import { createProductionReplayWorld, type ProductionReplayWorld } from "./world-factory";
 import {
   createProductionWaveRewardRuntime,
   type ProductionRunOpening,
   type ProductionWaveRewardIntent,
   type ProductionWaveRewardRuntime,
-} from "./production-wave-reward-runtime";
-import { ENTITY_KIND_REGISTRY } from "./registries";
-import { createDefaultStateCodecRegistry, restoreSnapshotTransactionally } from "../gameplay/snapshot/state-codec";
-import { rebaseEnvironmentSnapshot } from "../gameplay/snapshot/environment-codec";
-import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "../gameplay/snapshot/authored-environment-validation";
-import { readGhostRecordedOpeningPermit, type GhostRecordedOpeningPermit } from "../ghost/replay-admission";
+} from "./wave-reward-runtime";
+import { ENTITY_KIND_REGISTRY } from "../../../gameplay/snapshot/codec-ids";
 import {
-  advanceFramePrelude,
-  commitBossIntroSnapshot,
-  type MutableFramePreludeState,
-} from "../app/shell/frame-runtime";
-import { clamp, lerp } from "../domain/geometry";
+  createDefaultStateCodecRegistry,
+  restoreSnapshotTransactionally,
+} from "../../../gameplay/snapshot/state-codec";
+import { rebaseEnvironmentSnapshot } from "../../../gameplay/snapshot/environment-codec";
+import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "../../../gameplay/snapshot/authored-environment-validation";
+import { readGhostRecordedOpeningPermit, type GhostRecordedOpeningPermit } from "../../../ghost/replay-admission";
+import { advanceFramePrelude, commitBossIntroSnapshot, type MutableFramePreludeState } from "../../shell/frame-runtime";
+import { clamp, lerp } from "../../../domain/geometry";
 import {
   createGhostApplicationClockPlayback,
   type GhostApplicationClockSchedule,
-} from "../ghost/application-frame-events";
+} from "../../../ghost/application-frame-events";
 
 const productionChapterBindings = new WeakMap<ProductionReplayWorld, StagedCampaignChapterBinding>();
 const productionFocus = new WeakMap<ProductionReplayWorld, number>();
@@ -87,7 +90,7 @@ export function captureProductionRewardSelection(selection: RewardSelectionSnaps
 
 const productionWaveRewards = new WeakMap<ProductionReplayWorld, ProductionWaveRewardRuntime>();
 
-export type { ProductionApplicationFrameConfirm } from "./production-application-frame";
+export type { ProductionApplicationFrameConfirm } from "./application-frame";
 
 const CONTENT_HASH = stableVerificationHash(ENTITY_KIND_REGISTRY.ids);
 
@@ -123,13 +126,6 @@ export interface ProductionReplayCheckpointCapture {
   readonly snapshot: TearSnapshotV1;
   readonly input: AuthoritativeInputSnapshot;
   readonly semanticHash: string;
-}
-
-/** Immutable run-start facts captured before natural opening content consumes RNG. */
-export interface ProductionReplayBootstrap {
-  readonly build: TearBuildIdentityV1;
-  readonly rng: RunRandomStreamsSnapshot;
-  readonly applicationFramePolicy?: Readonly<{ version: 1; kind: "generated-step-intro"; secondsPerStep: number }>;
 }
 
 /** Shared renderer-neutral projection for production replay and headless worlds. */

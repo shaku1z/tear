@@ -1,4 +1,4 @@
-import { createProductionGhostReplayComposition } from "../../src/tearbench/production-replay-composition";
+import { createProductionGhostReplayComposition } from "../../src/app/world/detached/replay-composition";
 import { createLiveCombatActions } from "../../src/app/combat/combat-actions";
 import { createLiveWeaponRuntime } from "../../src/gameplay/combat/live-weapon-runtime";
 import { applyUpgrade, tierUp, UPGRADES, type UpgradeMods } from "../../src/gameplay/upgrades";
