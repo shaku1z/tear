@@ -92,7 +92,13 @@ describe("a boss phase change with the player at a wall", () => {
           maxTicks: 60_000,
         }),
       );
-      const actor = (): RawBoss | undefined => environment.world().enemies().find(isRawBoss);
+      const actor = (): RawBoss | undefined => {
+        const found: unknown = environment
+          .world()
+          .enemies()
+          .find((enemy) => isRawBoss(enemy));
+        return isRawBoss(found) ? found : undefined;
+      };
       const phase = (): number | undefined => readBoss(environment.world())?.phase;
       const player = () => environment.world().player() as RawPlayer;
       let tick = 0;
