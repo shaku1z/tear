@@ -16,10 +16,17 @@ export const CHAPTER_SKIP = Object.freeze({
 
 /**
  * The state of the story chapter the run is showing, read from the running world; undefined in a mode with no
- * chapters. A checkpoint holds the same field but hashes the whole game to get it.
+ * chapters and in a run opened where the stage shows none (the Grounds after its first wave). A checkpoint holds
+ * the same field but hashes the whole game to get it.
  */
 export function chapterState(environment: Pick<ProductionHeadlessEnvironment, "world">): string | undefined {
-  return (environment.world().run() as { chapterState?: string } | undefined)?.chapterState;
+  return (environment.world().run() as { chapterState?: string | null } | undefined)?.chapterState ?? undefined;
+}
+
+/** True while a story chapter holds the run: one is showing and has not handed over to the wave. */
+export function chapterHolds(environment: Pick<ProductionHeadlessEnvironment, "world">): boolean {
+  const state = chapterState(environment);
+  return state !== undefined && state !== CHAPTER_WAVE_LIVE;
 }
 
 /**

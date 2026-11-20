@@ -188,7 +188,7 @@
       "duration": "long"
     },
     "playtest": {
-      "purpose": "Plays the real game headless: `bosses`, `sweep` boss fights, `waves` a stage's waves, `runs` whole runs, `enemies` each kind alone (queue sweep and runs)",
+      "purpose": "Plays the real game headless: `bosses`, `sweep`, `waves`, `runs`, `enemies` reports; `coverage` lists what never appeared (queue sweep, runs, coverage)",
       "effects": [
         "read-only"
       ],
@@ -1493,7 +1493,7 @@
       ]
     },
     "scripts/playtest.mjs": {
-      "purpose": "Playtest command: loads src/playtest through Vite, plays fights, waves, runs or enemy meetings headless, in worker processes when many; --json writes them",
+      "purpose": "Playtest command: loads src/playtest through Vite, plays fights, waves, runs, enemy meetings or all for coverage, in worker processes; --json writes them",
       "effects": [
         "read-only"
       ],
