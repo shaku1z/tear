@@ -20,6 +20,8 @@ import { stageArtLayerRect } from "../../src/presentation/stage-art/stage-art-pa
 import { StageArtError, validateStageArt } from "../../src/presentation/stage-art/stage-art-validate";
 
 const WORLD = { width: 1600, height: 900, groundY: 800 };
+/** Time limit for the one test that paints the whole stage twice. */
+const TWO_BAKES_MS = 30_000;
 
 interface Recorded {
   readonly canvases: { readonly width: number; readonly height: number; readonly calls: string[] }[];
@@ -133,14 +135,19 @@ describe("stage readability rules", () => {
 });
 
 describe("painting a stage", () => {
-  it("paints the same calls every time from the same recipe", async () => {
-    const first: Recorded = { canvases: [] };
-    const second: Recorded = { canvases: [] };
-    await paintedStage(VERDANT_SANCTUM_ART).paint(paintPorts(first).ports);
-    await paintedStage(VERDANT_SANCTUM_ART).paint(paintPorts(second).ports);
-    expect(first.canvases.length).toBeGreaterThan(0);
-    expect(second.canvases).toEqual(first.canvases);
-  });
+  it(
+    "paints the same calls every time from the same recipe",
+    async () => {
+      const first: Recorded = { canvases: [] };
+      const second: Recorded = { canvases: [] };
+      await paintedStage(VERDANT_SANCTUM_ART).paint(paintPorts(first).ports);
+      await paintedStage(VERDANT_SANCTUM_ART).paint(paintPorts(second).ports);
+      expect(first.canvases.length).toBeGreaterThan(0);
+      expect(second.canvases).toEqual(first.canvases);
+      // Two whole bakes with every call recorded: about 2.3 s alone, and over the default 5 s on a loaded machine.
+    },
+    TWO_BAKES_MS,
+  );
 
   it("draws its randomness from the recipe seed alone, never a shared source", async () => {
     // Gameplay and replays use the injected random source and simulation ticks. Painting must not
