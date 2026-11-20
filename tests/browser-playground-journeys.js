@@ -402,9 +402,9 @@ const journey = (practiceLab) =>
       await waitScreen("playing");
       console.log("playground journey: run ready");
 
-      // Hotkey spawns run at the combat-tail boundary. Each must survive the filtered
+      // Shortcut spawns run at the combat-tail boundary. Each must survive the filtered
       // entity-list commit performed earlier in the same fixed tick.
-      for (const key of ["1", "2", "3", "t", "b"]) {
+      const spawnsOnKey = async (key) => {
         const before = await page.evaluate(() => window.__PANTHEON_TEST.state().enemyCount);
         await page.keyboard.press(key);
         try {
@@ -419,12 +419,14 @@ const journey = (practiceLab) =>
           }));
           assert.fail(`${key} did not spawn an enemy from ${before}: ${JSON.stringify(snapshot)}`);
         }
-      }
-      await page.keyboard.press("k");
+      };
+      // 3 is the target dummy and 2 clears the arena (the number row, from the binding table).
+      await spawnsOnKey("3");
+      await page.keyboard.press("2");
       await page.waitForFunction(() => window.__PANTHEON_TEST.state().enemyCount === 0, undefined, {
         timeout: STATE_WAIT_MS,
       });
-      console.log("playground journey: combat hotkey spawns survive the tail commit");
+      console.log("playground journey: a shortcut spawn survives the tail commit, and clear empties the arena");
 
       // Every Playground control below is reached through its rendered label, so the journey
       // follows the layout instead of fixed coordinates.
@@ -482,8 +484,11 @@ const journey = (practiceLab) =>
       await waitScreen("playing");
       console.log("playground journey: pointer resume");
 
-      // U opens ABILITIES; Tab leaves the menu from any tab.
-      await pressUntilScreen("u", "pglab");
+      // 4 repeats the last spawn from the menu (the CHARGER above).
+      await spawnsOnKey("4");
+      console.log("playground journey: repeat brings back the menu's last spawn");
+      // Tab reopens the menu on the tab left open (ABILITIES) and leaves it from any tab.
+      await pressUntilScreen("Tab", "pglab");
       await pressUntilScreen("Tab", "playing");
       // Pause offers the menu: the route touch and controller players use.
       await pressUntilScreen("Escape", "paused");

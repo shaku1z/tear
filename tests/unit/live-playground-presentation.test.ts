@@ -52,7 +52,6 @@ describe("live playground presentation", () => {
       arenaName: () => "Verdant",
       arenas: () => ["Ashen", "Verdant"],
       tab: () => tab,
-      hotkeyKinds: ["charger"],
       selectedWeapon: () => "sword",
       upgrades: () => [{ id: "dash", name: "Dash", desc: "Move", cat: "mobility", tiers: [{}, {}] }],
       abilityColors: () => ({ mobility: { color: "#00f" }, utility: { color: "#888" } }),
@@ -100,18 +99,26 @@ describe("live playground presentation", () => {
     expect(menu?.tabs.find((entry) => entry.selected)?.id).toBe("tab:spawn");
     expect(lab?.tabs.find((entry) => entry.selected)?.id).toBe("tab:abilities");
     expect(menu?.sections.map((section) => section.label)).toEqual(["ENEMIES", "HEALTH", "HOW MANY", "DIFFICULTY"]);
-    // Keyboard shows each choice's arena shortcut; other devices do not.
-    expect(menu?.sections[0]?.choices.map((choice) => choice.sub)).toEqual(["KEY 1", "KEY T"]);
+    // A choice with an arena shortcut names it in the device's words, from the binding table;
+    // the enemy kinds have none (repeat brings the last one back).
+    expect(menu?.sections[0]?.choices.map((choice) => [choice.id, choice.sub])).toEqual([
+      ["spawn:charger", undefined],
+      ["dummy", "KEY 3"],
+      ["repeat", "KEY 4"],
+    ]);
     device = "gamepad";
     runtime.renderMenu();
+    expect(menu?.sections[0]?.choices.map((choice) => choice.sub)).toEqual([undefined, "VIEW + ←", "VIEW + →"]);
+    device = "touch";
+    runtime.renderMenu();
     expect(menu?.sections[0]?.choices.some((choice) => choice.sub !== undefined)).toBe(false);
-    // BOSSES lists the roster once; the Echo's arena shortcut (M) sits on its own row.
+    // BOSSES lists the roster once, the Echo included, with no keys.
     device = "keyboard";
     tab = "bosses";
     runtime.renderMenu();
     expect(menu?.sections.flatMap((section) => section.choices.map((choice) => [choice.id, choice.sub]))).toEqual([
       ["boss:warden", undefined],
-      ["boss:echo", "KEY M"],
+      ["boss:echo", undefined],
     ]);
     // The arena tab lists the real stages only and marks the current one.
     tab = "arena";

@@ -8,11 +8,7 @@ import {
 } from "../../gameplay/training/live-tutorial-runtime";
 import { stepUiTab } from "../interface/ui-action-coordinator";
 import { PLAYGROUND_TABS } from "../../gameplay/training/runtime-bridge";
-import {
-  PLAYGROUND_ALL_KINDS,
-  PLAYGROUND_HOTKEY_KINDS,
-  PlaygroundController,
-} from "../../gameplay/training/playground-controller";
+import { PLAYGROUND_ALL_KINDS, PlaygroundController } from "../../gameplay/training/playground-controller";
 import { createPlaygroundRuntimeBridge } from "../../gameplay/training/runtime-bridge";
 import { createLivePlaygroundPresentation } from "../../gameplay/training/live-playground-presentation";
 import type { PlaygroundScreenModel } from "../../gameplay/training/live-playground-presentation";
@@ -197,8 +193,8 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
       context.addFloater(actor.x, actor.y - 60, text, emphasis, color);
     },
     navigate: (screen) => {
-      // ABILITIES is the menu's last tab on its own screen: U opens it directly, and the
-      // menu reopens on it when it was the tab left open.
+      // ABILITIES is the menu's last tab on its own screen: the menu reopens on it when it was
+      // the tab left open.
       if (screen === "pglab") runtime.tab = "abilities";
       const target = screen === "pgmenu" && runtime.tab === "abilities" ? "pglab" : screen;
       context.navigate(target);
@@ -206,9 +202,6 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
     },
     releasePointer: context.releasePointer,
     requestPointer: context.requestPointer,
-    dismissMirror: () => {
-      d.Mirror.active = false;
-    },
     selectArena: (arena) => {
       if (arena === -1) {
         context.selectStage(0);
@@ -285,7 +278,6 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
       }
       return runtime.tab;
     },
-    hotkeyKinds: PLAYGROUND_HOTKEY_KINDS,
     selectedWeapon: context.selectedWeapon,
     upgrades: () => d.UPGRADES,
     abilityColors: context.abilityColors,
