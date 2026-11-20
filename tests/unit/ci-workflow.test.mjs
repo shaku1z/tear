@@ -303,6 +303,39 @@ describe("Validate workflow", () => {
       );
   });
 
+  it("lets no check-results upload decide a verdict, keeps every upload a later step needs fatal, and reports a failed one", () => {
+    // Run 44740825411 failed only because the static job's check-results upload hit ECONNRESET.
+    // Two readers use check-results artifacts, and neither needs them: the check-results action on a
+    // re-run (the flaky report), which goes on when there are none, and scripts/ci-check-times.mjs by hand.
+    const action = read(".github/actions/check-results/action.yml");
+    expect(action).toContain("pattern: check-results-${{ inputs.job }}-*");
+    expect(action).toContain("No earlier check results for $JOB; this attempt cannot report flaky checks.");
+    expect(read("scripts/ci-check-times.mjs")).toContain('"check-results-*"');
+    const consumed = /^(tear-release-targets|validate-builds|tear-preview-dev)-/u;
+    let diagnostics = 0;
+    for (const [id, block] of Object.entries(jobBlocks)) {
+      const steps = block.split(/\n(?= {6}- )/u);
+      steps.forEach((step, index) => {
+        if (!step.includes("uses: actions/upload-artifact@")) return;
+        const name = / {10}name: (.+)/u.exec(step)?.[1] ?? "";
+        const where = `${id}: ${name}`;
+        if (name.startsWith("check-results-")) {
+          diagnostics += 1;
+          expect(step, where).toContain("continue-on-error: true");
+          expect(step, where).toMatch(/^ {6}- id: check-results-upload\n/u);
+          const report = steps[index + 1] ?? "";
+          expect(report, where).toContain("if: always() && steps.check-results-upload.outcome == 'failure'");
+          expect(report, where).toContain("::warning");
+          expect(report, where).toContain('>> "$GITHUB_STEP_SUMMARY"');
+        } else {
+          expect(name, `${where} is needed by a later step, or is new and needs a decision here`).toMatch(consumed);
+          expect(step, where).not.toContain("continue-on-error");
+        }
+      });
+    }
+    expect(diagnostics).toBe(4);
+  });
+
   it("has every browser shard test the release artifact's bytes, checked by hash before any test", () => {
     const shard = jobBlocks.browser;
     const download = shard.indexOf("name: tear-release-targets-${{ needs.scope.outputs.commit }}");
