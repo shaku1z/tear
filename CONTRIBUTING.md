@@ -61,8 +61,6 @@ See `docs/ARCHITECTURE.md`, `docs/DESIGN_SYSTEM.md`, `docs/PERFORMANCE_BUDGETS.m
 ## Evidence and generated output
 
 Keep source and package roots free of logs, screenshots, traces, reports, and
-compiler caches. Follow `docs/ARTIFACTS.md`, use the checkpoint-scoped paths in
-`config/artifact-layout.json`, and run `pnpm check:artifacts` after changing an
-artifact generator or evidence reference. Raw output under `artifacts/` is
-ignored; only deliberately promoted checkpoint manifests and preservation
-records are committed.
+compiler caches. Follow `docs/ARTIFACTS.md` and use its checkpoint-scoped
+paths. Raw output under `artifacts/` is ignored, and `pnpm check:docs` fails if
+it is committed; only deliberately promoted checkpoint manifests are committed.

@@ -61,8 +61,6 @@
     "build.reproducible-standalone-b": 4.3,
     "static.active-roster": 0.1,
     "static.architecture": 1.8,
-    "static.artifact-disposition": 0.1,
-    "static.artifact-layout": 0.1,
     "static.code-budget": 1.2,
     "static.docs": 0.1,
     "static.format": 15.6,
@@ -70,11 +68,9 @@
     "static.lint": 68.5,
     "static.music": 0.1,
     "static.node-tests": 62.4,
-    "static.parent-layout": 0.1,
     "static.terminology": 1.1,
     "static.typecheck": 20.7,
     "static.wiki": 1.4,
-    "static.workspace": 0.1,
     "unit.vitest": 172.7
   }
 }

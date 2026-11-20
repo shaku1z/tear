@@ -28,7 +28,7 @@ owning test/script references in one reviewable transaction.
 | Performance budgets | [PERFORMANCE_BUDGETS.md](PERFORMANCE_BUDGETS.md) | — |
 | itch.io package and upload steps | [ITCH_UPLOAD.md](ITCH_UPLOAD.md) | `config/build-targets.json` (`itch`); `scripts/package-target.mjs` |
 | Browser journey coverage | [BROWSER_JOURNEY_COVERAGE.md](BROWSER_JOURNEY_COVERAGE.md) | — |
-| Artifact and checkpoint-evidence organization | [ARTIFACTS.md](ARTIFACTS.md) | `config/artifact-layout.json`; G5 retention and disposition records |
+| Artifact and checkpoint-evidence organization | [ARTIFACTS.md](ARTIFACTS.md) | — |
 
 `docs/checkpoints/` and `docs/checkpoints/program-normalization/` are
 append-only checkpoint/history locations. `docs/source/` is the preserved
