@@ -6,12 +6,12 @@ import type {
   TearStructuredRuntimeEnvironment,
 } from "../../src/tearbench/live-runtime-contracts";
 import type { LiveRuntimeSnapshotController } from "../../src/tearbench/live-runtime-snapshots";
-import { launchResolvedLiveState } from "../../src/tearbench/live-state-forge-scenario-launch";
+import { launchResolvedLiveState } from "../../src/tearbench/live-state-setup-scenario-launch";
 import {
   captureProductionReplayCheckpoint,
   createProductionGhostReplayComposition,
 } from "../../src/tearbench/production-replay-composition";
-import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-forge-live-compiler";
+import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-setup-live-compiler";
 import { PALE_STAGE_ENGINEERING_TEARSDL } from "../../src/tearbench/pale-stage-engineering-scenario";
 import { resolveTearSdl } from "../../src/tearbench/tearsdl";
 import type { TearSnapshotV1 } from "../../src/tearbench/contracts";
@@ -24,7 +24,7 @@ function sourceSnapshot(): TearSnapshotV1 {
     .snapshot;
 }
 
-describe("Pale stage State Forge entry", () => {
+describe("Pale stage State Setup entry", () => {
   it("resolves a reachable engineering-only Playground preview entry", () => {
     const resolved = resolveTearSdl(PALE_STAGE_ENGINEERING_TEARSDL);
     expect(resolved.structural.valid).toBe(true);

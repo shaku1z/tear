@@ -2,11 +2,11 @@ import { preflightGhostRecordedCanonicalSnapshot } from "../../src/ghost/capsule
 import { declareSeedRace, seedRaceInitialBuildHash } from "../../src/ghost/seed-race-contract";
 import { seedRaceCatalogHash } from "../../src/gameplay/run/seed-locked-draft";
 import { describe, expect, it, vi } from "vitest";
-import { createLiveStateForgeAdapter } from "../../src/app/engineering/state-forge-adapter";
+import { createLiveStateSetupAdapter } from "../../src/app/engineering/state-setup-adapter";
 import { createProductionGhostReplayComposition } from "../../src/tearbench/production-replay-composition";
 import {
-  captureLiveStateForgeSnapshot,
-  createLiveStateForgeRestoreFactory,
+  captureLiveStateSetupSnapshot,
+  createLiveStateSetupRestoreFactory,
 } from "../../src/tearbench/live-runtime-snapshots";
 import { restoreSnapshotIntoLiveWorld } from "../../src/tearbench/live-state-snapshot";
 import { createDefaultStateCodecRegistry } from "../../src/tearbench/state-codecs";
@@ -84,7 +84,7 @@ function fixture(includeTutorial = false) {
       },
     })),
   );
-  const adapter = createLiveStateForgeAdapter({
+  const adapter = createLiveStateSetupAdapter({
     dependencies: { ...replay.dependencies, STAGES, PLAYGROUND_STAGES, UPGRADES, applyWeapon },
     entities: replay.world.entities,
     worldServices: replay.world.context.services,
@@ -158,12 +158,12 @@ function fixture(includeTutorial = false) {
   });
   const registry = createDefaultStateCodecRegistry();
   const capture = () =>
-    captureLiveStateForgeSnapshot({
+    captureLiveStateSetupSnapshot({
       id: "live-adapter-boundary",
       tick: combat.simulationRuntime.scheduler.tick,
       stateClass: "recorded-canonical",
       seed: "live-adapter-ownership",
-      stateForge: adapter,
+      stateSetup: adapter,
       registry,
       rng: replay.world.context.services.random.snapshot(),
       observationClass: "structured-state",
@@ -173,7 +173,7 @@ function fixture(includeTutorial = false) {
       visualHash: "not-captured",
     });
   const restore = (snapshot: ReturnType<typeof capture>) =>
-    restoreSnapshotIntoLiveWorld(snapshot, registry, createLiveStateForgeRestoreFactory(registry), {
+    restoreSnapshotIntoLiveWorld(snapshot, registry, createLiveStateSetupRestoreFactory(registry), {
       ...adapter,
       validate: (candidate) => {
         stagedEntropy.push(replay.cosmeticEmissionRandom.snapshot());
@@ -219,7 +219,7 @@ function fixture(includeTutorial = false) {
   };
 }
 
-describe("live State Forge adapter ownership boundary", () => {
+describe("live State Setup adapter ownership boundary", () => {
   it.each([0, 1, 3])("captures a real partial projectile trail with %i samples before JSON hashing", (samples) => {
     const host = fixture(),
       projectile = new host.replay.factories.Projectile(100, 200, 30, -40);

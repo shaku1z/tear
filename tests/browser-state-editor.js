@@ -4,7 +4,7 @@ const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
 const { STATE_WAIT_MS, settleFor } = require("./browser-waits");
 
-withJourney({ name: "C23 State Forge Studio" }, async ({ page, errors }) => {
+withJourney({ name: "C23 State Editor" }, async ({ page, errors }) => {
   const url = new URL(page.url());
   url.searchParams.set("snapshot-editor", "1");
   await page.goto(url.toString(), { timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
@@ -147,7 +147,7 @@ withJourney({ name: "C23 State Forge Studio" }, async ({ page, errors }) => {
   );
   fs.mkdirSync(artifactDirectory, { recursive: true });
   fs.writeFileSync(
-    path.join(artifactDirectory, "state-forge-studio-journey.json"),
+    path.join(artifactDirectory, "state-editor-journey.json"),
     JSON.stringify(
       {
         launchedRecordedCanonical: true,
@@ -162,6 +162,6 @@ withJourney({ name: "C23 State Forge Studio" }, async ({ page, errors }) => {
       2,
     ),
   );
-  await page.screenshot({ path: path.join(artifactDirectory, "state-forge-studio-journey.png") });
-  console.log("C23 State Forge Studio live host passed");
+  await page.screenshot({ path: path.join(artifactDirectory, "state-editor-journey.png") });
+  console.log("C23 State Editor live host passed");
 });

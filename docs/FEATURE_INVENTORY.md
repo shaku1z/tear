@@ -48,17 +48,17 @@ This is the migration checklist for the architectural redesign. A checked featur
   Rootbound is the Wave 40 boss, Echo is Wave 50, and Source is Wave 60.
 - [x] Pale Traverse, Rimehound, its five variants, Aurora/Ghost Tracks, and
   White Hart remain fully authored engineering content available through
-  Playground, State Forge, replay, and TearBench. They are excluded from
+  Playground, State Setup, replay, and TearBench. They are excluded from
   Adventure, Endless, Gauntlet, Boss Test, Enemy Test, Tutorial, published
   progression/reference surfaces, and ordinary campaign state by the
   source-owned content-availability policy.
 - [x] Shared environment contracts, state, presentation projection, replay,
-  State Forge, and TearBench codecs are biome-neutral. Verdant and Pale own
+  State Setup, and TearBench codecs are biome-neutral. Verdant and Pale own
   independent typed extensions and runtime features, and architecture checks
   reject direct/transitive cross-biome dependencies plus biome schema leakage
   into the neutral layer.
 - [x] Rootbound and White Hart are canonical authored boss definitions;
-  Rootbound phases 1–3 are implemented and generically State Forge-capable.
+  Rootbound phases 1–3 are implemented and generically State Setup-capable.
   White Hart remains unpublished by availability policy, not by provisional
   implementation status.
 - [ ] Final Verdant and Pale soundtrack selections are intentionally unfinished.
@@ -143,9 +143,9 @@ frozen evidence record.
   returns a defeat/result retry to that same selected boss and authored stage.
   Class-A live diagnostics now project Rootbound's current phase, valid ordinal
   set, and `verdant-sanctum` home through production boss/stage authorities;
-  State Forge derives the complete six-boss, eighteen-phase launch matrix.
+  State Setup derives the complete six-boss, eighteen-phase launch matrix.
   Rootbound phases 1–3 are explicitly attack-unavailable at the C10 boundary;
-  State Forge preserves that fact instead of synthesizing placeholder commits.
+  State Setup preserves that fact instead of synthesizing placeholder commits.
   VS3-C11-S1 adds the deterministic Phase I scheduling spine: a fixed cyclic
   Vine Sweep / Seed Arc / Rootline / Canopy Step selection order, explicit
   opening and recovery windows, and a selected-but-uncommitted boundary. No
@@ -262,7 +262,7 @@ frozen evidence record.
   field/combat-object caps; undersized capacity fails closed. Every reset,
   restore, retry, stage, terminal, defeat, abandon, and disposal path removes
   live environment records and neutralizes boss-local Phase II projections.
-  State Forge now restores a specialized active Graft against the real
+  State Setup now restores a specialized active Graft against the real
   Rootbound actor, preserves its recorded owner ID before environment wiring
   can allocate another identity, and proves damage, destruction, cleanup,
   native event order, and reward/proc exclusion in the shared browser suite.
@@ -323,7 +323,7 @@ frozen evidence record.
   existing `tear.hazard.v1` codec now reports v2, migrates legacy slow-zone /
   wall payloads, validates bounded environment fields/combat objects/routes,
   indexes owner/target references, and projects presentation-independent
-  environment hashes and structured observations. Generic State Forge factory
+  environment hashes and structured observations. Generic State Setup factory
   helpers, transactional replay restore, portable live/detached semantic
   projections, and positive/negative invariant fixtures cover the contract.
   This does not claim concrete Verdant gameplay, pixel parity, or C40.
@@ -336,7 +336,7 @@ frozen evidence record.
 - [x] Verdant C5 Bloom Wells V1 (engineering-only) — one authored 120 Hz Bloom
   definition owns warning, active lift, cooldown, stage/boss variants, bounded
   force, actor-capability eligibility, boss-terminal cleanup, portable hash
-  metadata, and accessibility facts. A live State Forge/browser cycle and
+  metadata, and accessibility facts. A live State Setup/browser cycle and
   supported detached replay proof cover lifecycle and cleanup; real production
   Sword, Hammer, Greatsword, Chainblade, and Riftlock transport remains
   unchanged. Verdant is not inserted into the campaign by this checkpoint.
@@ -348,7 +348,7 @@ frozen evidence record.
   formation forces, preserves full player controls, enforces world-owned caps,
   revalidates live geometry, and cleans relationships across sever, death,
   stage, retry, clear, and restore paths. Native creation/damage/destruction/
-  cleanup facts, State Forge/browser evidence, source-owned presentation, and
+  cleanup facts, State Setup/browser evidence, source-owned presentation, and
   non-proc contracts are covered. Rootbinder is not inserted into campaign
   waves by this checkpoint.
 - [x] Verdant C7 stage-aware enemy variants (engineering-only) — the typed
@@ -366,7 +366,7 @@ frozen evidence record.
   Voidspire with chapter IV, typed environment/presentation entries, central
   Bloom activation/cleanup, explicit local-wave pool unlocks, and a temporary
   `fillet` music safety fallback outside the public routing manifest. Exact
-  branch contracts recognize six stages. State Forge provides a legal exact
+  branch contracts recognize six stages. State Setup provides a legal exact
   wave-31 entry through central stage loading, and natural wave-30 progression
   proves the ordered chapter handoff and baseline Verdant pool. Protected-main
   publication, wiki dispatch, and deployment gates keep this feature branch
@@ -434,7 +434,7 @@ frozen evidence record.
   remain unchanged; no mode, enemy, stage, or boss registry was added. Tutorial
   remains isolated on its authored Charger/Ranged teaching surface, baseline
   loadout, training arenas, and explicit variant exclusion. Rootbound boss
-  frames use the generic boss State Forge factory, while Rootbinder networks and
+  frames use the generic boss State Setup factory, while Rootbinder networks and
   Bloom cycles retain their existing specialized projections. Their live
   mutation controls remain Class-A/test-build-only and are absent from Class B/C
   and production player surfaces. The source-owned achievement catalog now adds
@@ -491,7 +491,7 @@ frozen evidence record.
   `docs/checkpoints/verdant-sanctum/VS3-C18_EVIDENCE.md`.
 - [x] Verdant C21 engineering freeze handoff — checkpoints C0–C20 reconcile to
   one exact record, with C17 retained as the owner-authorized music deferral;
-  the shared environment/codec/observation/State Forge/evidence contracts and
+  the shared environment/codec/observation/State Setup/evidence contracts and
   their Pale extension boundaries are frozen in
   `docs/checkpoints/verdant-sanctum/VS3-C21_FREEZE_MANIFEST.md`. The legacy Pale
   creative plan is translated into typed Revision 3 delta requirements without
@@ -530,14 +530,14 @@ frozen evidence record.
   both normal physical frames and exact tooling through one live-consumed
   portable fixed-step core (`check:c27:foundation`,
   `check:c27a:foundation`) and a shared live-world entity-construction catalog
-  now keeps State Forge and active gameplay on the same production factory
+  now keeps State Setup and active gameplay on the same production factory
   choices. A generic per-world state/service context now also centralizes the
   live run, actor collections, configuration, named RNG, clocks, effects,
   Mirror, and boss-feedback seam, while explicitly retaining the current app
   implementations behind its adapter. The combat action path now uses that
   shared collection owner rather than a second collection adapter. Each world
   now also owns exactly one cinematic director used by campaign, combat, and
-  presentation. The dedicated `tear.cinematic.v1` State Forge component and
+  presentation. The dedicated `tear.cinematic.v1` State Setup component and
   content-fingerprinted data-only chapter binding capture and transactionally
   restore an active campaign position with input re-armed, including validated
   cross-session reconstruction and next-beat continuation. Legacy active
@@ -556,7 +556,7 @@ frozen evidence record.
   sees only its narrow session port. Focused unit and rebuilt campaign-victory
   evidence preserve that handoff, not durable storage or full-world portability.
   Floaters, slow zones, and temporary walls are also now consumed directly from
-  world state by State Forge and presentation. This preserves the existing live
+  world state by State Setup and presentation. This preserves the existing live
   path through focused and rebuilt campaign evidence, but leaves the full
   production world app-bound.
   VS3-C2 now adds one data-only, per-world environment owner for fields, combat
@@ -579,7 +579,7 @@ frozen evidence record.
   White Hart checkpoint, and Pale presentation is intentionally not claimed.
   PT3-C3 composes Rimehound as a distinct low quadruped through the existing
   enemy base, world factory, live spawn, fixed-step controller, collision,
-  State Forge payload, and enemy-presentation paths. The owning world's enemy
+  State Setup payload, and enemy-presentation paths. The owning world's enemy
   array supplies deterministic line/flank and single-attacker arbitration;
   there is no process-global pack state or second roster. Its warned target,
   decreasing pounce steering, contact-only pounce damage, wall/ledge/arena
@@ -599,7 +599,7 @@ frozen evidence record.
   unrelated stage/mode remain fail-closed. Their authored rebound, perfect
   prism recombination, vertical recovery wake, hail ground break, and
   launch/Power-break shell counterplay use ordinary family, projectile, and
-  break entry points. All five survive the production State Forge/hash boundary
+  break entry points. All five survive the production State Setup/hash boundary
   and have clean built Playground captures. At that checkpoint the stage itself
   remained inactive until PT3-C5.
   PT3-C5 activates the engineering-only Pale stage as campaign stage V at
@@ -610,14 +610,14 @@ frozen evidence record.
   frozen lower field, edge pines, village lights, sparse snow, snow-capped ice
   platforms, and direction-readable Track lanes. Desktop, laptop, alternate
   shape, touch-landscape, and combined accessibility captures come from a clean
-  attributed State Forge build. Pale uses `fillet` only as an engineering music
+  attributed State Setup build. Pale uses `fillet` only as an engineering music
   fallback; no public route or final selection exists. The seven-stage
   publication boundary remains engineering-only, and the exact reference
   exporter deliberately stays fail-closed until White Hart and PT3-C11 provide
   the seventh boss/stage pair.
   PT3-C7 completes the White Hart as a deterministic route-first three-phase
   boss through the existing enemy type, environment, projectile, arena,
-  canonical observation, and State Forge paths. Its twelve attacks cover
+  canonical observation, and State Setup paths. Its twelve attacks cover
   warned direct charges, jumpable/deflectable waves, returnable shards,
   true/decoy Ghost Tracks, player-usable Frozen Wake, temporary arena fracture,
   interruptible pursuit routes, and the exhausted Last Crossing. Phase and
@@ -662,9 +662,9 @@ frozen evidence record.
   VS3-C19 closes the Verdant TearBench integration boundary: source-derived
   authority and diff-aware routes cover the stage, Rootbinder, Rootbound,
   environment kinds, variants, achievements, audio disposition, and reference
-  identities. Actual selected browser, State Forge, boss, and live/detached
+  identities. Actual selected browser, State Setup, boss, and live/detached
   commands execute against an exact attributed test build. A persisted Bloom
-  Well run now reruns through its tick-zero State Forge context; empty restored
+  Well run now reruns through its tick-zero State Setup context; empty restored
   waves safely rebuild ownership from native spawn/death facts, while non-empty
   ambiguous restores still fail closed. This is Class-A engineering evidence,
   not Class-C certification or public-release approval.
@@ -679,26 +679,26 @@ frozen evidence record.
   population, and five-cycle heap budgets. This remains non-public engineering
   evidence and does not resolve the deferred Verdant music replacement.
   Boss-intro and boss-beat state also flow directly from world state through
-  live music, frame, State Forge, and presentation paths. This preserves the
+  live music, frame, State Setup, and presentation paths. This preserves the
   existing live path through focused and rebuilt campaign evidence, but leaves
   actor, frame, and combat ownership app-bound.
   Enemy and projectile collections also flow directly from world state through
-  the live context, music, frame, State Forge, diagnostics, and TearBench
+  the live context, music, frame, State Setup, diagnostics, and TearBench
   bridge. This preserves the existing live path through focused and rebuilt
   campaign evidence, but leaves player, blade, run, frame, and combat ownership
   app-bound.
   The live run also flows directly from world state through session services,
-  campaign/training, combat, State Forge, and presentation adapters while
+  campaign/training, combat, State Setup, and presentation adapters while
   retaining the existing absent-run menu behavior. This preserves the live path
   through focused and rebuilt campaign evidence, but leaves player, blade,
   frame, and combat ownership app-bound.
   The live blade also flows directly from world state through session, combat,
-  input, State Forge, and TearBench bridge paths while retaining the existing
+  input, State Setup, and TearBench bridge paths while retaining the existing
   absent-blade menu behavior. This preserves the live path through focused and
   rebuilt campaign evidence, but leaves player, frame, and combat ownership
   app-bound.
   The live player also flows directly from world state through session,
-  campaign/training, combat, input, replay, State Forge, and TearBench bridge
+  campaign/training, combat, input, replay, State Setup, and TearBench bridge
   paths while retaining existing absent-player menu behavior. This preserves the
   live path through focused and rebuilt campaign evidence, but leaves frame and
   combat construction app-bound.
@@ -737,7 +737,7 @@ frozen evidence record.
   device parity.
   Portable world assembly now creates one lifecycle and one transient record
   for every supplied world port. Detached combat reads that exact world-owned
-  record, so State Forge restoration cannot update a separate harness-local
+  record, so State Setup restoration cannot update a separate harness-local
   record. This does not make entity selection, live services, presentation, or
   a complete production world portable.
   The live runtime now creates its session and world through one production
@@ -757,18 +757,18 @@ frozen evidence record.
   Ghost storage, complete visible experiences, and end-to-end
   certification remain tracked by
   `plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md`.
-- [x] Test-build State Forge Studio — `tearbench-state-forge-studio.test.ts`
+- [x] Test-build State Editor — `tearbench-state-editor.test.ts`
   keeps structural, reachability, and population-plausibility reports
-  independent; `browser-state-forge-studio.js` proves the `?snapshot-editor=1` live
+  independent; `browser-state-editor.js` proves the `?snapshot-editor=1` live
   host can launch and capture a disposable runtime, inspect provenance and
   diffs, fork and transactionally watch a checkpoint, import/export TearSDL,
   and fail closed on malformed editor input.
 
-- [x] State Forge boss-intro ownership — the runtime bridge captures a versioned
+- [x] State Setup boss-intro ownership — the runtime bridge captures a versioned
   intro and restores its boss through the existing stable actor-reference codec.
-  `live-state-forge-runtime-bridge.test.ts` checks candidate ownership, malformed
+  `live-state-setup-runtime-bridge.test.ts` checks candidate ownership, malformed
   timers, explicit null restoration, and completion at 30/60/120 render Hz.
-  `browser-state-forge-runtime.js` checks natural Rootbound capture, exact
+  `browser-state-setup-runtime.js` checks natural Rootbound capture, exact
   failed-commit rollback, intro completion on the restored actor, and clearing
   a prior active intro. Legacy snapshots without a binding are rejected when
   a boss still requires the external intro countdown. This is Class-A
@@ -781,8 +781,8 @@ frozen evidence record.
 - [x] Class-A semantic cinematic advancement — `live-runtime-application-frame.test.ts`
   exposes one test-build-only authored director beat through the typed live
   runtime, without a debug global, renderer clock, or synthetic fixed tick.
-  `browser-c40-state-forge-source-void.js` proves a resolved Source phase-two
-  State Forge launch enters collapse, then reaches live void hazard/navigation
+  `browser-c40-state-setup-source-void.js` proves a resolved Source phase-two
+  State Setup launch enters collapse, then reaches live void hazard/navigation
   state through bounded semantic beats and real authoritative application
   frames. This is a replay-seek foundation, not C40 certification.
 
@@ -792,7 +792,7 @@ frozen evidence record.
   aliases of `tear.platform.v1`, while duplicate top-level actor ids still fail
   closed. `tearbench-state-codecs.test.ts` preserves both cases.
   `browser-c40-source-void-ghost-seek.js` uses the explicit test-build
-  `forensic-qa` recorder cadence to seal a real State Forge Source
+  `forensic-qa` recorder cadence to seal a real State Setup Source
   collapse-to-void run at one HP. A post-handoff semantic movement command
   causes the production void-fall rescue; the run retains the native
   `world.void-rescue` fact, valid rescue lane/platform relocation, HP clamp,
@@ -809,7 +809,7 @@ frozen evidence record.
 
 - [x] Narrow Greatsword Wheel Cut forensic replay evidence â€”
   `browser-c40-greatsword-wheelcut-ghost-seek.js` starts one real normal
-  State Forge Greatsword/charger encounter, captures the live Wheel Cut route
+  State Setup Greatsword/charger encounter, captures the live Wheel Cut route
   identity, then performs the actual return and catch. It seals and verifies
   the V3 capsule, retaining only generic native `blade.thrown`/`blade.caught`
   transport facts, and proves three fresh C29 production seeks at the retained
@@ -884,7 +884,7 @@ frozen evidence record.
   replay bootstrap, keyframe-aligned canonical authoritative-hash receipts,
   and fail-closed admission check. C29 now reopens one normal test-standalone
   durable capsule and reproduces all three captured keyframe hashes through
-  source-owned State Forge hydration and production combat composition. A
+  source-owned State Setup hydration and production combat composition. A
   verified source replay can now seek and create a non-persistent, unranked
   practice child at a verified checkpoint without mutating its durable capsule;
   a healthy completed capsule is also playable through the normal Profile ->

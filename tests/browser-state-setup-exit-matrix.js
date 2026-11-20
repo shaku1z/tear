@@ -22,7 +22,7 @@ const boundaries = [
   ["style", [-1, 0, 1]],
 ];
 
-withJourney({ name: "C23 State Forge exit matrix" }, async ({ page }) => {
+withJourney({ name: "C23 State Setup exit matrix" }, async ({ page }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: STATE_WAIT_MS });
   const result = await page.evaluate(
     ({ bossIds, phaseIds, boundaryIds }) => {

@@ -1,5 +1,5 @@
 import { createAuroraTrackFieldState } from "../gameplay/environment/aurora-track";
-import { forgeEnvironmentFieldState, forgeWaveState } from "./state-forge-factories";
+import { forgeEnvironmentFieldState, forgeWaveState } from "./state-setup-factories";
 import type { TearSdlDocumentV1 } from "./tearsdl";
 
 const PALE_SURGICAL_BASE: TearSdlDocumentV1 = Object.freeze({
@@ -31,15 +31,15 @@ export const PALE_RIMEHOUND_PACK_FORGE_TEARSDL = forgeWaveState(PALE_SURGICAL_BA
   { kind: "rimehound", count: 3 },
 ]);
 
-export interface PaleVariantStateForgeScenario {
+export interface PaleVariantStateSetupScenario {
   readonly id: string;
   readonly family: "charger" | "ranged" | "flyer" | "bomber" | "armored";
   readonly variantId: "rime-runner" | "prism-seer" | "snowfall-kite" | "hailcaster" | "glacier-guard";
   readonly seed: string;
 }
 
-/** Production checkpoint/restore cases consumed by the existing variant State Forge matrix. */
-export const PALE_VARIANT_STATE_FORGE_SCENARIOS: readonly PaleVariantStateForgeScenario[] = Object.freeze([
+/** Production checkpoint/restore cases consumed by the existing variant State Setup matrix. */
+export const PALE_VARIANT_STATE_SETUP_SCENARIOS: readonly PaleVariantStateSetupScenario[] = Object.freeze([
   { id: "pale-rime-runner-state-forge", family: "charger", variantId: "rime-runner", seed: "pale-rime-runner-restore" },
   { id: "pale-prism-seer-state-forge", family: "ranged", variantId: "prism-seer", seed: "pale-prism-seer-restore" },
   {
@@ -89,7 +89,7 @@ function whiteHartPhase(phase: 1 | 2 | 3, attack: "antler-run" | "ghost-tracks" 
 }
 
 /** One renderer-neutral surgical boundary per White Hart phase; the natural encounter remains canonical. */
-export const WHITE_HART_PHASE_STATE_FORGE_SCENARIOS = Object.freeze([
+export const WHITE_HART_PHASE_STATE_SETUP_SCENARIOS = Object.freeze([
   whiteHartPhase(1, "antler-run"),
   whiteHartPhase(2, "ghost-tracks"),
   whiteHartPhase(3, "last-crossing"),
@@ -117,7 +117,7 @@ const PALE_CANONICAL_BASE: TearSdlDocumentV1 = Object.freeze({
 });
 
 /** Canonical TC-9 documents. Their IDs are the descriptor IDs in canonical-scenarios.json. */
-export const PALE_CANONICAL_STATE_FORGE_SCENARIOS = Object.freeze({
+export const PALE_CANONICAL_STATE_SETUP_SCENARIOS = Object.freeze({
   "pale-aurora-track-behavior": canonicalDocument(
     PALE_AURORA_TRACK_FORGE_TEARSDL,
     "pale-aurora-track-behavior",
@@ -169,17 +169,17 @@ export const PALE_CANONICAL_STATE_FORGE_SCENARIOS = Object.freeze({
     "pale-glacier-guard-behavior-seed",
   ),
   "pale-white-hart-phase-1": canonicalDocument(
-    WHITE_HART_PHASE_STATE_FORGE_SCENARIOS[0],
+    WHITE_HART_PHASE_STATE_SETUP_SCENARIOS[0],
     "pale-white-hart-phase-1",
     "pale-white-hart-phase-1-seed",
   ),
   "pale-white-hart-phase-2": canonicalDocument(
-    WHITE_HART_PHASE_STATE_FORGE_SCENARIOS[1],
+    WHITE_HART_PHASE_STATE_SETUP_SCENARIOS[1],
     "pale-white-hart-phase-2",
     "pale-white-hart-phase-2-seed",
   ),
   "pale-white-hart-phase-3": canonicalDocument(
-    WHITE_HART_PHASE_STATE_FORGE_SCENARIOS[2],
+    WHITE_HART_PHASE_STATE_SETUP_SCENARIOS[2],
     "pale-white-hart-phase-3",
     "pale-white-hart-phase-3-seed",
   ),

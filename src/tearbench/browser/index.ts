@@ -5,5 +5,5 @@
  */
 export * from "./live-physical-input";
 export * from "./live-runtime-bridge";
-export * from "./state-forge-studio";
-export * from "./live-state-forge-studio-host";
+export * from "./state-editor";
+export * from "./live-state-editor-host";

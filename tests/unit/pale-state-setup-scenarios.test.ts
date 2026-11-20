@@ -7,10 +7,10 @@ import {
 import {
   PALE_AURORA_TRACK_FORGE_TEARSDL,
   PALE_RIMEHOUND_PACK_FORGE_TEARSDL,
-  PALE_VARIANT_STATE_FORGE_SCENARIOS,
-  WHITE_HART_PHASE_STATE_FORGE_SCENARIOS,
-} from "../../src/tearbench/pale-state-forge-scenarios";
-import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-forge-live-compiler";
+  PALE_VARIANT_STATE_SETUP_SCENARIOS,
+  WHITE_HART_PHASE_STATE_SETUP_SCENARIOS,
+} from "../../src/tearbench/pale-state-setup-scenarios";
+import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-setup-live-compiler";
 import { resolveTearSdl } from "../../src/tearbench/tearsdl";
 import scenarioCatalog from "../../src/tearbench/canonical-scenarios.json";
 import { materializeCanonicalScenario } from "../../src/tearbench/canonical-scenarios";
@@ -24,7 +24,7 @@ function sourceSnapshot() {
     .snapshot;
 }
 
-describe("Pale source-owned State Forge scenarios", () => {
+describe("Pale source-owned State Setup scenarios", () => {
   it("compiles the surgical Aurora and Rimehound cases through existing codecs", () => {
     const aurora = compileResolvedTearSdlSnapshot(sourceSnapshot(), resolveTearSdl(PALE_AURORA_TRACK_FORGE_TEARSDL));
     expect(aurora.state["tear.run.v1"]).toMatchObject({ mode: "playground", wave: 41, stage: 6, _biomeIdx: 6 });
@@ -43,24 +43,24 @@ describe("Pale source-owned State Forge scenarios", () => {
   });
 
   it("owns one production restore scenario per Pale variant", () => {
-    expect(PALE_VARIANT_STATE_FORGE_SCENARIOS.map(({ variantId }) => variantId)).toEqual(PALE_VARIANT_IDS);
-    expect(new Set(PALE_VARIANT_STATE_FORGE_SCENARIOS.map(({ id }) => id)).size).toBe(PALE_VARIANT_IDS.length);
+    expect(PALE_VARIANT_STATE_SETUP_SCENARIOS.map(({ variantId }) => variantId)).toEqual(PALE_VARIANT_IDS);
+    expect(new Set(PALE_VARIANT_STATE_SETUP_SCENARIOS.map(({ id }) => id)).size).toBe(PALE_VARIANT_IDS.length);
   });
 
   it("resolves exact source-derived White Hart phase ordinals without replacing the natural encounter", () => {
-    expect(WHITE_HART_PHASE_STATE_FORGE_SCENARIOS.map((document) => resolveTearSdl(document).scenario.start)).toEqual([
+    expect(WHITE_HART_PHASE_STATE_SETUP_SCENARIOS.map((document) => resolveTearSdl(document).scenario.start)).toEqual([
       expect.objectContaining({ mode: "bossonly", boss: "white-hart", bossPhase: "1" }),
       expect.objectContaining({ mode: "bossonly", boss: "white-hart", bossPhase: "2" }),
       expect.objectContaining({ mode: "bossonly", boss: "white-hart", bossPhase: "3" }),
     ]);
-    expect(WHITE_HART_PHASE_STATE_FORGE_SCENARIOS.map((document) => document.state?.boss)).toEqual([
+    expect(WHITE_HART_PHASE_STATE_SETUP_SCENARIOS.map((document) => document.state?.boss)).toEqual([
       expect.objectContaining({ phaseMarker: 1, atk: "antler-run" }),
       expect.objectContaining({ phaseMarker: 2, atk: "ghost-tracks" }),
       expect.objectContaining({ phaseMarker: 3, atk: "last-crossing" }),
     ]);
   });
 
-  it("materializes every canonical Pale State Forge start without dropping coordinates", () => {
+  it("materializes every canonical Pale State Setup start without dropping coordinates", () => {
     const ids = [
       "pale-aurora-track-behavior",
       "pale-rimehound-aurora-interaction",
@@ -87,7 +87,7 @@ describe("Pale source-owned State Forge scenarios", () => {
     }
   });
 
-  it("rejects catalog coordinates that disagree with the source State Forge document", () => {
+  it("rejects catalog coordinates that disagree with the source State Setup document", () => {
     const source = scenarioCatalog.find((candidate) => candidate.id === "pale-white-hart-phase-2");
     expect(source).toBeDefined();
     if (source === undefined) throw new Error("missing White Hart phase scenario");

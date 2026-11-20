@@ -31,7 +31,7 @@ export function createSourceWaveOwnershipTracker() {
       return activeWave === wave ? actorIds : undefined;
     },
     /**
-     * Re-establishes an empty current wave after a validated State Forge
+     * Re-establishes an empty current wave after a validated State Setup
      * restore. Callers must prove that the restored world has no living
      * enemies; non-empty snapshots cannot reconstruct wave ownership from
      * entity presence alone.

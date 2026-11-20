@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 const { STATE_WAIT_MS } = require("./browser-waits");
 
-// State Forge supplies only a legal normal Greatsword/charger encounter. The
+// State Setup supplies only a legal normal Greatsword/charger encounter. The
 // center-pivoting Wheel Cut, explicit recall, and catch are live semantics.
 const resolved = Object.freeze({
   document: Object.freeze({

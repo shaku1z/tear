@@ -20,7 +20,7 @@ import { createLiveCameraEffectsFixture } from "./live-camera-fixture";
 import { createLiveRuntimeSnapshotController } from "./live-runtime-snapshots";
 import { projectLiveNavigationObservation } from "./live-observation-navigation";
 import { projectLiveProjectiles } from "./live-observation-projectiles";
-import { launchResolvedLiveState } from "./live-state-forge-scenario-launch";
+import { launchResolvedLiveState } from "./live-state-setup-scenario-launch";
 import {
   projectLiveActorMechanics,
   projectLiveBehaviorMode,
@@ -33,7 +33,7 @@ import {
   createCanonicalWave99HammerProgression,
   createWave99HistoricalRunState,
   forgeExitLaunchSnapshot,
-} from "./state-forge-exit-gate";
+} from "./state-setup-exit-gate";
 import { createCampaignVictoryOrigin, createCampaignWave59RewardFrontier } from "./campaign-victory-origin";
 import { createGameplayCausalEvent, projectGameplayEventForParity } from "./gameplay-causal-events";
 import { environmentSnapshotToObservation } from "./environment-codec";
@@ -41,7 +41,7 @@ import {
   forgeBloomWellCycleState,
   forgeEnvironmentCombatObjectState,
   forgeEnvironmentFieldState,
-} from "./state-forge-factories";
+} from "./state-setup-factories";
 import { forgeRootbinderNetworkEnvironment } from "./rootbinder-network-forge";
 import { forgeRootboundGraftAnchorEnvironment } from "./rootbound-graft-anchor-forge";
 import { createBloomWellState, isBloomWellState } from "../gameplay/environment/bloom-well";
@@ -51,7 +51,7 @@ import {
 } from "../gameplay/environment/bloom-well-presentation-facts";
 import { resolveTearSdl, type TearSdlDocumentV1 } from "./tearsdl";
 import type { TearLiveRestoreResult } from "./live-state-snapshot";
-import type { StateForgeExitLaunch } from "./state-forge-exit-gate";
+import type { StateSetupExitLaunch } from "./state-setup-exit-gate";
 import type {
   LiveTearRuntimeEnvironmentContext,
   TearClassARuntimeEnvironment,
@@ -464,14 +464,14 @@ export function createLiveTearRuntimeEnvironment(
       }
       if (nextScenario.start.mode === "sandbox") throw new RangeError("sandbox is not a live run mode");
       if (nextScenario.stateClass !== "recorded-canonical") {
-        throw new RangeError(`live reset does not forge ${nextScenario.stateClass} state; use State Forge`);
+        throw new RangeError(`live reset does not forge ${nextScenario.stateClass} state; use State Setup`);
       }
       if (nextScenario.start.stage !== undefined)
-        throw new RangeError("live reset stage selection requires State Forge");
+        throw new RangeError("live reset stage selection requires State Setup");
       if (nextScenario.start.wave !== undefined && nextScenario.start.wave !== 1) {
-        throw new RangeError("live reset supports only the natural opening wave; use State Forge for exact waves");
+        throw new RangeError("live reset supports only the natural opening wave; use State Setup for exact waves");
       }
-      if (nextScenario.start.bossPhase !== undefined) throw new RangeError("boss-phase reset requires State Forge");
+      if (nextScenario.start.bossPhase !== undefined) throw new RangeError("boss-phase reset requires State Setup");
       if (nextScenario.start.boss !== undefined) {
         if (nextScenario.start.mode !== "bossonly") throw new RangeError("boss selection requires bossonly mode");
         context.selectBoss(nextScenario.start.boss);
@@ -819,14 +819,14 @@ export function createLiveTearRuntimeEnvironment(
         context.render();
         return Object.freeze({ beforeTick, afterTick, fixedTickDelta });
       },
-      advanceStateForgeCinematicBeat: () => {
+      advanceStateSetupCinematicBeat: () => {
         if (scenario === null || observation === null) {
           throw new Error("Tear runtime must be reset before cinematic advancement");
         }
         if (paused || terminated) {
           throw new Error("cinematic advancement requires a running Tear runtime");
         }
-        const advanced = context.advanceStateForgeCinematicBeat();
+        const advanced = context.advanceStateSetupCinematicBeat();
         const tick = context.authoritative()?.tick ?? observation.tick;
         if (!Number.isSafeInteger(tick) || tick < observation.tick) {
           throw new Error("cinematic advancement produced an invalid authoritative tick");
@@ -849,7 +849,7 @@ export function createLiveTearRuntimeEnvironment(
       captureSnapshot: (id: string, stateClass?: TearStateClass, seed?: string) =>
         snapshots.capture(id, stateClass, seed),
       restoreSnapshot: (snapshot: TearSnapshotV1) => snapshots.restore(snapshot),
-      forgeExitLaunch: (launch: StateForgeExitLaunch) => {
+      forgeExitLaunch: (launch: StateSetupExitLaunch) => {
         if (launch.kind === "boss-finisher" && context.bossIntroActive()) {
           throw new Error("boss-finisher origin requires the production boss introduction to be complete");
         }
