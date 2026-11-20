@@ -84,6 +84,17 @@ export const TUTORIAL_LESSON_IDS = [
   "ready",
 ] as const;
 export type TutorialLessonId = (typeof TUTORIAL_LESSON_IDS)[number];
+
+/**
+ * Where a course after these finished lessons starts, as "lesson `next` of `count`" over the
+ * counted lessons (the closing hand-off is not one); `next` is `count + 1` when only the
+ * closing hand-off is left.
+ */
+export function nextTutorialLesson(finished: readonly string[]): Readonly<{ next: number; count: number }> {
+  const counted = TUTORIAL_LESSON_IDS.filter((id) => id !== "ready");
+  const index = counted.findIndex((id) => !finished.includes(id));
+  return { next: index < 0 ? counted.length + 1 : index + 1, count: counted.length };
+}
 export type TutorialSessionPhase = "inactive" | "course" | "lesson-practice" | "free-practice";
 type FieldEncounter = "charger" | "breath" | "mixed";
 /** The few session facts the gold coach selects by (see `TutorialController.coachSelection`). */
@@ -434,6 +445,8 @@ export type TutorialIntent =
   | Readonly<{ type: "navigate"; screen: "menu" }>
   | Readonly<{ type: "release-pointer" }>
   | Readonly<{ type: "complete-course"; courseSessionId: string }>
+  /** A course lesson was finished; the profile keeps it, so the next course starts after it. */
+  | Readonly<{ type: "lesson-complete"; lessonId: TutorialLessonId }>
   | Readonly<{ type: "achievement-check" }>;
 
 export interface TutorialGhostSnapshot {
@@ -1076,7 +1089,12 @@ export class TutorialController {
     this.configuration = config;
   }
 
-  start(viewportWidth: number, courseSessionId = "tutorial"): void {
+  /**
+   * Starts the course at its first lesson not in `finished` (the lessons the profile kept from
+   * earlier courses), with those lessons already counted as done. With none finished it is the
+   * course from the first lesson.
+   */
+  start(viewportWidth: number, courseSessionId = "tutorial", finished: readonly string[] = []): void {
     this.practiceOrigin = undefined;
     this.annex = undefined;
     this.practiceTab = "lessons";
@@ -1089,6 +1107,7 @@ export class TutorialController {
     this.phase = "course";
     this.reached = new Set(["move"]);
     this.completed.clear();
+    for (const id of TUTORIAL_LESSON_IDS) if (id !== "ready" && finished.includes(id)) this.completed.add(id);
     this.skipped.clear();
     this.completionAwarded = false;
     this.helpVisible = false;
@@ -1114,6 +1133,11 @@ export class TutorialController {
     this.chargeRecoveryWindow = 0;
     this.chargeCommitAwayX = 0;
     this.bladeAwayTime = 0;
+    const opening = TUTORIAL_LESSON_IDS.findIndex((id) => !this.completed.has(id));
+    if (opening > 0) {
+      for (const id of this.completed) this.reached.add(id);
+      this.enterLesson(opening);
+    }
   }
 
   /** Eligibility is a saved profile fact, never a fabricated historical course. */
@@ -1441,10 +1465,12 @@ export class TutorialController {
         this.evidencePulse = false;
         return [...intents, { type: "sound", cue: "rankup" }, { type: "reset-training-space" }];
       }
-      this.completed.add(TUTORIAL_LESSON_IDS[this.lessonIndex] ?? "move");
-      this.skipped.delete(TUTORIAL_LESSON_IDS[this.lessonIndex] ?? "move");
+      const finishedId = TUTORIAL_LESSON_IDS[this.lessonIndex] ?? "move";
+      this.completed.add(finishedId);
+      this.skipped.delete(finishedId);
       this.completionDelay = 1.1;
       intents.push({ type: "sound", cue: "rankup" });
+      if (this.phase === "course") intents.push({ type: "lesson-complete", lessonId: finishedId });
     }
     return intents;
   }

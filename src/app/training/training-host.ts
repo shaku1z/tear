@@ -206,7 +206,7 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
     },
     start() {
       if (loaded === undefined) throw new Error("Training preflight must complete before tutorial start");
-      loaded.tutorial.start(preparedCourseId ?? "unissued");
+      loaded.tutorial.start(preparedCourseId ?? "unissued", context.dependencies.PROFILE.tutorialProgress().lessons);
     },
     stop() {
       loaded?.tutorial.stop();

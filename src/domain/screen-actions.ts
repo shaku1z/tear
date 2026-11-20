@@ -93,6 +93,10 @@ export type ScreenAction =
   | { readonly type: "run.restart" }
   /** `next: "setup"` leaves the run for the run setup (Adventure selected) instead of the main menu. */
   | { readonly type: "run.quit"; readonly next?: "setup" }
+  /** Tutorial-first PLAY: starts the tutorial course at the profile's next unfinished lesson. */
+  | { readonly type: "tutorial.continue" }
+  /** Leaves the tutorial on purpose for run setup; PLAY no longer leads into it. */
+  | { readonly type: "tutorial.skip" }
   | { readonly type: "continue.revive" }
   | { readonly type: "continue.giveUp" }
   | { readonly type: "results.retry" }

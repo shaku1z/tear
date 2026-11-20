@@ -184,6 +184,8 @@ export interface MenuScreenView {
   readonly biome?: string;
   /** Replaces the PLAY sub-label (mode · difficulty), e.g. the first-run tutorial nudge. */
   readonly playSub?: string;
+  /** Tutorial-first: PLAY starts the tutorial at its next lesson instead of opening run setup. */
+  readonly playTutorial?: boolean;
   readonly pendingFinale?: boolean;
   readonly nowPlaying?: Readonly<{ label: string; detail: string }>;
 }
@@ -608,6 +610,8 @@ export interface PausedScreenView {
 export interface ConfirmQuitScreenView {
   readonly id: "confirmquit";
   readonly practice?: boolean;
+  /** Leaving the tutorial: a course in progress keeps its finished lessons; drills keep nothing to lose. */
+  readonly tutorial?: "course" | "drills";
 }
 export interface ContinueScreenView {
   readonly id: "continue";

@@ -25,6 +25,8 @@ export interface ScreenActionBindingPorts {
   readonly startSelectedRace?: () => void;
   readonly startSelectedRun: () => void;
   readonly startRun: (mode: RunMode, difficulty: RunDifficulty) => void;
+  /** Records that the player left the tutorial on purpose. */
+  readonly skipTutorial: () => void;
   readonly currentRun: () => Readonly<{ mode: RunMode; diff: RunDifficulty }>;
   readonly resumeFinale: () => void;
   readonly claimFinale: () => void;
@@ -123,6 +125,16 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
         ports.setSetupSelection("mode", "campaign");
         ports.setScreen("setup");
       }
+    },
+    "tutorial.continue": () => {
+      ports.setSetupSelection("mode", "tutorial");
+      ports.startSelectedRun();
+    },
+    "tutorial.skip": () => {
+      ports.skipTutorial();
+      ports.quitRun();
+      ports.setSetupSelection("mode", "campaign");
+      ports.setScreen("setup");
     },
     "continue.revive": () => {
       ports.revive();

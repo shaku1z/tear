@@ -97,11 +97,11 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
     const drill =
       session.annex !== undefined || session.enemyPractice !== undefined || session.bossPractice !== undefined;
     const exercise = current?.canPractice === true || drill;
-    // The finished course leads into a real run; a course in progress can skip a lesson
-    // (it stays unfinished and is listed for replay), never earn it.
-    const courseEnd = (complete || unfinished) && !lab;
+    // The finished course leads into a real run. A course in progress can skip a lesson (it
+    // stays unfinished and is listed for replay, never earned), or skip the whole tutorial on
+    // purpose, which ends tutorial-first PLAY.
     const menu: { label: string; action: ScreenAction }[] = [
-      ...(courseEnd ? [{ label: "START A RUN", action: { type: "run.quit", next: "setup" } as const }] : []),
+      ...(complete && !lab ? [{ label: "START A RUN", action: { type: "run.quit", next: "setup" } as const }] : []),
       {
         label: complete || unfinished ? "KEEP PRACTICING" : "RESUME",
         action: { type: "run.resume" },
@@ -123,6 +123,7 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
             },
           ]
         : []),
+      ...(!complete && !lab ? [{ label: "SKIP TUTORIAL", action: { type: "tutorial.skip" } as const }] : []),
       { label: "SETTINGS", action: { type: "navigate", to: "settings" } },
       { label: "MAIN MENU", action: { type: "navigate", to: "confirmquit" } },
     ];
@@ -365,11 +366,15 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
 
   function confirmquit(view: ConfirmQuitScreenView): void {
     const layout = overlayHeader(context, {
-      title: "QUIT RUN?",
+      title: view.tutorial === "course" ? "QUIT TUTORIAL?" : view.tutorial === "drills" ? "LEAVE DRILLS?" : "QUIT RUN?",
       subtitle: [
-        view.practice
-          ? "Local practice ends without saved progression or High Scores."
-          : "Your progress (cleared waves & score) is saved to High Scores.",
+        view.tutorial === "course"
+          ? "Your finished lessons are kept. PLAY continues at the next one."
+          : view.tutorial === "drills"
+            ? "Every lesson you finished stays learned."
+            : view.practice
+              ? "Local practice ends without saved progression or High Scores."
+              : "Your progress (cleared waves & score) is saved to High Scores.",
       ],
     });
     actionRow(

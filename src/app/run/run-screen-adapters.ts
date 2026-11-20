@@ -287,7 +287,14 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
       });
     },
     renderConfirmQuit(): void {
-      renderers.confirmquit({ id: "confirmquit", practice: services.persistentEffects?.() === false });
+      const tutorial = services.tutorialSession?.();
+      renderers.confirmquit({
+        id: "confirmquit",
+        practice: services.persistentEffects?.() === false,
+        ...(tutorial === undefined
+          ? {}
+          : { tutorial: tutorial.practiceOnly === true || tutorial.courseCompleted ? "drills" : "course" }),
+      });
     },
     renderContinue(): void {
       const seconds = state.continueSeconds();

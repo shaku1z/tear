@@ -225,6 +225,8 @@ export interface LiveTutorialPort<TEnemy extends LiveTutorialEnemy> {
   readonly releasePointer: () => void;
   readonly addProfileStat: (stat: "tutorialDone", amount: 1) => void;
   readonly completeCourse?: (id: string) => Promise<unknown>;
+  /** Keeps one finished course lesson in the profile. */
+  readonly recordLesson?: (lessonId: string) => void;
   readonly checkAchievements: () => void;
   readonly drawGhost: (snapshot: TutorialGhostSnapshot) => void;
   readonly reducedMotion?: () => boolean;
@@ -290,7 +292,8 @@ export interface LiveTutorialRuntime {
   readonly gT: number;
   readonly anchor: number;
   readonly steps: readonly TutorialLesson[];
-  start(courseSessionId?: string): void;
+  /** Starts a course after the lessons in `finished` (the profile's kept lessons). */
+  start(courseSessionId?: string, finished?: readonly string[]): void;
   stop(): void;
   mark(kind: TutorialMark): void;
   step(): LiveTutorialLessonView;
@@ -570,9 +573,9 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
       return controller.anchorX;
     },
     steps: TUTORIAL_LESSONS,
-    start(courseSessionId = "unissued") {
+    start(courseSessionId = "unissued", finished = []) {
       coach.clear();
-      controller.start(port.viewportWidth, courseSessionId);
+      controller.start(port.viewportWidth, courseSessionId, finished);
       installPendingArena();
     },
     stop() {
@@ -680,6 +683,9 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
             break;
           case "complete-course":
             void port.completeCourse?.(intent.courseSessionId);
+            break;
+          case "lesson-complete":
+            port.recordLesson?.(intent.lessonId);
             break;
           case "achievement-check":
             port.checkAchievements();
