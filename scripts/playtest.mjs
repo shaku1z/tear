@@ -6,8 +6,8 @@
 // `pnpm playtest runs` plays whole runs from wave 1 in each mode and prints where they end and what each wave costs.
 // `pnpm playtest enemies` puts each enemy kind alone against the player and prints a row per kind.
 // `pnpm playtest coverage` plays every report's set and lists what the game defines that never appeared.
-import { spawn } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync, spawn } from "node:child_process";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -47,6 +47,8 @@ Plays boss fights on the real game, headless, and prints a table per fight and a
                        the machine's cores less two
   --show <what>        fights, summary or both; default both up to ${String(TABLES_UP_TO)} fights, summary above
   --json <file>        also write the measured fights as JSON
+  --compare <commit>   on any report: play the same set on that commit's game with this checkout's tool
+                       and print only the measures that differ (the tables with --show)
 
 "waves" plays the waves of an Adventure stage, each opened directly on its stage, and prints a row per wave:
 clear time, the wave as it arrived, damage by source, snares, roots and Rootbinders.
@@ -128,10 +130,54 @@ function playApart(command, args, file, name) {
 /** One worker: this command again with one share of the fights. */
 function playShare(command, given, index, of, file) {
   const args = [...given].flatMap(([name, value]) =>
-    ["jobs", "json", "show", "share"].includes(name) ? [] : [`--${name}`, value],
+    ["jobs", "json", "show", "share", "compare"].includes(name) ? [] : [`--${name}`, value],
   );
   args.push("--share", `${String(index)}/${String(of)}`);
   return playApart(command, args, file, `worker ${String(index)} of ${String(of)}`);
+}
+
+/**
+ * Another commit's game, ready to be played by this checkout's tool: its `src`, `config` and the JSON under
+ * `public` extracted once into `artifacts/playtest/base-<sha>/` (git ignores it), with this checkout's
+ * `src/playtest` laid over its own. Dependencies resolve from this checkout, so the lockfile must be the same.
+ */
+function baseBuild(commit) {
+  const git = (...args) =>
+    execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+  let sha;
+  try {
+    sha = git("rev-parse", "--verify", "--quiet", `${commit}^{commit}`).trim();
+  } catch {
+    throw new RangeError(`--compare: no commit "${commit}"`);
+  }
+  const name = sha.slice(0, 12);
+  try {
+    git("diff", "--quiet", sha, "--", "pnpm-lock.yaml");
+  } catch {
+    throw new RangeError(
+      `--compare: pnpm-lock.yaml differs between ${name} and this checkout, so its game cannot run on these dependencies`,
+    );
+  }
+  const folder = path.join(root, "artifacts", "playtest", `base-${name}`);
+  if (!existsSync(path.join(folder, "src"))) {
+    mkdirSync(folder, { recursive: true });
+    const data = git("ls-tree", "-r", "--name-only", sha, "--", "public")
+      .split("\n")
+      .filter((file) => file.endsWith(".json"));
+    // The archive is written and read by name inside the folder: a drive letter in a path reads as a host to some tars.
+    execFileSync(
+      "git",
+      ["archive", "--format=tar", "-o", path.join(folder, "base.tar"), sha, "src", "config", ...data],
+      {
+        cwd: root,
+      },
+    );
+    execFileSync("tar", ["-xf", "base.tar"], { cwd: folder });
+    rmSync(path.join(folder, "base.tar"));
+  }
+  rmSync(path.join(folder, "src", "playtest"), { recursive: true, force: true });
+  cpSync(path.join(root, "src", "playtest"), path.join(folder, "src", "playtest"), { recursive: true });
+  return { name, url: `/artifacts/playtest/base-${name}` };
 }
 
 /** The coverage list: each report played apart on its coverage set, then what never appeared in any of them. */
@@ -206,7 +252,8 @@ const server = await createServer({
   appType: "custom",
 });
 try {
-  const load = (name) => server.ssrLoadModule(`/src/playtest/${name}.ts`);
+  // --base is how --compare starts this command on another commit's game (see baseBuild).
+  const load = (name) => server.ssrLoadModule(`${given.get("base") ?? ""}/src/playtest/${name}.ts`);
   const shares = await load("boss-report");
   /**
    * What each command plays and prints. `request` is built from the options, `admit` refuses a mistyped id before
@@ -320,10 +367,13 @@ try {
       throw new Error(`--show takes ${kind.shows.join(", ")}`);
     const started = performance.now();
     let results;
+    let comparison;
     let jobs = 1;
     try {
       // Everything is admitted here, before any worker starts, so a mistyped id costs no playing time.
       const asked = kind.admit(kind.request);
+      // The other commit is made ready before anything is played, so a wrong commit costs no playing time either.
+      const build = given.has("compare") && share === undefined ? baseBuild(given.get("compare")) : undefined;
       const cores = Math.max(1, os.availableParallelism() - 2);
       jobs = given.has("jobs")
         ? wholeNumber("jobs", given.get("jobs"), 1, MAX_JOBS)
@@ -341,6 +391,20 @@ try {
           rmSync(folder, { recursive: true, force: true });
         }
       }
+      if (build !== undefined) {
+        const args = [...given].flatMap(([name, value]) =>
+          ["json", "show", "share", "compare", "base"].includes(name) ? [] : [`--${name}`, value],
+        );
+        const folder = mkdtempSync(path.join(os.tmpdir(), "tear-playtest-"));
+        try {
+          const file = path.join(folder, "base.json");
+          const base = await playApart(played, [...args, "--base", build.url], file, `on ${build.name}`);
+          const compare = await load("compare");
+          comparison = compare.formatComparison(compare.compareResults(base, results), results.length, build.name);
+        } finally {
+          rmSync(folder, { recursive: true, force: true });
+        }
+      }
     } catch (error) {
       // A mistyped boss, weapon, difficulty or option is refused before anything is played; print the reason, not a stack.
       if (!(error instanceof TypeError || error instanceof RangeError)) throw error;
@@ -348,7 +412,9 @@ try {
       process.exitCode = 1;
     }
     if (results !== undefined) {
-      const shown = show ?? kind.shown(results.length);
+      // A comparison prints only what changed, unless the tables are asked for.
+      const shown = show ?? (comparison === undefined ? kind.shown(results.length) : "none");
+      if (comparison !== undefined && show !== "none") process.stdout.write(comparison);
       if (shown !== "none") {
         kind.print(results, shown);
         process.stdout.write(

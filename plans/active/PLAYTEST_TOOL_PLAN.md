@@ -447,11 +447,24 @@ broken ("the stage's story chapter did not end"). The Grounds shows no chapter t
 waves and the runs. Tests: `tests/unit/playtest-coverage.test.ts`, and a Grounds wave in
 `tests/unit/playtest-waves.test.ts`.
 
+Built sixth (2026-11-20): `--compare <commit>` on every report. The commit's `src`, `config` and the JSON
+under `public` are extracted once into `artifacts/playtest/base-<sha>/` with `git archive`; this checkout's
+`src/playtest` is laid over its own, so both builds are played by the same tool; the same set is played on it
+as its own run of the command, and `compare.ts` prints, per situation, each measure that differs. The game is
+deterministic, so any difference is the build's; there is no threshold. It prints only what changed unless
+`--show` asks for the tables. It stops, by name, on a commit that does not exist and on a lockfile that
+differs. Its limit: the tool of today has to load on the game of that commit, so a commit from before a change
+to what `src/playtest` imports fails to load and says so; it is for a branch against main and for recent
+history. Checked by hand: `enemies --compare HEAD` prints "nothing changed"; Verdant waves 32 and 35 against
+the commit before the wave change of pull request 316 print both situations as changed, with the affixes that
+went. Tests: `tests/unit/playtest-compare.test.ts` (failure mode 3: one enemy's health doubled, its time to
+kill flagged and nothing else).
+
 Done when:
 - [ ] Every boss phase, every wave of each biome and every enemy kind is a row that starts directly, in under 1 s each.
 - [x] `pnpm playtest runs` reports where runs end and per-wave time and health cost for 3 modes, 3 difficulties and 5 weapons.
 - [x] The coverage section lists content that never appeared; the list is empty or each entry is reported to the lead.
-- [ ] `--compare` passes the test of failure mode 3 and prints no rows for a commit compared with itself.
+- [x] `--compare` passes the test of failure mode 3 and prints no rows for a commit compared with itself.
 
 ### Stage 3: a stronger player
 

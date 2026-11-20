@@ -188,7 +188,7 @@
       "duration": "long"
     },
     "playtest": {
-      "purpose": "Plays the real game headless: `bosses`, `sweep`, `waves`, `runs`, `enemies` reports; `coverage` lists what never appeared (queue sweep, runs, coverage)",
+      "purpose": "Plays the real game headless: `bosses`, `sweep`, `waves`, `runs`, `enemies` reports, `coverage`; --compare <commit> prints what changed (queue the big sets)",
       "effects": [
         "read-only"
       ],
@@ -1482,7 +1482,7 @@
       ]
     },
     "scripts/playtest.mjs": {
-      "purpose": "Playtest command: loads src/playtest through Vite, plays fights, waves, runs, enemy meetings or all for coverage, in worker processes; --json writes them",
+      "purpose": "Playtest command: plays the reports in worker processes; --json writes them; --compare extracts a commit's game into artifacts/playtest and plays it too",
       "effects": [
         "read-only"
       ],
