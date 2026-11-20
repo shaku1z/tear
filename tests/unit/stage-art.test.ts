@@ -69,7 +69,8 @@ function paintPorts(recorded: Recorded, options: { tick?: number; detail?: numbe
   return { ports, slices: () => slices };
 }
 
-const withLayers = (layers: StageArtRecipe["layers"]): StageArtRecipe => ({ ...VERDANT_SANCTUM_ART, layers });
+/** The Verdant recipe with other layers; its live list names Verdant's own layers, so it is left out. */
+const withLayers = (layers: StageArtRecipe["layers"]): StageArtRecipe => ({ ...VERDANT_SANCTUM_ART, layers, live: [] });
 const firstLayer = VERDANT_SANCTUM_ART.layers[0];
 if (firstLayer === undefined) throw new Error("the Verdant recipe has no layers");
 

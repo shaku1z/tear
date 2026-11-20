@@ -45,12 +45,14 @@ recipe keeps its procedural backdrop.
 | `src/presentation/stage-art/painted-stage.ts` | Binds a recipe to the stage's own paper and platform material. |
 | `src/presentation/scenes/scene-registry.ts` | `stageId -> lazy loader`. One line per drawn stage. |
 | `src/presentation/scenes/scene-library.ts` | When a stage paints, the fade-in, the fallback to the procedural backdrop, release of stages a run has left, the surface texture for any platform material. |
+| `src/presentation/stage-art/stage-art-live.ts` | Turns a recipe's water and motes into the tables drawn each frame; all their randomness is spent here, from the entry's seed. |
 | `src/presentation/scenes/scene-renderer.ts` | Draws the layers with parallax, the platform texture and contact shadows. |
+| `src/presentation/scenes/scene-live.ts` | Draws what moves over its layer each frame: water, motes, and parts that sway or breathe. |
 | `src/presentation/scenes/scene-contract.ts` | The scene layout the renderer composes, and the camera maths (parallax, overscan, coverage). |
 | `src/presentation/platform-materials/` | The platform materials; each takes a `SurfaceTexture` from the painted stage. |
 | `config/scene-viewports.json` | Every screen shape a covering layer must fill. |
-| `config/stage-readability.json` | The readability zones and floors, and each drawn stage with the browser check that measures it. |
-| `tests/unit/stage-art.test.ts`, `scene-library.test.ts`, `scene-contract.test.ts` | Recipe, painter, library and camera tests. |
+| `config/stage-readability.json` | The readability zones and floors, the moments at which a moving stage is measured and the ceilings on how much it may move, and each drawn stage with the browser check that measures it. |
+| `tests/unit/stage-art.test.ts`, `stage-live.test.ts`, `scene-library.test.ts`, `scene-contract.test.ts` | Recipe, painter, live list, library and camera tests. |
 
 ## The recipe
 
@@ -61,12 +63,46 @@ recipe keeps its procedural backdrop.
 | `light`, `atmosphere` | The key light (position, reach, colours) and the haze colour and warmth; a stroke's `haze` is its depth into that atmosphere. |
 | `ramps` | Named colour ramps, dark to light. Strokes name a ramp; they never carry their own colours for form. |
 | `layers` | `{ id, depth, plane, scale, area?, strokes }`. Depth 1 moves with the world, below 1 is further away. `back` draws under platforms, `front` over them. A layer without `area` covers the camera at every required screen shape; the painter sizes it. `scale` is canvas pixels per world unit, at most 1. |
+| `live` | Optional. What moves, as a list (next section). |
 | `surface` | The platform surface strip (lit edge at the top, repeated along x), the fill below it and the contact shadow. |
 | `edge` | Colour past a covering layer's edge at very wide screens. |
 
 A front layer may only dress the floor body and below: the painter refuses one
 that reaches above the floor surface at any camera the recipe allows, so a
 front layer never hides anything that stands or flies in the arena.
+
+## What moves
+
+A recipe's `live` list is the stage's motion. Each entry names the `layer` it
+belongs to and is drawn right after that layer, in the layer's coordinates, so
+it takes that layer's depth and plane. There are three kinds:
+
+| Kind | What it does | Main fields |
+| --- | --- | --- |
+| `water` | Redraws the rows of its layer between `top` and `bottom` each frame, each slid a little sideways on two wave trains, and lights short glints on the row tops. Rows are thin and nearly still at the far shore and taller and looser near the viewer. Start it below anything that stands in the water, so structures hold still and their reflections ripple. | `rows`, `reach` (far, near), `period`, `glints` |
+| `motes` | Small specks that drift, wobble and twinkle inside an area. | `area`, `count`, `size`, `color`, `alpha`, `drift`, `wobble`, `period` |
+| `part` | Strokes painted on their own canvas (`area`, `scale`, `strokes`, optional `blend: "lighter"`), drawn with a `sway` (the canvas leans from a pivot edge in slices, with a wave that travels across it), a `breathe` (its opacity moves between `low` and 1), or both. | `sway`, `breathe` |
+
+Rules that hold for every kind:
+
+- **Motion is a closed form of time.** Nothing is stored between frames; the
+  frame's time comes from the simulation clock, so the stage stops when the
+  game pauses. All randomness is spent when the stage paints, from the entry's
+  `seed`.
+- **A part without `breathe` is part of the picture.** It is painted right
+  after its layer, so water painted later reflects it, and it is always drawn.
+  Moving a stroke out of a layer into such a part leaves the still picture as
+  it was.
+- **Reduced motion and low graphics show the stage at rest.** Water and motes
+  are not drawn, parts are drawn unmoved, and a breathing part is drawn at its
+  `low` (not at all when `low` is 0). The browser check requires the stage to
+  be one unchanging picture with reduced motion on.
+- **Motion stays quiet.** `STAGE_ART_LIMITS.live` bounds every entry: how many
+  entries, mote count, size, opacity and speed, glint count and opacity, how
+  far water rows and swaying parts move, and a shortest period of 3 s. The
+  browser check then measures the result (see "Checked for every drawn stage").
+  A stage that moves too much is fixed in its recipe; a ceiling is never
+  raised to pass.
 
 ## Runtime
 
@@ -120,6 +156,15 @@ brushwork.
   status zone and 75% of the play band (`config/stage-readability.json`,
   measured by `tests/stage-readability.js`). A unit test requires every
   registered stage to be listed there with its browser check.
+- Motion, in the same check: the floors must hold at time 0 and at each of
+  `motion.times`, and at each of those moments the share of play-band pixels
+  that differ from time 0 by `motion.step` or more (on a 0 to 255 colour
+  channel) and the mean difference must stay under `motion.maxChangedShare`
+  and `motion.maxMeanChange`. With reduced motion on, every moment must equal
+  time 0 pixel for pixel.
+- The live list validates within its limits, compiles the same way every time
+  and draws nothing that moves when the stage is still
+  (`tests/unit/stage-live.test.ts`).
 - The scene library loads, releases and falls back as described under Runtime
   (`tests/unit/scene-library.test.ts`).
 
@@ -131,7 +176,8 @@ brushwork.
    range from the stage's real camera, the light, the atmosphere, ramps taken
    from the reference, then layers from far to near. Reuse stroke kinds; add a
    new kind (contract, one routine, one case in the painter, its cost in the
-   validator) only for a form no existing kind can draw.
+   validator) only for a form no existing kind can draw. Add a `live` list
+   for what moves once the still picture is approved.
 3. **Register.** One line in `scene-registry.ts`, and the stage with its
    browser check in `config/stage-readability.json`.
 4. **Readability.** Run the stage's browser check on a test build

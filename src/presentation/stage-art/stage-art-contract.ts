@@ -223,6 +223,79 @@ export interface StageArtLayer {
   readonly strokes: readonly StageArtStroke[];
 }
 
+/**
+ * What moves in the stage. Every entry names the layer it belongs to and draws
+ * right after it, so it takes that layer's depth and plane. Reduced motion and
+ * low graphics show the stage at rest: parts stay where they were painted, and
+ * water, motes and breathing light do not draw. STAGE_ART_LIMITS.live keeps
+ * every entry small, slow and faint, so nothing here competes with the fight.
+ */
+export type StageArtLive = LiveWater | LiveMotes | LivePart;
+
+/** The layer's own paint between two rows, rippling: rows slide sideways, and glints come and go. */
+export interface LiveWater extends Seeded {
+  readonly kind: "water";
+  readonly layer: string;
+  readonly top: number;
+  readonly bottom: number;
+  /** Row height at the far shore and nearest the viewer. */
+  readonly rows: readonly [far: number, near: number];
+  /** Farthest a row slides either way, at the far shore and nearest the viewer. */
+  readonly reach: readonly [far: number, near: number];
+  /** Seconds for one pass of the slower wave train. */
+  readonly period: number;
+  readonly glints: {
+    readonly count: number;
+    /** Longest streak, world px. */
+    readonly length: number;
+    readonly alpha: number;
+    /** Seconds between one glint's appearances, on average. */
+    readonly period: number;
+  };
+}
+
+/** Specks drifting through an area: pollen, dust, spray, snow. */
+export interface LiveMotes extends Seeded {
+  readonly kind: "motes";
+  readonly layer: string;
+  readonly area: Rect;
+  readonly count: number;
+  readonly size: readonly [min: number, max: number];
+  readonly color: string;
+  readonly alpha: number;
+  /** World px per second. */
+  readonly drift: readonly [x: number, y: number];
+  /** Sideways wander either way, and the seconds one wander takes. */
+  readonly wobble: number;
+  readonly period: number;
+}
+
+/**
+ * Strokes painted on their own canvas so they can move: hanging growth that
+ * sways from the edge it grows from, or light that fades in and out.
+ */
+export interface LivePart {
+  readonly kind: "part";
+  readonly layer: string;
+  readonly id: string;
+  readonly area: Rect;
+  readonly scale: number;
+  readonly strokes: readonly StageArtStroke[];
+  /** "lighter" adds the part's light to the layer; omitted, the part covers what is behind it. */
+  readonly blend?: "lighter";
+  readonly sway?: {
+    readonly pivot: "top" | "bottom";
+    readonly slices: number;
+    /** Farthest the free edge moves either way, world px. */
+    readonly reach: number;
+    readonly period: number;
+    /** Turns of the wave across the part's width. */
+    readonly travel: number;
+  };
+  /** Fades between `low` (shown at rest) and fully shown. */
+  readonly breathe?: { readonly low: number; readonly period: number };
+}
+
 /** Surface strip painted for platforms: lit top edge at row 0. */
 export interface StageArtSurface {
   readonly width: number;
@@ -252,6 +325,8 @@ export interface StageArtRecipe {
   readonly edge: string;
   readonly surface: StageArtSurface;
   readonly layers: readonly StageArtLayer[];
+  /** What moves; omitted, the stage is still. */
+  readonly live?: readonly StageArtLive[];
 }
 
 /** What the stage itself defines and the painted scene must keep: HUD paper and platform material. */
@@ -268,4 +343,29 @@ export const STAGE_ART_LIMITS = Object.freeze({
   operations: 400_000,
   maxScale: 1,
   minScale: 0.25,
+  /**
+   * Bounds on what moves. They keep the live layer cheap to draw and quiet
+   * next to combat: few things, small, faint and slow.
+   */
+  live: Object.freeze({
+    entries: 8,
+    motes: 64,
+    /** World px radius. */
+    moteSize: 2.5,
+    moteAlpha: 0.45,
+    /** World px per second. */
+    moteDrift: 14,
+    waterRows: 64,
+    /** World px a water row may slide either way. */
+    waterReach: 4,
+    glints: 48,
+    glintAlpha: 0.4,
+    /** World px a swaying part's free edge may move either way. */
+    swayReach: 8,
+    swaySlices: 32,
+    /** Fastest cycle of any motion, seconds. */
+    minPeriod: 3,
+    /** Canvas pixels all parts together may hold at full detail. */
+    partPixels: 900_000,
+  }),
 });
