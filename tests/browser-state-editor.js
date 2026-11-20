@@ -29,19 +29,19 @@ withJourney({ name: "C23 State Editor" }, async ({ page, errors }) => {
   assert.equal(await page.locator("#tear-snapshot-editor-timeline option").count(), 1);
   assert.match(await page.getByText("Provenance").locator("..").textContent(), /live-tear-runtime/);
 
-  await page.getByLabel("Fork id").fill("studio-low-health");
+  await page.getByLabel("Fork id").fill("test-low-health");
   await page.getByLabel("Fork state patch (JSON)").fill(
     JSON.stringify({
       "tear.player.v1": { hp: 77 },
     }),
   );
   await page.getByRole("button", { name: "Fork checkpoint" }).evaluate((button) => button.click());
-  assert.match(await page.getByRole("status").textContent(), /Forked studio-low-health/);
+  assert.match(await page.getByRole("status").textContent(), /Forked test-low-health/);
   assert.equal(await page.locator("#tear-snapshot-editor-timeline option").count(), 2);
   assert.match(await page.getByText("Checkpoint diff").locator("..").textContent(), /tear\.player\.v1\.hp/);
 
   await page.getByRole("button", { name: "Watch checkpoint" }).evaluate((button) => button.click());
-  assert.match(await page.getByRole("status").textContent(), /Watching studio-low-health/);
+  assert.match(await page.getByRole("status").textContent(), /Watching test-low-health/);
 
   const imported = {
     format: "tearsdl",
@@ -49,7 +49,7 @@ withJourney({ name: "C23 State Editor" }, async ({ page, errors }) => {
     id: "state-forge.imported-child",
     extends: "state-forge.live-sandbox",
     stateClass: "recorded-canonical",
-    seed: "studio-import",
+    seed: "editor-import",
     start: { wave: 1 },
     state: {},
   };
@@ -76,13 +76,13 @@ withJourney({ name: "C23 State Editor" }, async ({ page, errors }) => {
       constraints: { legalProgression: true },
       state: { playerHpRatio: 0.5 },
     },
-    { stateClass: "plausible-population", wave: 2, state: { playerHp: 80, profileId: "provisional-studio" } },
+    { stateClass: "plausible-population", wave: 2, state: { playerHp: 80, profileId: "provisional-editor" } },
     { stateClass: "surgical-valid", wave: 3, state: { playerHp: 61, blade: { state: "held" } } },
     {
       stateClass: "adversarial-impossible",
       wave: 1,
       constraints: { quarantined: true, faultBudget: 1, excludeFromBalanceEvidence: true },
-      state: { corruptionProfile: "quarantined-studio" },
+      state: { corruptionProfile: "quarantined-editor" },
     },
   ];
   const builtClassEvidence = [];
@@ -92,7 +92,7 @@ withJourney({ name: "C23 State Editor" }, async ({ page, errors }) => {
       schemaVersion: 1,
       id: `state-forge.class-${String(index)}`,
       stateClass: entry.stateClass,
-      seed: `studio-class-${String(index)}`,
+      seed: `editor-class-${String(index)}`,
       start: { mode: "endless", difficulty: "hard", weapon: "hammer", wave: entry.wave },
       state: entry.state,
       ...(entry.constraints === undefined ? {} : { constraints: entry.constraints }),
@@ -152,7 +152,7 @@ withJourney({ name: "C23 State Editor" }, async ({ page, errors }) => {
       {
         launchedRecordedCanonical: true,
         checkpointCount: 2,
-        forkedCheckpoint: "studio-low-health",
+        forkedCheckpoint: "test-low-health",
         importExportRoundTrip: true,
         invalidScenarioRejected: true,
         builtClasses: builtClassEvidence,

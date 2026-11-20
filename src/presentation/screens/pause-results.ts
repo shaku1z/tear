@@ -54,12 +54,12 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
   function tutorialPaused(session: NonNullable<PausedScreenView["tutorial"]>): void {
     const { canvas } = context;
     const unfinished = session.unfinished === true && session.phase === "free-practice";
-    const lab = session.practiceOnly === true,
-      tab = lab ? practiceTabDefinition(session.practiceTab ?? "lessons") : undefined,
+    const practice = session.practiceOnly === true,
+      tab = practice ? practiceTabDefinition(session.practiceTab ?? "lessons") : undefined,
       annexes = tab?.id === "weapons",
       catalog = tab?.id === "enemies",
       bosses = tab?.id === "bosses",
-      complete = (session.courseCompleted || lab) && session.phase === "free-practice",
+      complete = (session.courseCompleted || practice) && session.phase === "free-practice",
       current = session.lessons.find((lesson) => lesson.current);
     // Geometry comes from the shared overlay pattern; compact density (phone) tightens gaps.
     const compact = ui.density.compact,
@@ -68,7 +68,7 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
       top = header.bodyTop;
     ui.title(
       canvas,
-      lab ? "DRILLS" : complete || unfinished ? "TRAINING COMPLETE" : "TUTORIAL",
+      practice ? "DRILLS" : complete || unfinished ? "TRAINING COMPLETE" : "TUTORIAL",
       width / 2,
       titleY,
       ui.t.type.display,
@@ -101,7 +101,9 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
     // stays unfinished and is listed for replay, never earned); skipping the whole tutorial is
     // chosen on the quit confirm that MAIN MENU opens, as leaving a run always is.
     const menu: { label: string; action: ScreenAction; enabled?: boolean }[] = [
-      ...(complete && !lab ? [{ label: "START A RUN", action: { type: "run.quit", next: "setup" } as const }] : []),
+      ...(complete && !practice
+        ? [{ label: "START A RUN", action: { type: "run.quit", next: "setup" } as const }]
+        : []),
       {
         label: complete || unfinished ? "KEEP PRACTICING" : "RESUME",
         action: { type: "run.resume" },
@@ -193,7 +195,7 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
           }))
         : annexes
           ? (session.annexes ?? []).map((annex) => ({ ...annex, completed: false, reached: true, canPractice: true }))
-          : session.lessons.filter((lesson) => lesson.id !== "ready" && (lab || complete || lesson.reached));
+          : session.lessons.filter((lesson) => lesson.id !== "ready" && (practice || complete || lesson.reached));
     // On the drill's own tab, the drill under way says what to do now; any other tab explains its list.
     const drillTab = session.annex
         ? "weapons"
@@ -237,7 +239,7 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
     // The list is the shared button list: columns from the widest name, rows from the tallest
     // (name and status line), scrolling inside the panel with its hint on a line of its own.
     const buttons = exercises.map((lesson) => ({
-      label: `${lesson.completed && !lab ? "✓ " : ""}${lesson.title}${session.skipped?.some((id) => id === lesson.id) ? " · SKIPPED" : ""}${lesson.reached ? "" : " · LOCKED"}`,
+      label: `${lesson.completed && !practice ? "✓ " : ""}${lesson.title}${session.skipped?.some((id) => id === lesson.id) ? " · SKIPPED" : ""}${lesson.reached ? "" : " · LOCKED"}`,
       ...("knowledge" in lesson && typeof lesson.knowledge === "string"
         ? { sub: KNOWLEDGE_STATUS[lesson.knowledge] }
         : {}),

@@ -75,7 +75,7 @@ export interface PlaygroundActionDependencies {
   selectWeapon(id: string): void;
   restartWithWeapon(): void;
   resetAtDifficulty(): void;
-  openLab(): void;
+  openAbilities(): void;
   clearLabScroll(): void;
   lookupUpgrade(id: string): PlaygroundUpgradeSnapshot | null;
   playUi(): void;
@@ -242,7 +242,7 @@ export function createPlaygroundRuntimeBridge(dependencies: PlaygroundRuntimeDep
       dependencies.navigate("pgmenu");
     } else if (kind === "tab" && isPlaygroundTab(value)) {
       tab = value;
-      if (value === "abilities") actions.openLab();
+      if (value === "abilities") actions.openAbilities();
       else dependencies.navigate("pgmenu");
     } else if (kind === "weapon") {
       actions.selectWeapon(value);
@@ -250,9 +250,6 @@ export function createPlaygroundRuntimeBridge(dependencies: PlaygroundRuntimeDep
     } else if (kind === "toggle") {
       if (value === "god" || value === "freeze" || value === "slow") controller.toggle(value);
       else if (value === "onehit") dependencies.player.oneHit = !dependencies.player.oneHit;
-    } else if (kind === "lab") {
-      tab = "abilities";
-      actions.openLab();
     } else if (kind === "clear") {
       for (const enemy of dependencies.enemies) enemy.dead = true;
       dependencies.clearProjectiles();

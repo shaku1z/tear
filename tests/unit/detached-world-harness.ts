@@ -80,6 +80,7 @@ import {
 } from "../../src/gameplay/runtime/gameplay-event-publishers";
 import { createParticleSystem } from "../../src/presentation/particles";
 import type { RunLifecycleSnapshot } from "../../src/gameplay/run/lifecycle";
+import { DEFAULT_COSMETIC_LOOKS } from "../../src/presentation/cosmetic-defaults";
 
 type Options = TearWorldSimulationFactoryOptions;
 
@@ -159,6 +160,7 @@ export function createDetachedWorld(options: DetachedWorldOptions) {
   // reseeds it from the run seed (52817956); detached worlds do the same.
   const cosmeticEmissionRandom = createCosmeticEmissionRandom();
   const effects = createParticleSystem({
+    looks: DEFAULT_COSMETIC_LOOKS,
     effects: config.effects,
     lowGraphics: () => GFX.low,
     reducedMotion: () => A11Y.reducedMotion,
