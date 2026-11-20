@@ -66,6 +66,7 @@ import { createCinematics } from "../../presentation/cinematics";
 import { cosmeticRandom } from "../../presentation/cosmetic-random";
 import { createCosmeticEmissionRandom } from "../../domain/cosmetic-emission-random";
 import { createLiveAttractFeedback } from "../interface/attract-feedback";
+import { createCosmeticWardrobe } from "../../presentation/cosmetic-styles";
 import { createParticleSystem } from "../../presentation/particles";
 import { createUi } from "../../presentation/ui";
 import { createLegacyReplayCompatibility } from "../../replay/legacy-compat";
@@ -161,11 +162,14 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   const audioContextHandoff = createBrowserAudioContextHandoff();
   const SFX = createLegacySynthFacade({ audioContextHandoff });
   const cosmeticEmissionRandom = createCosmeticEmissionRandom();
+  // Who wears which cosmetics: a run start puts the profile's loadout on the player's blade.
+  const COSMETICS = createCosmeticWardrobe(COSMETIC_CATALOG, () => A11Y.reducedMotion || GFX.low);
   const FX = createParticleSystem({
     effects: worldConfig.effects,
     lowGraphics: () => GFX.low,
     reducedMotion: () => A11Y.reducedMotion,
     random: cosmeticEmissionRandom.next,
+    looks: COSMETICS,
   });
   let stageArtSlices = 0;
   const Scenes = createSceneLibrary({
@@ -225,6 +229,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     configuration: { accessibility: A11Y, config: worldConfig, graphics: GFX, theme: THEME },
     geometry: { clamp, len, lerp },
     cosmeticRandom: cosmeticEmissionRandom.next,
+    looks: COSMETICS,
   });
   const { Blade, Player, Projectile, enemyTypes, mirrorTypes } = createTearWorldSimulationFactories({
     clock: CLOCK,
@@ -448,6 +453,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     Charger,
     Chimera,
     Cinematics,
+    COSMETICS,
     Clipper: clipper,
     Cloud,
     Colossus,

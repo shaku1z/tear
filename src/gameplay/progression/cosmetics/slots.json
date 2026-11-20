@@ -22,7 +22,7 @@
         "#13c4d6"
       ],
       "widthScale": 1,
-      "glow": 0.4,
+      "glow": 0,
       "fade": "linear"
     }
   },
@@ -216,7 +216,7 @@
     "label": "TITLE",
     "group": "profile",
     "family": "text",
-    "hook": "ready",
+    "hook": "not yet",
     "default": {
       "text": "BLADE"
     }
@@ -226,7 +226,7 @@
     "label": "BANNER",
     "group": "profile",
     "family": "banner",
-    "hook": "ready",
+    "hook": "not yet",
     "default": {
       "colors": [
         "#2c3340",
@@ -256,7 +256,7 @@
     "family": "text",
     "hook": "not yet",
     "default": {
-      "text": "\u25c6"
+      "text": "◆"
     }
   },
   {

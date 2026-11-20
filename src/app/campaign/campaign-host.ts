@@ -176,6 +176,8 @@ export function createLiveCampaignHost(services: CampaignHostServices): LiveCamp
         const weapon = blade();
         weapon.finalFree = active;
         if (restoredTrail) weapon.restoredTrail = true;
+        // The beat authors the blade's look (the restored trail), so it shows over any cosmetic until the beat ends.
+        d.COSMETICS.authored(active && restoredTrail);
         if (!active) return;
         weapon.hostile = false;
         weapon.stolenBy = null;
