@@ -49,7 +49,9 @@ export function createCoachMarkRenderer(context: WorldRenderContext) {
       type = coachMarkType(context);
     canvas.font = ui.font(type.label, true);
     const titleWidth = mark.title ? canvas.measureText(mark.title).width : 0;
+    // A call-out is a title alone: no body line under it.
     const body = ui.textBox(canvas, mark.text, 0, 0, maxWidth, { size: type.caption, measureOnly: true, maxLines: 3 });
+    const bodyHeight = mark.text === "" ? 0 : body.height;
     const bodyWidth = Math.max(
       0,
       ...body.lines.map((line) => {
@@ -63,8 +65,10 @@ export function createCoachMarkRenderer(context: WorldRenderContext) {
     const rule = 4 + t.space.sm;
     const width = rule + Math.min(maxWidth, Math.max(titleWidth, bodyWidth, capsWidth));
     const height =
-      (mark.title ? type.label + t.space.xs : 0) + body.height + (caps.length ? t.space.sm + capsHeight : 0);
-    return { width, height, rule, body, capsHeight };
+      (mark.title ? type.label + (bodyHeight > 0 ? t.space.xs : 0) : 0) +
+      bodyHeight +
+      (caps.length ? t.space.sm + capsHeight : 0);
+    return { width, height, rule, body, bodyHeight, capsHeight };
   }
 
   function draw(mark: CoachMark, rect: CoachPlacement, alpha: number, metrics: ReturnType<typeof measure>): void {
@@ -81,12 +85,13 @@ export function createCoachMarkRenderer(context: WorldRenderContext) {
       ui.tag(canvas, mark.title, left, y, ui.ink, "left", type.label);
       y += t.space.xs;
     }
-    ui.textBox(canvas, mark.text, left, y + metrics.body.lineHeight * 0.8, rect.w - metrics.rule, {
-      size: type.caption,
-      maxLines: 3,
-      alpha: t.alpha.soft * alpha,
-    });
-    y += metrics.body.height;
+    if (metrics.bodyHeight > 0)
+      ui.textBox(canvas, mark.text, left, y + metrics.body.lineHeight * 0.8, rect.w - metrics.rule, {
+        size: type.caption,
+        maxLines: 3,
+        alpha: t.alpha.soft * alpha,
+      });
+    y += metrics.bodyHeight;
     if (mark.keys.length) {
       let x = left;
       const baseline = y + t.space.sm + metrics.capsHeight - 5;
