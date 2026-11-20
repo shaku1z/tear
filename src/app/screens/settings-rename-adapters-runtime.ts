@@ -172,7 +172,7 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
         entries: group.credits.map((credit) => ({
           id: credit.id,
           name: credit.name,
-          note: `${credit.use} · ${credit.notice} · ${credit.licence}`,
+          note: [credit.use, credit.notice, credit.licence].filter((part) => part !== null).join(" · "),
           hasLicenceText: credit.licenceFile !== null,
         })),
       })),

@@ -6,10 +6,10 @@ export interface Credit {
   readonly name: string;
   /** What the game uses the work for, in a few words. */
   readonly use: string;
-  /** The copyright line the licence asks to keep with the work. */
-  readonly notice: string;
-  /** The licence, by name. */
-  readonly licence: string;
+  /** The copyright line the licence asks to keep with the work; null for a work credited by a line of its own. */
+  readonly notice: string | null;
+  /** The licence, by name; null when the work has none to name. */
+  readonly licence: string | null;
   /** Where the licence text ships with the build, relative to the page; null when it does not ship. */
   readonly licenceFile: string | null;
   /** The builds that contain the work; every build when omitted. */
@@ -49,6 +49,21 @@ export const CREDIT_GROUPS: readonly CreditGroup[] = Object.freeze([
         notice: "© 2017 IBM Corp.",
         licence: OFL,
         licenceFile: OFL_TEXT,
+      },
+    ],
+  },
+  {
+    // The credit line is the owner's public handle, the same one the privacy page gives as contact.
+    // A work that later gets a different credit carries its own entry here, with its own name.
+    label: "MUSIC",
+    credits: [
+      {
+        id: "music",
+        name: "Music by shaku1z",
+        use: "every track in the game",
+        notice: null,
+        licence: null,
+        licenceFile: null,
       },
     ],
   },

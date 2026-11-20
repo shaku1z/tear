@@ -17,8 +17,9 @@ describe("credits table", () => {
     for (const credit of allCredits) {
       expect(credit.name).not.toBe("");
       expect(credit.use).not.toBe("");
-      expect(credit.notice).toMatch(/^©/u);
-      expect(credit.licence).not.toBe("");
+      // A licensed work carries the copyright line its licence asks for; a work credited by its own line has neither.
+      if (credit.licence === null) expect(credit.notice).toBeNull();
+      else expect(credit.notice).toMatch(/^©/u);
     }
   });
 
@@ -39,15 +40,21 @@ describe("credits table", () => {
       expect(existsSync(join(root, "public", credit.licenceFile ?? ""))).toBe(true);
       expect(licence).toContain(credit.name);
       // "© 2017 The Barlow Project Authors" -> "The Barlow Project Authors"; "© 2017 IBM Corp." -> "IBM Corp."
-      expect(licence).toContain(credit.notice.replace(/^© \d{4} /u, ""));
+      expect(licence).toContain((credit.notice ?? "").replace(/^© \d{4} /u, ""));
     }
   });
 
   it("lists each build's own works: libraries only the standalone build contains stay out of the portal builds", () => {
     expect([...BUILD_TARGET_NAMES].sort()).toEqual(["crazygames", "itch", "standalone"]);
-    expect(idsFor("standalone")).toEqual(["barlow-condensed", "ibm-plex-mono", "vite", "workbox", "firebase"]);
+    expect(idsFor("standalone")).toEqual(["barlow-condensed", "ibm-plex-mono", "music", "vite", "workbox", "firebase"]);
     for (const target of ["crazygames", "itch"] as const)
-      expect(idsFor(target)).toEqual(["barlow-condensed", "ibm-plex-mono", "vite"]);
+      expect(idsFor(target)).toEqual(["barlow-condensed", "ibm-plex-mono", "music", "vite"]);
+  });
+
+  it("credits the music with the owner's handle only, never a real name or an email address", () => {
+    const music = allCredits.find((credit) => credit.id === "music");
+    expect(music?.name).toBe("Music by shaku1z");
+    expect(JSON.stringify(music)).not.toMatch(/@/u);
   });
 
   it("never returns a group with nothing in it", () => {
