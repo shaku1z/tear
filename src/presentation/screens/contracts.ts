@@ -7,6 +7,7 @@ import type { ScreenUiPort } from "./screen-ui-port";
 export type { ScreenAction } from "../../domain/screen-actions";
 export type { ScreenUiPort, ScreenUiTokens } from "./screen-ui-port";
 import type { ShardsView } from "./shard-contracts";
+import type { BannerBand } from "../cosmetic-banner";
 
 export interface ScreenControl {
   readonly x: number;
@@ -271,6 +272,8 @@ export interface ProfileScreenView {
     readonly canSignOut: boolean;
     readonly signInLabel?: string;
     readonly showcases: readonly { readonly glyph: string; readonly color: string }[];
+    /** What the player wears on the passport; a part that is absent draws today's passport. */
+    readonly look?: { readonly title?: string; readonly banner?: BannerBand };
   };
   readonly finest?: { readonly headline: string; readonly detail: string };
   readonly records?: readonly {
