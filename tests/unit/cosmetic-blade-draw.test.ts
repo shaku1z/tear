@@ -195,7 +195,7 @@ describe("blade draw path with cosmetics", () => {
   it("never blurs a worn trail, so a cosmetic costs no more to draw than the default", () => {
     const dark: Scene = { name: "dark", blade: blade("sword"), dark: true, low: false };
     const blurs = (calls: readonly string[]): string[] => [
-      ...new Set(paints(calls).map((call) => call.split(" | ")[1]?.split(" ")[STATE_KEYS.indexOf("shadowBlur")])),
+      ...new Set(paints(calls).map((call) => call.split(" | ")[1]?.split(" ")[STATE_KEYS.indexOf("shadowBlur")] ?? "")),
     ];
     expect(blurs(wearing(dark, { trail: "trail_heartwood", blade: "blade_moonsteel" }))).toEqual(
       blurs(draw(dark, fresh())),
