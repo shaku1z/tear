@@ -100,59 +100,63 @@ async function main() {
     await background.close();
     await desktop.close();
 
-    const touchViewport = { width: 800, height: 360, dpr: 3, touch: true };
-    const touch = await browser.newContext({
-      viewport: touchViewport,
-      deviceScaleFactor: 3,
-      hasTouch: true,
-      isMobile: true,
-    });
-    const mobile = await open(touch, touchViewport, "touch-high-dpr-landscape");
-    const touchMenu = await mobile.controls.screenshot("touch-high-dpr-main-menu");
-    await mobile.controls.touch({ x: 260, y: 360 }, "start");
-    await mobile.controls.touch({ x: 260, y: 360 }, "end");
-    await mobile.controls.wait(700);
-    const touchSetup = await mobile.controls.screenshot("touch-high-dpr-setup");
-    assert.ok(
-      sampleDifference(touchMenu, touchSetup) > 20,
-      "physical high-DPR touch tap did not activate the shipped menu affordance",
-    );
-    record.cases.push({
-      name: "touch-high-dpr-landscape",
-      device: "physical-touch",
-      viewport: touchViewport,
-      frames: [touchMenu.length, touchSetup.length],
-    });
-    await touch.close();
+    // The touch cases need a release build with touch controls, which no target has while mobile
+    // is paused (plans/MOBILE_LATER.md); `--touch` runs them once one does.
+    if (process.argv.includes("--touch")) {
+      const touchViewport = { width: 800, height: 360, dpr: 3, touch: true };
+      const touch = await browser.newContext({
+        viewport: touchViewport,
+        deviceScaleFactor: 3,
+        hasTouch: true,
+        isMobile: true,
+      });
+      const mobile = await open(touch, touchViewport, "touch-high-dpr-landscape");
+      const touchMenu = await mobile.controls.screenshot("touch-high-dpr-main-menu");
+      await mobile.controls.touch({ x: 260, y: 360 }, "start");
+      await mobile.controls.touch({ x: 260, y: 360 }, "end");
+      await mobile.controls.wait(700);
+      const touchSetup = await mobile.controls.screenshot("touch-high-dpr-setup");
+      assert.ok(
+        sampleDifference(touchMenu, touchSetup) > 20,
+        "physical high-DPR touch tap did not activate the shipped menu affordance",
+      );
+      record.cases.push({
+        name: "touch-high-dpr-landscape",
+        device: "physical-touch",
+        viewport: touchViewport,
+        frames: [touchMenu.length, touchSetup.length],
+      });
+      await touch.close();
 
-    // A portrait phone has a materially different responsive composition from
-    // the landscape high-DPR surface above. The same logical player tap must
-    // still reach the visible menu affordance after production coordinate
-    // scaling, without relying on a DOM target or test runtime.
-    const portraitViewport = { width: 390, height: 844, dpr: 3, touch: true };
-    const portrait = await browser.newContext({
-      viewport: portraitViewport,
-      deviceScaleFactor: 3,
-      hasTouch: true,
-      isMobile: true,
-    });
-    const portraitSession = await open(portrait, portraitViewport, "touch-high-dpr-portrait");
-    const portraitMenu = await portraitSession.controls.screenshot("touch-high-dpr-portrait-main-menu");
-    await portraitSession.controls.touch({ x: 260, y: 360 }, "start");
-    await portraitSession.controls.touch({ x: 260, y: 360 }, "end");
-    await portraitSession.controls.wait(700);
-    const portraitSetup = await portraitSession.controls.screenshot("touch-high-dpr-portrait-setup");
-    assert.ok(
-      sampleDifference(portraitMenu, portraitSetup) > 20,
-      "physical portrait touch tap did not activate the responsive shipped menu affordance",
-    );
-    record.cases.push({
-      name: "touch-high-dpr-portrait",
-      device: "physical-touch",
-      viewport: portraitViewport,
-      frames: [portraitMenu.length, portraitSetup.length],
-    });
-    await portrait.close();
+      // A portrait phone has a materially different responsive composition from
+      // the landscape high-DPR surface above. The same logical player tap must
+      // still reach the visible menu affordance after production coordinate
+      // scaling, without relying on a DOM target or test runtime.
+      const portraitViewport = { width: 390, height: 844, dpr: 3, touch: true };
+      const portrait = await browser.newContext({
+        viewport: portraitViewport,
+        deviceScaleFactor: 3,
+        hasTouch: true,
+        isMobile: true,
+      });
+      const portraitSession = await open(portrait, portraitViewport, "touch-high-dpr-portrait");
+      const portraitMenu = await portraitSession.controls.screenshot("touch-high-dpr-portrait-main-menu");
+      await portraitSession.controls.touch({ x: 260, y: 360 }, "start");
+      await portraitSession.controls.touch({ x: 260, y: 360 }, "end");
+      await portraitSession.controls.wait(700);
+      const portraitSetup = await portraitSession.controls.screenshot("touch-high-dpr-portrait-setup");
+      assert.ok(
+        sampleDifference(portraitMenu, portraitSetup) > 20,
+        "physical portrait touch tap did not activate the responsive shipped menu affordance",
+      );
+      record.cases.push({
+        name: "touch-high-dpr-portrait",
+        device: "physical-touch",
+        viewport: portraitViewport,
+        frames: [portraitMenu.length, portraitSetup.length],
+      });
+      await portrait.close();
+    }
 
     // Browser accessibility preference is exercised at the real production
     // surface; the agent still receives only the rendered frame and sends a

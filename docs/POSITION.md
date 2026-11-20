@@ -22,9 +22,9 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 | [Pale Traverse rework](#pale-traverse) | Not started | Start once the Verdant gameplay rework has landed. | — |
 | [Player wiki](#wiki) | In progress | Review the move pull request, then confirm the Cloudflare secret question and run the first wiki deploy. | Archive shaku1z/tear-wiki after the first deploy from this repository. |
 | [Repository structure and workflow](#repository-structure) | In progress | After the hooks pull request merges, run pnpm setup:hooks in the canonical checkout on main (scripts/governance/README.md). | — |
-| [Playtest tool](#playtest-tool) | Stage 1 in part: pnpm playtest bosses prints a table per boss fight and phase, from Phase I or a chosen phase | Rest of stage 1: the walker player, boss movement, and the sweep over weapons and seeds. | — |
+| [Playtest tool](#playtest-tool) | Stage 1 in part: pnpm playtest bosses prints a table per boss fight and phase, from Phase I or a chosen phase | Rest of stage 1: the sweep over weapons, seeds and difficulties in under 5 minutes. | — |
 | [TearBench C21 to C40 program](#tearbench-program) | Paused at the 2026-08-30 state | Land or close pull request 84. | — |
-| [Mobile, touch and phone layouts](#mobile) | Paused by the owner 2026-11-19 | Leave the mobile code out of the production builds while keeping it in dev and test builds. | Say when mobile resumes. |
+| [Mobile, touch and phone layouts](#mobile) | Paused by the owner 2026-11-19; out of the release builds | Nothing until the owner resumes mobile; plans/MOBILE_LATER.md says how to turn it back on. | Mark the CrazyGames listing desktop only. Say when mobile resumes. |
 
 <a id="release-readiness"></a>
 
@@ -112,7 +112,7 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 **Stage 1 in part: pnpm playtest bosses prints a table per boss fight and phase, from Phase I or a chosen phase.** One command, pnpm playtest, that plays the game headless with scripted players on fixed seeds and reports clear rates, time to kill, damage taken and differences between builds. It is built from the working parts of TearBench and the scripted player and replaces both names. Verified on 2026-11-16: the scripted player runs headless at 13 to 15 times real time and the same seed reproduces exactly.
 
-- Next: Rest of stage 1: the walker player, boss movement, and the sweep over weapons and seeds.
+- Next: Rest of stage 1: the sweep over weapons, seeds and difficulties in under 5 minutes.
 - Owner action: none
 - Evidence: [plans/active/PLAYTEST_TOOL_PLAN.md](../plans/active/PLAYTEST_TOOL_PLAN.md)
 
@@ -130,8 +130,8 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 ### Mobile, touch and phone layouts
 
-**Paused by the owner 2026-11-19.** The owner paused all mobile work and wants it out of the official production builds until further notice. Touch controls, stick or drag aim, the rotate gate, phone layouts, touch density and haptics exist in the source. Touch-aim fixes are parked as draft pull request 191. Sessions write anything mobile will need later in plans/MOBILE_LATER.md.
+**Paused by the owner 2026-11-19; out of the release builds.** The owner paused all mobile work. The release builds (standalone, CrazyGames, itch) leave out the touch controls, the rotate gate, the phone profile layout and haptics, and a build check fails if they come back; a touch-only phone sees one line saying TEAR is played on a computer for now. Dev and test builds keep everything. The phone browser checks are parked in the mobile group (pnpm check:mobile). Touch-aim fixes are parked as draft pull request 191. Sessions write anything mobile will need later in plans/MOBILE_LATER.md.
 
-- Next: Leave the mobile code out of the production builds while keeping it in dev and test builds.
-- Owner action: Say when mobile resumes.
+- Next: Nothing until the owner resumes mobile; plans/MOBILE_LATER.md says how to turn it back on.
+- Owner action: Mark the CrazyGames listing desktop only. Say when mobile resumes.
 - Evidence: [plans/MOBILE_LATER.md](../plans/MOBILE_LATER.md), [#191](https://github.com/shaku1z/tear/pull/191)

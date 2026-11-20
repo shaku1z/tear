@@ -12,6 +12,7 @@ import type { AppTransitionContext } from "../interface/app-state-controller";
 import type { AppScreen } from "../../domain/screen-catalog";
 import { WHITE_HART_PHASE_ATTACKS, type WhiteHartAttackId } from "../../gameplay/entities/enemy-types/white-hart";
 import type { EnvironmentRuntimeState } from "../../gameplay/environment/environment-contracts";
+import { asRecord, isObject } from "../../domain/records";
 import { createDebugPerformanceScenarios } from "./debug-performance-scenarios";
 
 export interface DebugLifecycle {
@@ -124,7 +125,7 @@ function cloneDiagnosticData(
   if (value === null || typeof value === "boolean") return value;
   if (typeof value === "number") return Number.isFinite(value) ? value : invalidParticleDiagnostic();
   if (typeof value === "string") return value.length <= 256 ? value : invalidParticleDiagnostic();
-  if (typeof value !== "object" || Object.getOwnPropertySymbols(value).length > 0) return invalidParticleDiagnostic();
+  if (!isObject(value) || Object.getOwnPropertySymbols(value).length > 0) return invalidParticleDiagnostic();
   if (Array.isArray(value)) {
     if (value.length > maximumArray || value.length > budget.remaining) return diagnosticQuotaExceeded();
     if (Object.getOwnPropertyNames(value).length !== value.length + 1 || Object.keys(value).length !== value.length)
@@ -150,8 +151,9 @@ function cloneDiagnosticData(
   );
 }
 function diagnosticObject(value: unknown): Record<string, DiagnosticData> {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return invalidParticleDiagnostic();
-  return value as Record<string, DiagnosticData>;
+  const record = asRecord(value);
+  if (record === undefined) return invalidParticleDiagnostic();
+  return record as Record<string, DiagnosticData>;
 }
 function diagnosticProjection(
   value: object | undefined,
@@ -363,8 +365,7 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
           throw new Error("Invalid calibration platform state");
         const platform = context.stage.platforms[index];
         if (
-          typeof platform !== "object" ||
-          platform === null ||
+          !isObject(platform) ||
           !("y" in platform) ||
           typeof platform.y !== "number" ||
           platform.y >= d.CONFIG.world.groundY
@@ -873,8 +874,7 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
         const authored = d.PLAYGROUND_STAGES.find((stage) => stage.boss === boss);
         if (authored === undefined) throw new Error(`No authored stage exists for boss ${boss}`);
         const current = context.stage.current;
-        const currentId: unknown =
-          typeof current === "object" && current !== null ? Reflect.get(current, "id") : undefined;
+        const currentId: unknown = isObject(current) ? Reflect.get(current, "id") : undefined;
         return Object.freeze({
           currentId: typeof currentId === "string" ? currentId : null,
           currentIndex: context.stage.index,

@@ -40,6 +40,7 @@ import { promptDevice, promptLabels } from "../../domain/prompt-vocabulary";
 import { trainingExercise } from "../../gameplay/training/training-exercises";
 import { createTrainingCoachPresentation } from "./training-coach-presentation";
 import { isSheetScreen } from "../../domain/screen-catalog";
+import { isObject } from "../../domain/records";
 import type { EnvironmentSnapshot } from "../../gameplay/environment/environment-contracts";
 import { renderEnvironmentLayer } from "./environment-layer";
 import { gauntletTrialCard, gauntletWave } from "../../gameplay/run/gauntlet-trials";
@@ -124,7 +125,8 @@ export interface WorldPresentationServices {
   readonly tutorial: LiveTutorialRuntime;
   readonly finale: () => Finale | null;
   readonly achievementToast: AchievementToastController;
-  readonly touchOnboarding: TouchOnboardingController;
+  /** The first-touch coaching; null in a build without touch. */
+  readonly touchOnboarding: TouchOnboardingController | null;
   readonly formatTime: (seconds: number) => string;
   readonly trickColor: (multiplier: number) => string;
   readonly ease: (amount: number) => number;
@@ -503,7 +505,10 @@ export function createLiveWorldPresentationAdapters(
       }
     },
     drawTouchControls(): void {
-      const onboarding = services.touchOnboarding.step(state.lastUiDelta(), !!d.PROFILE.stat("touchOnboarded"));
+      const onboarding = services.touchOnboarding?.step(state.lastUiDelta(), !!d.PROFILE.stat("touchOnboarded")) ?? {
+        alpha: 0,
+        completed: false,
+      };
       if (onboarding.completed) d.profileStatsPersistence.add("touchOnboarded", 1);
       world.touchControls(
         buildTouchControlsSnapshot({
@@ -662,7 +667,7 @@ function projectBossZones(enemy: GameEnemy): readonly BossZone[] {
   if (!Array.isArray(source)) return [];
   const zones: readonly unknown[] = source;
   return zones.flatMap((zone): readonly BossZone[] => {
-    if (typeof zone !== "object" || zone === null || !("x" in zone) || typeof zone.x !== "number") return [];
+    if (!isObject(zone) || !("x" in zone) || typeof zone.x !== "number") return [];
     return [
       {
         x: zone.x,

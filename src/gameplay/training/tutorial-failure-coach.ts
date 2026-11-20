@@ -1,5 +1,6 @@
 import type { GameAction } from "../../input/game-action";
 import type { TutorialGoldFrame } from "./tutorial-gold-reference";
+import { requireRecord } from "../../domain/records";
 
 /** Facts are emitted by the real contact/transport owners, never reconstructed geometry. */
 export type TutorialAttemptFact =
@@ -49,8 +50,7 @@ const messages: Readonly<Record<Cause, string>> = {
   unknown: "Not quite. Pause and choose SHOW DEMO to watch it done.",
 };
 export function parseTutorialFailures(value: unknown): TutorialFailureCheckpoint {
-  if (!value || typeof value !== "object" || Array.isArray(value)) throw new TypeError("Invalid tutorial failures");
-  const data = value as Record<string, unknown>;
+  const data = requireRecord(value, "Invalid tutorial failures");
   if (
     data.version !== 1 ||
     Object.keys(data).some((key) => !["version", "variants"].includes(key)) ||
@@ -60,8 +60,7 @@ export function parseTutorialFailures(value: unknown): TutorialFailureCheckpoint
     throw new TypeError("Invalid tutorial failure ledger");
   const keys = new Set<string>();
   for (const raw of data.variants as readonly unknown[]) {
-    if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new TypeError("Invalid tutorial failure variant");
-    const entry = raw as Record<string, unknown>;
+    const entry = requireRecord(raw, "Invalid tutorial failure variant");
     if (
       Object.keys(entry).some((key) => !["key", "failures", "cause", "demoShown"].includes(key)) ||
       typeof entry.key !== "string" ||

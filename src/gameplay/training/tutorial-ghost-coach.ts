@@ -17,6 +17,7 @@ import {
 import { shippingTutorialGold } from "./tutorial-gold-shipping";
 import type { GameAction } from "../../input/game-action";
 import type { AuthoritativeInputSnapshot } from "../runtime/authoritative-input";
+import { isRecord } from "../../domain/records";
 
 // The shipped corpus is loaded on demand by training preflight; see tutorial-gold-shipping.ts.
 export { loadShippingTutorialGold, shippingTutorialGold } from "./tutorial-gold-shipping";
@@ -88,8 +89,7 @@ const fields = [
 ];
 export function parseTutorialCoachCheckpoint(value: unknown): TutorialCoachCheckpoint | undefined {
   if (value === undefined) return undefined;
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new TypeError("Invalid gold coach presentation");
+  if (!isRecord(value)) throw new TypeError("Invalid gold coach presentation");
   const data = value as TutorialCoachCheckpoint;
   const version: unknown = Reflect.get(value, "version");
   if (
@@ -119,7 +119,7 @@ export function parseTutorialCoachCheckpoint(value: unknown): TutorialCoachCheck
     throw new RangeError("Gold coach reference incompatible");
   for (const raw of [data.current, data.best] as readonly unknown[])
     if (raw !== undefined) {
-      if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new TypeError("Invalid personal attempt");
+      if (!isRecord(raw)) throw new TypeError("Invalid personal attempt");
       const attempt = raw as Attempt;
       if (
         Object.keys(attempt).some((key) => !["duration", "poses", "contact", "groundedContact"].includes(key)) ||

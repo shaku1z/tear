@@ -1,3 +1,4 @@
+import { isObject } from "../domain/records";
 import { UNSUPPORTED_INVARIANT_IDS, type TearInvariantId } from "./registries";
 import type { TearObservationV1, TearScenarioSubjectV1, TearScenarioV1 } from "./contracts";
 import { modeOwnsWaveActors } from "../gameplay/run/mode-catalog";
@@ -60,7 +61,7 @@ function finite(values: readonly number[]): boolean {
 function numericValues(value: unknown): readonly number[] {
   if (typeof value === "number") return [value];
   if (Array.isArray(value)) return value.flatMap((entry) => numericValues(entry));
-  if (typeof value === "object" && value !== null) return Object.values(value).flatMap((entry) => numericValues(entry));
+  if (isObject(value)) return Object.values(value).flatMap((entry) => numericValues(entry));
   return [];
 }
 

@@ -58,6 +58,9 @@ function drawSnareTell(canvas: CanvasRenderingContext2D, tell: BossTell, highCon
   canvas.restore();
 }
 
+/** Sizes of the Rootbinder's marks, in pixels. */
+const NODE = Object.freeze({ walking: 7, planted: 11, contrastExtra: 2, windupRing: 30, uprootedCross: 9 });
+
 /** Draws only immutable Rootbinder facts; no environment or gameplay state is mutated here. */
 export function renderRootbinderPresentation(
   canvas: CanvasRenderingContext2D,
