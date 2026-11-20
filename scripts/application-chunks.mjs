@@ -15,6 +15,15 @@ const APPLICATION_FOLDER_CHUNKS = Object.freeze({
   world: "runtime-app-combat",
 });
 
+/**
+ * `src/gameplay/<folder>/` -> chunk for a folder that joins another folder's chunk; every other folder gets
+ * `gameplay-<folder>`. Each startup chunk is a precache entry and a request, so a small folder that only one
+ * startup chunk's code reads (the snapshot codecs serialize run state) is listed here instead of adding a file.
+ */
+const GAMEPLAY_FOLDER_CHUNKS = Object.freeze({
+  snapshot: "gameplay-run",
+});
+
 /** The entry points import the application composition dynamically; it is where the startup path begins. */
 const STARTUP_ROOT = "/src/app/shell/composition.ts";
 
@@ -90,7 +99,7 @@ export function applicationChunk(id, meta) {
   if (topLevel === "app") return APPLICATION_FOLDER_CHUNKS[relative.split("/")[1] ?? ""] ?? "runtime-app-core";
   if (topLevel === "gameplay") {
     const area = relative.split("/").slice(1, 2)[0] ?? "core";
-    return `gameplay-${area}`;
+    return GAMEPLAY_FOLDER_CHUNKS[area] ?? `gameplay-${area}`;
   }
   if (
     [

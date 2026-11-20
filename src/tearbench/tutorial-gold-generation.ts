@@ -21,7 +21,8 @@ import {
 } from "./production-replay-composition";
 import { applyWeapon } from "../gameplay/weapons";
 import { driveTutorialCourse, type TutorialDriverObservation, type TutorialDriverPort } from "./tutorial-course-driver";
-import type { TearSnapshotV1, TearScenarioV1 } from "./contracts";
+import type { TearSnapshotV1 } from "../gameplay/snapshot/snapshot-contract";
+import type { TearScenarioV1 } from "./contracts";
 
 export interface TutorialGoldProofReference {
   readonly lessonId: TutorialGoldReference["lessonId"];

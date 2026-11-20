@@ -1,5 +1,6 @@
 import type { GameAction } from "../input/game-action";
-import type { TearObservationClass, TearObservationV1 } from "../tearbench/contracts";
+import type { TearObservationClass } from "../gameplay/snapshot/snapshot-contract";
+import type { TearObservationV1 } from "../tearbench/contracts";
 
 export type TearAgentProfileId = "smoke" | "competent" | "style" | "survival" | "chaos" | "menu" | "transition-hunter";
 

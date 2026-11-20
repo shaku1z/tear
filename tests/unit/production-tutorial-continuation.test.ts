@@ -21,7 +21,8 @@ import {
   type ProductionHeadlessCheckpoint,
   type ProductionTutorialHandoffArtifact,
 } from "../../src/playtest/headless/production-headless-environment";
-import type { TearScenarioV1, TearSnapshotV1 } from "../../src/tearbench/contracts";
+import type { TearScenarioV1 } from "../../src/tearbench/contracts";
+import type { TearSnapshotV1 } from "../../src/gameplay/snapshot/snapshot-contract";
 import {
   firstProductionC27AHashDivergence,
   replayProductionC27ATrace,

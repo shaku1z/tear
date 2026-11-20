@@ -109,6 +109,12 @@ describe("application chunk rule", () => {
     expect(applicationChunk(corpus, meta)).toBe("tutorial-gold-reference");
   });
 
+  it("folds a listed gameplay folder into another folder's chunk and gives the others their own", () => {
+    const meta = graph({ [ROOT]: {} });
+    expect(applicationChunk("/repo/src/gameplay/snapshot/state-codec.ts", meta)).toBe("gameplay-run");
+    expect(applicationChunk("/repo/src/gameplay/combat/a.ts", meta)).toBe("gameplay-combat");
+  });
+
   it("keeps the folder groups for startup modules and ignores modules outside src", () => {
     const meta = graph({ [ROOT]: {} });
     expect(applicationChunk(ROOT, meta)).toBe("runtime-app-core");

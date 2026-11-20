@@ -2,14 +2,15 @@ import { asRecord } from "../domain/records";
 import { hasMonotonicEnvelopes } from "../domain/envelopes";
 import { normalizeGameAction } from "../input/game-action";
 import type { ReplayActionEnvelope } from "../replay/envelope";
-import type { TearCausalEventV1, TearSnapshotV1 } from "../tearbench/contracts";
+import type { TearCausalEventV1 } from "../tearbench/contracts";
+import type { TearSnapshotV1 } from "../gameplay/snapshot/snapshot-contract";
 import {
   createDefaultStateCodecRegistry,
   restoreSnapshotTransactionally,
   type TearCodecIssue,
   type TearCodecWorld,
   type TearWorldFactory,
-} from "../tearbench/state-codecs";
+} from "../gameplay/snapshot/state-codec";
 import { validateTearContract } from "../tearbench/validation";
 import { isUnchangedGhostRead, type GhostCapsuleContents, type GhostCapsuleEntry } from "./capsule-reader";
 import { createGhostV3, GhostTimeline, type GhostEnvelopeV3, type GhostReplayTrident } from "./truth-kernel";

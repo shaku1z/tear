@@ -2,7 +2,7 @@ import { issueGhostRecordedOpeningPermit } from "../../src/ghost/replay-admissio
 import { readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { hydrateRewardCodecPayload } from "../../src/tearbench/reward-codec-hydrator";
-import type { TearCodecValue } from "../../src/tearbench/state-codecs";
+import type { TearCodecValue } from "../../src/gameplay/snapshot/state-codec";
 import type { GhostReadCapsule } from "../../src/ghost/capsule-reader";
 import { verifyGhostCapsuleProductionReplay } from "../../src/ghost/production-replay-verification";
 import { describe, expect, it } from "vitest";

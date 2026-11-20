@@ -39,22 +39,7 @@
     },
     {
       "from": "src/ghost/capsule-replay-envelope.ts",
-      "to": "src/tearbench/state-codecs.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/ghost/capsule-replay-envelope.ts",
       "to": "src/tearbench/validation.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/ghost/fork-origin.ts",
-      "to": "src/tearbench/contracts.ts",
-      "kind": "type"
-    },
-    {
-      "from": "src/ghost/fork-origin.ts",
-      "to": "src/tearbench/environment-codec.ts",
       "kind": "value"
     },
     {
@@ -95,16 +80,6 @@
     {
       "from": "src/ghost/replay-admission.ts",
       "to": "src/tearbench/validation.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/ghost/replay-world.ts",
-      "to": "src/tearbench/contracts.ts",
-      "kind": "type"
-    },
-    {
-      "from": "src/ghost/replay-world.ts",
-      "to": "src/tearbench/state-codecs.ts",
       "kind": "value"
     },
     {

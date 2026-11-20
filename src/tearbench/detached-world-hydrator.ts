@@ -1,6 +1,6 @@
 import { isObject, isRecord } from "../domain/records";
 import { rebindBossPracticeSource } from "../gameplay/training/boss-practice-source-restore";
-import type { TearCodecValue, TearCodecWorld } from "./state-codecs";
+import type { TearCodecValue, TearCodecWorld } from "../gameplay/snapshot/state-codec";
 import type { TearWorldEntityConstructionPort } from "../gameplay/runtime/tear-world-entity-construction";
 import type { EnvironmentSnapshot } from "../gameplay/environment/environment-contracts";
 import {
@@ -8,11 +8,11 @@ import {
   type UiTutorialPresentationCheckpoint,
   parseUiHudPresentationCheckpoint,
   type UiHudPresentationCheckpoint,
-} from "./ui-presentation-checkpoint";
+} from "../gameplay/snapshot/ui-checkpoint";
 import {
   parseParticlePresentationCheckpoint,
   type ParticlePresentationCheckpoint,
-} from "./particle-presentation-checkpoint";
+} from "../gameplay/snapshot/particle-checkpoint";
 import { parseTutorialSessionCheckpoint } from "../gameplay/training/tutorial-session-checkpoint";
 
 /**

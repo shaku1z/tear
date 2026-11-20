@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { TEAR_CONTRACT_FORMAT, type TearObservationV1 } from "../../src/tearbench/contracts";
+import { TEAR_CONTRACT_FORMAT } from "../../src/gameplay/snapshot/snapshot-contract";
+import type { TearObservationV1 } from "../../src/tearbench/contracts";
 import {
   ENVIRONMENT_REQUIRED_INVARIANT_IDS,
   effectiveInvariantIdsForScenario,

@@ -17,7 +17,7 @@ import {
   VERDANT_STAGE_ENGINEERING_TEARSDL,
   VERDANT_WAVE_ENGINEERING_TEARSDL,
 } from "../../src/tearbench/verdant-stage-engineering-scenario";
-import type { TearSnapshotV1 } from "../../src/tearbench/contracts";
+import type { TearSnapshotV1 } from "../../src/gameplay/snapshot/snapshot-contract";
 
 function sourceSnapshot(): TearSnapshotV1 {
   const source = createProductionGhostReplayComposition({ seed: "verdant-stage-wave-31", mode: "campaign" }).create(

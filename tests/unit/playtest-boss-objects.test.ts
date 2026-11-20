@@ -12,7 +12,8 @@ import {
 } from "../../src/playtest/boss-objects";
 import { BOSS_PLAYER_IDS } from "../../src/playtest/boss-player";
 import { formatBossReport } from "../../src/playtest/boss-report";
-import type { TearObservationV1, TearObservedEnvironmentCombatObjectV1 } from "../../src/tearbench/contracts";
+import type { TearObservationV1 } from "../../src/tearbench/contracts";
+import type { TearObservedEnvironmentCombatObjectV1 } from "../../src/gameplay/snapshot/snapshot-contract";
 import { createProductionHeadlessEnvironment } from "../../src/playtest/headless/production-headless-environment";
 
 /** Phase II of the Rootbound, where the game plants a Mercy Graft before the fight starts. */

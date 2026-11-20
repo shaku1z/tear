@@ -424,8 +424,9 @@ frozen evidence record.
   pool, so their Verdant interval can lawfully select Rootbinder under the same
   local unlock and composition rules. Playground projects its spawn menu from
   the canonical enemy identity list, and Enemy Test derives its wave-one full
-  roster from that same authority. The eight stable Playground number hotkeys
-  remain unchanged; no mode, enemy, stage, or boss registry was added. Tutorial
+  roster from that same authority. The Playground's number-row shortcuts spawn no
+  enemy kind directly (repeat brings back the menu's last spawn); no mode, enemy,
+  stage, or boss registry was added. Tutorial
   remains isolated on its authored Charger/Ranged teaching surface, baseline
   loadout, training arenas, and explicit variant exclusion. Rootbound boss
   frames use the generic boss State Setup factory, while Rootbinder networks and

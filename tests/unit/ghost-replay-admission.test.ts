@@ -12,18 +12,15 @@ import { verifyGhostCapsuleProductionReplay } from "../../src/ghost/production-r
 import { createGhostProductionReplaySession } from "../../src/ghost/production-replay-session";
 import { stableVerificationHash } from "../../src/domain/hash";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
+import { CODEC_REGISTRY, type TearCodecId } from "../../src/gameplay/snapshot/codec-ids";
 import {
-  CODEC_REGISTRY,
   captureCodecState,
   createDefaultStateCodecRegistry,
-  type TearCodecId,
   type TearCodecValue,
-  type TearCausalEventV1,
   type TearCodecWorld,
-  type TearSnapshotV1,
-  type TearScenarioV1,
-  validateTearContract,
-} from "../../src/tearbench";
+} from "../../src/gameplay/snapshot/state-codec";
+import { type TearCausalEventV1, type TearScenarioV1, validateTearContract } from "../../src/tearbench";
+import type { TearSnapshotV1 } from "../../src/gameplay/snapshot/snapshot-contract";
 import { createProductionHeadlessEnvironment } from "../../src/playtest/headless/production-headless-environment";
 import {
   GHOST_REPLAY_CONTEXT_FORMAT,

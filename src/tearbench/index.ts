@@ -1,6 +1,4 @@
 export * from "./canonical-scenarios";
-export * from "./state-codecs";
-export * from "./environment-codec";
 export * from "../gameplay/environment/environment-definitions";
 export * from "../gameplay/environment/field-runtime";
 export * from "../gameplay/environment/combat-object-runtime";

@@ -29,7 +29,7 @@ const actionName = (action: KeyboardAction): string =>
 
 /**
  * Places whose keys stay reserved for them, by binding context. A refused key bound in one
- * of these contexts is named by its place ("T is used by the Playground"), read from the
+ * of these contexts is named by its place ("3 is used by the Playground"), read from the
  * binding table the place itself reads.
  */
 const RESERVED_BY: Readonly<Partial<Record<KeyboardContext, string>>> = Object.freeze({
