@@ -15,7 +15,7 @@ import {
   type ProductionApplicationFrameConfirm,
 } from "../../tearbench/production-replay-composition";
 import { productionRunSeed, type ProductionReplayWorld } from "../../tearbench/production-world-factory";
-import type { ProductionWaveRewardRuntime } from "../../tearbench/production-wave-reward-runtime";
+import type { ProductionRunOpening, ProductionWaveRewardRuntime } from "../../tearbench/production-wave-reward-runtime";
 import type { ProductionWaveRewardIntent } from "../../tearbench/production-wave-reward-runtime";
 import type { TearCausalEventV1, TearObservationV1, TearScenarioV1, TearSnapshotV1 } from "../../tearbench/contracts";
 import {
@@ -75,6 +75,8 @@ export interface ProductionHeadlessEnvironmentOptions {
    * still prove the terminal agrees with their sealed source artifact.
    */
   readonly captureSourceTracks?: boolean;
+  /** The build a run opened on a later wave gives its player; see `ProductionRunOpening`. */
+  readonly build?: ProductionRunOpening["build"];
 }
 
 export interface ProductionHeadlessTerminalArtifact {
@@ -256,7 +258,14 @@ export function createProductionHeadlessEnvironment(
       weaponId: scenario.start.weapon,
       difficulty: scenario.start.difficulty,
       ...(scenario.start.boss === undefined ? {} : { firstBoss: scenario.start.boss }),
-      ...(scenario.start.wave === undefined ? {} : { firstWave: scenario.start.wave }),
+      ...(scenario.start.wave === undefined
+        ? {}
+        : {
+            opening: {
+              firstWave: scenario.start.wave,
+              ...(options.build === undefined ? {} : { build: options.build }),
+            },
+          }),
       ...(snapshot === undefined || input === undefined ? {} : { inputSnapshots: new Map([[snapshot.tick, input]]) }),
       gameplayEvents,
       ...(sourceTracks === undefined

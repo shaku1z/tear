@@ -372,9 +372,11 @@ A scenario's `start.wave` (with `start.stage` to name the Adventure stage it bel
 just before that wave and lets the game's own wave planner start it, so the stage, its story chapter and
 the wave's enemies are the game's, for every stage from one path. It is marked `surgical-valid` and gives
 no checkpoint; a later wave is refused in modes whose waves the planner does not number (boss-only, the
-Gauntlet). `src/playtest/headless/chapter.ts` skips the chapter the way a player does. Limit, stated in
-every report that uses it: the player arrives with no upgrades, as in the browser's wave scenarios; a
-build for the player is a later piece. Test: `tests/unit/playtest-wave-start.test.ts`.
+Gauntlet). `src/playtest/headless/chapter.ts` skips the chapter the way a player does. The player
+arrives with no upgrades unless the environment is given a build: then the game's draft is rolled once for
+each wave before and the build picks one upgrade from each, applied as a pick in a run is. Limit, stated in
+every report that uses it: tier-ups and anything bought are not part of a build. Test:
+`tests/unit/playtest-wave-start.test.ts`.
 
 Done when:
 - [ ] Every boss phase, every wave of each biome and every enemy kind is a row that starts directly, in under 1 s each.

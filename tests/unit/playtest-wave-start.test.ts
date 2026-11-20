@@ -115,6 +115,32 @@ describe("a headless run opened on a chosen wave", () => {
     expect(first({ mode: "endless", wave: 1 })).toBe(first({ mode: "endless" }));
   });
 
+  it("gives the player a build when asked: one pick from the game's draft for each wave before", () => {
+    const owned = (build?: (choices: readonly Readonly<{ id: string }>[]) => number): Record<string, number> => {
+      const environment = createProductionHeadlessEnvironment(build === undefined ? {} : { build });
+      try {
+        environment.reset(scenario({ mode: "campaign", wave: 31 }));
+        const run = environment.world().run() as unknown as { mods: { owned: Record<string, number> } };
+        return { ...run.mods.owned };
+      } finally {
+        environment.dispose();
+      }
+    };
+    const picks = (build: Record<string, number>): number => Object.values(build).reduce((sum, n) => sum + n, 0);
+    expect(picks(owned())).toBe(0);
+    const offered: number[] = [];
+    const first = owned((choices) => {
+      offered.push(choices.length);
+      return 0;
+    });
+    expect(offered).toHaveLength(30);
+    expect(Math.min(...offered)).toBeGreaterThanOrEqual(3);
+    expect(picks(first)).toBe(30);
+    expect(owned(() => 0)).toEqual(first);
+    expect(owned((choices) => choices.length - 1)).not.toEqual(first);
+    expect(() => owned(() => 9)).toThrow("not on offer");
+  });
+
   it("is surgical state: it has to say so, and it gives no checkpoint", () => {
     expect(() => scenario({ mode: "endless", wave: 12 }, "recorded-canonical")).toThrow(/natural opening/u);
     expect(() => scenario({ mode: "endless" }, "surgical-valid")).toThrow(/recorded-canonical natural openings/u);
