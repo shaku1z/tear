@@ -1,6 +1,7 @@
 import type { PromptAction } from "../../domain/prompt-vocabulary";
 import type { WeaponId } from "../weapon-selection";
-import type { TutorialLessonId, TutorialSessionView } from "./tutorial-controller";
+import type { TutorialSessionView } from "./tutorial-controller";
+import type { TutorialLessonId } from "./tutorial-lesson-ids";
 import { drillMovesLine, TUTORIAL_WEAPON_ANNEXES } from "./tutorial-weapon-annexes";
 
 /**

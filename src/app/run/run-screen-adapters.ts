@@ -18,6 +18,7 @@ import type { GauntletResult, RunResultInfo } from "../../gameplay/run/outcome-p
 import { bossName } from "../../gameplay/run/content-director";
 import { waveTitle } from "../../gameplay/run/wave-rules";
 import { GAUNTLET_TICKS_PER_SECOND } from "../../domain/gauntlet-records";
+import type { RunExitScreen } from "../../domain/screen-actions";
 import type { GauntletResultSource } from "../../presentation/run-screen-snapshots";
 
 /** A Gauntlet result in the units the result screens show. */
@@ -72,7 +73,7 @@ export interface RunScreenState {
   readonly continueSeconds: () => number;
   readonly replayAvailable: () => boolean;
   readonly setContinueSeconds: (value: number) => void;
-  readonly setScreen: (screen: "menu" | "playing") => void;
+  readonly setScreen: (screen: "menu" | "playing" | "confirmquit" | RunExitScreen) => void;
   readonly outcome: () => RunResultInfo;
 }
 
@@ -117,7 +118,8 @@ export interface LiveRunScreenAdapters {
   readonly chooseUpgrade: (index: number) => void;
   readonly chooseReserve: (index: number) => void;
   readonly chooseTierUp: (index: number) => void;
-  readonly quitRun: () => void;
+  /** Ends the run as QUIT does and opens `next` (the main menu unless named). */
+  readonly quitRun: (next?: RunExitScreen) => void;
   readonly reviveByAd: () => void;
 }
 
@@ -287,7 +289,14 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
       });
     },
     renderConfirmQuit(): void {
-      renderers.confirmquit({ id: "confirmquit", practice: services.persistentEffects?.() === false });
+      const tutorial = services.tutorialSession?.();
+      renderers.confirmquit({
+        id: "confirmquit",
+        practice: services.persistentEffects?.() === false,
+        ...(tutorial === undefined
+          ? {}
+          : { tutorial: tutorial.practiceOnly === true || tutorial.courseCompleted ? "drills" : "course" }),
+      });
     },
     renderContinue(): void {
       const seconds = state.continueSeconds();
@@ -342,7 +351,7 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
     chooseTierUp(index: number): void {
       reward.selectTier(index);
     },
-    quitRun(): void {
+    quitRun(next: RunExitScreen = "menu"): void {
       const run = state.run();
       const completed = run.waveLog.length;
       if (completed > 0 && services.persistentEffects?.() !== false) {
@@ -352,7 +361,12 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
       if (services.cinema.active) services.cinema.cancel("quit-run");
       services.clearFinale();
       services.terminateRun("quit");
+      // The screen rules let a run be left only from its quit confirm, to the main menu, so a run
+      // ended from its pause takes that same route (no confirm is drawn on the way) before opening
+      // `next`. Every way out of a run (QUIT, SKIP TUTORIAL, START A RUN) comes through here.
+      if (state.screen() === "paused") state.setScreen("confirmquit");
       state.setScreen("menu");
+      if (next !== "menu") state.setScreen(next);
     },
     reviveByAd(): void {
       state.setContinueSeconds(1e9);

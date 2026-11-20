@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
-const { STATE_WAIT_MS, launchJourney } = require("./browser-waits");
+const { STATE_WAIT_MS, launchJourney, settleFor } = require("./browser-waits");
 
 const repositoryRoot = path.resolve(__dirname, "..");
 const targets = ["standalone", "crazygames"];
@@ -123,13 +123,24 @@ const engineeringSetupLabels = ["DEV", "BOSS TEST", "ENEMY TEST", "CREATE SEED-L
 /** Records canvas text so production menus can be inspected without any test hook in the bundle. */
 function recordCanvasText() {
   const drawn = [];
+  // Where each label was last drawn on the visible canvas, in page pixels, so a drawn control can be clicked.
+  const at = new Map();
   const original = CanvasRenderingContext2D.prototype.fillText;
-  CanvasRenderingContext2D.prototype.fillText = function fillText(text, ...rest) {
+  CanvasRenderingContext2D.prototype.fillText = function fillText(text, x, y, ...rest) {
     drawn.push(String(text));
     if (drawn.length > 20_000) drawn.splice(0, drawn.length - 10_000);
-    return original.call(this, text, ...rest);
+    if (this.canvas.isConnected) {
+      const point = this.getTransform().transformPoint({ x, y }),
+        rect = this.canvas.getBoundingClientRect();
+      at.set(String(text), {
+        x: rect.left + (point.x * rect.width) / this.canvas.width,
+        y: rect.top + (point.y * rect.height) / this.canvas.height,
+      });
+    }
+    return original.call(this, text, x, y, ...rest);
   };
   Object.defineProperty(window, "__isolationDrawnText", { configurable: false, value: drawn });
+  Object.defineProperty(window, "__isolationDrawnAt", { configurable: false, value: at });
 }
 
 /** Exact or fitted (ellipsized) canvas labels that belong to engineering controls. */
@@ -190,6 +201,22 @@ async function assertReleaseSurfaces(page, target) {
     `${target} production main menu rendered engineering entries`,
   );
   await clickVirtual(page, 260, 361);
+  // A fresh profile is tutorial-first: PLAY starts the tutorial. Skipping it on purpose, on the
+  // quit confirm that the pause's MAIN MENU opens, opens the run setup.
+  await page
+    .waitForFunction(() => window.__isolationDrawnText.some((text) => /^LESSON 1 OF \d+$/u.test(text)), undefined, {
+      timeout: STATE_WAIT_MS,
+    })
+    .catch(() => {
+      throw new Error(`${target} PLAY did not start the tutorial`);
+    });
+  await page.keyboard.press("KeyP");
+  for (const label of ["MAIN MENU", "SKIP TUTORIAL"]) {
+    await waitForDrawnText(page, label, `${target} leaving the tutorial`);
+    await page.waitForTimeout(settleFor(700)); // the pause and the confirm arm before a press counts
+    const point = await page.evaluate((text) => window.__isolationDrawnAt.get(text), label);
+    await page.mouse.click(point.x, point.y);
+  }
   await waitForDrawnText(page, "START", `${target} setup`);
   const setup = await drawnTextAfterFrames(page);
   assert.ok(setup.includes("ADVENTURE"), `${target} setup did not render its modes`);

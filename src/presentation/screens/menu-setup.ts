@@ -119,7 +119,8 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
       ghost: true,
       entryFocus: true,
       sub: (view.playSub ?? `${view.modeLabel} · ${view.difficultyLabel}`).toUpperCase(),
-      action: { type: "navigate", to: "setup" },
+      // Tutorial-first: PLAY goes straight into the tutorial at its next lesson, not to run setup.
+      action: view.playTutorial ? { type: "tutorial.continue" } : { type: "navigate", to: "setup" },
     });
     const rail = [
       ["◆", "SHOP", "shop"],

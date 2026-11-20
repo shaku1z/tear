@@ -65,6 +65,15 @@ function recordCanvasFrames() {
   window.__TEAR_JOURNEY_FRAME__ = frame;
 }
 
+/**
+ * Isolated test storage for a player who skipped the tutorial on purpose: PLAY opens the run setup
+ * instead of starting the tutorial (a fresh profile is tutorial-first). The legacy profile key is
+ * migrated on load, so this is the smallest stored profile that says so.
+ */
+const TUTORIAL_SKIPPED_STORAGE = Object.freeze({
+  tear_profile: JSON.stringify({ tutorialProgress: { lessons: {}, skipped: true } }),
+});
+
 async function withJourney(options, run) {
   const buildDirectory = process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone";
   const root = path.resolve(__dirname, "..", "dist", buildDirectory);
@@ -156,18 +165,26 @@ async function withJourney(options, run) {
     page.setDefaultNavigationTimeout(STATE_WAIT_MS);
     await watchForStalls(page, { serverLog });
     await trackScriptLoads(page);
-    if (options.settings) {
-      await page.addInitScript((settings) => {
-        window.__TEAR_TEST_STORAGE__ = {
-          tear_settings: JSON.stringify({
-            gfx: settings.gfx,
-            reducedMotion: settings.reducedMotion,
-            highContrast: settings.highContrast,
-            flash: settings.flashScale,
-          }),
-        };
-      }, options.settings);
-    }
+    // The isolated test storage a page starts with. `tutorialSkipped` plays as a player who
+    // skipped the tutorial on purpose, so PLAY opens the run setup; without it a fresh profile is
+    // tutorial-first and PLAY starts the tutorial.
+    const seeded = {
+      ...(options.settings
+        ? {
+            tear_settings: JSON.stringify({
+              gfx: options.settings.gfx,
+              reducedMotion: options.settings.reducedMotion,
+              highContrast: options.settings.highContrast,
+              flash: options.settings.flashScale,
+            }),
+          }
+        : {}),
+      ...(options.tutorialSkipped ? TUTORIAL_SKIPPED_STORAGE : {}),
+    };
+    if (Object.keys(seeded).length > 0)
+      await page.addInitScript((storage) => {
+        window.__TEAR_TEST_STORAGE__ = storage;
+      }, seeded);
     if (options.colorScheme || options.reducedMotion) {
       await page.emulateMedia({ colorScheme: options.colorScheme, reducedMotion: options.reducedMotion });
     }
@@ -427,4 +444,4 @@ async function waitForBrowserValue(
   }
 }
 
-module.exports = { withJourney, waitForBrowserValue };
+module.exports = { withJourney, waitForBrowserValue, TUTORIAL_SKIPPED_STORAGE };

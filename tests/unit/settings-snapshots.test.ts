@@ -23,6 +23,15 @@ const environment = {
   installAvailable: false,
   update: { ready: false, applying: false },
   privacy: { privacyLink: true, termsLink: false, note: null, statistics: true },
+  credits: [
+    {
+      label: "FONTS",
+      entries: [
+        { id: "plex", name: "IBM Plex Mono", note: "text · © 2017 IBM Corp. · SIL OFL 1.1", hasLicenceText: true },
+        { id: "vite", name: "Vite", note: "builds the game · MIT License", hasLicenceText: false },
+      ],
+    },
+  ],
   buildLabel: "v0.1.0 · 820e8e9",
   presets: { default: { name: "DEFAULT", tag: "", line: "familiar", map: "L1 tether" } },
   controllerGlyphs: ["✕", "◯", "▢", "△"],
@@ -69,6 +78,30 @@ describe("settings snapshots", () => {
       expect(buildSettingsSections(tab, settings, environment).flatMap((section) => section.rows)).not.toContainEqual(
         expect.objectContaining({ key: "version" }),
       );
+  });
+  it("lists the credits tab from the build's credits: a row that opens a shipped licence, and plain rows", () => {
+    expect(buildSettingsSections("credits", settings, environment)).toEqual([
+      {
+        label: "FONTS",
+        rows: [
+          {
+            key: "licence:plex",
+            label: "IBM Plex Mono",
+            value: "LICENCE",
+            kind: "cycle",
+            note: "text · © 2017 IBM Corp. · SIL OFL 1.1",
+          },
+          { key: "credit:vite", label: "Vite", value: "", kind: "info", note: "builds the game · MIT License" },
+        ],
+      },
+    ]);
+    // The other tabs never carry credit rows.
+    for (const tab of ["general", "controls", "audio", "video", "accessibility"])
+      expect(
+        buildSettingsSections(tab, settings, environment)
+          .flatMap((section) => section.rows)
+          .some((row) => row.key.startsWith("credit") || row.key.startsWith("licence")),
+      ).toBe(false);
   });
   it("shows the data rows the build's privacy stance asks for, and no others", () => {
     const keys = (privacy: typeof environment.privacy) =>

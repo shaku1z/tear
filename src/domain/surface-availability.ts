@@ -18,9 +18,7 @@ type FeatureSurfaceId =
   | "setup:boss-picker"
   // Unfinished player features.
   | "feature:seed-race"
-  | "feature:boss-memory"
   | "feature:replay-editor"
-  | "feature:linked-pair-download"
   // Every engineering query parameter and surface route.
   | "route:engineering-query"
   // Engineering window globals.
@@ -41,9 +39,7 @@ const SCREEN_SURFACE_PREFIX = "screen:";
 export const SURFACE_CHANNEL: Readonly<Record<FeatureSurfaceId, SurfaceChannel>> = Object.freeze({
   "setup:boss-picker": "engineering",
   "feature:seed-race": "engineering",
-  "feature:boss-memory": "engineering",
   "feature:replay-editor": "engineering",
-  "feature:linked-pair-download": "engineering",
   "route:engineering-query": "engineering",
   "global:weapon-debug": "engineering",
 });
@@ -95,10 +91,6 @@ export function screenActionSurface(action: ScreenAction): SurfaceId | undefined
   if (action.type === "setup.start") return action.race === true ? "feature:seed-race" : undefined;
   if (action.type === "setup.selectBoss") return "setup:boss-picker";
   if (action.type === "career.control") return CAREER_COMMAND_SURFACES[action.command];
-  if (action.type === "replay.challenge.start")
-    return action.id.startsWith("boss-memory-") ? "feature:boss-memory" : undefined;
-  if (action.type === "profile.downloadGhostArchive")
-    return action.paired === true ? "feature:linked-pair-download" : undefined;
   if (type.startsWith("replay.editor.")) return "feature:replay-editor";
   return undefined;
 }
