@@ -1,5 +1,5 @@
 import { stableVerificationHash } from "../../domain/hash";
-import type { TearSnapshotV1 } from "../contracts";
+import type { TearSnapshotV1 } from "../../gameplay/snapshot/snapshot-contract";
 import type { TearRuntimeBridgeFactory } from "../live-runtime-contracts";
 import {
   installStateEditor,

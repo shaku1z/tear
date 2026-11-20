@@ -11,7 +11,7 @@ import { AUTHORED_BOSS_ROSTER } from "../../src/gameplay/run/content-director";
 import { isTearWorldEntityFactoryId } from "../../src/gameplay/runtime/tear-world-entity-construction";
 import { isPracticeBossId } from "../../src/gameplay/training/boss-phase-practice-runtime";
 import { practiceBossCatalog } from "../../src/gameplay/training/practice-boss-catalog";
-import { validateLiveCodecPayload } from "../../src/tearbench/live-codec-validation";
+import { validateLiveCodecPayload } from "../../src/gameplay/snapshot/validation";
 
 const RELEASES = join(import.meta.dirname, "..", "fixtures", "releases");
 

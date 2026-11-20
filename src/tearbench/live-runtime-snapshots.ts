@@ -6,8 +6,8 @@ import type {
   TearProvenanceV1,
   TearSnapshotV1,
   TearStateClass,
-} from "./contracts";
-import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "./contracts";
+} from "../gameplay/snapshot/snapshot-contract";
+import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "../gameplay/snapshot/snapshot-contract";
 import type { LiveTearRuntimeEnvironmentContext, TearRuntimeAccessClass } from "./live-runtime-contracts";
 import { restoreSnapshotIntoLiveWorld, type TearLiveRestoreResult } from "./live-state-snapshot";
 import { ENTITY_KIND_REGISTRY } from "./registries";
@@ -17,7 +17,7 @@ import {
   type TearStateCodecRegistry,
   type TearWorldFactory,
   type TearCodecWorld,
-} from "./state-codecs";
+} from "../gameplay/snapshot/state-codec";
 import type { TearLiveWorldAdapter } from "./live-state-snapshot";
 
 declare const __TEAR_BUILD_REVISION__: string | undefined;

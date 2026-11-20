@@ -1,15 +1,9 @@
 import type { CommandEnvelope } from "../domain/envelopes";
 import type { GameAction } from "../input/game-action";
 import { stableVerificationHash } from "../domain/hash";
-import type {
-  TearBuildIdentityV1,
-  TearCausalEventV1,
-  TearFailureArtifactV1,
-  TearHashSetV1,
-  TearObservationV1,
-  TearScenarioV1,
-} from "./contracts";
-import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "./contracts";
+import type { TearBuildIdentityV1, TearHashSetV1 } from "../gameplay/snapshot/snapshot-contract";
+import type { TearCausalEventV1, TearFailureArtifactV1, TearObservationV1, TearScenarioV1 } from "./contracts";
+import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "../gameplay/snapshot/snapshot-contract";
 import type { TearInvariantFailure } from "./invariants";
 import type { TearInvariantId } from "./registries";
 import { effectiveInvariantIdsForScenario, runInvariantChecks } from "./invariants";

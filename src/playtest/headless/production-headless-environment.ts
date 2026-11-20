@@ -18,7 +18,8 @@ import {
 import { productionRunSeed, type ProductionReplayWorld } from "../../tearbench/production-world-factory";
 import type { ProductionRunOpening, ProductionWaveRewardRuntime } from "../../tearbench/production-wave-reward-runtime";
 import type { ProductionWaveRewardIntent } from "../../tearbench/production-wave-reward-runtime";
-import type { TearCausalEventV1, TearObservationV1, TearScenarioV1, TearSnapshotV1 } from "../../tearbench/contracts";
+import type { TearCausalEventV1, TearObservationV1, TearScenarioV1 } from "../../tearbench/contracts";
+import type { TearSnapshotV1 } from "../../gameplay/snapshot/snapshot-contract";
 import {
   TearHeadlessEnvironmentPool,
   type TearHeadlessEnvironment,

@@ -124,6 +124,7 @@
     "prefixes": [
       "src/simulation/",
       "src/domain/",
+      "src/gameplay/snapshot/",
       "src/tearbench/",
       "src/agents/",
       "src/playtest/"
@@ -170,7 +171,7 @@
       "src/gameplay/runtime/gameplay-events.ts",
       "src/app/run/source-void-",
       "src/tearbench/gameplay-causal-events.ts",
-      "src/tearbench/state-codecs.ts",
+      "src/gameplay/snapshot/state-codec.ts",
       "src/replay/legacy-compat.ts",
       "src/tearbench/canonical-scenarios.json",
       "src/tearbench/evidence-routes.json",
@@ -318,9 +319,9 @@
     "owner": "verdant-environment",
     "reducedDisposition": "engineering-only-codec",
     "prefixes": [
-      "src/tearbench/environment-codec.ts",
+      "src/gameplay/snapshot/environment-codec.ts",
       "src/gameplay/environment/environment-projection.ts",
-      "src/tearbench/state-codecs.ts",
+      "src/gameplay/snapshot/state-codec.ts",
       "src/tearbench/contracts.ts",
       "src/tearbench/invariants.ts",
       "src/tearbench/state-setup-factories.ts",
@@ -517,7 +518,7 @@
       "src/tearbench/live-runtime-environment.ts",
       "src/tearbench/production-world-factory.ts",
       "src/tearbench/production-wave-reward-runtime.ts",
-      "src/tearbench/live-codec-validation.ts",
+      "src/gameplay/snapshot/validation.ts",
       "src/tearbench/registries.ts",
       "src/tearbench/canonical-scenarios.json",
       "src/tearbench/canonical-scenarios.ts",

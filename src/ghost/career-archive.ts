@@ -1,5 +1,5 @@
 import { asRecord } from "../domain/records";
-import { readSeedRaceRun } from "./seed-race-contract";
+import { readSeedRaceRun } from "../gameplay/run/seed-race-contract";
 import { stableVerificationHash } from "../domain/hash";
 import { readGhostReplayRunContext } from "./replay-admission";
 import { projectGhostRunDnaTheater } from "./run-dna-theater";

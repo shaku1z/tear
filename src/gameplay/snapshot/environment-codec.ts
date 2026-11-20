@@ -1,24 +1,35 @@
-import { isRecord } from "../domain/records";
-import type { EnvironmentSnapshot } from "../gameplay/environment/environment-contracts";
-import { MAX_ATTACK_IDS } from "../gameplay/environment/combat-object-runtime";
-import { ENVIRONMENT_OBJECT_KIND_IDS } from "../gameplay/environment/environment-object-kinds";
-import { environmentObjectDefinition, isEnvironmentObjectKind } from "../gameplay/environment/environment-definitions";
-import type { TearEnvironmentObservationV1 } from "./contracts";
-import { ENVIRONMENT_STATE_SETUP_FACTORY_REGISTRY } from "./state-setup-factories";
+import { isRecord } from "../../domain/records";
+import type { EnvironmentSnapshot } from "../environment/environment-contracts";
+import { MAX_ATTACK_IDS } from "../environment/combat-object-runtime";
+import { ENVIRONMENT_OBJECT_KIND_IDS } from "../environment/environment-object-kinds";
+import { environmentObjectDefinition, isEnvironmentObjectKind } from "../environment/environment-definitions";
+import type { TearEnvironmentObservationV1 } from "./snapshot-contract";
+import { createStableRegistry } from "../../domain/stable-registry";
 import {
   COMBAT_OBJECT_KEYS,
   FIELD_KEYS,
   projectEnvironmentHash,
   projectExtensions,
   ROUTE_KEYS,
-} from "../gameplay/environment/environment-projection";
+} from "../environment/environment-projection";
 
 export {
   environmentHash,
   projectEnvironmentHash,
   projectEnvironmentSemanticSnapshot,
   rebaseEnvironmentSnapshot,
-} from "../gameplay/environment/environment-projection";
+} from "../environment/environment-projection";
+
+/** The State Setup factories an environment object may name as its source. */
+export const ENVIRONMENT_STATE_SETUP_FACTORY_IDS = Object.freeze([
+  "environment-field",
+  "environment-combat-object",
+  "environment-route",
+] as const);
+export const ENVIRONMENT_STATE_SETUP_FACTORY_REGISTRY = createStableRegistry(
+  "environment State Setup factory",
+  ENVIRONMENT_STATE_SETUP_FACTORY_IDS,
+);
 
 export interface EnvironmentCodecIssue {
   readonly path: string;

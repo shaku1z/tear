@@ -4,14 +4,14 @@ import type {
   TearSimulationRuntime,
   TearSimulationAdvanceLifecycle,
 } from "../gameplay/runtime/tear-simulation-runtime";
-import type { TearSnapshotV1 } from "../tearbench/contracts";
+import type { TearSnapshotV1 } from "../gameplay/snapshot/snapshot-contract";
 import {
   createDefaultStateCodecRegistry,
   restoreSnapshotTransactionally,
   type TearCodecWorld,
   type TearStateCodecRegistry,
   type TearWorldFactory,
-} from "../tearbench/state-codecs";
+} from "../gameplay/snapshot/state-codec";
 import type { GhostEnvelopeV3 } from "./truth-kernel";
 
 export interface GhostReplaySimulation {
