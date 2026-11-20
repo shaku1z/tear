@@ -1,3 +1,5 @@
+import { bossDefinition, isBossDefinitionId } from "./boss-definitions";
+
 /**
  * Where each boss enters the arena.
  *
@@ -23,14 +25,8 @@ export interface BossPlacement {
 }
 
 export function planBossPlacement(id: string, width: number, config: BossPlacementConfig): BossPlacement {
-  const x = width / 2;
-  const ground = config.world.groundY;
-  if (id === "source") return Object.freeze({ factoryId: "source", x, y: ground - 300 });
-  if (id === "echo") return Object.freeze({ factoryId: "echo", x, y: ground - config.echo.h / 2 });
-  if (id === "aldric") return Object.freeze({ factoryId: "aldric", x, y: ground - config.aldric.h / 2 });
-  if (id === "rootbound") return Object.freeze({ factoryId: "rootbound", x, y: ground - config.boss.h / 2 });
-  if (id === "white-hart") return Object.freeze({ factoryId: "white-hart", x, y: ground - config.whiteHart.h / 2 });
-  if (id === "colossus") return Object.freeze({ factoryId: "colossus", x, y: ground - config.colossus.h / 2 });
-  if (id === "warden") return Object.freeze({ factoryId: "warden", x, y: ground - 140 });
-  return Object.freeze({ factoryId: "boss", x, y: ground - 140 });
+  if (!isBossDefinitionId(id)) throw new RangeError(`no boss placement for ${id}`);
+  const { factoryId, lift } = bossDefinition(id).spawn;
+  const rise = typeof lift === "number" ? lift : config[lift].h / 2;
+  return Object.freeze({ factoryId, x: width / 2, y: config.world.groundY - rise });
 }

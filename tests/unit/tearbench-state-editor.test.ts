@@ -11,7 +11,7 @@ const source = (stateClass = "surgical-valid"): string =>
   JSON.stringify({
     format: "tearsdl",
     schemaVersion: 1,
-    id: "studio-scenario",
+    id: "editor-scenario",
     stateClass,
     seed: "42",
     start: { mode: "campaign", difficulty: "normal", weapon: "sword", wave: 2 },
@@ -78,16 +78,16 @@ describe("State Editor model", () => {
 
   it("creates an editable child source without mutating the imported document", () => {
     const original = source();
-    const fork = JSON.parse(createStateSetupForkSource(original, "studio-fork", { player: { hp: 1 } })) as {
+    const fork = JSON.parse(createStateSetupForkSource(original, "editor-fork", { player: { hp: 1 } })) as {
       id: string;
       extends: string;
       state: unknown;
     };
     expect(fork).toMatchObject({
-      id: "studio-fork",
-      extends: "studio-scenario",
+      id: "editor-fork",
+      extends: "editor-scenario",
       state: { player: { hp: 1 }, run: { score: 40 } },
     });
-    expect(JSON.parse(original)).toMatchObject({ id: "studio-scenario", state: { player: { hp: 80 } } });
+    expect(JSON.parse(original)).toMatchObject({ id: "editor-scenario", state: { player: { hp: 80 } } });
   });
 });

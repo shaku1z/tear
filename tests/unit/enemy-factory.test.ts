@@ -89,7 +89,6 @@ describe("enemy factory", () => {
         "Armored",
         "BOSSFX",
         "Bomber",
-        "Boss",
         "Charger",
         "Chimera",
         "Colossus",

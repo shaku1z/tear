@@ -302,7 +302,7 @@ export class TutorialGhostCoach {
   get showing(): boolean {
     return this.visible;
   }
-  view(lab: boolean, reducedMotion: boolean): TutorialCoachView {
+  view(practice: boolean, reducedMotion: boolean): TutorialCoachView {
     return {
       available: !!this.reference,
       visible: this.visible,
@@ -310,14 +310,14 @@ export class TutorialGhostCoach {
       rate: this.rate,
       diagnosis: this.diagnosis,
       adaptive: this.failures.view(),
-      canCompare: lab && !!this.best,
+      canCompare: practice && !!this.best,
       reducedMotion,
       tick: Math.floor(this.cursor),
       fromTick: this.from,
       toTick: this.to,
     };
   }
-  display(lab: boolean, reducedMotion: boolean): TutorialGoldDisplay | undefined {
+  display(practice: boolean, reducedMotion: boolean): TutorialGoldDisplay | undefined {
     const ref = this.reference;
     if (!ref || !this.visible) return undefined;
     const { frame, tick } = sampleTutorialGold(ref, this.cursor / 120);
@@ -364,7 +364,7 @@ export class TutorialGhostCoach {
     });
     if (apex) markers.push({ kind: "apex", frame: apex });
     return {
-      ...this.view(lab, reducedMotion),
+      ...this.view(practice, reducedMotion),
       frame,
       platforms: stage?.platforms ?? ref.platforms,
       glyphs: [...glyphs],
