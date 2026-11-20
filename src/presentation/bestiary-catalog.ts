@@ -96,7 +96,7 @@ export const ENEMY_BESTIARY_COPY: Readonly<Record<EnemyKind, EnemyCopy>> = Objec
     name: "Rootbinder",
     role: "VERDANT · BINDER",
     category: "support",
-    desc: "Plants itself, then throws root links to you or its allies. Cut the warned link line to snap it, or strike while it is rooted.",
+    desc: "Backs away, plants itself and roots the allies near it: a rooted ally cannot be flung or lifted. Cut a root to free its ally. Cut them all, or land one heavy hit, to pull it out of the ground. Planted, it takes extra damage.",
   },
   rimehound: {
     name: "Rimehound",

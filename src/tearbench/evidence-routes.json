@@ -461,7 +461,7 @@
       "src/tearbench/canonical-scenarios.json",
       "tests/browser-current-gameplay-scenarios.js",
       "tests/unit/rootbinder-runtime.test.ts",
-      "tests/unit/rootbinder-network.test.ts"
+      "tests/unit/rootbinder-roots.test.ts"
     ],
     "scenarios": [
       "verdant-root-network-sever"
@@ -481,7 +481,7 @@
       "test-standalone"
     ],
     "authorityCommands": [
-      "pnpm exec vitest run tests/unit/rootbinder-network.test.ts tests/unit/rootbinder-runtime.test.ts tests/unit/environment-runtime.test.ts tests/unit/gameplay-causal-events.test.ts"
+      "pnpm exec vitest run tests/unit/rootbinder-roots.test.ts tests/unit/rootbinder-runtime.test.ts tests/unit/environment-runtime.test.ts tests/unit/gameplay-causal-events.test.ts"
     ],
     "authorityTaskIds": [
       "evidence.vitest.14"
