@@ -4,7 +4,6 @@ import type {
   EnvironmentFieldState,
   EnvironmentRouteState,
 } from "../gameplay/environment/environment-contracts";
-import { createStableRegistry } from "./registries";
 import {
   assertEnvironmentCombatCapabilities,
   assertEnvironmentObjectCategory,
@@ -14,17 +13,6 @@ import { createGraftAnchorState } from "../gameplay/environment/graft-anchor";
 import { createRootLink } from "../gameplay/entities/rootbinder-runtime";
 
 type Patch = Readonly<Record<string, unknown>>;
-
-/** State Setup factories are generic capability fixtures, not a Verdant roster. */
-export const ENVIRONMENT_STATE_SETUP_FACTORY_IDS = Object.freeze([
-  "environment-field",
-  "environment-combat-object",
-  "environment-route",
-] as const);
-export const ENVIRONMENT_STATE_SETUP_FACTORY_REGISTRY = createStableRegistry(
-  "environment State Setup factory",
-  ENVIRONMENT_STATE_SETUP_FACTORY_IDS,
-);
 
 export function buildEnvironmentFieldState(
   base: TearSdlDocumentV1,

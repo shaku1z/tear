@@ -60,7 +60,7 @@
       "implementationRefs": [
         "src/app/engineering/state-setup-adapter.ts",
         "src/tearbench/live-state-snapshot.ts",
-        "src/tearbench/live-codec-validation.ts"
+        "src/gameplay/snapshot/validation.ts"
       ],
       "evidenceRefs": [
         "tests/browser-state-setup-runtime.js",
@@ -79,7 +79,7 @@
       "textRegex": ".*",
       "implementationRefs": [
         "src/app/engineering/state-setup-adapter.ts",
-        "src/tearbench/state-codecs.ts"
+        "src/gameplay/snapshot/state-codec.ts"
       ],
       "evidenceRefs": [
         "tests/browser-state-setup-runtime.js",
@@ -295,7 +295,7 @@
       "sourceSections": [49, 50, 51, 54, 56, 79],
       "textRegex": "(state codec|codec registry|transactional restore|snapshot|state diff|checkpoint bank)",
       "excludeTextRegex": "(any supported combat frame|actual live world|10,000|wave 99)",
-      "implementationRefs": ["src/tearbench/state-codecs.ts"],
+      "implementationRefs": ["src/gameplay/snapshot/state-codec.ts"],
       "evidenceRefs": ["tests/unit/tearbench-state-codecs.test.ts"],
       "notes": "Data-only codec and transactional-restore contracts exist; complete live-world codecs do not."
     },

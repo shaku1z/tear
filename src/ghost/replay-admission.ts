@@ -1,11 +1,12 @@
 import { asRecord } from "../domain/records";
-import { readSeedRaceRun } from "./seed-race-contract";
+import { readSeedRaceRun } from "../gameplay/run/seed-race-contract";
 import { assertGhostForkAnchor, readGhostForkOrigin } from "./fork-origin";
 import { ghostRootIntegrity, type TearGhostManifest } from "./capsule-vault";
 import type { GhostReadCapsule } from "./capsule-reader";
 import { ghostLiveBootstrapEventId } from "./live-causal-events";
 import { stableVerificationHash } from "../domain/hash";
-import type { TearCausalEventV1, TearSnapshotV1 } from "../tearbench/contracts";
+import type { TearCausalEventV1 } from "../tearbench/contracts";
+import type { TearSnapshotV1 } from "../gameplay/snapshot/snapshot-contract";
 import { validateTearContract } from "../tearbench/validation";
 import { mapGhostCapsuleToReplayEnvelope, preflightGhostRecordedCanonicalSnapshot } from "./capsule-replay-envelope";
 import { readGhostAuthoritativeReceipt } from "./authoritative-receipt";

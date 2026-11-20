@@ -1,4 +1,4 @@
-import { validateSeedRaceState } from "../ghost/seed-race-contract";
+import { validateSeedRaceState } from "../gameplay/run/seed-race-contract";
 import { createSeedRaceDecisionPlayback, type SeedRaceDecision } from "../ghost/seed-race-decisions";
 import { FinaleController } from "../gameplay/campaign/finale-controller";
 import type { ProductionCombatPhaseOptions } from "./production-combat-phases";
@@ -11,8 +11,8 @@ import { launchCampaignChapter } from "../gameplay/campaign/campaign-sequences";
 import { createCampaignChapterController } from "../gameplay/campaign/campaign-controller-factory";
 import { createUiState } from "../presentation/ui-tokens";
 import { createLiveParticlePresentationState } from "./particle-presentation-state";
-import { validateParticlePresentationBinding } from "./particle-presentation-checkpoint";
-import { prepareParticlePresentationRestore } from "./particle-presentation-checkpoint";
+import { validateParticlePresentationBinding } from "../gameplay/snapshot/particle-checkpoint";
+import { prepareParticlePresentationRestore } from "../gameplay/snapshot/particle-checkpoint";
 import { createTearWorldConfiguration } from "../gameplay/runtime/tear-world-configuration";
 import { UPGRADES, type UpgradeDefinition } from "../gameplay/upgrades";
 import { eligibleTierChoices, type RewardSelectionSnapshot } from "../gameplay/run/reward-selection";
@@ -47,8 +47,8 @@ import type { AuthoritativeInputSnapshot, AuthoritativeInputState } from "../gam
 import type { TearGameplayEventPort } from "../gameplay/runtime/gameplay-events";
 import { CAMPAIGN_STAGE_IDS, stageAt } from "../gameplay/stages";
 import { stableVerificationHash } from "../domain/hash";
-import type { TearBuildIdentityV1, TearSnapshotV1 } from "./contracts";
-import type { TearCodecWorld } from "./state-codecs";
+import type { TearBuildIdentityV1, TearSnapshotV1 } from "../gameplay/snapshot/snapshot-contract";
+import type { TearCodecWorld } from "../gameplay/snapshot/state-codec";
 import { applyTearCodecConfiguration, hydrateTearCodecWorld } from "./detached-world-hydrator";
 import { captureLiveStateSetupSnapshot, injectedBuildIdentity } from "./live-runtime-snapshots";
 import { createProductionCombatSimulation } from "./production-combat-simulation";
@@ -62,9 +62,9 @@ import {
   type ProductionWaveRewardRuntime,
 } from "./production-wave-reward-runtime";
 import { ENTITY_KIND_REGISTRY } from "./registries";
-import { createDefaultStateCodecRegistry, restoreSnapshotTransactionally } from "./state-codecs";
-import { rebaseEnvironmentSnapshot } from "./environment-codec";
-import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "./authored-environment-codec-validation";
+import { createDefaultStateCodecRegistry, restoreSnapshotTransactionally } from "../gameplay/snapshot/state-codec";
+import { rebaseEnvironmentSnapshot } from "../gameplay/snapshot/environment-codec";
+import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "../gameplay/snapshot/authored-environment-validation";
 import { readGhostRecordedOpeningPermit, type GhostRecordedOpeningPermit } from "../ghost/replay-admission";
 import {
   advanceFramePrelude,

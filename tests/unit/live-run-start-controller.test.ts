@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 import { createLiveSeedRace } from "../../src/app/replay/seed-race-composition";
 import { createMetaProgression } from "../../src/gameplay/progression/meta";
-import { seedRaceInitialBuildHash } from "../../src/ghost/seed-race-contract";
+import { seedRaceInitialBuildHash } from "../../src/gameplay/run/seed-race-contract";
 import { describe, expect, it, vi } from "vitest";
 import { LiveRunStartController } from "../../src/gameplay/run/live-run-start-controller";
 import { createSurfaceAvailability } from "../../src/domain/surface-availability";
@@ -44,9 +44,10 @@ import { stableVerificationHash } from "../../src/domain/hash";
 import type { ReplayActionEnvelope } from "../../src/replay/envelope";
 import { restoreProductionReplaySnapshot } from "../../src/tearbench/production-replay-composition";
 import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
-import { createDefaultStateCodecRegistry, type TearCodecWorld } from "../../src/tearbench/state-codecs";
+import { createDefaultStateCodecRegistry, type TearCodecWorld } from "../../src/gameplay/snapshot/state-codec";
 import type { GhostReadCapsule } from "../../src/ghost/capsule-reader";
-import type { TearCausalEventV1, TearSnapshotV1 } from "../../src/tearbench/contracts";
+import type { TearCausalEventV1 } from "../../src/tearbench/contracts";
+import type { TearSnapshotV1 } from "../../src/gameplay/snapshot/snapshot-contract";
 import { AppStateController } from "../../src/app/interface/app-state-controller";
 import { createLiveGhostReferenceController } from "../../src/app/replay/ghost-reference-controller";
 import type { GhostLiveReference } from "../../src/ghost/live-ghost-reference-data";

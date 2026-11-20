@@ -4,8 +4,8 @@ import { RunLifecycleController } from "../gameplay/run/lifecycle";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../gameplay/runtime/cinematic-director";
 import { STAGES, stageAt } from "../gameplay/stages";
 import { UPGRADES } from "../gameplay/upgrades";
-import type { TearSnapshotV1 } from "./contracts";
-import { projectEnvironmentHash } from "./environment-codec";
+import type { TearSnapshotV1 } from "../gameplay/snapshot/snapshot-contract";
+import { projectEnvironmentHash } from "../gameplay/snapshot/environment-codec";
 import {
   reconstructProgression,
   synthesizeProgression,

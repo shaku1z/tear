@@ -1,12 +1,125 @@
-import { isObject, isRecord } from "../domain/records";
-import type { ParticleSystem } from "../presentation/particles";
+import { isObject, isRecord } from "../../domain/records";
 import {
   legacyCosmeticEmissionSnapshot,
   parseCosmeticEmissionRandomSnapshot,
   type CosmeticEmissionRandomSnapshot,
-} from "../domain/cosmetic-emission-random";
+} from "../../domain/cosmetic-emission-random";
 
-type Particle = ParticleSystem["list"][number];
+/** The particle shapes. The particle system draws these; a snapshot stores them as plain data. */
+export interface ParticleViewRect {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+export type EffectPriority = "cosmetic" | "combat" | "hazard";
+export interface ParticleBase {
+  type: string;
+  x: number;
+  y: number;
+  life: number;
+  max: number;
+  col?: string | null;
+  priority?: EffectPriority;
+}
+export interface SparkParticle extends ParticleBase {
+  type: "spark";
+  vx: number;
+  vy: number;
+}
+export interface RingParticle extends ParticleBase {
+  type: "ring";
+  r: number;
+}
+export interface RibbonParticle extends ParticleBase {
+  type: "ribbon";
+  x1: number;
+  y1: number;
+}
+export interface EdgeTraceParticle extends ParticleBase {
+  type: "edgeTrace";
+  x1: number;
+  y1: number;
+  thickness: number;
+}
+export interface ContactMarkParticle extends ParticleBase {
+  type: "contactMark";
+  tx: number;
+  ty: number;
+  length: number;
+  thickness: number;
+}
+export interface GroundPulseParticle extends ParticleBase {
+  type: "groundPulse";
+  nx: number;
+  ny: number;
+  halfWidth: number;
+}
+export interface MuzzleWedgeParticle extends ParticleBase {
+  type: "muzzleWedge";
+  dx: number;
+  dy: number;
+  length: number;
+  halfWidth: number;
+}
+export interface ShardParticle extends ParticleBase {
+  type: "shard";
+  vx: number;
+  vy: number;
+  rot: number;
+  spin: number;
+  size: number;
+}
+export interface FlashParticle extends ParticleBase {
+  type: "flash";
+  r: number;
+}
+export interface ShockParticle extends ParticleBase {
+  type: "shock";
+  r: number;
+  vr: number;
+  thick: number;
+}
+export interface SmokeParticle extends ParticleBase {
+  type: "smoke";
+  vx: number;
+  vy: number;
+  size: number;
+}
+export interface GhostParticle extends ParticleBase {
+  type: "ghost";
+  hw: number;
+  hh: number;
+}
+export interface EmberParticle extends ParticleBase {
+  type: "ember";
+  vx: number;
+  vy: number;
+  size: number;
+}
+export interface DripParticle extends ParticleBase {
+  type: "drip";
+  vx: number;
+  vy: number;
+  size: number;
+}
+export type ParticleShape =
+  | SparkParticle
+  | RingParticle
+  | RibbonParticle
+  | EdgeTraceParticle
+  | ContactMarkParticle
+  | GroundPulseParticle
+  | MuzzleWedgeParticle
+  | ShardParticle
+  | FlashParticle
+  | ShockParticle
+  | SmokeParticle
+  | GhostParticle
+  | EmberParticle
+  | DripParticle;
+type Particle = ParticleShape;
+
 export type ParticleEffectsPolicy = Readonly<{ highBudget: number; lowBudget: number; cullMargin: number }>;
 export type ParticlePresentationPolicy = Readonly<{
   effects: ParticleEffectsPolicy;
@@ -15,7 +128,7 @@ export type ParticlePresentationPolicy = Readonly<{
 }>;
 type ParticlePresentationData = Readonly<{
   list: readonly Readonly<Particle>[];
-  view: Readonly<NonNullable<ParticleSystem["view"]>> | null;
+  view: Readonly<ParticleViewRect> | null;
   replacementCursor: number;
   policy: ParticlePresentationPolicy;
 }>;

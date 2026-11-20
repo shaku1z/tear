@@ -1,13 +1,13 @@
-import { isRecord } from "../domain/records";
-import { readBeatRunBinding } from "../gameplay/run/beat-run";
-import { readGhostRunAssistance } from "../gameplay/run/ghost-assistance";
-import type { TearCodecId } from "./registries";
-import type { TearCodecIssue } from "./state-codecs";
-import { findVariant } from "../gameplay/variants";
-import { ROOTBOUND_HEALING } from "../gameplay/entities/enemy-types/rootbound";
-import { ROOTBOUND_REGROWTH_CONNECTION_COUNT } from "../gameplay/environment/regrowth-link";
-import { parseUiTutorialPresentationCheckpoint, parseUiHudPresentationCheckpoint } from "./ui-presentation-checkpoint";
-import { parseParticlePresentationCheckpoint } from "./particle-presentation-checkpoint";
+import { isRecord } from "../../domain/records";
+import { readBeatRunBinding } from "../run/beat-run";
+import { readGhostRunAssistance } from "../run/ghost-assistance";
+import type { TearCodecId } from "./codec-ids";
+import type { TearCodecIssue } from "./state-codec";
+import { findVariant } from "../variants";
+import { ROOTBOUND_HEALING } from "../entities/enemy-types/rootbound";
+import { ROOTBOUND_REGROWTH_CONNECTION_COUNT } from "../environment/regrowth-link";
+import { parseUiTutorialPresentationCheckpoint, parseUiHudPresentationCheckpoint } from "./ui-checkpoint";
+import { parseParticlePresentationCheckpoint } from "./particle-checkpoint";
 
 function issue(codecId: TearCodecId, path: string, message: string): TearCodecIssue {
   return Object.freeze({ codecId, path, message });
@@ -401,4 +401,4 @@ export function validateLiveCodecPayload(codecId: TearCodecId, payload: unknown)
   }
   return Object.freeze(issues);
 }
-import { readSeedRaceRun } from "../ghost/seed-race-contract";
+import { readSeedRaceRun } from "../run/seed-race-contract";

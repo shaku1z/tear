@@ -2,15 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   EVENT_REGISTRY,
   INVARIANT_REGISTRY,
-  TEAR_CONTRACT_FORMAT,
-  TEAR_CONTRACT_VERSION,
-  createStableRegistry,
   validateTearContract,
   withinTickPhaseOrder,
   type GhostRangeV1,
   type TearCausalEventV1,
   type TearScenarioV1,
 } from "../../src/tearbench";
+import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "../../src/gameplay/snapshot/snapshot-contract";
+import { createStableRegistry } from "../../src/domain/stable-registry";
 
 const scenario = (): TearScenarioV1 =>
   Object.freeze({

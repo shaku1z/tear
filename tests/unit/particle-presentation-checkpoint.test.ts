@@ -3,7 +3,7 @@ import { createParticleSystem } from "../../src/presentation/particles";
 import {
   parseParticlePresentationCheckpoint,
   validateParticlePresentationBinding,
-} from "../../src/tearbench/particle-presentation-checkpoint";
+} from "../../src/gameplay/snapshot/particle-checkpoint";
 import { createCosmeticEmissionRandom } from "../../src/domain/cosmetic-emission-random";
 
 function fixture(highBudget = 32, lowBudget = 2) {

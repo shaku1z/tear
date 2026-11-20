@@ -1,6 +1,6 @@
-import { assertAuroraTrackFieldState, assertGhostTrackRouteState } from "../gameplay/environment/aurora-track";
-import { isValidBloomWellForcePolicy } from "../gameplay/environment/bloom-well";
-import { GRAFT_ANCHOR_TYPES, graftAnchorDefinition } from "../gameplay/environment/graft-anchor";
+import { assertAuroraTrackFieldState, assertGhostTrackRouteState } from "../environment/aurora-track";
+import { isValidBloomWellForcePolicy } from "../environment/bloom-well";
+import { GRAFT_ANCHOR_TYPES, graftAnchorDefinition } from "../environment/graft-anchor";
 import {
   validateEnvironmentCodecPayload as validateNeutral,
   type EnvironmentCodecIssue,
