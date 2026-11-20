@@ -5,10 +5,10 @@ import {
   type AcknowledgedStorage,
   type CompletionStatus,
 } from "../../domain/reward-receipts";
+import { asRecord } from "../../domain/records";
 import type { SaveProblemReporter } from "../../domain/save-problems";
 /** The key the coins and upgrades are stored under. */
 export const META_STORE_KEY = "tear_meta";
-import { asRecord } from "../../domain/records";
 export const META_RANK_LIMITS = Object.freeze({
   tough: 8,
   sharp: 8,
