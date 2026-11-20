@@ -323,7 +323,6 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
         theaterUnavailable: !capsule.theaterEligible,
         repairable: capsule.repairable,
         canDownloadArchive: capsule.healthy && capsule.status === "complete",
-        canDownloadLinkedPair: capsule.canDownloadLinkedPair === true,
         timestamp: new Date(capsule.createdAt).toLocaleDateString(),
         comparisonSelected: comparisonSources.includes(capsule.id),
         comparisonSourceCount: comparisonSources.length,

@@ -5,6 +5,7 @@ const http = require("node:http");
 const { listenOnFreePort } = require("./local-server");
 const path = require("node:path");
 const { STATE_WAIT_MS, clickTarget, pollEvery, settleFor, launchJourney } = require("./browser-waits");
+const { TUTORIAL_SKIPPED_STORAGE } = require("./browser-journey-harness");
 
 (async () => {
   const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
@@ -154,9 +155,20 @@ const { STATE_WAIT_MS, clickTarget, pollEvery, settleFor, launchJourney } = requ
     }
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   };
+  // A fresh profile is tutorial-first: PLAY starts the tutorial. Skipping it on purpose, on the
+  // quit confirm that the pause's MAIN MENU opens, opens the run setup with Adventure selected,
+  // and PLAY no longer leads into it.
   await clickTarget(page, "menu", "PLAY");
+  await waitForScreen("playing");
+  assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().mode), "tutorial");
+  await page.keyboard.press("p");
+  await waitForScreen("paused");
+  await clickTarget(page, "paused", "MAIN MENU");
+  await waitForScreen("confirmquit");
+  await clickTarget(page, "confirmquit", "SKIP TUTORIAL");
   await waitForScreen("setup");
-  // A fresh profile is preselected onto the Tutorial; this journey plays Endless, as a player would pick it.
+  assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().setup.mode), "campaign");
+  // This journey plays Endless, as a player would pick it.
   await clickTarget(page, "setup", "ENDLESS");
   await page.waitForFunction(() => window.__PANTHEON_TEST.state().setup.mode === "endless");
   await clickTarget(page, "setup", "START");
@@ -201,6 +213,11 @@ const { STATE_WAIT_MS, clickTarget, pollEvery, settleFor, launchJourney } = requ
   await waitForScreen("menu");
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().score.run === null);
   console.log("application state flow passed");
+  // The test build's storage starts fresh on every page load, so the skip above does not outlive
+  // the reloads below; from here on the page plays as a player who skipped the tutorial.
+  await page.addInitScript((storage) => {
+    window.__TEAR_TEST_STORAGE__ = storage;
+  }, TUTORIAL_SKIPPED_STORAGE);
 
   await page.evaluate(() => window.__PANTHEON_TEST.startMode("campaign"));
   await page.waitForFunction(
@@ -238,7 +255,7 @@ const { STATE_WAIT_MS, clickTarget, pollEvery, settleFor, launchJourney } = requ
     }
     await clickTarget(page, "setup", weaponIds[i]);
     await page.waitForTimeout(settleFor(80));
-    await clickTarget(page, "setup", "ENDLESS"); // a fresh profile is preselected onto the Tutorial
+    await clickTarget(page, "setup", "ENDLESS"); // a skipped tutorial preselects Adventure
     await page.waitForTimeout(settleFor(80));
     await clickTarget(page, "setup", "START");
     await page.waitForTimeout(settleFor(500));

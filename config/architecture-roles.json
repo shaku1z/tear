@@ -193,7 +193,6 @@
     "app.document-owners": {
       "purpose": "App modules that may touch the browser document directly; everything else in src/app receives it through the composition port.",
       "include": [
-        "src/app/replay/browser-boss-memory.ts",
         "src/app/library/browser-ghost-archive-files.ts",
         "src/app/replay/browser-ghost-career-search.ts",
         "src/app/replay/browser-ghost-career.ts",

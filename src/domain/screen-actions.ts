@@ -7,6 +7,9 @@
 import type { AppScreen } from "./screen-catalog";
 import type { PracticeTab } from "./practice-tab";
 
+/** Where a run is left for once it has ended; the main menu unless named. */
+export type RunExitScreen = "menu" | "setup";
+
 export type ScreenAction =
   | { readonly type: "chase.control"; readonly command: "toggle" | "stop" }
   | { readonly type: "navigate"; readonly to: AppScreen; readonly resetScroll?: boolean; readonly tab?: string }
@@ -40,7 +43,7 @@ export type ScreenAction =
   | { readonly type: "profile.restoreGhostArchive"; readonly id: string; readonly revision: number }
   | { readonly type: "profile.cancelGhostRestore"; readonly id: string; readonly revision: number }
   | { readonly type: "profile.cancelGhostArchiveSelection" }
-  | { readonly type: "profile.downloadGhostArchive"; readonly id: string; readonly paired?: true }
+  | { readonly type: "profile.downloadGhostArchive"; readonly id: string }
   | { readonly type: "profile.signIn" }
   | { readonly type: "profile.signOut" }
   | { readonly type: "profile.rename" }
@@ -92,7 +95,11 @@ export type ScreenAction =
   | { readonly type: "run.resume" }
   | { readonly type: "run.restart" }
   /** `next: "setup"` leaves the run for the run setup (Adventure selected) instead of the main menu. */
-  | { readonly type: "run.quit"; readonly next?: "setup" }
+  | { readonly type: "run.quit"; readonly next?: RunExitScreen }
+  /** Tutorial-first PLAY: starts the tutorial course at the profile's next unfinished lesson. */
+  | { readonly type: "tutorial.continue" }
+  /** Leaves the tutorial on purpose for run setup; PLAY no longer leads into it. */
+  | { readonly type: "tutorial.skip" }
   | { readonly type: "continue.revive" }
   | { readonly type: "continue.giveUp" }
   | { readonly type: "results.retry" }
