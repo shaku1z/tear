@@ -57,6 +57,7 @@ import { createProductionRunOutcomeRuntime, type ProductionRunOutcomeRuntime } f
 import { createProductionReplayWorld, type ProductionReplayWorld } from "./production-world-factory";
 import {
   createProductionWaveRewardRuntime,
+  type ProductionRunOpening,
   type ProductionWaveRewardIntent,
   type ProductionWaveRewardRuntime,
 } from "./production-wave-reward-runtime";
@@ -99,7 +100,7 @@ export interface ProductionGhostReplayCompositionOptions {
   readonly weaponId?: string;
   readonly difficulty?: RunDifficulty;
   readonly firstBoss?: string;
-  readonly firstWave?: number;
+  readonly opening?: ProductionRunOpening;
   /** Optional immutable identity supplied by the build/composition boundary. */
   readonly buildIdentity?: Omit<TearBuildIdentityV1, "configHash">;
   readonly forkOrigin?: GhostForkOriginV1;
@@ -856,7 +857,7 @@ export function createProductionGhostReplayComposition(options: ProductionGhostR
       });
       productionWaveRewards.set(replay, waveReward);
       replay.bindTutorialSpawn(waveReward.spawnTutorial);
-      if (staged === undefined) waveReward.startNaturalOpening(options.firstWave);
+      if (staged === undefined) waveReward.startNaturalOpening(options.opening);
       else {
         waveReward.reward.restore(staged.reward);
         waveReward.restoreUi(staged.screen, productionFocus.get(replay) ?? -1);
