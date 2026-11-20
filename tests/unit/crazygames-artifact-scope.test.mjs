@@ -53,3 +53,17 @@ it("keeps every file a cue, the page or a bundle requests and lists the rest", a
     await rm(root, { recursive: true, force: true });
   }
 });
+
+it("leaves out a static page the target does not serve and keeps one it lists", async () => {
+  const root = await fixture({
+    "index.html": "<title>game</title>",
+    "privacy.html": "<title>privacy</title>",
+    "about.html": "<title>about</title>",
+  });
+  try {
+    expect(await unrequestedCrazyGamesFiles(root)).toEqual(["about.html", "privacy.html"]);
+    expect(await unrequestedCrazyGamesFiles(root, ["privacy"])).toEqual(["about.html"]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

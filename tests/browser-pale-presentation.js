@@ -93,7 +93,7 @@ withJourney({ name: "Pale PT3-C5 presentation" }, async ({ page, buildInfo }) =>
   const state = await page.evaluate((scenario) => {
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
     window.__PALE_C5_ENVIRONMENT__ = environment;
-    const launched = environment.forgeResolvedScenario(scenario);
+    const launched = environment.buildResolvedScenario(scenario);
     for (let index = 0; index < 12; index += 1) environment.renderFrame(1 / 60);
     const snapshot = environment.captureSnapshot("pale-c5-browser");
     return { launched, run: snapshot.state["tear.run.v1"], hazard: snapshot.state["tear.hazard.v1"] };

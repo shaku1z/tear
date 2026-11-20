@@ -96,7 +96,7 @@ export const ENEMY_BESTIARY_COPY: Readonly<Record<EnemyKind, EnemyCopy>> = Objec
     name: "Rootbinder",
     role: "VERDANT · BINDER",
     category: "support",
-    desc: "Backs away, plants itself and roots the allies near it: a rooted ally cannot be flung or lifted. Cut a root to free its ally. Cut them all, or land one heavy hit, to pull it out of the ground. Planted, it takes extra damage.",
+    desc: "Backs away, plants itself and roots the allies near it: a rooted ally cannot be flung or lifted. Cut a root to free its ally. Planted, it also marks the ground under you: leave the ring before it closes, or cut the root that holds you. Cut every root, or land one heavy hit, to pull it out of the ground. Planted, it takes extra damage.",
   },
   rimehound: {
     name: "Rimehound",

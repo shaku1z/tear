@@ -290,6 +290,7 @@ describe("boss fight measurement", () => {
       phase: 1,
       ticks: 10,
       damageDealt: 0,
+      hitsLanded: 0,
       bossHealed: 0,
       damageTaken: 40,
       hitsTaken: 2,

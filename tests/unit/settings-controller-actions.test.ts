@@ -20,6 +20,7 @@ function controller(): SettingsController {
     input: { forceMode: "auto", touchAimMode: "stick" },
     gamepad: { setPreset: (value: string) => value },
     audio: { migrateSettings: (value: Record<string, unknown>) => value, applySettings: () => undefined },
+    statistics: { share: true },
     store: { get: () => null, set: vi.fn() },
     navigator: { hardwareConcurrency: 8 },
     matchMedia: () => ({ matches: false }),

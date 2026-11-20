@@ -2,9 +2,9 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import { createBloomWellState } from "../../src/gameplay/environment/bloom-well";
 import type { TearClassARuntimeEnvironment } from "../../src/tearbench/live-runtime-contracts";
 import {
-  forgeBloomWellCycleState,
-  forgeBossFrameState,
-  forgeRootbinderNetworkState,
+  buildBloomWellCycleState,
+  buildBossFrameState,
+  buildRootbinderNetworkState,
 } from "../../src/tearbench/state-setup-factories";
 import type { TearSdlDocumentV1 } from "../../src/tearbench/tearsdl";
 
@@ -28,7 +28,7 @@ const base: TearSdlDocumentV1 = {
 
 describe("Verdant development controls", () => {
   it("authors Rootbound through the generic boss-frame State Setup boundary", () => {
-    const rootbound = forgeBossFrameState(base, "rootbound", "2", "regrowth", 42);
+    const rootbound = buildBossFrameState(base, "rootbound", "2", "regrowth", 42);
     expect(rootbound).toMatchObject({
       start: { mode: "sandbox", stage: "verdant-sanctum", boss: "rootbound", bossPhase: "2" },
       state: { boss: { id: "rootbound", phase: "2", attack: "regrowth", frame: 42 } },
@@ -36,7 +36,7 @@ describe("Verdant development controls", () => {
   });
 
   it("authors Rootbinder and Bloom through their existing specialized State Setup projections", () => {
-    const rootbinder = forgeRootbinderNetworkState(base);
+    const rootbinder = buildRootbinderNetworkState(base);
     expect(rootbinder.state).toMatchObject({
       enemyComposition: [
         { kind: "rootbinder", count: 1 },
@@ -45,7 +45,7 @@ describe("Verdant development controls", () => {
       environment: { fields: [], combatObjects: [{ kind: "root-link" }, { kind: "root-link" }], routes: [] },
     });
 
-    const bloom = forgeBloomWellCycleState(
+    const bloom = buildBloomWellCycleState(
       base,
       createBloomWellState({
         id: "verdant-development-bloom",
@@ -61,8 +61,8 @@ describe("Verdant development controls", () => {
   });
 
   it("keeps live controls on the structured test-only environment contract", () => {
-    expectTypeOf<TearClassARuntimeEnvironment["forgeBloomWellCycle"]>().toBeFunction();
-    expectTypeOf<TearClassARuntimeEnvironment["forgeRootbinderNetwork"]>().toBeFunction();
-    expectTypeOf<TearClassARuntimeEnvironment["forgeRootboundGraftAnchor"]>().toBeFunction();
+    expectTypeOf<TearClassARuntimeEnvironment["buildBloomWellCycle"]>().toBeFunction();
+    expectTypeOf<TearClassARuntimeEnvironment["buildRootbinderNetwork"]>().toBeFunction();
+    expectTypeOf<TearClassARuntimeEnvironment["buildRootboundGraftAnchor"]>().toBeFunction();
   });
 });

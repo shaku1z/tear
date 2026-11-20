@@ -28,7 +28,7 @@ function seekBoss(context: LiveTearRuntimeEnvironmentContext): void {
   for (let tick = 0; tick < 1_500 && !context.state.enemies().some((enemy) => enemy.isBoss); tick += 1) {
     // Source discovery must not enter TearBench's public session counters or
     // action-observation timeline. Advance the shared authoritative tick
-    // directly; the forged snapshot rebases it to its deterministic origin.
+    // directly; the built snapshot rebases it to its deterministic origin.
     const steps = context.advanceFixedTick();
     if (steps !== 1) throw new Error("State Setup boss source lookup did not advance exactly one fixed tick");
   }
@@ -70,6 +70,6 @@ export function launchResolvedLiveState(
     context.loadStage(stageIndex);
   }
   const source = snapshots.capture(`${resolved.document.id}.source`);
-  const forged = compileResolvedTearSdlSnapshot(source, resolved);
-  return snapshots.restore(forged);
+  const built = compileResolvedTearSdlSnapshot(source, resolved);
+  return snapshots.restore(built);
 }

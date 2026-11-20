@@ -94,24 +94,24 @@ function patchEnemyComposition(snapshot: TearSnapshotV1, composition: unknown): 
 
 function patchEnvironment(snapshot: TearSnapshotV1, environment: unknown, expectedStageId?: string): void {
   if (environment === undefined) return;
-  const value = record(environment, "environment forge payload");
+  const value = record(environment, "environment setup payload");
   const issues = validateEnvironmentCodecPayload({ slowZones: [], walls: [], ...value });
   const firstIssue = issues[0];
   if (firstIssue !== undefined)
-    throw new TypeError(`environment forge payload is invalid: ${firstIssue.path} ${firstIssue.message}`);
+    throw new TypeError(`environment setup payload is invalid: ${firstIssue.path} ${firstIssue.message}`);
   const hazard = record(snapshot.state["tear.hazard.v1"], "hazard codec");
   if (expectedStageId !== undefined && value.stageId !== undefined && value.stageId !== expectedStageId) {
-    throw new RangeError("environment forge stage does not match the resolved scenario stage");
+    throw new RangeError("environment setup stage does not match the resolved scenario stage");
   }
   if (typeof hazard.worldId === "string" && typeof value.worldId === "string" && hazard.worldId !== value.worldId) {
-    throw new RangeError("environment forge world identity does not match the source snapshot");
+    throw new RangeError("environment setup world identity does not match the source snapshot");
   }
   hazard.fields = structuredClone(value.fields);
   hazard.combatObjects = structuredClone(value.combatObjects);
   hazard.routes = structuredClone(value.routes);
 }
 
-/** Rebase stage-owned temporal records to the forged fixed-tick origin. */
+/** Rebase stage-owned temporal records to the built fixed-tick origin. */
 function rebaseEnvironmentOrigin(snapshot: TearSnapshotV1): void {
   const hazard = record(snapshot.state["tear.hazard.v1"], "hazard codec");
   for (const key of ["fields", "combatObjects", "routes"] as const) {
@@ -142,29 +142,29 @@ function patchExactStage(run: MutableRecord, stageId: string | undefined, wave: 
 /** Compiles resolved TearSDL into a detached live-codec snapshot. */
 export function compileResolvedTearSdlSnapshot(source: TearSnapshotV1, resolved: TearSdlResolved): TearSnapshotV1 {
   if (!resolved.structural.valid) throw new TypeError("cannot compile structurally invalid TearSDL");
-  const forged = structuredClone(source);
-  const mutable = forged as unknown as MutableRecord;
+  const built = structuredClone(source);
+  const mutable = built as unknown as MutableRecord;
   mutable.id = resolved.document.id;
   mutable.stateClass = resolved.document.stateClass;
   mutable.seed = resolved.document.seed;
   const state = resolved.document.state ?? {};
-  const run = record(forged.state["tear.run.v1"], "run codec");
-  const player = record(forged.state["tear.player.v1"], "player codec");
-  const blade = record(forged.state["tear.blade.v1"], "blade codec");
-  const ui = record(forged.state["tear.ui.v1"], "ui codec");
-  const world = record(forged.state["tear.world.v1"], "world codec");
+  const run = record(built.state["tear.run.v1"], "run codec");
+  const player = record(built.state["tear.player.v1"], "player codec");
+  const blade = record(built.state["tear.blade.v1"], "blade codec");
+  const ui = record(built.state["tear.ui.v1"], "ui codec");
+  const world = record(built.state["tear.world.v1"], "world codec");
   run.mode = resolved.scenario.start.mode;
   run.difficulty = resolved.scenario.start.difficulty;
   run.diff = resolved.scenario.start.difficulty;
   run.weaponId = resolved.scenario.start.weapon;
   // The boss lookup used to obtain the production source snapshot may advance
-  // one fixed tick before the actor exists. A forged scenario is a fresh
+  // one fixed tick before the actor exists. A built scenario is a fresh
   // deterministic origin, so do not leak that lookup tick into the action
   // envelope contract or the first submitted command will target the wrong
   // fixed tick.
   mutable.tick = 0;
   run.tick = 0;
-  const worldClock = forged.state["tear.world.v1"];
+  const worldClock = built.state["tear.world.v1"];
   if (worldClock !== undefined) record(worldClock, "world codec").clock = 0;
   const wave = resolved.scenario.start.wave ?? 1;
   run.wave = wave;
@@ -178,18 +178,18 @@ export function compileResolvedTearSdlSnapshot(source: TearSnapshotV1, resolved:
   if (state.device !== undefined) world.device = structuredClone(state.device);
   if (state.abilities !== undefined) run.stateForgeAbilities = structuredClone(state.abilities);
   if (state.boss !== undefined) {
-    const bosses = forged.state["tear.boss.v1"];
+    const bosses = built.state["tear.boss.v1"];
     if (!Array.isArray(bosses) || bosses.length === 0) throw new TypeError("boss patch requires a live boss source");
     patchRecord(record(bosses[0], "boss codec"), state.boss, "boss patch");
   }
-  patchEnemyComposition(forged, state.enemyComposition);
-  patchEnvironment(forged, state.environment, resolved.document.start.stage);
+  patchEnemyComposition(built, state.enemyComposition);
+  patchEnvironment(built, state.environment, resolved.document.start.stage);
   for (const [key, value] of Object.entries(state)) {
     if (key.startsWith("tear.") && key.endsWith(".v1")) {
-      patchRecord(record(forged.state[key], `${key} codec`), value, `${key} patch`);
+      patchRecord(record(built.state[key], `${key} codec`), value, `${key} patch`);
     }
   }
-  rebaseEnvironmentOrigin(forged);
+  rebaseEnvironmentOrigin(built);
   run.stateForgeScenario = Object.freeze({
     id: resolved.document.id,
     stateClass: resolved.document.stateClass,
@@ -197,6 +197,6 @@ export function compileResolvedTearSdlSnapshot(source: TearSnapshotV1, resolved:
     plausibility: resolved.plausibility,
     resolvedHash: resolved.resolvedHash,
   });
-  mutable.hashes = Object.freeze({ ...forged.hashes, exact: stableVerificationHash(forged.state) });
-  return Object.freeze(forged);
+  mutable.hashes = Object.freeze({ ...built.hashes, exact: stableVerificationHash(built.state) });
+  return Object.freeze(built);
 }

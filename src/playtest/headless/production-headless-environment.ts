@@ -170,7 +170,7 @@ export function validateProductionHeadlessCheckpointRequest(
 /** A State Setup recovery frontier bound to one natural source checkpoint; arbitrary surgical snapshot execution stays unavailable. */
 export interface ProductionHeadlessStateSetupEvaluation {
   readonly source: ProductionHeadlessCheckpoint;
-  readonly forgedSnapshot: TearSnapshotV1;
+  readonly builtSnapshot: TearSnapshotV1;
 }
 
 export interface ProductionHeadlessEnvironment extends TearHeadlessEnvironment<
@@ -389,28 +389,28 @@ export function validateProductionHeadlessCheckpoint(value: unknown): Production
 
 function validateStateSetupEvaluation(
   value: unknown,
-): Readonly<{ source: ProductionHeadlessCheckpoint; forgedSnapshot: TearSnapshotV1 }> {
+): Readonly<{ source: ProductionHeadlessCheckpoint; builtSnapshot: TearSnapshotV1 }> {
   if (!isRecord(value)) throw new TypeError("production State Setup evaluation is invalid");
   const source = validateProductionHeadlessCheckpoint(value.source);
-  const parsed = validateTearContract(value.forgedSnapshot);
+  const parsed = validateTearContract(value.builtSnapshot);
   if (!parsed.ok || parsed.value.kind !== "snapshot")
     throw new TypeError("production State Setup evaluation snapshot is invalid");
-  const forged = parsed.value;
+  const built = parsed.value;
   if (
-    forged.stateClass !== "surgical-valid" ||
-    forged.tick !== source.checkpoint.tick ||
-    forged.seed !== source.snapshot.seed ||
-    forged.provenance.actor !== "state-forge" ||
-    forged.provenance.producer !== "forgeExitLaunchSnapshot" ||
-    forged.provenance.sourceId !== source.snapshot.id ||
-    forged.lineage?.parentId !== source.snapshot.id ||
-    forged.lineage.parentRootHash !== source.snapshot.hashes.exact ||
-    forged.lineage.forkTick !== source.checkpoint.tick ||
-    forged.hashes.exact !== stableVerificationHash(forged.state)
+    built.stateClass !== "surgical-valid" ||
+    built.tick !== source.checkpoint.tick ||
+    built.seed !== source.snapshot.seed ||
+    built.provenance.actor !== "state-forge" ||
+    built.provenance.producer !== "forgeExitLaunchSnapshot" ||
+    built.provenance.sourceId !== source.snapshot.id ||
+    built.lineage?.parentId !== source.snapshot.id ||
+    built.lineage.parentRootHash !== source.snapshot.hashes.exact ||
+    built.lineage.forkTick !== source.checkpoint.tick ||
+    built.hashes.exact !== stableVerificationHash(built.state)
   ) {
     throw new RangeError("production State Setup evaluation requires a lineage-bound surgical snapshot");
   }
-  return Object.freeze({ source, forgedSnapshot: forged });
+  return Object.freeze({ source, builtSnapshot: built });
 }
 
 /**
@@ -769,7 +769,7 @@ export function createProductionHeadlessEnvironment(
       const evaluation = validateStateSetupEvaluation(value);
       const restored = compose(
         evaluation.source.scenario,
-        evaluation.forgedSnapshot,
+        evaluation.builtSnapshot,
         evaluation.source.input,
         evaluation.source.bootstrap,
       );

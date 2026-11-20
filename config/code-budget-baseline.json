@@ -81,6 +81,9 @@
     "src/input/browser-gamepad.ts": {
       "largestFunctionStatements": 124
     },
+    "src/playtest/headless/production-headless-environment.ts": {
+      "chars": 27871
+    },
     "src/presentation/attract-runtime.ts": {
       "largestFunctionStatements": 92
     },
@@ -149,13 +152,10 @@
       "largestFunctionStatements": 93
     },
     "src/tearbench/live-runtime-environment.ts": {
-      "chars": 29599
+      "chars": 29591
     },
     "src/tearbench/production-combat-phases.ts": {
       "chars": 30070
-    },
-    "src/playtest/headless/production-headless-environment.ts": {
-      "chars": 27889
     },
     "src/tearbench/production-replay-composition.ts": {
       "chars": 34925

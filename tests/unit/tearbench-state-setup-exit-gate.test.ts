@@ -6,7 +6,7 @@ import {
   certifyWave99HammerProgression,
   createBossPhaseLaunchMatrix,
   createOneFrameBoundaryLaunchMatrix,
-  forgeExitLaunchSnapshot,
+  buildExitLaunchSnapshot,
   STATE_SETUP_BOSS_FINISHER_HP,
 } from "../../src/tearbench/state-setup-exit-gate";
 
@@ -142,28 +142,28 @@ describe("C23 State Setup exit matrix", () => {
         phase: 3,
       },
     ]);
-    const forged = forgeExitLaunchSnapshot(source, {
+    const built = buildExitLaunchSnapshot(source, {
       id: "source-finisher",
       kind: "boss-finisher",
       boss: "source",
       remainingHp: STATE_SETUP_BOSS_FINISHER_HP,
     });
     const originalBoss = (source.state["tear.boss.v1"] as readonly Record<string, unknown>[])[0];
-    const forgedBoss = (forged.state["tear.boss.v1"] as readonly Record<string, unknown>[])[0];
+    const builtBoss = (built.state["tear.boss.v1"] as readonly Record<string, unknown>[])[0];
 
-    expect(forged).toMatchObject({ id: "source-finisher", stateClass: "surgical-valid" });
-    expect(forged.provenance).toMatchObject({
+    expect(built).toMatchObject({ id: "source-finisher", stateClass: "surgical-valid" });
+    expect(built.provenance).toMatchObject({
       actor: "state-forge",
       producer: "forgeExitLaunchSnapshot",
       sourceId: "boss-source",
     });
-    expect(forged.lineage).toEqual({
+    expect(built.lineage).toEqual({
       parentId: "boss-source",
       relation: "forked-at",
       parentRootHash: source.hashes.exact,
       forkTick: 700,
     });
-    expect(forgedBoss).toMatchObject({
+    expect(builtBoss).toMatchObject({
       factoryId: "source",
       _gid: 41,
       stableId: "enemy:41",
@@ -175,8 +175,8 @@ describe("C23 State Setup exit matrix", () => {
       phase: 3,
     });
     expect(originalBoss?.hp).toBe(900);
-    expect(forged.hashes.exact).toBe(stableVerificationHash(forged.state));
-    expect(forged.hashes.exact).not.toBe(source.hashes.exact);
+    expect(built.hashes.exact).toBe(stableVerificationHash(built.state));
+    expect(built.hashes.exact).not.toBe(source.hashes.exact);
   });
 
   it.each([
@@ -192,7 +192,7 @@ describe("C23 State Setup exit matrix", () => {
     ["dead", [{ factoryId: "source", hp: 0, hpDisplay: 0, maxHp: 100, dead: true }]],
   ] as const)("fails closed for a %s boss source", (_label, bosses) => {
     expect(() =>
-      forgeExitLaunchSnapshot(bossSnapshot(bosses), {
+      buildExitLaunchSnapshot(bossSnapshot(bosses), {
         id: "source-finisher",
         kind: "boss-finisher",
         boss: "source",
@@ -230,7 +230,7 @@ describe("C23 State Setup exit matrix", () => {
       const candidate = structuredClone(base);
       corrupt(candidate.state);
       expect(() =>
-        forgeExitLaunchSnapshot(candidate, {
+        buildExitLaunchSnapshot(candidate, {
           id: "source-finisher",
           kind: "boss-finisher",
           boss: "source",
