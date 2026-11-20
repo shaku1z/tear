@@ -7,16 +7,18 @@ import { GhostProductionReplayWorld } from "../../src/ghost/replay-world";
 import { stableVerificationHash } from "../../src/domain/hash";
 import { captureProductionReplayCheckpoint } from "../../src/tearbench/production-replay-composition";
 import type { GameAction } from "../../src/input/game-action";
-import { validateProductionHeadlessCheckpointRequest } from "../../src/tearbench/production-headless-environment";
 import {
-  createProductionGhostReplayComposition,
   createProductionHeadlessEnvironment,
   createProductionHeadlessEpisodePool,
+  validateProductionHeadlessCheckpointRequest,
+  type ProductionHeadlessCheckpoint,
+  type ProductionHeadlessTerminalArtifact,
+} from "../../src/playtest/headless/production-headless-environment";
+import {
+  createProductionGhostReplayComposition,
   BoundedArtifactSampler,
   createOneFrameBoundaryLaunchMatrix,
   TearHeadlessRunner,
-  type ProductionHeadlessTerminalArtifact,
-  type ProductionHeadlessCheckpoint,
   buildExitLaunchSnapshot,
   type TearScenarioV1,
 } from "../../src/tearbench";

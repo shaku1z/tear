@@ -1,12 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import type { GameAction } from "../../src/input/game-action";
-import {
-  CANONICAL_ENGINEERING_SCENARIOS,
-  createProductionHeadlessEnvironment,
-  type TearCausalEventV1,
-  type TearObservationV1,
-} from "../../src/tearbench";
+import { CANONICAL_ENGINEERING_SCENARIOS, type TearCausalEventV1, type TearObservationV1 } from "../../src/tearbench";
+import { createProductionHeadlessEnvironment } from "../../src/playtest/headless/production-headless-environment";
 import { skipOpeningChapter } from "./headless-opening-chapter";
 
 const scenarios = CANONICAL_ENGINEERING_SCENARIOS.filter(

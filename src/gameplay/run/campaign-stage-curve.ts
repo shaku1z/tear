@@ -1,5 +1,6 @@
 import type { StageId } from "../stages";
 import type { CompositionBudgetDefinition } from "./composition-budget";
+import type { StageWaveScript } from "./wave-script";
 
 export interface CampaignStageCurve {
   readonly health: number;
@@ -8,6 +9,8 @@ export interface CampaignStageCurve {
   readonly concurrentAdd: number;
   readonly disposition: "authored-prototype" | "legacy-position-placeholder";
   readonly composition?: CompositionBudgetDefinition;
+  /** The stage's waves as written. Without it every wave is a pick from the stage pool. */
+  readonly waves?: StageWaveScript;
 }
 
 const VERDANT_COMPOSITION = Object.freeze({
@@ -17,6 +20,46 @@ const VERDANT_COMPOSITION = Object.freeze({
     rootbinder: Object.freeze([0, 1, 1, 1, 1, 1, 2, 2, 2, 0]),
   }),
 } as const satisfies CompositionBudgetDefinition);
+
+/**
+ * Verdant's nine waves before the Rootbound. Each row is what the wave always has, in spawn order; the planner
+ * fills the rest from the stage pool under the budget above. The scripted enemies of a row cost at most that
+ * wave's budget and respect its caps and the pool's unlock waves (`tests/unit/wave-script.test.ts`).
+ */
+const VERDANT_WAVES = Object.freeze({
+  localWaves: Object.freeze([
+    {
+      purpose: "Read the arena and the Bloom Wells against the three attackers.",
+      first: ["flyer", "ranged", "charger"],
+    },
+    {
+      purpose: "Meet the Rootbinder: two ground allies arrive first, so it has something to root.",
+      first: ["charger", "charger", "rootbinder"],
+    },
+    { purpose: "Meet the Mender: it heals what you leave alive.", first: ["charger", "ranged", "mender"] },
+    { purpose: "A durable front line with fire behind it.", first: ["armored", "armored", "ranged"] },
+    {
+      purpose: "Switch between air and ground targets.",
+      first: ["flyer", "flyer", "ranged", "charger"],
+      last: ["flyer"],
+    },
+    { purpose: "Meet the Chimera among enemies you know.", first: ["charger", "ranged", "chimera"] },
+    {
+      purpose: "Rooted allies on the ground with flyers pressing from above.",
+      first: ["charger", "charger", "rootbinder", "flyer", "flyer"],
+    },
+    {
+      purpose: "Cut roots under pressure: a second Rootbinder arrives late.",
+      first: ["charger", "armored", "rootbinder"],
+      last: ["charger", "rootbinder"],
+    },
+    {
+      purpose: "Everything Verdant taught, before the Rootbound.",
+      first: ["charger", "armored", "rootbinder", "mender"],
+      last: ["chimera"],
+    },
+  ]),
+} as const satisfies StageWaveScript);
 
 /**
  * Provisional Pale-owned pressure budget. The total budget controls the stage's
@@ -62,6 +105,7 @@ export const CAMPAIGN_STAGE_CURVES = Object.freeze({
     concurrentAdd: 2,
     disposition: "authored-prototype",
     composition: VERDANT_COMPOSITION,
+    waves: VERDANT_WAVES,
   }),
   voidspire: Object.freeze({
     health: 2.36,

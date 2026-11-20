@@ -1,6 +1,6 @@
 import { expect } from "vitest";
 
-import type { ProductionHeadlessEnvironment } from "../../src/tearbench";
+import type { ProductionHeadlessEnvironment } from "../../src/playtest/headless/production-headless-environment";
 
 /** The opening chapter's state, read from the running world. A checkpoint holds the same field but hashes the whole game to get it. */
 function chapterState(environment: ProductionHeadlessEnvironment): unknown {

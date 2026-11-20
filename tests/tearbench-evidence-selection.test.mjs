@@ -524,7 +524,7 @@ test("production replay/headless composition is explicitly dispositioned", () =>
   const selection = select([
     "src/tearbench/production-combat-phases.ts",
     "src/tearbench/production-replay-composition.ts",
-    "src/tearbench/production-headless-environment.ts",
+    "src/playtest/headless/production-headless-environment.ts",
   ]);
   assert.ok(selection.routes.includes("production-replay-headless-composition"));
   assert.ok(selection.buildTargets.includes("test-standalone"));

@@ -685,6 +685,7 @@
       "src/gameplay/run/campaign-stage-curve.ts",
       "src/gameplay/run/composition-budget.ts",
       "src/gameplay/run/wave-planner.ts",
+      "src/gameplay/run/wave-script.ts",
       "src/gameplay/run/gauntlet-trials.ts",
       "src/gameplay/run/spawn-scheduler.ts",
       "src/gameplay/run/live-wave-controller.ts",
@@ -694,6 +695,7 @@
       "tests/unit/verdant-stage-state-setup.test.ts",
       "tests/unit/verdant-wave-composition.test.ts",
       "tests/unit/verdant-wave-economy.test.ts",
+      "tests/unit/wave-script.test.ts",
       "tests/browser-progression-journeys.js"
     ],
     "scenarios": [
@@ -715,7 +717,7 @@
       "test-standalone"
     ],
     "authorityCommands": [
-      "pnpm exec vitest run tests/unit/campaign-stage-curve.test.ts tests/unit/verdant-stage-state-setup.test.ts tests/unit/verdant-wave-composition.test.ts tests/unit/verdant-wave-economy.test.ts"
+      "pnpm exec vitest run tests/unit/campaign-stage-curve.test.ts tests/unit/verdant-stage-state-setup.test.ts tests/unit/verdant-wave-composition.test.ts tests/unit/verdant-wave-economy.test.ts tests/unit/wave-script.test.ts"
     ],
     "journeyCommands": [
       "node tests/browser-progression-journeys.js"
@@ -1012,8 +1014,8 @@
     "prefixes": [
       "src/tearbench/production-combat-phases.ts",
       "src/tearbench/production-replay-composition.ts",
-      "src/tearbench/production-headless-environment.ts",
-      "src/tearbench/production-policy-observation.ts"
+      "src/playtest/headless/production-headless-environment.ts",
+      "src/playtest/headless/production-policy-observation.ts"
     ],
     "scenarios": [],
     "journeyCheckpoint": "production-replay-headless-composition-engineering",
