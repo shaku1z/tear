@@ -105,8 +105,13 @@ async function collectTitles(page, viewport) {
 
 const desktop = { width: 1600, height: 900 };
 const phone = { width: 800, height: 360 };
+// `--desktop` (the required check) or `--touch` (the phone walk, parked while mobile is paused,
+// plans/MOBILE_LATER.md; `pnpm check:mobile`); both by default.
+const args = process.argv.slice(2);
+const wantDesktop = args.includes("--desktop") || !args.includes("--touch");
+const wantTouch = args.includes("--touch") || !args.includes("--desktop");
 
-withJourney(
+(wantDesktop ? withJourney : async () => undefined)(
   { name: "music screen journey", recordFrames: true, viewport: desktop },
   async ({ page, waitScreen, clickLabel }) => {
     await startAudio(page);
@@ -151,7 +156,7 @@ withJourney(
   },
 )
   .then(() =>
-    withJourney(
+    (wantTouch ? withJourney : async () => undefined)(
       {
         name: "music screen journey (phone landscape)",
         recordFrames: true,

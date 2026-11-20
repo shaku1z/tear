@@ -1,3 +1,4 @@
+import { requireRecord } from "../domain/records";
 import { parseTutorialCoachCheckpoint, type TutorialCoachCheckpoint } from "../gameplay/training/tutorial-ghost-coach";
 /** Portable presentation-only data. Never part of gameplay semantic projection. */
 export type UiHudPresentationCheckpoint = Readonly<{
@@ -24,9 +25,7 @@ export type UiTutorialPresentationCheckpoint = Readonly<{
 
 export function parseUiTutorialPresentationCheckpoint(value: unknown): UiTutorialPresentationCheckpoint | undefined {
   if (value === undefined) return undefined;
-  if (typeof value !== "object" || value === null || Array.isArray(value))
-    throw new TypeError("Tutorial presentation must be an object");
-  const data = value as Record<string, unknown>;
+  const data = requireRecord(value, "Tutorial presentation must be an object");
   const numbers = ["ghostTime", "anchorX", "coachIdle", "coachDemoTime"];
   const flags = ["evidencePulse", "helpVisible"];
   const goldCoach = parseTutorialCoachCheckpoint(data.goldCoach);
@@ -64,10 +63,8 @@ export function parseUiTutorialPresentationCheckpoint(value: unknown): UiTutoria
 
 export function parseUiHudPresentationCheckpoint(value: unknown): UiHudPresentationCheckpoint | undefined {
   if (value === undefined) return undefined;
-  if (typeof value !== "object" || value === null || Array.isArray(value))
-    throw new TypeError("HUD presentation must be a versioned object");
-  if (!("version" in value) || value.version !== 1) throw new RangeError("unsupported HUD presentation version");
-  const data = value as Record<string, unknown>;
+  const data = requireRecord(value, "HUD presentation must be a versioned object");
+  if (!("version" in data) || data.version !== 1) throw new RangeError("unsupported HUD presentation version");
   const keys = ["version", "clockSeconds", "lagHp", "multiplier", "multiplierPop"];
   if (Object.keys(data).some((key) => !keys.includes(key))) throw new RangeError("unsupported HUD presentation field");
   const number = (key: string, maximum = Infinity): number => {

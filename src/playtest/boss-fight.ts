@@ -44,6 +44,8 @@ export interface BossPhaseResult {
   readonly hitsTaken: number;
   /** Ticks in which the boss reported itself exposed. */
   readonly exposedTicks: number;
+  /** How far the boss moved sideways, in world pixels, summed over the phase. */
+  readonly bossTravel: number;
   /**
    * Damage to the player by the move it is attributed to. The game has no event that names the source
    * of damage, so each loss of health is attributed to a damaging tell that was active on the player
@@ -85,6 +87,7 @@ interface MutablePhase {
   damageTaken: number;
   hitsTaken: number;
   exposedTicks: number;
+  bossTravel: number;
   hitsBy: Record<string, { hits: number; damage: number }>;
   objects: Record<string, ObjectCount>;
 }
@@ -154,6 +157,7 @@ function emptyPhase(phase: number): MutablePhase {
     damageTaken: 0,
     hitsTaken: 0,
     exposedTicks: 0,
+    bossTravel: 0,
     hitsBy: {},
     objects: {},
   };
@@ -243,6 +247,7 @@ export function playBossFight(
         row.ticks += 1;
         countObjects(row.objects, readCuttableObjects(stateAfter));
         if (before.tells.some((tell) => tell.stage === "exposed")) row.exposedTicks += 1;
+        row.bossTravel += Math.abs((after ?? before).x - before.x);
         const bossChange = (after === null ? 0 : after.hp) - before.hp;
         if (bossChange < 0) row.damageDealt += -bossChange;
         else if (after !== null && after.phase === before.phase) row.bossHealed += bossChange;

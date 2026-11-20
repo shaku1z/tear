@@ -1,3 +1,4 @@
+import { isRecord } from "../domain/records";
 import type { CommandEnvelope } from "../domain/envelopes";
 import { AIM_MAGNITUDE_SCALE, normalizeGameAction, type GameAction } from "../input/game-action";
 import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
@@ -216,12 +217,8 @@ function cloneActions(actions: readonly CommandEnvelope<GameAction>[]): readonly
   );
 }
 
-function record(value: unknown): value is Readonly<Record<string, unknown>> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 export function validateProductionHeadlessCheckpoint(value: unknown): ProductionHeadlessCheckpoint {
-  if (!record(value) || value.format !== "tearbench-production-headless-checkpoint" || value.schemaVersion !== 2) {
+  if (!isRecord(value) || value.format !== "tearbench-production-headless-checkpoint" || value.schemaVersion !== 2) {
     throw new TypeError("production headless checkpoint format is invalid");
   }
   const scenario = requireProductionHeadlessScenario(value.scenario);
@@ -239,7 +236,7 @@ export function validateProductionHeadlessCheckpoint(value: unknown): Production
   if (snapshot.value.stateClass !== "recorded-canonical") {
     throw new RangeError("production headless checkpoints require recorded-canonical source state");
   }
-  if (!record(value.checkpoint) || !record(value.input) || !Array.isArray(value.actions)) {
+  if (!isRecord(value.checkpoint) || !isRecord(value.input) || !Array.isArray(value.actions)) {
     throw new TypeError("production headless checkpoint coordinate is invalid");
   }
   const checkpoint = value.checkpoint;
@@ -297,8 +294,8 @@ export function validateProductionHeadlessCheckpoint(value: unknown): Production
   const run = snapshot.value.state["tear.run.v1"];
   const blade = snapshot.value.state["tear.blade.v1"];
   if (
-    !record(run) ||
-    !record(blade) ||
+    !isRecord(run) ||
+    !isRecord(blade) ||
     run.mode !== scenario.start.mode ||
     run.difficulty !== scenario.start.difficulty ||
     blade.weaponId !== scenario.start.weapon ||
@@ -311,7 +308,7 @@ export function validateProductionHeadlessCheckpoint(value: unknown): Production
     previousTick = 0;
   const actions: CommandEnvelope<GameAction>[] = [];
   for (const entry of value.actions) {
-    if (!record(entry)) throw new TypeError("production headless checkpoint action trace is invalid");
+    if (!isRecord(entry)) throw new TypeError("production headless checkpoint action trace is invalid");
     const id = entry.id;
     const tick = entry.tick;
     if (
@@ -339,7 +336,7 @@ export function validateProductionHeadlessCheckpoint(value: unknown): Production
     throw new TypeError("production headless checkpoint command sequence is incomplete");
   }
   if (
-    !record(value.delivery) ||
+    !isRecord(value.delivery) ||
     !Number.isSafeInteger(value.delivery.nextSequence) ||
     Number(value.delivery.nextSequence) < 0 ||
     !Array.isArray(value.delivery.pendingEvents) ||
@@ -393,7 +390,7 @@ export function validateProductionHeadlessCheckpoint(value: unknown): Production
 function validateStateSetupEvaluation(
   value: unknown,
 ): Readonly<{ source: ProductionHeadlessCheckpoint; builtSnapshot: TearSnapshotV1 }> {
-  if (!record(value)) throw new TypeError("production State Setup evaluation is invalid");
+  if (!isRecord(value)) throw new TypeError("production State Setup evaluation is invalid");
   const source = validateProductionHeadlessCheckpoint(value.source);
   const parsed = validateTearContract(value.builtSnapshot);
   if (!parsed.ok || parsed.value.kind !== "snapshot")

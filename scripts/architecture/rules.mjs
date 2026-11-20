@@ -661,6 +661,21 @@ const STRUCTURE_RULES = [
       },
     },
   ),
+  importRule(
+    "mobile.build-guarded",
+    ["N2"],
+    ["src/**"],
+    ["@release.mobile-only"],
+    "mobile-only modules may be value-imported only by mobile-only modules and the guarded importers, which reach them behind __TEAR_MOBILE__",
+    {
+      except: ["@release.mobile-only", "@release.mobile-guarded-importers"],
+      edges: "static-value",
+      fixtures: {
+        reject: [{ imports: "src/input/browser-touch", file: "src/input/browser-gamepad.ts" }],
+        accept: [{ imports: "src/input/browser-touch", type: true, file: "src/input/browser-gamepad.ts" }],
+      },
+    },
+  ),
 ];
 
 export const RULES = Object.freeze([

@@ -1,3 +1,4 @@
+import { isObject } from "../domain/records";
 import type { ScreenAction } from "../presentation/screens/contracts";
 import type { RunDifficulty, RunMode } from "../gameplay/run/session";
 import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
@@ -191,7 +192,7 @@ function immutableSnapshot(context: LiveTearRuntimeEnvironmentContext, state: Mu
     engineEvents: Object.freeze(state.engineEvents.map((event) => Object.freeze({ ...event }))),
     weaponEvents: Object.freeze(
       (run === null || run === undefined ? [] : run.weaponLog).map((event) =>
-        event && typeof event === "object" ? Object.freeze({ ...event }) : event,
+        isObject(event) ? Object.freeze({ ...event }) : event,
       ),
     ),
     ...(run === null || run === undefined

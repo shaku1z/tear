@@ -1,3 +1,4 @@
+import { requireRecord } from "../domain/records";
 import { stableVerificationHash } from "../domain/hash";
 import { RunLifecycleController } from "../gameplay/run/lifecycle";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../gameplay/runtime/cinematic-director";
@@ -121,10 +122,7 @@ export function createCampaignVictoryOrigin(): CampaignVictoryOriginCertificate 
 type MutableRecord = Record<string, unknown>;
 
 function record(value: unknown, label: string): MutableRecord {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new TypeError(`${label} must be an object`);
-  }
-  return value as MutableRecord;
+  return requireRecord(value, `${label} must be an object`);
 }
 
 function certifyFrontierInput(certificate: CampaignVictoryOriginCertificate): void {

@@ -2,6 +2,7 @@ import { releasePointerLock } from "../../platform/browser-pointer-lock";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../../presentation/screens/live-screen-renderers";
 import type { AppScreen } from "../../domain/screen-catalog";
+import { isObject } from "../../domain/records";
 import type { VisualRecordingV2, VisualSpawnEvent } from "../../replay/visual-replay";
 import type { ReplayPuppet } from "../../presentation/replay-world-frame";
 import type { ReplayPuppetSource } from "../../presentation/replay-puppet-factory";
@@ -94,7 +95,7 @@ export interface ReplayScreenAdapter {
 }
 
 function isVariantPuppet(value: unknown): value is VariantPuppet {
-  if (typeof value !== "object" || value === null) return false;
+  if (!isObject(value)) return false;
   return (
     "x" in value &&
     typeof value.x === "number" &&

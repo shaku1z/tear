@@ -5,5 +5,5 @@
     "types": ["node", "vitest/globals"],
     "tsBuildInfoFile": "./artifacts/build-cache/typescript/test.tsbuildinfo"
   },
-  "include": ["tests/**/*.ts", "scripts/asset-sheets/**/*.ts"]
+  "include": ["tests/**/*.ts", "scripts/asset-sheets/**/*.ts", "src/test-build.d.ts"]
 }
