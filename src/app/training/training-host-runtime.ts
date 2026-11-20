@@ -229,7 +229,7 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
       resetAtDifficulty: () => {
         context.resetRun(requireRun(state).diff);
       },
-      openLab: () => {
+      openAbilities: () => {
         context.navigate("pglab");
         context.resetScroll();
       },

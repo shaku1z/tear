@@ -136,7 +136,7 @@ export interface ThrownCollisionHooks {
   logHit(throwId: number, damage: number, secondary: boolean, mechanic?: string): void;
   emitResolve(enemy: ThrownEnemy, damage: number): void;
   onKill(enemy: ThrownEnemy, cause?: string): void;
-  burst(x: number, y: number, dx: number, dy: number, count: number, color?: string): void;
+  burst(x: number, y: number, dx: number, dy: number, count: number, color?: string, kind?: BurstKind): void;
   ribbon(x1: number, y1: number, x2: number, y2: number, color: string): void;
   ring(x: number, y: number, radius: number, color: string): void;
   floater(x: number, y: number, text: string, big: boolean, color?: string): void;
@@ -258,7 +258,7 @@ function resolveThrownEnemyHit(
     }
   }
   applyThrowMods(blade, player, enemy, run, t, hooks);
-  if (!presentedAttack) hooks.burst(enemy.x, enemy.y, blade.vx, blade.vy, t.sparkCount, enemy.color);
+  if (!presentedAttack) hooks.burst(enemy.x, enemy.y, blade.vx, blade.vy, t.sparkCount, enemy.color, "blade-hit");
   hooks.floater(enemy.x, enemy.y - 26, Math.round(damage).toString(), true);
   hooks.setHitStop(t.hitStopSmall);
   hooks.shake(t.shakeSmall);
@@ -439,4 +439,5 @@ function redirectBlade(
 function projectileIsDead(projectile: SweeperProjectile): boolean {
   return projectile.dead;
 }
+import type { BurstKind } from "../../domain/cosmetic-types";
 import type { AttackPresentationCue } from "./attack-presentation-cue";

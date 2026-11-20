@@ -5,7 +5,9 @@ import ts from "typescript";
 import { CONFIG } from "../../src/config/game-config";
 import type { GameRuntimeDependencies } from "../../src/app/shell/game-runtime-dependencies";
 import type { LiveGameHostState } from "../../src/app/world/game-host-state";
-import type { FinaleIntentPorts } from "../../src/gameplay/campaign/finale-runtime";
+import { dispatchFinaleIntents, type FinaleIntentPorts } from "../../src/gameplay/campaign/finale-runtime";
+import { COSMETIC_CATALOG } from "../../src/gameplay/progression/cosmetic-catalog";
+import { createCosmeticWardrobe } from "../../src/presentation/cosmetic-styles";
 import type { FinaleOutwardCall, FinaleParticleEmissionReceipt } from "../../src/gameplay/campaign/finale-outward-call";
 
 const forwarding = vi.hoisted((): { port: unknown } => ({ port: undefined }));
@@ -311,5 +313,47 @@ describe("live campaign host finale observation", () => {
     if (!ts.isConditionalExpression(conditional)) return;
     expect(conditional.condition.getText(source)).toBe("__TEAR_TEST_BUILD__");
     expect(conditional.whenTrue).toBe(branch);
+  });
+  it("lets the finale's restored trail win over a worn cosmetic for its beat, and the cosmetic return after", () => {
+    const weapon = { finalFree: false, restoredTrail: false, handPos: () => ({ x: 0, y: 0 }) };
+    const COSMETICS = createCosmeticWardrobe(COSMETIC_CATALOG, () => false);
+    COSMETICS.wear(weapon, { trail: "trail_dusk" });
+    const dependencies = {
+      CONFIG,
+      UI: { t: { motion: { loreReveal: 0.1, chapterIn: 0.1, loreExit: 0.1, biomeRevealBrief: 0.1 } } },
+      stageAt: () => ({ name: "Ash" }),
+      stagePlatforms: () => [],
+      COSMETICS,
+    } as unknown as GameRuntimeDependencies;
+    const state = { blade: () => weapon, player: () => ({ x: 0, y: 0 }) } as unknown as LiveGameHostState;
+    createLiveCampaignHost({
+      dependencies,
+      state,
+      cinema: {} as never,
+      installStage: vi.fn(),
+      lifecycle: {} as never,
+      activatePreparedWave: vi.fn(),
+      prepareVictory: () => ({ isNew: false, earned: 0, coins: 0 }),
+      win: vi.fn(),
+      achievementsEnabled: () => false,
+      checkAchievements: vi.fn(),
+      resetStageAchievements: vi.fn(),
+      rememberBiome: vi.fn(),
+      cinematicPreference: () => "full",
+      addFlash: vi.fn(),
+      addShake: vi.fn(),
+      formatTime: () => "0:00",
+      setWorldZoom: vi.fn(),
+      width: 1600,
+      height: 900,
+    });
+    const ports = (forwarding.port as { finaleIntents: FinaleIntentPorts }).finaleIntents;
+
+    expect(COSMETICS.of(weapon).trail.worn).toBe(true);
+    dispatchFinaleIntents([{ type: "final-blade", active: true, restoredTrail: true }], ports);
+    expect(weapon.restoredTrail).toBe(true);
+    expect(COSMETICS.of(weapon)).toBe(COSMETICS.defaults);
+    dispatchFinaleIntents([{ type: "final-blade", active: false }], ports);
+    expect(COSMETICS.of(weapon).trail.worn).toBe(true);
   });
 });

@@ -83,7 +83,7 @@ describe("cosmetic data files", () => {
       "mix_preset",
     ]);
     const ready = COSMETIC_CATALOG.slots.filter((slot) => slot.hook === "ready").map((slot) => slot.id);
-    expect(ready).toEqual(["blade", "trail", "spark", "title", "banner"]);
+    expect(ready).toEqual(["blade", "trail", "spark"]);
     const notYet = COSMETIC_CATALOG.slots.filter((slot) => slot.hook === "not yet").map((slot) => slot.id);
     expect(notYet).toHaveLength(COSMETIC_CATALOG.slots.length - ready.length);
   });
@@ -114,7 +114,7 @@ describe("cosmetic data files", () => {
 
   it("rejects bad rows with a reason", () => {
     const trail = (colors: string[], extra: Record<string, unknown> = {}) => ({
-      look: { colors, widthScale: 1, glow: 0, fade: "linear", ...extra },
+      look: { colors, widthScale: 1, fade: "linear", ...extra },
     });
     expect(withItem({ tier: "mythic" })).toContain("unknown tier");
     expect(withItem({ collection: "nope" })).toContain("unknown collection");

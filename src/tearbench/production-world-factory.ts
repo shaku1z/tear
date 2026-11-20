@@ -34,6 +34,8 @@ import {
 } from "../gameplay/training/live-tutorial-runtime";
 import { createTutorialArena } from "../gameplay/training/tutorial-arenas";
 import { trainingPlatforms } from "../gameplay/training/playground-controller";
+import { DEFAULT_COSMETIC_LOOKS } from "../presentation/cosmetic-defaults";
+import type { CosmeticLooks } from "../presentation/cosmetic-styles";
 
 type FactoryOptions = TearWorldSimulationFactoryOptions;
 
@@ -58,6 +60,8 @@ export interface ProductionReplayWorldOptions {
   readonly discoveredVariantIds?: readonly string[];
   /** Host-only notification; completion never issues a new run seed or writes progress. */
   readonly tutorialHandoff?: () => void;
+  /** Who wears which cosmetics in this world; the game's own look when absent. Never read by the simulation. */
+  readonly looks?: CosmeticLooks;
 }
 
 /** Ground plus a one-way ledge, owned by each detached production world. */
@@ -195,6 +199,7 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
   const runSeed = productionRunSeed(options.seed);
   const cosmeticEmissionRandom = createCosmeticEmissionRandom();
   const effects = createParticleSystem({
+    looks: options.looks ?? DEFAULT_COSMETIC_LOOKS,
     effects: config.effects,
     lowGraphics: () => GFX.low,
     reducedMotion: () => A11Y.reducedMotion,

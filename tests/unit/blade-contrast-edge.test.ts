@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { BladeRenderSnapshot } from "../../src/gameplay/entities/blade-contracts";
 import { WEAPON_IDS } from "../../src/gameplay/weapon-selection";
 import { BLADE_TONE, BLADE_TONE_STYLES, createBladeRenderer } from "../../src/presentation/entities/blade-renderer";
+import { DEFAULT_COSMETIC_LOOKS } from "../../src/presentation/cosmetic-defaults";
 
 const INK = { light: "#0a0a0a", dark: "#ecebf6" } as const;
 
@@ -119,8 +120,9 @@ function restingBlade(model: string): BladeRenderSnapshot {
 function drawResting(model: string, dark: boolean, low: boolean) {
   const canvas = recordingCanvas();
   createBladeRenderer({
+    looks: DEFAULT_COSMETIC_LOOKS,
     clock: { sim: 0 },
-    policy: { colors: { bladeGlow: "glow", bladeTrail: "trail", perfect: "perfect" }, juice: { trailAlpha: 0.4 } },
+    policy: { colors: { bladeTrail: "trail", perfect: "perfect" }, juice: { trailAlpha: 0.4 } },
     graphics: { low },
     theme: { dark, ink: dark ? INK.dark : INK.light, rim: "rim" },
     clamp: (value, min, max) => Math.min(max, Math.max(min, value)),
