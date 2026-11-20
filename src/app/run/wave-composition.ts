@@ -26,9 +26,9 @@ function bossId(value: string): BossId {
 
 /**
  * The stage the wave after `wave` plays on, when the run's mode fixes that in
- * advance. Its painted background is fetched during `wave`, so a stage change
- * (after the boss, in the campaign) never waits on a download. Modes that pick
- * stages another way return undefined and load when the stage is first shown.
+ * advance. Its background is painted during `wave`, so a stage change (after
+ * the boss, in the campaign) never waits on it. Modes that pick stages another
+ * way return undefined and paint when the stage is first shown.
  */
 export function stageIdAfterWave(
   mode: RunMode,

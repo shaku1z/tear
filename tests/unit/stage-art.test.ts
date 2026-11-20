@@ -10,7 +10,7 @@ import readability from "../../config/stage-readability.json";
 import { stageDefinition } from "../../src/gameplay/stages";
 import { requiredLayerRect, viewportWorldRect, type Rect } from "../../src/presentation/scenes/scene-contract";
 import type { ScenePaintPorts } from "../../src/presentation/scenes/scene-library";
-import { SCENE_PACKAGES } from "../../src/presentation/scenes/scene-registry";
+import { PAINTED_STAGES } from "../../src/presentation/scenes/scene-registry";
 import type { SceneBitmap, SceneCanvas } from "../../src/presentation/scenes/scene-renderer";
 import { stagePresentationDefinition } from "../../src/presentation/stage-presentation-definitions";
 import { paintedStage } from "../../src/presentation/stage-art/painted-stage";
@@ -126,7 +126,7 @@ describe("stage art recipes", () => {
 describe("stage readability rules", () => {
   it("lists every stage that has scene art, with the browser check that measures it", () => {
     const listed = readability.stages.map((entry) => entry.stage);
-    expect([...listed].sort()).toEqual(Object.keys(SCENE_PACKAGES).sort());
+    expect([...listed].sort()).toEqual(Object.keys(PAINTED_STAGES).sort());
     for (const entry of readability.stages) expect(existsSync(entry.check), entry.check).toBe(true);
   });
 });
@@ -171,6 +171,19 @@ describe("painting a stage", () => {
     expect(loaded.scene.platforms.material).toBe(stagePresentationDefinition("verdant-sanctum")?.platformMaterialId);
     expect(loaded.images.has(loaded.scene.platforms.texture)).toBe(true);
     for (const layer of loaded.scene.layers) expect(loaded.images.has(layer.image)).toBe(true);
+  });
+
+  it("refuses a front layer that reaches above the floor, and paints one that dresses the floor body", async () => {
+    // A front layer draws over platforms and actors, so it must never hide anything in the arena.
+    const front = (area: Rect) =>
+      withLayers([firstLayer, { ...firstLayer, id: "near", plane: "front", depth: 1, area }]);
+    const paint = (recipe: StageArtRecipe) => paintedStage(recipe).paint(paintPorts({ canvases: [] }).ports);
+    await expect(paint(front([0, 600, 400, 100]))).rejects.toThrow(
+      /front layer reaches .* px into the gameplay region/u,
+    );
+    const floorTop = WORLD.groundY + VERDANT_SANCTUM_ART.camera.shake;
+    const loaded = await paint(front([0, floorTop, 400, WORLD.height - floorTop]));
+    expect(loaded.scene.layers.map((layer) => layer.plane)).toEqual(["back", "front"]);
   });
 
   it("bakes smaller canvases on low graphics", async () => {
