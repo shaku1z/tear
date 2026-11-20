@@ -255,7 +255,7 @@ Decisions behind the shape:
 | `src/replay/watch.ts` | replay | Playback over a world port: play, pause, speed, seek, step, chapter jump, the frame at a tick; owns the seek cache |
 | `src/replay/verify.ts` | replay | Re-simulates a record and compares every checkpoint and the result; names the first tick that differs |
 | `src/replay/share.ts` | replay | One text encoding for the file, the feed and the leaderboard link; the published summary |
-| `src/replay/race.ts` | replay | A recorded run alongside a live one (seed race, and chase if kept); built only on `record` and `watch` |
+| `src/replay/race.ts` | replay | A recorded run alongside a live one (the seed race, same seed only, decision 6); built only on `record` and `watch` |
 | `src/replay/encoding.ts` | replay | Chunk encoding and compression (from `capsule-codec.ts`), used by store and share |
 | `src/persistence/indexeddb-chunk-storage.ts` | persistence | A generic IndexedDB adapter for keyed chunks (from `indexeddb-vault-backend.ts`); no replay types |
 | `src/gameplay/snapshot/` | gameplay | World state to data and back (the State Setup codecs and hydrators, renamed "snapshots" as the playtest plan says); used by the seek cache, practice from here, State Setup and the playtest tool's phase starts |
@@ -313,10 +313,15 @@ Neither old format can become a new record: a Ghost 2 recording has no reliable 
 play leaves its action capture off), and V3 capsules were written under rulesets that will be
 retired before most players see the switch. So there is no converter.
 
-- **Profile shows one line once:** "Replays saved before this update can't be played in this
-  version." The next launch deletes the old local stores: the Ghost 2 localStorage keys (they share
-  the localStorage quota with the player's save, so leaving them costs the save room) and the
-  `tear-ghost-v3` IndexedDB database. This needs the lead's and the owner's yes (question 3).
+- **Profile shows a notice once** (decision 3): "Replays saved before this update can't be played
+  in this version. You can download them first. Nothing else in your save is touched." It has two
+  buttons, DOWNLOAD ALL and CONTINUE.
+  - Only CONTINUE deletes the old local stores: the Ghost 2 localStorage keys and the `tear-ghost-v3`
+    IndexedDB database.
+  - The Ghost 2 keys share the localStorage quota with the player's save, so leaving them costs the
+    save room.
+  - Leaving the notice without pressing CONTINUE deletes nothing, and the notice appears again next
+    time.
 - **Imported old files** (`tearghost-capsule` archives) are recognized by their format id only and
   refused with "This replay file is from an earlier version of Tear."
 - **Old published replays** (Firebase `replays` documents and CrazyGames replay ids that hold Ghost 2
@@ -341,7 +346,7 @@ with the count of `src` importers and test files that import it. The target colu
 | `browser-capsule-vault.ts` | players; 5, 2 | merge into `store.ts` and `app/replay/replay-library.ts` (PR 6) | Browser facade over list, read, repair, verify, seek, fork |
 | `browser-cold-restore.ts` | players; 2, 3 | merge into `store.ts` import (PR 6) | IMPORT A REPLAY FILE becomes one validated add |
 | `browser-finale-companion.ts` | players; 2, 0 | delete (PR 2) | The record runs to the end of the run, finale included |
-| `browser-recorded-challenge.ts` | players; 3, 1 | delete (PR 2) | Recorded challenges (question 2) |
+| `browser-recorded-challenge.ts` | players; 3, 1 | delete (PR 2) | Recorded challenges (decision 2) |
 | `capsule-archive.ts` | players; 8, 5 | merge into `share.ts` (PR 6) | The file is the same text as the cloud upload |
 | `capsule-codec.ts` | players; 6, 4 | rename to `replay/encoding.ts` (PR 6) | Chunk encoding and compression; generic and tested |
 | `capsule-contract.ts` | players; 4, 0 | merge into `record.ts` (PR 5) | Manifest and track grammar; one record type replaces it |
@@ -353,7 +358,7 @@ with the count of `src` importers and test files that import it. The target colu
 | `capsule-replay-envelope.ts` | players; 15, 5 | merge into `watch.ts` (PR 7) | Maps a capsule to the replay world and preflights keyframes |
 | `capsule-vault-backend.ts` | players; 11, 5 | merge into `store.ts` (port and memory storage for tests) (PR 6) | Backend types, stores, retired key prefixes |
 | `capsule-vault.ts` | players; 28, 18 | rename to `replay/store.ts` (PR 6) | The base of the store: index, budget, chunked commits (#286) |
-| `career-archive-store.ts` | players; 3, 2 | delete (PR 8) | CAREER folds into the one Replays list (question 1) |
+| `career-archive-store.ts` | players; 3, 2 | delete (PR 8) | CAREER folds into the one Replays list (decision 1) |
 | `career-archive-worker.ts` | worker entry (1,008 KB bundle); 0, 0 | delete (PR 8) | The list reads `summary` from records; no worker |
 | `career-archive.ts` | players; 7, 3 | delete (PR 8) | 18 filters, views, notes, retention over a second index |
 | `cold-restore-job.ts` | players; 6, 4 | delete (PR 6) | Resumable restore jobs for a single-file import |
@@ -362,7 +367,7 @@ with the count of `src` importers and test files that import it. The target colu
 | `finale-companion.ts` | players; 11, 2 | delete (PR 2) | See `browser-finale-companion.ts` |
 | `finale-playback.ts` | players; 2, 1 | delete (PR 2) | Same |
 | `fork-origin.ts` | players; 11, 1 | merge into `app/replay/practice-launch.ts` (PR 7) | Practice origin; the permits go |
-| `ghost-doctor.ts` | players; 4, 0 | delete (PR 2) | REPAIR (question 2) |
+| `ghost-doctor.ts` | players; 4, 0 | delete (PR 2) | REPAIR (decision 2) |
 | `index.ts` | tests only; 0, 16 | delete (PR 1) | Barrel that only tests import |
 | `indexeddb-vault-backend.ts` | players; 12, 3 | move to `persistence/indexeddb-chunk-storage.ts` (PR 6) | Generic keyed-chunk storage; the database name of the new store is new (see the switch) |
 | `live-causal-events.ts` | players; 6, 7 | merge into `recorder.ts` (PR 5) | Gameplay facts become marks |
@@ -372,7 +377,7 @@ with the count of `src` importers and test files that import it. The target colu
 | `live-recorder.ts` | players; 6, 7 | merge into `recorder.ts` (PR 5) | One recorder |
 | `player-experiences.ts` | players; 3, 0 | delete (PR 2) | Challenge kinds, attempt proofs, Run DNA, "nemesis grammar" |
 | `preservation-corpus.ts` | dev; 1, 1 | delete (PR 1) | Fixture prover for capsule boundaries; the round-trip test's old-format corpus replaces it |
-| `production-replay-comparison.ts` | players; 2, 1 | delete (PR 2) | COMPARE 2 to 9 runs (question 2) |
+| `production-replay-comparison.ts` | players; 2, 1 | delete (PR 2) | COMPARE 2 to 9 runs (decision 2) |
 | `production-replay-session.ts` | players; 10, 4 | merge into `watch.ts` (PR 7) | Opens a verified record for playback |
 | `production-replay-verification.ts` | players; 8, 3 | rename to `replay/verify.ts` (PR 5) | Re-simulate and compare |
 | `recorded-challenge.ts` | players; 5, 2 | delete (PR 2) | Recorded challenges |
@@ -380,7 +385,7 @@ with the count of `src` importers and test files that import it. The target colu
 | `replay-admission.ts` | players; 21, 11 | merge into `record.ts` (header) and `verify.ts` (ruleset and build check) (PR 5) | 26,698 characters of run context, fingerprints, random state and opening permits |
 | `replay-cut-list.ts` | hidden; 3, 1 | merge into clip export as one tick range (PR 7) | The Replay Editor's cut list |
 | `replay-world.ts` | players; 15, 4 | merge into `watch.ts` (world port) (PR 7) | World, session and practice types |
-| `run-dna-theater.ts` | players; 2, 3 | delete (PR 2) | RUN DNA panel (question 2) |
+| `run-dna-theater.ts` | players; 2, 3 | delete (PR 2) | RUN DNA panel (decision 2) |
 | `seed-race-contract.ts` | hidden (seed race); 9, 4 | merge into `record.ts` (race declaration in `run.start`) and `race.ts` (PR 9) | Seed race stays |
 | `seed-race-decisions.ts` | hidden; 5, 2 | merge into `race.ts` (PR 9) | Same |
 | `streaming-recorder.ts` | players; 4, 7 | merge into `recorder.ts` (PR 5) | Keep its chunk-commit order (#286) |
@@ -408,11 +413,11 @@ with the count of `src` importers and test files that import it. The target colu
 | `browser-ghost-career.ts` | players; 1, 1 | delete (PR 8) | CAREER metadata |
 | `browser-ghost-replay-presentation.ts` | players; 1, 2 | merge into `replay-screen.ts` and `presentation/replay-frame.ts` (PR 7) | Draws a verified frame |
 | `browser-live-ghost-reference.ts` | players; 1, 2 | merge into `race-composition.ts` (PR 9) | Chase and race |
-| `browser-replay-clip-export.ts` | hidden; 2, 0 | rename to `clip-export.ts`, rewire to `watch.frameAt` (PR 7) | Kept engineering-only so "save clip" later is UI only (question 5) |
+| `browser-replay-clip-export.ts` | hidden; 2, 0 | rename to `clip-export.ts`, rewire to `watch.frameAt` (PR 7) | Kept engineering-only so "save clip" later is UI only (decision 5) |
 | `browser-replay-clip-webm.ts` | hidden; 1, 1 | rename to `webm-writer.ts` (PR 7) | Generic, tested WebM writer |
 | `ghost-challenge-composition.ts` | players; 1, 0 | delete (PR 2) | Recorded challenges |
 | `ghost-challenge-controller.ts` | players; 1, 1 | delete (PR 2) | Same |
-| `ghost-chase-composition.ts` | players; 1, 2 | merge into `race-composition.ts` (PR 9) | One ghost-alongside feature |
+| `ghost-chase-composition.ts` | players; 1, 2 | merge into `race-composition.ts` (PR 9) | One race feature on the same seed; chase on a different seed is dropped (decision 6) |
 | `ghost-comparison-screen-adapter.ts` | players; 1, 0 | delete (PR 2) | COMPARE |
 | `ghost-finale-companion.ts` | players; 2, 1 | delete (PR 2) | Finale companion |
 | `ghost-finale-screen-adapter.ts` | players; 1, 1 | delete (PR 2) | Same |
@@ -517,7 +522,7 @@ unused barrels (`src/ghost/index.ts`, `src/replay/index.ts`) and their tests and
 - **Measured:** Characters and files deleted; release bundle bytes before and after (`check-bundle-budget`).
 - **Removed:** About 6 modules and their tests.
 
-### PR 2: remove the replay extras (after the owner's yes, question 2)
+### PR 2: remove the replay extras (decision 2)
 
 COMPARE, recorded challenges, RUN DNA, the finale companion, REPAIR (Doctor, corrupt-capsule
 records, repair upkeep), `theater.ts` and `player-experiences.ts`. The Theater keeps play, pause,
@@ -587,7 +592,7 @@ Clip export rewired to `watch.frameAt` and still engineering-only.
 - **Measured:** Open to first frame, seek time near and far, replay frame cost (p95), desktop.
 - **Removed:** About 12 modules (session, replay world, transport, puppet factory, frame drawers, theater adapter, cut list).
 
-### PR 8: one Replays list and share; Ghost 2 removed (after questions 1 and 3)
+### PR 8: one Replays list and share; Ghost 2 removed (decisions 1 and 3)
 
 Profile REPLAYS, VAULT and CAREER become one REPLAYS tab (WATCH, PIN, SHARE, DOWNLOAD, DELETE,
 IMPORT A REPLAY FILE). Publishing, the feed and leaderboard links use `share.ts`. Ghost 2 recording
@@ -602,7 +607,7 @@ driver of `replay-shows-the-moment.test.ts` goes with Ghost 2.
 - **Measured:** localStorage bytes freed on a profile with 22 Ghost 2 replays; startup and replay chunk bytes; the career worker's 1,008 KB gone from precache.
 - **Removed:** `legacy-compat`, `visual-replay`, the career archive and its worker, the vault library controller and their tests.
 
-### PR 9: race on watch (seed race, and chase if kept)
+### PR 9: race on watch (same seed only, decision 6)
 
 - **General case:** A recorded run alongside a live run.
 - **One owner:** `src/replay/race.ts`; the racer's music pick always plays in a race.
@@ -633,7 +638,7 @@ position file and moves this card to `plans/completed/`.
 | 5 | green | **new** `tests/unit/replay-round-trip.test.ts` | same, opening a new record | record bytes, live frame cost |
 | 6 | green | round-trip through the memory and IndexedDB storage | **new** `tests/browser-replay-journey.js` (record a short run, list, watch, download, import) | store timings |
 | 7 | green | round-trip plus a seek test at near and far ticks; `replay-shows-the-moment` (watch driver) | journey adds pause, speed, seek, chapter, practice; **new** `browser-replay-matches-live.js` (its failure on main pasted) | open and seek times, frame p95 |
-| 8 | green | round-trip plus share encode and decode, old-format refusals | journey adds publish to the local provider, feed and a leaderboard link, the one-time notice, and the stage name at 0:01 of an Adventure replay; `browser-replay-matches-live.js` on the REPLAYS tab and a leaderboard replay | localStorage freed, precache bytes |
+| 8 | green | round-trip plus share encode and decode, old-format refusals | journey adds publish to the local provider, feed and a leaderboard link, the one-time notice (DOWNLOAD ALL saves a file, leaving keeps the old stores, CONTINUE deletes them), and the stage name at 0:01 of an Adventure replay; `browser-replay-matches-live.js` on the REPLAYS tab and a leaderboard replay | localStorage freed, precache bytes |
 | 9 | green | round-trip of a raced run | journey adds a race against a saved replay | live frame p95 with a ghost |
 | 10 | green | round-trip with `look` changed: hashes equal | journey shows a cosmetic in a watched replay | `pnpm check:docs`, terminology |
 
@@ -679,10 +684,10 @@ the modules it touches, and CI's `pnpm check:functional`. Heavy commands go thro
 
 ## Owner items (cloud and product; not done by this plan)
 
-- **Firestore rules:** `replays/{id}/chunks/{n}` allows any signed-in user to create or update the
-  chunks of any replay (`firestore.rules`), so a published or leaderboard replay can be overwritten
-  by someone else. The fix is to limit chunk writes to the parent's `ownerUid`. Firebase rules are
-  the owner's.
+- **Deploy the Firestore rules fix.** Today `replays/{id}/chunks/{n}` lets any signed-in user
+  create or update the chunks of any replay, and anonymous sign-in makes that anyone. The legacy
+  `ghosts/{board}` is open the same way. The separate rules PR fixes both in `firestore.rules`;
+  deploying it is the owner's step.
 - **Old cloud replays:** Ghost 2 documents in Firebase `replays` and CrazyGames replay ids stay where
   they are; whether to delete them is the owner's call (storage cost, privacy).
 - **CrazyGames replay size:** the SDK's `publishReplay` size limit for the new record is not known
@@ -692,20 +697,33 @@ the modules it touches, and CI's `pnpm check:functional`. Heavy commands go thro
 - **Server verification:** leaderboard replays are not verified by a server; this plan lets a
   client verify a replay and show it, but does not add a service.
 
-## Questions for the lead
+## Decisions (the lead, 2026-11-19, under the owner's delegation)
 
-1. **One Replays tab.** May REPLAYS, VAULT and CAREER become one REPLAYS tab, dropping CAREER's 18
-   filters, notes and its 1 MB worker? (Owner product call; recommended.)
-2. **Theater extras.** May COMPARE, recorded challenges, RUN DNA, the finale companion and REPAIR be
-   removed from release (PR 2)? Practice from here stays. (Owner product call; recommended.)
-3. **Old replays at the switch.** May PR 8 delete the old local replay stores after the one-time
-   notice, rather than leave them unread? (Recommended: they take the save's localStorage room.)
-4. **PR 206 order.** Land 206 first (recommended), or split it?
-5. **Clip export.** Keep the WebM writer and exporter, rewired and hidden, for the later "save clip"
-   (recommended), or delete them and rebuild later?
-6. **Chase.** Chase (a ghost of your best alongside, released today) and seed race (same seed,
-   hidden) become one race feature. Does chase on a different seed stay, or does every race use the
-   recorded seed?
+The lead decided these under the owner's delegation and the plain-names and remove-the-over-built
+standard. Decisions 1, 2, 3 and 6 are on the ledger so the owner can overrule them; an overrule
+changes only the PR that carries that decision.
+
+1. **One Replays tab.** REPLAYS, VAULT and CAREER become one REPLAYS tab. CAREER's filters, notes
+   and worker go (PR 8).
+2. **Theater extras go.** COMPARE, recorded challenges, RUN DNA, the finale companion and REPAIR are
+   removed from release (PR 2). Practice from a replay stays.
+3. **Old replays at the switch are deleted only after the player agrees.** The one-time notice says,
+   in plain words, what is going (replays saved before this update), why (this version can't play
+   them), and that nothing else in the save is touched. It offers DOWNLOAD ALL first, and deletes
+   only after the player presses CONTINUE (PR 8).
+4. **PR 206 lands first** if it can go green soon. Otherwise it is split, and its replay slot moves
+   into PR 4. This plan never touches 206's branch.
+5. **The WebM clip writer is kept**, hidden, and rewired to watch (PR 7).
+6. **One race feature, on the same seed only.** Chase on a different seed is dropped: a ghost from
+   another world isn't a race. This is reversible if the owner asks (PR 9).
+
+**Moves agreed with the playtest tool:** `src/app/world/detached/` and `src/gameplay/snapshot/` are
+accepted, provided `pnpm check:architecture --explain` accepts the edges and the layer allowlist does
+not grow. The exact edges are agreed with the playtest-tool session before PR 3.
+
+**Security, separate from this sequence:** a small pull request changes only `firestore.rules`.
+Chunk writes are allowed only for the parent replay's `ownerUid`, and the legacy `ghosts/{board}`
+writes are closed. Deploying the rules is the owner's step.
 
 ## Failure modes (written first)
 
@@ -720,9 +738,10 @@ the modules it touches, and CI's `pnpm check:functional`. Heavy commands go thro
    changes every `look` field and keeps every hash.
 4. **Seeking is unusably slow on a long run.** Caught by the browser journey timing a far seek on a
    ten-minute run, with the number in PR 7.
-5. **The switch silently loses a player's replays.** Caught by the browser journey checking the
-   one-time notice on a profile seeded with Ghost 2 and V3 records, and by the old-format refusal
-   fixtures.
+5. **The switch silently loses a player's replays.** Caught by the browser journey on a profile
+   seeded with Ghost 2 and V3 records. It checks that the one-time notice appears, that DOWNLOAD ALL
+   saves a file, that leaving the notice keeps the old stores, and that only CONTINUE deletes them.
+   The old-format refusal fixtures cover imported files.
 6. **A deleted module was still needed by something players use.** Caught by the release import
    graph (no `src/ghost` import left), `pnpm check:architecture`, and the browser journeys.
 7. **The move PRs change behaviour.** Caught by `pnpm test:determinism` and the tutorial gold check
@@ -770,4 +789,5 @@ the modules it touches, and CI's `pnpm check:functional`. Heavy commands go thro
 ## Log
 
 - 2026-11-19 Plan written from main `92eddb5c`; draft PR opened for the lead's review. No code until the lead says go.
+- 2026-11-19 The lead said go. Their six decisions are recorded, and the separate Firestore rules PR was added.
 - 2026-11-19 Added the owner's two defects (the stage at each moment; the real weapon and throws) with their causes, the parity table and the live-drawing rule.
