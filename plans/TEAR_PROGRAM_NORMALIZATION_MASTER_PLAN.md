@@ -1,11 +1,12 @@
 # TEAR Program Normalization and Release Governance Master Plan
 
-<!-- tearbench-current-program-state: tc8-current-program-state-2026-08-30 -->
-
-**Current TearBench program-state authority:** `config/tearbench-current-program-state.json`.
-It is the canonical source for the current protected game/wiki receipt chain and
-conservative G7/C25/C27-C40 wording; historical checkpoint receipts remain immutable.
-**Current program-state summary:** Source `9e7d6a701ca0b992c8d78cccc2af329d698778c0`;
+**TearBench program state:** the TearBench C21 to C40 program was retired on
+2026-11-20 and its program-state file (`config/tearbench-current-program-state.json`)
+and plans were removed. Where this plan says "the current program-state
+authority", it means that removed file; the summary below is its last recorded
+state, from the 2026-08-30 build, and the checkpoint receipts remain in
+`docs/checkpoints/`.
+**Last recorded program-state summary:** Source `9e7d6a701ca0b992c8d78cccc2af329d698778c0`;
 C25 open; C27 open; C28 complete; C29 narrow-complete; C30 active; C31 active;
 C32 foundation-only; C33 active; C34 active; C35 active; C36 open; C37 partial;
 C38 bounded-partial; C39 local-only; C40 incomplete; production attributable;

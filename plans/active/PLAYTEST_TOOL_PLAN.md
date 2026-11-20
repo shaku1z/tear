@@ -242,7 +242,8 @@ Nothing that works is rebuilt.
 
 | Part (today's path) | Disposition |
 | --- | --- |
-| `tearbench/production-headless-environment.ts`, `headless.ts` | Reused as is from stage 1; moved to `src/playtest/headless/` in stage 5 |
+| `tearbench/production-headless-environment.ts`, `production-headless-scenario.ts`, `production-policy-observation.ts`, `production-boss-practice-start.ts` | Reused as is from stage 1; moved to `src/playtest/headless/` on 2026-11-20, ahead of the replay overhaul's world move |
+| `tearbench/headless.ts` | Reused as is; moved to `src/playtest/headless/` in stage 5 |
 | `tearbench/production-world-factory.ts`, `production-combat-phases.ts`, `production-wave-reward-runtime.ts` | Reused as is from stage 1. Moved by the replay overhaul (its fourth pull request) to `src/app/world/detached/`, not by this plan: players' replays reach them, and release code cannot import `src/playtest` |
 | `agents/scripted-policy*.ts`, `hierarchical-policy-adapter.ts`, `watch-build-choice.ts`, `tearbench/scripted-agent-hierarchy.ts` | Reused from stage 1; become `src/playtest/players/scripted*.ts` in stage 5 |
 | `tearbench/canonical-scenarios.json` (35 scenarios, 8 headless today) | Become rows in `situations.json` in stage 4; the browser-only ones run headless where stage 2's starts allow, and stay browser tests where a browser is the point |
@@ -356,16 +357,53 @@ about 15 times real time a process, and 1,680 fights are 12.6 hours of game time
 on every seed with these players, and `cuts-objects` plays the same fight as `avoids-tells` wherever the stage
 holds nothing to cut; a sweep that played each distinct fight once would be about a third shorter. Not built.
 
+Built seventh (2026-11-20): the tests of the failure modes, which close the stage.
+
+- Failure mode 1 (wrong numbers): `tests/unit/playtest-hand-count.test.ts` plays three short fights, gives the
+  game the same actions again, writes down every tick from the game's own actors and counts ticks, damage and
+  hits taken, damage dealt, hits landed and boss movement from that list; the table must agree. It fails on a
+  planted error in the movement and in the damage dealt.
+- Failure mode 2 (not reproducible): `tests/unit/playtest-sweep.test.ts` plays a set whole and in three shares
+  and requires the same fights in the same order, and `playtest-bosses` requires the same table for the same
+  seed. The command on one job and on four gave byte-identical JSON twice by hand (24 fights, then 4). That
+  comparison is not a unit test: it costs about 80 s, nearly all of it five loads of the game. It belongs in
+  stage 4's `playtest check`, which loads the game once for the fixed set.
+- Failure mode 6 (changes the game): `pnpm test:determinism` passes (16 tests) and no playtest pull request
+  touched a fixture or the tutorial reference output.
+
 Done when:
 - [x] `pnpm playtest sweep` prints, for every boss, per phase and per player: clear rate, time to kill, damage and hits taken, hits landed, boss movement, share of time open; 5 weapons, Easy and Normal, in under 5 minutes on 6 jobs. Seeds were cut from 4 to 2 to hold the 5 minutes (see "Built sixth").
-- [ ] The three tests of failure modes 1, 2 and 6 pass.
-- [ ] The Rootbound's rows are sent to the Verdant gameplay work and the lead, beside Aldric's and the White Hart's.
-- [ ] Catalogue, change-impact, repository-map and layer entries exist; `pnpm check:quick` passes.
+- [x] The three tests of failure modes 1, 2 and 6 pass. For mode 2 the one-job against four-jobs comparison of the command was made by hand and waits for stage 4 to become a check (see "Built seventh").
+- [x] The Rootbound's rows are sent to the Verdant gameplay work and the lead, beside Aldric's and the White Hart's (2026-11-20, `playtest-sweep-rootbound-rows.md` in the sessions' shared notes).
+- [x] Catalogue, change-impact, repository-map and layer entries exist; `pnpm check:quick` passes.
 
 ### Stage 2: situations as data, comparison, enemies and full runs
 
 `situations.json`; phase, wave and stage starts through the snapshot factories; `enemies`
 and `runs` reports; coverage; `--compare`.
+
+Built first (2026-11-20, brought forward for `pnpm playtest waves`): a headless start on a chosen wave.
+A scenario's `start.wave` (with `start.stage` to name the Adventure stage it belongs to) places the run
+just before that wave and lets the game's own wave planner start it, so the stage, its story chapter and
+the wave's enemies are the game's, for every stage from one path. It is marked `surgical-valid` and gives
+no checkpoint; a later wave is refused in modes whose waves the planner does not number (boss-only, the
+Gauntlet). `src/playtest/headless/chapter.ts` skips the chapter the way a player does. The player
+arrives with no upgrades unless the environment is given a build: then the game's draft is rolled once for
+each wave before and the build picks one upgrade from each, applied as a pick in a run is. Limit, stated in
+every report that uses it: tier-ups and anything bought are not part of a build. Test:
+`tests/unit/playtest-wave-start.test.ts`.
+
+Built second (2026-11-20): `pnpm playtest waves --stage <id>`, the measures the Verdant gameplay work asked for.
+Each wave of the stage before its boss is opened directly and played on fixed seeds; a row per wave gives how
+many runs cleared it, the game's own clear time (its wave log), the opening grace, the enemies as they arrived
+and how many had affixes, damage taken by source, snares marked, caught and cut and the time held, ally roots
+grown and cut, uproots, and each Rootbinder's time to kill and whether it died planted. `--show runs` adds a
+line for every run with where the player fell and the arrival order; `--json` writes everything. Roots and
+snares are read by the shared names of the parts (`root-link`, `root-snare`, `rootPhase`), so another enemy or
+stage that uses them is counted with no edit. Damage by source is attributed, as for bosses: the game does not
+record what hit the player, so it goes to the owner of a shot on the player, else an enemy touching the
+player, else "unmarked". Verdant, sword, Normal, three seeds, two players: 54 waves in 71 s on five
+jobs. Tests: `tests/unit/playtest-waves.test.ts`.
 
 Done when:
 - [ ] Every boss phase, every wave of each biome and every enemy kind is a row that starts directly, in under 1 s each.

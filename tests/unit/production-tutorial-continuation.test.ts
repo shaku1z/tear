@@ -6,11 +6,8 @@ import type { PracticeBossState } from "../../src/gameplay/training/practice-bos
 import { beforeAll, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { CONFIG } from "../../src/config/game-config";
-import {
-  TutorialController,
-  TUTORIAL_LESSON_IDS,
-  type TutorialSessionCheckpoint,
-} from "../../src/gameplay/training/tutorial-controller";
+import { TUTORIAL_LESSON_IDS } from "../../src/gameplay/training/tutorial-lesson-ids";
+import { TutorialController, type TutorialSessionCheckpoint } from "../../src/gameplay/training/tutorial-controller";
 import { createTutorialArena } from "../../src/gameplay/training/tutorial-arenas";
 import { projectCanonicalGameplayState } from "../../src/gameplay/runtime/canonical-state";
 import { stableVerificationHash } from "../../src/domain/hash";
@@ -22,7 +19,7 @@ import {
   createProductionHeadlessEnvironment,
   type ProductionHeadlessCheckpoint,
   type ProductionTutorialHandoffArtifact,
-} from "../../src/tearbench/production-headless-environment";
+} from "../../src/playtest/headless/production-headless-environment";
 import type { TearScenarioV1, TearSnapshotV1 } from "../../src/tearbench/contracts";
 import {
   firstProductionC27AHashDivergence,
@@ -34,7 +31,7 @@ import { WEAPON_IDS } from "../../src/gameplay/weapon-selection";
 import type { createBlade } from "../../src/gameplay/entities/blade";
 import { loadShippingTutorialGold } from "../../src/gameplay/training/tutorial-gold-shipping";
 
-// The shipped corpus is an on-demand asset; training preflight loads it before any lesson.
+// These tests need the coach's demonstrations, so they load the on-demand corpus first; the game asks for it once a lesson is played.
 beforeAll(async () => {
   await loadShippingTutorialGold();
 });

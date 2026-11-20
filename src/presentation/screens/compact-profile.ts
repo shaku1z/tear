@@ -241,24 +241,9 @@ export function createCompactProfile(context: ScreenRenderContext) {
         enabled: replay.available,
         action: { type: "profile.watchGhostCapsule", id: replay.id },
       },
-      {
-        label: replay.comparisonSelected ? "SELECTED" : "SELECT",
-        enabled: replay.available,
-        selected: replay.comparisonSelected,
-        action: { type: "profile.compareGhostCapsule", id: replay.id },
-      },
     ];
-    const sources = replay.comparisonSourceCount ?? 0;
-    if (sources >= 2)
-      items.push({ label: `COMPARE ${String(sources)}`, action: { type: "profile.openGhostComparison" } });
     if (replay.canDownloadArchive)
       items.push({ label: "DOWNLOAD", action: { type: "profile.downloadGhostArchive", id: replay.id } });
-    if (replay.canDownloadLinkedPair) {
-      items.push({
-        label: "DOWNLOAD RUN + FINALE",
-        action: { type: "profile.downloadGhostArchive", id: replay.id, paired: true },
-      });
-    }
     return items;
   }
 

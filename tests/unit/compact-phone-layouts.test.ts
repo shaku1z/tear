@@ -411,7 +411,6 @@ const replays: ReplayView[] = Array.from({ length: 5 }, (_, index) => ({
   pinned: index === 0,
   shared: index === 1,
   canDownloadArchive: true,
-  canDownloadLinkedPair: index === 2,
   comparisonSelected: index === 1,
   comparisonSourceCount: 2,
 }));
@@ -823,7 +822,7 @@ describe("phone compositions (compact density)", () => {
         `profile vault ${phone.name}`,
       );
       for (const replay of replays)
-        expect(vault.has(JSON.stringify({ type: "profile.compareGhostCapsule", id: replay.id }))).toBe(true);
+        expect(vault.has(JSON.stringify({ type: "profile.watchGhostCapsule", id: replay.id }))).toBe(true);
       sweep(
         phone,
         (r) => {

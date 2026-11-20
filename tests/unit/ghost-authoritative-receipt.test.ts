@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createGhostAuthoritativeReceipt, readGhostAuthoritativeReceipt } from "../../src/ghost";
+import { createGhostAuthoritativeReceipt, readGhostAuthoritativeReceipt } from "../../src/ghost/authoritative-receipt";
 
 const hash = "a".repeat(16);
 

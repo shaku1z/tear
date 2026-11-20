@@ -31,7 +31,6 @@ export * from "./pale-canonical-scenario-bridge";
 export * from "./canonical-structured-assertions";
 export * from "./verdant-stage-engineering-scenario";
 export * from "./headless";
-export * from "./production-headless-environment";
 export * from "./contracts";
 export * from "./invariants";
 export * from "./registries";

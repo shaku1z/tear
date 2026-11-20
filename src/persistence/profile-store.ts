@@ -1,7 +1,6 @@
 import type { CosmeticCatalog, CosmeticState } from "../domain/cosmetic-types";
 import {
   claimableGrants,
-  emptyCosmeticState,
   equipCosmetic,
   grantItems,
   markSeen,
@@ -18,6 +17,13 @@ import {
   type GauntletClear,
 } from "../domain/gauntlet-records";
 import { progressFacts } from "../domain/progress-facts";
+import {
+  mergeTutorialProgress,
+  normalizeTutorialProgress,
+  storedTutorialProgress,
+  withTutorialLesson,
+  type TutorialProgress,
+} from "../domain/tutorial-progress";
 import { asRecord, finiteOrZero, hasOwnKey, ownValue, safeEntries } from "../domain/records";
 import type { ProgressFacts } from "../domain/unlock-condition";
 import type { AcknowledgedStorage } from "../platform/contracts";
@@ -41,6 +47,15 @@ import {
   mutableProfileWorkingCopy,
   type ProfileEnvelopeV2,
 } from "./profile-envelope";
+import {
+  freshProfile,
+  PROFILE_ENVELOPE_KEY,
+  PROFILE_MIRROR_KEY,
+  readStoredProfile,
+  type ProfileData,
+  type Tracker,
+} from "./saved-profile";
+import type { SaveProblemReporter } from "../domain/save-problems";
 
 interface SyncStore {
   readonly acknowledged?: AcknowledgedStorage;
@@ -65,32 +80,11 @@ interface MetaPort {
   addCoins(amount: number): void;
 }
 
-type Tracker = Record<string, unknown>;
-
-export interface ProfileData extends Record<string, unknown> {
-  v: number;
-  shards: number;
-  ach: Record<string, number>;
-  stats: Record<string, number | Tracker>;
-  seen: Record<string, boolean>;
-  modes: Record<string, boolean>;
-  created: number;
-  achCoinsRetrofit: boolean;
-  username?: string;
-  usernameSetAt?: number;
-  pendingFinale?: Tracker;
-  rewards?: Tracker;
-  weaponsWon?: Record<string, number>;
-  advDiffs?: Record<string, number>;
-  /** Cosmetic ownership and equipped slots (version 4); read through `cosmetics()`. */
-  cosmetics?: unknown;
-  /** The Gauntlet personal best per difficulty, an optional field; read through `gauntletBest()`. */
-  gauntletBest?: unknown;
-}
+export type { ProfileData };
 
 export interface ProfileStore {
-  readonly KEY: "tear_profile";
-  readonly ENVELOPE_KEY: "tear_profile_v2";
+  readonly KEY: typeof PROFILE_MIRROR_KEY;
+  readonly ENVELOPE_KEY: typeof PROFILE_ENVELOPE_KEY;
   data: ProfileData;
   load(): ProfileData;
   flushAcknowledged(): Promise<CompletionStatus>;
@@ -114,6 +108,12 @@ export interface ProfileStore {
   gauntletBest(difficulty: string): GauntletClear | null;
   /** Keeps a Gauntlet clear when it beats the best on its difficulty; true when it does. */
   recordGauntletClear(difficulty: string, clear: GauntletClear): boolean;
+  /** The tutorial lessons this profile has finished, and whether the player skipped the tutorial. */
+  tutorialProgress(): TutorialProgress;
+  /** Keeps one finished tutorial lesson (saved at once, so a quit keeps it). */
+  recordTutorialLesson(lessonId: string): void;
+  /** Records that the player left the tutorial on purpose: PLAY no longer leads into it. */
+  skipTutorial(): void;
   /** Shards left to spend: earned minus the prices paid for owned cosmetics, never below zero. */
   shardBalance(): number;
   buyCosmetic(itemId: string): Promise<CompletionStatus | PurchaseRefusal>;
@@ -148,6 +148,8 @@ export interface ProfileStoreOptions {
   readonly writerId: () => string;
   readonly onCommitted?: () => void;
   readonly onLoaded?: () => void;
+  /** Told when the stored profile cannot be used, so the player can be told. */
+  readonly reportProblem?: SaveProblemReporter;
   readonly log?: (message: string) => void;
   /** Published biome display names whose discovery counts toward progression. */
   readonly countedBiomeNames?: readonly string[];
@@ -185,6 +187,7 @@ const RECEIPT_OWNED_FIELDS = new Set([
   "advDiffs",
   "cosmetics",
   "gauntletBest",
+  "tutorialProgress",
 ]);
 function overlayNormalChanges(target: Tracker, baseline: Tracker, current: Tracker, root = true): void {
   for (const key of new Set([...Object.keys(baseline), ...Object.keys(current)])) {
@@ -209,19 +212,7 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
   const now = options.now ?? Date.now;
   let envelope: ProfileEnvelopeV2 | null = null;
   let envelopeWritable = true;
-  const fresh = (): ProfileData => ({
-    v: 1,
-    shards: 0,
-    ach: {},
-    stats: {},
-    seen: {},
-    modes: {},
-    created: now(),
-    achCoinsRetrofit: false,
-    // The same empty ledger migration gives an older save, so a new profile has every field from the start.
-    cosmetics: emptyCosmeticState(),
-    gauntletBest: {},
-  });
+  const fresh = (): ProfileData => freshProfile(now());
 
   let knownProfile = fresh();
   const mergeData = (target: ProfileData, remote: unknown): void => {
@@ -259,6 +250,13 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
       target.gauntletBest = mergeGauntletBests(
         normalizeGauntletBests(target.gauntletBest),
         normalizeGauntletBests(source.gauntletBest),
+      );
+    if (source.tutorialProgress !== undefined || target.tutorialProgress !== undefined)
+      target.tutorialProgress = storedTutorialProgress(
+        mergeTutorialProgress(
+          normalizeTutorialProgress(target.tutorialProgress),
+          normalizeTutorialProgress(source.tutorialProgress),
+        ),
       );
     Object.assign(target.modes, boolMap(source.modes));
     Object.assign(target.seen, boolMap(source.seen));
@@ -414,8 +412,8 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
     return status === "committed" ? result.value : status;
   }
   const profile: ProfileStore = {
-    KEY: "tear_profile",
-    ENVELOPE_KEY: "tear_profile_v2",
+    KEY: PROFILE_MIRROR_KEY,
+    ENVELOPE_KEY: PROFILE_ENVELOPE_KEY,
     data: fresh(),
     flushAcknowledged: () => commit(),
     async issueTutorial(id) {
@@ -462,34 +460,11 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
       });
     },
     load() {
-      let raw: Tracker | null = null;
-      envelopeWritable = true;
-      try {
-        const text = options.store.get(this.ENVELOPE_KEY);
-        if (text) {
-          const migrated = migrateProfileEnvelope(JSON.parse(text) as unknown, now());
-          if (migrated.ok) {
-            envelope = migrated.value;
-            raw = mutableProfileWorkingCopy(migrated.value);
-          } else envelopeWritable = false;
-        }
-      } catch {
-        envelope = null;
-        envelopeWritable = false;
-      }
-      if (!raw) {
-        let legacy: unknown;
-        try {
-          legacy = JSON.parse(options.store.get(this.KEY) ?? "{}") as unknown;
-        } catch {
-          legacy = {};
-        }
-        const migrated = migrateProfileEnvelope(legacy, now());
-        if (migrated.ok) {
-          envelope = migrated.value;
-          raw = mutableProfileWorkingCopy(migrated.value);
-        }
-      }
+      const stored = readStoredProfile(options.store, envelope, now());
+      envelope = stored.envelope;
+      envelopeWritable = stored.writable;
+      if (stored.problem !== null) options.reportProblem?.(stored.problem);
+      const raw = stored.raw;
       const source = raw ?? {};
       this.data = Object.assign(fresh(), source, {
         ach: numberMap(source.ach),
@@ -581,6 +556,22 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
       this.data.gauntletBest = { ...bests, [difficulty]: { ticks: clear.ticks, hits: clear.hits } };
       this.save();
       return true;
+    },
+    tutorialProgress() {
+      return normalizeTutorialProgress(this.data.tutorialProgress);
+    },
+    recordTutorialLesson(lessonId) {
+      const before = normalizeTutorialProgress(this.data.tutorialProgress),
+        after = withTutorialLesson(before, lessonId);
+      if (after.lessons.length === before.lessons.length) return;
+      this.data.tutorialProgress = storedTutorialProgress(after);
+      this.save();
+    },
+    skipTutorial() {
+      const current = normalizeTutorialProgress(this.data.tutorialProgress);
+      if (current.skipped) return;
+      this.data.tutorialProgress = storedTutorialProgress({ ...current, skipped: true });
+      this.save();
     },
     shardBalance() {
       return shardBalance(finiteOrZero(this.data.shards), normalizeCosmeticState(this.data.cosmetics));

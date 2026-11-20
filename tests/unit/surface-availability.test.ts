@@ -41,8 +41,6 @@ describe("surface availability policy", () => {
       { type: "setup.selectBoss", id: "warden" },
       { type: "career.control", command: "race" },
       { type: "replay.editor.toggle" },
-      { type: "replay.challenge.start", id: "boss-memory-save" },
-      { type: "profile.downloadGhostArchive", id: "c", paired: true },
     ];
     for (const action of engineering) {
       expect(screenActionSurface(action), JSON.stringify(action)).toBeDefined();
@@ -56,12 +54,8 @@ describe("surface availability policy", () => {
       { type: "navigate", to: "profile", tab: "vault" },
       { type: "career.control", command: "watch" },
       { type: "career.control", command: "chase" },
-      { type: "career.control", command: "challenge" },
       { type: "career.control", command: "download" },
       { type: "replay.practice" },
-      { type: "replay.challenge.open" },
-      { type: "replay.challenge.start", id: "challenge-1" },
-      { type: "replay.runDna.toggle" },
       { type: "profile.watchGhostCapsule", id: "c" },
       { type: "profile.downloadGhostArchive", id: "c" },
       { type: "profile.restoreGhostArchive", id: "j", revision: 1 },

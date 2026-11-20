@@ -16,6 +16,7 @@ import type { StageId } from "../stages";
 import { campaignStageCurve } from "./campaign-stage-curve";
 import { eligibleCompositionPool, emptyCompositionBudgetState, recordCompositionKind } from "./composition-budget";
 import { describeWave, openingGrace } from "./wave-rules";
+import { scriptedWave } from "./wave-script";
 import { GAUNTLET_RULES, gauntletEnemyScale, gauntletRound, gauntletWave } from "./gauntlet-trials";
 
 export interface WaveTuning {
@@ -167,7 +168,11 @@ function regularWaveQueue(
   if (miniBoss !== null) queue.push({ type: "miniboss", bossId: miniBoss });
   const stageOwnsPool = state.mode === "campaign" || state.mode === "endless" || state.mode === "gauntlet";
   const contentStage = stageOwnsPool && stageIndex !== null ? stageAt(options.stages, stageIndex) : null;
-  const composition = contentStage === null ? undefined : campaignStageCurve(contentStage.id).composition;
+  const contentCurve = contentStage === null ? undefined : campaignStageCurve(contentStage.id);
+  const composition = contentCurve?.composition;
+  // The stage's written wave: these arrive first and last, plain, and the pool fills the places between.
+  const scripted = scriptedWave(contentCurve?.waves, localWave);
+  const plain = (kind: EnemyKind): WaveSpawnSpec => ({ type: kind, hpScale, dmgScale });
   const sandboxPool: readonly CampaignPoolEntry[] | null =
     state.mode === "sandbox" ? PUBLISHED_ENEMY_IDENTITY_IDS.map((kind) => ({ kind, weight: 1, unlockWave: 1 })) : null;
   const authoredPool = contentStage?.pool ?? sandboxPool;
@@ -179,7 +184,13 @@ function regularWaveQueue(
         ? unlockedAuthoredPool
         : authoredPool;
   let compositionState = emptyCompositionBudgetState();
-  for (let index = 0; index < count; index += 1) {
+  // The scripted enemies are counted before the fill, so the fill stays inside what the budget has left.
+  if (composition !== undefined)
+    for (const kind of [...scripted.first, ...scripted.last])
+      compositionState = recordCompositionKind(composition, compositionState, kind);
+  queue.push(...scripted.first.map(plain));
+  const fill = Math.max(0, count - scripted.first.length - scripted.last.length);
+  for (let index = 0; index < fill; index += 1) {
     const eligiblePool =
       contentStage === null || composition === undefined
         ? availableAuthoredPool
@@ -211,6 +222,7 @@ function regularWaveQueue(
     queue.push({ type: kind, hpScale, dmgScale });
     if (composition !== undefined) compositionState = recordCompositionKind(composition, compositionState, kind);
   }
+  queue.push(...scripted.last.map(plain));
   // Gatekeepers: the round's elites, each a stage enemy with exactly one affix.
   for (let index = 0; index < (round?.gatekeepers ?? 0); index += 1) {
     const eligible =

@@ -100,12 +100,43 @@ export interface SettingsPrivacyView {
   /** Show the switch for anonymous run statistics. */
   readonly statistics: boolean;
 }
+/** The Credits tab's content as the build resolves it: the works it contains, grouped. */
+export interface SettingsCreditGroup {
+  readonly label: string;
+  readonly entries: readonly Readonly<{
+    id: string;
+    name: string;
+    /** What it is used for, its copyright line and its licence, as one line. */
+    note: string;
+    /** The licence text ships with the game and opens from the row. */
+    hasLicenceText: boolean;
+  }>[];
+}
+/** Where the two-step erase of the player's progress stands, as the General tab shows it. */
+export interface SettingsResetView {
+  readonly stage: "idle" | "armed" | "working";
+  /** A press on the armed button erases now (false during the short delay after arming). */
+  readonly confirmable: boolean;
+  /** Why the last attempt changed nothing; null when there was none. */
+  readonly failure: "online-failed" | "device-failed" | null;
+}
+/** The row keys of the erase: the first press arms it, the armed button confirms, the other backs out. */
+export const RESET_PROGRESS_KEY = "resetProgress";
+export const RESET_CANCEL_KEY = "resetCancel";
+const RESET_NOTE_KEY = "resetNote";
+const RESET_ARMED_NOTE = "Coins, unlocks, stats and name go. Leaderboard entries and replays stay.";
+/** The tab id of the read-only Credits list: nothing on it is a setting to reset. */
+export const CREDITS_TAB = "credits";
+/** A credit row opens its licence text through this key prefix. */
+export const LICENCE_KEY_PREFIX = "licence:";
 export interface SettingsEnvironmentSnapshot {
   readonly lowGraphics: boolean;
   readonly touch: boolean;
   readonly installAvailable: boolean;
   readonly update: Readonly<{ ready: boolean; applying: boolean }>;
   readonly privacy: SettingsPrivacyView;
+  readonly credits: readonly SettingsCreditGroup[];
+  readonly progressReset: SettingsResetView;
   /** The running build as the player reads it (version and short revision). */
   readonly buildLabel: string;
   readonly presets: Readonly<Record<string, ControllerPresetView>>;
@@ -114,6 +145,33 @@ export interface SettingsEnvironmentSnapshot {
   readonly keyboard?: KeyboardRowsState;
 }
 export type SettingsSections = SettingsScreenView["sections"];
+const RESET_FAILURE_NOTE: Readonly<Record<NonNullable<SettingsResetView["failure"]>, string>> = {
+  "online-failed": "Could not reach your online save. Nothing was erased.",
+  "device-failed": "This device would not save the erase. Try again.",
+};
+/** The erase in its three states: one row to ask, then the confirming row with a way back, then a wait. */
+function resetProgressRows(reset: SettingsResetView): SettingRowView[] {
+  if (reset.stage === "idle")
+    return [
+      ...(reset.failure === null
+        ? []
+        : [{ key: RESET_NOTE_KEY, label: RESET_FAILURE_NOTE[reset.failure], value: "", kind: "info" } as const]),
+      { key: RESET_PROGRESS_KEY, label: "Reset progress", value: "RESET…", kind: "cycle" },
+    ];
+  if (reset.stage === "working")
+    return [{ key: RESET_PROGRESS_KEY, label: "Erasing all progress…", value: "", kind: "info" }];
+  return [
+    { key: RESET_NOTE_KEY, label: RESET_ARMED_NOTE, value: "", kind: "info" },
+    {
+      key: RESET_PROGRESS_KEY,
+      label: "Erase ALL progress. No undo.",
+      value: "ERASE",
+      kind: "cycle",
+      enabled: reset.confirmable,
+    },
+    { key: RESET_CANCEL_KEY, label: "Keep my progress", value: "CANCEL", kind: "cycle" },
+  ];
+}
 const percent = (value: number): string => String(Math.round(value * 100)) + "%";
 function keyboardRows(state: KeyboardRowsState): SettingRowView[] {
   const note = (row: string): { note?: string } => (state.note?.row === row ? { note: state.note.text } : {});
@@ -134,6 +192,15 @@ export function buildSettingsSections(
   environment: SettingsEnvironmentSnapshot,
 ): SettingsSections {
   const normalizedTab = normalizeMusicSettingsTab(tab);
+  if (normalizedTab === CREDITS_TAB)
+    return environment.credits.map((group) => ({
+      label: group.label,
+      rows: group.entries.map((entry): SettingRowView =>
+        entry.hasLicenceText
+          ? { key: LICENCE_KEY_PREFIX + entry.id, label: entry.name, value: "LICENCE", kind: "cycle", note: entry.note }
+          : { key: "credit:" + entry.id, label: entry.name, value: "", kind: "info", note: entry.note },
+      ),
+    }));
   if (normalizedTab === "audio")
     return [
       {
@@ -325,6 +392,7 @@ export function buildSettingsSections(
       kind: "cycle",
       enabled: !environment.update.applying,
     });
+  rows.push(...resetProgressRows(environment.progressReset));
   // Last, so it reads as the footer of the list: what a player quotes when they report a problem.
   rows.push({ key: "version", label: "Version", value: environment.buildLabel, kind: "info" });
   return [{ label: "GENERAL", rows }];

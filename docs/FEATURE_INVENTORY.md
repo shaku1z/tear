@@ -22,13 +22,7 @@ Race-derived local
 challenge/practice forks are explicitly unsupported; this is not full R16 closure.
 See the [current C37 contract](checkpoints/C37_COACH_PRACTICE_FOUNDATION.md#seed-locked-race-local-source-implementation-browser-acceptance-pending).
 
-Boss Memory now saves a named, annotated derived encounter from a verified
-living-boss checkpoint through native boss or player defeat. Recording history
-is removed; normal segment-only download/import, bounded Watch and independent
-entry Practice reuse existing owners. Source membership is explicitly unproven
-without original bytes; necessary entry gameplay state remains. Focused native
-construction controls are engineering evidence; fresh normal browser acceptance
-is pending. See the current C37 checkpoint for provenance and legacy limits.
+Boss Memory was removed in the replay overhaul (PR 1 of [the replay overhaul plan](../plans/active/REPLAY_OVERHAUL_PLAN.md)); it was never released.
 
 This is the migration checklist for the architectural redesign. A checked feature has characterization, contract, deterministic, or built-artifact browser coverage in the redesigned runtime and is included in `pnpm check`. Presence in a compatibility bundle alone does not count. A check records the existence of credible automated evidence; release readiness still requires that the complete gate pass from the final clean commit.
 
@@ -39,8 +33,8 @@ This is the migration checklist for the architectural redesign. A checked featur
   the release channel; test builds and `vite dev` use the engineering channel.
   Engineering-only (not drawn, not focusable, actions inert, screens refused):
   Boss Test and Enemy Test (still catalog modes) with the
-  boss picker, Seed-Locked Race, Boss Memory, Replay
-  Editor, linked-pair download, every engineering URL parameter (`test`, `stemcue`,
+  boss picker, Seed-Locked Race, Replay
+  Editor, every engineering URL parameter (`test`, `stemcue`,
   `stems`, `foundry*`, surface routes) and the weapon/audio-preview debug
   globals.
 - [x] The published Adventure is exactly six stages and 60 waves: Grounds,
@@ -752,11 +746,8 @@ frozen evidence record.
   supplied with concrete constructor ports; the app adapter only binds legacy
   classes. This preserves Echo modifier rebinding but does not make entity
   classes or their outward services portable.
-  Real
-  full-world portability, durable
-  Ghost storage, complete visible experiences, and end-to-end
-  certification remain tracked by
-  `plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md`.
+  Real full-world portability, durable Ghost storage, complete visible
+  experiences, and end-to-end certification are not built.
 - [x] Test-build State Editor — `tearbench-state-editor.test.ts`
   keeps structural, reachability, and population-plausibility reports
   independent; `browser-state-editor.js` proves the `?snapshot-editor=1` live
@@ -781,7 +772,7 @@ frozen evidence record.
 - [x] Class-A semantic cinematic advancement — `live-runtime-application-frame.test.ts`
   exposes one test-build-only authored director beat through the typed live
   runtime, without a debug global, renderer clock, or synthetic fixed tick.
-  `browser-c40-state-setup-source-void.js` proves a resolved Source phase-two
+  `browser-state-setup-source-void.js` proves a resolved Source phase-two
   State Setup launch enters collapse, then reaches live void hazard/navigation
   state through bounded semantic beats and real authoritative application
   frames. This is a replay-seek foundation, not C40 certification.
@@ -905,13 +896,9 @@ frozen evidence record.
   alone makes no continuation claim. Legacy completion inference needs a later
   playing anchor/receipt. Fresh normal-browser acceptance remains required for
   the new route; constructed win fixtures do not establish a full Campaign run.
-  Pixel/device output fidelity remains C25/C40 work. C29
-  also now exposes
-  player-visible semantic comparison: from Profile -> Vault, select two
-  through nine healthy completed V3 capsules and use `COMPARE N` to
-   reconstruct and inspect each repeated semantic event occurrence side by
-   side. It is intentionally a semantic source-simulation comparison, not a
-   pixel, PCM, haptic, or device output claim;
+  Pixel/device output fidelity remains C25/C40 work. The C29 semantic
+   comparison (`COMPARE N` in Profile -> Vault) was removed with the replay
+   overhaul (plans/active/REPLAY_OVERHAUL_PLAN.md, PR 2).
    C29/C30 source replay and headless composition now own the same portable live
    wave, spawn, clear, and reward runtime (including semantic draft routing)
    used by the C27A detached host, plus the portable terminal-outcome runtime.
@@ -1004,6 +991,8 @@ frozen evidence record.
 - [x] Master, music, sound-effects and interface volume/mute controls — audio settings/mixer tests, screen renderer parity, and the built-artifact feature/audio matrices.
 - [x] Independent saved audio sliders plus temporary ad/portal/system mute reasons — `audio-live-legacy.test.ts`, `audio-mixer.test.ts`, `audio-system.test.ts`, and CrazyGames adapter contracts.
 - [x] Cinematic preference and automatic pause behavior — `cinematic-preference.test.ts` and `settings-controller.test.ts` cover policy, sanitization and persistence; `browser-cinematic-preferences.js` proves full/brief/off campaign behavior and direct wave activation when scenes are off; the input matrix covers controller-disconnect auto-pause.
+- [x] Save notices and RESET PROGRESS: a profile or coins file that cannot be read, or a browser that will not keep data, is told to the player once in plain words (one DOM dialog, one sentence per kind in `SAVE_PROBLEM_TEXT`); Settings > General > RESET PROGRESS erases the profile, the coins and upgrades and the online copy behind two presses (the second only after a short delay, the first expiring after ten seconds), online copy first so the cloud merge cannot refill it — `save-problems.test.ts`, `progress-reset.test.ts`, `progress-reset-flow.test.ts`, `settings-snapshots.test.ts`, `platform-cloud.test.ts` and `platform-firebase-cloud.test.ts`.
+- [x] Credits tab in Settings: the fonts and libraries each build contains, with the licence text opening from the row where it ships — `credits.test.ts` (a font file without an entry fails it, and each build lists only its own works), `settings-snapshots.test.ts` and `screen-renderers.test.ts` (no RESET DEFAULTS on the read-only tab).
 
 ## Audio
 
@@ -1025,10 +1014,12 @@ frozen evidence record.
 
 No feature-preservation evidence gaps remain in this inventory. Release readiness still requires the full clean-commit gate described above.
 
-### C37 recorded Run DNA Theater projection
+### C37 recorded Run DNA projection
 
-The normal C29 Theater exposes a `RUN DNA` panel only as an immutable
-projection of its already-verified durable capsule. `run-dna-v1` is calculated
+The Theater's `RUN DNA` panel was removed with the replay overhaul
+(plans/active/REPLAY_OVERHAUL_PLAN.md, PR 2); CAREER still reads the same
+projection until PR 8. The projection is immutable and comes from an
+already-verified durable capsule. `run-dna-v1` is calculated
 only from exactly one complete declared `run-dna-metrics-v1` result; absent,
 incomplete, or ambiguous metrics render as unavailable. The visible panel
 names the formula, custody label, source metrics, and dimensions. It neither

@@ -383,9 +383,9 @@
       "sourceSections": [70, 72, 79],
       "textRegex": "(Ghost Theater|replay world|seek|Ghost Lens|event-aligned|trajectory diff|Practice from here)",
       "excludeTextRegex": "(player can|accessible|mobile|real capsule|browser)",
-      "implementationRefs": ["src/ghost/replay-world.ts", "src/ghost/theater.ts"],
+      "implementationRefs": ["src/ghost/replay-world.ts"],
       "evidenceRefs": ["tests/unit/ghost-replay-world.test.ts"],
-      "notes": "Transport, seek, comparison, and practice helpers exist without a complete player-facing Theater."
+      "notes": "Seek and practice helpers exist; the comparison and lens helpers were removed with the replay overhaul."
     },
     {
       "id": "EVID-PLAYER-EXPERIENCE-CONTRACTS",
@@ -394,9 +394,9 @@
       "sourceSections": [71, 72, 79],
       "textRegex": "(Chase Your Best|Ghost Race|Beat This Run|Boss Memory|Daily Echo|Learning Ghost|Nemesis Ghost|Run DNA|career archive|Ghost Studio)",
       "excludeTextRegex": "(player can|visible|export.*media|complete UI)",
-      "implementationRefs": ["src/ghost/player-experiences.ts"],
-      "evidenceRefs": ["tests/unit/ghost-player-experiences.test.ts"],
-      "notes": "Definitions and pure proof/EDL/DNA helpers exist; complete player experiences do not."
+      "implementationRefs": ["src/ghost/run-dna-theater.ts"],
+      "evidenceRefs": ["tests/unit/ghost-run-dna-theater.test.ts"],
+      "notes": "The Run DNA calculation remains for CAREER; the challenge proof and other experience helpers were removed with the replay overhaul."
     },
     {
       "id": "EVID-PRESERVATION-CONTRACTS",

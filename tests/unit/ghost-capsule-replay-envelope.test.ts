@@ -1,12 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  GhostCapsuleReader,
-  GhostLocalVault,
-  GhostStreamingRecorder,
-  createMemoryGhostVaultBackend,
-  mapGhostCapsuleToReplayEnvelope,
-} from "../../src/ghost";
+import { GhostCapsuleReader } from "../../src/ghost/capsule-reader";
+import { GhostLocalVault, createMemoryGhostVaultBackend } from "../../src/ghost/capsule-vault";
+import { GhostStreamingRecorder } from "../../src/ghost/streaming-recorder";
+import { mapGhostCapsuleToReplayEnvelope } from "../../src/ghost/capsule-replay-envelope";
 import { isUnchangedGhostRead } from "../../src/ghost/capsule-reader";
 import { stableVerificationHash } from "../../src/domain/hash";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";

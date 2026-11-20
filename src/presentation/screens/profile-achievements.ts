@@ -60,8 +60,7 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
     }
 
     if ((view.tab === "replays" || view.tab === "vault") && view.replays) {
-      const linkedPair = view.tab === "vault" && view.replays.some((r) => r.canDownloadLinkedPair);
-      const rowHeight = linkedPair ? 128 : 96;
+      const rowHeight = 96;
       if (listEmpty) {
         const empty = profileListEmptyState(view);
         const ctaY = ui.emptyState(canvas, empty.glyph, empty.line, context.width / 2, top + 110, empty.detail, 720);
@@ -119,40 +118,6 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
                   : { type: "profile.watchReplay", id: replay.id },
             });
           }
-          if (view.tab === "vault" && !replay.repairable) {
-            enqueueRow({
-              x: actionsX + 118,
-              y: y + 18,
-              w: 126,
-              h: 40,
-              size: ui.t.type.label,
-              label: replay.comparisonSelected ? "SELECTED" : "SELECT",
-              enabled: replay.available,
-              selected: replay.comparisonSelected,
-              action: { type: "profile.compareGhostCapsule", id: replay.id },
-            });
-            if ((replay.comparisonSourceCount ?? 0) >= 2) {
-              enqueueRow({
-                x: actionsX + 252,
-                y: y + 18,
-                w: 132,
-                h: 40,
-                size: ui.t.type.label,
-                label: `COMPARE ${String(replay.comparisonSourceCount)}`,
-                action: { type: "profile.openGhostComparison" },
-              });
-            }
-          }
-          if (view.tab === "vault" && replay.canDownloadLinkedPair)
-            enqueueRow({
-              x: actionsX,
-              y: y + 96,
-              w: 252,
-              h: 28,
-              size: ui.t.type.micro,
-              label: "DOWNLOAD RUN + FINALE",
-              action: { type: "profile.downloadGhostArchive", id: replay.id, paired: true },
-            });
           if (replay.local) {
             enqueueRow({
               x: actionsX + 118,

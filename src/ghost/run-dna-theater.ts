@@ -1,13 +1,43 @@
 import { asRecord } from "../domain/records";
 import { parseGhostApplicationClockEvent, readGhostApplicationClockSchedule } from "./application-frame-events";
 import type { GhostReadCapsule } from "./capsule-reader";
-import { calculateRunDna, type GhostRunDna } from "./player-experiences";
 import { readGhostReplayRunContext } from "./replay-admission";
 import {
   RUN_DNA_CAPTURE_POLICY,
   RUN_DNA_MANEUVERS,
   type NativeRunDnaCapture,
 } from "../gameplay/runtime/run-dna-observer";
+
+export interface GhostRunDna {
+  readonly dimensions: Readonly<{
+    aggression: number;
+    precision: number;
+    mobility: number;
+    defense: number;
+    experimentation: number;
+  }>;
+  readonly sourceMetrics: Readonly<Record<string, number>>;
+  readonly formulaVersion: "run-dna-v1";
+}
+
+export function calculateRunDna(metrics: Readonly<Record<string, number>>): GhostRunDna {
+  const ratio = (numerator: string, denominator: string): number => {
+    const top = metrics[numerator] ?? 0;
+    const bottom = Math.max(1, metrics[denominator] ?? 0);
+    return Math.max(0, Math.min(1, top / bottom));
+  };
+  return Object.freeze({
+    dimensions: Object.freeze({
+      aggression: ratio("attacks", "combatTicks"),
+      precision: 1 - ratio("misses", "attacks"),
+      mobility: ratio("movingTicks", "combatTicks"),
+      defense: 1 - ratio("damageTaken", "maxHp"),
+      experimentation: ratio("distinctManeuvers", "availableManeuvers"),
+    }),
+    sourceMetrics: Object.freeze({ ...metrics }),
+    formulaVersion: "run-dna-v1",
+  });
+}
 
 const METRICS = [
   "attacks",

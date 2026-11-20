@@ -97,11 +97,11 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
     const drill =
       session.annex !== undefined || session.enemyPractice !== undefined || session.bossPractice !== undefined;
     const exercise = current?.canPractice === true || drill;
-    // The finished course leads into a real run; a course in progress can skip a lesson
-    // (it stays unfinished and is listed for replay), never earn it.
-    const courseEnd = (complete || unfinished) && !lab;
-    const menu: { label: string; action: ScreenAction }[] = [
-      ...(courseEnd ? [{ label: "START A RUN", action: { type: "run.quit", next: "setup" } as const }] : []),
+    // The finished course leads into a real run. A course in progress can skip a lesson (it
+    // stays unfinished and is listed for replay, never earned); skipping the whole tutorial is
+    // chosen on the quit confirm that MAIN MENU opens, as leaving a run always is.
+    const menu: { label: string; action: ScreenAction; enabled?: boolean }[] = [
+      ...(complete && !lab ? [{ label: "START A RUN", action: { type: "run.quit", next: "setup" } as const }] : []),
       {
         label: complete || unfinished ? "KEEP PRACTICING" : "RESUME",
         action: { type: "run.resume" },
@@ -109,8 +109,16 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
       ...(exercise
         ? [{ label: "RESTART LESSON", action: { type: "tutorial.action", command: "restart" } as const }]
         : []),
-      ...(session.coach?.available && current?.canPractice && !drill
-        ? [{ label: "SHOW DEMO", action: { type: "tutorial.action", command: "demo" } as const }]
+      // The demonstrations arrive after the lesson starts (tutorial-gold-shipping.ts). The row is always
+      // there and turns on when they do, so the items below it never move under the player's pointer.
+      ...(current?.canPractice && !drill
+        ? [
+            {
+              label: "SHOW DEMO",
+              action: { type: "tutorial.action", command: "demo" } as const,
+              enabled: session.coach?.available === true,
+            },
+          ]
         : []),
       ...(current?.canPractice && session.phase !== "free-practice" && !drill
         ? [
@@ -139,6 +147,7 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
         h: menuH,
         label: item.label,
         action: item.action,
+        ...(item.enabled === false ? { enabled: false } : {}),
         size: ui.t.type.caption,
       });
     });
@@ -365,17 +374,23 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
 
   function confirmquit(view: ConfirmQuitScreenView): void {
     const layout = overlayHeader(context, {
-      title: "QUIT RUN?",
+      title: view.tutorial === "course" ? "QUIT TUTORIAL?" : view.tutorial === "drills" ? "LEAVE DRILLS?" : "QUIT RUN?",
       subtitle: [
-        view.practice
-          ? "Local practice ends without saved progression or High Scores."
-          : "Your progress (cleared waves & score) is saved to High Scores.",
+        view.tutorial === "course"
+          ? "Your finished lessons are kept. PLAY continues at the next one, unless you skip the tutorial."
+          : view.tutorial === "drills"
+            ? "Every lesson you finished stays learned."
+            : view.practice
+              ? "Local practice ends without saved progression or High Scores."
+              : "Your progress (cleared waves & score) is saved to High Scores.",
       ],
     });
     actionRow(
       context,
       [
         { label: "QUIT", action: { type: "run.quit" } },
+        // Skipping on purpose ends tutorial-first PLAY: the run setup opens, and PLAY opens it from now on.
+        ...(view.tutorial === "course" ? [{ label: "SKIP TUTORIAL", action: { type: "tutorial.skip" } as const }] : []),
         // A confirm opens on its safe choice, so a stray confirm press never quits.
         { label: "CANCEL", action: { type: "navigate", to: "paused" }, entryFocus: true },
       ],

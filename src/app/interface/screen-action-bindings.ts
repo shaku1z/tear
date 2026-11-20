@@ -8,6 +8,7 @@ import type { RunDifficulty, RunMode } from "../../gameplay/run/session";
 import type { GhostVaultLibraryPort } from "../library/ghost-vault-library-controller";
 import { screenActionAvailable, type SurfaceAvailability } from "../../domain/surface-availability";
 import type { ScreenAction } from "../../presentation/screens/contracts";
+import type { RunExitScreen } from "../../domain/screen-actions";
 import { setMusicPreview, stepMusicPreview } from "../../audio/music/preview";
 import { requestNextSong } from "../../audio/music/music-source";
 
@@ -25,6 +26,8 @@ export interface ScreenActionBindingPorts {
   readonly startSelectedRace?: () => void;
   readonly startSelectedRun: () => void;
   readonly startRun: (mode: RunMode, difficulty: RunDifficulty) => void;
+  /** Records that the player left the tutorial on purpose. */
+  readonly skipTutorial: () => void;
   readonly currentRun: () => Readonly<{ mode: RunMode; diff: RunDifficulty }>;
   readonly resumeFinale: () => void;
   readonly claimFinale: () => void;
@@ -33,7 +36,8 @@ export interface ScreenActionBindingPorts {
   readonly chooseReserve: (index: number) => void;
   readonly chooseTier: (index: number) => void;
   readonly requestPointer: () => void;
-  readonly quitRun: () => void;
+  /** Ends the run as QUIT does and opens `next` (the main menu unless named); see the run adapter. */
+  readonly quitRun: (next?: RunExitScreen) => void;
   readonly revive: () => void;
   readonly endRun: () => void;
   readonly retryRun: () => void;
@@ -54,6 +58,11 @@ export interface ScreenActionBindingPorts {
 }
 
 export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) {
+  /** The one way out of a run: it ends as QUIT ends it, then `next` opens (the run setup with Adventure selected). */
+  const leaveRun = (next: RunExitScreen = "menu"): void => {
+    ports.quitRun(next);
+    if (next === "setup") ports.setSetupSelection("mode", "campaign");
+  };
   return createScreenActionRouter({
     navigate: (action) => {
       ports.setScreen(action.to);
@@ -118,11 +127,15 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
       ports.startRun(run.mode, run.diff);
     },
     "run.quit": (action) => {
-      ports.quitRun();
-      if (action.next === "setup") {
-        ports.setSetupSelection("mode", "campaign");
-        ports.setScreen("setup");
-      }
+      leaveRun(action.next);
+    },
+    "tutorial.continue": () => {
+      ports.setSetupSelection("mode", "tutorial");
+      ports.startSelectedRun();
+    },
+    "tutorial.skip": () => {
+      ports.skipTutorial();
+      leaveRun("setup");
     },
     "continue.revive": () => {
       ports.revive();
@@ -191,12 +204,6 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "profile.watchGhostCapsule": (action) => {
       ports.library.watchGhostCapsule(action.id);
     },
-    "profile.compareGhostCapsule": (action) => {
-      ports.library.compareGhostCapsule(action.id);
-    },
-    "profile.openGhostComparison": () => {
-      ports.library.openGhostComparison();
-    },
     "profile.repairGhostCapsule": (action) => {
       ports.library.repairGhostCapsule(action.id);
     },
@@ -222,8 +229,7 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
       ports.ghostFiles.cancelArchive();
     },
     "profile.downloadGhostArchive": (action) => {
-      if (action.paired === true) ports.ghostFiles.downloadArchive(action.id, true);
-      else ports.ghostFiles.downloadArchive(action.id);
+      ports.ghostFiles.downloadArchive(action.id);
     },
     "profile.signIn": () => {
       ports.signIn();
@@ -283,15 +289,6 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "replay.practice": () => {
       ports.replay.practice();
     },
-    "replay.challenge.open": () => {
-      ports.replay.openChallenges();
-    },
-    "replay.challenge.start": (action) => {
-      ports.replay.startChallenge(action.id);
-    },
-    "replay.runDna.toggle": () => {
-      ports.replay.toggleRunDna();
-    },
     "replay.editor.toggle": () => {
       ports.replay.toggleReplayEditor();
     },
@@ -313,9 +310,6 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     },
     "replay.speed": (action) => {
       ports.replay.setSpeed(action.value);
-    },
-    "replay.finale": () => {
-      ports.replay.openFinale?.();
     },
     "replay.exit": () => {
       ports.replay.exit();

@@ -9,23 +9,17 @@ export interface LiveGhostPracticeSessionState {
   readonly active: () => GhostPracticeChild | null;
   readonly activate: (child: GhostPracticeChild) => void;
   readonly clear: () => void;
-  readonly beforeClear?: (callback: () => void) => void;
 }
 
 export function createLiveGhostPracticeSessionState(): LiveGhostPracticeSessionState {
   let child: GhostPracticeChild | null = null;
-  let clearing: (() => void) | undefined;
   return Object.freeze({
     active: () => child,
     activate: (value) => {
       child = value;
     },
     clear: () => {
-      clearing?.();
       child = null;
-    },
-    beforeClear: (callback) => {
-      clearing = callback;
     },
   } satisfies LiveGhostPracticeSessionState);
 }

@@ -54,8 +54,8 @@
       "id": "verdant-gameplay",
       "name": "Verdant Sanctum gameplay",
       "state": "In progress",
-      "summary": "The Rootbound boss is rebuilt in all three phases as data on a shared boss move layer that Pale and later bosses reuse: Phase I's moves, Phase II's Grafts, Root Cage and Bloom Wells, and Phase III's Regrowth and Last Spring. Its body no longer hurts on touch: it blocks, and it does not play a move the player could not walk out of. The stage's Bloom Wells stand on the floor and lift the player and light enemies; who a stage field moves is one data row. The Rootbinder is rebuilt as a support that backs away, plants and roots the allies near it, so they cannot be flung or lifted until the root is cut; cutting every root or one heavy hit uproots it, and it takes more damage while planted. Its old leash on the player is replaced by a warned snare: a ring marked on the ground that holds a player who stays in it, with a cut, a 2 second release and an immunity afterwards. Verdant waves are not rebuilt yet.",
-      "next": "Verdant waves.",
+      "summary": "The Rootbound boss is rebuilt in all three phases as data on a shared boss move layer that Pale and later bosses reuse: Phase I's moves, Phase II's Grafts, Root Cage and Bloom Wells, and Phase III's Regrowth and Last Spring. Its body no longer hurts on touch: it blocks, and it does not play a move the player could not walk out of. The stage's Bloom Wells stand on the floor and lift the player and light enemies; who a stage field moves is one data row. The Rootbinder is rebuilt as a support that backs away, plants and roots the allies near it, so they cannot be flung or lifted until the root is cut; cutting every root or one heavy hit uproots it, and it takes more damage while planted. Its old leash on the player is replaced by a warned snare: a ring marked on the ground that holds a player who stays in it, with a cut, a 2 second release and an immunity afterwards. Verdant's nine waves are written: each has listed enemies in spawn order (wave 32 two ground allies and then a Rootbinder, 33 a Mender, 36 a Chimera, 38 a second Rootbinder late) and the pool fills the rest; any stage can carry such a table. Their numbers are not tuned yet.",
+      "next": "Tune the waves against the playtest tool's wave measurements, then close Verdant.",
       "owner_action": "Playtest the Rootbound in all three phases.",
       "evidence": [
         "plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md"
@@ -111,7 +111,7 @@
     {
       "id": "playtest-tool",
       "name": "Playtest tool",
-      "state": "Stage 1 built: pnpm playtest bosses prints a table per boss fight and phase; pnpm playtest sweep plays every boss, weapon, Easy and Normal with six scripted players and prints a summary",
+      "state": "Stage 1 done: pnpm playtest bosses prints a table per boss fight and phase; pnpm playtest sweep plays every boss, weapon, Easy and Normal with six scripted players and prints a summary",
       "summary": "One command, pnpm playtest, that plays the game headless with scripted players on fixed seeds and reports clear rates, time to kill, damage taken and differences between builds. It is built from the working parts of TearBench and the scripted player and replaces both names. Verified on 2026-11-16: the scripted player runs headless at 13 to 15 times real time and the same seed reproduces exactly.",
       "next": "Stage 2: every boss phase, wave and enemy kind as a row that starts directly, and pnpm playtest runs.",
       "owner_action": "",
@@ -120,16 +120,14 @@
       ]
     },
     {
-      "id": "tearbench-program",
-      "name": "TearBench C21 to C40 program",
-      "state": "Paused at the 2026-08-30 state",
-      "summary": "The TearBench certification program state is recorded for the production build and is still checked by check:docs. Pull request 84 (five-run canary qualification) is open; its commits are already in main.",
-      "next": "Land or close pull request 84.",
-      "owner_action": "",
+      "id": "replays",
+      "name": "Replays",
+      "state": "In progress: PR 1 merged (hidden replay features removed); PR 2 open (replay extras)",
+      "summary": "Players reach two replay systems today: Ghost 2 (position samples in localStorage, used by the REPLAYS tab, the feed and leaderboard links) and the Ghost V3 capsules (re-simulated, in IndexedDB, used by VAULT, CAREER and the Theater). The plan replaces both with one versioned record and five plain modules (record, store, watch, share, verify), moves the replay world and snapshot codecs out of TearBench, and deletes src/ghost (118 replay modules and about 800,000 characters today).",
+      "next": "Merge PR 2, then PR 2b (REPAIR) and PR 3 (the snapshot codecs move to src/gameplay/snapshot).",
+      "owner_action": "Deploy the Firestore chunk-write rules from the merged rules PR.",
       "evidence": [
-        "config/tearbench-current-program-state.json",
-        "plans/TEARBENCH_MASTER_HANDOFF.md",
-        "https://github.com/shaku1z/tear/pull/84"
+        "plans/active/REPLAY_OVERHAUL_PLAN.md"
       ]
     },
     {

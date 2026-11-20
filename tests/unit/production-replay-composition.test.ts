@@ -26,7 +26,8 @@ import {
   restoreProductionReplayChapterBinding,
   restoreProductionReplaySnapshot,
 } from "../../src/tearbench";
-import { GhostProductionReplayWorld, createGhostV3, type GhostReplayTrident } from "../../src/ghost";
+import { GhostProductionReplayWorld } from "../../src/ghost/replay-world";
+import { createGhostV3, type GhostReplayTrident } from "../../src/ghost/truth-kernel";
 import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-setup-live-compiler";
 import { resolveTearSdl, type TearSdlDocumentV1 } from "../../src/tearbench/tearsdl";
 import type { ProductionReplayWorld } from "../../src/tearbench/production-world-factory";

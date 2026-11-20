@@ -15,7 +15,7 @@
       "largestFunctionStatements": 83
     },
     "src/config/game-config.ts": {
-      "chars": 27922
+      "chars": 27592
     },
     "src/game-reference/game-reference.ts": {
       "chars": 30503
@@ -63,8 +63,8 @@
       "chars": 26787
     },
     "src/gameplay/training/tutorial-controller.ts": {
-      "chars": 45521,
-      "largestFunctionStatements": 170
+      "chars": 45395,
+      "largestFunctionStatements": 169
     },
     "src/gameplay/upgrades.ts": {
       "chars": 29224
@@ -80,6 +80,9 @@
     },
     "src/input/browser-gamepad.ts": {
       "largestFunctionStatements": 124
+    },
+    "src/playtest/headless/production-headless-environment.ts": {
+      "chars": 27871
     },
     "src/presentation/attract-runtime.ts": {
       "largestFunctionStatements": 92
@@ -153,9 +156,6 @@
     },
     "src/tearbench/production-combat-phases.ts": {
       "chars": 30070
-    },
-    "src/tearbench/production-headless-environment.ts": {
-      "chars": 27871
     },
     "src/tearbench/production-replay-composition.ts": {
       "chars": 34925

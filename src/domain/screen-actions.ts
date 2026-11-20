@@ -7,6 +7,9 @@
 import type { AppScreen } from "./screen-catalog";
 import type { PracticeTab } from "./practice-tab";
 
+/** Where a run is left for once it has ended; the main menu unless named. */
+export type RunExitScreen = "menu" | "setup";
+
 export type ScreenAction =
   | { readonly type: "chase.control"; readonly command: "toggle" | "stop" }
   | { readonly type: "navigate"; readonly to: AppScreen; readonly resetScroll?: boolean; readonly tab?: string }
@@ -32,15 +35,13 @@ export type ScreenAction =
   | { readonly type: "profile.selectTab"; readonly id: string }
   | { readonly type: "profile.watchReplay"; readonly id: string }
   | { readonly type: "profile.watchGhostCapsule"; readonly id: string }
-  | { readonly type: "profile.compareGhostCapsule"; readonly id: string }
-  | { readonly type: "profile.openGhostComparison" }
   | { readonly type: "profile.repairGhostCapsule"; readonly id: string }
   | { readonly type: "profile.pickGhostArchive" }
   | { readonly type: "profile.reselectGhostArchive"; readonly id: string }
   | { readonly type: "profile.restoreGhostArchive"; readonly id: string; readonly revision: number }
   | { readonly type: "profile.cancelGhostRestore"; readonly id: string; readonly revision: number }
   | { readonly type: "profile.cancelGhostArchiveSelection" }
-  | { readonly type: "profile.downloadGhostArchive"; readonly id: string; readonly paired?: true }
+  | { readonly type: "profile.downloadGhostArchive"; readonly id: string }
   | { readonly type: "profile.signIn" }
   | { readonly type: "profile.signOut" }
   | { readonly type: "profile.rename" }
@@ -60,16 +61,12 @@ export type ScreenAction =
   | { readonly type: "replay.jumpChapter"; readonly direction: -1 | 1 }
   | { readonly type: "replay.restart" }
   | { readonly type: "replay.practice" }
-  | { readonly type: "replay.challenge.open" }
-  | { readonly type: "replay.challenge.start"; readonly id: string }
-  | { readonly type: "replay.runDna.toggle" }
   | { readonly type: "replay.editor.toggle" }
   | { readonly type: "replay.editor.appendClip" }
   | { readonly type: "replay.editor.media"; readonly command: "markIn" | "clear" | "export" | "cancel" | "download" }
   | { readonly type: "replay.toggleInfo" }
   | { readonly type: "replay.speed"; readonly value: number }
   | { readonly type: "replay.exit" }
-  | { readonly type: "replay.finale" }
   | { readonly type: "settings.selectTab"; readonly id: string }
   | { readonly type: "settings.step"; readonly key: string; readonly delta: number }
   | { readonly type: "settings.toggle"; readonly key: string }
@@ -92,7 +89,11 @@ export type ScreenAction =
   | { readonly type: "run.resume" }
   | { readonly type: "run.restart" }
   /** `next: "setup"` leaves the run for the run setup (Adventure selected) instead of the main menu. */
-  | { readonly type: "run.quit"; readonly next?: "setup" }
+  | { readonly type: "run.quit"; readonly next?: RunExitScreen }
+  /** Tutorial-first PLAY: starts the tutorial course at the profile's next unfinished lesson. */
+  | { readonly type: "tutorial.continue" }
+  /** Leaves the tutorial on purpose for run setup; PLAY no longer leads into it. */
+  | { readonly type: "tutorial.skip" }
   | { readonly type: "continue.revive" }
   | { readonly type: "continue.giveUp" }
   | { readonly type: "results.retry" }

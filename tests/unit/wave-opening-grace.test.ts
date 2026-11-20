@@ -13,7 +13,8 @@ import { planNextWave, type WavePlanningState } from "../../src/gameplay/run/wav
 import { OPENING_GRACE_SECONDS, openingGrace, openingGraceRemaining } from "../../src/gameplay/run/wave-rules";
 import { CONFIG } from "../../src/config/game-config";
 import { STAGES } from "../../src/gameplay/stages";
-import { CANONICAL_ENGINEERING_SCENARIOS, createProductionHeadlessEnvironment } from "../../src/tearbench";
+import { CANONICAL_ENGINEERING_SCENARIOS } from "../../src/tearbench";
+import { createProductionHeadlessEnvironment } from "../../src/playtest/headless/production-headless-environment";
 import { createEnemyHarness, createTestPlayer, STANDARD_ACTOR_FACTORIES } from "./enemy-test-harness";
 
 const TICKS_PER_SECOND = 120;

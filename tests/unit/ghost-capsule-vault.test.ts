@@ -2,10 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   GHOST_VAULT_STORES,
-  GhostDoctor,
-  GhostCapsuleReader,
   GhostLocalVault,
-  GhostStreamingRecorder,
   capsuleDebugJson,
   createGhostCapsuleManifestV2,
   createInlineGhostEncoderWorker,
@@ -20,7 +17,10 @@ import {
   type GhostVaultStore,
   ghostCapsuleProtectionKey,
   reviseGhostCapsuleManifest,
-} from "../../src/ghost";
+} from "../../src/ghost/capsule-vault";
+import { GhostDoctor } from "../../src/ghost/ghost-doctor";
+import { GhostCapsuleReader } from "../../src/ghost/capsule-reader";
+import { GhostStreamingRecorder } from "../../src/ghost/streaming-recorder";
 
 describe("Ghost capsule recorder and local Vault", () => {
   it("reserves an absent protected capsule id for its exact root and permits that exact source to return", async () => {

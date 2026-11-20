@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import type { CommandEnvelope } from "../../src/domain/envelopes";
-import { GhostProductionReplayWorld, createGhostV3, type GhostReplayTrident } from "../../src/ghost";
+import { GhostProductionReplayWorld } from "../../src/ghost/replay-world";
+import { createGhostV3, type GhostReplayTrident } from "../../src/ghost/truth-kernel";
 import type { GameAction } from "../../src/input/game-action";
 import { TearGameplayEventBus, type TearGameplayEvent } from "../../src/gameplay/runtime/gameplay-events";
 import { WEAPON_IDS, type WeaponId } from "../../src/gameplay/weapon-selection";
@@ -9,11 +10,11 @@ import { projectGameplayEventForParity } from "../../src/tearbench/gameplay-caus
 import {
   CANONICAL_ENGINEERING_SCENARIOS,
   createProductionGhostReplayComposition,
-  createProductionHeadlessEnvironment,
   buildExitLaunchSnapshot,
   type TearCausalEventV1,
   type TearObservationV1,
 } from "../../src/tearbench";
+import { createProductionHeadlessEnvironment } from "../../src/playtest/headless/production-headless-environment";
 
 const REPLAY_TRIDENT: GhostReplayTrident = {
   command: {

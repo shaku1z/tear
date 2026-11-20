@@ -5,12 +5,9 @@ import type { TearSnapshotV1 } from "../../tearbench/contracts";
 import { captureLiveStateSetupSnapshot } from "../../tearbench/live-runtime-snapshots";
 import type { TearLiveWorldAdapter } from "../../tearbench/live-state-snapshot";
 import { createDefaultStateCodecRegistry } from "../../tearbench/state-codecs";
-import type { LiveCampaignTraining } from "../campaign/campaign-training-composition";
 import type { LiveCanonicalCombatHost, LiveCanonicalStateCapture } from "../combat/live-canonical-state";
-import type { LiveScreenNavigation } from "../interface/live-screen-navigation";
 import type { GameBlade, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveWorldComposition } from "../world/world-composition";
-import { createLiveGhostFinaleCompanion } from "./ghost-finale-companion";
 import type { LiveGhostRecording } from "./live-ghost-recording";
 
 export interface LiveGhostCaptureOptions {
@@ -19,25 +16,21 @@ export interface LiveGhostCaptureOptions {
   readonly world: Pick<LiveWorldComposition, "state" | "lifecycle" | "context">;
   readonly combat: Pick<LiveCanonicalCombatHost, "authoritativeStep" | "simulationRuntime">;
   readonly canonicalState: LiveCanonicalStateCapture;
-  readonly campaign: Pick<LiveCampaignTraining["campaign"], "story" | "runtime" | "stage">;
-  readonly navigation: Pick<LiveScreenNavigation, "screen">;
   readonly run: () => GameRun;
   readonly player: () => GamePlayer;
   readonly blade: () => GameBlade;
 }
 
 /**
- * Ghost V3 authoritative capture: result receipts, State Setup keyframes,
- * presentation keyframes, and the finale companion witness.
+ * Ghost V3 authoritative capture: result receipts, State Setup keyframes and
+ * presentation keyframes.
  */
 export function createLiveGhostCapture(options: LiveGhostCaptureOptions) {
   const { recording, stateSetup, combat, canonicalState, run: liveRun, player: livePlayer, blade: liveBlade } = options;
   const { session: ghostV3Session, recorder: ghostV3, frames: ghostFrames } = recording;
-  const { state: hostState, lifecycle: RUN_LIFECYCLE } = options.world;
+  const { state: hostState } = options.world;
   const { services } = options.world.context;
-  const CINEMA = options.world.context.cinema;
   const { authoritativeStep, simulationRuntime } = combat;
-  const { story, runtime: campaignRuntime, stage: stageRuntime } = options.campaign;
   const registry = createDefaultStateCodecRegistry();
   const captureSnapshot = (tick: number): TearSnapshotV1 | undefined => {
     const recorder = ghostV3;
@@ -100,7 +93,6 @@ export function createLiveGhostCapture(options: LiveGhostCaptureOptions) {
       ghostFrames.receipt(snapshot === undefined ? undefined : { id: snapshot.id, exactHash: snapshot.hashes.exact }),
     );
     ghostV3.record("results", tick, receipt);
-    finale.observed(snapshot, receipt);
     return snapshot;
   };
   /** At each recorder keyframe cadence: the presentation sample, the RNG anchor, then the authoritative receipt. */
@@ -135,26 +127,7 @@ export function createLiveGhostCapture(options: LiveGhostCaptureOptions) {
       captureReceipt(tick);
     }
   };
-  const finale = createLiveGhostFinaleCompanion({
-    session: ghostV3Session,
-    frames: ghostFrames,
-    tick: () => simulationRuntime.scheduler.tick,
-    run: liveRun,
-    finaleActive: () => story.finale !== null && RUN_LIFECYCLE.snapshot().phase === "finale",
-    completed: () => options.navigation.screen() === "win" && RUN_LIFECYCLE.snapshot().phase === "terminated",
-    captureReceipt,
-    witness: () => ({
-      canonical: canonicalState(simulationRuntime.scheduler.tick, simulationRuntime.input).state,
-      finale: campaignRuntime.captureFinaleBinding(),
-      cinema: CINEMA.captureState(),
-      cinemaInput: CINEMA.captureRecordedInput(),
-      lifecycle: RUN_LIFECYCLE.snapshot(),
-      rng: services.random.snapshot(),
-      seconds: services.clock.seconds(),
-      stage: stageRuntime.index,
-    }),
-  });
-  return Object.freeze({ registry, captureReceipt, recordKeyframe, finale });
+  return Object.freeze({ registry, captureReceipt, recordKeyframe });
 }
 
 export type LiveGhostCapture = ReturnType<typeof createLiveGhostCapture>;
