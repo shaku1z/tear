@@ -869,7 +869,7 @@ frozen evidence record.
 - [ ] Ghost 3.0 durable Vault and governed cloud publication — C28's named
   gate now proves real IndexedDB Vault storage across browser restart,
   version-1-to-version-2 migration, interrupted-write recovery, hostile
-  imports, Doctor repair children, the record of corrupt capsules, and a
+  imports, the chunk health scan, and a
   browser-enforced physical quota rejection after retaining a source capsule.
   C27 also includes a real IndexedDB live-capture sidecar plus a persisted V1
   replay bootstrap, keyframe-aligned canonical authoritative-hash receipts,
@@ -1105,10 +1105,20 @@ Removed in shaku1z/tear#227. The engineering-only Coach panel in the
 Theater (selected-run history, View Moment, practice before a cited moment)
 and its worker are gone, with the unused coach analysis contracts. The
 knowledge libraries (Canon, Frontier, Corpus) never had a writer outside
-tests and are gone; the one part the Vault uses, its record of capsules
-that failed their integrity check, is now `src/ghost/corrupt-capsule-records.ts`
-and stores the same bytes as before. The tutorial coach in Training is a
-different system and is unchanged.
+tests and are gone. The one part the Vault still used, its record of capsules
+that failed their integrity check, went with REPAIR (below). The tutorial coach
+in Training is a different system and is unchanged.
+
+### Removed: Vault REPAIR
+
+Removed in replay overhaul PR 2b (decision 2). Profile > VAULT no longer offers
+REPAIR for a damaged saved replay, and the vault no longer writes repaired
+copies, their lineage and quarantine entries, or a record of corrupt capsules.
+`ghost-doctor.ts` and `corrupt-capsule-records.ts` are gone; the health scan
+and the index rebuild moved into `src/ghost/vault-maintenance.ts`. A capsule
+with a missing or damaged chunk is listed as "damaged, can't play" with CAN'T
+PLAY. Repaired copies already in a player's vault stay as they were.
+Deleting a damaged capsule arrives with the new replay store (PR 6).
 
 ### Linked scored-run/finale portable files
 

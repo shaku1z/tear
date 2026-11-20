@@ -204,9 +204,6 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "profile.watchGhostCapsule": (action) => {
       ports.library.watchGhostCapsule(action.id);
     },
-    "profile.repairGhostCapsule": (action) => {
-      ports.library.repairGhostCapsule(action.id);
-    },
     "career.control": (action) => {
       ports.library.careerAction(action.command, action.id);
     },

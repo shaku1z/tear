@@ -68,6 +68,8 @@ export interface SceneLayout {
   /** Colour the HUD/actor ink polarity is derived from while the scene shows. */
   readonly theme: { readonly paper: string };
   readonly layers: readonly SceneLayer[];
+  /** What moves, in drawing order within each layer. */
+  readonly live: readonly SceneLive[];
   readonly platforms: ScenePlatformBinding;
 }
 
@@ -179,4 +181,93 @@ export function frontLayerIntrusion(
     }
   }
   return Math.max(0, reach);
+}
+
+/**
+ * What moves in a painted stage. Every entry belongs to one layer and draws
+ * right after it, in that layer's coordinates, so it shares the layer's depth
+ * and plane. Positions and sizes are world units; times are seconds. Each entry
+ * is a closed form of the frame's time, so nothing is stored between frames.
+ */
+export type SceneLive = SceneLiveWater | SceneLiveMotes | SceneLivePart;
+
+/** One row of water: the layer's own paint between two rows, slid sideways. */
+export interface SceneWaterRow {
+  readonly y: number;
+  readonly h: number;
+  /** Farthest the row slides either way. */
+  readonly reach: number;
+  readonly phase: number;
+}
+
+/** A short streak of light that fades in and out on the water. */
+export interface SceneGlint {
+  readonly x: number;
+  readonly y: number;
+  readonly w: number;
+  readonly period: number;
+  readonly phase: number;
+}
+
+export interface SceneLiveWater {
+  readonly kind: "water";
+  readonly layer: string;
+  readonly rows: readonly SceneWaterRow[];
+  /** Seconds for one pass of the slower wave train. */
+  readonly period: number;
+  readonly glints: readonly SceneGlint[];
+  /** Glint colour as "r,g,b". */
+  readonly glintColor: string;
+  readonly glintAlpha: number;
+}
+
+export interface SceneMote {
+  readonly x: number;
+  readonly y: number;
+  readonly size: number;
+  readonly phase: number;
+}
+
+export interface SceneLiveMotes {
+  readonly kind: "motes";
+  readonly layer: string;
+  /** Motes drift across this area and wrap, fading at its edges. */
+  readonly area: Rect;
+  readonly motes: readonly SceneMote[];
+  /** Mote colour as "r,g,b". */
+  readonly color: string;
+  readonly alpha: number;
+  /** World units per second. */
+  readonly drift: readonly [x: number, y: number];
+  /** Sideways wander either way, and the seconds one wander takes. */
+  readonly wobble: number;
+  readonly period: number;
+}
+
+/** A part swings from one edge: slices across its width lean in a travelling wave. */
+export interface SceneSway {
+  readonly pivot: "top" | "bottom";
+  readonly slices: number;
+  /** Farthest the free edge moves either way. */
+  readonly reach: number;
+  readonly period: number;
+  /** Turns of the wave across the part's width. */
+  readonly travel: number;
+}
+
+/** A part fades between `low` and fully shown. */
+export interface SceneBreathe {
+  readonly low: number;
+  readonly period: number;
+}
+
+/** A piece of the picture painted on its own image so it can move. */
+export interface SceneLivePart {
+  readonly kind: "part";
+  readonly layer: string;
+  readonly image: string;
+  readonly rect: Rect;
+  readonly blend: "source-over" | "lighter";
+  readonly sway?: SceneSway;
+  readonly breathe?: SceneBreathe;
 }

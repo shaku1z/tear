@@ -120,10 +120,9 @@
     },
     {
       "id": "repository-records",
-      "reason": "Configuration, preservation and research records; covered by check:docs, check:workspace and their own tests.",
+      "reason": "Configuration and research records; covered by check:docs and their own tests.",
       "paths": [
         "config/",
-        "preservation/",
         "analysis/",
         "experiments/",
         "wiki/"

@@ -1339,7 +1339,6 @@ describe("legacy screen renderer registry", () => {
       const rowTypes = new Set([
         "profile.watchGhostCapsule",
         "profile.downloadGhostArchive",
-        "profile.repairGhostCapsule",
         "profile.watchReplay",
         "profile.pinReplay",
         "profile.publishReplay",
@@ -1456,7 +1455,7 @@ describe("legacy screen renderer registry", () => {
     expect(JSON.stringify(controls)).not.toContain("codec restore rejected");
   });
 
-  it("offers a semantic repair action only for an unhealthy Vault capsule", () => {
+  it("shows an unhealthy Vault capsule as CAN'T PLAY and offers no repair", () => {
     const controls: ScreenControl[] = [];
     const renderer = createScreenRenderers(createRenderContext(controls));
     renderer.profile({
@@ -1470,21 +1469,22 @@ describe("legacy screen renderer registry", () => {
         {
           id: "damaged-capsule",
           title: "Ghost V3 - COACHING",
-          detail: "COMPLETE - 3 CHUNKS - NEEDS REPAIR",
+          detail: "Complete recording · damaged, can't play",
           available: false,
-          repairable: true,
-          badge: "DURABLE CAPSULE",
+          theaterUnavailable: true,
+          badge: "SAVED REPLAY",
         },
       ],
     });
-    expect(controls.find((control) => control.action.type === "profile.repairGhostCapsule")).toMatchObject({
-      label: "REPAIR",
+    expect(controls.find((control) => control.action.type === "profile.watchGhostCapsule")).toMatchObject({
+      label: "CAN'T PLAY",
       x: 968,
       y: 324,
       w: 110,
       h: 40,
-      action: { type: "profile.repairGhostCapsule", id: "damaged-capsule" },
+      action: { type: "profile.watchGhostCapsule", id: "damaged-capsule" },
     });
+    expect(controls.some((control) => control.label === "REPAIR")).toBe(false);
     expect(controls.some((control) => control.action.type === "profile.watchReplay")).toBe(false);
   });
 

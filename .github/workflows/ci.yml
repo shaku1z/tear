@@ -140,13 +140,23 @@ jobs:
           job: static
       - name: Static checks (format, repository guards, typecheck, lint)
         run: node scripts/run-checks.mjs static
-      - uses: actions/upload-artifact@v4
+      # Read by .github/actions/check-results on a re-run of this job (to report flaky checks), which
+      # goes on without them, and by scripts/ci-check-times.mjs by hand. Nothing needs them to pass,
+      # so a failed upload must not decide the job's verdict; the next step reports it.
+      - id: check-results-upload
+        uses: actions/upload-artifact@v4
         if: always()
+        continue-on-error: true
         with:
           name: check-results-static-${{ github.run_attempt }}
           path: ${{ runner.temp }}/check-results/results.json
           if-no-files-found: ignore
           retention-days: 14
+      - name: Report a failed check-results upload
+        if: always() && steps.check-results-upload.outcome == 'failure'
+        run: |
+          echo "::warning title=check-results upload failed::check-results-static-${{ github.run_attempt }} was not uploaded; the checks' verdict stands. Lost: this job's timings for scripts/ci-check-times.mjs, and a later re-run of this job cannot report flaky checks."
+          echo "- check-results upload failed for check-results-static-${{ github.run_attempt }}: the checks' verdict stands; this job's timings are lost, and a later re-run of this job cannot report flaky checks." >> "$GITHUB_STEP_SUMMARY"
 
   unit:
     needs: scope
@@ -170,13 +180,23 @@ jobs:
           job: unit
       - name: Unit tests
         run: node scripts/run-checks.mjs unit
-      - uses: actions/upload-artifact@v4
+      # Read by .github/actions/check-results on a re-run of this job (to report flaky checks), which
+      # goes on without them, and by scripts/ci-check-times.mjs by hand. Nothing needs them to pass,
+      # so a failed upload must not decide the job's verdict; the next step reports it.
+      - id: check-results-upload
+        uses: actions/upload-artifact@v4
         if: always()
+        continue-on-error: true
         with:
           name: check-results-unit-${{ github.run_attempt }}
           path: ${{ runner.temp }}/check-results/results.json
           if-no-files-found: ignore
           retention-days: 14
+      - name: Report a failed check-results upload
+        if: always() && steps.check-results-upload.outcome == 'failure'
+        run: |
+          echo "::warning title=check-results upload failed::check-results-unit-${{ github.run_attempt }} was not uploaded; the checks' verdict stands. Lost: this job's timings for scripts/ci-check-times.mjs, and a later re-run of this job cannot report flaky checks."
+          echo "- check-results upload failed for check-results-unit-${{ github.run_attempt }}: the checks' verdict stands; this job's timings are lost, and a later re-run of this job cannot report flaky checks." >> "$GITHUB_STEP_SUMMARY"
 
   # Builds every target once. The browser shards test these exact files: the release build in the
   # artifact the deploy workflows publish, and the other builds beside it, each verified by hash.
@@ -207,13 +227,23 @@ jobs:
       - name: Record the hash of each build
         id: hashes
         run: echo "hashes=$(node scripts/ci-build-hashes.mjs)" >> "$GITHUB_OUTPUT"
-      - uses: actions/upload-artifact@v4
+      # Read by .github/actions/check-results on a re-run of this job (to report flaky checks), which
+      # goes on without them, and by scripts/ci-check-times.mjs by hand. Nothing needs them to pass,
+      # so a failed upload must not decide the job's verdict; the next step reports it.
+      - id: check-results-upload
+        uses: actions/upload-artifact@v4
         if: always()
+        continue-on-error: true
         with:
           name: check-results-build-${{ github.run_attempt }}
           path: ${{ runner.temp }}/check-results/results.json
           if-no-files-found: ignore
           retention-days: 14
+      - name: Report a failed check-results upload
+        if: always() && steps.check-results-upload.outcome == 'failure'
+        run: |
+          echo "::warning title=check-results upload failed::check-results-build-${{ github.run_attempt }} was not uploaded; the checks' verdict stands. Lost: this job's timings for scripts/ci-check-times.mjs, and a later re-run of this job cannot report flaky checks."
+          echo "- check-results upload failed for check-results-build-${{ github.run_attempt }}: the checks' verdict stands; this job's timings are lost, and a later re-run of this job cannot report flaky checks." >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
           # Named after the commit actually built, which build-info.json records.
@@ -301,13 +331,23 @@ jobs:
           job: browser-${{ matrix.shard }}
       - name: Browser checks
         run: xvfb-run -a node scripts/run-checks.mjs browser --shard ${{ matrix.shard }}/4
-      - uses: actions/upload-artifact@v4
+      # Read by .github/actions/check-results on a re-run of this job (to report flaky checks), which
+      # goes on without them, and by scripts/ci-check-times.mjs by hand. Nothing needs them to pass,
+      # so a failed upload must not decide the job's verdict; the next step reports it.
+      - id: check-results-upload
+        uses: actions/upload-artifact@v4
         if: always()
+        continue-on-error: true
         with:
           name: check-results-browser-${{ matrix.shard }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/check-results/results.json
           if-no-files-found: ignore
           retention-days: 14
+      - name: Report a failed check-results upload
+        if: always() && steps.check-results-upload.outcome == 'failure'
+        run: |
+          echo "::warning title=check-results upload failed::check-results-browser-${{ matrix.shard }}-${{ github.run_attempt }} was not uploaded; the checks' verdict stands. Lost: this job's timings for scripts/ci-check-times.mjs, and a later re-run of this job cannot report flaky checks."
+          echo "- check-results upload failed for check-results-browser-${{ matrix.shard }}-${{ github.run_attempt }}: the checks' verdict stands; this job's timings are lost, and a later re-run of this job cannot report flaky checks." >> "$GITHUB_STEP_SUMMARY"
 
   # The required status. It fails closed: see scripts/ci-verdict.mjs.
   check:
