@@ -555,8 +555,21 @@ empty.
   ("nothing outlives its move"). Shape agreed on 2026-11-20 (see "Rootbound"). PR 5 waits for its
   phase-change pull request.
 - **Replay overhaul:** owns the snapshot codecs and the ruleset table's player-facing line. Every
-  codec field change above goes to it for review before merge. Whichever of PR 7 and replay PR 5
-  lands second deletes the application-frame confirm path.
+  codec field change above goes to it for review before merge, with the PR number sent before the
+  PR touches `src/gameplay/snapshot`. Agreed on 2026-11-20; the order above does not clash with
+  theirs.
+  - Replay PR 4 moves the detached world from `src/tearbench` to `src/app/world/detached/`. For
+    example, `production-application-frame.ts` becomes `application-frame.ts`, and
+    `detached-world-hydrator.ts` becomes `world-hydrator.ts`. Live capture and restore move to
+    `src/gameplay/snapshot/live-capture.ts` and `live-restore.ts`. Codec PRs here branch from
+    main after that lands and use the new paths.
+  - The stage beat field (PR 1) goes in three places: the world codec, live capture and the
+    detached world hydrator. `tests/unit/detached-live-parity.test.ts` and
+    `detached-finale-live-parity.test.ts` check that they agree.
+  - Replay PR 5 deletes `ghost-frame-recording.ts` and `application-frame-events.ts`. Whichever
+    of that and PR 7 lands second deletes the remaining application-frame confirm path.
+  - The lead's Verdant and Pale rebuild plan may touch the same snapshot fields; agree the order
+    with the lead before PR 5.
 - **Playtest tool:** `cinematicTicks` in `src/playtest/boss-fight.ts` stays as the measure (it reads
   0 after PR 5). It is removed in PR 7 together with `cinematicActive()`.
 
