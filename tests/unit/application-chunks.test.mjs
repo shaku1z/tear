@@ -107,8 +107,6 @@ describe("application chunk rule", () => {
     });
     expect(reachedOnlyDynamically(corpus, meta)).toBe(true);
     expect(applicationChunk(corpus, meta)).toBe("tutorial-gold-reference");
-    // The module that checks the corpus ships in the same chunk, so no separate small file reaches the precache.
-    expect(applicationChunk(reader, meta)).toBe("tutorial-gold-reference");
   });
 
   it("keeps the folder groups for startup modules and ignores modules outside src", () => {

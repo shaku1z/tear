@@ -243,6 +243,7 @@ export default defineConfig(({ mode, command }) => {
                 globIgnores: [
                   "**/node_modules/**/*",
                   "assets/tutorial-gold-reference-*.js",
+                  "assets/tutorial-gold-corpus-*.js",
                   "assets/worker-tutorial-gold-*.js",
                   "assets/career-archive-worker-*.js",
                   "assets/live-ghost-reference-worker-*.js",
@@ -252,9 +253,10 @@ export default defineConfig(({ mode, command }) => {
                 ],
                 runtimeCaching: [
                   {
-                    urlPattern: /\/assets\/tutorial-gold-reference-[\w-]+\.js$/u,
+                    // The corpus, the module that checks it and the code that reads it: three files per build.
+                    urlPattern: /\/assets\/tutorial-gold-(?:reference|corpus)-[\w-]+\.js$/u,
                     handler: "CacheFirst",
-                    options: { cacheName: "tear-tutorial-gold", expiration: { maxEntries: 1 } },
+                    options: { cacheName: "tear-tutorial-gold", expiration: { maxEntries: 6 } },
                   },
                   {
                     urlPattern: /\/assets\/(?:career-archive|live-ghost-reference)-worker-[\w-]+\.js$/u,
@@ -297,9 +299,7 @@ export default defineConfig(({ mode, command }) => {
               {
                 name: "worker-tutorial-gold",
                 test: (id) =>
-                  ["tutorial-gold-reference-data.json", "tutorial-gold-corpus.ts"].some((file) =>
-                    id.replaceAll("\\", "/").endsWith(`/src/gameplay/training/${file}`),
-                  ),
+                  id.replaceAll("\\", "/").endsWith("/src/gameplay/training/tutorial-gold-reference-data.json"),
               },
             ],
           },
