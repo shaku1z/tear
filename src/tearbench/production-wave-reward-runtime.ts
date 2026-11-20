@@ -55,7 +55,11 @@ export interface ProductionWaveRewardRuntime {
   readonly restoreScreen: (screen: string) => void;
   readonly focus: () => number;
   readonly restoreUi: (screen: string, focus: number) => void;
-  readonly startNaturalOpening: () => void;
+  /**
+   * Starts the run. `firstWave` is the wave it opens on (1 for every player's run): the run is placed just before
+   * it and the game's own wave planner starts it, so the stage, the chapter and the wave are the game's.
+   */
+  readonly startNaturalOpening: (firstWave?: number) => void;
   readonly spawnTutorial: (
     kind: EnemyKind,
     hpScale: number,
@@ -364,9 +368,9 @@ export function createProductionWaveRewardRuntime(
     controls: () => [],
     focus: () => focus,
   };
-  const startNaturalOpening = () => {
+  const startNaturalOpening = (firstWave = 1) => {
     if (world.lifecycle.phase !== "idle") throw new Error("production wave runtime cannot restart an active lifecycle");
-    run().wave = 0;
+    run().wave = firstWave - 1;
     // As the live run start does, a Gauntlet opening draws its trial order.
     const opening = run();
     if (opening.mode === "gauntlet" && opening.bossOrder.length === 0) opening.bossOrder = content.gauntletTrials();

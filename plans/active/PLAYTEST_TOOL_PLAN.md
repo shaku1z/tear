@@ -367,6 +367,15 @@ Done when:
 `situations.json`; phase, wave and stage starts through the snapshot factories; `enemies`
 and `runs` reports; coverage; `--compare`.
 
+Built first (2026-11-20, brought forward for `pnpm playtest waves`): a headless start on a chosen wave.
+A scenario's `start.wave` (with `start.stage` to name the Adventure stage it belongs to) places the run
+just before that wave and lets the game's own wave planner start it, so the stage, its story chapter and
+the wave's enemies are the game's, for every stage from one path. It is marked `surgical-valid` and gives
+no checkpoint; a later wave is refused in modes whose waves the planner does not number (boss-only, the
+Gauntlet). `src/playtest/headless/chapter.ts` skips the chapter the way a player does. Limit, stated in
+every report that uses it: the player arrives with no upgrades, as in the browser's wave scenarios; a
+build for the player is a later piece. Test: `tests/unit/playtest-wave-start.test.ts`.
+
 Done when:
 - [ ] Every boss phase, every wave of each biome and every enemy kind is a row that starts directly, in under 1 s each.
 - [ ] `pnpm playtest runs` reports where runs end and per-wave time and health cost for 3 modes, 3 difficulties and 5 weapons.

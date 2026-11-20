@@ -87,6 +87,8 @@ const productionWaveRewards = new WeakMap<ProductionReplayWorld, ProductionWaveR
 
 export type { ProductionApplicationFrameConfirm } from "./production-application-frame";
 
+const CONTENT_HASH = stableVerificationHash(ENTITY_KIND_REGISTRY.ids);
+
 export interface ProductionGhostReplayCompositionOptions {
   readonly observeStyle?: ProductionCombatPhaseOptions["observeStyle"];
   readonly observeTerminal?: (outcome: "defeat" | "victory") => void;
@@ -97,6 +99,7 @@ export interface ProductionGhostReplayCompositionOptions {
   readonly weaponId?: string;
   readonly difficulty?: RunDifficulty;
   readonly firstBoss?: string;
+  readonly firstWave?: number;
   /** Optional immutable identity supplied by the build/composition boundary. */
   readonly buildIdentity?: Omit<TearBuildIdentityV1, "configHash">;
   readonly forkOrigin?: GhostForkOriginV1;
@@ -472,7 +475,7 @@ export function captureProductionReplayCheckpoint(
     observationClass: "structured-state",
     producer: "production-headless-checkpoint",
     target: buildIdentity?.target ?? "headless",
-    contentHash: buildIdentity?.contentHash ?? stableVerificationHash(ENTITY_KIND_REGISTRY.ids),
+    contentHash: buildIdentity?.contentHash ?? CONTENT_HASH,
     ...(buildIdentity === undefined ? {} : { buildIdentity }),
     // A required contract hash that explicitly denotes absence of a pixel capture;
     // it is not rendered-output evidence.
@@ -738,10 +741,7 @@ export function createProductionGhostReplayComposition(options: ProductionGhostR
           waveReward?.restoreScreen("paused");
         },
       });
-      const runtimeBuild = injectedBuildIdentity(
-        "production-headless",
-        stableVerificationHash(ENTITY_KIND_REGISTRY.ids),
-      );
+      const runtimeBuild = injectedBuildIdentity("production-headless", CONTENT_HASH);
       const inheritedBuild = snapshot?.provenance.build;
       const suppliedBuild = inheritedBuild === undefined ? (options.buildIdentity ?? runtimeBuild) : undefined;
       const bootstrap = Object.freeze({
@@ -752,7 +752,7 @@ export function createProductionGhostReplayComposition(options: ProductionGhostR
             revision: suppliedBuild?.revision ?? "unbound",
             target: suppliedBuild?.target ?? "production-headless",
             rulesetVersion: suppliedBuild?.rulesetVersion ?? "live",
-            contentHash: suppliedBuild?.contentHash ?? stableVerificationHash(ENTITY_KIND_REGISTRY.ids),
+            contentHash: suppliedBuild?.contentHash ?? CONTENT_HASH,
             configHash: stableVerificationHash(replay.configuration.value),
           }),
         rng: replay.world.context.services.random.snapshot(),
@@ -856,8 +856,8 @@ export function createProductionGhostReplayComposition(options: ProductionGhostR
       });
       productionWaveRewards.set(replay, waveReward);
       replay.bindTutorialSpawn(waveReward.spawnTutorial);
-      if (staged === undefined) waveReward.startNaturalOpening();
-      if (staged !== undefined) {
+      if (staged === undefined) waveReward.startNaturalOpening(options.firstWave);
+      else {
         waveReward.reward.restore(staged.reward);
         waveReward.restoreUi(staged.screen, productionFocus.get(replay) ?? -1);
         replay.tutorial.restorePresentation(staged.tutorialPresentation);
