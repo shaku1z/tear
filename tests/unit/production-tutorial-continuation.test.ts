@@ -14,7 +14,7 @@ import { stableVerificationHash } from "../../src/domain/hash";
 import {
   captureProductionReplayCheckpoint,
   createProductionGhostReplayComposition,
-} from "../../src/tearbench/production-replay-composition";
+} from "../../src/app/world/detached/replay-composition";
 import {
   createProductionHeadlessEnvironment,
   type ProductionHeadlessCheckpoint,

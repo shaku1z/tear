@@ -6,7 +6,7 @@
  *
  * Kinds:
  * - import: a module in `in` (minus `except`) may not reference a module in
- *   `to`. `edges` is `any` (default, includes `import type`), `value`, or
+ *   `to` (minus `toExcept`). `edges` is `any` (default, includes `import type`), `value`, or
  *   `static-value` (dynamic `import()` allowed). `transitive` also follows
  *   every edge of the import graph.
  * - text: the source text of an in-scope module may not match `pattern`.
@@ -166,19 +166,19 @@ const PORTABLE_RULES = [
     { reject: [CANVAS_FIXTURE], accept: [{ text: "const x = 1;" }] },
   ),
   importRule(
-    "tearbench.detached-world-imports",
+    "app.detached-world-hydrator-imports",
     ["R09"],
-    ["@tearbench.detached-world"],
+    ["@app.detached-world-hydrator"],
     OUTWARD,
-    "detached TearBench world modules cannot depend on outward app, presentation, service, or Ghost 2 adapters",
+    "detached world hydration cannot depend on outward app, presentation, service, or Ghost 2 adapters",
     { fixtures: { reject: [{ ...APP_IMPORT_FIXTURE, type: true }], accept: [] } },
   ),
   textRule(
-    "tearbench.detached-world-browser-globals",
+    "app.detached-world-hydrator-browser-globals",
     ["R10"],
-    ["@tearbench.detached-world"],
+    ["@app.detached-world-hydrator"],
     BROWSER_GLOBALS,
-    "detached TearBench world modules cannot reference browser or Canvas globals",
+    "detached world hydration cannot reference browser or Canvas globals",
     { reject: [CANVAS_FIXTURE], accept: [] },
   ),
   importRule(
@@ -186,8 +186,14 @@ const PORTABLE_RULES = [
     ["R11"],
     ["@tearbench.production-headless-entry"],
     [...OUTWARD, "src/**/browser/**"],
-    "production headless entry cannot import browser or outward adapters directly",
-    { fixtures: { reject: [APP_IMPORT_FIXTURE, { imports: "@tearbench.browser-adapters" }], accept: [] } },
+    "production headless entry cannot import browser or outward adapters directly; the detached world is its way into the app",
+    {
+      toExcept: ["@app.detached-world"],
+      fixtures: {
+        reject: [APP_IMPORT_FIXTURE, { imports: "@tearbench.browser-adapters" }],
+        accept: [{ imports: "@app.detached-world" }],
+      },
+    },
   ),
   textRule(
     "tearbench.headless-entry-browser-globals",
@@ -691,6 +697,11 @@ export const RULES = Object.freeze([
 export function ruleSelectorUsages(rules = RULES) {
   return rules.map((rule) => ({
     where: `rule ${rule.id}`,
-    selectors: [...(rule.anticipatory === true ? [] : rule.in), ...(rule.except ?? []), ...(rule.to ?? [])],
+    selectors: [
+      ...(rule.anticipatory === true ? [] : rule.in),
+      ...(rule.except ?? []),
+      ...(rule.to ?? []),
+      ...(rule.toExcept ?? []),
+    ],
   }));
 }

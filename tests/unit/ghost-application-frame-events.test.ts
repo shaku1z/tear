@@ -20,7 +20,7 @@ import { createGhostAuthoritativeReceipt } from "../../src/ghost/authoritative-r
 import {
   captureProductionReplayCheckpoint,
   createProductionGhostReplayComposition,
-} from "../../src/tearbench/production-replay-composition";
+} from "../../src/app/world/detached/replay-composition";
 import { GhostProductionReplayWorld } from "../../src/ghost/replay-world";
 import { createGhostV3, type GhostReplayTrident } from "../../src/ghost/truth-kernel";
 import type { GhostReadCapsule } from "../../src/ghost/capsule-reader";

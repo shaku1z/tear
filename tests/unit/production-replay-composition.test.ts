@@ -20,18 +20,18 @@ import { stableVerificationHash } from "../../src/domain/hash";
 import {
   captureProductionReplayCheckpoint,
   createProductionGhostReplayComposition,
-  createProductionReplayWorld,
   restoreProductionReplayChapterBinding,
   restoreProductionReplaySnapshot,
-} from "../../src/tearbench";
+} from "../../src/app/world/detached/replay-composition";
+import { createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
 import { environmentHash, environmentSnapshotToObservation } from "../../src/gameplay/snapshot/environment-codec";
 import { GhostProductionReplayWorld } from "../../src/ghost/replay-world";
 import { createGhostV3, type GhostReplayTrident } from "../../src/ghost/truth-kernel";
 import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-setup-live-compiler";
 import { resolveTearSdl, type TearSdlDocumentV1 } from "../../src/tearbench/tearsdl";
-import type { ProductionReplayWorld } from "../../src/tearbench/production-world-factory";
+import type { ProductionReplayWorld } from "../../src/app/world/detached/world-factory";
 import type { TearSnapshotV1 } from "../../src/gameplay/snapshot/snapshot-contract";
-import { createLiveParticlePresentationState } from "../../src/tearbench/particle-presentation-state";
+import { createLiveParticlePresentationState } from "../../src/app/world/detached/particle-state";
 import { legacyCosmeticEmissionSnapshot } from "../../src/domain/cosmetic-emission-random";
 import { UPGRADES, applyUpgrade } from "../../src/gameplay/upgrades";
 

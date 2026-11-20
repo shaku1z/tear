@@ -6,7 +6,7 @@ import type { GameAction } from "../input/game-action";
 import type { TearScenarioV1 } from "./contracts";
 import type { TearSnapshotV1 } from "../gameplay/snapshot/snapshot-contract";
 import { projectGameplayEventForParity, type TearSemanticEngineEventV1 } from "./gameplay-causal-events";
-import { createProductionGhostReplayComposition } from "./production-replay-composition";
+import { replayEngine, type ReplayEngine } from "../ghost/replay-engine";
 
 export interface ProductionC27AHashReceipt {
   readonly tick: number;
@@ -71,7 +71,9 @@ function fallbackSegments(trace: ProductionC27ATrace): readonly ProductionC27ASe
   });
 }
 
-function routeProjection(result: ReturnType<ReturnType<typeof createProductionGhostReplayComposition>["create"]>) {
+function routeProjection(
+  result: ReturnType<ReturnType<ReplayEngine["createProductionGhostReplayComposition"]>["create"]>,
+) {
   const run = result.replay.world.state.run() as never as { wave: number; mods: { owned: Record<string, number> } };
   const selection = result.waveReward.reward.snapshot();
   return Object.freeze({
@@ -104,13 +106,16 @@ export function replayProductionC27ATrace(trace: ProductionC27ATrace): Productio
   gameplayEvents.subscribe((event) => {
     nativeEvents.push(event);
   });
-  const composed = createProductionGhostReplayComposition({
-    seed: trace.origin.seed,
-    mode: trace.scenario.start.mode,
-    weaponId: trace.scenario.start.weapon,
-    gameplayEvents,
-    ...(trace.originInput === undefined ? {} : { inputSnapshots: new Map([[trace.origin.tick, trace.originInput]]) }),
-  }).create(trace.origin);
+  const composed = replayEngine
+    .loaded()
+    .createProductionGhostReplayComposition({
+      seed: trace.origin.seed,
+      mode: trace.scenario.start.mode,
+      weaponId: trace.scenario.start.weapon,
+      gameplayEvents,
+      ...(trace.originInput === undefined ? {} : { inputSnapshots: new Map([[trace.origin.tick, trace.originInput]]) }),
+    })
+    .create(trace.origin);
   const { simulation } = composed;
   gameplayEvents.setTickSource(() => simulation.scheduler.tick);
   const sequencer = new EnvelopeSequencer();

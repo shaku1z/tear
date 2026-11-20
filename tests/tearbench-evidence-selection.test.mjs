@@ -218,7 +218,7 @@ test("selection exposes canonical matrix and capability obligations bound to exe
 });
 
 test("production composition exposes all required hook-family dispositions", () => {
-  const selection = select(["src/tearbench/production-replay-composition.ts"]);
+  const selection = select(["src/app/world/detached/replay-composition.ts"]);
   assert.deepEqual(
     selection.backendDispositions.map((entry) => entry.family),
     [
@@ -270,7 +270,7 @@ test("production hook-family coverage and evidence ownership fail closed", () =>
     ],
   ];
   for (const [name, mutate, expected] of mutations) {
-    const result = rejected(["src/tearbench/production-replay-composition.ts"], {
+    const result = rejected(["src/app/world/detached/replay-composition.ts"], {
       routes: mutatedRoutes(name, mutate),
     });
     assert.notEqual(result.status, 0, name);
@@ -522,8 +522,8 @@ test("boss, stage, progression, event, and player owners receive current mapped 
 
 test("production replay/headless composition is explicitly dispositioned", () => {
   const selection = select([
-    "src/tearbench/production-combat-phases.ts",
-    "src/tearbench/production-replay-composition.ts",
+    "src/app/world/detached/combat-phases.ts",
+    "src/app/world/detached/replay-composition.ts",
     "src/playtest/headless/production-headless-environment.ts",
   ]);
   assert.ok(selection.routes.includes("production-replay-headless-composition"));

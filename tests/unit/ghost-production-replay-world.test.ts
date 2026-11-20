@@ -2,13 +2,14 @@ import { createBrowserGhostReplayPresentation } from "../../src/app/replay/brows
 import {
   createProductionGhostReplayComposition,
   projectProductionReplayCanonicalState,
-} from "../../src/tearbench/production-replay-composition";
+} from "../../src/app/world/detached/replay-composition";
 import { describe, expect, it } from "vitest";
 
 import { GhostProductionReplayWorld } from "../../src/ghost/replay-world";
 import { createGhostV3, type GhostReplayTrident } from "../../src/ghost/truth-kernel";
 import { CONFIG } from "../../src/config/game-config";
-import { createProductionCombatSimulation, createProductionReplayWorld } from "../../src/tearbench";
+import { createProductionCombatSimulation } from "../../src/app/world/detached/combat-simulation";
+import { createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
 
 const trident: GhostReplayTrident = {
   command: {

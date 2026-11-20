@@ -1,10 +1,9 @@
 import { readSeedRaceDecisions } from "./seed-race-decisions";
 import { readSeedRaceRun, seedRaceInitialBuildHash } from "../gameplay/run/seed-race-contract";
 import { stableVerificationHash } from "../domain/hash";
-import type { createProductionGhostReplayComposition } from "../tearbench/production-replay-composition";
-import { replayEngine } from "./replay-engine";
-import { injectedBuildIdentity } from "../tearbench/live-runtime-snapshots";
-import { ENTITY_KIND_REGISTRY } from "../tearbench/registries";
+import { replayEngine, type ReplayEngine } from "./replay-engine";
+import { injectedBuildIdentity } from "../gameplay/snapshot/live-capture";
+import { ENTITY_KIND_REGISTRY } from "../gameplay/snapshot/codec-ids";
 import { CURRENT_RULESET_VERSION } from "../gameplay/run/ruleset-version";
 import { TearGameplayEventBus } from "../gameplay/runtime/gameplay-events";
 import { AIM_MAGNITUDE_SCALE } from "../input/game-action";
@@ -100,7 +99,9 @@ export async function prepareGhostLiveReference(
   const gameplayEvents = new TearGameplayEventBus();
   let replayTick = 0,
     boundaries: GhostLiveReference["splits"][number][] = [];
-  const sampling: { session?: ReturnType<ReturnType<typeof createProductionGhostReplayComposition>["create"]> } = {};
+  const sampling: {
+    session?: ReturnType<ReturnType<ReplayEngine["createProductionGhostReplayComposition"]>["create"]>;
+  } = {};
   gameplayEvents.setTickSource(() => replayTick);
   gameplayEvents.subscribe((event) => {
     const active = sampling.session;

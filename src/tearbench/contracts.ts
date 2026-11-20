@@ -3,13 +3,13 @@ import type { GameAction } from "../input/game-action";
 import type {
   TearDifficultyId,
   TearBossId,
-  TearEntityKindId,
   TearEventId,
   TearInvariantId,
   TearRunModeId,
   TearWeaponId,
   TearWithinTickPhase,
 } from "./registries";
+import type { TearEntityKindId } from "../gameplay/snapshot/codec-ids";
 import type {
   TEAR_CONTRACT_FORMAT,
   TEAR_CONTRACT_VERSION,

@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { createParticleSystem } from "../../src/presentation/particles";
-import { createLiveParticlePresentationState } from "../../src/tearbench/particle-presentation-state";
+import { createLiveParticlePresentationState } from "../../src/app/world/detached/particle-state";
 import { createCosmeticEmissionRandom } from "../../src/domain/cosmetic-emission-random";
 
 import {
   hydrateTearCodecWorld,
   type TearWorldConstructionPort,
   type TearWorldHydrationContext,
-} from "../../src/tearbench";
+} from "../../src/app/world/detached/world-hydrator";
 import type { TearCodecId } from "../../src/gameplay/snapshot/codec-ids";
 import type { TearCodecValue, TearCodecWorld } from "../../src/gameplay/snapshot/state-codec";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";

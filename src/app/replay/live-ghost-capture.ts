@@ -2,8 +2,8 @@ import { createGhostAuthoritativeReceipt } from "../../ghost/authoritative-recei
 import { ghostLiveBootstrapEventId } from "../../ghost/live-causal-events";
 import { stableVerificationHash } from "../../domain/hash";
 import type { TearSnapshotV1 } from "../../gameplay/snapshot/snapshot-contract";
-import { captureLiveStateSetupSnapshot } from "../../tearbench/live-runtime-snapshots";
-import type { TearLiveWorldAdapter } from "../../tearbench/live-state-snapshot";
+import { captureLiveStateSetupSnapshot } from "../../gameplay/snapshot/live-capture";
+import type { TearLiveWorldAdapter } from "../../gameplay/snapshot/live-restore";
 import { createDefaultStateCodecRegistry } from "../../gameplay/snapshot/state-codec";
 import type { LiveCanonicalCombatHost, LiveCanonicalStateCapture } from "../combat/live-canonical-state";
 import type { GameBlade, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";

@@ -1,7 +1,8 @@
 import type { GameAction } from "../input/game-action";
 import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
 import { stageIdAtRuntimeIndex } from "../gameplay/stages";
-import { ENTITY_KIND_REGISTRY, type TearEntityKindId, type TearStageId } from "./registries";
+import { ENTITY_KIND_REGISTRY, type TearEntityKindId } from "../gameplay/snapshot/codec-ids";
+import type { TearStageId } from "./registries";
 
 /** Associates actors with the current production wave using actual native lifecycle facts. */
 export function createSourceWaveOwnershipTracker() {

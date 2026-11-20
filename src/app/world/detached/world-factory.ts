@@ -1,39 +1,39 @@
-import { createProductionFinaleRuntime } from "./production-finale-runtime";
-import type { TearGameplayEventPort } from "../gameplay/runtime/gameplay-events";
-import { deriveVoidSeed } from "../gameplay/run/live-run-start-controller";
-import { createLiveBossPhasePractice } from "../app/campaign/boss-phase-practice";
-import { createLiveCinematicHost } from "../app/campaign/cinematic-host";
-import { createLiveSourceVoidController } from "../app/run/source-void-controller";
-import { stageAt } from "../gameplay/stages";
-import type { EnemyKind } from "../gameplay/run/content-director";
-import { A11Y, CONFIG, GFX, REMOTE } from "../config/game-config";
-import { createLiveAuthoritativeInputAdapter } from "../gameplay/runtime/authoritative-input-adapter";
-import { createLiveWorldComposition, type LiveWorldSessionPort } from "../app/world/world-composition";
-import type { GameRuntimeDependencies } from "../app/shell/game-runtime-dependencies";
-import { aabbOverlap, clamp, len, lerp, lerpAngle, segPointDist, segSegmentDist } from "../domain/geometry";
-import { applyWeapon } from "../gameplay/weapons";
-import { CinematicTimeline } from "../gameplay/runtime/cinematic-director";
-import { createTearWorldBootstrap } from "../gameplay/runtime/tear-world-bootstrap";
+import { createProductionFinaleRuntime } from "./finale-runtime";
+import type { TearGameplayEventPort } from "../../../gameplay/runtime/gameplay-events";
+import { deriveVoidSeed } from "../../../gameplay/run/live-run-start-controller";
+import { createLiveBossPhasePractice } from "../../campaign/boss-phase-practice";
+import { createLiveCinematicHost } from "../../campaign/cinematic-host";
+import { createLiveSourceVoidController } from "../../run/source-void-controller";
+import { stageAt } from "../../../gameplay/stages";
+import type { EnemyKind } from "../../../gameplay/run/content-director";
+import { A11Y, CONFIG, GFX, REMOTE } from "../../../config/game-config";
+import { createLiveAuthoritativeInputAdapter } from "../../../gameplay/runtime/authoritative-input-adapter";
+import { createLiveWorldComposition, type LiveWorldSessionPort } from "../world-composition";
+import type { GameRuntimeDependencies } from "../../shell/game-runtime-dependencies";
+import { aabbOverlap, clamp, len, lerp, lerpAngle, segPointDist, segSegmentDist } from "../../../domain/geometry";
+import { applyWeapon } from "../../../gameplay/weapons";
+import { CinematicTimeline } from "../../../gameplay/runtime/cinematic-director";
+import { createTearWorldBootstrap } from "../../../gameplay/runtime/tear-world-bootstrap";
 import {
   createTearWorldSimulationFactories,
   type TearWorldEntityPresentationPorts,
   type TearWorldSimulationFactoryOptions,
-} from "../gameplay/runtime/tear-world-simulation-factories";
-import { newMods } from "../gameplay/upgrades";
-import { planRunStart } from "../gameplay/run/run-start-plan";
-import type { RunDifficulty } from "../gameplay/run/session";
-import { stagePlatforms } from "../gameplay/stages";
-import { cosmeticRandom } from "../presentation/cosmetic-random";
-import { createCosmeticEmissionRandom } from "../domain/cosmetic-emission-random";
-import { createMirrorLockFeedback } from "../presentation/mirror-lock-feedback";
-import { createParticleSystem } from "../presentation/particles";
+} from "../../../gameplay/runtime/tear-world-simulation-factories";
+import { newMods } from "../../../gameplay/upgrades";
+import { planRunStart } from "../../../gameplay/run/run-start-plan";
+import type { RunDifficulty } from "../../../gameplay/run/session";
+import { stagePlatforms } from "../../../gameplay/stages";
+import { cosmeticRandom } from "../../../presentation/cosmetic-random";
+import { createCosmeticEmissionRandom } from "../../../domain/cosmetic-emission-random";
+import { createMirrorLockFeedback } from "../../../presentation/mirror-lock-feedback";
+import { createParticleSystem } from "../../../presentation/particles";
 import {
   createLiveTutorialRuntime,
   recoverTutorialBlade,
   resetTutorialActors,
-} from "../gameplay/training/live-tutorial-runtime";
-import { createTutorialArena } from "../gameplay/training/tutorial-arenas";
-import { trainingPlatforms } from "../gameplay/training/playground-controller";
+} from "../../../gameplay/training/live-tutorial-runtime";
+import { createTutorialArena } from "../../../gameplay/training/tutorial-arenas";
+import { trainingPlatforms } from "../../../gameplay/training/playground-controller";
 
 type FactoryOptions = TearWorldSimulationFactoryOptions;
 

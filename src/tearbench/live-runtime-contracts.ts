@@ -13,7 +13,7 @@ import type {
   BloomWellPresentationOptions,
 } from "../gameplay/environment/bloom-well-presentation-facts";
 import type { TearScenarioTransition } from "./runner";
-import type { TearLiveRestoreResult, TearLiveWorldAdapter } from "./live-state-snapshot";
+import type { TearLiveRestoreResult, TearLiveWorldAdapter } from "../gameplay/snapshot/live-restore";
 import type { StateSetupExitLaunch } from "./state-setup-exit-gate";
 import type { TearProgressionLedger } from "./progression-ledger";
 import type { TearProgressionReplayResult } from "./progression-replay";

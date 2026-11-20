@@ -6,6 +6,11 @@ export function ruleApplies(rule, file, resolver) {
   return resolver.matchesAny(rule.in, file) && !resolver.matchesAny(rule.except ?? [], file);
 }
 
+/** A module in an import rule's `to`, minus its `toExcept`. */
+function targetSelected(rule, file, resolver) {
+  return resolver.matchesAny(rule.to, file) && !resolver.matchesAny(rule.toExcept ?? [], file);
+}
+
 function edgeQualifies(rule, record) {
   const edges = rule.edges ?? "any";
   if (edges === "any") return true;
@@ -15,7 +20,7 @@ function edgeQualifies(rule, record) {
 
 function targetMatches(rule, resolution, resolver) {
   const candidates = resolution.resolved ? [resolution.target] : [resolution.target, `${resolution.target}.ts`];
-  return candidates.some((candidate) => resolver.matchesAny(rule.to, candidate));
+  return candidates.some((candidate) => targetSelected(rule, candidate, resolver));
 }
 
 function snippet(text) {
@@ -96,7 +101,7 @@ export function transitiveFindings(rule, graph, resolver) {
     const queue = [...parents.keys()];
     // The array iterator re-reads the length, so modules appended below are visited too (breadth first).
     for (const node of queue) {
-      if (resolver.matchesAny(rule.to, node)) {
+      if (targetSelected(rule, node, resolver)) {
         if (parents.get(node) === undefined) continue;
         findings.push(finding(rule, source, `transitively through ${chain(parents, node).join(" -> ")}`));
         break;

@@ -11,7 +11,7 @@ import { createTearWorldComposition } from "../../src/gameplay/runtime/tear-worl
 import { createLiveWorldServices } from "../../src/app/world/world-context";
 import { MusicDirector } from "../../src/audio/music-director";
 import { createCosmeticEmissionRandom } from "../../src/domain/cosmetic-emission-random";
-import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
+import { createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
 import type { TearGameplayEventPort } from "../../src/gameplay/runtime/gameplay-events";
 
 function createWorldDependencies() {
@@ -59,7 +59,7 @@ function createConfiguration() {
 
 /** The live production-world root's options (src/app/shell/production-world.ts). */
 const LIVE = Object.freeze({ publishEnvironmentEvents: true, musicDirection: true } as const);
-/** The detached TearBench replay world's options (src/tearbench/production-world-factory.ts). */
+/** The detached TearBench replay world's options (src/app/world/detached/world-factory.ts). */
 const DETACHED = Object.freeze({ publishEnvironmentEvents: false, musicDirection: false } as const);
 
 function withEventBus(dependencies: GameRuntimeDependencies) {

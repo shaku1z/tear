@@ -8,12 +8,12 @@ import { createSurfaceAvailability } from "../../src/domain/surface-availability
 import { createLiveRunStartHost } from "../../src/app/run/run-start-host";
 import { createLiveGhostOpeningCapture } from "../../src/app/replay/ghost-opening-capture";
 import { GhostLiveRecorder } from "../../src/ghost/live-recorder";
-import * as productionReplayComposition from "../../src/tearbench/production-replay-composition";
+import * as productionReplayComposition from "../../src/app/world/detached/replay-composition";
 import { validateTearContract } from "../../src/tearbench/validation";
 import {
   createProductionGhostReplayComposition,
   captureProductionReplayCheckpoint,
-} from "../../src/tearbench/production-replay-composition";
+} from "../../src/app/world/detached/replay-composition";
 import { REMOTE } from "../../src/config/game-config";
 import { applyWeapon } from "../../src/gameplay/weapons";
 import { newMods, UPGRADES, applyUpgrade } from "../../src/gameplay/upgrades";
@@ -42,8 +42,8 @@ import {
 import { createGhostProductionReplaySession } from "../../src/ghost/production-replay-session";
 import { stableVerificationHash } from "../../src/domain/hash";
 import type { ReplayActionEnvelope } from "../../src/replay/envelope";
-import { restoreProductionReplaySnapshot } from "../../src/tearbench/production-replay-composition";
-import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
+import { restoreProductionReplaySnapshot } from "../../src/app/world/detached/replay-composition";
+import { createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
 import { createDefaultStateCodecRegistry, type TearCodecWorld } from "../../src/gameplay/snapshot/state-codec";
 import type { GhostReadCapsule } from "../../src/ghost/capsule-reader";
 import type { TearCausalEventV1 } from "../../src/tearbench/contracts";
