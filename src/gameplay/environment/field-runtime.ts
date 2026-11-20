@@ -102,3 +102,53 @@ export function fieldEnemyClass(enemy: FieldClassedEnemy): FieldEnemyClass {
   if (enemy.isBoss === true) return "boss";
   return (enemy.weight ?? 1) >= FIELD_HEAVY_ENEMY_WEIGHT ? "heavy-enemy" : "light-enemy";
 }
+
+/** The three stretches of a field that warns, acts and rests, in simulation ticks. */
+export interface FieldCycleTiming {
+  readonly warningTicks: number;
+  readonly activeTicks: number;
+  readonly cooldownTicks: number;
+}
+
+export interface FieldCyclePoint {
+  readonly state: "dormant" | "warning" | "active" | "cooldown";
+  /** The tick the state began. */
+  readonly stateTick: number;
+  /** The tick the state ends. */
+  readonly transitionTick: number;
+  /** The first tick of the cycle the tick falls in. */
+  readonly cycleStart: number;
+  /** True once a field that does not recur has run its one cycle: its owner ends it. */
+  readonly finished: boolean;
+}
+
+export function fieldCycleTicks(timing: FieldCycleTiming): number {
+  return timing.warningTicks + timing.activeTicks + timing.cooldownTicks;
+}
+
+/**
+ * Where a warn-act-rest field is at a tick, from absolute ticks, so nothing drifts and a field restored
+ * from a snapshot lands in the same place. A field that recurs counts cycles from its first; another has
+ * one. Before its start a field is dormant, which is how paired fields are set to alternate.
+ */
+export function fieldCycleAt(
+  timing: FieldCycleTiming,
+  startTick: number,
+  tick: number,
+  recurs: boolean,
+): FieldCyclePoint {
+  const total = fieldCycleTicks(timing);
+  const elapsed = tick - startTick;
+  const cycleStart = !recurs || elapsed < 0 ? startTick : startTick + Math.floor(elapsed / total) * total;
+  const into = tick - cycleStart;
+  const activeAt = cycleStart + timing.warningTicks;
+  const restAt = activeAt + timing.activeTicks;
+  const end = cycleStart + total;
+  if (into < 0 || into >= total)
+    return { state: "dormant", stateTick: end, transitionTick: end, cycleStart, finished: into >= total };
+  if (tick < activeAt)
+    return { state: "warning", stateTick: cycleStart, transitionTick: activeAt, cycleStart, finished: false };
+  if (tick < restAt)
+    return { state: "active", stateTick: activeAt, transitionTick: restAt, cycleStart, finished: false };
+  return { state: "cooldown", stateTick: restAt, transitionTick: end, cycleStart, finished: false };
+}

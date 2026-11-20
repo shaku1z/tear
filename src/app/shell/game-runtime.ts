@@ -223,9 +223,7 @@ export function startLiveGame(
     environment,
     config: CONFIG,
     player: livePlayer,
-    blade: liveBlade,
     enemies: () => hostState.enemies(),
-    projectiles: () => hostState.projectiles(),
     entityId: (entity, prefix) => combatHost.combatEntityRuntime.id(entity, prefix),
   });
   const runAbandonment = createLiveRunAbandonment({

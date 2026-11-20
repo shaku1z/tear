@@ -1,103 +1,108 @@
 import { describe, expect, it } from "vitest";
 
 import { bindLiveAuroraTrackActors } from "../../src/gameplay/environment/biome-actors/aurora-track-actors";
-import type { AuroraTransportActor } from "../../src/gameplay/environment/aurora-track-runtime";
+import type { AuroraTrackActor } from "../../src/gameplay/environment/aurora-track-runtime";
 
-describe("live Aurora Track actor wiring", () => {
-  it("projects player intent, thrown blade, enemy mass, boss charge, and deflected projectiles without copies", () => {
-    let source: (() => readonly AuroraTransportActor[]) | undefined;
-    const environment = {
+function bind(
+  player: Parameters<typeof bindLiveAuroraTrackActors>[1],
+  enemies: Parameters<typeof bindLiveAuroraTrackActors>[2],
+  id: Parameters<typeof bindLiveAuroraTrackActors>[3],
+): () => readonly AuroraTrackActor[] {
+  let source: (() => readonly AuroraTrackActor[]) | undefined;
+  bindLiveAuroraTrackActors(
+    {
       addFeature() {
-        /* wiring registration is asserted by the runtime integration tests */
+        /* registration is asserted by the runtime integration tests */
       },
-      setFeatureActorSource(_featureId: string, _slot: string, value: () => readonly AuroraTransportActor[]) {
+      setFeatureActorSource(_featureId: string, _slot: string, value: () => readonly AuroraTrackActor[]) {
         source = value;
       },
-    };
-    const input = { right: () => true, left: () => false };
-    const player = { x: 10, y: 20, vx: 30, aiInput: input };
-    const blade = { x: 30, y: 20, vx: 500, state: "flying" };
+    },
+    player,
+    enemies,
+    id,
+  );
+  return () => source?.() ?? [];
+}
+
+describe("live Aurora Track actor wiring", () => {
+  it("hands the roads the player and each enemy by its class, marking held and flying enemies", () => {
     const influence: unknown[] = [];
+    const player = { x: 10, y: 20, vx: 30, fieldSpeed: 1, aiInput: { right: () => true, left: () => false } };
     const light = {
       x: 40,
       y: 20,
       vx: 50,
+      fieldSpeed: 1,
       weight: 1,
-      cfg: { speed: 100 },
       onAuroraTrackInfluence(direction: -1 | 1, onTrack: boolean) {
         influence.push([direction, onTrack]);
       },
     };
-    const heavy = { x: 50, y: 20, vx: 30, weight: 2, cfg: { speed: 80 } };
-    const boss = { x: 60, y: 20, vx: 200, weight: 6, isBoss: true, auroraBossChargeActive: true, cfg: { speed: 70 } };
-    const deflected = { x: 70, y: 20, vx: 600, dead: false, deflected: true };
-    const hostile = { x: 80, y: 20, vx: -300, dead: false, deflected: false };
-    bindLiveAuroraTrackActors(
-      environment,
-      () => player,
-      () => blade,
-      () => [light, heavy, boss],
-      () => [deflected, hostile],
-      (enemy) => (enemy === light ? "enemy:light" : enemy === heavy ? "enemy:heavy" : "enemy:boss"),
-      (projectile) => (projectile === deflected ? "projectile:deflected" : "projectile:hostile"),
-      {
-        playerAcceleration: 5000,
-        playerMaximumSpeed: 430,
-        bladeAcceleration: 1900,
-        bladeMaximumSpeed: 4600,
-        projectileAcceleration: 640,
-        projectileMaximumSpeed: 1900,
-      },
-    );
-    const actors = source?.() ?? [];
-    expect(actors.map(({ id, kind }) => ({ id, kind }))).toEqual([
-      { id: "player", kind: "player" },
-      { id: "blade", kind: "thrown-blade" },
-      { id: "enemy:light", kind: "light-enemy" },
-      { id: "enemy:heavy", kind: "heavy-enemy" },
-      { id: "enemy:boss", kind: "boss-charge" },
-      { id: "projectile:deflected", kind: "deflected-projectile" },
+    const heavy = { x: 50, y: 20, vx: -30, fieldSpeed: 1, weight: 2 };
+    const boss = { x: 60, y: 20, vx: 200, fieldSpeed: 1, weight: 6, isBoss: true };
+    const rooted = { x: 70, y: 20, vx: 0, fieldSpeed: 1, weight: 1, anchored: true };
+    const flyer = { x: 80, y: 20, vx: 90, fieldSpeed: 1, weight: 1, flies: true };
+    const names = new Map<object, string>([
+      [light, "enemy:light"],
+      [heavy, "enemy:heavy"],
+      [boss, "enemy:boss"],
+      [rooted, "enemy:rooted"],
+      [flyer, "enemy:flyer"],
     ]);
-    expect(actors[0]?.intentX).toBe(1);
-    if (actors[0] === undefined || actors[1] === undefined || actors[5] === undefined)
-      throw new Error("missing Aurora adapters");
-    actors[0].vx = 77;
-    actors[1].vx = 888;
-    actors[5].vx = 999;
-    actors[2]?.onInfluenced?.(1, true);
-    expect(player.vx).toBe(77);
-    expect(blade.vx).toBe(888);
-    expect(deflected.vx).toBe(999);
+    const actors = bind(
+      () => player,
+      () => [light, heavy, boss, rooted, flyer],
+      (enemy) => names.get(enemy) ?? "enemy:unknown",
+    )();
+    expect(actors.map(({ id, kind, held, intentX }) => ({ id, kind, held: held === true, intentX }))).toEqual([
+      { id: "player", kind: "player", held: false, intentX: 1 },
+      { id: "enemy:light", kind: "light-enemy", held: false, intentX: 1 },
+      { id: "enemy:heavy", kind: "heavy-enemy", held: false, intentX: -1 },
+      { id: "enemy:boss", kind: "boss", held: false, intentX: 1 },
+      { id: "enemy:rooted", kind: "light-enemy", held: true, intentX: 0 },
+      { id: "enemy:flyer", kind: "light-enemy", held: true, intentX: 1 },
+    ]);
+    actors[1]?.onInfluenced?.(1, true);
     expect(influence).toEqual([[1, true]]);
   });
 
-  it("does not infer player intent from residual velocity or expose held blades", () => {
-    let source: (() => readonly AuroraTransportActor[]) | undefined;
-    const player = { x: 0, y: 0, vx: 300 };
-    bindLiveAuroraTrackActors(
-      {
-        addFeature() {
-          /* wiring registration is asserted by the runtime integration tests */
-        },
-        setFeatureActorSource(_featureId: string, _slot: string, value: () => readonly AuroraTransportActor[]) {
-          source = value;
-        },
-      },
+  it("writes a road's speed straight onto the live player and enemy, with no copies", () => {
+    const player = { x: 10, y: 20, vx: 30, fieldSpeed: 1, aiInput: { right: () => false, left: () => true } };
+    const enemy = { x: 40, y: 20, vx: 50, fieldSpeed: 1 };
+    const actors = bind(
       () => player,
-      () => ({ x: 0, y: 0, vx: 0, state: "held" }),
+      () => [enemy],
+      () => "enemy:1",
+    )();
+    const [hero, foe] = actors;
+    if (hero === undefined || foe === undefined) throw new Error("the bound actors are missing");
+    hero.fieldSpeed = 1.5;
+    foe.fieldSpeed = 1.2;
+    expect(player.fieldSpeed).toBe(1.5);
+    expect(enemy.fieldSpeed).toBe(1.2);
+    player.vx = -200;
+    expect(hero.vx).toBe(-200);
+    expect(hero.intentX).toBe(-1);
+  });
+
+  it("reads no intent from a player without input, so leftover speed is not travel", () => {
+    const player = { x: 10, y: 20, vx: 300, fieldSpeed: 1 };
+    const [hero] = bind(
+      () => player,
       () => [],
-      () => [],
-      () => "enemy:none",
-      () => "projectile:none",
-      {
-        playerAcceleration: 1,
-        playerMaximumSpeed: 1,
-        bladeAcceleration: 1,
-        bladeMaximumSpeed: 1,
-        projectileAcceleration: 1,
-        projectileMaximumSpeed: 1,
-      },
-    );
-    expect(source?.()).toMatchObject([{ id: "player", intentX: 0 }]);
+      () => "enemy",
+    )();
+    expect(hero?.intentX).toBe(0);
+  });
+
+  it("hands on no player while the world has none, as when the stage is cleared before a run starts", () => {
+    const enemy = { x: 40, y: 20, vx: 50, fieldSpeed: 1 };
+    const actors = bind(
+      () => undefined,
+      () => [enemy],
+      () => "enemy:1",
+    )();
+    expect(actors.map((actor) => actor.id)).toEqual(["enemy:1"]);
   });
 });

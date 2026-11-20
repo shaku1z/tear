@@ -1,4 +1,4 @@
-import type { AuroraTransportActor, AuroraTransportKind } from "../aurora-track-runtime";
+import type { AuroraTrackActor } from "../aurora-track-runtime";
 import { fieldEnemyClass } from "../field-runtime";
 import { createPaleEnvironmentFeature } from "../pale-environment-feature";
 
@@ -10,66 +10,43 @@ export interface LiveAuroraPlayer {
   x: number;
   y: number;
   vx: number;
+  fieldSpeed: number;
   aiInput?: DirectionInput;
-}
-export interface LiveAuroraBlade {
-  x: number;
-  y: number;
-  vx: number;
-  state: string;
 }
 export interface LiveAuroraEnemy {
   x: number;
   y: number;
   vx: number;
+  fieldSpeed: number;
   weight?: number;
   isBoss?: boolean;
-  auroraBossChargeActive?: boolean;
-  cfg?: Readonly<{ speed?: number }>;
+  anchored?: boolean;
+  flies?: boolean;
   onAuroraTrackInfluence?(direction: -1 | 1, onTrack: boolean): void;
-}
-export interface LiveAuroraProjectile {
-  x: number;
-  y: number;
-  vx: number;
-  dead: boolean;
-  deflected: boolean;
 }
 interface AuroraEnvironment {
   addFeature(feature: ReturnType<typeof createPaleEnvironmentFeature>): void;
-  setFeatureActorSource(featureId: string, slot: string, source: () => readonly AuroraTransportActor[]): void;
+  setFeatureActorSource(featureId: string, slot: string, source: () => readonly AuroraTrackActor[]): void;
 }
 
-export interface LiveAuroraTrackTuning {
-  readonly playerAcceleration: number;
-  readonly playerMaximumSpeed: number;
-  readonly bladeAcceleration: number;
-  readonly bladeMaximumSpeed: number;
-  readonly projectileAcceleration: number;
-  readonly projectileMaximumSpeed: number;
-}
-
-function velocityIntent(value: number): number {
-  return value === 0 ? 0 : Math.sign(value);
-}
-
-/** Binds live mutable transport subjects to the shared fixed-step environment port. */
+/**
+ * Hands the roads the live player and enemies. The player means to go where its input points; an enemy means
+ * to go where it is going. An enemy that is held or flies is marked so, and the road leaves it alone.
+ * A world has no player until a run places one (the environment is cleared before that), so none is handed on.
+ */
 export function bindLiveAuroraTrackActors(
   environment: AuroraEnvironment,
-  player: () => LiveAuroraPlayer,
-  blade: () => LiveAuroraBlade,
+  player: () => LiveAuroraPlayer | null | undefined,
   enemies: () => readonly LiveAuroraEnemy[],
-  projectiles: () => readonly LiveAuroraProjectile[],
   actorId: (enemy: LiveAuroraEnemy) => string,
-  projectileId: (projectile: LiveAuroraProjectile) => string,
-  tuning: LiveAuroraTrackTuning,
 ): void {
   environment.addFeature(createPaleEnvironmentFeature());
   environment.setFeatureActorSource("pale", "aurora-track", () => {
     const hero = player();
-    const input = hero.aiInput;
-    const actors: AuroraTransportActor[] = [
-      {
+    const actors: AuroraTrackActor[] = [];
+    if (hero !== null && hero !== undefined) {
+      const input = hero.aiInput;
+      actors.push({
         id: "player",
         kind: "player",
         get x() {
@@ -78,100 +55,45 @@ export function bindLiveAuroraTrackActors(
         get y() {
           return hero.y;
         },
-        get intentX() {
-          return input === undefined ? 0 : (input.right() ? 1 : 0) - (input.left() ? 1 : 0);
-        },
-        normalAcceleration: tuning.playerAcceleration,
-        maximumSpeed: tuning.playerMaximumSpeed,
         get vx() {
           return hero.vx;
         },
-        set vx(value: number) {
-          hero.vx = value;
-        },
-      },
-    ];
-
-    const liveBlade = blade();
-    if (liveBlade.state !== "held" && liveBlade.state !== "embedded")
-      actors.push({
-        id: "blade",
-        kind: "thrown-blade",
-        get x() {
-          return liveBlade.x;
-        },
-        get y() {
-          return liveBlade.y;
-        },
         get intentX() {
-          return velocityIntent(liveBlade.vx);
+          return input === undefined ? 0 : (input.right() ? 1 : 0) - (input.left() ? 1 : 0);
         },
-        normalAcceleration: tuning.bladeAcceleration,
-        maximumSpeed: tuning.bladeMaximumSpeed,
-        get vx() {
-          return liveBlade.vx;
+        get fieldSpeed() {
+          return hero.fieldSpeed;
         },
-        set vx(value: number) {
-          liveBlade.vx = value;
+        set fieldSpeed(value: number) {
+          hero.fieldSpeed = value;
         },
       });
-
-    for (const enemy of enemies()) {
-      const speed = enemy.cfg?.speed ?? Math.max(1, Math.abs(enemy.vx));
-      const kind: AuroraTransportKind =
-        enemy.isBoss === true
-          ? enemy.auroraBossChargeActive === true
-            ? "boss-charge"
-            : "boss"
-          : fieldEnemyClass(enemy);
+    }
+    for (const enemy of enemies())
       actors.push({
         id: actorId(enemy),
-        kind,
+        kind: fieldEnemyClass(enemy),
+        held: enemy.anchored === true || enemy.flies === true,
         get x() {
           return enemy.x;
         },
         get y() {
           return enemy.y;
         },
-        get intentX() {
-          return velocityIntent(enemy.vx);
-        },
-        normalAcceleration: speed * 4,
-        maximumSpeed: speed * 4,
         get vx() {
           return enemy.vx;
         },
-        set vx(value: number) {
-          enemy.vx = value;
+        get intentX() {
+          return Math.sign(enemy.vx);
+        },
+        get fieldSpeed() {
+          return enemy.fieldSpeed;
+        },
+        set fieldSpeed(value: number) {
+          enemy.fieldSpeed = value;
         },
         onInfluenced: (direction, onTrack) => enemy.onAuroraTrackInfluence?.(direction, onTrack),
       });
-    }
-
-    projectiles().forEach((projectile) => {
-      if (projectile.dead || !projectile.deflected) return;
-      actors.push({
-        id: projectileId(projectile),
-        kind: "deflected-projectile",
-        get x() {
-          return projectile.x;
-        },
-        get y() {
-          return projectile.y;
-        },
-        get intentX() {
-          return velocityIntent(projectile.vx);
-        },
-        normalAcceleration: tuning.projectileAcceleration,
-        maximumSpeed: tuning.projectileMaximumSpeed,
-        get vx() {
-          return projectile.vx;
-        },
-        set vx(value: number) {
-          projectile.vx = value;
-        },
-      });
-    });
     return actors;
   });
 }

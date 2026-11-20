@@ -43,6 +43,19 @@ A stage object is anything the stage or a boss places in the arena that has a li
   never reads a weight or an enemy kind itself. An enemy that keeps its own height sets `flies`, and one held
   in place sets `anchored`; a lift leaves both alone. A field that should catch whoever stands in it ends at
   the floor (`tests/unit/bloom-well-lift.test.ts` measures it on the real enemies and player).
+- **A field that wakes and sleeps** takes its state from `fieldCycleAt` in `field-runtime.ts`: warning,
+  active and cooldown lengths, a start tick and whether it comes again. The Bloom Wells and the Aurora Tracks
+  both use it; a field never counts its own cycle. A stage sets its fields to alternate with `offsetTicks` on
+  the field's row in `stage-environment-definitions.ts`.
+- **A field that lies on a surface** names the surface on its row (`surface`: a platform of the stage by
+  index, or a stretch of the floor), and `stageFieldSurface` reads the place from the stage. Never write a
+  field's box as numbers beside the stage: it goes stale when a platform moves.
+  `tests/unit/aurora-track-surface.test.ts` holds that whoever stands on the surface is inside the field.
+- **A field that changes how fast someone can go** never moves anyone. It sets `fieldSpeed` on the actor, a
+  multiplier the player and the enemy base already apply to their own top speed, and the biome feature sets
+  it back to 1 when the field or the stage ends (its `clear`) and derives it again after a state is loaded
+  (its `replace`). The Aurora Track is the example: `AURORA_TRACK_TRAVEL` holds the raise, who gets it and
+  how long it lasts off the road, and `applyAuroraTrackSpeed` is the one place that writes the multiplier.
 - **An enemy that holds its allies in place** (the Rootbinder is the example) does it through three shared
   pieces, none of them keyed to a kind. The hold is `setRooted` on the enemy base: a rooted enemy is
   `anchored`, so every knockback, launch and lift already leaves it alone, and it takes full damage. The tie

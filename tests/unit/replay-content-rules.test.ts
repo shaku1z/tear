@@ -34,9 +34,7 @@ describe("production replay covers all live content", () => {
         environment: new EnvironmentRuntime("probe", "probe"),
         config: CONFIG,
         player: () => ({}) as never,
-        blade: () => ({}) as never,
         enemies: () => [],
-        projectiles: () => [],
         entityId: (_entity, prefix) => prefix,
       });
     });

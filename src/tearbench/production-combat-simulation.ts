@@ -65,9 +65,7 @@ export function createProductionCombatSimulation<State>(
     environment: replay.world.context.environment,
     config: replay.configuration.value,
     player: () => replay.world.state.player() as never,
-    blade: () => replay.world.state.blade() as never,
     enemies: () => replay.world.state.enemies(),
-    projectiles: () => replay.world.state.projectiles(),
     entityId: (entity, prefix) => core.combatEntityRuntime.id(entity, prefix),
   });
   replay.world.context.environment.setAvailableActorIdsSource(

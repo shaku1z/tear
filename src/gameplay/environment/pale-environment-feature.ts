@@ -1,6 +1,6 @@
 import type { EnvironmentFeature, EnvironmentFeatureContext } from "./environment-feature-ports";
-import { assertGhostTrackRouteState, assertAuroraTrackFieldState } from "./aurora-track";
-import { advanceAuroraTrack, type AuroraTransportActor } from "./aurora-track-runtime";
+import { assertGhostTrackRouteState, assertAuroraTrackFieldState, type AuroraTrackFieldState } from "./aurora-track";
+import { advanceAuroraTrack, applyAuroraTrackSpeed, type AuroraTrackActor } from "./aurora-track-runtime";
 import {
   advanceGhostTrackRoute,
   installWhiteHartEnvironmentRequest,
@@ -21,11 +21,11 @@ export class PaleEnvironmentFeature implements EnvironmentFeature {
   claimsField(field: ReturnType<EnvironmentFeatureContext["fields"]>[number]): boolean {
     return field.kind === "aurora-track";
   }
-  #auroraActors: (() => readonly AuroraTransportActor[]) | undefined;
+  #auroraActors: (() => readonly AuroraTrackActor[]) | undefined;
   #whiteHartActors: (() => readonly WhiteHartEnvironmentActor[]) | undefined;
 
   setActorSource(slot: string, source: (() => readonly unknown[]) | undefined): void {
-    if (slot === "aurora-track") this.#auroraActors = source as (() => readonly AuroraTransportActor[]) | undefined;
+    if (slot === "aurora-track") this.#auroraActors = source as (() => readonly AuroraTrackActor[]) | undefined;
     if (slot === "white-hart")
       this.#whiteHartActors = source as (() => readonly WhiteHartEnvironmentActor[]) | undefined;
   }
@@ -67,13 +67,36 @@ export class PaleEnvironmentFeature implements EnvironmentFeature {
       const next = advanceGhostTrackRoute(route, tick);
       if (next !== route) environment.updateRoute(route.id, next);
     }
+    void seconds;
+    const travellers = this.#auroraActors?.() ?? [];
     for (const field of environment.fields()) {
       if (field.kind !== "aurora-track") continue;
       assertAuroraTrackFieldState(field);
-      const result = advanceAuroraTrack(field, tick, seconds, this.#auroraActors?.() ?? [], environment.events);
-      if (result.field !== field) environment.updateField(field.id, result.field);
+      const next = advanceAuroraTrack(field, tick, travellers, environment.events);
+      if (next !== field) environment.updateField(field.id, next);
     }
+    applyAuroraTrackSpeed(tracks(environment), travellers);
   }
+
+  /** The carry lives in the roads, so a restored world gets its speeds back from them. */
+  replace(environment: EnvironmentFeatureContext): void {
+    applyAuroraTrackSpeed(tracks(environment), this.#auroraActors?.() ?? []);
+  }
+
+  /** The roads are about to go: nobody keeps a raised top speed. */
+  clear(): void {
+    applyAuroraTrackSpeed([], this.#auroraActors?.() ?? []);
+  }
+}
+
+function tracks(environment: EnvironmentFeatureContext): readonly AuroraTrackFieldState[] {
+  const roads: AuroraTrackFieldState[] = [];
+  for (const field of environment.fields())
+    if (field.kind === "aurora-track") {
+      assertAuroraTrackFieldState(field);
+      roads.push(field);
+    }
+  return roads;
 }
 
 export interface WhiteHartEnvironmentActor {

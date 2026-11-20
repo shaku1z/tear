@@ -232,7 +232,7 @@ describe("Rimehound", () => {
     expect(hound.contactDamageEnabled()).toBe(false);
   });
 
-  it("retains Aurora Track momentum during a committed pounce and fails safely at the arena edge", () => {
+  it("lengthens a committed pounce along an awake Aurora Track and fails safely at the arena edge", () => {
     const { types } = fixture();
     const hound = new types.Rimehound(40, CONFIG.world.groundY - RIMEHOUND_TUNING.body.h / 2);
     hound.atk = "pounce";
@@ -240,19 +240,16 @@ describe("Rimehound", () => {
     hound.vx = 300;
     hound.vy = -20;
     hound.pounceAirborne = true;
-    const field = Object.freeze({
-      ...createAuroraTrackFieldState({
-        id: "pale:rimehound-track",
-        ownerId: "pale-traverse",
-        variant: "stage",
-        direction: 1,
-        geometry: { x: 0, y: 0, w: 1_600, h: 900 },
-        startTick: 0,
-      }),
-      state: "active" as const,
+    const field = createAuroraTrackFieldState({
+      id: "pale:rimehound-track",
+      ownerId: "pale-traverse",
+      variant: "stage",
+      direction: 1,
+      geometry: { x: 0, y: 0, w: 1_600, h: 900 },
+      startTick: 0,
     });
-    const before = hound.vx;
-    advanceAuroraTrack(field, 1, 1 / 120, [
+    // Tick 100 is inside the road's awake stretch (72 to 432).
+    advanceAuroraTrack(field, 100, [
       {
         id: "enemy:rimehound",
         kind: "light-enemy",
@@ -263,20 +260,15 @@ describe("Rimehound", () => {
           return hound.y;
         },
         intentX: 1,
-        normalAcceleration: RIMEHOUND_TUNING.body.speed * 4,
-        maximumSpeed: RIMEHOUND_TUNING.pounceSpeed,
         get vx() {
           return hound.vx;
         },
-        set vx(value) {
-          hound.vx = value;
-        },
+        fieldSpeed: 1,
         onInfluenced(direction, onTrack) {
           hound.onAuroraTrackInfluence(direction, onTrack);
         },
       },
     ]);
-    expect(hound.vx).toBeGreaterThan(before);
     expect(hound.atkT).toBeCloseTo(0.66);
     expect(hound.auroraPounceExtended).toBe(true);
     expect(hound.auroraDirection).toBe(1);

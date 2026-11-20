@@ -2,14 +2,27 @@ import type { StageId } from "../stages";
 import type { EnvironmentObjectKind } from "./environment-object-kinds";
 import type { EnvironmentGeometry } from "./environment-contracts";
 
-export interface StageInitialFieldDefinition {
-  readonly kind: Extract<EnvironmentObjectKind, "bloom-well" | "aurora-track">;
+/**
+ * The surface a field lies on: one of the stage's platforms, by its place in the stage's layout, or a
+ * stretch of the floor. A field that names a surface gets its box from it, so it cannot sit off its surface.
+ */
+export type StageFieldSurface =
+  Readonly<{ platform: number }> | Readonly<{ floor: Readonly<{ x: number; w: number }> }>;
+
+interface StageInitialFieldBase {
   readonly slot: string;
-  readonly geometry: EnvironmentGeometry;
-  readonly direction?: -1 | 1;
   /** Delays a recurring field's first cycle so paired fields alternate instead of pulsing together. */
   readonly offsetTicks?: number;
 }
+export type StageInitialFieldDefinition =
+  | (StageInitialFieldBase &
+      Readonly<{ kind: Extract<EnvironmentObjectKind, "bloom-well">; geometry: EnvironmentGeometry }>)
+  | (StageInitialFieldBase &
+      Readonly<{
+        kind: Extract<EnvironmentObjectKind, "aurora-track">;
+        surface: StageFieldSurface;
+        direction: -1 | 1;
+      }>);
 
 export interface StageEnvironmentDefinition {
   readonly id: string;
@@ -51,23 +64,27 @@ export const STAGE_ENVIRONMENT_DEFINITIONS = Object.freeze({
     id: "pale-traverse-environment",
     stageId: "pale-traverse",
     initialFields: Object.freeze([
+      // Three roads that wake in turn, a third of a cycle (912 ticks) apart. The floor road runs east, the
+      // middle platform (layout[2]) runs back west, and the low west platform (layout[0]) runs east again.
       Object.freeze({
         kind: "aurora-track",
-        slot: "lower-east",
+        slot: "floor-east",
         direction: 1 as const,
-        geometry: Object.freeze({ x: 120, y: 625, w: 560, h: 72 }),
+        surface: Object.freeze({ floor: Object.freeze({ x: 200, w: 1200 }) }),
       }),
       Object.freeze({
         kind: "aurora-track",
         slot: "crossing-west",
         direction: -1 as const,
-        geometry: Object.freeze({ x: 540, y: 495, w: 520, h: 66 }),
+        surface: Object.freeze({ platform: 2 }),
+        offsetTicks: 304,
       }),
       Object.freeze({
         kind: "aurora-track",
-        slot: "upper-east",
+        slot: "low-west-east",
         direction: 1 as const,
-        geometry: Object.freeze({ x: 680, y: 240, w: 240, h: 62 }),
+        surface: Object.freeze({ platform: 0 }),
+        offsetTicks: 608,
       }),
     ]),
     maximumFields: 4,

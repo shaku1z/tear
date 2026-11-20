@@ -1,31 +1,32 @@
 import type { TearGameplayEventPort } from "../runtime/gameplay-events";
 import { publishEnvironmentEvent } from "./environment-events";
 import type { EnvironmentTrackDirection } from "./environment-contracts";
-import type { AuroraTrackCarryState, AuroraTrackFieldState } from "./aurora-track";
+import {
+  AURORA_TRACK_RECURS,
+  AURORA_TRACK_TRAVEL,
+  type AuroraTrackCarryState,
+  type AuroraTrackFieldState,
+  type AuroraTrackTarget,
+} from "./aurora-track";
+import { fieldCycleAt } from "./field-runtime";
 
-export type AuroraTransportKind =
-  "player" | "light-enemy" | "heavy-enemy" | "boss" | "thrown-blade" | "deflected-projectile" | "boss-charge";
-
-export interface AuroraTransportActor {
+/** Someone a road may carry. `fieldSpeed` is the multiplier on its top speed, read by whoever owns that speed. */
+export interface AuroraTrackActor {
   readonly id: string;
-  readonly kind: AuroraTransportKind;
+  readonly kind: AuroraTrackTarget;
   readonly x: number;
   readonly y: number;
+  readonly vx: number;
+  /** The way it means to go: -1, 0 or 1. */
   readonly intentX: number;
-  readonly normalAcceleration: number;
-  readonly maximumSpeed: number;
-  vx: number;
+  /** Held in place or keeping its own height in the air: a road leaves it alone. */
+  readonly held?: boolean;
+  fieldSpeed: number;
   onInfluenced?(direction: EnvironmentTrackDirection, onTrack: boolean): void;
 }
 
-export interface AuroraTrackStepResult {
-  readonly field: AuroraTrackFieldState;
-  readonly influencedActorIds: readonly string[];
-}
-
-function inside(field: AuroraTrackFieldState, actor: AuroraTransportActor): boolean {
+function inside(field: AuroraTrackFieldState, actor: AuroraTrackActor): boolean {
   const { geometry } = field;
-  if (geometry.radius !== undefined) return Math.hypot(actor.x - geometry.x, actor.y - geometry.y) <= geometry.radius;
   return (
     actor.x >= geometry.x &&
     actor.x <= geometry.x + (geometry.w ?? 0) &&
@@ -34,116 +35,115 @@ function inside(field: AuroraTrackFieldState, actor: AuroraTransportActor): bool
   );
 }
 
-function eligible(field: AuroraTrackFieldState, actor: AuroraTransportActor): boolean {
-  const policy = field.transportEligibility;
-  switch (actor.kind) {
-    case "player":
-      return policy.player;
-    case "light-enemy":
-      return policy.enemies && policy.lightEnemies;
-    case "heavy-enemy":
-      return policy.enemies && policy.heavyEnemies;
-    case "boss":
-      return policy.bosses;
-    case "thrown-blade":
-      return policy.thrownBlade;
-    case "deflected-projectile":
-      return policy.deflectedProjectiles;
-    case "boss-charge":
-      return policy.bossCharges;
-  }
+/** Going the road's way: it means to, and it is not moving against it. */
+function travelling(actor: AuroraTrackActor, direction: EnvironmentTrackDirection): boolean {
+  return actor.intentX * direction > 0 && actor.vx * direction >= 0;
 }
 
-function validIntent(actor: AuroraTransportActor, direction: EnvironmentTrackDirection): boolean {
-  return Number.isFinite(actor.intentX) && actor.intentX * direction > 0 && actor.vx * direction >= 0;
+function share(actor: AuroraTrackActor): number {
+  return actor.held === true ? 0 : AURORA_TRACK_TRAVEL.targets[actor.kind];
 }
 
-function lifecycleState(field: AuroraTrackFieldState, tick: number): AuroraTrackFieldState {
-  const elapsed = tick - field.stateTick;
-  if (elapsed < 0) throw new RangeError("Aurora Track ticks must be monotonic");
-  if (field.state === "warning" && elapsed >= field.lifecycle.warningTicks) {
-    return Object.freeze({ ...field, state: "active", stateTick: tick });
-  }
-  if (field.state === "active" && elapsed >= field.lifecycle.activeTicks) {
-    return Object.freeze({
-      ...field,
-      state: field.variant === "boss-wake" ? "expired" : "cooldown",
-      stateTick: tick,
-      ...(field.variant === "boss-wake" ? { cleanupReason: "natural-expiry" as const } : {}),
-      carryStates: Object.freeze([]),
-    });
-  }
-  if (field.state === "cooldown" && elapsed >= field.lifecycle.cooldownTicks) {
-    return Object.freeze({ ...field, state: "warning", stateTick: tick, carryStates: Object.freeze([]) });
-  }
-  return field;
-}
-
+/**
+ * One tick of a road: its warn-wake-sleep cycle, and who it is carrying. An actor travelling its way on an
+ * awake road is carried in full; off the road, or once the road sleeps, the carry runs down while the actor
+ * keeps going that way and ends at once when it stops or turns. Nothing here moves anyone: the carry is the
+ * road's state, and `auroraTrackSpeed` turns it into a top-speed multiplier.
+ */
 export function advanceAuroraTrack(
   input: AuroraTrackFieldState,
   tick: number,
-  seconds: number,
-  actors: readonly AuroraTransportActor[],
+  actors: readonly AuroraTrackActor[],
   events?: TearGameplayEventPort,
-): AuroraTrackStepResult {
+): AuroraTrackFieldState {
   if (!Number.isSafeInteger(tick) || tick < 0)
     throw new RangeError("Aurora Track tick must be a non-negative safe integer");
-  if (!(seconds > 0) || !Number.isFinite(seconds))
-    throw new RangeError("Aurora Track step duration must be finite and positive");
-  const field = lifecycleState(input, tick);
-  if (field !== input && events !== undefined && field.state !== "warning")
-    publishEnvironmentEvent(
-      events,
-      {
-        event: field.state === "active" ? "field-started" : "field-resolved",
-        objectId: field.id,
-        category: "field",
-        objectKind: field.kind,
-        ...(field.state === "expired" ? { reason: "natural-expiry" as const } : {}),
-      },
-      tick,
-    );
-  if (field.state !== "active") return Object.freeze({ field, influencedActorIds: Object.freeze([]) });
-
-  const priorCarry = new Map(field.carryStates.map((carry) => [carry.actorId, carry]));
-  const nextCarry: AuroraTrackCarryState[] = [];
-  const influenced: string[] = [];
+  if (input.cleanupReason !== null) return input;
+  const cycle = fieldCycleAt(input.lifecycle, input.startTick, tick, AURORA_TRACK_RECURS[input.variant]);
+  if (cycle.finished) {
+    if (events !== undefined) publishResolved(events, input, tick);
+    return Object.freeze({
+      ...input,
+      state: "expired",
+      stateTick: tick,
+      cleanupReason: "natural-expiry",
+      carryStates: Object.freeze([]),
+    });
+  }
+  const changed = cycle.state !== input.state || cycle.stateTick !== input.stateTick;
+  if (changed && events !== undefined) {
+    if (cycle.state === "active")
+      publishEnvironmentEvent(
+        events,
+        { event: "field-started", objectId: input.id, category: "field", objectKind: input.kind },
+        tick,
+      );
+    else if (input.state === "active") publishResolved(events, input, tick);
+  }
+  const awake = cycle.state === "active";
+  const prior = new Map(input.carryStates.map((carry) => [carry.actorId, carry.remainingTicks]));
+  const carryStates: AuroraTrackCarryState[] = [];
   const seen = new Set<string>();
   for (const actor of [...actors].sort((left, right) => left.id.localeCompare(right.id))) {
-    if (seen.has(actor.id)) throw new TypeError(`duplicate Aurora transport actor ID: ${actor.id}`);
+    if (seen.has(actor.id)) throw new TypeError(`duplicate Aurora Track actor ID: ${actor.id}`);
     seen.add(actor.id);
-    if (
-      ![actor.x, actor.y, actor.vx, actor.intentX, actor.normalAcceleration, actor.maximumSpeed].every(
-        Number.isFinite,
-      ) ||
-      actor.normalAcceleration < 0 ||
-      actor.maximumSpeed <= 0
-    ) {
-      throw new TypeError(`Aurora transport actor ${actor.id} must contain finite state`);
-    }
-    const onTrack = inside(field, actor);
-    const carry = priorCarry.get(actor.id);
-    const continuing = carry !== undefined && carry.remainingTicks > 0 && carry.direction === field.direction;
-    if (!eligible(field, actor) || !validIntent(actor, field.direction) || (!onTrack && !continuing)) continue;
-    const influenceScale = actor.kind === "heavy-enemy" ? field.momentum.heavyInfluenceScale : 1;
-    const carryScale = onTrack ? 1 : field.momentum.velocityRetention;
-    const delta =
-      field.direction *
-      actor.normalAcceleration *
-      (field.momentum.accelerationMultiplier - 1) *
-      influenceScale *
-      carryScale *
-      seconds;
-    const cap = actor.maximumSpeed * field.momentum.accelerationMultiplier;
-    if (Math.abs(actor.vx) < cap) actor.vx = Math.max(-cap, Math.min(cap, actor.vx + delta));
-    actor.onInfluenced?.(field.direction, onTrack);
-    influenced.push(actor.id);
-    const remainingTicks = onTrack ? field.momentum.exitCarryTicks : Math.max(0, (carry?.remainingTicks ?? 0) - 1);
-    if (remainingTicks > 0)
-      nextCarry.push(Object.freeze({ actorId: actor.id, direction: field.direction, remainingTicks }));
+    if (![actor.x, actor.y, actor.vx, actor.intentX].every(Number.isFinite))
+      throw new TypeError(`Aurora Track actor ${actor.id} must contain finite state`);
+    if (share(actor) <= 0 || !travelling(actor, input.direction)) continue;
+    const onTrack = awake && inside(input, actor);
+    const remainingTicks = onTrack ? AURORA_TRACK_TRAVEL.carryTicks : (prior.get(actor.id) ?? 0) - 1;
+    if (remainingTicks <= 0) continue;
+    carryStates.push(Object.freeze({ actorId: actor.id, direction: input.direction, remainingTicks }));
+    actor.onInfluenced?.(input.direction, onTrack);
   }
+  const sameCarry =
+    carryStates.length === input.carryStates.length &&
+    carryStates.every((carry, index) => {
+      const before = input.carryStates[index];
+      return before?.actorId === carry.actorId && before.remainingTicks === carry.remainingTicks;
+    });
+  if (!changed && sameCarry) return input;
   return Object.freeze({
-    field: Object.freeze({ ...field, carryStates: Object.freeze(nextCarry) }),
-    influencedActorIds: Object.freeze(influenced),
+    ...input,
+    state: cycle.state,
+    stateTick: cycle.stateTick,
+    carryStates: sameCarry ? input.carryStates : Object.freeze(carryStates),
   });
+}
+
+function publishResolved(events: TearGameplayEventPort, field: AuroraTrackFieldState, tick: number): void {
+  publishEnvironmentEvent(
+    events,
+    {
+      event: "field-resolved",
+      objectId: field.id,
+      category: "field",
+      objectKind: field.kind,
+      reason: "natural-expiry",
+    },
+    tick,
+  );
+}
+
+/** The top-speed multiplier a road gives an actor now: 1 unless it carries the actor. */
+export function auroraTrackSpeed(
+  field: AuroraTrackFieldState,
+  actor: Pick<AuroraTrackActor, "id" | "kind" | "held">,
+): number {
+  const carry = field.carryStates.find((entry) => entry.actorId === actor.id);
+  if (carry === undefined) return 1;
+  const part = actor.held === true ? 0 : AURORA_TRACK_TRAVEL.targets[actor.kind];
+  return 1 + (AURORA_TRACK_TRAVEL.topSpeed - 1) * part * (carry.remainingTicks / AURORA_TRACK_TRAVEL.carryTicks);
+}
+
+/** Sets every actor's `fieldSpeed` from the roads: the largest any road gives it, and 1 with none. */
+export function applyAuroraTrackSpeed(
+  fields: readonly AuroraTrackFieldState[],
+  actors: readonly AuroraTrackActor[],
+): void {
+  for (const actor of actors) {
+    let speed = 1;
+    for (const field of fields) speed = Math.max(speed, auroraTrackSpeed(field, actor));
+    actor.fieldSpeed = speed;
+  }
 }

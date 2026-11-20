@@ -8,75 +8,43 @@ import type {
   EnvironmentObjectValidationPort,
 } from "./environment-contracts";
 import { isRecord } from "../../domain/records";
+import type { FieldEnemyClass } from "./field-runtime";
 
 export type AuroraTrackVariant = "stage" | "boss-wake";
 export type GhostTrackVariant = "ghost";
-export interface AuroraTrackTransportEligibility {
-  readonly player: boolean;
-  readonly enemies: boolean;
-  readonly bosses: boolean;
-  readonly lightEnemies: boolean;
-  readonly heavyEnemies: boolean;
-  readonly thrownBlade: boolean;
-  readonly deflectedProjectiles: boolean;
-  readonly bossCharges: boolean;
-}
-export interface AuroraTrackMomentumPolicy {
-  readonly accelerationMultiplier: number;
-  readonly velocityRetention: number;
-  readonly exitCarryTicks: number;
-  readonly heavyInfluenceScale: number;
-}
-export interface AuroraTrackCarryState {
-  readonly actorId: string;
-  readonly direction: EnvironmentTrackDirection;
-  readonly remainingTicks: number;
-}
+export type AuroraTrackTarget = "player" | FieldEnemyClass;
 
-export interface AuroraTrackDefinition {
-  readonly id: AuroraTrackVariant;
-  readonly ownership: "stage" | "boss";
-  readonly maximumConcurrent: number;
-  readonly lifecycle: EnvironmentTrackLifecycle;
-  readonly transportEligibility: AuroraTrackTransportEligibility;
-  readonly momentum: AuroraTrackMomentumPolicy;
-}
+/**
+ * An Aurora Track is a road of light lying on a surface. Whoever travels its way on it may go faster
+ * than they otherwise can; standing on it, crossing it or going against it changes nothing.
+ *
+ * `topSpeed` is the multiplier on top speed at full share. `targets` is who a road carries and with what
+ * share of the raise: the one place that decides it. Held and flying enemies are never carried, whatever
+ * their row. After leaving the road the raise fades to nothing over `carryTicks`, while the traveller keeps
+ * going the road's way.
+ */
+export const AURORA_TRACK_TRAVEL = Object.freeze({
+  topSpeed: 1.5,
+  carryTicks: 48,
+  targets: Object.freeze({
+    player: 1,
+    "light-enemy": 1,
+    "heavy-enemy": 0.35,
+    boss: 0,
+  } satisfies Readonly<Record<AuroraTrackTarget, number>>),
+});
 
-const TRANSPORT = Object.freeze({
-  player: true,
-  enemies: true,
-  bosses: true,
-  lightEnemies: true,
-  heavyEnemies: true,
-  thrownBlade: true,
-  deflectedProjectiles: true,
-  bossCharges: true,
-} as const satisfies AuroraTrackTransportEligibility);
-const MOMENTUM = Object.freeze({
-  accelerationMultiplier: 1.35,
-  velocityRetention: 0.92,
-  exitCarryTicks: 48,
-  heavyInfluenceScale: 0.35,
-} as const satisfies AuroraTrackMomentumPolicy);
+/** A road's box rises this far above the surface it lies on, so whoever stands on the surface is on the road. */
+export const AURORA_TRACK_HEIGHT = 70;
 
-/** Provisional fixed-tick data; PT3-C2 may tune values without changing ownership. */
-export const AURORA_TRACK_DEFINITIONS: Readonly<Record<AuroraTrackVariant, AuroraTrackDefinition>> = Object.freeze({
-  stage: Object.freeze({
-    id: "stage",
-    ownership: "stage",
-    maximumConcurrent: 4,
-    lifecycle: Object.freeze({ warningTicks: 72, activeTicks: 360, cooldownTicks: 480 }),
-    transportEligibility: TRANSPORT,
-    momentum: MOMENTUM,
-  }),
-  "boss-wake": Object.freeze({
-    id: "boss-wake",
-    ownership: "boss",
-    maximumConcurrent: 3,
-    lifecycle: Object.freeze({ warningTicks: 72, activeTicks: 300, cooldownTicks: 0 }),
-    transportEligibility: TRANSPORT,
-    momentum: Object.freeze({ ...MOMENTUM, exitCarryTicks: 42 }),
-  }),
+/** Warning, awake and asleep, in ticks. A stage's road wakes again for the whole stage; a boss's wake runs once. */
+export const AURORA_TRACK_TIMING: Readonly<Record<AuroraTrackVariant, EnvironmentTrackLifecycle>> = Object.freeze({
+  stage: Object.freeze({ warningTicks: 72, activeTicks: 360, cooldownTicks: 480 }),
+  "boss-wake": Object.freeze({ warningTicks: 72, activeTicks: 300, cooldownTicks: 0 }),
+});
+export const AURORA_TRACK_RECURS: Readonly<Record<AuroraTrackVariant, boolean>> = Object.freeze({
+  stage: true,
+  "boss-wake": false,
 });
 
 export const GHOST_TRACK_DEFINITION = Object.freeze({
@@ -85,6 +53,13 @@ export const GHOST_TRACK_DEFINITION = Object.freeze({
   maximumConcurrent: 3,
   lifecycle: Object.freeze({ warningTicks: 72, activeTicks: 60, cooldownTicks: 0 }),
 });
+
+/** Who is still being carried by a road, and for how many more ticks once off it. */
+export interface AuroraTrackCarryState {
+  readonly actorId: string;
+  readonly direction: EnvironmentTrackDirection;
+  readonly remainingTicks: number;
+}
 
 function positiveSafeInteger(value: unknown, label: string): asserts value is number {
   if (typeof value !== "number" || !Number.isSafeInteger(value) || value <= 0)
@@ -115,10 +90,9 @@ export type AuroraTrackFieldState = EnvironmentFieldState &
     trackId: string;
     variant: AuroraTrackVariant;
     direction: EnvironmentTrackDirection;
+    /** The first tick of its first cycle; a later start is how roads are set to alternate. */
+    startTick: number;
     lifecycle: EnvironmentTrackLifecycle;
-    transportEligibility: AuroraTrackTransportEligibility;
-    momentum: AuroraTrackMomentumPolicy;
-    maximumConcurrent: number;
     carryStates: readonly AuroraTrackCarryState[];
   }>;
 export type GhostTrackRouteState = EnvironmentRouteState &
@@ -147,10 +121,13 @@ export function assertAuroraTrackFieldState(value: EnvironmentFieldState): asser
   if (candidate.variant !== "stage" && candidate.variant !== "boss-wake")
     throw new TypeError("Aurora Track variant is not approved");
   assertDirection(candidate.direction);
+  nonNegativeSafeInteger(candidate.startTick, "Aurora Track startTick");
   if (candidate.lifecycle === undefined) throw new TypeError("Aurora Track lifecycle is required");
   assertLifecycle(candidate.lifecycle);
-  if (candidate.transportEligibility === undefined || candidate.momentum === undefined)
-    throw new TypeError("Aurora Track transport data is required");
+  const timing = AURORA_TRACK_TIMING[candidate.variant];
+  for (const key of ["warningTicks", "activeTicks", "cooldownTicks"] as const)
+    if (candidate.lifecycle[key] !== timing[key])
+      throw new RangeError(`Aurora Track ${key} does not match its variant definition`);
   const carryStates: unknown = candidate.carryStates;
   if (!isUnknownArray(carryStates)) throw new TypeError("Aurora Track carryStates must be an array");
   const carryIds = new Set<string>();
@@ -165,59 +142,8 @@ export function assertAuroraTrackFieldState(value: EnvironmentFieldState): asser
     carryIds.add(actorId);
     assertDirection(direction);
     positiveSafeInteger(remainingTicks, "Aurora Track carry remainingTicks");
-    if (remainingTicks > candidate.momentum.exitCarryTicks)
-      throw new RangeError("Aurora Track carry exceeds exitCarryTicks");
+    if (remainingTicks > AURORA_TRACK_TRAVEL.carryTicks) throw new RangeError("Aurora Track carry exceeds carryTicks");
   }
-  const definition = AURORA_TRACK_DEFINITIONS[candidate.variant];
-  if (candidate.maximumConcurrent !== definition.maximumConcurrent)
-    throw new RangeError("Aurora Track maximumConcurrent does not match its variant definition");
-  for (const key of [
-    "player",
-    "enemies",
-    "bosses",
-    "lightEnemies",
-    "heavyEnemies",
-    "thrownBlade",
-    "deflectedProjectiles",
-    "bossCharges",
-  ] as const) {
-    if (typeof candidate.transportEligibility[key] !== "boolean")
-      throw new TypeError(`Aurora Track eligibility ${key} must be boolean`);
-  }
-  const momentum = candidate.momentum;
-  if (!(Number.isFinite(momentum.accelerationMultiplier) && momentum.accelerationMultiplier >= 1))
-    throw new RangeError("Aurora Track acceleration multiplier must be finite and at least one");
-  if (!(
-    Number.isFinite(momentum.velocityRetention) &&
-    momentum.velocityRetention >= 0 &&
-    momentum.velocityRetention <= 1
-  ))
-    throw new RangeError("Aurora Track velocity retention must be within zero and one");
-  nonNegativeSafeInteger(momentum.exitCarryTicks, "Aurora Track exit carry ticks");
-  if (!(
-    Number.isFinite(momentum.heavyInfluenceScale) &&
-    momentum.heavyInfluenceScale >= 0 &&
-    momentum.heavyInfluenceScale <= 1
-  ))
-    throw new RangeError("Aurora Track heavy influence scale must be within zero and one");
-  for (const key of ["warningTicks", "activeTicks", "cooldownTicks"] as const)
-    if (candidate.lifecycle[key] !== definition.lifecycle[key])
-      throw new RangeError(`Aurora Track ${key} does not match its variant definition`);
-  for (const key of ["accelerationMultiplier", "velocityRetention", "exitCarryTicks", "heavyInfluenceScale"] as const)
-    if (momentum[key] !== definition.momentum[key])
-      throw new RangeError(`Aurora Track momentum ${key} does not match its variant definition`);
-  for (const key of [
-    "player",
-    "enemies",
-    "bosses",
-    "lightEnemies",
-    "heavyEnemies",
-    "thrownBlade",
-    "deflectedProjectiles",
-    "bossCharges",
-  ] as const)
-    if (candidate.transportEligibility[key] !== definition.transportEligibility[key])
-      throw new TypeError(`Aurora Track eligibility ${key} does not match its variant definition`);
 }
 
 export function assertGhostTrackRouteState(value: EnvironmentRouteState): asserts value is GhostTrackRouteState {
@@ -250,6 +176,13 @@ export const PALE_TRACK_VALIDATION: EnvironmentObjectValidationPort = Object.fre
   validateRoute: assertGhostTrackRouteState,
 });
 
+/** The box of a road lying on a surface: the stretch of surface, from its top up `AURORA_TRACK_HEIGHT`. */
+export function auroraTrackGeometryOn(
+  surface: Readonly<{ x: number; y: number; w: number }>,
+): Readonly<EnvironmentGeometry> {
+  return Object.freeze({ x: surface.x, y: surface.y - AURORA_TRACK_HEIGHT, w: surface.w, h: AURORA_TRACK_HEIGHT });
+}
+
 export function createAuroraTrackFieldState(
   input: Readonly<{
     id: string;
@@ -261,7 +194,7 @@ export function createAuroraTrackFieldState(
     patternId?: string;
   }>,
 ): AuroraTrackFieldState {
-  const definition = AURORA_TRACK_DEFINITIONS[input.variant];
+  const targets = AURORA_TRACK_TRAVEL.targets;
   const value = Object.freeze({
     id: input.id,
     factoryId: "aurora-track",
@@ -272,16 +205,18 @@ export function createAuroraTrackFieldState(
     timer: 0,
     ownerId: input.ownerId,
     schedule: null,
-    eligibility: Object.freeze({ player: true, enemies: true, bosses: true }),
+    eligibility: Object.freeze({
+      player: targets.player > 0,
+      enemies: targets["light-enemy"] > 0 || targets["heavy-enemy"] > 0,
+      bosses: targets.boss > 0,
+    }),
     force: null,
     cleanupReason: null,
     trackId: input.id,
     variant: input.variant,
     direction: input.direction,
-    lifecycle: definition.lifecycle,
-    transportEligibility: definition.transportEligibility,
-    momentum: definition.momentum,
-    maximumConcurrent: definition.maximumConcurrent,
+    startTick: input.startTick,
+    lifecycle: AURORA_TRACK_TIMING[input.variant],
     carryStates: Object.freeze([]),
     ...(input.patternId === undefined ? {} : { patternId: input.patternId }),
   } as const satisfies AuroraTrackFieldState);

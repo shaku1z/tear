@@ -5,6 +5,7 @@ import { createEnvironmentRuntime } from "../../src/gameplay/environment/environ
 import { buildEnvironmentPresentationSnapshot } from "../../src/gameplay/environment/presentation-snapshot";
 import {
   PALE_TRACK_PRESENTATION_LIMITS,
+  PALE_TRACK_ROAD,
   renderPaleEnvironmentPresentation,
 } from "../../src/presentation/environment/pale-environment-presentation";
 import { environmentHash } from "../../src/tearbench/environment-codec";
@@ -55,11 +56,39 @@ describe("Pale environment presentation", () => {
       flashScale: 0,
     });
     expect(value.calls).toEqual(
-      expect.arrayContaining(["fillRect", "strokeRect", "moveTo", "lineTo", "stroke", "strokeStyle:#ef8da8"]),
+      expect.arrayContaining(["fillRect", "moveTo", "lineTo", "stroke", "strokeStyle:#ef8da8"]),
     );
+    // One stroke is the road's edge; the rest are its arrows.
     expect(value.calls.filter((call) => call === "stroke").length).toBeLessThanOrEqual(
-      PALE_TRACK_PRESENTATION_LIMITS.chevronsPerTrack,
+      PALE_TRACK_PRESENTATION_LIMITS.chevronsPerTrack + 1,
     );
+  });
+
+  it("draws the road as a band lying on its surface, never as a box over whoever stands there", () => {
+    const fills: number[][] = [];
+    const context = new Proxy(
+      {},
+      {
+        get: (_target, key) => (key === "fillRect" ? (...args: number[]) => fills.push(args) : () => undefined),
+        set: () => true,
+      },
+    ) as unknown as CanvasRenderingContext2D;
+    const options = { highContrast: false, reducedMotion: true, lowGraphics: false, timeSeconds: 0, flashScale: 0 };
+    const snapshot = buildEnvironmentPresentationSnapshot(environment().snapshot());
+    const [road] = snapshot.fields;
+    if (road === undefined) throw new Error("the road is missing");
+    // The road's box is x 100 to 660, y 620 to 692; its surface is the bottom edge.
+    renderPaleEnvironmentPresentation(context, snapshot, options);
+    expect(fills).toEqual([[100, 692 - PALE_TRACK_ROAD.band, 560, PALE_TRACK_ROAD.band]]);
+    fills.length = 0;
+    renderPaleEnvironmentPresentation(context, { ...snapshot, fields: [{ ...road, state: "active" }] }, options);
+    expect(fills).toEqual([
+      [100, 620, 560, 72 - PALE_TRACK_ROAD.band],
+      [100, 692 - PALE_TRACK_ROAD.band, 560, PALE_TRACK_ROAD.band],
+    ]);
+    fills.length = 0;
+    renderPaleEnvironmentPresentation(context, { ...snapshot, fields: [{ ...road, state: "cooldown" }] }, options);
+    expect(fills).toEqual([[100, 689, 560, 3]]);
   });
 
   it("keeps static high-contrast arrows under reduced low-graphics settings", () => {
@@ -73,10 +102,10 @@ describe("Pale environment presentation", () => {
       flashScale: 0,
     });
     expect(value.calls).toEqual(
-      expect.arrayContaining(["fillStyle:#4b00d1", "strokeStyle:#ffffff", "strokeStyle:#fff36b", "strokeRect"]),
+      expect.arrayContaining(["fillStyle:#4b00d1", "strokeStyle:#ffffff", "strokeStyle:#fff36b"]),
     );
     expect(value.calls.filter((call) => call === "stroke")).toHaveLength(
-      PALE_TRACK_PRESENTATION_LIMITS.lowGraphicsChevronsPerTrack,
+      PALE_TRACK_PRESENTATION_LIMITS.lowGraphicsChevronsPerTrack + 1,
     );
   });
 

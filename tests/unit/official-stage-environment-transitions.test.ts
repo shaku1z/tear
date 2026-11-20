@@ -45,23 +45,23 @@ function addTransientOwnership(environment: ReturnType<typeof runtime>, ownerId:
 describe("official six-stage environment transitions", () => {
   it("proves Crimson to Verdant activation, then complete Verdant cleanup into Voidspire", () => {
     const environment = runtime();
-    activateStageEnvironment(environment, "crimson-fields", 300, "stage-transition");
+    activateStageEnvironment(environment, "crimson-fields", 300, "stage-transition", 800);
     addTransientOwnership(environment, "crimson-fields");
-    activateStageEnvironment(environment, "verdant-sanctum", 400, "stage-transition");
+    activateStageEnvironment(environment, "verdant-sanctum", 400, "stage-transition", 800);
     expect(environment.stageId).toBe("verdant-sanctum");
     expect(environment.fields().map((field) => field.kind)).toEqual(["bloom-well", "bloom-well"]);
     expect(environment.combatObjects()).toEqual([]);
     expect(environment.routes()).toEqual([]);
 
     addTransientOwnership(environment, "enemy:rootbound");
-    activateStageEnvironment(environment, "voidspire", 500, "stage-transition");
+    activateStageEnvironment(environment, "voidspire", 500, "stage-transition", 800);
     expect(environment.snapshot()).toMatchObject({ stageId: "voidspire", fields: [], combatObjects: [], routes: [] });
     expect(environment.lastClearReason).toBe("stage-transition");
   });
 
   it("proves complete Voidspire cleanup into The Tear", () => {
     const environment = runtime();
-    activateStageEnvironment(environment, "voidspire", 500, "stage-transition");
+    activateStageEnvironment(environment, "voidspire", 500, "stage-transition", 800);
     environment.addField({
       kind: "bloom-well",
       ownerId: "voidspire",
@@ -75,14 +75,14 @@ describe("official six-stage environment transitions", () => {
       cleanupReason: null,
     });
     addTransientOwnership(environment, "voidspire");
-    activateStageEnvironment(environment, "tear", 600, "stage-transition");
+    activateStageEnvironment(environment, "tear", 600, "stage-transition", 800);
     expect(environment.snapshot()).toMatchObject({ stageId: "tear", fields: [], combatObjects: [], routes: [] });
   });
 
   it("never materializes Pale environment state while traversing the official campaign", () => {
     const environment = runtime();
     for (const [index, stage] of STAGES.entries()) {
-      activateStageEnvironment(environment, stage.id, index * 100, index === 0 ? "new-run" : "stage-transition");
+      activateStageEnvironment(environment, stage.id, index * 100, index === 0 ? "new-run" : "stage-transition", 800);
       expect(environment.stageId).not.toBe("pale-traverse");
       expect(
         environment.fields().some((field) => field.kind === "aurora-track"),

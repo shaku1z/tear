@@ -40,7 +40,7 @@ interface SceneOptions {
 function scene(options: SceneOptions = {}) {
   const harness = createEnemyHarness([0.5]);
   const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "roots" });
-  if (options.wells === true) activateStageEnvironment(environment, "verdant-sanctum", 0, "new-run");
+  if (options.wells === true) activateStageEnvironment(environment, "verdant-sanctum", 0, "new-run", 800);
   const binders = (options.binders ?? [400]).map(
     (x) => new harness.types.Rootbinder(x, FLOOR - CONFIG.rootbinder.h / 2),
   );

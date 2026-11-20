@@ -25,7 +25,7 @@ describe("Verdant typed stage registries", () => {
 
   it("loads stage-owned wells at the activation tick and clears them on exit", () => {
     const environment = createEnvironmentRuntime({ stageId: "crimson-fields", worldId: "verdant-stage-test" });
-    activateStageEnvironment(environment, "verdant-sanctum", 3_600, "stage-transition");
+    activateStageEnvironment(environment, "verdant-sanctum", 3_600, "stage-transition", 800);
 
     expect(environment.stageId).toBe("verdant-sanctum");
     expect(environment.fields()).toHaveLength(2);
@@ -44,7 +44,7 @@ describe("Verdant typed stage registries", () => {
       ]),
     );
 
-    activateStageEnvironment(environment, "voidspire", 4_800, "stage-transition");
+    activateStageEnvironment(environment, "voidspire", 4_800, "stage-transition", 800);
     expect(environment.stageId).toBe("voidspire");
     expect(environment.fields()).toEqual([]);
     expect(environment.lastClearReason).toBe("stage-transition");

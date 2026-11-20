@@ -13,7 +13,14 @@ export const PALE_TRACK_PRESENTATION_LIMITS = Object.freeze({
   lowGraphicsChevronsPerTrack: 4,
 });
 
-/** Renders immutable Aurora Track facts as route-first directional lanes. */
+/** The road's light: a band this thick lying on the surface, with its arrows this far above it. */
+export const PALE_TRACK_ROAD = Object.freeze({ band: 8, arrowLift: 24, arrowHalf: 10 });
+
+/**
+ * Draws an Aurora Track as a road lying on its surface: a band of light along the surface (the bottom of the
+ * road's box), a faint wash up to the height the road reaches, and arrows running its way. A road about to
+ * wake is a dashed, paler band; a sleeping road is a thin dim line with no arrows moving.
+ */
 export function renderPaleEnvironmentPresentation(
   canvas: CanvasRenderingContext2D,
   snapshot: EnvironmentPresentationSnapshot,
@@ -26,36 +33,45 @@ export function renderPaleEnvironmentPresentation(
   for (const field of snapshot.fields) {
     if (field.kind !== "aurora-track" || field.direction === undefined) continue;
     const { minX, maxX, minY, maxY } = field.bounds;
-    const width = maxX - minX,
-      height = maxY - minY;
+    const width = maxX - minX;
+    const awake = field.state === "active";
     const warning = field.state === "warning" || field.state === "scheduled";
-    const dormant = field.state === "cooldown" || field.state === "expired" || field.state === "destroyed";
     const pulse = options.reducedMotion
       ? 1
       : 1 - 0.16 * options.flashScale + Math.sin(options.timeSeconds * 3.2) * 0.16 * options.flashScale;
-    canvas.globalAlpha = (dormant ? 0.24 : warning ? 0.56 : 0.72) * pulse;
+    if (awake && !options.lowGraphics) {
+      canvas.globalAlpha = 0.1 * pulse;
+      canvas.fillStyle = options.highContrast ? "#4b00d1" : "#69d59f";
+      canvas.fillRect(minX, minY, width, maxY - minY - PALE_TRACK_ROAD.band);
+    }
+    const band = awake || warning ? PALE_TRACK_ROAD.band : 3;
+    canvas.globalAlpha = (awake ? 0.85 : warning ? 0.6 : 0.3) * pulse;
     canvas.fillStyle = options.highContrast ? "#4b00d1" : warning ? "#78c4df" : "#69d59f";
+    canvas.fillRect(minX, maxY - band, width, band);
     canvas.strokeStyle = options.highContrast ? "#ffffff" : "#d8eaff";
-    canvas.lineWidth = options.highContrast ? 5 : warning ? 3 : 2.5;
+    canvas.lineWidth = options.highContrast ? 4 : 2;
     canvas.setLineDash(warning ? [16, 10] : []);
-    canvas.fillRect(minX, minY, width, height);
-    canvas.strokeRect(minX, minY, width, height);
+    canvas.beginPath();
+    canvas.moveTo(minX, maxY - band);
+    canvas.lineTo(maxX, maxY - band);
+    canvas.stroke();
     canvas.setLineDash([]);
+    if (!awake && !warning) continue;
 
     const budget = options.lowGraphics
       ? PALE_TRACK_PRESENTATION_LIMITS.lowGraphicsChevronsPerTrack
       : PALE_TRACK_PRESENTATION_LIMITS.chevronsPerTrack;
     const count = Math.min(budget, Math.max(2, Math.floor(width / (options.lowGraphics ? 120 : 64))));
-    const movingOffset = options.reducedMotion ? 0 : (options.timeSeconds * 28) % Math.max(1, width / count);
-    canvas.globalAlpha = dormant ? 0.3 : 0.9;
+    const spacing = width / count;
+    const movingOffset = options.reducedMotion || !awake ? 0 : (options.timeSeconds * 90) % spacing;
+    canvas.globalAlpha = awake ? 0.9 : 0.45;
     canvas.strokeStyle = options.highContrast ? "#fff36b" : field.direction === 1 ? "#d8eaff" : "#ef8da8";
     canvas.lineWidth = options.highContrast ? 5 : 3;
+    const y = maxY - PALE_TRACK_ROAD.arrowLift;
+    const half = PALE_TRACK_ROAD.arrowHalf;
     for (let index = 0; index < count; index += 1) {
-      const spacing = width / count;
       const rawX = minX + spacing * (index + 0.5) + field.direction * movingOffset;
       const x = minX + ((rawX - minX + width) % width);
-      const y = minY + height / 2;
-      const half = Math.min(12, height * 0.22);
       canvas.beginPath();
       canvas.moveTo(x - field.direction * half, y - half);
       canvas.lineTo(x + field.direction * half, y);

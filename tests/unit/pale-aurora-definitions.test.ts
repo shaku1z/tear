@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  AURORA_TRACK_DEFINITIONS,
+  AURORA_TRACK_RECURS,
+  AURORA_TRACK_TIMING,
+  AURORA_TRACK_TRAVEL,
   GHOST_TRACK_DEFINITION,
   PALE_TRACK_VALIDATION,
   createAuroraTrackFieldState,
@@ -60,17 +62,20 @@ describe("Pale Aurora environment definitions", () => {
     expect(environmentObjectDefinition("ghost-track").category).toBe("route");
   });
 
-  it("defines immutable stage, boss-wake, and bounded Ghost Track data", () => {
-    expect(Object.keys(AURORA_TRACK_DEFINITIONS)).toEqual(["stage", "boss-wake"]);
-    expect(AURORA_TRACK_DEFINITIONS.stage).toMatchObject({ ownership: "stage", maximumConcurrent: 4 });
-    expect(AURORA_TRACK_DEFINITIONS["boss-wake"]).toMatchObject({ ownership: "boss", maximumConcurrent: 3 });
+  it("defines the road as immutable data: one travel row, a timing per variant, and which variant recurs", () => {
+    expect(Object.keys(AURORA_TRACK_TIMING)).toEqual(["stage", "boss-wake"]);
+    expect(AURORA_TRACK_RECURS).toEqual({ stage: true, "boss-wake": false });
+    expect(Object.keys(AURORA_TRACK_TRAVEL.targets)).toEqual(["player", "light-enemy", "heavy-enemy", "boss"]);
+    expect(AURORA_TRACK_TRAVEL.topSpeed).toBeGreaterThan(1);
     expect(GHOST_TRACK_DEFINITION).toMatchObject({ ownership: "boss", maximumConcurrent: 3 });
-    expect(Object.isFrozen(AURORA_TRACK_DEFINITIONS.stage.lifecycle)).toBe(true);
-    expect(Object.isFrozen(field.transportEligibility)).toBe(true);
+    expect(Object.isFrozen(AURORA_TRACK_TRAVEL.targets)).toBe(true);
+    expect(Object.isFrozen(AURORA_TRACK_TIMING.stage)).toBe(true);
     expect(Object.isFrozen(route.points)).toBe(true);
+    // The generic eligibility a field carries is read off the same row, never written beside it.
+    expect(field.eligibility).toEqual({ player: true, enemies: true, bosses: false });
   });
 
-  it("round-trips direction, lifecycle, eligibility, carry, ownership, and reference data", () => {
+  it("round-trips direction, start, lifecycle, carry, ownership, and reference data", () => {
     expect(validateEnvironmentCodecPayload(payload)).toEqual([]);
     const runtime = createEnvironmentRuntime({ stageId: "pale-traverse", worldId: "pale-definitions" });
     runtime.addField(field);
@@ -84,7 +89,7 @@ describe("Pale Aurora environment definitions", () => {
       direction: 1,
       variant: "stage",
       lifecycle: field.lifecycle,
-      momentum: field.momentum,
+      startTick: 120,
     });
     expect(observation.routes[0]).toMatchObject({
       kind: "ghost-track",
@@ -130,8 +135,14 @@ describe("Pale Aurora environment definitions", () => {
       validators: [PALE_TRACK_VALIDATION],
     });
     expect(() => runtime.addField({ ...field, direction: 0 } as never)).toThrow(/direction/u);
-    expect(() => runtime.addField({ ...field, momentum: { ...field.momentum, heavyInfluenceScale: 2 } })).toThrow(
-      /heavy influence/u,
+    expect(() =>
+      runtime.addField({
+        ...field,
+        carryStates: [{ actorId: "player", direction: 1, remainingTicks: AURORA_TRACK_TRAVEL.carryTicks + 1 }],
+      }),
+    ).toThrow(/exceeds carryTicks/u);
+    expect(() => runtime.addField({ ...field, lifecycle: { ...field.lifecycle, activeTicks: 1 } })).toThrow(
+      /does not match its variant/u,
     );
     expect(() => runtime.addRoute({ ...route, maximumConcurrent: 4 })).toThrow(/remain three/u);
     expect(() => runtime.addRoute({ ...route, kind: "aurora-track" } as never)).toThrow(/not approved for route/u);
@@ -142,8 +153,8 @@ describe("Pale Aurora environment definitions", () => {
       }).some((issue) => issue.message.includes("warningTicks")),
     ).toBe(true);
     expect(
-      validateEnvironmentCodecPayload({ ...payload, fields: [{ ...field, transportEligibility: undefined }] }).some(
-        (issue) => issue.message.includes("transport data"),
+      validateEnvironmentCodecPayload({ ...payload, fields: [{ ...field, startTick: undefined }] }).some((issue) =>
+        issue.message.includes("startTick"),
       ),
     ).toBe(true);
   });

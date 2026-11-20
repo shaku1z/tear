@@ -9,7 +9,7 @@ import type {
 import type { TearGameplayEventPort } from "../runtime/gameplay-events";
 import { publishEnvironmentEvent } from "./environment-events";
 import { isObject } from "../../domain/records";
-import { fieldEnemyClass, type FieldEnemyClass } from "./field-runtime";
+import { fieldCycleAt, fieldEnemyClass, type FieldEnemyClass } from "./field-runtime";
 
 /** Bloom Wells use authored fixed ticks so warning and force do not drift with render cadence. */
 export const BLOOM_WELL_TIMING = Object.freeze({
@@ -177,42 +177,15 @@ export function createBloomWellState(input: BloomWellDefinition, startTick = 0):
   });
 }
 
-function stateAt(startTick: number, tick: number): BloomWellState["state"] {
-  const elapsed = tick - startTick;
-  if (elapsed < 0) return "dormant";
-  if (elapsed < BLOOM_WELL_TIMING.warningTicks) return "warning";
-  if (elapsed < BLOOM_WELL_TIMING.warningTicks + BLOOM_WELL_TIMING.activeTicks) return "active";
-  if (elapsed < BLOOM_WELL_TIMING.totalTicks) return "cooldown";
-  return "dormant";
-}
-function transitionAt(startTick: number, state: BloomWellState["state"]): number {
-  if (state === "warning") return startTick + BLOOM_WELL_TIMING.warningTicks;
-  if (state === "active") return startTick + BLOOM_WELL_TIMING.warningTicks + BLOOM_WELL_TIMING.activeTicks;
-  return startTick + BLOOM_WELL_TIMING.totalTicks;
-}
-function stateStartedAt(startTick: number, state: BloomWellState["state"]): number {
-  if (state === "warning") return startTick;
-  if (state === "active") return startTick + BLOOM_WELL_TIMING.warningTicks;
-  if (state === "cooldown") return startTick + BLOOM_WELL_TIMING.warningTicks + BLOOM_WELL_TIMING.activeTicks;
-  return startTick + BLOOM_WELL_TIMING.totalTicks;
-}
-/** The start of the cycle a tick falls in: a Well that recurs counts cycles from its first, another has only one. */
-function cycleStart(state: BloomWellState, tick: number): number {
-  const elapsed = tick - state.startTick;
-  if (!BLOOM_WELL_RECURS[state.variant] || elapsed < 0) return state.startTick;
-  return state.startTick + Math.floor(elapsed / BLOOM_WELL_TIMING.totalTicks) * BLOOM_WELL_TIMING.totalTicks;
-}
 /** Pure, absolute-tick lifecycle advancement; repeated renders cannot accumulate drift. */
 export function advanceBloomWell(state: BloomWellState, tick: number, events?: TearGameplayEventPort): BloomWellState {
   assertTick(tick, "Bloom Well tick");
   if (state.cleanupReason !== null) return state;
-  const base = cycleStart(state, tick);
-  if (!BLOOM_WELL_RECURS[state.variant] && tick - base >= BLOOM_WELL_TIMING.totalTicks)
-    return finishedWell(state, tick, events);
-  const next = stateAt(base, tick);
-  const timer = Math.max(0, tick - base) / BLOOM_WELL_TIMING.ticksPerSecond;
-  const stateTick = stateStartedAt(base, next);
-  if (next === state.state && stateTick === state.stateTick)
+  const cycle = fieldCycleAt(BLOOM_WELL_TIMING, state.startTick, tick, BLOOM_WELL_RECURS[state.variant]);
+  if (cycle.finished) return finishedWell(state, tick, events);
+  const next = cycle.state;
+  const timer = Math.max(0, tick - cycle.cycleStart) / BLOOM_WELL_TIMING.ticksPerSecond;
+  if (next === state.state && cycle.stateTick === state.stateTick)
     return state.timer === timer ? state : Object.freeze({ ...state, timer });
   if (events !== undefined && (next === "active" || next === "dormant")) {
     publishEnvironmentEvent(
@@ -230,8 +203,8 @@ export function advanceBloomWell(state: BloomWellState, tick: number, events?: T
   return Object.freeze({
     ...state,
     state: next,
-    stateTick,
-    transitionTick: transitionAt(base, next),
+    stateTick: cycle.stateTick,
+    transitionTick: cycle.transitionTick,
     timer,
   });
 }

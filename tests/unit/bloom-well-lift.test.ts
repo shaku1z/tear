@@ -26,7 +26,7 @@ type ActorKind = keyof typeof STANDARD_ACTOR_FACTORIES;
 
 function stageWithWells() {
   const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "bloom-well-lift" });
-  activateStageEnvironment(environment, "verdant-sanctum", 0, "new-run");
+  activateStageEnvironment(environment, "verdant-sanctum", 0, "new-run", 800);
   const well = environment.fields()[0];
   if (well === undefined) throw new Error("the Verdant stage has no Bloom Well");
   return { environment, centre: well.geometry.x + (well.geometry.w ?? 0) / 2 };

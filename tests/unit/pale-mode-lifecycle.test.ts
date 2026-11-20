@@ -184,7 +184,7 @@ describe("Pale mode and lifecycle coverage", () => {
       const harness = createEnemyHarness();
       const boss = new harness.types.WhiteHart(CONFIG.view.w / 2, CONFIG.world.groundY - CONFIG.whiteHart.h / 2);
       const environment = createEnvironmentRuntime({ stageId: "grounds", worldId: `pale-lifecycle:${boundary.label}` });
-      activateStageEnvironment(environment, "pale-traverse", 100, "stage-transition");
+      activateStageEnvironment(environment, "pale-traverse", 100, "stage-transition", 800);
       installWhiteHartEnvironmentRequest(
         environment,
         "enemy:white-hart",

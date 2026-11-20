@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createAuroraTrackFieldState } from "../../src/gameplay/environment/aurora-track";
-import type { AuroraTransportActor } from "../../src/gameplay/environment/aurora-track-runtime";
+import type { AuroraTrackActor } from "../../src/gameplay/environment/aurora-track-runtime";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 import type { WhiteHartEnvironmentActor } from "../../src/gameplay/environment/pale-environment-feature";
 import { bindPaleEnvironmentActors } from "./environment-feature-fixture";
@@ -111,21 +111,20 @@ describe("White Hart shared route runtime", () => {
     expect(runtime.routes()[0]).toMatchObject({ state: "expired", cleanupReason: "natural-expiry" });
   });
 
-  it("lands a Ghost Track hit after the Aurora Track push on the same tick, so the hit's knockback holds", () => {
-    // Pale behaviour pinned by the shared contact damage step: the biome feature moves the player first,
+  it("lands a Ghost Track hit after the Aurora Track's step on the same tick, so the hit's knockback holds", () => {
+    // Pale behaviour pinned by the shared contact damage step: the biome feature steps its roads first,
     // then the runtime applies declared contact damage. The hit sets velocity absolutely, as the player's does.
     const KNOCKBACK = -200;
     const runtime = createEnvironmentRuntime({ stageId: "pale-traverse", worldId: "ghost-after-aurora" });
     const order: string[] = [];
-    const hero: AuroraTransportActor = {
+    const hero: { -readonly [Key in keyof AuroraTrackActor]: AuroraTrackActor[Key] } = {
       id: "player",
       kind: "player",
       x: 20,
       y: 20,
       vx: 100,
       intentX: 1,
-      normalAcceleration: 600,
-      maximumSpeed: 300,
+      fieldSpeed: 1,
       onInfluenced: () => order.push("aurora"),
     };
     let requests: readonly WhiteHartEnvironmentRequest[] = [
@@ -214,7 +213,6 @@ describe("White Hart shared route runtime", () => {
       kind: "aurora-track",
       variant: "boss-wake",
       patternId: "white-hart-frozen-wake",
-      maximumConcurrent: 3,
     });
     first.clear("stage-transition");
     expect(first.fields()).toHaveLength(0);

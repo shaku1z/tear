@@ -12,7 +12,7 @@ describe("Pale typed stage environment", () => {
     });
   });
 
-  it("installs bounded directional Aurora Tracks and clears them on exit", () => {
+  it("installs its Aurora Tracks on their surfaces, waking in turn, and clears them on exit", () => {
     expect(stageEnvironmentDefinition("pale-traverse")).toMatchObject({
       id: "pale-traverse-environment",
       maximumFields: 4,
@@ -21,7 +21,7 @@ describe("Pale typed stage environment", () => {
       cleanup: "stage-owned",
     });
     const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "pale-stage-test" });
-    activateStageEnvironment(environment, "pale-traverse", 4_800, "stage-transition");
+    activateStageEnvironment(environment, "pale-traverse", 4_800, "stage-transition", 800);
     expect(environment.stageId).toBe("pale-traverse");
     expect(environment.fields()).toHaveLength(3);
     expect(
@@ -29,14 +29,33 @@ describe("Pale typed stage environment", () => {
         id: field.id,
         kind: field.kind,
         direction: (field as { direction?: number }).direction,
-        state: field.state,
+        startTick: (field as { startTick?: number }).startTick,
+        geometry: field.geometry,
       })),
     ).toEqual([
-      { id: "pale-traverse:aurora-track:lower-east", kind: "aurora-track", direction: 1, state: "warning" },
-      { id: "pale-traverse:aurora-track:crossing-west", kind: "aurora-track", direction: -1, state: "warning" },
-      { id: "pale-traverse:aurora-track:upper-east", kind: "aurora-track", direction: 1, state: "warning" },
+      {
+        id: "pale-traverse:aurora-track:floor-east",
+        kind: "aurora-track",
+        direction: 1,
+        startTick: 4_800,
+        geometry: { x: 200, y: 730, w: 1_200, h: 70 },
+      },
+      {
+        id: "pale-traverse:aurora-track:crossing-west",
+        kind: "aurora-track",
+        direction: -1,
+        startTick: 5_104,
+        geometry: { x: 560, y: 440, w: 480, h: 70 },
+      },
+      {
+        id: "pale-traverse:aurora-track:low-west-east",
+        kind: "aurora-track",
+        direction: 1,
+        startTick: 5_408,
+        geometry: { x: 140, y: 570, w: 400, h: 70 },
+      },
     ]);
-    activateStageEnvironment(environment, "voidspire", 6_000, "stage-transition");
+    activateStageEnvironment(environment, "voidspire", 6_000, "stage-transition", 800);
     expect(environment.fields()).toEqual([]);
     expect(environment.lastClearReason).toBe("stage-transition");
   });

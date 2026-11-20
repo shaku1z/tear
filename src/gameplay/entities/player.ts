@@ -112,6 +112,8 @@ function createPlayer(dependencies: PlayerDependencies) {
     afterimageT: number;
     _wasGround: boolean;
     moveBoost: number;
+    /** A stage field's multiplier on top speed, set each tick by the field (an Aurora Track); 1 with none. */
+    fieldSpeed = 1;
     downBufferT: number;
     guardT: number;
     flowDR: number;
@@ -326,7 +328,7 @@ function createPlayer(dependencies: PlayerDependencies) {
         const voidSlow = this.voidSlowT > 0 ? CONFIG.source.voidSlowMult || 0.65 : 1;
         const moveSlow = this.slowMult * voidSlow;
         const accel = (this.onGround ? P.groundAccel : P.airAccel) * moveSlow;
-        const top = P.moveSpeed * this.moveBoost * moveSlow;
+        const top = P.moveSpeed * this.moveBoost * this.fieldSpeed * moveSlow;
         if (dirX !== 0) {
           this.vx += dirX * accel * dt;
           this.vx = clamp(this.vx, -top, top);

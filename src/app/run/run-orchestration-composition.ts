@@ -129,7 +129,13 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
   const setEnvironmentStage = (index: number, reason: "new-run" | "stage-transition"): void => {
     const stageId = stageIdAtRuntimeIndex(index);
     if (stageId === null) throw new RangeError(`environment stage index is invalid: ${String(index)}`);
-    activateStageEnvironment(options.environment, stageId, options.authoritativeResult()?.tick ?? 0, reason);
+    activateStageEnvironment(
+      options.environment,
+      stageId,
+      options.authoritativeResult()?.tick ?? 0,
+      reason,
+      d.CONFIG.world.groundY,
+    );
   };
   const loadTransitionStage = (index: number): void => {
     cleanupBossEncounterActors(options.enemies(), "stage-transition");

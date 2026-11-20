@@ -84,6 +84,8 @@ export function createEnemyBase(dependencies: EnemyDependencies, bossRuntime: Bo
     rootable = true;
     /** Keeps its own height in the air: a lift leaves it alone. */
     flies = false;
+    /** A stage field's multiplier on its speed, set each tick by the field (an Aurora Track); 1 with none. */
+    fieldSpeed = 1;
     buffs: string[];
     immuneToBlade: boolean;
     bleedStacks: number;
@@ -377,7 +379,7 @@ export function createEnemyBase(dependencies: EnemyDependencies, bossRuntime: Bo
       return Math.max(this.hw, this.hh);
     }
     get speed() {
-      return this.cfg.speed * this.speedMult * this.auraSpeed * this.slowStatus;
+      return this.cfg.speed * this.speedMult * this.auraSpeed * this.slowStatus * this.fieldSpeed;
     }
     blocks(incomingX?: number, tipSpeed?: number) {
       void incomingX;
