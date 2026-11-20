@@ -79,7 +79,7 @@
       "chars": 26698
     },
     "src/input/browser-gamepad.ts": {
-      "largestFunctionStatements": 124
+      "largestFunctionStatements": 122
     },
     "src/presentation/attract-runtime.ts": {
       "largestFunctionStatements": 92

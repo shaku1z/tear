@@ -638,20 +638,37 @@ describe("playground controller", () => {
     expect(trainingPlatforms(1600, 900, 800)).toHaveLength(3);
   });
 
-  it("emits hotkey spawn intents in the legacy order", () => {
+  it("runs the number-row shortcuts: heal, clear, dummy, repeat the last spawn, and the two rules", () => {
     const controller = new PlaygroundController({ hpMultiplier: 3, count: 5 });
-    const intents = controller.update(
-      {
-        pressed: new Set(["Digit1", "KeyH"]),
-        viewportWidth: 1600,
-        player: { x: 800, y: 700, facing: 1, hp: 5, maxHp: 100, oneHit: false },
-        run: { difficulty: "normal", difficultyDamage: 1, bossIndex: 0, bossOrder: ["warden"] },
-        enemies: [],
-      },
-      { charger: "red", perfect: "cyan" },
-    );
-    expect(intents[0]).toEqual({ type: "spawn", kind: "charger", count: 5, hpScale: 3 });
-    expect(intents).toContainEqual({ type: "heal-player" });
+    const press = (...codes: string[]) =>
+      controller.update(
+        {
+          pressed: new Set(codes),
+          viewportWidth: 1600,
+          player: { x: 800, y: 700, facing: 1, hp: 100, maxHp: 100, oneHit: false },
+          enemies: [],
+        },
+        { charger: "red", perfect: "cyan" },
+      );
+    // Nothing to repeat before the first spawn from the menu.
+    expect(press("Digit4")).toEqual([
+      { type: "announce", text: "SPAWN ONE FROM THE MENU FIRST", emphasis: false, color: "#888" },
+    ]);
+    expect(controller.spawn("charger")).toEqual({ type: "spawn", kind: "charger", count: 5, hpScale: 3 });
+    expect(press("Digit4")).toContainEqual({ type: "spawn", kind: "charger", count: 5, hpScale: 3 });
+    expect(press("Digit1")).toContainEqual({ type: "heal-player" });
+    expect(press("Digit2")).toEqual(expect.arrayContaining([{ type: "clear-enemies" }, { type: "clear-projectiles" }]));
+    expect(press("Digit3").some((intent) => intent.type === "spawn" && intent.kind === "charger")).toBe(true);
+    // The dummy is not a menu spawn: repeat still brings back the five chargers.
+    expect(press("Digit4")).toContainEqual({ type: "spawn", kind: "charger", count: 5, hpScale: 3 });
+    press("Digit5");
+    expect(controller.state.freeze).toBe(true);
+    press("Digit6");
+    expect(controller.state.god).toBe(true);
+    // Tab opens the menu at once and nothing else acts on that frame.
+    expect(press("Tab", "Digit1")).toEqual([{ type: "navigate", screen: "pgmenu" }, { type: "release-pointer" }]);
+    // The letters the Playground used to take do nothing in the arena now.
+    expect(press("KeyT", "KeyB", "KeyH", "KeyK", "KeyM", "KeyU")).toEqual([]);
     expect(controller.labAction({ id: "dash", owned: 1, tier: 1, tierCount: 2 })).toEqual({
       type: "tier-up",
       upgradeId: "dash",

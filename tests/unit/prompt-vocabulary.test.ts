@@ -20,21 +20,26 @@ const padLabel = (binding: PadBinding): string =>
     pause: "MENU",
     "tab-prev": "LB",
     "tab-next": "RB",
+    view: "VIEW",
+    north: "Y",
   })[binding];
 
 /** Tabbed-menu controls: a pad has them, a touch player taps the tab strip and RESUME instead. */
 const MENU_CONTROLS: readonly PromptAction[] = ["tab-prev", "tab-next", "close-menu"];
 
-const PLAYGROUND_HOTKEYS: readonly PromptAction[] = [
+/** The Playground's shortcuts: a pad reaches all but no damage through the View layer; touch has none. */
+const PLAYGROUND_SHORTCUTS: readonly PromptAction[] = [
   "playground-menu",
-  "abilities",
-  "quick-spawn",
-  "spawn-dummy",
-  "summon-boss",
-  "clear-enemies",
   "heal",
-  "fullscreen",
+  "clear-enemies",
+  "spawn-dummy",
+  "repeat-spawn",
+  "toggle-freeze",
+  "toggle-no-damage",
 ];
+
+/** Keyboard-only actions with no pad or touch wording. */
+const KEYBOARD_ONLY: readonly PromptAction[] = ["toggle-no-damage", "fullscreen"];
 
 describe("prompt vocabulary", () => {
   it("maps every input mode onto one of three vocabularies", () => {
@@ -49,7 +54,10 @@ describe("prompt vocabulary", () => {
       expect(promptLabel(action, "keyboard"), action).toMatch(/\S/u);
       for (const device of ["touch", "gamepad"] as const) {
         const label = promptLabel(action, device, padLabel);
-        if (PLAYGROUND_HOTKEYS.includes(action) || (device === "touch" && MENU_CONTROLS.includes(action))) {
+        const none =
+          KEYBOARD_ONLY.includes(action) ||
+          (device === "touch" && (PLAYGROUND_SHORTCUTS.includes(action) || MENU_CONTROLS.includes(action)));
+        if (none) {
           expect(label, `${action} on ${device}`).toBeNull();
           expect(promptAvailable(action, device)).toBe(false);
         } else {
@@ -92,6 +100,18 @@ describe("prompt vocabulary", () => {
 
   it("drops actions a device cannot trigger and merges duplicates", () => {
     expect(promptLabels(["throw", "recall", "playground-menu"], "touch")).toEqual(["THROW"]);
-    expect(promptLabels(["playground-menu", "abilities"], "keyboard")).toEqual(["TAB", "U"]);
+    expect(promptLabels(["playground-menu", "heal", "repeat-spawn"], "keyboard")).toEqual(["TAB", "1", "4"]);
+  });
+
+  it("words the Playground's pad layer as View held with a D-pad direction or Y", () => {
+    expect(promptLabel("playground-menu", "gamepad", padLabel)).toBe("VIEW");
+    expect(promptLabels(["heal", "clear-enemies", "spawn-dummy", "repeat-spawn"], "gamepad", padLabel)).toEqual([
+      "VIEW + ↑",
+      "VIEW + ↓",
+      "VIEW + ←",
+      "VIEW + →",
+    ]);
+    expect(promptLabel("toggle-freeze", "gamepad", padLabel)).toBe("VIEW + Y");
+    expect(promptLabel("toggle-no-damage", "gamepad", padLabel)).toBeNull();
   });
 });

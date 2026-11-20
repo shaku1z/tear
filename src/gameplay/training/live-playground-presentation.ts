@@ -3,9 +3,9 @@ import {
   promptLabel,
   promptLabels,
   type PadBindingLabel,
+  type PromptAction,
   type PromptInputMode,
 } from "../../domain/prompt-vocabulary";
-import { keyCodeLabel, keyCodes, keyboardLabel, type KeyboardAction } from "../../domain/keyboard-bindings";
 import { PLAYGROUND_TABS } from "./runtime-bridge";
 
 export interface PlaygroundChoice {
@@ -64,25 +64,15 @@ export function playgroundMenuSubtitle(mode: PlaygroundPromptDevice, padLabel?: 
   ].join(" · ");
 }
 
-/** Keyboard shortcuts in the arena, shown on the choice they repeat (keyboard only). */
-export const PLAYGROUND_SHORTCUTS: Readonly<Record<string, KeyboardAction>> = Object.freeze({
-  dummy: "spawn-dummy",
-  "boss:next": "summon-boss",
-  "boss:echo": "summon-echo",
-  clear: "clear-enemies",
+/** The arena shortcuts, shown on the menu choice each one repeats. */
+export const PLAYGROUND_SHORTCUTS: Readonly<Record<string, PromptAction>> = Object.freeze({
   heal: "heal",
-  "tab:abilities": "abilities",
+  clear: "clear-enemies",
+  dummy: "spawn-dummy",
+  repeat: "repeat-spawn",
+  "toggle:freeze": "toggle-freeze",
+  "toggle:god": "toggle-no-damage",
 });
-
-/** The key label for a choice's shortcut: its bound action, or the nth quick-spawn key. */
-function shortcutLabel(id: string, spawnIndex?: number): string | undefined {
-  if (spawnIndex !== undefined) {
-    const code = keyCodes("quick-spawn")[spawnIndex];
-    return code === undefined ? undefined : keyCodeLabel(code);
-  }
-  const action = PLAYGROUND_SHORTCUTS[id];
-  return action === undefined ? undefined : keyboardLabel(action);
-}
 
 function menuTabs(selected: string): PlaygroundScreenModel["tabs"] {
   return PLAYGROUND_TABS.map(([id, label]) => ({ id: `tab:${id}`, label, selected: id === selected }));
@@ -105,8 +95,6 @@ export interface LivePlaygroundPresentationOptions {
   /** Every arena the Playground can use, in stage order. */
   readonly arenas: () => readonly string[];
   readonly tab: () => string;
-  /** The enemy kinds bound to the number keys, in key order. */
-  readonly hotkeyKinds: readonly string[];
   readonly selectedWeapon: () => string;
   readonly upgrades: () => readonly PlaygroundPresentationUpgrade[];
   readonly abilityColors: () => Readonly<Record<string, Readonly<{ color: string }>>>;
@@ -127,29 +115,26 @@ export function createLivePlaygroundPresentation(options: LivePlaygroundPresenta
       const run = options.run(),
         pg = run.pg,
         colors = options.colors(),
-        device = options.inputDevice(),
-        // Arena shortcuts are keys: shown only while the keyboard owns input.
-        keyboard = promptDevice(device) === "keyboard",
+        device = promptDevice(options.inputDevice()),
         tab = options.tab();
-      const key = (id: string, spawnIndex?: number) => {
-        const hotkey = keyboard ? shortcutLabel(id, spawnIndex) : undefined;
-        return hotkey === undefined ? {} : { sub: `KEY ${hotkey}` };
+      // A choice's arena shortcut, worded for the device in use (none on touch).
+      const key = (id: string) => {
+        const action = PLAYGROUND_SHORTCUTS[id];
+        const label = action === undefined ? null : promptLabel(action, device, options.padLabel);
+        return label === null ? {} : { sub: device === "keyboard" ? `KEY ${label}` : label };
       };
       const pages: Readonly<Record<string, readonly PlaygroundSection[]>> = {
         spawn: [
           {
             label: "ENEMIES",
             choices: [
-              ...options.kinds.map((kind) => {
-                const index = options.hotkeyKinds.indexOf(kind);
-                return {
-                  id: `spawn:${kind}`,
-                  label: kind.toUpperCase(),
-                  accent: colors[kind] ?? "#888",
-                  ...(index < 0 ? {} : key(kind, index)),
-                };
-              }),
+              ...options.kinds.map((kind) => ({
+                id: `spawn:${kind}`,
+                label: kind.toUpperCase(),
+                accent: colors[kind] ?? "#888",
+              })),
               { id: "dummy", label: "TARGET DUMMY", accent: "#888", ...key("dummy") },
+              { id: "repeat", label: "REPEAT LAST", accent: "#888", ...key("repeat") },
             ],
           },
           {
@@ -181,12 +166,10 @@ export function createLivePlaygroundPresentation(options: LivePlaygroundPresenta
           {
             label: "SUMMON A BOSS",
             choices: [
-              // One row per roster boss; an arena shortcut (M for the Echo) shows on that boss's row.
               ...options.bosses.map((boss) => ({
                 id: `boss:${boss.id}`,
                 label: boss.name.toUpperCase(),
                 accent: colors.boss ?? options.uiAccent(),
-                ...key(`boss:${boss.id}`),
               })),
             ],
           },
@@ -216,8 +199,8 @@ export function createLivePlaygroundPresentation(options: LivePlaygroundPresenta
           {
             label: "RULES",
             choices: [
-              { id: "toggle:god", label: "NO DAMAGE", selected: Boolean(pg.god) },
-              { id: "toggle:freeze", label: "FREEZE ENEMIES", selected: Boolean(pg.freeze) },
+              { id: "toggle:god", label: "NO DAMAGE", selected: Boolean(pg.god), ...key("toggle:god") },
+              { id: "toggle:freeze", label: "FREEZE ENEMIES", selected: Boolean(pg.freeze), ...key("toggle:freeze") },
               { id: "toggle:slow", label: "SLOW MOTION", selected: Boolean(pg.slow) },
               { id: "toggle:onehit", label: "ONE-HIT MODE", selected: options.oneHit() },
             ],
