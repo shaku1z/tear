@@ -20,6 +20,7 @@ import type { LiveWorldEntityConstructionPort } from "../world/world-entity-fact
 import type { RunRandomStreamsSnapshot } from "../../simulation/run-random";
 import type { RunRandomStreamName } from "../../simulation/run-random";
 import type { RandomSource } from "../../domain/random";
+import { isObject, isRecord } from "../../domain/records";
 import type { TearWorldServices } from "../../gameplay/runtime/tear-world-context";
 import type { LegacyGhostRuntimeState } from "../../replay/legacy-compat";
 import type { CombatEntityIdentityState } from "../../gameplay/combat/combat-entity-runtime";
@@ -143,7 +144,7 @@ function encode(value: unknown, identities: ReadonlyMap<object, string>, stack =
   }
   if (typeof value === "undefined" || typeof value === "symbol") return null;
   if (typeof value === "bigint") return value.toString();
-  if (typeof value !== "object") throw new TypeError(`unsupported live snapshot value: ${typeof value}`);
+  if (!isObject(value)) throw new TypeError(`unsupported live snapshot value: ${typeof value}`);
   const identity = identities.get(value);
   if (identity !== undefined) return Object.freeze({ $ref: identity });
   if (stack.has(value)) return null;
@@ -356,14 +357,8 @@ function stageWorld(
   // before constructing actors or consulting any outgoing presentation state.
   const ui = world.components.get("tear.ui.v1"),
     blade = world.components.get("tear.blade.v1");
-  const uiRecord =
-    ui !== null && typeof ui === "object" && !Array.isArray(ui)
-      ? (ui as Readonly<Record<string, TearCodecValue>>)
-      : undefined;
-  const bladeRecord =
-    blade !== null && typeof blade === "object" && !Array.isArray(blade)
-      ? (blade as Readonly<Record<string, TearCodecValue>>)
-      : undefined;
+  const uiRecord = isRecord(ui) ? (ui as Readonly<Record<string, TearCodecValue>>) : undefined;
+  const bladeRecord = isRecord(blade) ? (blade as Readonly<Record<string, TearCodecValue>>) : undefined;
   const particles = parseParticlePresentationCheckpoint(uiRecord?.particlesPresentation);
   if (particles !== undefined) {
     if (options.particlesPresentation === undefined) throw new Error("particle presentation owner is not bound");

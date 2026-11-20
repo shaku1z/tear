@@ -1,3 +1,4 @@
+import { isRecord } from "../../domain/records";
 import type { TearProvenanceV1 } from "../contracts";
 import type { StateSetupEvaluation, StateSetupReport, StateSetupValueDiff } from "../state-editor-model";
 import { diffStateSetupValues, evaluateStateSetupSource } from "../state-editor-model";
@@ -325,8 +326,4 @@ export function installStateEditor(host: StateEditorHost): HTMLElement | null {
   validate();
   document.body.append(panel);
   return panel;
-}
-
-function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

@@ -46,7 +46,8 @@ export interface TouchControlViewport {
  * pixels converted at the live scale. The joystick ring keeps its logical radius
  * because its follow distance (`CONFIG.touch.joyFollow`) is a logical input rule.
  */
-export const TOUCH_CONTROL_METRICS = Object.freeze({
+// Pure, so a build without touch controls drops this module (plans/MOBILE_LATER.md).
+export const TOUCH_CONTROL_METRICS = /* @__PURE__ */ Object.freeze({
   jumpCss: 96,
   dashCss: 80,
   throwCss: 76,

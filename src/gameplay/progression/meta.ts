@@ -5,6 +5,7 @@ import {
   type AcknowledgedStorage,
   type CompletionStatus,
 } from "../../domain/reward-receipts";
+import { asRecord } from "../../domain/records";
 export const META_RANK_LIMITS = Object.freeze({
   tough: 8,
   sharp: 8,
@@ -145,21 +146,15 @@ export interface MetaProgressionDependencies<
   readonly applyUpgrade: (upgrade: Upgrade, context: ApplyContext) => void;
 }
 
-function record(value: unknown): Record<string, unknown> | null {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
-}
-
 function amount(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? Math.max(0, value) : 0;
 }
 
 export function migrateMetaData(value: unknown): MetaData {
-  const source = record(value) ?? {};
+  const source = asRecord(value) ?? {};
   const legacyCoins = source.lifetimeEarned === undefined ? amount(source.coins) : 0;
   const purchases: Record<string, number> = {};
-  const rawPurchases = record(source.buy);
+  const rawPurchases = asRecord(source.buy);
   if (rawPurchases) {
     for (const [id, level] of Object.entries(rawPurchases)) purchases[id] = Math.floor(amount(level));
   }
@@ -240,7 +235,7 @@ export function createMetaProgression<Upgrade extends UpgradeDefinition, ApplyCo
       }
       const migrated = migrateMetaData(parsed);
       this.data = migrated;
-      const source = record(parsed);
+      const source = asRecord(parsed);
       if (source?.coins !== undefined && source.lifetimeEarned === undefined) this.save();
       return this.data;
     },

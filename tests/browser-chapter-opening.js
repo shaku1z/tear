@@ -212,8 +212,9 @@ function pressEachClosingBeatInPage(deviceName) {
   requestAnimationFrame(frame);
 }
 
-async function chapterOpeningCarriesThroughOnEveryDevice(browser, configure) {
-  for (const device of DEVICES) {
+/** `want` picks the desktop devices (mouse, keyboard, controller), the touch device, or both. */
+async function chapterOpeningCarriesThroughOnEveryDevice(browser, configure, want = { desktop: true, touch: true }) {
+  for (const device of DEVICES.filter((entry) => (entry.context.hasTouch === true ? want.touch : want.desktop))) {
     const context = await browser.newContext(device.context);
     const page = await context.newPage();
     const errors = [];

@@ -1,4 +1,5 @@
 import { len } from "../domain/geometry";
+import { isObject } from "../domain/records";
 import type { UpgradeApplyContext, UpgradeEventHandler, UpgradeMods } from "./upgrades";
 
 type HookContext = Pick<UpgradeApplyContext, "mods" | "config">;
@@ -199,7 +200,7 @@ export function restoreUpgradeHooks(context: HookContext): void {
           `Legacy upgrade callback payload in ${key} is unsupported: snapshot discarded its binding identity`,
         );
       if (
-        typeof entry !== "object" ||
+        !isObject(entry) ||
         !("$upgradeHook" in entry) ||
         typeof entry.$upgradeHook !== "string" ||
         !Object.hasOwn(bindings, entry.$upgradeHook)

@@ -2,7 +2,7 @@
 //
 //   node scripts/run-checks.mjs                  every gate group in order (`pnpm check`)
 //   node scripts/run-checks.mjs fast             the fast group (`pnpm check:quick`, the pre-push hook)
-//   node scripts/run-checks.mjs static           one group: fast, static, unit, build, browser, nightly, weekly
+//   node scripts/run-checks.mjs static           one group: fast, static, unit, build, browser, nightly, weekly, mobile
 //   node scripts/run-checks.mjs browser --list   print what would run
 //   node scripts/run-checks.mjs browser --shard 2/4   one of four parts of a group (CI's parallel jobs)
 //

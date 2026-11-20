@@ -1,5 +1,6 @@
 import type { Align, UiDependencies, UiOptions, UiRuntime } from "./ui-contracts";
 import { truthyOr } from "./value-fallback";
+import { isObject } from "../domain/records";
 
 export function createUiCinematic(dependencies: UiDependencies) {
   const {
@@ -137,7 +138,7 @@ export function createUiCinematic(dependencies: UiDependencies) {
       let guard = null,
         guardColor = t.color.guard;
       if (typeof o.guard === "number") guard = o.guard;
-      else if (o.guard && typeof o.guard === "object") {
+      else if (o.guard && isObject(o.guard)) {
         guard = o.guard.frac;
         guardColor = truthyOr(o.guard.color, () => guardColor);
       }

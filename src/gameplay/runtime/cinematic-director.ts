@@ -8,6 +8,7 @@
 // run that opens on a brief, so the timeline lives in gameplay and only its
 // drawing lives in presentation.
 import type { CONFIG as GAME_CONFIG } from "../../config/game-config";
+import { isRecord } from "../../domain/records";
 
 type CompletionPolicy = "condition" | "confirm" | "confirm-or-timeout" | "timed";
 type CinematicContext = Record<string, unknown>;
@@ -168,14 +169,9 @@ export interface CinematicRecordedInputV1 {
   readonly previous: Readonly<{ key: boolean; touch: boolean; pad: boolean }>;
 }
 function recordedInput(value: unknown): CinematicRecordedInputV1 {
-  if (
-    typeof value !== "object" ||
-    value === null ||
-    Array.isArray(value) ||
-    Object.getPrototypeOf(value) !== Object.prototype
-  )
+  if (!isRecord(value) || Object.getPrototypeOf(value) !== Object.prototype)
     throw new TypeError("Cinematic source input must be data");
-  const v = value as Record<string, unknown>,
+  const v = value,
     previous = v.previous;
   if (
     Object.keys(v).sort().join() !== ["version", "armed", "releasedSeconds", "holdSeconds", "previous"].sort().join() ||
@@ -185,16 +181,14 @@ function recordedInput(value: unknown): CinematicRecordedInputV1 {
     [v.releasedSeconds, v.holdSeconds].some(
       (n) => typeof n !== "number" || !Number.isFinite(n) || n < 0 || n > 86400,
     ) ||
-    typeof previous !== "object" ||
-    previous === null ||
-    Array.isArray(previous) ||
+    !isRecord(previous) ||
     Object.getPrototypeOf(previous) !== Object.prototype ||
     Object.keys(previous).sort().join() !== "key,pad,touch" ||
     Object.values(Object.getOwnPropertyDescriptors(previous)).some((p) => !("value" in p)) ||
     Object.values(previous).some((n) => typeof n !== "boolean")
   )
     throw new TypeError("Invalid/unsupported cinematic source input");
-  return structuredClone(value) as CinematicRecordedInputV1;
+  return structuredClone<unknown>(value) as CinematicRecordedInputV1;
 }
 
 const CinematicTimeline = (() => {
@@ -608,7 +602,7 @@ export { CinematicTimeline };
 export type CinematicDirector = InstanceType<typeof CinematicTimeline.Director>;
 
 function validateDirectorState(value: unknown): CinematicDirectorStateV1 {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+  if (!isRecord(value)) {
     throw new TypeError("cinematic director state must be an object");
   }
   const state = value as Partial<CinematicDirectorStateV1>;

@@ -1,3 +1,4 @@
+import { isObject, isRecord } from "../domain/records";
 import type { ParticleSystem } from "../presentation/particles";
 import {
   legacyCosmeticEmissionSnapshot,
@@ -54,8 +55,7 @@ const variants: Readonly<Record<string, readonly string[]>> = Object.freeze({
 });
 
 function data(value: unknown, keys: readonly string[]): Record<string, unknown> {
-  if (typeof value !== "object" || value === null || Array.isArray(value))
-    throw new TypeError("particle presentation requires data objects");
+  if (!isRecord(value)) throw new TypeError("particle presentation requires data objects");
   const prototype: unknown = Object.getPrototypeOf(value);
   if (prototype !== Object.prototype && prototype !== null)
     throw new TypeError("particle presentation requires plain objects");
@@ -82,7 +82,7 @@ function boolean(value: unknown): boolean {
 
 function particle(value: unknown): Readonly<Particle> {
   // Inspect the discriminator without invoking a getter, before selecting its fields.
-  if (typeof value !== "object" || value === null) throw new TypeError("particle must be data");
+  if (!isObject(value)) throw new TypeError("particle must be data");
   const type = Object.getOwnPropertyDescriptor(value, "type");
   const name: unknown = type !== undefined && "value" in type ? type.value : undefined;
   if (typeof name !== "string" || !Object.hasOwn(variants, name)) throw new TypeError("unsupported particle type");

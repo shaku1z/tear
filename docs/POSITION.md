@@ -24,7 +24,7 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 | [Repository structure and workflow](#repository-structure) | In progress | After the hooks pull request merges, run pnpm setup:hooks in the canonical checkout on main (scripts/governance/README.md). | — |
 | [Playtest tool](#playtest-tool) | Stage 1 built: pnpm playtest bosses prints a table per boss fight and phase; pnpm playtest sweep plays every boss, weapon, Easy and Normal with six scripted players and prints a summary | Stage 2: every boss phase, wave and enemy kind as a row that starts directly, and pnpm playtest runs. | — |
 | [TearBench C21 to C40 program](#tearbench-program) | Paused at the 2026-08-30 state | Land or close pull request 84. | — |
-| [Mobile, touch and phone layouts](#mobile) | Paused by the owner 2026-11-19 | Leave the mobile code out of the production builds while keeping it in dev and test builds. | Say when mobile resumes. |
+| [Mobile, touch and phone layouts](#mobile) | Paused by the owner 2026-11-19; out of the release builds | Nothing until the owner resumes mobile; plans/MOBILE_LATER.md says how to turn it back on. | Mark the CrazyGames listing desktop only. Say when mobile resumes. |
 
 <a id="release-readiness"></a>
 
@@ -130,8 +130,8 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 ### Mobile, touch and phone layouts
 
-**Paused by the owner 2026-11-19.** The owner paused all mobile work and wants it out of the official production builds until further notice. Touch controls, stick or drag aim, the rotate gate, phone layouts, touch density and haptics exist in the source. Touch-aim fixes are parked as draft pull request 191. Sessions write anything mobile will need later in plans/MOBILE_LATER.md.
+**Paused by the owner 2026-11-19; out of the release builds.** The owner paused all mobile work. The release builds (standalone, CrazyGames, itch) leave out the touch controls, the rotate gate, the phone profile layout and haptics, and a build check fails if they come back; a touch-only phone sees one line saying TEAR is played on a computer for now. Dev and test builds keep everything. The phone browser checks are parked in the mobile group (pnpm check:mobile). Touch-aim fixes are parked as draft pull request 191. Sessions write anything mobile will need later in plans/MOBILE_LATER.md.
 
-- Next: Leave the mobile code out of the production builds while keeping it in dev and test builds.
-- Owner action: Say when mobile resumes.
+- Next: Nothing until the owner resumes mobile; plans/MOBILE_LATER.md says how to turn it back on.
+- Owner action: Mark the CrazyGames listing desktop only. Say when mobile resumes.
 - Evidence: [plans/MOBILE_LATER.md](../plans/MOBILE_LATER.md), [#191](https://github.com/shaku1z/tear/pull/191)

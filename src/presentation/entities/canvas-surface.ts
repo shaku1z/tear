@@ -1,7 +1,8 @@
+import { isObject } from "../../domain/records";
+
 export function isCanvasSurface(value: unknown): value is CanvasRenderingContext2D {
   return (
-    typeof value === "object" &&
-    value !== null &&
+    isObject(value) &&
     "save" in value &&
     typeof value.save === "function" &&
     "restore" in value &&
