@@ -1064,7 +1064,7 @@
         "args": [
           "run",
           "tests/unit/campaign-stage-curve.test.ts",
-          "tests/unit/verdant-stage-state-forge.test.ts",
+          "tests/unit/verdant-stage-state-setup.test.ts",
           "tests/unit/verdant-wave-composition.test.ts",
           "tests/unit/verdant-wave-economy.test.ts"
         ]
@@ -1090,7 +1090,7 @@
           "tests/unit/pale-aurora-definitions.test.ts",
           "tests/unit/pale-aurora-runtime.test.ts",
           "tests/unit/rimehound.test.ts",
-          "tests/unit/pale-state-forge-scenarios.test.ts"
+          "tests/unit/pale-state-setup-scenarios.test.ts"
         ]
       },
       "claimIds": [
@@ -1166,7 +1166,7 @@
         "args": [
           "run",
           "tests/unit/pale-variant-selection.test.ts",
-          "tests/unit/pale-state-forge-scenarios.test.ts",
+          "tests/unit/pale-state-setup-scenarios.test.ts",
           "tests/unit/live-codec-validation.test.ts",
           "tests/unit/game-reference.test.ts"
         ]
@@ -1219,8 +1219,8 @@
           "tests/unit/white-hart-foundation.test.ts",
           "tests/unit/white-hart-phases.test.ts",
           "tests/unit/white-hart-route-runtime.test.ts",
-          "tests/unit/white-hart-state-forge.test.ts",
-          "tests/unit/pale-state-forge-scenarios.test.ts"
+          "tests/unit/white-hart-state-setup.test.ts",
+          "tests/unit/pale-state-setup-scenarios.test.ts"
         ]
       },
       "claimIds": [
@@ -1245,7 +1245,7 @@
           "tests/unit/enemy-reference.test.ts",
           "tests/unit/boss-reference.test.ts",
           "tests/unit/pale-wave-composition.test.ts",
-          "tests/unit/pale-stage-state-forge.test.ts",
+          "tests/unit/pale-stage-state-setup.test.ts",
           "tests/unit/tearbench-current-game-authority.test.ts"
         ]
       },

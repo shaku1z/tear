@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 const { STATE_WAIT_MS } = require("./browser-waits");
 
-// State Forge supplies only a legal normal Riftlock/charger encounter. The
+// State Setup supplies only a legal normal Riftlock/charger encounter. The
 // captured target and Backblast recall are exercised through semantic input.
 const resolved = Object.freeze({
   document: Object.freeze({

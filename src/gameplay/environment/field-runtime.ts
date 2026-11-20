@@ -83,3 +83,22 @@ export function advanceEnvironmentField(
     transition,
   });
 }
+
+/**
+ * How a stage field sorts an enemy before it decides whether to move it. One rule for every biome: a field
+ * lists what it does to each class as data and never reads an enemy's weight itself.
+ */
+export type FieldEnemyClass = "light-enemy" | "heavy-enemy" | "boss";
+
+/** An enemy at or above this weight is heavy to a stage field. Armoured enemies and planters are; chargers are not. */
+export const FIELD_HEAVY_ENEMY_WEIGHT = 1.75;
+
+export interface FieldClassedEnemy {
+  readonly weight?: number;
+  readonly isBoss?: boolean;
+}
+
+export function fieldEnemyClass(enemy: FieldClassedEnemy): FieldEnemyClass {
+  if (enemy.isBoss === true) return "boss";
+  return (enemy.weight ?? 1) >= FIELD_HEAVY_ENEMY_WEIGHT ? "heavy-enemy" : "light-enemy";
+}

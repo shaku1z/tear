@@ -8,7 +8,8 @@ import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION, type TearScenarioV1 } from
 import { requireProductionHeadlessScenario } from "../tearbench/production-headless-scenario";
 import { TEAR_SIMULATION_TICKS_PER_SECOND } from "../tearbench/simulation-profile";
 import { createProductionHeadlessEnvironment } from "../tearbench/production-headless-environment";
-import { createBossPlayer, type BossPlayerId } from "./boss-player";
+import { createObjectCounter, readCuttableObjects, type ObjectCount } from "./boss-objects";
+import { BOSS_PLAYER_IDS, createBossPlayer, type BossPlayer, type BossPlayerId } from "./boss-player";
 import { boxOverlaps, readBoss, readPlayerBox, trainingResets, type BossView, type PlayerBox } from "./boss-view";
 
 export interface BossFightRequest {
@@ -49,6 +50,8 @@ export interface BossPhaseResult {
    * at that tick, else to the body of the boss when they touch, else to "unmarked".
    */
   readonly hitsBy: Readonly<Record<string, AttributedHits>>;
+  /** What stood on the stage for a weapon to cut (Grafts, cage walls, roots), by name. Empty for most bosses. */
+  readonly objects: Readonly<Record<string, Readonly<ObjectCount>>>;
 }
 
 export interface BossFightResult extends BossFightRequest {
@@ -83,6 +86,7 @@ interface MutablePhase {
   hitsTaken: number;
   exposedTicks: number;
   hitsBy: Record<string, { hits: number; damage: number }>;
+  objects: Record<string, ObjectCount>;
 }
 
 /**
@@ -90,6 +94,8 @@ interface MutablePhase {
  * difficulty is refused here, by name, before any fight starts.
  */
 export function bossFightScenario(request: BossFightRequest): TearScenarioV1 {
+  if (!BOSS_PLAYER_IDS.includes(request.player))
+    throw new RangeError(`no player "${request.player}"; the players are ${BOSS_PLAYER_IDS.join(", ")}`);
   if (request.phase !== undefined) {
     const phases = bossPhaseCount(request.boss);
     if (!Number.isInteger(request.phase) || request.phase < 1 || request.phase > phases)
@@ -114,7 +120,8 @@ export function bossFightScenario(request: BossFightRequest): TearScenarioV1 {
     executionClass: "engineering",
     seed: request.seed,
     start,
-    maxTicks: request.maxTicks,
+    // The run also holds the time the game takes to bring the boss to a chosen phase; the fight has its own limit.
+    maxTicks: request.maxTicks + (request.phase === undefined ? 0 : PRACTICE_SETUP_LIMIT_TICKS),
     assertions: ["runtime.finite-state"],
     tags: ["playtest"],
   });
@@ -138,37 +145,56 @@ export function attributeHit(player: PlayerBox, before: BossView | null, after: 
   return body !== null && boxOverlaps(player, body, ATTRIBUTION_MARGIN_PIXELS) ? BODY_HIT : UNMARKED_HIT;
 }
 
-/** Plays one boss fight on the real game, headless, and measures it phase by phase. */
-export function playBossFight(request: BossFightRequest): BossFightResult {
+function emptyPhase(phase: number): MutablePhase {
+  return {
+    phase,
+    ticks: 0,
+    damageDealt: 0,
+    bossHealed: 0,
+    damageTaken: 0,
+    hitsTaken: 0,
+    exposedTicks: 0,
+    hitsBy: {},
+    objects: {},
+  };
+}
+
+/**
+ * For a fight at a chosen phase: the game brings the boss there and the player waits, as it would watching the
+ * transition. Returns the ticks that took and whether the boss got there in time; at once for a Phase I fight.
+ */
+function bringToChosenPhase(
+  environment: ReturnType<typeof createProductionHeadlessEnvironment>,
+  request: BossFightRequest,
+): Readonly<{ setupTicks: number; reached: boolean }> {
+  if (!isPracticeBossId(request.boss) || !isPracticeBossPhase(request.phase)) return { setupTicks: 0, reached: true };
+  const practice = environment.practiceBoss(request.boss, request.phase);
+  let setupTicks = 0;
+  while (practice() !== "active" && setupTicks < PRACTICE_SETUP_LIMIT_TICKS) {
+    environment.step([]);
+    setupTicks += 1;
+  }
+  return { setupTicks, reached: practice() === "active" };
+}
+
+/**
+ * Plays one boss fight on the real game, headless, and measures it phase by phase. The player is the one the
+ * request names; a caller may hand in its own instead.
+ */
+export function playBossFight(
+  request: BossFightRequest,
+  player: BossPlayer = createBossPlayer(request.player),
+): BossFightResult {
   const environment = createProductionHeadlessEnvironment();
   try {
     environment.reset(bossFightScenario(request));
-    let setupTicks = 0;
-    if (isPracticeBossId(request.boss) && isPracticeBossPhase(request.phase)) {
-      // The game brings the boss to the phase; the player waits, as it would watching the transition.
-      const practice = environment.practiceBoss(request.boss, request.phase);
-      while (practice() !== "active" && setupTicks < PRACTICE_SETUP_LIMIT_TICKS) {
-        environment.step([]);
-        setupTicks += 1;
-      }
-      if (practice() !== "active")
-        return brokenFight(request, setupTicks, `the boss did not reach phase ${String(request.phase)}`);
-    }
-    const player = createBossPlayer(request.player);
+    const { setupTicks, reached } = bringToChosenPhase(environment, request);
+    if (!reached) return brokenFight(request, setupTicks, `the boss did not reach phase ${String(request.phase)}`);
     const phases: MutablePhase[] = [];
     const phaseRow = (phase: number): MutablePhase => {
       const last = phases.at(-1);
       if (last?.phase === phase) return last;
-      const next = {
-        phase,
-        ticks: 0,
-        damageDealt: 0,
-        bossHealed: 0,
-        damageTaken: 0,
-        hitsTaken: 0,
-        exposedTicks: 0,
-        hitsBy: {},
-      };
+      const next = emptyPhase(phase);
       phases.push(next);
       return next;
     };
@@ -179,6 +205,7 @@ export function playBossFight(request: BossFightRequest): BossFightResult {
     let limitedTellData = false;
     let cinematicTicks = 0;
     let lastHit: BossFightResult["killingHit"];
+    const countObjects = createObjectCounter();
     while (end === undefined) {
       const state = environment.policyObservation();
       const rawUi = environment.policyUiObservation();
@@ -203,7 +230,8 @@ export function playBossFight(request: BossFightRequest): BossFightResult {
       ticks += 1;
       const after = readBoss(environment.world());
       const boxAfter = readPlayerBox(environment.world());
-      const observed = environment.policyObservation().player;
+      const stateAfter = environment.policyObservation();
+      const observed = stateAfter.player;
       // Playground practice restores a defeated player instead of ending the run; the game reports it, and it
       // counts as the defeat it is.
       const reset = trainingResets(environment.world()) > resetsBefore;
@@ -213,6 +241,7 @@ export function playBossFight(request: BossFightRequest): BossFightResult {
         limitedTellData ||= before.limitedTellData;
         const row = phaseRow(before.phase);
         row.ticks += 1;
+        countObjects(row.objects, readCuttableObjects(stateAfter));
         if (before.tells.some((tell) => tell.stage === "exposed")) row.exposedTicks += 1;
         const bossChange = (after === null ? 0 : after.hp) - before.hp;
         if (bossChange < 0) row.damageDealt += -bossChange;
@@ -228,6 +257,10 @@ export function playBossFight(request: BossFightRequest): BossFightResult {
           lastHit = { source, damage: lost, bossDoing: before.doing };
         }
         if (after === null || after.dead) end = "boss defeated";
+        else if (player.phaseTicks !== undefined && row.ticks >= player.phaseTicks) {
+          end = "time limit";
+          reason = `the ${player.id} player plays ${String(secondsOf(player.phaseTicks))} s of a phase`;
+        }
       }
       if (end === undefined && (hpAfter <= 0 || step.terminated)) end = hpAfter <= 0 ? "player defeated" : "broken";
       if (end === "player defeated" && reset) reason = "the Playground restored the player; the fight stops there";

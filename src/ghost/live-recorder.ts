@@ -3,7 +3,6 @@ import { readGhostFinaleCompanion } from "./finale-companion";
 import {
   createBrowserGhostEncoderWorker,
   GhostLocalVault,
-  GhostStreamingRecorder,
   type GhostChunkKind,
   type GhostEncoderWorkerPort,
   type TearGhostManifest,
@@ -11,6 +10,7 @@ import {
   type GhostVaultGuard,
 } from "./capsule-vault";
 import { createIndexedDbGhostVaultBackend } from "./indexeddb-vault-backend";
+import { GhostStreamingRecorder } from "./streaming-recorder";
 import { createLiveGhostBootstrapEvent, createLiveGhostForkBootstrapEvent } from "./live-causal-events";
 import { ghostRecordingProfile, type GhostRecordingProfileId } from "./recording-profiles";
 
@@ -327,10 +327,9 @@ export class GhostLiveRecorder {
       // Reaching the first append takes a turn, so `flushing` is always assigned before it is cleared.
       await Promise.resolve();
       const recorder = session.recorder;
-      while (recorder !== null && session.pending.length > 0) {
-        const entry = session.pending.shift();
-        if (entry !== undefined) await recorder.append(entry);
-      }
+      // Everything waiting goes to the recorder at once, so one write commits every chunk it completes.
+      // Entries that arrive during that write wait for the next round; the order never changes.
+      while (recorder !== null && session.pending.length > 0) await recorder.appendAll(session.pending.splice(0));
     } catch (error) {
       this.#fail(session, error);
     } finally {

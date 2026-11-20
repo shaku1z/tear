@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   GhostLocalVault,
-  GhostStreamingRecorder,
   createMemoryGhostVaultBackend,
   GHOST_VAULT_STORES,
   type GhostVaultBackend,
 } from "../../src/ghost/capsule-vault";
+import { GhostStreamingRecorder } from "../../src/ghost/streaming-recorder";
 import {
   prepareGhostPortableArchive,
   prepareCompleteGhostPairedArchive,

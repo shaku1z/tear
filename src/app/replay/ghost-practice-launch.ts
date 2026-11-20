@@ -1,15 +1,15 @@
 import type { GhostPracticeChild } from "../../ghost/replay-world";
-import { createLiveStateForgeRestoreFactory } from "../../tearbench/live-runtime-snapshots";
+import { createLiveStateSetupRestoreFactory } from "../../tearbench/live-runtime-snapshots";
 import { restoreSnapshotIntoLiveWorld, type TearLiveWorldAdapter } from "../../tearbench/live-state-snapshot";
 import type { TearStateCodecRegistry } from "../../tearbench/state-codecs";
 import type { LiveGhostPracticeSessionState } from "./ghost-practice-session-state";
 
 export interface GhostPracticeLaunchPort {
   readonly registry: TearStateCodecRegistry;
-  readonly stateForge: TearLiveWorldAdapter<unknown>;
+  readonly stateSetup: TearLiveWorldAdapter<unknown>;
   readonly hasLiveWorld: () => boolean;
   readonly practice: LiveGhostPracticeSessionState;
-  /** Clears the captured Ghost 2 recorder after State Forge restoration. */
+  /** Clears the captured Ghost 2 recorder after State Setup restoration. */
   readonly clearRestoredRecording: () => void;
   readonly setPlaying: () => void;
   readonly requestPointer: () => void;
@@ -36,7 +36,7 @@ function validPracticeChild(child: GhostPracticeChild): boolean {
 
 /**
  * Moves a verified immutable practice child into the real live world. The
- * State Forge transaction preserves rollback, then the application installs
+ * State Setup transaction preserves rollback, then the application installs
  * an outward-effect policy before exposing ordinary player controls.
  */
 export function launchGhostPracticeChild(
@@ -45,12 +45,12 @@ export function launchGhostPracticeChild(
 ): GhostPracticeLaunchResult {
   if (!validPracticeChild(child))
     return Object.freeze({ ok: false, message: "Practice child failed custody validation." });
-  const stateForge: TearLiveWorldAdapter<unknown> = {
-    capture: () => port.stateForge.capture(),
-    stage: (world, context) => port.stateForge.stage(world, context),
-    validate: (candidate) => port.stateForge.validate(candidate),
+  const stateSetup: TearLiveWorldAdapter<unknown> = {
+    capture: () => port.stateSetup.capture(),
+    stage: (world, context) => port.stateSetup.stage(world, context),
+    validate: (candidate) => port.stateSetup.validate(candidate),
     commit(candidate) {
-      port.stateForge.commit(candidate);
+      port.stateSetup.commit(candidate);
       // A recorded keyframe contains Ghost 2's in-memory recorder. It is
       // historical source data, not a recording session for this child.
       port.clearRestoredRecording();
@@ -60,8 +60,8 @@ export function launchGhostPracticeChild(
   const restored = restoreSnapshotIntoLiveWorld(
     child.snapshot,
     port.registry,
-    createLiveStateForgeRestoreFactory(port.registry),
-    stateForge,
+    createLiveStateSetupRestoreFactory(port.registry),
+    stateSetup,
     { capturePrevious: port.hasLiveWorld() },
   );
   if (!restored.ok) {

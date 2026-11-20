@@ -1,3 +1,4 @@
+import { asRecord } from "../domain/records";
 import { parseGhostApplicationClockEvent, readGhostApplicationClockSchedule } from "./application-frame-events";
 import type { GhostReadCapsule } from "./capsule-reader";
 import { calculateRunDna, type GhostRunDna } from "./player-experiences";
@@ -30,18 +31,13 @@ export interface GhostRunDnaTheaterProjection {
   readonly unavailable: readonly string[];
 }
 
-function object(value: unknown): Record<string, unknown> | undefined {
-  return value !== null && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : undefined;
-}
 function nativeCapture(
   value: unknown,
   capsule: GhostReadCapsule,
   entryTick: number,
   metrics: Readonly<Record<MetricName, number | undefined>>,
 ): NativeRunDnaCapture["capture"] {
-  const c = object(value),
+  const c = asRecord(value),
     context = readGhostReplayRunContext(capsule.manifest.provenance);
   const fields = [
     "version",
@@ -128,7 +124,7 @@ function nativeCapture(
       ...capsule.tracks.presentation,
     ].some((entry) => entry.tick > counter("endTick")) ||
     capsule.tracks.results.some(
-      (entry) => entry.tick > terminalTick && object(entry.value)?.format === "tearghost-authoritative-receipt",
+      (entry) => entry.tick > terminalTick && asRecord(entry.value)?.format === "tearghost-authoritative-receipt",
     )
   )
     throw new TypeError("gameplay commit after native terminal");
@@ -151,13 +147,13 @@ function nativeCapture(
     if (!late.some((entry) => entry.tick === capsule.maxTick))
       throw new TypeError("post-terminal endpoint exceeds its frame-tail witness");
   }
-  const events = capsule.tracks.events.map((entry) => ({ tick: entry.tick, event: object(entry.value) }));
+  const events = capsule.tracks.events.map((entry) => ({ tick: entry.tick, event: asRecord(entry.value) }));
   const terminal = events.filter(
     ({ event }) =>
       event?.source === "engine" && ["run.completed", "run.defeated", "run.abandoned"].includes(event.type as string),
   );
   const matches = (event: Record<string, unknown> | undefined) => {
-    const p = object(event?.payload);
+    const p = asRecord(event?.payload);
     return (
       p?.runId === context.run.id &&
       p.mode === context.run.mode &&
@@ -179,14 +175,9 @@ function nativeCapture(
 }
 
 function metricRecord(value: unknown): Readonly<Record<string, unknown>> | undefined {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
-  const record = value as Readonly<Record<string, unknown>>;
-  return record.kind === "run-dna-metrics-v1" &&
-    typeof record.metrics === "object" &&
-    record.metrics !== null &&
-    !Array.isArray(record.metrics)
-    ? (record.metrics as Readonly<Record<string, unknown>>)
-    : undefined;
+  const record = asRecord(value);
+  if (record === undefined) return undefined;
+  return record.kind === "run-dna-metrics-v1" ? asRecord(record.metrics) : undefined;
 }
 
 /** A read-only Theater projection. Only one declared, complete metrics result may feed Run DNA. */
@@ -217,7 +208,7 @@ export function projectGhostRunDnaTheater(capsule: GhostReadCapsule): GhostRunDn
       unavailable: Object.freeze(unavailable),
     });
   const dna = calculateRunDna(sourceMetrics as Record<string, number>);
-  const raw = object(declaration?.value);
+  const raw = asRecord(declaration?.value);
   if (raw !== undefined && Object.hasOwn(raw, "capture")) {
     try {
       const capture = nativeCapture(raw.capture, capsule, declaration?.tick ?? -1, sourceMetrics);

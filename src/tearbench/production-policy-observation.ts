@@ -1,4 +1,5 @@
 import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION, type TearObservationV1 } from "./contracts";
+import { environmentSnapshotToObservation } from "./environment-codec";
 import {
   projectLiveActorMechanics,
   projectLiveBladeMechanics,
@@ -129,6 +130,8 @@ export function projectProductionPolicyObservation(
       score: run.score,
       elapsedTicks: tick,
     }),
+    // What the stage holds (fields, things a weapon can cut, routes), as the live observation gives it.
+    environment: environmentSnapshotToObservation(replay.world.context.environment.snapshot()),
     availableActions: canonicalObservationActions(screen, run.mode, false),
   });
 }

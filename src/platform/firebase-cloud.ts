@@ -1,3 +1,4 @@
+import { asRecord } from "../domain/records";
 import type { AccountProvider, CloudSavePayload, CloudUser, SharedCloudService, SignInResult } from "./cloud";
 import type { FirebaseClientConfig } from "./firebase-config";
 
@@ -106,10 +107,6 @@ export function createBrowserScriptLoader(documentLike: Document): (url: string)
       documentLike.head.appendChild(script);
     });
   };
-}
-
-function asRecord(value: unknown): DataRecord | null {
-  return typeof value === "object" && value !== null && !Array.isArray(value) ? (value as DataRecord) : null;
 }
 
 function number(value: unknown, fallback = 0): number {
@@ -524,7 +521,7 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
       if (!session) return null;
       try {
         const document = await race(session.db.collection("ghosts").doc(`${mode}_${difficulty}`).get());
-        return document.exists ? asRecord(document.data()) : null;
+        return document.exists ? (asRecord(document.data()) ?? null) : null;
       } catch {
         return null;
       }

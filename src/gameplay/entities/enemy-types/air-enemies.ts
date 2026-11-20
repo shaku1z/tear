@@ -24,6 +24,7 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
       super(x, y, CONFIG.flyer);
       this.color = CONFIG.colors.flyer;
       this.kind = "flyer";
+      this.flies = true;
       this.behavior = "swoop";
       this.state = "hover";
       this.aimTimer = this.cfg.swoopInterval * (0.5 + GAME_RANDOM.next() * 0.6);
@@ -264,6 +265,7 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
       super(x, y, CONFIG.bomber);
       this.color = CONFIG.colors.bomber;
       this.kind = "bomber";
+      this.flies = true;
       this.behavior = "lob";
       this.lobTimer = CONFIG.bomber.lobInterval * (0.5 + GAME_RANDOM.next() * 0.7);
       this.mineTimer = CONFIG.bomber.mineInterval * (0.6 + GAME_RANDOM.next() * 0.6);
