@@ -1,4 +1,5 @@
 import type { Align, CardOptions, UiDependencies, UiRuntime } from "./ui-contracts";
+import { drawKeyLegend, measureKeyLegend } from "./key-legend";
 import { truthyOr } from "./value-fallback";
 
 /** The wide compact sheet: inset from the safe frame's sides, and from its top and bottom. */
@@ -17,7 +18,23 @@ export function createUiLedger(dependencies: UiDependencies) {
       ctx.font = this.font(this.t.type.micro, true);
       // The cap grows with the type token, so touch density never overfills it.
       const h = Math.max(KEYCAP_AUTHORED_H, Math.round(this.t.type.micro * 1.7));
-      return { w: Math.max(h + 4, ctx.measureText(key).width + 14), h };
+      return { w: Math.max(h + 4, measureKeyLegend(ctx, key, this.t.type.micro) + 14), h };
+    },
+    /** A key legend outside a cap (the controls guide's key column); arrows keep the letters' weight. */
+    keyLegend(
+      this: UiRuntime,
+      ctx: CanvasRenderingContext2D,
+      legend: string,
+      x: number,
+      y: number,
+      color?: string,
+      align?: Align,
+      size?: number,
+    ) {
+      const legendSize = size ?? this.t.type.micro;
+      ctx.fillStyle = color ?? this.t.color.muted;
+      ctx.font = this.font(legendSize, true);
+      return drawKeyLegend(ctx, legend, x, y, legendSize, align);
     },
     keycap(this: UiRuntime, ctx: CanvasRenderingContext2D, key: string, x: number, y: number) {
       const { w, h } = this.keycapSize(ctx, key);
@@ -32,9 +49,7 @@ export function createUiLedger(dependencies: UiDependencies) {
       ctx.strokeRect(x, y - h + 5, w, h);
       ctx.fillStyle = this.ink;
       ctx.fillRect(x, y + 3, w, 2); // key-cap "depth" lip
-      ctx.textAlign = "center";
-      ctx.textBaseline = "alphabetic";
-      ctx.fillText(key, x + w / 2, y - lift);
+      drawKeyLegend(ctx, key, x + w / 2, y - lift, this.t.type.micro, "center");
       ctx.textAlign = "left";
       return w;
     },

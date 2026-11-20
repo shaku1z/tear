@@ -134,6 +134,7 @@ Optional args are marked `?`. All draw to the passed `ctx`.
 | `UI.focusRing` | `UI.focusRing(ctx, box)` | Keyboard/controller focus ring outside a control (drawn by the button layer) |
 | `UI.sheetFooter` | `UI.sheetFooter()` | The sheet's footer row `{ y, h, backX }`: single owner of the BACK row geometry (used by `pageLayout` and the toast) |
 | `UI.keycap` | `UI.keycap(ctx, key, x, y)` | Bordered key cap sized from `type.micro`; returns its width (`UI.keycapSize(ctx, key)` measures it) |
+| `UI.keyLegend` | `UI.keyLegend(ctx, legend, x, y, color?, align?, size?)` | A key legend outside a cap (the controls guide). It and `UI.keycap` draw through `src/presentation/key-legend.ts`, which draws the arrow keys as shapes with a bold capital's stem and advance, so arrows read as heavily as letters |
 | `UI.finalReward` | `UI.finalReward(ctx, { …, actions? })` | Campaign reward panel; with `actions: true` it reserves a footer row and returns `actionsY`, so buttons always sit inside the panel |
 | `UI.emptyState` | `UI.emptyState(ctx, glyph, line, cx, cy, detail?, width?)` | Designed empty / loading / offline state; returns the y for an optional CTA |
 | `UI.cursor` | `UI.cursor(ctx, x, y)` | Pointer/cursor glyph |

@@ -35,7 +35,7 @@
     "testMode": "test-crazygames",
     "previewDev": null,
     "package": { "path": "artifacts/packages/tear-crazygames.zip", "maxArchiveBytes": 21495808 },
-    "limits": { "maxUnpackedBytes": 26500000, "maxFiles": 1500, "maxFileBytes": null, "maxPathLength": null }
+    "limits": { "maxUnpackedBytes": 23500000, "maxFiles": 1500, "maxFileBytes": null, "maxPathLength": null }
   },
   "itch": {
     "description": "itch.io HTML5 upload: one ZIP with index.html at its root, relative URLs, local saves only (no accounts, SDK or service worker).",
@@ -58,6 +58,6 @@
     "testMode": null,
     "previewDev": null,
     "package": { "path": "artifacts/packages/tear-itch.zip", "maxArchiveBytes": 21495808 },
-    "limits": { "maxUnpackedBytes": 26500000, "maxFiles": 1000, "maxFileBytes": 209715200, "maxPathLength": 240 }
+    "limits": { "maxUnpackedBytes": 23500000, "maxFiles": 1000, "maxFileBytes": 209715200, "maxPathLength": 240 }
   }
 }

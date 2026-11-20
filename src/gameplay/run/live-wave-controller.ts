@@ -43,6 +43,7 @@ export interface LiveWaveRun {
   pendingBossOutro: unknown;
   _biomeIdx?: number;
   waveTime: number;
+  waveGrace?: number;
   waveKills: number;
   wavePeak: number;
   mult: number;
@@ -173,6 +174,7 @@ export class LiveWaveController {
     if (plan.waveTime !== null) run.waveTime = plan.waveTime;
     if (plan.waveKills !== null) run.waveKills = plan.waveKills;
     if (plan.wavePeak !== null) run.wavePeak = plan.wavePeak;
+    run.waveGrace = plan.grace;
     this.#port.executePlanIntents(plan.intents);
   }
 

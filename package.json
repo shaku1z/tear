@@ -121,7 +121,6 @@
     "report:load": "node tests/browser-load-profile.js",
     "assets:sheets": "node scripts/asset-sheets.mjs",
     "music:cover": "node scripts/music-cover.mjs",
-    "scene": "node scripts/scene.mjs",
     "check:architecture": "node scripts/check-source-architecture.mjs",
     "check:code-budget": "node scripts/check-code-budget.mjs",
     "check:test-isolation": "node scripts/check-production-test-isolation.mjs",
