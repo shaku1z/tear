@@ -42,6 +42,7 @@ export const CANONICAL_ACTIVE_PLAN_PATHS = Object.freeze([
   "plans/active/RELEASE_READINESS_PLAN.md",
   "plans/active/PLAYTEST_TOOL_PLAN.md",
   "plans/active/DRILLED_MOVE_NAMES.md",
+  "plans/active/REPLAY_OVERHAUL_PLAN.md",
 ]);
 
 // Compatibility export for callers that need the canonical active-plan list.
