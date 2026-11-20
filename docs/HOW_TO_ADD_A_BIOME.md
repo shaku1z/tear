@@ -37,6 +37,12 @@ A stage object is anything the stage or a boss places in the arena that has a li
 - **Damage by touch** is declared on the object (`damage`, `threatening`, `hitActorIds`, optional
   `hazardScaled`). The runtime applies it once per target after the biome feature steps. A biome feature
   never writes its own hit test.
+- **Who a field moves** is data on the field: a row that gives the player, light enemies, heavy enemies and
+  bosses each a share of its force (`BLOOM_WELL_LIFT.targets` is the example; a share of 0 leaves that class
+  alone). `fieldEnemyClass` in `field-runtime.ts` sorts an enemy by one weight line for every biome; a field
+  never reads a weight or an enemy kind itself. An enemy that keeps its own height sets `flies`, and one held
+  in place sets `anchored`; a lift leaves both alone. A field that should catch whoever stands in it ends at
+  the floor (`tests/unit/bloom-well-lift.test.ts` measures it on the real enemies and player).
 - **The biome feature** (`<biome>-environment-feature.ts`) advances its kinds each tick and is bound to the
   live entities in `src/gameplay/environment/biome-actors/` (one `bind-…-actors.ts` per biome, called from
   `bind-biome-actors.ts`). Bindings hand the runtime the player with `bindLiveContactTargets`.
