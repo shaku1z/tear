@@ -1,4 +1,5 @@
 import { stableVerificationHash } from "../../domain/hash";
+import { asRecord, isObject, isRecord, requireRecord } from "../../domain/records";
 import { parseFinaleConfig } from "../../gameplay/campaign/finale-binding";
 import type { FinaleConfig } from "../../gameplay/campaign/finale-controller";
 import type { BossPracticeCandidate } from "../../gameplay/training/practice-boss-catalog";
@@ -74,7 +75,7 @@ export interface LiveStateSetupRuntimeBridge {
 function bossIntro(value: unknown, version: unknown): BossIntroState | null {
   if (version !== undefined && version !== 1) throw new RangeError("unsupported boss intro snapshot version");
   if (value === undefined || value === null) return null;
-  if (version !== 1 || typeof value !== "object" || Array.isArray(value)) {
+  if (version !== 1 || !isRecord(value)) {
     throw new TypeError("boss intro snapshot must be a versioned object");
   }
   const intro = value as Partial<Omit<BossIntroState, "boss">> & { boss?: GameEnemy | null };
@@ -89,8 +90,8 @@ function bossIntro(value: unknown, version: unknown): BossIntroState | null {
     !Number.isFinite(intro.dur) ||
     intro.dur <= 0 ||
     intro.t > intro.dur ||
-    typeof intro.boss !== "object" ||
-    intro.boss?.isBoss !== true
+    !isObject(intro.boss) ||
+    intro.boss.isBoss !== true
   ) {
     throw new TypeError("boss intro snapshot has invalid timers or actor");
   }
@@ -115,10 +116,7 @@ export function resolveStateSetupBossIntro(
 
 function stageBanner(value: unknown): Readonly<{ name: string; seconds: number }> {
   if (value === undefined) return Object.freeze({ name: "", seconds: 0 });
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new TypeError("stage banner state must be an object");
-  }
-  const candidate = value as { name?: unknown; seconds?: unknown };
+  const candidate = requireRecord(value, "stage banner state must be an object");
   if (
     typeof candidate.name !== "string" ||
     typeof candidate.seconds !== "number" ||
@@ -131,7 +129,7 @@ function stageBanner(value: unknown): Readonly<{ name: string; seconds: number }
 }
 
 function activeCinema(value: unknown): Readonly<{ active?: unknown; scriptId?: unknown; beatId?: unknown }> {
-  return typeof value === "object" && value !== null && !Array.isArray(value) ? value : {};
+  return asRecord(value) ?? {};
 }
 
 const transientNumberFields = Object.freeze([
@@ -190,10 +188,7 @@ function expectedChapterPosition(beatId: unknown): Readonly<{ state: string | un
 
 function cinemaProtection(value: unknown): Readonly<{ active: boolean; lastMode: string | null }> {
   if (value === undefined) return Object.freeze({ active: false, lastMode: null });
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new TypeError("cinematic protection state must be an object");
-  }
-  const candidate = value as { active?: unknown; lastMode?: unknown };
+  const candidate = requireRecord(value, "cinematic protection state must be an object");
   if (
     typeof candidate.active !== "boolean" ||
     (candidate.lastMode !== null && typeof candidate.lastMode !== "string")
@@ -206,21 +201,14 @@ function cinemaProtection(value: unknown): Readonly<{ active: boolean; lastMode:
 /** Non-entity nested records are encoded by value. Rebind only after exact structural agreement. */
 function canonicalPracticeBinding(value: unknown, run: GameRun, platforms: readonly object[]): unknown {
   if (value === null || value === undefined) return value;
-  if (typeof value !== "object" || Array.isArray(value)) throw new TypeError("Invalid boss cinematic binding");
-  const binding = value as Record<string, unknown>;
+  const binding = requireRecord(value, "Invalid boss cinematic binding");
   if (binding.kind === "source-descent") {
     const transition: unknown = Reflect.get(run, "voidDescent");
     if (!transition || stableVerificationHash(binding.transition) !== stableVerificationHash(transition))
       throw new RangeError("Source descent binding differs from canonical run transition");
     return { ...binding, transition };
   }
-  if (
-    binding.kind !== "boss-ritual" ||
-    !binding.context ||
-    typeof binding.context !== "object" ||
-    !binding.ritual ||
-    typeof binding.ritual !== "object"
-  )
+  if (binding.kind !== "boss-ritual" || !isObject(binding.context) || !isObject(binding.ritual))
     throw new TypeError("Invalid ritual binding");
   const context = binding.context as Record<string, unknown>,
     ritual = binding.ritual as { platforms?: readonly object[] };
@@ -277,10 +265,7 @@ export function createLiveStateSetupRuntimeBridge(
       (options.practiceCinema?.captureBinding() as { kind?: string } | null)?.kind === "source-descent"
         ? { cinemaInput: options.cinema.captureRecordedInput?.() }
         : {}),
-      ...((typeof tutorialSession === "object" &&
-        tutorialSession !== null &&
-        "version" in tutorialSession &&
-        tutorialSession.version === 6) ||
+      ...((isObject(tutorialSession) && "version" in tutorialSession && tutorialSession.version === 6) ||
       options.practiceCinema?.captureBinding() != null
         ? { bossCinematicBinding: options.practiceCinema?.captureBinding() ?? null }
         : {}),
@@ -330,13 +315,7 @@ export function createLiveStateSetupRuntimeBridge(
       cinematicActive: activeCinema(snapshot.cinema).active === true,
     });
     const tutorial = snapshot.tutorialSession;
-    if (
-      typeof tutorial === "object" &&
-      tutorial !== null &&
-      "active" in tutorial &&
-      tutorial.active === true &&
-      candidateRun.mode !== "tutorial"
-    ) {
+    if (isObject(tutorial) && "active" in tutorial && tutorial.active === true && candidateRun.mode !== "tutorial") {
       throw new RangeError("active tutorial session requires a tutorial run");
     }
     const cinema = activeCinema(snapshot.cinema);
@@ -369,8 +348,7 @@ export function createLiveStateSetupRuntimeBridge(
         throw new RangeError("active campaign chapter binding is inconsistent with candidate world state");
       }
     }
-    const practice =
-      typeof tutorial === "object" && tutorial !== null && "version" in tutorial && tutorial.version === 6;
+    const practice = isObject(tutorial) && "version" in tutorial && tutorial.version === 6;
     const canonicalBinding = canonicalPracticeBinding(snapshot.bossCinematicBinding, candidateRun, candidatePlatforms);
     if (practice && cinema.active === true) {
       const selected = tutorial as unknown as { bossPractice: { bossId: string } };
@@ -379,27 +357,23 @@ export function createLiveStateSetupRuntimeBridge(
         throw new RangeError("Boss practice cinematic candidate owner mismatch");
     }
     const practiceBinding = options.practiceCinema?.stageBinding(canonicalBinding, candidateEnemies);
-    const values: unknown =
-      configuration !== null && typeof configuration === "object" ? Reflect.get(configuration, "values") : undefined;
-    const finaleConfig: unknown =
-      values !== null && typeof values === "object" ? Reflect.get(values, "finale") : undefined;
+    const values: unknown = isObject(configuration) ? Reflect.get(configuration, "values") : undefined;
+    const finaleConfig: unknown = isObject(values) ? Reflect.get(values, "finale") : undefined;
     const finale = options.finale?.stage(
       snapshot.finaleBinding,
       finaleConfig === undefined ? undefined : parseFinaleConfig(finaleConfig),
     );
     if (snapshot.finaleBinding != null && finale === undefined) throw new RangeError("Finale binding is unsupported");
-    const savedState: unknown =
-      snapshot.finaleBinding !== null && typeof snapshot.finaleBinding === "object"
-        ? Reflect.get(snapshot.finaleBinding, "state")
-        : undefined;
+    const savedState: unknown = isObject(snapshot.finaleBinding)
+      ? Reflect.get(snapshot.finaleBinding, "state")
+      : undefined;
     if (
       finale !== undefined &&
       (candidateRun.mode !== "campaign" ||
         lifecycle.phase !== "finale" ||
         cinema.scriptId !== "adventure-final-cut" ||
         chapter !== null ||
-        savedState === null ||
-        typeof savedState !== "object" ||
+        !isObject(savedState) ||
         Reflect.get(savedState, "phase") !== cinema.beatId)
     )
       throw new RangeError("Incoherent finale lifecycle");

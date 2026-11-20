@@ -6,6 +6,7 @@ import {
   type PracticeBossPhase,
 } from "./boss-phase-practice-runtime";
 import type { TutorialLesson } from "./tutorial-controller";
+import { requireRecord } from "../../domain/records";
 
 export type PracticeBossKnowledge = "defeated-identity" | "encountered-phase" | "save-unconfirmed" | "unknown";
 export interface PracticeBossEntry {
@@ -67,9 +68,7 @@ export function practiceBossCatalog(
   );
 }
 export function validatePracticeBoss(value: unknown): PracticeBossState {
-  if (value === null || typeof value !== "object" || Array.isArray(value))
-    throw new TypeError("Invalid boss practice selection");
-  const state = value as Record<string, unknown>,
+  const state = requireRecord(value, "Invalid boss practice selection"),
     runtime = validateBossPhasePracticeState(state.runtime);
   if (
     Object.keys(state).length !== 5 ||

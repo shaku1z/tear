@@ -529,9 +529,9 @@ the modules it touches, and CI's `pnpm check:functional`. Heavy commands go thro
    and this plan builds on its loader: PR 4's detached world is the lazily loaded engine, and PR 7
    moves the one wait into `watch.open`. If 206 cannot be green within a few days, split it: the
    general parts land, and its replay slot is absorbed into PR 4. I do not edit 206's branch.
-2. **PR 284 (the last plain-object guard sites).** It changes `replay-library-controller.ts`,
-   `replay-screen-adapter-runtime.ts`, `ghost-assistance.ts` and four of the codec files PR 3 moves.
-   PR 3 starts after 284 merges.
+2. **PR 284 (the last plain-object guard sites)** merged on 2026-11-19 while this plan was written. It changed
+   `replay-library-controller.ts`, `replay-screen-adapter-runtime.ts`, `ghost-assistance.ts` and four of
+   the codec files PR 3 moves; the plan's PRs start from main after it.
 3. **Playtest tool stage 5.** Its "Reused, moved, deleted" table moves
    `production-world-factory.ts`, `production-combat-phases.ts` and `production-wave-reward-runtime.ts`
    into `src/playtest/headless/`. Release builds reach those through the replay world, and release

@@ -1,4 +1,5 @@
 import type { FinaleConfig, FinaleStartInput, FinaleState } from "./finale-controller";
+import { isRecord } from "../../domain/records";
 
 export interface FinaleBindingV1 {
   readonly version: 1;
@@ -8,15 +9,13 @@ export interface FinaleBindingV1 {
 
 function data(value: unknown, fields: readonly string[]): Record<string, unknown> {
   if (
-    typeof value !== "object" ||
-    value === null ||
-    Array.isArray(value) ||
+    !isRecord(value) ||
     Object.getPrototypeOf(value) !== Object.prototype ||
     Reflect.ownKeys(value).some((key) => typeof key !== "string" || !fields.includes(key)) ||
     Object.values(Object.getOwnPropertyDescriptors(value)).some((entry) => !("value" in entry))
   )
     throw new TypeError("Invalid finale binding data");
-  return value as Record<string, unknown>;
+  return value;
 }
 const number = (value: unknown, min = -1e7, max = 1e7): boolean =>
   typeof value === "number" && Number.isFinite(value) && value >= min && value <= max;

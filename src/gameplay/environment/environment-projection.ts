@@ -3,6 +3,7 @@
 // of a live run uses it; TearBench's codec validates payloads and re-exports it.
 import { stableVerificationHash } from "../../domain/hash";
 import type { EnvironmentSnapshot } from "./environment-contracts";
+import { isRecord } from "../../domain/records";
 
 const ENVIRONMENT_REFERENCE_KEY = /^(?:owner|target|source|actor).*Id$/iu;
 
@@ -25,7 +26,7 @@ function environmentIdRemapping(value: Readonly<Record<string, unknown>>): Reado
   ] as const) {
     const entries = Array.isArray(value[key]) ? value[key] : [];
     entries.forEach((entry, index) => {
-      if (!record(entry) || typeof entry.id !== "string" || !isGeneratedEnvironmentId(entry.id, worldId)) return;
+      if (!isRecord(entry) || typeof entry.id !== "string" || !isGeneratedEnvironmentId(entry.id, worldId)) return;
       result.set(entry.id, `generated:${prefix}:${String(index)}`);
     });
   }
@@ -39,21 +40,21 @@ function portableEnvironmentId(value: unknown, remapping: ReadonlyMap<string, st
 /** Rehomes allocator-generated environment IDs while preserving authored IDs. */
 export function rebaseEnvironmentSnapshot(value: unknown, destinationWorldId: string): EnvironmentSnapshot {
   if (!text(destinationWorldId)) throw new TypeError("destination environment world ID is required");
-  if (!record(value)) throw new TypeError("environment snapshot must be an object");
+  if (!isRecord(value)) throw new TypeError("environment snapshot must be an object");
   const sourceWorldId = typeof value.worldId === "string" ? value.worldId : undefined;
   const remapping = new Map<string, string>();
   if (sourceWorldId !== undefined && sourceWorldId !== destinationWorldId) {
     for (const key of ["fields", "combatObjects", "routes"] as const) {
       const entries = Array.isArray(value[key]) ? value[key] : [];
       entries.forEach((entry) => {
-        if (!record(entry) || typeof entry.id !== "string" || !isGeneratedEnvironmentId(entry.id, sourceWorldId))
+        if (!isRecord(entry) || typeof entry.id !== "string" || !isGeneratedEnvironmentId(entry.id, sourceWorldId))
           return;
         remapping.set(entry.id, `${destinationWorldId}:${entry.id.slice(sourceWorldId.length + 1)}`);
       });
     }
   }
   const rewrite = (entry: unknown): unknown => {
-    if (!record(entry)) return entry;
+    if (!isRecord(entry)) return entry;
     const result: Record<string, unknown> = { ...entry, id: portableEnvironmentId(entry.id, remapping) };
     for (const [key, reference] of Object.entries(entry)) {
       if (ENVIRONMENT_REFERENCE_KEY.test(key)) result[key] = portableEnvironmentId(reference, remapping);
@@ -75,10 +76,6 @@ export function rebaseEnvironmentSnapshot(value: unknown, destinationWorldId: st
   }) as EnvironmentSnapshot;
 }
 
-function record(value: unknown): value is Readonly<Record<string, unknown>> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function finite(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
@@ -89,7 +86,7 @@ function text(value: unknown): value is string {
 
 const rounded = (value: number): number => Math.round(value * 1_000) / 1_000;
 function projectionGeometry(value: Readonly<Record<string, unknown>>): Readonly<Record<string, unknown>> {
-  const firstPoint = Array.isArray(value.points) && record(value.points[0]) ? value.points[0] : undefined;
+  const firstPoint = Array.isArray(value.points) && isRecord(value.points[0]) ? value.points[0] : undefined;
   const result: Record<string, unknown> = {
     x: rounded(Number(value.x ?? firstPoint?.x ?? 0)),
     y: rounded(Number(value.y ?? firstPoint?.y ?? 0)),
@@ -109,7 +106,7 @@ function projectData(value: unknown, key: string, remapping: ReadonlyMap<string,
   if (typeof value === "string")
     return ENVIRONMENT_REFERENCE_KEY.test(key) ? portableEnvironmentId(value, remapping) : value;
   if (Array.isArray(value)) return Object.freeze(value.map((entry) => projectData(entry, key, remapping)));
-  if (!record(value)) return value;
+  if (!isRecord(value)) return value;
   return Object.freeze(
     Object.fromEntries(
       Object.keys(value)
@@ -152,16 +149,16 @@ export const ROUTE_KEYS = new Set(COMMON_KEYS);
 
 /** Presentation-independent environment projection used by exact hosts and replay. */
 export function projectEnvironmentHash(value: unknown): unknown {
-  if (!record(value)) return Object.freeze({ stageId: "unknown", fields: [], combatObjects: [], routes: [] });
+  if (!isRecord(value)) return Object.freeze({ stageId: "unknown", fields: [], combatObjects: [], routes: [] });
   const remapping = environmentIdRemapping(value);
   const list = (key: "fields" | "combatObjects" | "routes"): readonly unknown[] => {
     const entries: readonly unknown[] = Array.isArray(value[key]) ? value[key] : [];
     return entries.map((entry): unknown => {
-      if (!record(entry)) return entry;
+      if (!isRecord(entry)) return entry;
       const commonValue: Record<string, unknown> = {
         id: portableEnvironmentId(entry.id, remapping),
         kind: entry.kind,
-        geometry: projectionGeometry(record(entry.geometry) ? entry.geometry : {}),
+        geometry: projectionGeometry(isRecord(entry.geometry) ? entry.geometry : {}),
         state: entry.state,
         stateTick: entry.stateTick,
         ownerId: portableEnvironmentId(entry.ownerId ?? null, remapping),

@@ -1,3 +1,5 @@
+import { requireRecord } from "../../domain/records";
+
 /** Sticky run data: hiding a reference cannot restore competitive eligibility. */
 export interface GhostRunAssistance {
   readonly format: "tear-ghost-chase";
@@ -13,9 +15,7 @@ export interface GhostRunAssistance {
 
 export function readGhostRunAssistance(value: unknown): GhostRunAssistance | undefined {
   if (value === undefined) return undefined;
-  if (typeof value !== "object" || value === null || Array.isArray(value))
-    throw new TypeError("Invalid Chase disposition");
-  const v = value as Record<string, unknown>;
+  const v = requireRecord(value, "Invalid Chase disposition");
   if (
     Object.keys(v).sort().join() !==
       [

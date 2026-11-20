@@ -329,7 +329,11 @@ limit; the time the game takes to bring the boss there used to be taken out of i
 Built fourth (2026-11-19): the `no-dodge` player (the scripted player without its dash and its jump) and the
 `still` player (no input during play). Both measure what a boss does to them, so a fight of theirs stops, as
 a time limit with the reason, once a phase has been played for 60 seconds.
-Still to do in this stage: the `walker` player, boss movement, and the sweep.
+
+Built fifth (2026-11-20): the `walker` player (keeps walking, turns round at whatever stops it, jumps every
+four seconds, never attacks; it stops after 60 seconds of a phase like the other two pressure players) and
+the "boss px/s" column: how far the boss moved sideways each second of the phase.
+Still to do in this stage: the sweep.
 
 Done when:
 - [ ] `pnpm playtest bosses` prints, for all five campaign bosses, per phase and per player: clear rate, time to kill, damage and hits taken, hits landed, boss movement, share of time open; 5 weapons, 4 seeds, Easy and Normal, in under 5 minutes on 6 jobs.

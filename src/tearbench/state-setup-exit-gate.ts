@@ -1,3 +1,4 @@
+import { requireRecord } from "../domain/records";
 import { stableVerificationHash } from "../domain/hash";
 import type { TearSnapshotV1 } from "./contracts";
 import type { TearProgressionEvent, TearSynthesizedProgression } from "./progression-ledger";
@@ -60,10 +61,7 @@ export interface Wave99HammerExitCertificate {
 }
 
 function mutableRecord(value: unknown, label: string): MutableRecord {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new TypeError(`${label} must be an object`);
-  }
-  return value as MutableRecord;
+  return requireRecord(value, `${label} must be an object`);
 }
 
 function eventsOfType<TType extends TearProgressionEvent["type"]>(

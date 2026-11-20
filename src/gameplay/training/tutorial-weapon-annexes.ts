@@ -2,6 +2,7 @@ import type { PromptAction } from "../../domain/prompt-vocabulary";
 import { WEAPON_IDS, type WeaponId } from "../weapon-selection";
 import { getWeapon, type WeaponDrillMove } from "../weapons";
 import type { TutorialIntent, TutorialLesson, TutorialUpdateSnapshot } from "./tutorial-controller";
+import { requireRecord } from "../../domain/records";
 
 export interface TutorialWeaponAnnexState {
   readonly id: WeaponId;
@@ -112,9 +113,7 @@ export function createWeaponAnnex(id: string): TutorialWeaponAnnexState | undefi
     : { id: definition.id, weaponId: definition.id, progress: 0, pendingEvidence: false };
 }
 export function validateWeaponAnnex(value: unknown): TutorialWeaponAnnexState {
-  if (typeof value !== "object" || value === null || Array.isArray(value))
-    throw new TypeError("Invalid tutorial weapon annex");
-  const state = value as Record<string, unknown>,
+  const state = requireRecord(value, "Invalid tutorial weapon annex"),
     definition = weaponAnnex(String(state.id));
   if (
     Object.keys(state).some((key) => !["id", "weaponId", "progress", "pendingEvidence"].includes(key)) ||
