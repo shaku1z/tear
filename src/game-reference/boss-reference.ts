@@ -142,7 +142,9 @@ function projectDefinition(
   path: string,
 ): Readonly<{ id: BossDefinitionId; name: string; phaseMarks: readonly [number, number] }> {
   const source = record(value, path);
-  exactKeys(source, path, ["id", "name", "phaseMarks"]);
+  // `spawn` is where the engine places the boss in the arena: engine data no reader of the reference
+  // uses, so the export leaves it out on purpose and the published shape stays id, name, stage, marks.
+  exactKeys(source, path, ["id", "name", "phaseMarks", "spawn"]);
   const id = text(source.id, `${path}.id`);
   if (id !== expected.id) throw new TypeError(`${path}.id must use the exact canonical authored order`);
   const name = text(source.name, `${path}.name`);

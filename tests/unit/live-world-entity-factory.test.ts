@@ -114,7 +114,6 @@ describe("live world entity factory", () => {
       "support",
       "rootbinder",
       "rimehound",
-      "boss",
     ]);
     expect(calls.every((call) => call.x === 40 && call.y === 50)).toBe(true);
     expect(calls.find((call) => call.kind === "echo")?.extra).toEqual([initialRun.mods]);

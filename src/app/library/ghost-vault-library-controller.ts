@@ -1,9 +1,4 @@
-import {
-  inspectBrowserGhostVaultReadOnly,
-  repairBrowserGhostCapsule,
-  type BrowserGhostVaultCatalog,
-  type BrowserGhostVaultRepairResult,
-} from "../../ghost/browser-capsule-vault";
+import { inspectBrowserGhostVaultReadOnly, type BrowserGhostVaultCatalog } from "../../ghost/browser-capsule-vault";
 import type { TearGhostManifest } from "../../ghost/capsule-vault";
 import { createBrowserGhostColdRestore, type BrowserGhostColdRestorePort } from "../../ghost/browser-cold-restore";
 import { NORMAL_GHOST_ARCHIVE_LIMITS } from "../../ghost/capsule-archive";
@@ -23,9 +18,8 @@ export interface GhostVaultLibraryCapsule {
   readonly status: TearGhostManifest["status"];
   readonly recordingProfile: TearGhostManifest["recordingProfile"];
   readonly chunkCount: number;
+  /** False when a chunk is missing or damaged; the capsule is shown and can be deleted, never repaired. */
   readonly healthy: boolean;
-  readonly repairable: boolean;
-  readonly repairChildId?: string;
   /** Player-safe, runtime-only Theater eligibility; custody remains unchanged. */
   readonly theaterEligible: boolean;
   readonly theaterRefusal?: GhostTheaterOpenResult;
@@ -42,7 +36,6 @@ export interface GhostVaultLibrarySnapshot {
 export interface GhostVaultLibraryPort {
   readonly snapshot: () => GhostVaultLibrarySnapshot;
   readonly refresh: () => void;
-  readonly repair: (id: string) => void;
   readonly setTheaterEligibility: (id: string, result: GhostTheaterOpenResult) => void;
   readonly pickArchive: (jobId?: string) => void;
   readonly restoreArchive: (id: string, revision: number) => void;
@@ -53,7 +46,6 @@ export interface GhostVaultLibraryPort {
 
 export interface GhostVaultLibraryControllerOptions {
   readonly inspect: () => Promise<BrowserGhostVaultCatalog>;
-  readonly repair: (id: string) => Promise<BrowserGhostVaultRepairResult>;
   readonly files?: GhostArchiveFilePort;
   readonly restore?: BrowserGhostColdRestorePort;
   readonly newIntent?: () => string;
@@ -299,9 +291,7 @@ function restoreFailureMessage(code: string): string {
 function capsuleView(
   manifest: TearGhostManifest,
   healthy: boolean,
-  repairChildId?: string,
   theaterRefusal?: GhostTheaterOpenResult,
-  repairMetadataComplete = false,
 ): GhostVaultLibraryCapsule {
   return Object.freeze({
     id: manifest.id,
@@ -310,10 +300,8 @@ function capsuleView(
     recordingProfile: manifest.recordingProfile,
     chunkCount: manifest.chunks.length,
     healthy,
-    repairable: !healthy && (repairChildId === undefined || !repairMetadataComplete),
     theaterEligible: theaterRefusal?.kind !== "refused",
     ...(theaterRefusal === undefined ? {} : { theaterRefusal }),
-    ...(repairChildId === undefined ? {} : { repairChildId }),
   });
 }
 
@@ -345,21 +333,8 @@ export function createGhostVaultLibraryController(options: GhostVaultLibraryCont
   });
   const catalogSnapshot = (catalog: BrowserGhostVaultCatalog, message?: string): GhostVaultLibrarySnapshot => {
     const health = new Map(catalog.maintenance.integrity.map((entry) => [entry.id, entry.healthy]));
-    const repairedChildren = new Map<string, string>();
-    const repairMetadata = new Map(catalog.repairMetadata?.map((entry) => [entry.id, entry.complete]));
-    for (const manifest of catalog.manifests) {
-      if (manifest.lineage?.relation === "repaired-from") repairedChildren.set(manifest.lineage.parentId, manifest.id);
-    }
     const capsules = catalog.manifests
-      .map((manifest) =>
-        capsuleView(
-          manifest,
-          health.get(manifest.id) === true,
-          repairedChildren.get(manifest.id),
-          theaterRefusals.get(manifest.id),
-          repairMetadata.get(manifest.id),
-        ),
-      )
+      .map((manifest) => capsuleView(manifest, health.get(manifest.id) === true, theaterRefusals.get(manifest.id)))
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
     return frozenSnapshot("ready", capsules, catalog.maintenance.evictedCapsuleIds, message);
   };
@@ -394,42 +369,6 @@ export function createGhostVaultLibraryController(options: GhostVaultLibraryCont
     dispose: () => {
       generation++;
       archive.dispose();
-    },
-    repair: (id) => {
-      const source = current.capsules.find((capsule) => capsule.id === id);
-      if (!source?.repairable) {
-        current = frozenSnapshot(
-          "failed",
-          current.capsules,
-          current.evictedCapsuleIds,
-          "This Ghost capsule cannot be repaired.",
-        );
-        return;
-      }
-      const request = ++generation;
-      current = frozenSnapshot("loading", current.capsules);
-      void options
-        .repair(id)
-        .then((repair) => options.inspect().then((catalog) => Object.freeze({ repair, catalog })))
-        .then(({ repair, catalog }) => {
-          if (request !== generation) return;
-          current = catalogSnapshot(
-            catalog,
-            repair.reused
-              ? "A verified repair child is already available."
-              : "Ghost repair child created; the original remains preserved.",
-          );
-        })
-        .catch((error: unknown) => {
-          if (request !== generation) return;
-          const message = error instanceof Error ? error.message : String(error);
-          current = frozenSnapshot(
-            "failed",
-            current.capsules,
-            current.evictedCapsuleIds,
-            `Ghost repair failed: ${message}`,
-          );
-        });
     },
     setTheaterEligibility: (id, result) => {
       if (result.kind !== "refused" || !current.capsules.some((capsule) => capsule.id === id)) return;
@@ -466,7 +405,6 @@ export function createBrowserGhostVaultLibrary(factory: IDBFactory | undefined):
           }),
         }),
       refresh: () => undefined,
-      repair: () => undefined,
       setTheaterEligibility: () => undefined,
       pickArchive: () => undefined,
       restoreArchive: () => undefined,
@@ -480,6 +418,5 @@ export function createBrowserGhostVaultLibrary(factory: IDBFactory | undefined):
     inspect: () => inspectBrowserGhostVaultReadOnly(factory),
     ...(files === undefined ? {} : { files }),
     restore: createBrowserGhostColdRestore(factory),
-    repair: (id) => repairBrowserGhostCapsule(factory, id),
   });
 }

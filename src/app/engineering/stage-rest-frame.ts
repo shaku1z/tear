@@ -26,12 +26,15 @@ export interface StageRestFrameOptions {
  * draws it with nothing happening: backdrop, platform shadows, platforms and
  * the front plane, with no actors, effects or interface. Readability checks
  * measure this frame, so they judge the stage and not what stands on it.
- * Returns undefined until the stage's own scene covers the view.
+ * `timeSeconds` is the moment of the stage's own motion (water, motes, sway)
+ * to draw. Returns undefined until the stage's own scene covers the view.
  */
-export function createStageRestFrame(options: StageRestFrameOptions): () => StageRestFrame | undefined {
+export function createStageRestFrame(
+  options: StageRestFrameOptions,
+): (timeSeconds?: number) => StageRestFrame | undefined {
   const { Scenes, Backdrop, THEME, browserDocument } = options.dependencies;
   const { width, height } = options;
-  return () => {
+  return (timeSeconds = 0) => {
     const current = options.stage.current;
     if (!Scenes.opaque(current.id)) return undefined;
     const canvas = browserDocument.createElement("canvas");
@@ -46,7 +49,7 @@ export function createStageRestFrame(options: StageRestFrameOptions): () => Stag
       playerWorldX: width / 2,
       worldWidth: width,
       view,
-      timeSeconds: 0,
+      timeSeconds,
     };
     Scenes.drawBack(context, input);
     Scenes.drawShadows(context, current.id, options.stage.platforms);

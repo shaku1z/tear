@@ -196,26 +196,6 @@ export function installStandardEnemyRenderers(types: EnemyTypes, runtime: EnemyR
     },
   });
 
-  Object.assign(types.Boss.prototype, {
-    draw(this: RenderInstance<"Boss">, ctx: CanvasRenderingContext2D) {
-      const x = this.x - this.hw,
-        y = this.y - this.hh,
-        w = this.hw * 2,
-        h = this.hh * 2;
-      ctx.fillStyle = this.flash > 0 ? "#fff" : this.color;
-      ctx.fillRect(x, y, w, h);
-      ctx.strokeStyle = THEME.ink;
-      ctx.lineWidth = 4;
-      ctx.strokeRect(x, y, w, h);
-      // eye + phase pips
-      ctx.fillStyle = "#fff";
-      const dir = Math.sign(this.vx) || 1;
-      ctx.fillRect(this.x + dir * 18 - 9, this.y - 18, 18, 14);
-      for (let i = 0; i < this.phase; i++) ctx.fillRect(x + 12 + i * 16, y + h - 18, 10, 8);
-      // local hp bar hidden (a big one is drawn in the HUD)
-    },
-  });
-
   Object.assign(types.Support.prototype, {
     draw(this: RenderInstance<"Support">, ctx: CanvasRenderingContext2D) {
       const t = this.supportType,

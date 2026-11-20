@@ -44,7 +44,6 @@ describe("Tear world legacy entity construction", () => {
         voidWisp: (x, y) => actor("void-wisp", x, y),
         reflection: (x, y) => actor("reflection", x, y),
         support: (x, y, kind) => actor(kind, x, y),
-        boss: (x, y) => actor("boss", x, y),
       },
       rebindEchoMods: (enemy, mods) => {
         enemy.mods = mods;
@@ -80,7 +79,6 @@ describe("Tear world legacy entity construction", () => {
       "anchor",
       "rootbinder",
       "rimehound",
-      "boss",
     ]);
     expect(echo.mods).toEqual(restored.mods);
     expect(factory.createEnemy("charger", 9, 10, initial)).toMatchObject({ x: 9, y: 10 });

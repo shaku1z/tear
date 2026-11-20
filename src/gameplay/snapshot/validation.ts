@@ -1,4 +1,5 @@
 import { isRecord } from "../../domain/records";
+import { isBossDefinitionId } from "../run/boss-definitions";
 import { readBeatRunBinding } from "../run/beat-run";
 import { readGhostRunAssistance } from "../run/ghost-assistance";
 import type { TearCodecId } from "./codec-ids";
@@ -218,6 +219,29 @@ function rootboundPhaseThreeState(
   return issues;
 }
 
+/**
+ * A run names its bosses by definition id. Any other id used to build the generic stand-in Boss, which
+ * is gone, so a restored run that names one is refused here instead of throwing at its next boss spawn.
+ */
+function runBossIssues(payload: Readonly<Record<string, unknown>>): TearCodecIssue[] {
+  const named = (value: unknown): boolean => typeof value === "string" && isBossDefinitionId(value);
+  const issues: TearCodecIssue[] = [];
+  for (const key of ["curBoss", "miniBoss"] as const) {
+    const value = payload[key];
+    if (value !== undefined && value !== null && !named(value))
+      issues.push(issue("tear.run.v1", `$.${key}`, `${key} must name a boss definition`));
+  }
+  const order = payload.bossOrder;
+  if (order !== undefined && !(Array.isArray(order) && order.every(named)))
+    issues.push(issue("tear.run.v1", "$.bossOrder", "bossOrder must list boss definitions"));
+  const queue: unknown = payload.spawnQueue;
+  (Array.isArray(queue) ? queue : []).forEach((entry: unknown, index) => {
+    if (isRecord(entry) && entry.bossId !== undefined && !named(entry.bossId))
+      issues.push(issue("tear.run.v1", `$.spawnQueue[${String(index)}].bossId`, "bossId must name a boss definition"));
+  });
+  return issues;
+}
+
 /** Domain shape checks layered on top of bounded declarative-data validation. */
 export function validateLiveCodecPayload(codecId: TearCodecId, payload: unknown): readonly TearCodecIssue[] {
   if (codecId === "tear.enemy.v1" || codecId === "tear.boss.v1" || codecId === "tear.projectile.v1") {
@@ -265,7 +289,11 @@ export function validateLiveCodecPayload(codecId: TearCodecId, payload: unknown)
     for (const key of ["mode", "difficulty"] as const) {
       if (typeof payload[key] !== "string") issues.push(issue(codecId, `$.${key}`, `${key} must be a string`));
     }
-    issues.push(...finiteField(codecId, payload, "wave"), ...finiteField(codecId, payload, "tick"));
+    issues.push(
+      ...finiteField(codecId, payload, "wave"),
+      ...finiteField(codecId, payload, "tick"),
+      ...runBossIssues(payload),
+    );
   } else if (codecId === "tear.world.v1") {
     issues.push(...finiteField(codecId, payload, "clock"));
     if (payload.simulationSeconds !== undefined) {

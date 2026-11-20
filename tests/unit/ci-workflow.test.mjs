@@ -215,7 +215,6 @@ describe("Validate workflow", () => {
 
   it("has every script that compares HEAD with GITHUB_SHA prefer the checked commit", () => {
     for (const [file, variable] of [
-      ["scripts/check-workspace.mjs", "TEAR_RELEASE_SHA"],
       ["scripts/release-preflight.mjs", "TEAR_RELEASE_SHA"],
       ["scripts/verify-release-artifact.mjs", "TEAR_RELEASE_SHA"],
       ["scripts/build-target.mjs", "TEAR_BUILD_GIT_SHA"],
@@ -301,6 +300,39 @@ describe("Validate workflow", () => {
       expect(read(`.github/workflows/${file}`), file).toContain(
         'if (run.conclusion !== "success") errors.push(`conclusion ${run.conclusion} is not success`);',
       );
+  });
+
+  it("lets no check-results upload decide a verdict, keeps every upload a later step needs fatal, and reports a failed one", () => {
+    // Run 44740825411 failed only because the static job's check-results upload hit ECONNRESET.
+    // Two readers use check-results artifacts, and neither needs them: the check-results action on a
+    // re-run (the flaky report), which goes on when there are none, and scripts/ci-check-times.mjs by hand.
+    const action = read(".github/actions/check-results/action.yml");
+    expect(action).toContain("pattern: check-results-${{ inputs.job }}-*");
+    expect(action).toContain("No earlier check results for $JOB; this attempt cannot report flaky checks.");
+    expect(read("scripts/ci-check-times.mjs")).toContain('"check-results-*"');
+    const consumed = /^(tear-release-targets|validate-builds|tear-preview-dev)-/u;
+    let diagnostics = 0;
+    for (const [id, block] of Object.entries(jobBlocks)) {
+      const steps = block.split(/\n(?= {6}- )/u);
+      steps.forEach((step, index) => {
+        if (!step.includes("uses: actions/upload-artifact@")) return;
+        const name = / {10}name: (.+)/u.exec(step)?.[1] ?? "";
+        const where = `${id}: ${name}`;
+        if (name.startsWith("check-results-")) {
+          diagnostics += 1;
+          expect(step, where).toContain("continue-on-error: true");
+          expect(step, where).toMatch(/^ {6}- id: check-results-upload\n/u);
+          const report = steps[index + 1] ?? "";
+          expect(report, where).toContain("if: always() && steps.check-results-upload.outcome == 'failure'");
+          expect(report, where).toContain("::warning");
+          expect(report, where).toContain('>> "$GITHUB_STEP_SUMMARY"');
+        } else {
+          expect(name, `${where} is needed by a later step, or is new and needs a decision here`).toMatch(consumed);
+          expect(step, where).not.toContain("continue-on-error");
+        }
+      });
+    }
+    expect(diagnostics).toBe(4);
   });
 
   it("has every browser shard test the release artifact's bytes, checked by hash before any test", () => {
@@ -477,21 +509,30 @@ describe("the required check job", () => {
 describe("Nightly checks workflow", () => {
   const nightly = read(".github/workflows/nightly.yml");
 
-  it("runs the nightly group on main once a day and by hand", () => {
-    expect(nightly).toMatch(/schedule:\n {4}- cron: "\d{1,2} \d{1,2} \* \* \*"\n {2}workflow_dispatch:/u);
+  it("runs the nightly group on main once a day and the weekly group once a week, each by hand too", () => {
+    expect([...nightly.matchAll(/- cron: "([^"]+)"/gu)].map((match) => match[1])).toEqual(["41 7 * * *", "23 8 * * 0"]);
     // A schedule runs on the default branch, main; started by hand, it checks the chosen branch.
     expect(nightly).toMatch(/uses: actions\/checkout@v4/u);
-    expect(nightly).toMatch(/run: xvfb-run -a node scripts\/run-checks\.mjs nightly --keep-going\n/u);
+    // Each job runs on its own schedule only; by hand, the group input picks one.
+    const nightlyJobs = jobs(nightly);
+    expect(nightlyJobs.nightly).toContain("if: github.event.schedule != '23 8 * * 0' && inputs.group != 'weekly'");
+    expect(nightlyJobs.nightly).toMatch(/run: xvfb-run -a node scripts\/run-checks\.mjs nightly --keep-going\n/u);
+    expect(nightlyJobs.weekly).toContain("if: github.event.schedule == '23 8 * * 0' || inputs.group == 'weekly'");
+    expect(nightlyJobs.weekly).toContain("name: Weekly checks");
+    expect(nightlyJobs.weekly).toMatch(/run: xvfb-run -a node scripts\/run-checks\.mjs weekly --keep-going\n/u);
     expect(selectChecks(loadChecks(), "nightly").length).toBeGreaterThan(0);
+    expect(selectChecks(loadChecks(), "weekly").length).toBeGreaterThan(0);
+    // The weekly group used to run in its own workflow, TearBench Evidence Program.
+    expect(existsSync(resolve(root, ".github/workflows/tearbench-program.yml"))).toBe(false);
   });
 
   it("checks the commit named in the optional ref input, and says which commit it checked", () => {
     // The input is optional and has no default, so the schedule and a plain run check what they always did.
     expect(nightly).toMatch(/workflow_dispatch:\n {4}inputs:\n {6}ref:\n(?: {8}[^\n]+\n)*? {8}required: false\n/u);
     expect(nightly).not.toMatch(/\n {8}default:/u);
-    // Exactly one job checks out that ref: the one that runs the checks. The image job reads only the lockfile.
+    // The two jobs that run checks check out that ref. The image job reads only the lockfile.
     const refs = nightly.match(/\n\s+ref: [^\n]+/gu) ?? [];
-    expect(refs.map((line) => line.trim())).toEqual(["ref: ${{ inputs.ref }}"]);
+    expect(refs.map((line) => line.trim())).toEqual(["ref: ${{ inputs.ref }}", "ref: ${{ inputs.ref }}"]);
     expect(nightly).toMatch(/git rev-parse HEAD\)" >> "\$GITHUB_STEP_SUMMARY"/u);
     expect(nightly.indexOf("Name the checked commit")).toBeLessThan(nightly.indexOf("pnpm install"));
   });
@@ -552,6 +593,15 @@ describe("Browser jobs' container", () => {
     for (const job of allJobs.filter((each) => !gated(each))) {
       expect(job.block, where(job)).not.toMatch(/playwright install/u);
       if (/xvfb-run/u.test(job.block)) expect(job.block, where(job)).toMatch(/\n {4}container:/u);
+    }
+  });
+});
+
+describe("Cloudflare deploy configs", () => {
+  it("serve only the standalone build, in production and in preview", () => {
+    for (const file of ["wrangler.jsonc", "wrangler.preview.jsonc"]) {
+      const directories = [...read(file).matchAll(/"directory":\s*"([^"]*)"/gu)].map((match) => match[1]);
+      expect(directories, file).toEqual(["./dist/standalone"]);
     }
   });
 });
