@@ -30,6 +30,7 @@ import { dirname, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { designCheckVerdict, readDesignCheckConfig } from "./design-check.mjs";
+import { GATE_LABEL, gateFilesIn, loadGateList } from "./gate-files.mjs";
 import { BATCH_BRANCH } from "./merge-batch.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -123,6 +124,7 @@ export function batchCover(pr, batch, mainSinceBatch) {
  * @param {Parameters<typeof batchCover>[1]} [facts.batch] the newest passed batch run naming this head
  * @param {Parameters<typeof batchCover>[2]} [facts.mainSinceBatch]
  * @param {string} [facts.designCheckMode] the design-check gate's mode; missing means enforce
+ * @param {{ files: { path: string }[] }} [facts.gateList] config/gate-files.json from the checkout that runs this
  * @returns {{ ready: boolean, reason: string, action?: string, notes?: string[] }} `notes` are printed and
  *   never change `ready`: a would-refuse in observe mode, or an accepted "not applicable" line
  */
@@ -137,6 +139,16 @@ export function decide(facts) {
       ready: false,
       reason: verdict.refuse,
       action: "answer each design-check label in the description (docs/ENGINEERING_STANDARD.md)",
+    };
+  }
+  // Rule 5: a change to a gate file merges only after the lead's review. fixes-main does not bypass it.
+  const gate = facts.gateList === undefined ? [] : gateFilesIn(facts.gateList, pr.files);
+  if (gate.length > 0 && !pr.labels.includes(GATE_LABEL)) {
+    const shown = gate.slice(0, 5).join(", ") + (gate.length > 5 ? `, and ${String(gate.length - 5)} more` : "");
+    return {
+      ready: false,
+      reason: `it changes gate files (${shown})`,
+      action: `the lead reviews it; the merge desk labels it "${GATE_LABEL}" only when the lead names the pull request and head`,
     };
   }
   const decision = decideChecks(facts);
@@ -268,7 +280,18 @@ export function gatherFacts(
   git(["fetch", "--quiet", "origin", "main"]);
   const mainTip = git(["rev-parse", "origin/main"])?.trim();
   const designCheckMode = readDesignCheckConfig(root).mode;
-  return { slug, main, pr, run, mainFilesSince, mainTip, designCheckMode, ...gatherBatch(slug, pr) };
+  // The canonical checkout on main runs merge:ready, so the list is main's, not the change's.
+  return {
+    slug,
+    main,
+    pr,
+    run,
+    mainFilesSince,
+    mainTip,
+    designCheckMode,
+    gateList: loadGateList(),
+    ...gatherBatch(slug, pr),
+  };
 }
 
 /** The newest passed batch run that names this head, and main's commits since the main it checked. */
