@@ -98,8 +98,13 @@ describe("the stores report what they cannot read", () => {
       const problems: SaveProblem[] = [];
       createMetaProgression({
         store: { get: () => text, set: () => undefined },
+        config: structuredClone(CONFIG),
+        cloud: { loggedIn: () => false, push: () => Promise.resolve() },
+        random: { next: () => 0 },
+        upgrades: [],
+        applyUpgrade: () => undefined,
         reportProblem: (problem) => problems.push(problem),
-      } as unknown as Parameters<typeof createMetaProgression>[0]).META.load();
+      }).META.load();
       return problems;
     };
     expect(metaProblems("{")).toEqual(["meta-unreadable"]);
