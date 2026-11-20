@@ -280,6 +280,28 @@ function create(numbers, without) {
   }
 }
 
+/**
+ * Why `branch` cannot be read as a batch, or undefined when it can: its name must be exactly a
+ * batch branch name, and it must exist on origin. A name copied with extra text (a trailing colon
+ * from "batch <branch>: ...") or a branch already pruned is refused as what it is, never read as a
+ * batch whose run did not pass.
+ */
+export function batchBranchRefusal(branch, existsOnOrigin) {
+  if (!BATCH_BRANCH.test(String(branch)))
+    return `"${String(branch)}" is not a batch branch name (codex/batch-<yyyymmdd>t<hhmmss>z)`;
+  if (!existsOnOrigin(branch)) return `${branch} does not exist on origin`;
+  return undefined;
+}
+
+/** Throws when `branch` is not a batch branch on origin (batchBranchRefusal). */
+function requireBatchBranch(branch) {
+  const refusal = batchBranchRefusal(
+    branch,
+    (name) => git(["ls-remote", "--exit-code", "--heads", "origin", `refs/heads/${name}`], { allowFailure: true }).ok,
+  );
+  if (refusal !== undefined) throw new Error(refusal);
+}
+
 /** The newest Validate run started by hand on the batch branch, with its batch annotation. */
 function batchRun(branch) {
   const slug = gh(["repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"]);
@@ -301,6 +323,7 @@ function batchRun(branch) {
 }
 
 function status(branch) {
+  requireBatchBranch(branch);
   const { latest, jobs, note } = batchRun(branch);
   if (latest === undefined) throw new Error(`no Validate run on ${branch}`);
   console.log(`batch run ${latest.html_url}: ${latest.status}${latest.conclusion ? `, ${latest.conclusion}` : ""}`);
@@ -384,6 +407,7 @@ export function awaitBatchRun(
  */
 function mergeAll(branch, authorized) {
   if (!authorized) throw new Error("--merge needs --authorize-owner-merge, which the merge helper requires");
+  requireBatchBranch(branch);
   const { members } = awaitBatchRun(branch, { read: batchRun });
   const helper = join(CANONICAL.root, "scripts", "governance", "owner-safe-pr-merge.mjs");
   const view = (number) =>
@@ -425,6 +449,7 @@ function mergeAll(branch, authorized) {
 }
 
 function verify(branch) {
+  requireBatchBranch(branch);
   const { main, members } = awaitBatchRun(branch, { read: batchRun });
   git(["fetch", "--quiet", "origin", "main", branch]);
   const checkedTree = git(["merge-tree", "--write-tree", main, `origin/${branch}`]).out.split("\n")[0];

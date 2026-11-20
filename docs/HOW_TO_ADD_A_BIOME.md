@@ -62,7 +62,9 @@ A stage object is anything the stage or a boss places in the arena that has a li
   budget: `waves` has one row per local wave with the enemies the wave always has `first`, in spawn order,
   optionally the ones it has `last`, and one line on what the wave is for. The shared planner puts them at
   the head and tail of the spawn queue and fills the places between from the stage pool under the budget;
-  a stage without `waves` is only the pool. A wave that introduces an enemy lists it, and lists first
+  a stage without `waves` is only the pool. Listed enemies arrive without affixes (the queue marks them
+  `plain` and the spawn step skips its affix roll), so an enemy is met as itself; the fill rolls affixes as
+  everywhere. A wave that introduces an enemy lists it, and lists first
   whatever that enemy needs (a Rootbinder's ground allies). `tests/unit/wave-script.test.ts` reads every
   scripted stage and fails if a listed enemy is missing or out of order on any seed, if a row breaks the
   budget, a cap or an unlock wave, or if the wave changes size.
