@@ -13,7 +13,6 @@ function bridge(spawned?: PlaygroundRuntimeEnemy) {
   const dependencies: PlaygroundRuntimeDependencies = {
     controller: new PlaygroundController(),
     difficulties: [],
-    colors: {},
     stageNames: [],
     groundY: 800,
     viewportWidth: 1600,
@@ -27,8 +26,6 @@ function bridge(spawned?: PlaygroundRuntimeEnemy) {
       diffCount: 1,
       coinMod: 1,
       scoreMod: 1,
-      bossIdx: 0,
-      bossOrder: [],
       curBoss: null,
     },
     enemies: [],
@@ -43,7 +40,6 @@ function bridge(spawned?: PlaygroundRuntimeEnemy) {
     },
     releasePointer: () => undefined,
     requestPointer: () => undefined,
-    dismissMirror: () => undefined,
     selectArena: () => undefined,
     wipe: () => undefined,
     resetRun: () => undefined,
@@ -83,19 +79,12 @@ describe("Playground runtime bridge", () => {
   it("names a spawned enemy above its head, and anything else at the player", () => {
     const enemy: PlaygroundRuntimeEnemy = { dead: false, x: 1200, y: 760, hh: 40, stun: 0, hp: 10, maxHp: 10 };
     const playground = bridge(enemy);
-    const announce = { type: "announce", text: "", emphasis: false, color: "" } as const;
     playground.runtime.execute([
       { type: "spawn", kind: "grunt", count: 1, hpScale: 1 },
-      { ...announce, text: "GRUNT" },
-      { type: "summon-boss", bossId: "echo", nextBossIndex: 0 },
-      { ...announce, text: "THE ECHO" },
+      { type: "announce", text: "GRUNT" },
       { type: "heal-player" },
-      { ...announce, text: "HEALED" },
+      { type: "announce", text: "HEALED" },
     ]);
-    expect(playground.announced).toEqual([
-      { text: "GRUNT", at: { x: 1200, y: 720 } },
-      { text: "THE ECHO", at: { x: 1200, y: 720 } },
-      { text: "HEALED" },
-    ]);
+    expect(playground.announced).toEqual([{ text: "GRUNT", at: { x: 1200, y: 720 } }, { text: "HEALED" }]);
   });
 });

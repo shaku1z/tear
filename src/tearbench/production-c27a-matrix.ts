@@ -3,7 +3,8 @@ import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state
 import type { AuthoritativeInputSnapshot } from "../gameplay/runtime/authoritative-input";
 import { TearGameplayEventBus, type TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
 import type { GameAction } from "../input/game-action";
-import type { TearScenarioV1, TearSnapshotV1 } from "./contracts";
+import type { TearScenarioV1 } from "./contracts";
+import type { TearSnapshotV1 } from "../gameplay/snapshot/snapshot-contract";
 import { projectGameplayEventForParity, type TearSemanticEngineEventV1 } from "./gameplay-causal-events";
 import { createProductionGhostReplayComposition } from "./production-replay-composition";
 

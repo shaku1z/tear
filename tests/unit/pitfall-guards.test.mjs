@@ -5,7 +5,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { indexedTestFiles } from "../../scripts/test-files.mjs";
+import { indexedTestFiles, processTestFiles, startsProcesses } from "../../scripts/test-files.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const scripts = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")).scripts;
@@ -212,7 +212,7 @@ describe("pitfall guards", () => {
       );
       try {
         const { default: config } = await import("../../vitest.config.ts");
-        const include = config.test.include;
+        const include = config.test.projects.flatMap((project) => project.test.include);
         expect(fs.existsSync(path.join(root, probe))).toBe(true);
         expect(include).toContain("tests/unit/pitfall-guards.test.mjs");
         expect(include).not.toContain(probe);
@@ -222,9 +222,49 @@ describe("pitfall guards", () => {
       }
     });
 
-    it("both runner configurations take their files from the index", () => {
-      for (const file of ["vitest.config.ts", "vitest.endurance.config.ts"])
-        expect(fs.readFileSync(path.join(root, file), "utf8"), file).toMatch(/include: indexedTestFiles\(/u);
+    it("both runner configurations take their files from the index", async () => {
+      expect(fs.readFileSync(path.join(root, "vitest.endurance.config.ts"), "utf8")).toMatch(
+        /include: indexedTestFiles\(/u,
+      );
+      // The unit configuration splits the index's files between its two projects, each file once.
+      const { default: config } = await import("../../vitest.config.ts");
+      const [unit, processes] = config.test.projects.map((project) => project.test);
+      const indexed = indexedTestFiles([
+        "tests/unit/**/*.test.ts",
+        "tests/unit/**/*.test.mjs",
+        "tests/contract/**/*.test.ts",
+      ]);
+      expect([...unit.include, ...processes.include].sort()).toEqual([...indexed].sort());
+      expect(config.test.include).toBeUndefined();
+    });
+
+    it("runs every test file that starts processes in the one-at-a-time process project, after the rest", async () => {
+      expect(startsProcesses('import { execFileSync } from "node:child_process";')).toBe(true);
+      expect(startsProcesses("const { spawnSync } = require('child_process');")).toBe(true);
+      expect(startsProcesses('await import("node:child_process")')).toBe(true);
+      expect(startsProcesses("runtime.spawn({ type: 'miniboss' });")).toBe(false);
+      const { default: config } = await import("../../vitest.config.ts");
+      const [unit, processes] = config.test.projects.map((project) => project.test);
+      expect(processes).toMatchObject({ name: "process", fileParallelism: false, sequence: { groupOrder: 1 } });
+      expect(unit.name).toBe("unit");
+      // This file starts git, so it runs in the process project and not beside the parallel workers.
+      expect(processes.include).toContain("tests/unit/pitfall-guards.test.mjs");
+      expect(unit.include).not.toContain("tests/unit/pitfall-guards.test.mjs");
+      // git grep's pick agrees with the same pattern read from Node.
+      for (const file of processes.include)
+        expect(startsProcesses(fs.readFileSync(path.join(root, file), "utf8")), file).toBe(true);
+      // And git grep asks for exactly that pattern, over the index's own globs.
+      const calls = [];
+      const git = (args) => {
+        calls.push(args);
+        const error = new Error("no match");
+        error.status = 1;
+        throw error;
+      };
+      expect(processTestFiles(["tests/unit/**/*.test.ts"], { git })).toEqual([]);
+      expect(calls).toEqual([
+        ["grep", "-l", "-E", "-e", `["'](node:)?child_process["']`, "--", ":(glob)tests/unit/**/*.test.ts"],
+      ]);
     });
 
     it("asks git for index entries with glob pathspecs and refuses names it cannot pass back as globs", () => {

@@ -6,7 +6,7 @@ import { createEnvironmentRuntime } from "../../src/gameplay/environment/environ
 import type { WhiteHartEnvironmentActor } from "../../src/gameplay/environment/pale-environment-feature";
 import { bindPaleEnvironmentActors } from "./environment-feature-fixture";
 import type { WhiteHartEnvironmentRequest } from "../../src/gameplay/environment/white-hart-route-runtime";
-import { environmentHash } from "../../src/tearbench/environment-codec";
+import { environmentHash } from "../../src/gameplay/snapshot/environment-codec";
 
 function request(sequence: number, threatening = true): WhiteHartEnvironmentRequest {
   return Object.freeze({

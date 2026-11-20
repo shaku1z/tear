@@ -212,15 +212,23 @@ export class TrainingCoach {
     if (playground.runKey === this.#playgroundKey && playground.arena === this.#playgroundArena) return;
     this.#playgroundKey = playground.runKey;
     this.#playgroundArena = playground.arena;
-    // Keyboard names its shortcuts; touch and controller reach the same menu through pause.
-    const shortcuts = (["playground-menu", "abilities", "quick-spawn"] as const).filter((action) =>
+    // Keyboard and controller name their shortcuts; touch reaches the same menu through pause.
+    const names = {
+      "playground-menu": "menu",
+      heal: "heal",
+      "clear-enemies": "clear",
+      "spawn-dummy": "dummy",
+      "repeat-spawn": "repeat",
+    } as const;
+    const shortcuts = (Object.keys(names) as (keyof typeof names)[]).filter((action) =>
       promptAvailable(action, device),
     );
-    const names = { "playground-menu": "menu", abilities: "abilities", "quick-spawn": "spawn" } as const;
     const pause = promptLabel("pause", device, frame.padLabel);
     const text =
       shortcuts.length > 0
-        ? shortcuts.map((action) => `${promptLabel(action, device) ?? ""} ${names[action]}`).join("  ·  ")
+        ? shortcuts
+            .map((action) => `${promptLabel(action, device, frame.padLabel) ?? ""} ${names[action]}`)
+            .join("  ·  ")
         : "Pause for the Playground menu.";
     this.#queue.offer({
       id: "playground:help",

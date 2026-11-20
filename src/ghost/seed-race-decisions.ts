@@ -5,7 +5,7 @@ import type { RewardChoice, RewardSelectionSnapshot } from "../gameplay/run/rewa
 import type { RewardDecision, RewardRuntime } from "../gameplay/run/reward-runtime";
 import type { TearCausalEventV1 } from "../tearbench/contracts";
 import type { GhostReadCapsule } from "./capsule-reader";
-import { readSeedRaceRun } from "./seed-race-contract";
+import { readSeedRaceRun } from "../gameplay/run/seed-race-contract";
 
 export function raceRewardHash(snapshot: RewardSelectionSnapshot<RewardChoice>): string {
   return stableVerificationHash({

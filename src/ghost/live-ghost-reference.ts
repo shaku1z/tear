@@ -1,5 +1,5 @@
 import { readSeedRaceDecisions } from "./seed-race-decisions";
-import { readSeedRaceRun, seedRaceInitialBuildHash } from "./seed-race-contract";
+import { readSeedRaceRun, seedRaceInitialBuildHash } from "../gameplay/run/seed-race-contract";
 import { stableVerificationHash } from "../domain/hash";
 import type { createProductionGhostReplayComposition } from "../tearbench/production-replay-composition";
 import { replayEngine } from "./replay-engine";

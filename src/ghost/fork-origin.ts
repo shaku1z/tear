@@ -1,7 +1,7 @@
 import { isObject, isRecord } from "../domain/records";
 import { stableVerificationHash } from "../domain/hash";
-import type { TearSnapshotV1 } from "../tearbench/contracts";
-import { rebaseEnvironmentSnapshot } from "../tearbench/environment-codec";
+import type { TearSnapshotV1 } from "../gameplay/snapshot/snapshot-contract";
+import { rebaseEnvironmentSnapshot } from "../gameplay/snapshot/environment-codec";
 import type { GhostReadCapsule } from "./capsule-reader";
 import { mapGhostCapsuleToReplayEnvelope } from "./capsule-replay-envelope";
 import { readGhostAuthoritativeReceipt } from "./authoritative-receipt";

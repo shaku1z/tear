@@ -1,14 +1,14 @@
-import { isObject, isRecord, requireRecord } from "../domain/records";
+import { isObject, isRecord, requireRecord } from "../../domain/records";
 import { sourceVoidHistoryReferences } from "./source-void-history-references";
 import { isAuthoredArenaSlotReference } from "./arena-slot-references";
-import { stableVerificationHash } from "../domain/hash";
-import type { TearSnapshotV1 } from "./contracts";
-import { CODEC_REGISTRY, type TearCodecId } from "./registries";
-import { validateLiveCodecPayload } from "./live-codec-validation";
-import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../gameplay/runtime/cinematic-director";
+import { stableVerificationHash } from "../../domain/hash";
+import type { TearSnapshotV1 } from "./snapshot-contract";
+import { CODEC_REGISTRY, type TearCodecId } from "./codec-ids";
+import { validateLiveCodecPayload } from "./validation";
+import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../runtime/cinematic-director";
 import { projectEnvironmentHash } from "./environment-codec";
-import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "./authored-environment-codec-validation";
-import { STAGE_IDS } from "../gameplay/stages";
+import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "./authored-environment-validation";
+import { STAGE_IDS } from "../stages";
 
 export type TearCodecValue =
   null | boolean | number | string | readonly TearCodecValue[] | Readonly<{ [key: string]: TearCodecValue }>;

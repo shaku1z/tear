@@ -7,7 +7,7 @@ import {
   PALE_TRACK_PRESENTATION_LIMITS,
   renderPaleEnvironmentPresentation,
 } from "../../src/presentation/environment/pale-environment-presentation";
-import { environmentHash } from "../../src/tearbench/environment-codec";
+import { environmentHash } from "../../src/gameplay/snapshot/environment-codec";
 
 function recorder() {
   const calls: string[] = [];

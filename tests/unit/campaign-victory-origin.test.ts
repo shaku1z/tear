@@ -11,8 +11,8 @@ import {
   createCampaignVictoryOrigin,
   createCampaignWave59RewardFrontier,
 } from "../../src/tearbench/campaign-victory-origin";
-import type { TearSnapshotV1 } from "../../src/tearbench/contracts";
-import { projectEnvironmentHash } from "../../src/tearbench/environment-codec";
+import type { TearSnapshotV1 } from "../../src/gameplay/snapshot/snapshot-contract";
+import { projectEnvironmentHash } from "../../src/gameplay/snapshot/environment-codec";
 import { reconstructProgression, synthesizeProgression } from "../../src/tearbench/progression-ledger";
 
 function sourceSnapshot(): TearSnapshotV1 {

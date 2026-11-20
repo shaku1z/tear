@@ -1,12 +1,12 @@
-import { isObject, isRecord } from "../domain/records";
-import { META_RANK_LIMITS } from "../gameplay/progression/meta";
-import { WEAPON_IDS } from "../gameplay/weapon-selection";
-import { BOSS_ROSTER } from "../gameplay/run/content-director";
-import { VERDANT_VARIANT_IDS } from "../gameplay/variants";
-import { UPGRADES } from "../gameplay/upgrades";
-import type { SeedRaceRun, SeedRaceShared } from "../gameplay/run/seed-locked-draft";
-import { seedRaceCatalogHash, seedRaceLegality } from "../gameplay/run/seed-locked-draft";
-import { stableVerificationHash } from "../domain/hash";
+import { isObject, isRecord } from "../../domain/records";
+import { META_RANK_LIMITS } from "../progression/meta";
+import { WEAPON_IDS } from "../weapon-selection";
+import { BOSS_ROSTER } from "./content-director";
+import { VERDANT_VARIANT_IDS } from "../variants";
+import { UPGRADES } from "../upgrades";
+import type { SeedRaceRun, SeedRaceShared } from "./seed-locked-draft";
+import { seedRaceCatalogHash, seedRaceLegality } from "./seed-locked-draft";
+import { stableVerificationHash } from "../../domain/hash";
 const HASH = /^[a-f0-9]{16}$/u;
 function closed(value: Record<string, unknown>, names: string): boolean {
   const fields = names.split(" ");

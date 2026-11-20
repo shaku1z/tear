@@ -6,7 +6,7 @@ import { renderBloomWellPresentation } from "../../src/presentation/environment/
 import { renderVerdantEnvironmentPresentation } from "../../src/presentation/environment/verdant-environment-presentation";
 import { createBloomWellState } from "../../src/gameplay/environment/bloom-well";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
-import { environmentHash } from "../../src/tearbench/environment-codec";
+import { environmentHash } from "../../src/gameplay/snapshot/environment-codec";
 
 function recorder() {
   const calls: string[] = [];

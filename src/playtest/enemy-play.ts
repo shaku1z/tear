@@ -1,7 +1,8 @@
 import { ENEMY_IDENTITY_IDS, PUBLISHED_ENEMY_IDENTITY_IDS, type EnemyKind } from "../gameplay/run/content-director";
 import type { RunDifficulty } from "../gameplay/run/session";
 import type { WeaponId } from "../gameplay/weapon-selection";
-import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION, type TearScenarioV1 } from "../tearbench/contracts";
+import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "../gameplay/snapshot/snapshot-contract";
+import type { TearScenarioV1 } from "../tearbench/contracts";
 import { agentView, type AttributedHits } from "./boss-fight";
 import { BOSS_PLAYER_IDS, createBossPlayer, type BossPlayer, type BossPlayerId } from "./boss-player";
 import { readPlayerBox, trainingResets } from "./boss-view";
