@@ -31,7 +31,7 @@ import { WEAPON_IDS } from "../../src/gameplay/weapon-selection";
 import type { createBlade } from "../../src/gameplay/entities/blade";
 import { loadShippingTutorialGold } from "../../src/gameplay/training/tutorial-gold-shipping";
 
-// The shipped corpus is an on-demand asset; training preflight loads it before any lesson.
+// These tests need the coach's demonstrations, so they load the on-demand corpus first; the game asks for it once a lesson is played.
 beforeAll(async () => {
   await loadShippingTutorialGold();
 });
