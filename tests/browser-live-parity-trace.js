@@ -106,19 +106,19 @@ const MAX_FOCUSED_TICKS = 180;
 const MIN_FOCUSED_TICKS = 40;
 
 function scenariosForExecution() {
-  const requestedId = process.env.TEAR_C27A_SCENARIO_ID;
-  const requestedMaxTicks = process.env.TEAR_C27A_MAX_TICKS;
+  const requestedId = process.env.TEAR_LIVE_PARITY_SCENARIO_ID;
+  const requestedMaxTicks = process.env.TEAR_LIVE_PARITY_MAX_TICKS;
   if (requestedId === undefined && requestedMaxTicks === undefined) return scenarios;
   if (requestedId !== SHORT_SCENARIO_ID) {
-    throw new Error(`focused C27A capture requires TEAR_C27A_SCENARIO_ID=${SHORT_SCENARIO_ID}`);
+    throw new Error(`focused C27A capture requires TEAR_LIVE_PARITY_SCENARIO_ID=${SHORT_SCENARIO_ID}`);
   }
   if (requestedMaxTicks === undefined || !/^\d+$/u.test(requestedMaxTicks)) {
-    throw new Error("focused C27A capture requires a numeric TEAR_C27A_MAX_TICKS");
+    throw new Error("focused C27A capture requires a numeric TEAR_LIVE_PARITY_MAX_TICKS");
   }
   const maxTicks = Number(requestedMaxTicks);
   if (!Number.isSafeInteger(maxTicks) || maxTicks < MIN_FOCUSED_TICKS || maxTicks > MAX_FOCUSED_TICKS) {
     throw new Error(
-      `TEAR_C27A_MAX_TICKS must be an integer from ${String(MIN_FOCUSED_TICKS)} to ${String(MAX_FOCUSED_TICKS)}`,
+      `TEAR_LIVE_PARITY_MAX_TICKS must be an integer from ${String(MIN_FOCUSED_TICKS)} to ${String(MAX_FOCUSED_TICKS)}`,
     );
   }
   const selected = scenarios.find((scenario) => scenario.id === SHORT_SCENARIO_ID);
@@ -144,7 +144,8 @@ function actionsAt(tick) {
 
 // A bounded diagnostic is not a parity matrix; keep it away from the complete
 // matrix consumed by the existing detached-world regression gates.
-const focusedCapture = process.env.TEAR_C27A_SCENARIO_ID !== undefined || process.env.TEAR_C27A_MAX_TICKS !== undefined;
+const focusedCapture =
+  process.env.TEAR_LIVE_PARITY_SCENARIO_ID !== undefined || process.env.TEAR_LIVE_PARITY_MAX_TICKS !== undefined;
 const ARTIFACT_DIR = path.join("artifacts", "tearbench", "checkpoints", "core", "C27A", "live-parity");
 
 function artifactPath(scenario) {
