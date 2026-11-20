@@ -31,6 +31,7 @@ function open(values: Map<string, string>) {
     },
     accessibility: { flashScale: 1, motionScale: 1, reducedMotion: false, highContrast: false },
     graphics: { low: false },
+    statistics: { share: true },
     input: { forceMode: "auto", touchAimMode: "stick" },
     // As the game's pad: a known preset is kept, anything else becomes the default.
     gamepad: { setPreset: (name) => (name === "southpaw" ? name : "default") },

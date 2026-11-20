@@ -19,20 +19,24 @@ service cloud.firestore {
       allow create: if request.auth != null;
       allow read, update, delete: if false;
     }
-    // one replay ghost per board (public read, authed write) — legacy, superseded by /replays
+    // one replay ghost per board — legacy, superseded by /replays; the game only reads it, nobody writes
     match /ghosts/{board} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if false;
     }
     // published replays: a RunSummary doc + the recording chunked underneath.
     // Anyone can watch; only the owner (the Replay Passport uid) can create/replace/delete.
     match /replays/{id} {
       allow read: if true;
-      allow create, update: if request.auth != null && request.resource.data.ownerUid == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.ownerUid == request.auth.uid;
+      allow update: if request.auth != null && resource.data.ownerUid == request.auth.uid
+                    && request.resource.data.ownerUid == request.auth.uid;
       allow delete: if request.auth != null && request.auth.uid == resource.data.ownerUid;
       match /chunks/{n} {
         allow read: if true;
-        allow create, update: if request.auth != null;
+        // only the parent replay's owner may write its chunks (the parent is written first)
+        allow create, update: if request.auth != null
+                              && get(/databases/$(database)/documents/replays/$(id)).data.ownerUid == request.auth.uid;
         allow delete: if false;
       }
     }

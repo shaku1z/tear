@@ -22,6 +22,7 @@ const environment = {
   touch: false,
   installAvailable: false,
   update: { ready: false, applying: false },
+  privacy: { privacyLink: true, termsLink: false, note: null, statistics: true },
   buildLabel: "v0.1.0 · 820e8e9",
   presets: { default: { name: "DEFAULT", tag: "", line: "familiar", map: "L1 tether" } },
   controllerGlyphs: ["✕", "◯", "▢", "△"],
@@ -68,6 +69,33 @@ describe("settings snapshots", () => {
       expect(buildSettingsSections(tab, settings, environment).flatMap((section) => section.rows)).not.toContainEqual(
         expect.objectContaining({ key: "version" }),
       );
+  });
+  it("shows the data rows the build's privacy stance asks for, and no others", () => {
+    const keys = (privacy: typeof environment.privacy) =>
+      buildSettingsSections("general", settings, { ...environment, privacy })[0]?.rows.map((row) => row.key) ?? [];
+    const own = keys(environment.privacy);
+    expect(own).toContain("shareStatistics");
+    expect(own).toContain("privacy");
+    expect(own).not.toContain("terms");
+    const portal = keys({ privacyLink: true, termsLink: true, note: null, statistics: false });
+    expect(portal).toContain("terms");
+    expect(portal).not.toContain("shareStatistics");
+    const local = buildSettingsSections("general", settings, {
+      ...environment,
+      privacy: {
+        privacyLink: false,
+        termsLink: false,
+        note: "Progress is stored only in this browser.",
+        statistics: false,
+      },
+    })[0]?.rows;
+    expect(local).toContainEqual({
+      key: "privacyNote",
+      label: "Progress is stored only in this browser.",
+      value: "",
+      kind: "info",
+    });
+    expect(local?.map((row) => row.key)).not.toContain("privacy");
   });
   it("previews the active controller glyph family instead of hardcoding one console", () => {
     expect(

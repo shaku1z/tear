@@ -69,7 +69,7 @@ withJourney({ name: "C23 State Editor" }, async ({ page, errors }) => {
   assert.ok(downloadPath);
   assert.deepEqual(JSON.parse(fs.readFileSync(downloadPath, "utf8")), imported);
 
-  const forgeClasses = [
+  const buildClasses = [
     {
       stateClass: "reconstructed-reachable",
       wave: 24,
@@ -85,8 +85,8 @@ withJourney({ name: "C23 State Editor" }, async ({ page, errors }) => {
       state: { corruptionProfile: "quarantined-studio" },
     },
   ];
-  const forgedClassEvidence = [];
-  for (const [index, entry] of forgeClasses.entries()) {
+  const builtClassEvidence = [];
+  for (const [index, entry] of buildClasses.entries()) {
     const document = {
       format: "tearsdl",
       schemaVersion: 1,
@@ -106,7 +106,7 @@ withJourney({ name: "C23 State Editor" }, async ({ page, errors }) => {
     await page.getByRole("button", { name: "Launch scenario", exact: true }).evaluate((button) => button.click());
     await page.waitForTimeout(settleFor(200));
     assert.match(await page.getByRole("status").textContent(), new RegExp(`Launched ${document.id}`));
-    const forged = await page.evaluate((expectedClass) => {
+    const built = await page.evaluate((expectedClass) => {
       const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
       const snapshot = environment.captureSnapshot(`proof-${expectedClass}`);
       return {
@@ -114,12 +114,12 @@ withJourney({ name: "C23 State Editor" }, async ({ page, errors }) => {
         stateClass: snapshot.state["tear.run.v1"].stateForgeScenario.stateClass,
       };
     }, entry.stateClass);
-    assert.equal(forged.wave, entry.wave);
-    assert.equal(forged.stateClass, entry.stateClass);
-    forgedClassEvidence.push({
+    assert.equal(built.wave, entry.wave);
+    assert.equal(built.stateClass, entry.stateClass);
+    builtClassEvidence.push({
       scenarioId: document.id,
       stateClass: entry.stateClass,
-      wave: forged.wave,
+      wave: built.wave,
       constraints: entry.constraints ?? {},
     });
   }
@@ -155,7 +155,7 @@ withJourney({ name: "C23 State Editor" }, async ({ page, errors }) => {
         forkedCheckpoint: "studio-low-health",
         importExportRoundTrip: true,
         invalidScenarioRejected: true,
-        forgedClasses: forgedClassEvidence,
+        builtClasses: builtClassEvidence,
         adversarialEvidenceQuarantined: true,
       },
       null,

@@ -16,7 +16,7 @@ import {
   TearHeadlessRunner,
   type ProductionHeadlessTerminalArtifact,
   type ProductionHeadlessCheckpoint,
-  forgeExitLaunchSnapshot,
+  buildExitLaunchSnapshot,
   type TearScenarioV1,
 } from "../../src/tearbench";
 
@@ -724,18 +724,18 @@ describe("C30 production headless environment", () => {
     const source = original.captureCheckpoint();
     const launch = createOneFrameBoundaryLaunchMatrix()[0];
     if (launch === undefined) throw new Error("State Setup fixture launch missing");
-    const forgedSnapshot = forgeExitLaunchSnapshot(source.snapshot, launch);
+    const builtSnapshot = buildExitLaunchSnapshot(source.snapshot, launch);
     const restored = createProductionHeadlessEnvironment();
-    expect(restored.restoreStateSetupEvaluation({ source, forgedSnapshot })).toMatchObject({
+    expect(restored.restoreStateSetupEvaluation({ source, builtSnapshot })).toMatchObject({
       tick: source.checkpoint.tick,
     });
-    const lineage = forgedSnapshot.lineage;
+    const lineage = builtSnapshot.lineage;
     if (lineage === undefined) throw new Error("State Setup fixture lineage missing");
-    const forgedWrongParent = Object.freeze({
-      ...forgedSnapshot,
+    const builtWrongParent = Object.freeze({
+      ...builtSnapshot,
       lineage: Object.freeze({ ...lineage, parentId: "foreign" }),
     });
-    expect(() => restored.restoreStateSetupEvaluation({ source, forgedSnapshot: forgedWrongParent })).toThrow(
+    expect(() => restored.restoreStateSetupEvaluation({ source, builtSnapshot: builtWrongParent })).toThrow(
       /lineage-bound/u,
     );
     original.dispose();

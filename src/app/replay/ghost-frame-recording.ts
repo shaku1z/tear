@@ -148,7 +148,7 @@ export function createLiveGhostFrameRecording(
       if (binding === undefined) return;
       // The witness belongs to the application clock. Raw fixed ticks driven
       // outside any application frame (State Setup source discovery, whose
-      // timeline the forged origin rebases away) are not clock facts.
+      // timeline the built origin rebases away) are not clock facts.
       if (chosen === undefined && open === undefined) return;
       // Cinema callbacks run before this frame's prelude; simulation installs do not.
       activate();

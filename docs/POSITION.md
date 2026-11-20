@@ -17,12 +17,12 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 | [Release readiness](#release-readiness) | Merged to main | Production deploy, after the owner has played the build. | — |
 | [Production deploy](#production-deploy) | Deployed 2026-11-13 | The next production deploy follows the Verdant, Tutorial and music work. | — |
 | [Verdant Sanctum visuals](#verdant-visuals) | In progress | The owner judges the moving stage; then Pale Traverse from a recipe, with its own live list. | Judge the drawn look against the reference illustration: the owner's taste decides visual work. |
-| [Verdant Sanctum gameplay](#verdant-gameplay) | In progress | The Rootbinder's warned snare, then Verdant waves. | Playtest the Rootbound in all three phases. |
+| [Verdant Sanctum gameplay](#verdant-gameplay) | In progress | Verdant waves. | Playtest the Rootbound in all three phases. |
 | [Tutorial and Playground experience](#training-ux) | In progress | One source of names for the drilled weapon moves (this pull request, then its floaters), then the release tutorial flow and menu fixes. | — |
 | [Pale Traverse rework](#pale-traverse) | Not started | Start once the Verdant gameplay rework has landed. | — |
 | [Player wiki](#wiki) | In progress | Review the move pull request, then confirm the Cloudflare secret question and run the first wiki deploy. | Archive shaku1z/tear-wiki after the first deploy from this repository. |
 | [Repository structure and workflow](#repository-structure) | In progress | After the hooks pull request merges, run pnpm setup:hooks in the canonical checkout on main (scripts/governance/README.md). | — |
-| [Playtest tool](#playtest-tool) | Stage 1 in part: pnpm playtest bosses prints a table per boss fight and phase, from Phase I or a chosen phase | Rest of stage 1: the sweep over weapons, seeds and difficulties in under 5 minutes. | — |
+| [Playtest tool](#playtest-tool) | Stage 1 built: pnpm playtest bosses prints a table per boss fight and phase; pnpm playtest sweep plays every boss, weapon, Easy and Normal with six scripted players and prints a summary | Stage 2: every boss phase, wave and enemy kind as a row that starts directly, and pnpm playtest runs. | — |
 | [TearBench C21 to C40 program](#tearbench-program) | Paused at the 2026-08-30 state | Land or close pull request 84. | — |
 | [Mobile, touch and phone layouts](#mobile) | Paused by the owner 2026-11-19; out of the release builds | Nothing until the owner resumes mobile; plans/MOBILE_LATER.md says how to turn it back on. | Mark the CrazyGames listing desktop only. Say when mobile resumes. |
 
@@ -60,9 +60,9 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 ### Verdant Sanctum gameplay
 
-**In progress.** The Rootbound boss is rebuilt in all three phases as data on a shared boss move layer that Pale and later bosses reuse: Phase I's moves, Phase II's Grafts, Root Cage and Bloom Wells, and Phase III's Regrowth and Last Spring. Its body no longer hurts on touch: it blocks, and it does not play a move the player could not walk out of. The stage's Bloom Wells stand on the floor and lift the player and light enemies; who a stage field moves is one data row. The Rootbinder is rebuilt as a support that backs away, plants and roots the allies near it, so they cannot be flung or lifted until the root is cut; cutting every root or one heavy hit uproots it, and it takes more damage while planted. Its old leash on the player is removed and comes back as a warned snare in the next pull request, which merges together with this one. Verdant waves are not rebuilt yet.
+**In progress.** The Rootbound boss is rebuilt in all three phases as data on a shared boss move layer that Pale and later bosses reuse: Phase I's moves, Phase II's Grafts, Root Cage and Bloom Wells, and Phase III's Regrowth and Last Spring. Its body no longer hurts on touch: it blocks, and it does not play a move the player could not walk out of. The stage's Bloom Wells stand on the floor and lift the player and light enemies; who a stage field moves is one data row. The Rootbinder is rebuilt as a support that backs away, plants and roots the allies near it, so they cannot be flung or lifted until the root is cut; cutting every root or one heavy hit uproots it, and it takes more damage while planted. Its old leash on the player is replaced by a warned snare: a ring marked on the ground that holds a player who stays in it, with a cut, a 2 second release and an immunity afterwards. Verdant waves are not rebuilt yet.
 
-- Next: The Rootbinder's warned snare, then Verdant waves.
+- Next: Verdant waves.
 - Owner action: Playtest the Rootbound in all three phases.
 - Evidence: [plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md)
 
@@ -110,9 +110,9 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 ### Playtest tool
 
-**Stage 1 in part: pnpm playtest bosses prints a table per boss fight and phase, from Phase I or a chosen phase.** One command, pnpm playtest, that plays the game headless with scripted players on fixed seeds and reports clear rates, time to kill, damage taken and differences between builds. It is built from the working parts of TearBench and the scripted player and replaces both names. Verified on 2026-11-16: the scripted player runs headless at 13 to 15 times real time and the same seed reproduces exactly.
+**Stage 1 built: pnpm playtest bosses prints a table per boss fight and phase; pnpm playtest sweep plays every boss, weapon, Easy and Normal with six scripted players and prints a summary.** One command, pnpm playtest, that plays the game headless with scripted players on fixed seeds and reports clear rates, time to kill, damage taken and differences between builds. It is built from the working parts of TearBench and the scripted player and replaces both names. Verified on 2026-11-16: the scripted player runs headless at 13 to 15 times real time and the same seed reproduces exactly.
 
-- Next: Rest of stage 1: the sweep over weapons, seeds and difficulties in under 5 minutes.
+- Next: Stage 2: every boss phase, wave and enemy kind as a row that starts directly, and pnpm playtest runs.
 - Owner action: none
 - Evidence: [plans/active/PLAYTEST_TOOL_PLAN.md](../plans/active/PLAYTEST_TOOL_PLAN.md)
 
