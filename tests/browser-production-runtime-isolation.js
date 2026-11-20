@@ -123,13 +123,24 @@ const engineeringSetupLabels = ["DEV", "BOSS TEST", "ENEMY TEST", "CREATE SEED-L
 /** Records canvas text so production menus can be inspected without any test hook in the bundle. */
 function recordCanvasText() {
   const drawn = [];
+  // Where each label was last drawn on the visible canvas, in page pixels, so a drawn control can be clicked.
+  const at = new Map();
   const original = CanvasRenderingContext2D.prototype.fillText;
-  CanvasRenderingContext2D.prototype.fillText = function fillText(text, ...rest) {
+  CanvasRenderingContext2D.prototype.fillText = function fillText(text, x, y, ...rest) {
     drawn.push(String(text));
     if (drawn.length > 20_000) drawn.splice(0, drawn.length - 10_000);
-    return original.call(this, text, ...rest);
+    if (this.canvas.isConnected) {
+      const point = this.getTransform().transformPoint({ x, y }),
+        rect = this.canvas.getBoundingClientRect();
+      at.set(String(text), {
+        x: rect.left + (point.x * rect.width) / this.canvas.width,
+        y: rect.top + (point.y * rect.height) / this.canvas.height,
+      });
+    }
+    return original.call(this, text, x, y, ...rest);
   };
   Object.defineProperty(window, "__isolationDrawnText", { configurable: false, value: drawn });
+  Object.defineProperty(window, "__isolationDrawnAt", { configurable: false, value: at });
 }
 
 /** Exact or fitted (ellipsized) canvas labels that belong to engineering controls. */
@@ -190,6 +201,19 @@ async function assertReleaseSurfaces(page, target) {
     `${target} production main menu rendered engineering entries`,
   );
   await clickVirtual(page, 260, 361);
+  // A fresh profile is tutorial-first: PLAY starts the tutorial, and skipping it on purpose from
+  // its pause menu opens the run setup.
+  await page
+    .waitForFunction(() => window.__isolationDrawnText.some((text) => /^LESSON 1 OF \d+$/u.test(text)), undefined, {
+      timeout: STATE_WAIT_MS,
+    })
+    .catch(() => {
+      throw new Error(`${target} PLAY did not start the tutorial`);
+    });
+  await page.keyboard.press("KeyP");
+  await waitForDrawnText(page, "SKIP TUTORIAL", `${target} tutorial pause`);
+  const skip = await page.evaluate(() => window.__isolationDrawnAt.get("SKIP TUTORIAL"));
+  await page.mouse.click(skip.x, skip.y);
   await waitForDrawnText(page, "START", `${target} setup`);
   const setup = await drawnTextAfterFrames(page);
   assert.ok(setup.includes("ADVENTURE"), `${target} setup did not render its modes`);

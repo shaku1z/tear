@@ -236,7 +236,8 @@ async function pointerBelongsToTheMouseAlone(browser, configure) {
  * A tablet starts on touch, so its first tap meets the touch layout it was drawn. A laptop with
  * a touch screen starts on the mouse; its first tap is resolved against the mouse layout the
  * player saw, and the menu changes to its touch layout only afterwards. Either way the first
- * tap on PLAY opens the run setup (it once opened the Shop, which sat under the moved layout).
+ * tap on PLAY presses PLAY, which starts the tutorial on a fresh profile (it once opened the
+ * Shop, which sat under the moved layout).
  */
 async function firstTapLandsOnTheControlsThePlayerSaw(browser, configure) {
   for (const device of [
