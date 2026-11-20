@@ -8,8 +8,8 @@ import {
   validateCosmeticCatalog,
   worstCaseStateSize,
 } from "../../src/domain/cosmetic-validation";
+import { activeLoadout } from "../../src/domain/cosmetic-loadouts";
 import {
-  activeLoadout,
   claimableGrants,
   emptyCosmeticState,
   equipCosmetic,
@@ -83,7 +83,7 @@ describe("cosmetic data files", () => {
       "mix_preset",
     ]);
     const ready = COSMETIC_CATALOG.slots.filter((slot) => slot.hook === "ready").map((slot) => slot.id);
-    expect(ready).toEqual(["blade", "trail", "spark"]);
+    expect(ready).toEqual(["blade", "trail", "spark", "title", "banner"]);
     const notYet = COSMETIC_CATALOG.slots.filter((slot) => slot.hook === "not yet").map((slot) => slot.id);
     expect(notYet).toHaveLength(COSMETIC_CATALOG.slots.length - ready.length);
   });

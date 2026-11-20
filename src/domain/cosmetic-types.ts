@@ -126,5 +126,8 @@ export interface CosmeticState {
  */
 export type BurstKind = "blade-hit";
 
+/** A pure step from one cosmetic record to the next (equip, a loadout change), or null when it does not apply. */
+export type CosmeticChange = (catalog: CosmeticCatalog, state: CosmeticState, now: number) => CosmeticState | null;
+
 /** The plain object every consumer of a look takes (the dispatcher, a replay, a profile card, a co-op partner). */
 export type Loadout = Readonly<Record<string, string>>;

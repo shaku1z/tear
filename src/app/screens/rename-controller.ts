@@ -1,6 +1,13 @@
 import { releasePointerLock } from "../../platform/browser-pointer-lock";
 import type { AppScreen } from "../../domain/screen-catalog";
 import { RENAME_FIELD } from "../../presentation/rename-field";
+import {
+  MAX_PLAYER_NAME,
+  MIN_PLAYER_NAME,
+  nameProblem,
+  type NameSubject,
+  type NameTarget,
+} from "../../domain/display-names";
 
 export interface RenameSnapshot {
   readonly active: boolean;
@@ -8,6 +15,9 @@ export interface RenameSnapshot {
   readonly firstRun: boolean;
   readonly previous: AppScreen;
   readonly value: string;
+  readonly subject: NameSubject;
+  readonly minLength: number;
+  readonly maxLength: number;
 }
 export interface RenameControllerPorts {
   readonly document: Document;
@@ -25,8 +35,9 @@ interface ActiveRename {
   error: string;
   readonly firstRun: boolean;
   previous: AppScreen;
+  readonly target: NameTarget;
 }
-const restrictedWords = Object.freeze(["fuck", "shit", "bitch", "nigg", "asshole", "cunt", "faggot", "dick"]);
+const WEEKLY_RENAME_LIMIT = "You can only change your name once every 7 days.";
 
 export class RenameController {
   #active: ActiveRename | null = null;
@@ -42,12 +53,32 @@ export class RenameController {
     this.#prompted = true;
   }
 
+  /** Opens the screen on the player name; a signed-out player cannot rename unless a debug bypass is given. */
   begin(firstRun: boolean, debugBypass = false): void {
     if (!debugBypass && !this.ports.cloud.loggedIn()) return;
+    const { profile, cloud } = this.ports;
+    this.#open(firstRun, {
+      subject: "player",
+      initial: profile.username(),
+      minLength: MIN_PLAYER_NAME,
+      maxLength: MAX_PLAYER_NAME,
+      refuse: () => (profile.usernameSetAt() && !cloud.canRename() ? WEEKLY_RENAME_LIMIT : null),
+      commit: (name) => {
+        cloud.setCustomUsername(name);
+      },
+    });
+  }
+  /** Opens the same screen on any other name (a loadout's). */
+  beginNaming(target: NameTarget): void {
+    this.#open(false, target);
+  }
+
+  #open(firstRun: boolean, target: NameTarget): void {
     releasePointerLock(this.ports.document);
     this.ports.input.textEntryMode = true;
     const input = this.#input();
-    input.value = this.ports.profile.username();
+    input.value = target.initial;
+    input.maxLength = target.maxLength;
     input.style.display = "block";
     input.style.color = "#f1eff9";
     this.position();
@@ -55,7 +86,7 @@ export class RenameController {
       input.focus();
     }, 50);
     const previous = this.ports.screen();
-    this.#active = { error: "", firstRun, previous: previous === "rename" ? "profile" : previous };
+    this.#active = { error: "", firstRun, previous: previous === "rename" ? "profile" : previous, target };
     this.ports.setScreen("rename");
     // The field owns Enter and Escape: stop them reaching the game's window listener,
     // which would otherwise read them as confirm/back on the screen this returns to.
@@ -72,13 +103,14 @@ export class RenameController {
 
   submit(): void {
     if (this.#active === null) return;
+    const { target } = this.#active;
     const name = this.#input().value.trim(),
-      error = this.#validate(name);
+      error = nameProblem(name, target.minLength, target.maxLength) ?? target.refuse?.() ?? null;
     if (error !== null) {
       this.#active.error = error;
       return;
     }
-    this.ports.cloud.setCustomUsername(name);
+    target.commit(name);
     this.close();
   }
   cancel(): void {
@@ -119,20 +151,14 @@ export class RenameController {
       firstRun: active?.firstRun ?? false,
       previous: active?.previous ?? "settings",
       value: this.#input().value.trim(),
+      subject: active?.target.subject ?? "player",
+      minLength: active?.target.minLength ?? MIN_PLAYER_NAME,
+      maxLength: active?.target.maxLength ?? MAX_PLAYER_NAME,
     });
   }
   #input(): HTMLInputElement {
     const input = this.ports.document.getElementById("nameInput");
     if (!(input instanceof HTMLInputElement)) throw new TypeError("#nameInput must be an input element");
     return input;
-  }
-  #validate(name: string): string | null {
-    if (name.length < 3 || name.length > 16) return "Must be 3-16 characters";
-    if (!/^[a-zA-Z0-9 _-]+$/.test(name)) return "Letters, numbers, spaces, _, - only";
-    const lower = name.toLowerCase();
-    if (restrictedWords.some((word) => lower.includes(word))) return "Name contains restricted words";
-    if (this.ports.profile.usernameSetAt() && !this.ports.cloud.canRename())
-      return "You can only change your name once every 7 days.";
-    return null;
   }
 }

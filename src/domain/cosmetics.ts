@@ -13,12 +13,14 @@ import {
   MAX_LOADOUT_NAME,
   MAX_OWNED,
   type CosmeticCatalog,
+  type CosmeticCollection,
   type CosmeticItem,
   type CosmeticState,
   type EquippedEntry,
   type Loadout,
   type SavedLoadout,
 } from "./cosmetic-types";
+import { activeLoadout, DEFAULT_LOADOUT_NAME, liveLoadout, stampAfter } from "./cosmetic-loadouts";
 import { isItemId } from "./identifiers";
 import { hasOwnKey, isRecord, ownValue } from "./records";
 import { conditionMet, type ProgressFacts, type UnlockCondition } from "./unlock-condition";
@@ -167,20 +169,6 @@ export const priceOf = (catalog: CosmeticCatalog, item: CosmeticItem): number =>
   catalog.tiers.find((tier) => tier.id === item.tier)?.price ?? Number.POSITIVE_INFINITY;
 const sellsForShards = (item: CosmeticItem): boolean => item.acquire.some((entry) => entry.how === "shards");
 
-const latestChange = (loadout: SavedLoadout): number =>
-  Math.max(loadout.nameAt, ...Object.values(loadout.slots).map((entry) => entry.at));
-const isDeletedLoadout = (loadout: SavedLoadout): boolean =>
-  loadout.deletedAt !== undefined && loadout.deletedAt >= latestChange(loadout);
-
-/** The loadout saved under `id`, or undefined when there is none or it was deleted. */
-function liveLoadout(state: CosmeticState, id: string): SavedLoadout | undefined {
-  const loadout = ownValue(state.loadouts, id);
-  return loadout && !isDeletedLoadout(loadout) ? loadout : undefined;
-}
-
-/** The loadout in use, or undefined while nothing has been equipped yet. */
-export const activeLoadout = (state: CosmeticState): SavedLoadout | undefined => liveLoadout(state, state.active.id);
-
 /** Whether the player owns the item (bought or granted). */
 const owns = (state: CosmeticState, id: string): boolean => hasOwnKey(state.owned, id);
 
@@ -243,22 +231,54 @@ export function acquireCondition(entry: Acquisition): UnlockCondition | null {
  * (its reward). Challenge, mastery, code and bundle grants arrive through their own receipts later.
  */
 export function claimableGrants(catalog: CosmeticCatalog, state: CosmeticState, facts: ProgressFacts): string[] {
-  const owned = (id: string): boolean => owns(state, id);
-  const complete = (collectionId: string): boolean => {
-    const reward = catalog.collections.find((entry) => entry.id === collectionId)?.reward;
-    const members = catalog.items.filter((item) => item.collection === collectionId && item.id !== reward);
-    return members.length > 0 && members.every((item) => owned(item.id));
-  };
+  const complete = new Set(
+    collectionProgress(catalog, state, facts)
+      .filter((progress) => progress.complete)
+      .map((progress) => progress.collection.id),
+  );
   return catalog.items
-    .filter((item) => !owned(item.id) && !(item.unlock && !conditionMet(item.unlock, facts)))
+    .filter((item) => !owns(state, item.id) && !(item.unlock && !conditionMet(item.unlock, facts)))
     .filter((item) =>
       item.acquire.some((entry) => {
         const condition = acquireCondition(entry);
         if (condition) return conditionMet(condition, facts);
-        return entry.how === "collection" && complete(entry.id);
+        return entry.how === "collection" && complete.has(entry.id);
       }),
     )
     .map((item) => item.id);
+}
+
+export interface CollectionProgress {
+  readonly collection: CosmeticCollection;
+  /** The items that complete it: every item of the collection except its reward. */
+  readonly members: readonly CosmeticItem[];
+  readonly owned: number;
+  /** Its unlock condition is met, so its items may be bought. */
+  readonly unlocked: boolean;
+  /** Every member is owned, which grants the reward. */
+  readonly complete: boolean;
+  readonly reward?: CosmeticItem;
+}
+
+/** Where the player stands on each collection. The one place membership and completion are decided. */
+export function collectionProgress(
+  catalog: CosmeticCatalog,
+  state: CosmeticState,
+  facts: ProgressFacts,
+): CollectionProgress[] {
+  return catalog.collections.map((collection) => {
+    const reward = catalog.items.find((item) => item.id === collection.reward);
+    const members = catalog.items.filter((item) => item.collection === collection.id && item.id !== collection.reward);
+    const owned = members.filter((item) => owns(state, item.id)).length;
+    return {
+      collection,
+      members,
+      owned,
+      unlocked: conditionMet(collection.unlock, facts),
+      complete: members.length > 0 && owned === members.length,
+      ...(reward ? { reward } : {}),
+    };
+  });
 }
 
 export const grantItems = (state: CosmeticState, ids: readonly string[]): CosmeticState => {
@@ -286,12 +306,8 @@ export function equipCosmetic(
   // The loadout in use; failing that, the live main loadout; only when neither exists is a fresh main made.
   const live = activeLoadout(state);
   const id = live ? state.active.id : DEFAULT_LOADOUT_ID;
-  const base: SavedLoadout = live ?? liveLoadout(state, id) ?? { name: "MAIN", nameAt: now, slots: {} };
-  const at = Math.max(
-    Math.trunc(now),
-    (ownValue(base.slots, slot)?.at ?? 0) + 1,
-    (ownValue(state.loadouts, id)?.deletedAt ?? -1) + 1,
-  );
+  const base: SavedLoadout = live ?? liveLoadout(state, id) ?? { name: DEFAULT_LOADOUT_NAME, nameAt: now, slots: {} };
+  const at = stampAfter(now, ownValue(base.slots, slot)?.at ?? 0, ownValue(state.loadouts, id)?.deletedAt ?? -1);
   const loadout: SavedLoadout = { ...base, slots: { ...base.slots, [slot]: { id: itemId, at } } };
   return { ...state, loadouts: { ...state.loadouts, [id]: loadout }, active: live ? state.active : { id, at } };
 }

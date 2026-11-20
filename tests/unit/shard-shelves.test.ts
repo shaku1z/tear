@@ -37,6 +37,7 @@ const input = (over: Partial<ShardShelvesInput> = {}): ShardShelvesInput => ({
   names: CONDITION_NAMES,
   collectionName: (id) => id,
   newItems: new Set(),
+  deleteArmed: null,
   ...over,
 });
 const card = (view: ReturnType<typeof buildShardShelves>, id: string | null, slot?: string) =>

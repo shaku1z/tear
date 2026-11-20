@@ -7,6 +7,10 @@ import { COSMETIC_CATALOG } from "../../gameplay/progression/cosmetic-catalog";
 import { buildShardShelves } from "../../presentation/shard-shelves-snapshot";
 import { buildShopSnapshot, SHOP_TABS } from "../../presentation/shop-snapshot";
 import type { MenuScreenServices, MenuScreenState } from "../screens/menu-screen-adapters";
+import { createArmedConfirm } from "../interface/armed-confirm";
+import { deleteLoadout, loadoutSummaries, MIN_LOADOUT_NAME, renameLoadout } from "../../domain/cosmetic-loadouts";
+import { MAX_LOADOUT_NAME, type CosmeticChange } from "../../domain/cosmetic-types";
+import type { NameTarget } from "../../domain/display-names";
 
 const collectionName = (id: string): string =>
   COSMETIC_CATALOG.collections.find((entry) => entry.id === id)?.name ?? id;
@@ -15,6 +19,12 @@ export function createLiveSetupShopRenderers(state: MenuScreenState, services: M
   const { dependencies: d, renderers } = services;
   /** Items that were new when the SHARDS tab opened: they keep their NEW badge for this visit only. */
   let freshItems: ReadonlySet<string> = new Set();
+  const deleteConfirm = createArmedConfirm(() => performance.now());
+  const changeCosmetics = (change: CosmeticChange): void => {
+    void d.PROFILE.changeCosmetics(change).then((result) => {
+      if (result === "committed") d.SFX.ui();
+    });
+  };
   const shards = () =>
     buildShardShelves({
       catalog: COSMETIC_CATALOG,
@@ -24,6 +34,8 @@ export function createLiveSetupShopRenderers(state: MenuScreenState, services: M
       names: CONDITION_NAMES,
       collectionName,
       newItems: freshItems,
+      deleteArmed:
+        loadoutSummaries(d.PROFILE.cosmetics()).find((loadout) => deleteConfirm.view(loadout.id).armed)?.id ?? null,
     });
   /** Grants anything already earned, then badges and marks as seen what the player holds but has not seen. */
   const openShards = async (): Promise<void> => {
@@ -125,10 +137,23 @@ export function createLiveSetupShopRenderers(state: MenuScreenState, services: M
         await d.PROFILE.markCosmeticsSeen([id]);
       });
     },
-    equipCosmetic(slot: string, id: string | null): void {
-      void d.PROFILE.equipCosmetic(slot, id).then((result) => {
-        if (result === "committed") d.SFX.ui();
-      });
+    changeCosmetics,
+    pressDeleteLoadout(id: string): void {
+      if (deleteConfirm.press(id)) changeCosmetics((_catalog, cosmetics, now) => deleteLoadout(cosmetics, id, now));
+      else d.SFX.ui();
+    },
+    loadoutNameTarget(id: string): NameTarget | null {
+      const loadout = loadoutSummaries(d.PROFILE.cosmetics()).find((entry) => entry.id === id);
+      if (!loadout) return null;
+      return {
+        subject: "loadout",
+        initial: loadout.name,
+        minLength: MIN_LOADOUT_NAME,
+        maxLength: MAX_LOADOUT_NAME,
+        commit: (name) => {
+          changeCosmetics((_catalog, cosmetics, now) => renameLoadout(cosmetics, id, name, now));
+        },
+      };
     },
   });
 }
