@@ -93,7 +93,8 @@ export class TrainingCoach {
   #idle = 0;
   #playgroundKey: unknown = undefined;
   #playgroundArena: number | undefined = undefined;
-  #callouts = 0;
+  /** Counts showings: each new arena, run or call-out is its own occasion and starts its time again. */
+  #occasions = 0;
 
   step(frame: TrainingCoachFrame): readonly Readonly<{ mark: CoachMark; alpha: number }>[] {
     const device = promptDevice(frame.inputMode);
@@ -187,7 +188,8 @@ export class TrainingCoach {
     for (const callout of frame.callouts ?? []) {
       const anchor = callout.anchor ?? frame.player;
       this.#queue.offer({
-        id: `callout:${String(++this.#callouts)}`,
+        id: "callout",
+        occasion: String(++this.#occasions),
         channel: "callout",
         tone: callout.tone,
         title: callout.text,
@@ -222,6 +224,7 @@ export class TrainingCoach {
         : "Pause for the Playground menu.";
     this.#queue.offer({
       id: "playground:help",
+      occasion: String(++this.#occasions),
       channel: "help",
       tone: "info",
       title: "PLAYGROUND",

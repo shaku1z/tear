@@ -169,7 +169,7 @@ export function createPlaygroundRuntimeBridge(dependencies: PlaygroundRuntimeDep
       } else if (intent.type === "summon-boss") {
         dependencies.run.curBoss = intent.bossId;
         dependencies.run.bossIdx = intent.nextBossIndex;
-        dependencies.spawn("boss", 1);
+        spawned = dependencies.spawn("boss", 1) ?? spawned;
       } else if (intent.type === "clear-enemies") {
         for (const enemy of dependencies.enemies) enemy.dead = true;
       } else if (intent.type === "clear-projectiles") dependencies.clearProjectiles();
