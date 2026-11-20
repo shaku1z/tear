@@ -129,8 +129,12 @@ applies them and answers yes or no with the reason; the merge helper calls it.
    - The gate's mode is in `config/design-check.json`: `off`, `observe` or
      `enforce`. It is read from `origin/main`'s copy, never the working tree,
      so a branch cannot switch its own gate off.
-   - In `observe`, the default for now, `merge:ready` prints
-     "would refuse: <reason>" and lets the merge through.
+   - The gate enforces: `merge:ready` refuses a description that leaves a
+     label unanswered. It switched from `observe` (where it prints
+     "would refuse: <reason>" and lets the merge through) after the observe
+     record over every pull request merged since the gate went in (75 on
+     2026-11-19) showed no false refusals and nothing accepted that was
+     unanswered, once #275 had fixed the label reader.
    - `pnpm design-check:report` lists every merged pull request since
      observe began that the gate would have refused, so false refusals can be
      reviewed.
