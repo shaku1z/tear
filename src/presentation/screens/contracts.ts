@@ -463,6 +463,8 @@ export interface SettingRowView {
 export interface SettingsScreenView {
   readonly id: "settings";
   readonly tab: string;
+  /** False on a read-only tab (Credits): RESET DEFAULTS is not drawn there. */
+  readonly resettable: boolean;
   readonly tabs: readonly ChoiceView[];
   readonly sections: readonly { readonly label: string; readonly rows: readonly SettingRowView[] }[];
   readonly canScrollUp?: boolean;

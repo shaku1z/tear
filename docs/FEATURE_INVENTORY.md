@@ -1004,6 +1004,7 @@ frozen evidence record.
 - [x] Master, music, sound-effects and interface volume/mute controls — audio settings/mixer tests, screen renderer parity, and the built-artifact feature/audio matrices.
 - [x] Independent saved audio sliders plus temporary ad/portal/system mute reasons — `audio-live-legacy.test.ts`, `audio-mixer.test.ts`, `audio-system.test.ts`, and CrazyGames adapter contracts.
 - [x] Cinematic preference and automatic pause behavior — `cinematic-preference.test.ts` and `settings-controller.test.ts` cover policy, sanitization and persistence; `browser-cinematic-preferences.js` proves full/brief/off campaign behavior and direct wave activation when scenes are off; the input matrix covers controller-disconnect auto-pause.
+- [x] Credits tab in Settings: the fonts and libraries each build contains, with the licence text opening from the row where it ships — `credits.test.ts` (a font file without an entry fails it, and each build lists only its own works), `settings-snapshots.test.ts` and `screen-renderers.test.ts` (no RESET DEFAULTS on the read-only tab).
 
 ## Audio
 
