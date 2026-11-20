@@ -76,7 +76,7 @@ feed and leaderboard replays show today. The causes below were found in the code
    (`gameplay/run/outcome-planner.ts:141`). It shows that stage until the first stage change it has
    a record of, so the first stage of an Adventure run is drawn as the stage the run ended on.
 3. **Long runs lose earlier stages.** When a recording passes 9,000 samples (15 minutes at 10 Hz),
-   `#trim` (`legacy-compat.ts:330`) drops the first quarter. It filters out the stage events before
+   `#trim` (`legacy-compat.ts:328`) drops the first quarter. It filters out the stage events before
    the cut and keeps no "stage at the cut" entry, so the fallback in cause 2 applies again.
 
 **Fix in the new design:** the record has no stage track. The stage at any tick is the stage of the
