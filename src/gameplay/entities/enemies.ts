@@ -22,7 +22,7 @@ function createEnemyTypes(dependencies: EnemyDependencies) {
   const Enemy = createEnemyBase(dependencies, bossRuntime);
   const { Charger, Ranged } = createGroundEnemyTypes(dependencies, Enemy);
   const { Flyer, Bomber, Armored } = createAirEnemyTypes(dependencies, Enemy);
-  const { Boss, Rootbinder, Support, Wraith, Chimera } = createSpecialEnemyTypes(dependencies, Enemy);
+  const { Rootbinder, Support, Wraith, Chimera } = createSpecialEnemyTypes(dependencies, Enemy);
   const { BOSSFX, weaponCapsuleIntersectsSegment } = bossRuntime;
   const Warden = createWardenType(dependencies, Enemy, bossRuntime);
   const Colossus = createColossusType(dependencies, Enemy, bossRuntime);
@@ -38,7 +38,6 @@ function createEnemyTypes(dependencies: EnemyDependencies) {
     Armored,
     BOSSFX,
     Bomber,
-    Boss,
     Charger,
     Chimera,
     Colossus,

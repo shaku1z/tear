@@ -1000,7 +1000,7 @@
       "duration": "long"
     },
     "check:weekly": {
-      "purpose": "Weekly group of config/checks.json: endurance plus ghost replay and vault suites",
+      "purpose": "Weekly group of config/checks.json: endurance, replay and vault suites, and the scripted-agent autonomy journey on a test build",
       "effects": [
         "read-only"
       ],
@@ -1334,8 +1334,7 @@
       "via": [],
       "runBy": [
         ".github/workflows/ci.yml",
-        ".github/workflows/nightly.yml",
-        ".github/workflows/tearbench-program.yml"
+        ".github/workflows/nightly.yml"
       ]
     },
     "scripts/ci-verdict.mjs": {

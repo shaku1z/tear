@@ -78,6 +78,7 @@ describe("Rootbound production foundation", () => {
       id: "rootbound",
       name: "The Rootbound",
       phaseMarks: [0.65, 0.28],
+      spawn: { factoryId: "rootbound", lift: "boss" },
     });
     expect(STAGE_BOSS_HOME["verdant-sanctum"]).toBe("rootbound");
     expect(BOSS_DEFINITIONS.find(({ id }) => id === "rootbound")).toBe(ROOTBOUND_DEFINITION);
