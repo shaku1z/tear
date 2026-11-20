@@ -411,7 +411,6 @@ const replays: ReplayView[] = Array.from({ length: 5 }, (_, index) => ({
   pinned: index === 0,
   shared: index === 1,
   canDownloadArchive: true,
-  canDownloadLinkedPair: index === 2,
   comparisonSelected: index === 1,
   comparisonSourceCount: 2,
 }));

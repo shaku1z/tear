@@ -9,6 +9,7 @@ const {
   writeClassCArtifact,
 } = require("./class-c-browser-harness");
 const { STATE_WAIT_MS, settleFor, launchJourney } = require("./browser-waits");
+const { TUTORIAL_SKIPPED_STORAGE } = require("./browser-journey-harness");
 
 function sampleDifference(left, right) {
   let changed = 0;
@@ -57,6 +58,12 @@ async function main() {
   async function open(context, viewport, label) {
     const page = await context.newPage();
     page.on("pageerror", (error) => record.browserErrors.push(`${label}: ${error.stack || error.message}`));
+    // The edges are checked on the menu and the run setup that PLAY opens, so the page plays as a
+    // player who skipped the tutorial. A release build keeps its profile in the real local storage.
+    await page.addInitScript((storage) => {
+      for (const [key, value] of Object.entries(storage))
+        if (localStorage.getItem(key) === null) localStorage.setItem(key, value);
+    }, TUTORIAL_SKIPPED_STORAGE);
     await page.route("**/*", (route) =>
       route.request().url().startsWith(host.origin) ? route.continue() : route.abort(),
     );

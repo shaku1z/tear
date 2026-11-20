@@ -17,14 +17,10 @@ import {
 import { REMOTE } from "../../src/config/game-config";
 import { applyWeapon } from "../../src/gameplay/weapons";
 import { newMods, UPGRADES, applyUpgrade } from "../../src/gameplay/upgrades";
-import {
-  GhostCapsuleReader,
-  GhostLocalVault,
-  GhostStreamingRecorder,
-  createLiveGhostBootstrapEvent,
-  createMemoryGhostVaultBackend,
-  ghostLiveBootstrapEventId,
-} from "../../src/ghost";
+import { GhostCapsuleReader } from "../../src/ghost/capsule-reader";
+import { GhostLocalVault, createMemoryGhostVaultBackend } from "../../src/ghost/capsule-vault";
+import { GhostStreamingRecorder } from "../../src/ghost/streaming-recorder";
+import { createLiveGhostBootstrapEvent, ghostLiveBootstrapEventId } from "../../src/ghost/live-causal-events";
 import {
   assessGhostReplayBootstrap,
   createGhostReplayRunContext,

@@ -6,11 +6,7 @@ import {
   type GhostVaultBackend,
 } from "../../src/ghost/capsule-vault";
 import { GhostStreamingRecorder } from "../../src/ghost/streaming-recorder";
-import {
-  prepareGhostPortableArchive,
-  prepareCompleteGhostPairedArchive,
-  ghostPortableArchiveData,
-} from "../../src/ghost/capsule-paired-archive";
+import { prepareGhostPortableArchive, ghostPortableArchiveData } from "../../src/ghost/capsule-paired-archive";
 import { prepareCompleteGhostCapsuleArchive, prepareGhostCapsuleArchive } from "../../src/ghost/capsule-archive";
 import { GhostColdRestore } from "../../src/ghost/cold-restore";
 import { GhostCapsuleReader } from "../../src/ghost/capsule-reader";
@@ -294,7 +290,7 @@ describe("linked parent/finale portable archive", () => {
     });
     expect(await stores(target.backend())).toEqual(before);
   });
-  it("rejects foreign-Vault plans, malformed pair metadata, and ambiguous parent-side download", async () => {
+  it("rejects foreign-Vault plans and malformed pair metadata", async () => {
     const f = await fixture(),
       bytes = f.bytes,
       archive = await prepareGhostPortableArchive(bytes),
@@ -317,11 +313,6 @@ describe("linked parent/finale portable archive", () => {
     const before = await stores(target.backend());
     await expect(new GhostColdRestore(target).restore("foreign", bytes)).rejects.toMatchObject({ code: "conflict" });
     expect(await stores(target.backend())).toEqual(before);
-    const child = await f.vault.getManifest("pair-finale");
-    if (!child) throw new Error("missing child");
-    // A second complete candidate is not selected by catalog order, even if its linkage is invalid.
-    await f.vault.putManifest(reviseGhostCapsuleManifest({ ...child, id: "another-finale" }, {}));
-    await expect(prepareCompleteGhostPairedArchive(f.vault, "pair-parent")).rejects.toThrow(/unambiguous/);
   });
   it.each(["cancel", "quota", "protection-drift", "response-loss", "unreadable-resolution"])(
     "retains joint transaction guarantees under %s",
@@ -408,11 +399,10 @@ describe("linked parent/finale portable archive", () => {
       expect(readFileSync(path)).toEqual(before);
     },
   );
-  it("uses normal controller pair download, named RESTORE BOTH preview and explicit restore after reselection", async () => {
+  it("imports a linked file through the controller: RESTORE BOTH preview and explicit restore after reselection", async () => {
     const f = await fixture(),
-      origin = createGhostColdRestoreBrowserPort(f.vault),
       target = new GhostLocalVault(createMemoryGhostVaultBackend());
-    const download = await origin.download("pair-finale", true),
+    const download = { bytes: f.bytes },
       port = createGhostColdRestoreBrowserPort(target),
       files = { pick: vi.fn(), download: vi.fn() };
     let selected: ((file: { size: number; arrayBuffer(): Promise<ArrayBuffer> }) => void) | undefined;

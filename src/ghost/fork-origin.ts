@@ -1,5 +1,4 @@
 import { isObject, isRecord } from "../domain/records";
-import { readGhostBossMemory } from "./boss-memory-origin";
 import { stableVerificationHash } from "../domain/hash";
 import { readGhostFinaleCompanion } from "./finale-companion";
 import type { TearSnapshotV1 } from "../tearbench/contracts";
@@ -95,7 +94,6 @@ export function readGhostForkOrigin(provenance: unknown): GhostForkOriginV1 | un
 }
 export function ghostRecordingFirstTick(capsule: GhostReadCapsule): number {
   return (
-    readGhostBossMemory(capsule.manifest.provenance)?.origin.tick ??
     readGhostFinaleCompanion(capsule.manifest.provenance)?.origin.tick ??
     readGhostForkOrigin(capsule.manifest.provenance)?.checkpoint.tick ??
     0

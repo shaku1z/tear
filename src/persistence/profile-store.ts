@@ -17,6 +17,13 @@ import {
   type GauntletClear,
 } from "../domain/gauntlet-records";
 import { progressFacts } from "../domain/progress-facts";
+import {
+  mergeTutorialProgress,
+  normalizeTutorialProgress,
+  storedTutorialProgress,
+  withTutorialLesson,
+  type TutorialProgress,
+} from "../domain/tutorial-progress";
 import { asRecord, finiteOrZero, hasOwnKey, ownValue, safeEntries } from "../domain/records";
 import type { ProgressFacts } from "../domain/unlock-condition";
 import type { AcknowledgedStorage } from "../platform/contracts";
@@ -101,6 +108,12 @@ export interface ProfileStore {
   gauntletBest(difficulty: string): GauntletClear | null;
   /** Keeps a Gauntlet clear when it beats the best on its difficulty; true when it does. */
   recordGauntletClear(difficulty: string, clear: GauntletClear): boolean;
+  /** The tutorial lessons this profile has finished, and whether the player skipped the tutorial. */
+  tutorialProgress(): TutorialProgress;
+  /** Keeps one finished tutorial lesson (saved at once, so a quit keeps it). */
+  recordTutorialLesson(lessonId: string): void;
+  /** Records that the player left the tutorial on purpose: PLAY no longer leads into it. */
+  skipTutorial(): void;
   /** Shards left to spend: earned minus the prices paid for owned cosmetics, never below zero. */
   shardBalance(): number;
   buyCosmetic(itemId: string): Promise<CompletionStatus | PurchaseRefusal>;
@@ -174,6 +187,7 @@ const RECEIPT_OWNED_FIELDS = new Set([
   "advDiffs",
   "cosmetics",
   "gauntletBest",
+  "tutorialProgress",
 ]);
 function overlayNormalChanges(target: Tracker, baseline: Tracker, current: Tracker, root = true): void {
   for (const key of new Set([...Object.keys(baseline), ...Object.keys(current)])) {
@@ -236,6 +250,13 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
       target.gauntletBest = mergeGauntletBests(
         normalizeGauntletBests(target.gauntletBest),
         normalizeGauntletBests(source.gauntletBest),
+      );
+    if (source.tutorialProgress !== undefined || target.tutorialProgress !== undefined)
+      target.tutorialProgress = storedTutorialProgress(
+        mergeTutorialProgress(
+          normalizeTutorialProgress(target.tutorialProgress),
+          normalizeTutorialProgress(source.tutorialProgress),
+        ),
       );
     Object.assign(target.modes, boolMap(source.modes));
     Object.assign(target.seen, boolMap(source.seen));
@@ -535,6 +556,22 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
       this.data.gauntletBest = { ...bests, [difficulty]: { ticks: clear.ticks, hits: clear.hits } };
       this.save();
       return true;
+    },
+    tutorialProgress() {
+      return normalizeTutorialProgress(this.data.tutorialProgress);
+    },
+    recordTutorialLesson(lessonId) {
+      const before = normalizeTutorialProgress(this.data.tutorialProgress),
+        after = withTutorialLesson(before, lessonId);
+      if (after.lessons.length === before.lessons.length) return;
+      this.data.tutorialProgress = storedTutorialProgress(after);
+      this.save();
+    },
+    skipTutorial() {
+      const current = normalizeTutorialProgress(this.data.tutorialProgress);
+      if (current.skipped) return;
+      this.data.tutorialProgress = storedTutorialProgress({ ...current, skipped: true });
+      this.save();
     },
     shardBalance() {
       return shardBalance(finiteOrZero(this.data.shards), normalizeCosmeticState(this.data.cosmetics));

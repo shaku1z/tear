@@ -50,7 +50,6 @@ describe("replay engine gate", () => {
   it("keeps synchronous engine use inside the modules that work on a capsule", () => {
     // Each of these takes a capsule that GhostCapsuleReader.read produced, and that read waits for the engine.
     const allowed = [
-      "boss-memory.ts",
       "finale-playback.ts",
       "live-ghost-reference.ts",
       "production-replay-session.ts",

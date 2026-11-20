@@ -143,6 +143,9 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
         );
       return status;
     },
+    recordLesson: (lessonId) => {
+      d.PROFILE.recordTutorialLesson(lessonId);
+    },
     checkAchievements: () => {
       d.ACH.check();
     },

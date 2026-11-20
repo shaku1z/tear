@@ -29,6 +29,8 @@ export interface ProfileData extends Record<string, unknown> {
   cosmetics?: unknown;
   /** The Gauntlet personal best per difficulty, an optional field; read through `gauntletBest()`. */
   gauntletBest?: unknown;
+  /** Finished tutorial lessons and a deliberate skip, an optional field; read through `tutorialProgress()`. */
+  tutorialProgress?: unknown;
 }
 
 /** The two keys a profile lives under: the versioned envelope, and the plain copy older builds read. */

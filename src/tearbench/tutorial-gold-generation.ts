@@ -3,7 +3,8 @@ import type { GameAction } from "../input/game-action";
 import { CONFIG } from "../config/game-config";
 import { stableVerificationHash } from "../domain/hash";
 import { TearGameplayEventBus, type TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
-import { TUTORIAL_LESSONS, TUTORIAL_LESSON_IDS } from "../gameplay/training/tutorial-controller";
+import { TUTORIAL_LESSONS } from "../gameplay/training/tutorial-controller";
+import { TUTORIAL_LESSON_IDS } from "../gameplay/training/tutorial-lesson-ids";
 import {
   TUTORIAL_GOLD_LESSONS,
   bindTutorialGoldCorpus,

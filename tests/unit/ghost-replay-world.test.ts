@@ -2,15 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   GhostLensRegistry,
-  GhostReplayWorld,
   GhostTheaterTransport,
   alignGhostsBySemanticEvent,
-  createGhostV3,
-  createPracticeFromHere,
   diffTrajectories,
-  type GhostReplaySimulation,
-  type GhostReplayTrident,
-} from "../../src/ghost";
+} from "../../src/ghost/theater";
+import { GhostReplayWorld, createPracticeFromHere, type GhostReplaySimulation } from "../../src/ghost/replay-world";
+import { createGhostV3, type GhostReplayTrident } from "../../src/ghost/truth-kernel";
 import {
   CODEC_REGISTRY,
   captureCodecState,
