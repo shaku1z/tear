@@ -20,6 +20,20 @@ const path = require("node:path");
 const { assertCleanProductionUrl, serveProductionBuild } = require("./class-c-browser-harness");
 const { STATE_WAIT_MS, holdFor, notWithin, pollEvery, settleFor, launchJourney } = require("./browser-waits");
 
+/**
+ * A first-run player on the standalone build is shown the privacy notice over the menu and presses OK before
+ * anything else: the journey does the same with its own real input (`pressAt`), so it proves the notice is
+ * shown to a fresh profile, can be dismissed, and leaves the menu usable.
+ */
+async function acknowledgePrivacyNotice(page, leg, pressAt) {
+  const ok = page.locator("#tear-privacy-notice button");
+  await ok.waitFor({ state: "visible", timeout: STATE_WAIT_MS });
+  const box = await ok.boundingBox();
+  assert.ok(box, `${leg}: the privacy notice has a button to press`);
+  await pressAt({ x: box.x + box.width / 2, y: box.y + box.height / 2 });
+  await ok.waitFor({ state: "detached", timeout: STATE_WAIT_MS });
+}
+
 const VIEW = Object.freeze({ width: 1280, height: 720 });
 const SCALE = VIEW.width / 1600;
 const COMBAT_BUDGET_MS = Number(process.env.TEAR_RELEASE_ADVENTURE_BUDGET_MS || 180_000);
@@ -287,6 +301,7 @@ async function runTouchLeg(browser, origin, viewport, shot) {
   try {
     await page.goto(`${origin}/`, { waitUntil: "domcontentloaded", timeout: STATE_WAIT_MS });
     await waitForText(/^PLAY$/u, STATE_WAIT_MS, "main menu");
+    await acknowledgePrivacyNotice(page, leg, tap);
     await page.waitForTimeout(settleFor(800));
     await tapLabel(/^PLAY$/u, "PLAY");
     await page.waitForTimeout(settleFor(900));
@@ -409,6 +424,8 @@ async function main() {
 
   const startAdventure = async (leg) => {
     await waitForText(/^PLAY$/u, STATE_WAIT_MS, `${leg}: main menu`);
+    // Only the fresh profile is shown the notice; the same profile in a new session has already pressed OK.
+    if (leg === "fresh") await acknowledgePrivacyNotice(page, leg, click);
     await page.waitForTimeout(settleFor(800));
     await clickLabel(/^PLAY$/u, `${leg}: PLAY`);
     await page.waitForTimeout(settleFor(900));
