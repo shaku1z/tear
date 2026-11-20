@@ -16,10 +16,10 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 | --- | --- | --- | --- |
 | [Release readiness](#release-readiness) | Merged to main | Production deploy, after the owner has played the build. | — |
 | [Production deploy](#production-deploy) | Deployed 2026-11-13 | The next production deploy follows the Verdant, Tutorial and music work. | — |
-| [Verdant Sanctum visuals](#verdant-visuals) | In progress | Keep closing the look toward the owner's reference illustration, then a live layer (light shafts, water glints, sway) as recipe data, then Pale Traverse from a recipe. | Judge the drawn look against the reference illustration: the owner's taste decides visual work. |
+| [Verdant Sanctum visuals](#verdant-visuals) | In progress | The owner judges the moving stage; then Pale Traverse from a recipe, with its own live list. | Judge the drawn look against the reference illustration: the owner's taste decides visual work. |
 | [Verdant Sanctum gameplay](#verdant-gameplay) | In progress | Close Verdant: the owner plays the waves and the Rootbinder; then Pale. | Playtest the Rootbound in all three phases. |
 | [Tutorial and Playground experience](#training-ux) | In progress | One source of names for the drilled weapon moves (this pull request, then its floaters), then the release tutorial flow and menu fixes. | — |
-| [Pale Traverse rework](#pale-traverse) | Not started | Start once the Verdant gameplay rework has landed. | — |
+| [Pale Traverse rework](#pale-traverse) | In progress | Slice 1: rebuild the Aurora Tracks as roads on a surface that raise top speed. | — |
 | [Player wiki](#wiki) | In progress | Review the move pull request, then confirm the Cloudflare secret question and run the first wiki deploy. | Archive shaku1z/tear-wiki after the first deploy from this repository. |
 | [Repository structure and workflow](#repository-structure) | In progress | After the hooks pull request merges, run pnpm setup:hooks in the canonical checkout on main (scripts/governance/README.md). | — |
 | [Playtest tool](#playtest-tool) | Stage 2 under way: stage 1 is done (pnpm playtest bosses and sweep); pnpm playtest waves opens any Adventure wave directly and prints a row per wave of a stage | pnpm playtest runs (full runs: where they end, time and health cost per wave), then the enemies report, the coverage list and --compare. | — |
@@ -50,11 +50,11 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 ### Verdant Sanctum visuals
 
-**In progress.** The game draws Verdant itself at load from a stage art recipe (src/presentation/stage-art): a key light, an atmosphere, colour ramps and layers of shared strokes (foliage, trunks, ruined arcades, water, light), painted in short slices into layers the scene renderer composes. The painted image package is gone. Any biome reaches the same look with a recipe; Pale Traverse is next. Boss warnings and strikes on Verdant are drawn as roots and thorns rising from the floor, from a table on the stage's presentation definition that any biome can supply. The background does not move yet.
+**In progress.** The game draws Verdant itself at load from a stage art recipe (src/presentation/stage-art): a key light, an atmosphere, colour ramps and layers of shared strokes (foliage, trunks, ruined arcades, water, light), painted in short slices into layers the scene renderer composes. The painted image package is gone. Any biome reaches the same look with a recipe; Pale Traverse is next. Boss warnings and strikes on Verdant are drawn as roots and thorns rising from the floor, from a table on the stage's presentation definition that any biome can supply. The stage also moves, from a `live` list in the same recipe: water rows that ripple and glint, drifting pollen, vines that sway and light shafts that fade in and out, all bounded by limits and by a measured ceiling in config/stage-readability.json, and all held still by reduced motion and low graphics.
 
-- Next: Keep closing the look toward the owner's reference illustration, then a live layer (light shafts, water glints, sway) as recipe data, then Pale Traverse from a recipe.
+- Next: The owner judges the moving stage; then Pale Traverse from a recipe, with its own live list.
 - Owner action: Judge the drawn look against the reference illustration: the owner's taste decides visual work.
-- Evidence: [docs/BACKGROUND_WORKFLOW.md](BACKGROUND_WORKFLOW.md), [tests/unit/stage-art.test.ts](../tests/unit/stage-art.test.ts), [tests/unit/scene-library.test.ts](../tests/unit/scene-library.test.ts), [tests/unit/boss-tell-skin.test.ts](../tests/unit/boss-tell-skin.test.ts), [plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md)
+- Evidence: [docs/BACKGROUND_WORKFLOW.md](BACKGROUND_WORKFLOW.md), [tests/unit/stage-art.test.ts](../tests/unit/stage-art.test.ts), [tests/unit/stage-live.test.ts](../tests/unit/stage-live.test.ts), [tests/unit/scene-library.test.ts](../tests/unit/scene-library.test.ts), [tests/unit/boss-tell-skin.test.ts](../tests/unit/boss-tell-skin.test.ts), [plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md)
 
 <a id="verdant-gameplay"></a>
 
@@ -80,11 +80,11 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 ### Pale Traverse rework
 
-**Not started.** Pale Traverse stays a Playground preview and is not published. The owner wants it reworked after Verdant. Its earlier migration work is on the unmerged branch codex/pale-traverse-r4.
+**In progress.** Pale Traverse stays a Playground preview and is not published. Its gameplay is being rebuilt the way Verdant's was. The audit found that the Aurora Tracks touch nobody standing on a platform or the floor, the White Hart gives no warning the game can check and plays the same fight on every seed, and none of Pale uses the shared layers. The plan is eight pull requests: the tracks, the Rimehound, routes in the boss move layer, the White Hart one phase at a time, the waves, then leftovers. The earlier work on the unmerged branch codex/pale-traverse-r4 is reference only.
 
-- Next: Start once the Verdant gameplay rework has landed.
+- Next: Slice 1: rebuild the Aurora Tracks as roads on a surface that raise top speed.
 - Owner action: none
-- Evidence: [plans/active/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md)
+- Evidence: [plans/active/PALE_GAMEPLAY_REBUILD.md](../plans/active/PALE_GAMEPLAY_REBUILD.md), [plans/active/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md)
 
 <a id="wiki"></a>
 

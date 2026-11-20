@@ -405,9 +405,21 @@ record what hit the player, so it goes to the owner of a shot on the player, els
 player, else "unmarked". Verdant, sword, Normal, three seeds, two players: 54 waves in 71 s on five
 jobs. Tests: `tests/unit/playtest-waves.test.ts`.
 
+Built third (2026-11-20): `pnpm playtest runs`, whole runs from wave 1 in the Adventure, Endless and the
+Gauntlet, on the production headless path with no copied game logic: the scripted player drafts from what the
+game offers after each wave and skips each story chapter as a player does. Per mode and difficulty it prints a
+row per weapon (runs won, the wave runs ended in, run time, upgrades held) and a row per wave over every weapon
+and seed (runs that reached it, runs that cleared it, the game's own clear time, health lost, health coming in
+and going out). The default set is 3 modes, Easy, Normal and Hard, 5 weapons and seeds 1 to 3: 135 runs in
+76 s on six jobs. What three seeds can show: the wave a weapon's runs usually end in, to within a wave
+or two, and which waves cost the most health. What they cannot: a difference of one wave between two weapons,
+or a clear rate for a wave that one or two runs reached. And every number is the scripted player's: it shows
+how far that player gets, not how far a person gets, until stage 3's stronger player. Tests:
+`tests/unit/playtest-runs.test.ts`.
+
 Done when:
 - [ ] Every boss phase, every wave of each biome and every enemy kind is a row that starts directly, in under 1 s each.
-- [ ] `pnpm playtest runs` reports where runs end and per-wave time and health cost for 3 modes, 3 difficulties and 5 weapons.
+- [x] `pnpm playtest runs` reports where runs end and per-wave time and health cost for 3 modes, 3 difficulties and 5 weapons.
 - [ ] The coverage section lists content that never appeared; the list is empty or each entry is reported to the lead.
 - [ ] `--compare` passes the test of failure mode 3 and prints no rows for a commit compared with itself.
 
@@ -438,7 +450,19 @@ Done when:
 Move the headless game and players under `src/playtest/`, rename State Forge to snapshots,
 delete `scripts/tearbench*.mjs`, the task registry and what is left of `src/agents`.
 
+The last `playtest -> tearbench` imports are this stage's to move (lead, 2026-11-20). The replay overhaul's
+third and fourth pull requests take the replay side (the snapshot contract and codecs, the world factory, the
+composition, the wave reward runtime and the combat simulation). What `src/playtest` still imports from
+`src/tearbench` after them, measured on main `c0270eff`: `contracts` (the scenario, observation and causal event
+types), `simulation-profile`, `validation`, `observation-identity`, `live-observation-actors`,
+`live-observation-projectiles`, `headless`, `gameplay-causal-events` and `production-replay-bootstrap-check`,
+which stays with the headless environment. They move into `src/playtest` with whatever only they use. The pull
+request that moves the last one also removes the `playtest -> tearbench` allowance from
+`config/architecture-layers.json`. The order is agreed with the replay overhaul first, so the two do not edit
+the same imports at the same time: these moves start after its fourth pull request is on main.
+
 Done when:
+- [ ] `src/playtest` imports nothing from `src/tearbench`, and `config/architecture-layers.json` no longer allows it.
 - [ ] `git grep -i tearbench` finds nothing outside `plans/completed/` and the replay code that waits for the replay overhaul.
 - [ ] Architecture and code-budget baselines are lower than before, never higher.
 - [ ] `pnpm check` passes.

@@ -11,12 +11,14 @@ import {
   viewportWorldRect,
   type Rect,
   type SceneLayer,
+  type SceneLive,
   type SceneWorld,
 } from "../scenes/scene-contract";
 import type { ScenePaintPorts } from "../scenes/scene-library";
 import type { LoadedScene, SceneBitmap, SceneCanvas } from "../scenes/scene-renderer";
-import { parseHex, valueNoise, type Context2D, type PaintKit, type Ramp } from "./paint-kit";
-import type { StageArtIdentity, StageArtLayer, StageArtRecipe, StageArtStroke } from "./stage-art-contract";
+import { parseHex, valueNoise, type Context2D, type PaintKit, type Ramp, type Rgb } from "./paint-kit";
+import type { LivePart, StageArtIdentity, StageArtLayer, StageArtRecipe, StageArtStroke } from "./stage-art-contract";
+import { compileMotes, compileWater } from "./stage-art-live";
 import { StageArtError, validateStageArt } from "./stage-art-validate";
 import { paintArcade, paintSurface } from "./strokes-built";
 import { paintMass, paintScatter, paintStrands, paintTrunk } from "./strokes-growth";
@@ -94,6 +96,52 @@ interface Painted {
   readonly canvas: SceneCanvas & SceneBitmap;
 }
 
+/** What every kit of one bake shares: the light, atmosphere, ramps, noise and detail. */
+type SharedKit = Omit<PaintKit, "context" | "behind" | "bounds">;
+
+/** A part is painted like a layer, on a canvas of its own area, so the renderer can move it. */
+async function paintPart(
+  part: LivePart,
+  shared: SharedKit,
+  ports: ScenePaintPorts,
+  run: (steps: Generator<void>) => Promise<void>,
+): Promise<SceneCanvas & SceneBitmap> {
+  const scale = part.scale * ports.detail;
+  const canvas = ports.createCanvas(Math.ceil(part.area[2] * scale), Math.ceil(part.area[3] * scale));
+  const context = context2d(canvas);
+  const toPart = () => {
+    context.setTransform(scale, 0, 0, scale, -part.area[0] * scale, -part.area[1] * scale);
+  };
+  toPart();
+  const kit: PaintKit = { ...shared, context, behind: () => undefined, bounds: part.area };
+  for (const stroke of part.strokes) {
+    context.save();
+    await run(strokeSteps(kit, stroke));
+    context.restore();
+    toPart();
+  }
+  return canvas;
+}
+
+/** Compiles what moves into what the renderer draws: water and motes become tables, parts name their image. */
+function compileLive(recipe: StageArtRecipe, painted: readonly Painted[], glint: Rgb): SceneLive[] {
+  return (recipe.live ?? []).map((entry) => {
+    const layerRect = painted.find((item) => item.layer.id === entry.layer)?.rect;
+    if (layerRect === undefined) throw new StageArtError(`live ${entry.kind}: unknown layer "${entry.layer}"`);
+    if (entry.kind === "water") return compileWater(entry, layerRect, glint);
+    if (entry.kind === "motes") return compileMotes(entry);
+    return Object.freeze({
+      kind: "part",
+      layer: entry.layer,
+      image: entry.id,
+      rect: entry.area,
+      blend: entry.blend ?? "source-over",
+      ...(entry.sway === undefined ? {} : { sway: entry.sway }),
+      ...(entry.breathe === undefined ? {} : { breathe: entry.breathe }),
+    });
+  });
+}
+
 export async function paintStageArt(
   recipe: StageArtRecipe,
   identity: StageArtIdentity,
@@ -118,7 +166,11 @@ export async function paintStageArt(
       sliceStart = ports.now();
     }
   };
+  const shared = { light, atmosphere, ramps, noise, detail: ports.detail };
   const painted: Painted[] = [];
+  /** Everything behind the layer being painted, in drawing order: back layers and the parts that always show. */
+  const backdrop: { readonly rect: Rect; readonly canvas: SceneBitmap }[] = [];
+  const parts = new Map<string, SceneBitmap>();
   for (const layer of recipe.layers) {
     const rect = stageArtLayerRect(recipe, layer, ports.world);
     // A front layer draws over platforms and actors, so it may only dress the floor body and below.
@@ -143,9 +195,7 @@ export async function paintStageArt(
       const composite = ports.createCanvas(canvas.width, canvas.height);
       const target = context2d(composite);
       target.setTransform(scale, 0, 0, scale, -rect[0] * scale, -rect[1] * scale);
-      for (const earlier of painted) {
-        if (earlier.layer.plane === "back") target.drawImage(earlier.canvas, ...earlier.rect);
-      }
+      for (const earlier of backdrop) target.drawImage(earlier.canvas, ...earlier.rect);
       target.drawImage(canvas, ...rect);
       return composite;
     };
@@ -157,6 +207,13 @@ export async function paintStageArt(
       toLayer();
     }
     painted.push({ layer, rect, canvas });
+    if (layer.plane === "back") backdrop.push({ rect, canvas });
+    for (const entry of recipe.live ?? []) {
+      if (entry.kind !== "part" || entry.layer !== layer.id) continue;
+      const part = await paintPart(entry, shared, ports, run);
+      parts.set(entry.id, part);
+      if (layer.plane === "back" && entry.breathe === undefined) backdrop.push({ rect: entry.area, canvas: part });
+    }
   }
   const surface = recipe.surface;
   const strip = ports.createCanvas(Math.ceil(surface.width), Math.ceil(surface.height));
@@ -178,6 +235,8 @@ export async function paintStageArt(
   );
   const images = new Map<string, SceneBitmap>(painted.map((entry) => [entry.layer.id, entry.canvas]));
   images.set("surface", strip);
+  for (const [id, part] of parts) images.set(id, part);
+  const live = compileLive(recipe, painted, light.core);
   const layers: SceneLayer[] = painted.map(({ layer, rect }) =>
     Object.freeze({
       id: layer.id,
@@ -195,6 +254,7 @@ export async function paintStageArt(
     edge: Object.freeze({ color: recipe.edge, feather: EDGE_FEATHER }),
     theme: Object.freeze({ paper: identity.paper }),
     layers: Object.freeze(layers),
+    live: Object.freeze(live),
     platforms: Object.freeze({
       material: identity.platformMaterial,
       texture: "surface",

@@ -55,6 +55,7 @@ function paintedScene(): LoadedScene {
           covers: true,
         },
       ],
+      live: [],
       platforms: {
         material: "fixture",
         texture: "surface",
