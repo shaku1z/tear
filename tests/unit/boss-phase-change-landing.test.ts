@@ -9,7 +9,7 @@ import {
   type CinematicRuntimePlatform,
 } from "../../src/gameplay/campaign/cinematic-player-runtime";
 import { bossDefinition } from "../../src/gameplay/run/boss-definitions";
-import { bossFightScenario } from "../../src/playtest/boss-fight";
+import { bossFightScenario, bossPhaseCount } from "../../src/playtest/boss-fight";
 import { REPORT_BOSSES } from "../../src/playtest/boss-report";
 import { readBoss } from "../../src/playtest/boss-view";
 import { createProductionHeadlessEnvironment } from "../../src/tearbench/production-headless-environment";
@@ -45,7 +45,8 @@ const STANDING_LIMIT_TICKS = 2 * TICKS_PER_SECOND;
 /** The void run carries the player on moving shards, so a wall position may be a fraction of a pixel out. */
 const EDGE_TOLERANCE = 1;
 
-const PHASED_BOSSES = REPORT_BOSSES.filter((boss) => bossDefinition(boss).phaseMarks.length > 0);
+/** Every boss the game defines has at least one phase mark (its definition's type says so), so all of them. */
+const PHASED_BOSSES = REPORT_BOSSES;
 const WALLS = ["left", "right"] as const;
 
 function isRawBoss(value: unknown): value is RawBoss {
@@ -75,7 +76,7 @@ describe("a boss phase change with the player at a wall", () => {
 
   it("covers every boss that has phases", () => {
     expect(PHASED_BOSSES).toContain("source");
-    expect(PHASED_BOSSES.length).toBeGreaterThan(1);
+    for (const boss of PHASED_BOSSES) expect(bossPhaseCount(boss), boss).toBeGreaterThan(1);
   });
 
   it.each(cases)("%s at the %s wall: every phase change ends with the player standing in the arena", (boss, wall) => {
