@@ -3,6 +3,7 @@
 // `pnpm playtest sweep` is the same over every weapon, two seeds and two difficulties, summary only.
 // `pnpm playtest waves --stage <id>` plays the waves of an Adventure stage, each opened directly, and prints a
 // row per wave.
+// `pnpm playtest runs` plays whole runs from wave 1 in each mode and prints where they end and what each wave costs.
 import { spawn } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
@@ -17,9 +18,12 @@ const MAX_JOBS = 6;
 const FIGHTS_PER_JOB = 10;
 /** More fights than this and the fight tables are left out unless asked for. */
 const TABLES_UP_TO = 30;
+/** Game seconds a run may take before it is stopped: 30 minutes, longer than the scripted player lasts. */
+const RUN_SECONDS = 1800;
 const USAGE = `Usage: pnpm playtest bosses [options]
        pnpm playtest sweep [options]
        pnpm playtest waves --stage <ids> [options]
+       pnpm playtest runs [options]
 
 Plays boss fights on the real game, headless, and prints a table per fight and a summary.
 "sweep" plays every weapon, seeds 1 and 2 and Easy and Normal, and prints the summary.
@@ -46,6 +50,12 @@ clear time, the wave as it arrived, damage by source, snares, roots and Rootbind
                        picked from the game's draft
   --difficulty, --weapon, --seconds, --jobs, --json as above; --seed defaults to 1,2,3;
   --player defaults to scripted,cuts-objects; --show runs adds a line for every run
+
+"runs" plays whole runs from wave 1, drafting as a player does, and prints where they end and the time and
+health each wave costs.
+  --mode <ids>         comma list of campaign, endless, gauntlet; default all three
+  --difficulty defaults to easy,normal,hard; --weapon to all five; --seed to 1,2,3; --player to scripted;
+  --seconds to ${String(RUN_SECONDS)} (queue the default set: pnpm queue -- pnpm playtest runs)
 `;
 /**
  * The plan asks a sweep for four seeds in under 5 minutes on 6 jobs. Four took 498 s (1,680 fights, 2026-11-19), so
@@ -100,7 +110,7 @@ function playShare(command, given, index, of, file) {
 }
 
 const [command, ...rest] = process.argv.slice(2);
-if (!["bosses", "sweep", "waves"].includes(command)) {
+if (!["bosses", "sweep", "waves", "runs"].includes(command)) {
   process.stdout.write(USAGE);
   process.exit(command === undefined || command === "help" ? 0 : 1);
 }
@@ -114,14 +124,12 @@ if (phases !== undefined && (phases.length === 0 || !phases.every(Number.isInteg
   throw new Error("--phase takes whole phase numbers");
 const share = given.get("share")?.split("/").map(Number);
 const show = given.get("show");
-const waves = command === "waves";
-if (show !== undefined && !(waves ? ["runs", "summary", "none"] : ["fights", "summary", "both", "none"]).includes(show))
-  throw new Error(waves ? "--show takes runs or summary" : "--show takes fights, summary or both");
 const wholeNumbers = (name) => {
   const values = list(given.get(name), []).map(Number);
   if (values.length === 0 || !values.every(Number.isInteger)) throw new Error(`--${name} takes whole numbers`);
   return values;
 };
+const maxTicks = Math.round(seconds * 120);
 
 const server = await createServer({
   root,
@@ -132,76 +140,129 @@ const server = await createServer({
   appType: "custom",
 });
 try {
-  const report = await server.ssrLoadModule("/src/playtest/boss-report.ts");
-  const summary = await server.ssrLoadModule("/src/playtest/boss-summary.ts");
-  const waveReport = await server.ssrLoadModule("/src/playtest/wave-report.ts");
+  const load = (name) => server.ssrLoadModule(`/src/playtest/${name}.ts`);
+  const shares = await load("boss-report");
+  /**
+   * What each command plays and prints. `request` is built from the options, `admit` refuses a mistyped id before
+   * anything is played, `play` plays everything or one worker's share, and `print` writes what `--show` chose.
+   */
+  const kinds = {
+    bosses: async () => {
+      const summary = await load("boss-summary");
+      return {
+        noun: "fights",
+        shows: ["fights", "summary", "both"],
+        shown: (count) => (count > TABLES_UP_TO ? "summary" : "both"),
+        request: {
+          bosses: list(given.get("boss"), phases === undefined ? shares.REPORT_BOSSES : shares.PRACTICE_REPORT_BOSSES),
+          difficulties: list(given.get("difficulty"), ["normal"]),
+          weapons: list(given.get("weapon"), ["sword"]),
+          seeds: list(given.get("seed"), ["1"]),
+          players: list(given.get("player"), shares.REPORT_PLAYERS),
+          ...(phases === undefined ? {} : { phases }),
+          maxTicks,
+        },
+        admit: shares.admitBossReport,
+        play: shares.playBossReport,
+        print: (fights, shown) => {
+          if (shown === "fights" || shown === "both") process.stdout.write(shares.formatBossReport(fights));
+          if (shown === "both") process.stdout.write("\n");
+          if (seedsCut) process.stdout.write(SWEEP_CUT);
+          if (shown === "summary" || shown === "both") process.stdout.write(summary.formatBossSummary(fights));
+        },
+      };
+    },
+    waves: async () => {
+      const report = await load("wave-report");
+      const stages = list(given.get("stage"), []);
+      return {
+        noun: "waves",
+        shows: ["runs", "summary"],
+        shown: () => "summary",
+        request: {
+          stages,
+          ...(given.has("wave") ? { waves: wholeNumbers("wave") } : {}),
+          difficulties: list(given.get("difficulty"), ["normal"]),
+          weapons: list(given.get("weapon"), ["sword"]),
+          seeds: list(given.get("seed"), ["1", "2", "3"]),
+          players: list(given.get("player"), report.WAVE_REPORT_PLAYERS),
+          builds: list(given.get("build"), ["drafted"]),
+          maxTicks,
+        },
+        admit: (request) => {
+          if (stages.length === 0) throw new RangeError("waves needs --stage, for example --stage verdant-sanctum");
+          return report.admitWaveReport(request);
+        },
+        play: report.playWaveReport,
+        print: (results, shown) => process.stdout.write(report.formatWaveReport(results, shown === "runs")),
+      };
+    },
+    runs: async () => {
+      const report = await load("run-report");
+      const play = await load("run-play");
+      return {
+        noun: "runs",
+        shows: ["summary"],
+        shown: () => "summary",
+        request: {
+          modes: list(given.get("mode"), play.RUN_MODES),
+          difficulties: list(given.get("difficulty"), ["easy", "normal", "hard"]),
+          weapons: list(given.get("weapon"), SWEEP.get("weapon").split(",")),
+          seeds: list(given.get("seed"), ["1", "2", "3"]),
+          players: list(given.get("player"), ["scripted"]),
+          maxTicks: given.has("seconds") ? maxTicks : RUN_SECONDS * 120,
+        },
+        admit: report.admitRunReport,
+        play: report.playRunReport,
+        print: (results) => process.stdout.write(report.formatRunReport(results)),
+      };
+    },
+  };
+  const played = command === "sweep" ? "bosses" : command;
+  const kind = await kinds[played]();
+  if (show !== undefined && ![...kind.shows, "none"].includes(show))
+    throw new Error(`--show takes ${kind.shows.join(", ")}`);
   const started = performance.now();
-  const waveRequest = {
-    stages: list(given.get("stage"), []),
-    ...(given.has("wave") ? { waves: wholeNumbers("wave") } : {}),
-    difficulties: list(given.get("difficulty"), ["normal"]),
-    weapons: list(given.get("weapon"), ["sword"]),
-    seeds: list(given.get("seed"), ["1", "2", "3"]),
-    players: list(given.get("player"), waveReport.WAVE_REPORT_PLAYERS),
-    builds: list(given.get("build"), ["drafted"]),
-    maxTicks: Math.round(seconds * 120),
-  };
-  const bossRequest = {
-    bosses: list(given.get("boss"), phases === undefined ? report.REPORT_BOSSES : report.PRACTICE_REPORT_BOSSES),
-    difficulties: list(given.get("difficulty"), ["normal"]),
-    weapons: list(given.get("weapon"), ["sword"]),
-    seeds: list(given.get("seed"), ["1"]),
-    players: list(given.get("player"), report.REPORT_PLAYERS),
-    ...(phases === undefined ? {} : { phases }),
-    maxTicks: Math.round(seconds * 120),
-  };
-  let fights;
+  let results;
   let jobs = 1;
   try {
-    if (waves && waveRequest.stages.length === 0)
-      throw new RangeError("waves needs --stage, for example --stage verdant-sanctum");
-    const request = waves ? waveRequest : bossRequest;
-    const play = waves ? waveReport.playWaveReport : report.playBossReport;
-    // Every fight is admitted here, before any worker starts, so a mistyped id costs no playing time.
-    const asked = waves ? waveReport.admitWaveReport(request) : report.admitBossReport(request);
+    // Everything is admitted here, before any worker starts, so a mistyped id costs no playing time.
+    const asked = kind.admit(kind.request);
     const cores = Math.max(1, os.availableParallelism() - 2);
     jobs = given.has("jobs")
       ? wholeNumber("jobs", given.get("jobs"), 1, MAX_JOBS)
       : Math.max(1, Math.min(MAX_JOBS, cores, Math.floor(asked.length / FIGHTS_PER_JOB)));
-    if (share !== undefined) fights = play(request, { index: share[0], of: share[1] });
-    else if (jobs === 1) fights = play(request);
+    if (share !== undefined) results = kind.play(kind.request, { index: share[0], of: share[1] });
+    else if (jobs === 1) results = kind.play(kind.request);
     else {
       const folder = mkdtempSync(path.join(os.tmpdir(), "tear-playtest-"));
       try {
-        const shares = Array.from({ length: jobs }, (_, index) =>
-          playShare(waves ? command : "bosses", given, index, jobs, path.join(folder, `${String(index)}.json`)),
+        const workers = Array.from({ length: jobs }, (_, index) =>
+          playShare(played, given, index, jobs, path.join(folder, `${String(index)}.json`)),
         );
-        fights = report.mergeSlices(await Promise.all(shares));
+        results = shares.mergeSlices(await Promise.all(workers));
       } finally {
         rmSync(folder, { recursive: true, force: true });
       }
     }
   } catch (error) {
-    // A mistyped boss, weapon, difficulty or option is refused before any fight; print the reason, not a stack.
+    // A mistyped boss, weapon, difficulty or option is refused before anything is played; print the reason, not a stack.
     if (!(error instanceof TypeError || error instanceof RangeError)) throw error;
     process.stderr.write(`playtest: ${error.message}\n`);
     process.exitCode = 1;
   }
-  if (fights !== undefined) {
-    const shown = show ?? (waves || fights.length > TABLES_UP_TO ? "summary" : "both");
-    if (waves && shown !== "none") process.stdout.write(waveReport.formatWaveReport(fights, shown === "runs"));
-    else if (shown === "fights" || shown === "both") process.stdout.write(report.formatBossReport(fights));
-    if (shown === "both") process.stdout.write("\n");
-    if (seedsCut && shown !== "none") process.stdout.write(SWEEP_CUT);
-    if (!waves && (shown === "summary" || shown === "both")) process.stdout.write(summary.formatBossSummary(fights));
-    if (shown !== "none")
+  if (results !== undefined) {
+    const shown = show ?? kind.shown(results.length);
+    if (shown !== "none") {
+      kind.print(results, shown);
       process.stdout.write(
-        `\n${String(fights.length)} ${waves ? "waves" : "fights"} in ${((performance.now() - started) / 1000).toFixed(1)} s of real time` +
+        `\n${String(results.length)} ${kind.noun} in ${((performance.now() - started) / 1000).toFixed(1)} s of real time` +
           ` on ${String(jobs)} ${jobs === 1 ? "job" : "jobs"}.\n`,
       );
+    }
     const json = given.get("json");
-    if (json !== undefined) writeFileSync(path.resolve(json), `${JSON.stringify(fights, null, 2)}\n`);
-    if (fights.some((fight) => fight.end === "broken")) process.exitCode = 1;
+    if (json !== undefined) writeFileSync(path.resolve(json), `${JSON.stringify(results, null, 2)}\n`);
+    if (results.some((result) => result.end === "broken")) process.exitCode = 1;
   }
 } finally {
   await server.close();
