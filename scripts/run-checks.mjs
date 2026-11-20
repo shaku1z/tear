@@ -26,10 +26,35 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { joinQueue, lightKind, queueDirectory, queueSlots } from "./queue.mjs";
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+/** This copy of the gate. In CI it is main's copy (.github/actions/main-gate); locally, the checkout. */
+const gateRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+/** The checkout being checked: TEAR_CHECKED_ROOT when main's copy of the gate runs against a change. */
+const root = process.env.TEAR_CHECKED_ROOT ? resolve(process.env.TEAR_CHECKED_ROOT) : gateRoot;
 
 export function loadChecks(path = resolve(root, "config/checks.json")) {
   return JSON.parse(readFileSync(path, "utf8"));
+}
+
+/**
+ * The checks that judge a change: every check of the gate's list with the gate's definition, then
+ * each check whose group and id appear only in the change's list, with the change's definition.
+ * Run from main's copy, a change can add checks but can neither drop nor soften one of main's; a
+ * renamed id is main's check, still run, plus a new one.
+ */
+export function judgedChecks(gate, change) {
+  const groups = {};
+  for (const [name, checks] of Object.entries(gate.groups)) {
+    const ids = new Set(checks.map((check) => check.id));
+    groups[name] = [...checks, ...(change.groups[name] ?? []).filter((check) => !ids.has(check.id))];
+  }
+  for (const [name, checks] of Object.entries(change.groups)) if (!(name in groups)) groups[name] = checks;
+  return { ...gate, gate: [...gate.gate, ...change.gate.filter((name) => !gate.gate.includes(name))], groups };
+}
+
+/** The list this run judges with: the gate's own, joined with the change's when the gate is main's copy. */
+export function loadJudgedChecks() {
+  const own = loadChecks(resolve(gateRoot, "config/checks.json"));
+  return gateRoot === root ? own : judgedChecks(own, loadChecks(resolve(root, "config/checks.json")));
 }
 
 /** The checks one invocation runs, in list order, each with its exact argument list. */
@@ -193,7 +218,7 @@ async function main(argv) {
     }
   }
   const shardAt = argv.indexOf("--shard");
-  const listed = selectChecks(loadChecks(), group);
+  const listed = selectChecks(loadJudgedChecks(), group);
   const checks = shardAt === -1 ? listed : shardChecks(listed, ...parseShard(argv[shardAt + 1]), loadCheckTimes());
   if (shardAt !== -1)
     console.log(`shard ${argv[shardAt + 1]}: ${String(checks.length)} of ${String(listed.length)} check(s)`);

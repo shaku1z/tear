@@ -86,6 +86,14 @@ jobs:
             docs_only=true
           fi
           echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
+      - uses: ./.github/actions/main-gate
+        with:
+          main: ${{ steps.main.outputs.main }}
+      # Shown on the run and the pull request; pnpm merge:ready holds such a change for the lead.
+      - name: Flag changed gate files
+        if: github.event_name != 'push'
+        shell: bash
+        run: git diff --name-only origin/main HEAD | node scripts/gate-files.mjs --flag "$TEAR_GATE_LIST"
       - name: Name the browser jobs' image from the lockfile
         id: image
         run: node scripts/ci-playwright-image.mjs >> "$GITHUB_OUTPUT"
@@ -135,11 +143,14 @@ jobs:
         with:
           main: ${{ needs.scope.outputs.merge_main }}
           commit: ${{ needs.scope.outputs.commit }}
+      - uses: ./.github/actions/main-gate
+        with:
+          main: ${{ needs.scope.outputs.main }}
       - uses: ./.github/actions/check-results
         with:
           job: static
       - name: Static checks (format, repository guards, typecheck, lint)
-        run: node scripts/run-checks.mjs static
+        run: node "$TEAR_GATE/run-checks.mjs" static
       # Read by .github/actions/check-results on a re-run of this job (to report flaky checks), which
       # goes on without them, and by scripts/ci-check-times.mjs by hand. Nothing needs them to pass,
       # so a failed upload must not decide the job's verdict; the next step reports it.
@@ -175,11 +186,14 @@ jobs:
         with:
           main: ${{ needs.scope.outputs.merge_main }}
           commit: ${{ needs.scope.outputs.commit }}
+      - uses: ./.github/actions/main-gate
+        with:
+          main: ${{ needs.scope.outputs.main }}
       - uses: ./.github/actions/check-results
         with:
           job: unit
       - name: Unit tests
-        run: node scripts/run-checks.mjs unit
+        run: node "$TEAR_GATE/run-checks.mjs" unit
       # Read by .github/actions/check-results on a re-run of this job (to report flaky checks), which
       # goes on without them, and by scripts/ci-check-times.mjs by hand. Nothing needs them to pass,
       # so a failed upload must not decide the job's verdict; the next step reports it.
@@ -219,11 +233,14 @@ jobs:
         with:
           main: ${{ needs.scope.outputs.merge_main }}
           commit: ${{ needs.scope.outputs.commit }}
+      - uses: ./.github/actions/main-gate
+        with:
+          main: ${{ needs.scope.outputs.main }}
       - uses: ./.github/actions/check-results
         with:
           job: build
       - name: Builds
-        run: node scripts/run-checks.mjs build
+        run: node "$TEAR_GATE/run-checks.mjs" build
       - name: Record the hash of each build
         id: hashes
         run: echo "hashes=$(node scripts/ci-build-hashes.mjs)" >> "$GITHUB_OUTPUT"
@@ -326,11 +343,14 @@ jobs:
         env:
           EXPECTED: ${{ needs.build.outputs.hashes }}
         run: node scripts/ci-build-hashes.mjs --expect "$EXPECTED"
+      - uses: ./.github/actions/main-gate
+        with:
+          main: ${{ needs.scope.outputs.main }}
       - uses: ./.github/actions/check-results
         with:
           job: browser-${{ matrix.shard }}
       - name: Browser checks
-        run: xvfb-run -a node scripts/run-checks.mjs browser --shard ${{ matrix.shard }}/4
+        run: xvfb-run -a node "$TEAR_GATE/run-checks.mjs" browser --shard ${{ matrix.shard }}/4
       # Read by .github/actions/check-results on a re-run of this job (to report flaky checks), which
       # goes on without them, and by scripts/ci-check-times.mjs by hand. Nothing needs them to pass,
       # so a failed upload must not decide the job's verdict; the next step reports it.
@@ -387,7 +407,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .node-version
+      - uses: ./.github/actions/main-gate
+        with:
+          main: ${{ needs.scope.outputs.main }}
       - name: Every needed job passed
         env:
           NEEDS: ${{ toJSON(needs) }}
-        run: node scripts/ci-verdict.mjs
+        run: node "$TEAR_GATE/ci-verdict.mjs"
