@@ -35,7 +35,9 @@ export interface ProgressResetPorts {
 
 /** Writes `text` over whatever is stored under `key`, however it reads: unlike a commit, nothing is merged in. */
 async function overwrite(store: ProgressResetPorts["store"], key: string, text: string): Promise<boolean> {
-  if (store.acknowledged) return (await store.acknowledged.update(key, () => text)).status === "committed";
+  if (store.acknowledged && (await store.acknowledged.update(key, () => text)).status !== "committed") return false;
+  // The plain store also keeps the device's own copy, which a portal build's acknowledged write leaves as it was:
+  // an earlier copy there would come back whenever the portal's data returns nothing.
   try {
     store.set(key, text);
     return true;
