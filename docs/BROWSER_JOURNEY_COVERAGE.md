@@ -8,7 +8,7 @@ Run all four route/progression/playground/result journeys with `pnpm test:browse
 | --- | --- |
 | `browser-navigation-journeys.js` | Every menu hub route and BACK; War Table mode/difficulty/weapon/boss choices and return; all seven modes through BEGIN; pause/resume/confirm-quit/menu; required Attract entry/exit snapshot |
 | `browser-progression-journeys.js` | Draft keyboard reroll; pointer choice; reserve choose and skip; tier-up choice; Shop/Codex/Profile/Achievement/Leaderboard routes, tabs, cards and scrolling; both replay feeds; replay chapter/pause/speed/restart/info/back; rename DOM validation and Escape return |
-| `browser-playground-journeys.js` | In-world `1`/`2`/`3`/`T`/`B` hotkey spawns surviving both a sub-fixed-step display frame and the combat-tail entity commit; Playground menu entry on SPAWN and pointer spawn by label; Q/E and click tab switching; ARENA lists real stages only; ABILITIES tab, TAKE and RESUME; `U` to ABILITIES and Tab resume; pause opens the menu on the tab left open |
+| `browser-playground-journeys.js` | In-world `3` (target dummy) spawn surviving the combat-tail entity commit and `2` clearing the arena; Playground menu entry on SPAWN and pointer spawn by label; Q/E and click tab switching; ARENA lists real stages only; ABILITIES tab, TAKE and RESUME; `4` repeating the menu's last spawn; Tab reopening the menu on the tab left open and resuming; pause opens the menu on the tab left open |
 | `browser-terminal-journeys.js` | Game-over retry and menu; rewarded-continue give-up; non-campaign win replay/menu; campaign result/menu; deterministic final-cut advance/cut through restoration/results |
 
 ## Required debug preparation hooks
