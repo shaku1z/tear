@@ -1872,6 +1872,10 @@
       "eslint.config.mjs",
       "tests/unit/one-record-guard.test.mjs"
     ],
+    "scripts/eslint-rules/replay-engine-loaded.mjs": [
+      "eslint.config.mjs",
+      "tests/unit/replay-engine-loaded-rule.test.mjs"
+    ],
     "scripts/build-targets.mjs": [
       "scripts/build-target.mjs",
       "scripts/check-reproducible-build.mjs",
