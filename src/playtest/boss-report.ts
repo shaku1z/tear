@@ -14,7 +14,7 @@ import {
 
 export interface BossReportRequest {
   readonly bosses: readonly BossFightRequest["boss"][];
-  readonly difficulty: BossFightRequest["difficulty"];
+  readonly difficulties: readonly BossFightRequest["difficulty"][];
   readonly weapons: readonly BossFightRequest["weapon"][];
   readonly seeds: readonly string[];
   readonly players: readonly BossPlayerId[];
@@ -37,29 +37,66 @@ const ROMAN = ["", "I", "II", "III"];
 
 export function bossFightRequests(request: BossReportRequest): readonly BossFightRequest[] {
   return request.bosses.flatMap((boss) =>
-    request.weapons.flatMap((weapon) =>
-      request.seeds.flatMap((seed) =>
-        (request.phases ?? [undefined]).flatMap((phase) =>
-          request.players.map((player) => ({
-            boss,
-            weapon,
-            seed,
-            player,
-            difficulty: request.difficulty,
-            ...(phase === undefined ? {} : { phase }),
-            maxTicks: request.maxTicks,
-          })),
+    request.difficulties.flatMap((difficulty) =>
+      request.weapons.flatMap((weapon) =>
+        request.seeds.flatMap((seed) =>
+          (request.phases ?? [undefined]).flatMap((phase) =>
+            request.players.map((player) => ({
+              boss,
+              weapon,
+              seed,
+              player,
+              difficulty,
+              ...(phase === undefined ? {} : { phase }),
+              maxTicks: request.maxTicks,
+            })),
+          ),
         ),
       ),
     ),
   );
 }
 
-export function playBossReport(request: BossReportRequest): readonly BossFightResult[] {
+/**
+ * One worker's share of a list: every `of`-th item starting at `index`. Dealing the items out in turn gives each
+ * worker the same mix of long and short fights.
+ */
+export function sliceOf<T>(items: readonly T[], index: number, of: number): readonly T[] {
+  if (!Number.isInteger(of) || of < 1 || !Number.isInteger(index) || index < 0 || index >= of)
+    throw new RangeError(`no slice ${String(index)} of ${String(of)}`);
+  return items.filter((_, position) => position % of === index);
+}
+
+/** The whole list again, in its first order, from every worker's share. */
+export function mergeSlices<T>(slices: readonly (readonly T[])[]): readonly T[] {
+  const merged: T[] = [];
+  const longest = Math.max(0, ...slices.map((slice) => slice.length));
+  for (let position = 0; position < longest; position += 1)
+    for (const slice of slices) {
+      const item = slice[position];
+      if (item !== undefined) merged.push(item);
+    }
+  return merged;
+}
+
+/**
+ * The fights a request asks for, each admitted by the game's own check: a mistyped boss, weapon, difficulty or
+ * player is refused here, by name, before any fight is played.
+ */
+export function admitBossReport(request: BossReportRequest): readonly BossFightRequest[] {
   const requests = bossFightRequests(request);
-  // Every fight is admitted before the first is played, so a mistyped id costs no playing time.
   for (const fight of requests) bossFightScenario(fight);
-  return requests.map((fight) => playBossFight(fight));
+  return requests;
+}
+
+/** Plays the fights asked for, or one worker's share of them (`sliceOf`). */
+export function playBossReport(
+  request: BossReportRequest,
+  share?: Readonly<{ index: number; of: number }>,
+): readonly BossFightResult[] {
+  const requests = admitBossReport(request);
+  const own = share === undefined ? requests : sliceOf(requests, share.index, share.of);
+  return own.map((fight) => playBossFight(fight));
 }
 
 function table(rows: readonly (readonly string[])[]): string {

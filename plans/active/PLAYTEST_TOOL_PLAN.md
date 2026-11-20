@@ -330,13 +330,28 @@ Built fourth (2026-11-19): the `no-dodge` player (the scripted player without it
 `still` player (no input during play). Both measure what a boss does to them, so a fight of theirs stops, as
 a time limit with the reason, once a phase has been played for 60 seconds.
 
-Built fifth (2026-11-20): the `walker` player (keeps walking, turns round at whatever stops it, jumps every
+Built fifth (2026-11-19): the `walker` player (keeps walking, turns round at whatever stops it, jumps every
 four seconds, never attacks; it stops after 60 seconds of a phase like the other two pressure players) and
 the "boss px/s" column: how far the boss moved sideways each second of the phase.
-Still to do in this stage: the sweep.
+
+Built sixth (2026-11-19): the sweep and the summary. `pnpm playtest sweep` plays every boss with every weapon
+on Easy and Normal with all six players and prints one summary table per boss and difficulty; a row is a phase
+and a player, pooled over weapons and seeds: fights that cleared the phase of those that reached it, the middle
+clear time, damage and hits taken and hits landed per fight, the share of damage nothing warned of, boss
+movement and the share of time the boss was open. `--difficulty` takes a list, and "hits landed" is a new
+per-phase measure. Many fights are shared between worker processes of the same command (`--jobs`, up to 6);
+the result is the same fights in the same order as on one process, which a test holds.
+
+Measured on 2026-11-19 on 6 jobs, on a machine other sessions were also using: four seeds are 1,680 fights and
+took 498 s, over the budget. By the budget rule the default sweep plays seeds 1 and 2 (840 fights, 251 s)
+and says in its first line that seeds 3 and 4 were left out; `--seed 1,2,3,4` plays them. The fights play at
+about 15 times real time a process, and 1,680 fights are 12.6 hours of game time, so four seeds do not fit
+5 minutes on 6 jobs at this speed. What would fit them: Colossus, Aldric and the White Hart give the same fight
+on every seed with these players, and `cuts-objects` plays the same fight as `avoids-tells` wherever the stage
+holds nothing to cut; a sweep that played each distinct fight once would be about a third shorter. Not built.
 
 Done when:
-- [ ] `pnpm playtest bosses` prints, for all five campaign bosses, per phase and per player: clear rate, time to kill, damage and hits taken, hits landed, boss movement, share of time open; 5 weapons, 4 seeds, Easy and Normal, in under 5 minutes on 6 jobs.
+- [x] `pnpm playtest sweep` prints, for every boss, per phase and per player: clear rate, time to kill, damage and hits taken, hits landed, boss movement, share of time open; 5 weapons, Easy and Normal, in under 5 minutes on 6 jobs. Seeds were cut from 4 to 2 to hold the 5 minutes (see "Built sixth").
 - [ ] The three tests of failure modes 1, 2 and 6 pass.
 - [ ] The Rootbound's rows are sent to the Verdant gameplay work and the lead, beside Aldric's and the White Hart's.
 - [ ] Catalogue, change-impact, repository-map and layer entries exist; `pnpm check:quick` passes.
