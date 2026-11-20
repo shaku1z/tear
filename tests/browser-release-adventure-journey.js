@@ -22,6 +22,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { assertCleanProductionUrl, serveProductionBuild } = require("./class-c-browser-harness");
 const { STATE_WAIT_MS, holdFor, notWithin, pollEvery, settleFor, launchJourney } = require("./browser-waits");
+const { chooseMove } = require("./release-adventure-pilot");
 
 const VIEW = Object.freeze({ width: 1280, height: 720 });
 const SCALE = VIEW.width / 1600;
@@ -594,7 +595,7 @@ async function main() {
       if (Date.now() > combatDeadline) {
         await shot(`${leg}-budget-exhausted`);
         throw new Error(
-          `${leg}: wave 1 was not cleared within ${String(COMBAT_BUDGET_MS)} ms (retries ${String(retries)}, enemies left ${String(lastLeft)}, ${String(await fps())} fps)`,
+          `${leg}: wave 1 was not cleared within ${String(COMBAT_BUDGET_MS)} ms (retries ${String(retries)}, enemies left ${String(lastLeft)}, ${String(await fps())} fps, last seen ${JSON.stringify(lastSeen)})`,
         );
       }
       if (Date.now() - lastText > 250) {
@@ -676,12 +677,11 @@ async function main() {
         continue;
       }
       const dx = target.x - player.x,
-        dy = target.y - player.y,
-        direction = Math.sign(dx) || 1;
-      const approach = Math.abs(dx) > 150 * SCALE;
-      await hold(direction > 0 ? "KeyD" : "KeyA", approach);
-      await hold(direction > 0 ? "KeyA" : "KeyD", false);
-      if (dy < -120 * SCALE && Math.abs(dx) < 260 * SCALE && sweep % 7 < 1.2) await press("Space", 60);
+        dy = target.y - player.y;
+      const move = chooseMove(player, target, SCALE);
+      await hold("KeyD", move.walk > 0);
+      await hold("KeyA", move.walk < 0);
+      if (move.jump && sweep % 7 < 1.2) await press("Space", 60);
       const angle = Math.atan2(dy - 8 * SCALE, dx) + Math.sin(sweep) * 1.4,
         radius = 190 * SCALE;
       await page.mouse.move(player.x + Math.cos(angle) * radius, player.y - 8 * SCALE + Math.sin(angle) * radius, {
