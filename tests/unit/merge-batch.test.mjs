@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  batchBranchRefusal,
   awaitBatchRun,
   batchReadVerdict,
   BATCH_BRANCH,
@@ -308,5 +309,27 @@ describe("reading the batch run before --merge", () => {
       "the batch run on codex/batch-x did not pass: run 44694875420: completed, conclusion cancelled, a batch note",
     );
     expect(clock).toBe(0);
+  });
+});
+
+describe("the batch branch --status, --merge and --verify are asked about", () => {
+  const onOrigin = new Set(["codex/batch-20261120t072326z"]);
+  const exists = (name) => onOrigin.has(name);
+
+  it("refuses a name copied with extra text, and says so", () => {
+    // The lead's wrapper captured "batch codex/batch-…: #…" with its colon.
+    expect(batchBranchRefusal("codex/batch-20261120t072326z:", exists)).toBe(
+      '"codex/batch-20261120t072326z:" is not a batch branch name (codex/batch-<yyyymmdd>t<hhmmss>z)',
+    );
+    expect(batchBranchRefusal(undefined, exists)).toBe(
+      '"undefined" is not a batch branch name (codex/batch-<yyyymmdd>t<hhmmss>z)',
+    );
+  });
+
+  it("refuses a batch branch that is not on origin, and accepts one that is", () => {
+    expect(batchBranchRefusal("codex/batch-20261120t000000z", exists)).toBe(
+      "codex/batch-20261120t000000z does not exist on origin",
+    );
+    expect(batchBranchRefusal("codex/batch-20261120t072326z", exists)).toBeUndefined();
   });
 });
