@@ -22,7 +22,7 @@ export interface SaveNotice {
   readonly report: SaveProblemReporter;
 }
 
-/** The page's notice for save problems: one dialog listing the problems not yet acknowledged, each told once. */
+/** The page's notice for save problems: one panel listing the problems not yet acknowledged, each told once. */
 export function createSaveNotice(document: Document): SaveNotice {
   const told = new Set<SaveProblem>();
   /** Told but not yet acknowledged; the dialog lists these. */

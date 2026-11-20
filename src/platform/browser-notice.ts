@@ -4,7 +4,7 @@ export interface NoticeButton {
   readonly onPress?: () => void;
 }
 
-/** What a notice says. The first button is the one the focus starts on. */
+/** What a notice says. */
 export interface NoticeSpec {
   /** The element id; one notice per id is open at a time. */
   readonly id: string;
@@ -18,39 +18,45 @@ export interface OpenNotice {
   close(): void;
 }
 
-const BACKDROP_STYLE = [
+/** Where every notice is stacked: one corner, so two notices never cover each other. */
+export const NOTICE_STACK_ID = "tear-notices";
+
+/**
+ * The stack takes no input of its own (`pointer-events:none`); only a notice inside it does. It sits in the
+ * bottom-right corner, which the menus leave empty, so it never covers a control on the first screen.
+ */
+const STACK_STYLE = [
   "position:fixed",
-  "inset:0",
+  "right:16px",
+  "bottom:16px",
   "z-index:2147482000",
   "display:flex",
-  "align-items:center",
-  "justify-content:center",
-  "padding:24px",
-  "box-sizing:border-box",
-  "background:rgba(10,11,16,0.9)",
-  "color:#f1eff9",
+  "flex-direction:column",
+  "gap:10px",
+  "max-width:min(26em,calc(100vw - 32px))",
+  "pointer-events:none",
   "font-family:'Courier New','Nimbus Mono PS','Liberation Mono',monospace",
+].join(";");
+
+const NOTICE_STYLE = [
+  "display:flex",
+  "flex-direction:column",
+  "gap:8px",
+  "padding:14px 16px",
+  "border:2px solid #13c4d6",
+  "background:rgba(10,11,16,0.94)",
+  "color:#f1eff9",
+  "line-height:1.5",
+  "font-size:13px",
+  "pointer-events:auto",
   "cursor:auto",
 ].join(";");
 
-const CARD_STYLE = [
-  "max-width:36em",
-  "display:flex",
-  "flex-direction:column",
-  "gap:14px",
-  "padding:28px",
-  "border:2px solid #13c4d6",
-  "background:#0a0b10",
-  "line-height:1.6",
-  "font-size:15px",
-].join(";");
-
-const BUTTON_ROW_STYLE = "display:flex;flex-wrap:wrap;gap:12px";
-
 const BUTTON_STYLE = [
-  "min-width:140px",
-  "min-height:44px",
-  "padding:10px 24px",
+  "align-self:flex-start",
+  "min-width:96px",
+  "min-height:36px",
+  "padding:6px 18px",
   "border:2px solid #13c4d6",
   "background:#13c4d6",
   "color:#0a0b10",
@@ -60,33 +66,37 @@ const BUTTON_STYLE = [
   "cursor:pointer",
 ].join(";");
 
+function stackIn(document: Document): HTMLElement {
+  const existing = document.getElementById(NOTICE_STACK_ID);
+  if (existing !== null) return existing;
+  const stack = document.createElement("div");
+  stack.id = NOTICE_STACK_ID;
+  stack.style.cssText = STACK_STYLE;
+  document.body.append(stack);
+  return stack;
+}
+
 /**
- * The page's own dialog for something the player must read before going on: a full-screen card over the
- * game, drawn with DOM elements like the crash screen so it works when the canvas UI is not running.
- * The game listens for keys on the window; while a notice is open they belong to the notice.
+ * The page's way to tell the player something. One rule, for every notice: a notice never blocks the first
+ * screen. It is a small panel in a corner that takes no focus and no key presses (the game keeps both) and
+ * takes pointer input only on itself, so the menu behind it works while it is showing.
  */
 export function openNotice(document: Document, spec: NoticeSpec): OpenNotice {
-  const backdrop = document.createElement("div");
-  backdrop.id = spec.id;
-  backdrop.setAttribute("role", "dialog");
-  backdrop.setAttribute("aria-modal", "true");
-  backdrop.setAttribute("aria-labelledby", `${spec.id}-title`);
-  backdrop.style.cssText = BACKDROP_STYLE;
-  backdrop.addEventListener("keydown", (event) => {
-    event.stopPropagation();
-  });
-  const card = document.createElement("div");
-  card.style.cssText = CARD_STYLE;
+  const notice = document.createElement("section");
+  notice.id = spec.id;
+  notice.setAttribute("role", "region");
+  notice.setAttribute("aria-labelledby", `${spec.id}-title`);
+  notice.style.cssText = NOTICE_STYLE;
   const title = document.createElement("h2");
   title.id = `${spec.id}-title`;
   title.textContent = spec.title;
-  title.style.cssText = "margin:0;font-size:22px";
-  card.append(title);
+  title.style.cssText = "margin:0;font-size:15px";
+  notice.append(title);
   for (const text of spec.paragraphs) {
     const paragraph = document.createElement("p");
     paragraph.textContent = text;
     paragraph.style.cssText = "margin:0";
-    card.append(paragraph);
+    notice.append(paragraph);
   }
   if (spec.link !== undefined) {
     const link = document.createElement("a");
@@ -95,16 +105,14 @@ export function openNotice(document: Document, spec: NoticeSpec): OpenNotice {
     link.rel = "noopener";
     link.textContent = spec.link.label;
     link.style.cssText = "color:#13c4d6";
-    card.append(link);
+    notice.append(link);
   }
-  const row = document.createElement("div");
-  row.style.cssText = BUTTON_ROW_STYLE;
   const handle: OpenNotice = {
     close() {
-      backdrop.remove();
+      notice.remove();
     },
   };
-  const buttons = spec.buttons.map((definition) => {
+  for (const definition of spec.buttons) {
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = definition.label;
@@ -113,12 +121,8 @@ export function openNotice(document: Document, spec: NoticeSpec): OpenNotice {
       definition.onPress?.();
       handle.close();
     });
-    return button;
-  });
-  row.append(...buttons);
-  card.append(row);
-  backdrop.append(card);
-  document.body.append(backdrop);
-  buttons[0]?.focus();
+    notice.append(button);
+  }
+  stackIn(document).append(notice);
   return handle;
 }

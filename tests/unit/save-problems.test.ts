@@ -10,6 +10,7 @@ import {
   readStoredProfile,
   storedRevision,
 } from "../../src/persistence/saved-profile";
+import { NOTICE_STACK_ID } from "../../src/platform/browser-notice";
 import { createSaveNotice, SAVE_NOTICE_ID, SAVE_PROBLEM_TEXT } from "../../src/platform/browser-save-notice";
 import { createLegacyPlatformCompatibility } from "../../src/platform/legacy-compat";
 import type { SyncStringStorage } from "../../src/platform/storage";
@@ -158,6 +159,8 @@ describe("the platform store reports a write that has nowhere to go", () => {
 });
 
 describe("the save notice", () => {
+  const shown = (page: ReturnType<typeof fakePage>): number =>
+    page.body.find((element) => element.id === NOTICE_STACK_ID)?.children.length ?? 0;
   const dialog = (page: ReturnType<typeof fakePage>) => page.body.find((element) => element.id === SAVE_NOTICE_ID);
   const press = (page: ReturnType<typeof fakePage>): void =>
     page.body.find((element) => element.tag === "button")?.listeners.get("click")?.();
@@ -174,7 +177,7 @@ describe("the save notice", () => {
     expect(dialog(page)).toBeUndefined();
     notice.report("profile-unreadable");
     expect(dialog(page)?.texts()).toContain(SAVE_PROBLEM_TEXT["profile-unreadable"]);
-    expect(dialog(page)?.attributes.get("role")).toBe("dialog");
+    expect(dialog(page)?.attributes.get("role")).toBe("region");
   });
 
   it("tells each problem once: the same one again opens nothing, even after OK", () => {
@@ -182,7 +185,7 @@ describe("the save notice", () => {
     const notice = createSaveNotice(page.document);
     notice.report("storage-unavailable");
     notice.report("storage-unavailable");
-    expect(page.body.children).toHaveLength(1);
+    expect(shown(page)).toBe(1);
     press(page);
     expect(dialog(page)).toBeUndefined();
     notice.report("storage-unavailable");
@@ -194,7 +197,7 @@ describe("the save notice", () => {
     const notice = createSaveNotice(page.document);
     notice.report("profile-unreadable");
     notice.report("meta-unreadable");
-    expect(page.body.children).toHaveLength(1);
+    expect(shown(page)).toBe(1);
     expect(dialog(page)?.texts()).toEqual(
       expect.arrayContaining([SAVE_PROBLEM_TEXT["profile-unreadable"], SAVE_PROBLEM_TEXT["meta-unreadable"]]),
     );
