@@ -31,7 +31,6 @@
       "src/gameplay/run/boss-definitions.ts",
       "src/gameplay/environment/*.ts",
       "src/tearbench/*.ts",
-      "docs/TEARBENCH_GHOST3_PROGRAM.md",
       "docs/tearbench-ghost3-evidence-catalog.json",
       "docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md"
     ],
@@ -415,18 +414,6 @@
         "expiry": {
           "checkpoint": "never",
           "condition": "Historical Ghost3 wording and hashes remain unchanged."
-        }
-      },
-      {
-        "id": "history-runtime-alignment",
-        "pathPattern": "docs/TEARBENCH_RUNTIME_ARCHITECTURE_ALIGNMENT.md",
-        "termIds": ["tearbench"],
-        "owner": "TearBench architecture history owner",
-        "reason": "The runtime alignment document records a prior architecture decision and is hash-bound evidence.",
-        "testEvidence": ["check:architecture", "preserved documentation hashes"],
-        "expiry": {
-          "checkpoint": "never",
-          "condition": "Do not rewrite historical runtime alignment wording solely for terminology."
         }
       },
       {
