@@ -43,6 +43,8 @@ export interface WaveSpawnSpec {
   readonly hpScale?: number;
   readonly dmgScale?: number;
   readonly preset?: EnemyPreset;
+  /** Arrives without affixes: the spawn step skips its affix roll. Set on the enemies a wave script lists. */
+  readonly plain?: true;
 }
 
 export interface WavePlanningState {
@@ -172,7 +174,7 @@ function regularWaveQueue(
   const composition = contentCurve?.composition;
   // The stage's written wave: these arrive first and last, plain, and the pool fills the places between.
   const scripted = scriptedWave(contentCurve?.waves, localWave);
-  const plain = (kind: EnemyKind): WaveSpawnSpec => ({ type: kind, hpScale, dmgScale });
+  const plain = (kind: EnemyKind): WaveSpawnSpec => ({ type: kind, hpScale, dmgScale, plain: true });
   const sandboxPool: readonly CampaignPoolEntry[] | null =
     state.mode === "sandbox" ? PUBLISHED_ENEMY_IDENTITY_IDS.map((kind) => ({ kind, weight: 1, unlockWave: 1 })) : null;
   const authoredPool = contentStage?.pool ?? sandboxPool;

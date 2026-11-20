@@ -12,8 +12,12 @@
  * planted Rootbinder roots the allies near it (they cannot be flung or lifted until the root is cut) and no
  * longer leashes the player. v11: a planted Rootbinder snares the player with a warned mark on the ground.
  * v12: Verdant's waves are written (a stage wave script: listed enemies first and last, the pool fills between).
+ * v13: the enemies a wave script lists arrive without affixes.
  */
-export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v12";
+export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v13";
+
+/** The identity while a wave script's listed enemies still rolled affixes; historical replays only. */
+export const SIX_BIOME_PALE_PREVIEW_V12_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v12";
 
 /** The identity while every Verdant wave was only a pick from the stage pool; historical replays only. */
 export const SIX_BIOME_PALE_PREVIEW_V11_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v11";
@@ -86,7 +90,8 @@ export const RULESET_STEPS: readonly RulesetStep[] = Object.freeze(
     { version: SIX_BIOME_PALE_PREVIEW_V9_RULESET_VERSION, change: "a run's first wave began with a grace" },
     { version: SIX_BIOME_PALE_PREVIEW_V10_RULESET_VERSION, change: "Rootbinders began rooting their allies" },
     { version: SIX_BIOME_PALE_PREVIEW_V11_RULESET_VERSION, change: "Rootbinders began snaring with a warning" },
-    { version: CURRENT_RULESET_VERSION, change: "Verdant's waves were written" },
+    { version: SIX_BIOME_PALE_PREVIEW_V12_RULESET_VERSION, change: "Verdant's waves were written" },
+    { version: CURRENT_RULESET_VERSION, change: "the listed enemies of a wave began arriving without affixes" },
   ].map((step) => Object.freeze(step)),
 );
 
