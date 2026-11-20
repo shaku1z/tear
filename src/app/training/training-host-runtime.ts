@@ -1,6 +1,7 @@
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { GameEnemy, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
+import type { TrainingCallouts } from "./training-coach";
 import {
   createLiveTutorialRuntime,
   resetTutorialActors,
@@ -54,7 +55,7 @@ export interface LiveTrainingHostContext {
   readonly resetTrainingCarry?: () => void;
   readonly selectedWeapon: () => string;
   readonly selectWeapon: (id: string) => void;
-  readonly addFloater: (x: number, y: number, text: string, emphasis: boolean, color: string) => void;
+  readonly callouts: TrainingCallouts;
   readonly drawGhost: (snapshot: TutorialGhostSnapshot) => void;
   readonly abilityColors: () => Readonly<Record<string, Readonly<{ color: string }>>>;
   readonly scroll: () => number;
@@ -130,17 +131,12 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
     addProfileStat: d.profileStatsPersistence.add,
     completeCourse: async (id) => {
       const status = await (d.tutorialCompletionPersistence?.complete(id) ?? Promise.resolve("unavailable"));
-      const actor = state.player();
-      if (actor !== undefined)
-        context.addFloater(
-          actor.x,
-          actor.y - 70,
-          status === "committed" || status === "already"
-            ? "TUTORIAL PROGRESS SAVED"
-            : "TUTORIAL COMPLETE · SAVE NOT CONFIRMED",
-          true,
-          status === "committed" || status === "already" ? d.CONFIG.colors.perfect : "#e0a326",
-        );
+      const saved = status === "committed" || status === "already";
+      context.callouts.post(
+        saved
+          ? { text: "TUTORIAL PROGRESS SAVED", tone: "success" }
+          : { text: "TUTORIAL COMPLETE · SAVE NOT CONFIRMED", tone: "nudge" },
+      );
       return status;
     },
     recordLesson: (lessonId) => {
@@ -192,9 +188,8 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
       state.setProjectiles([]);
     },
     spawn: context.spawn,
-    announce: (text, emphasis, color) => {
-      const actor = player();
-      context.addFloater(actor.x, actor.y - 60, text, emphasis, color);
+    announce: (text, at) => {
+      context.callouts.post({ text, tone: "info", ...(at ? { at } : {}) });
     },
     navigate: (screen) => {
       // ABILITIES is the menu's last tab on its own screen: U opens it directly, and the

@@ -1,4 +1,10 @@
-import { CoachQueue, coachMarkAlpha, type CoachMark, type CoachPoint } from "../../presentation/coach/coach-marks";
+import {
+  CoachQueue,
+  coachMarkAlpha,
+  type CoachMark,
+  type CoachPoint,
+  type CoachTone,
+} from "../../presentation/coach/coach-marks";
 import {
   promptAvailable,
   promptDevice,
@@ -18,6 +24,30 @@ export const COACH_HELP_SECONDS = 8;
 export const COACH_STEP_SECONDS = 1;
 /** How long the "learned" line shows when an exercise completes. */
 export const COACH_LEARNED_SECONDS = 3;
+/** How long a call-out (a spawned enemy's name, CLEARED, a save notice) stays. */
+export const COACH_CALLOUT_SECONDS = 1.2;
+
+/** A short training call-out, drawn as a coach mark above what it names. */
+export interface TrainingCallout {
+  readonly text: string;
+  readonly tone: Extract<CoachTone, "info" | "success" | "nudge">;
+  /** The world point it sits above (a spawned enemy's head); the player when absent. */
+  readonly at?: Readonly<{ x: number; y: number }>;
+}
+
+/** Carries call-outs from the training rules that post them to the coach that draws them. */
+export function createTrainingCallouts() {
+  const pending: TrainingCallout[] = [];
+  return Object.freeze({
+    post(callout: TrainingCallout): void {
+      pending.push(callout);
+    },
+    drain(): readonly TrainingCallout[] {
+      return pending.splice(0);
+    },
+  });
+}
+export type TrainingCallouts = ReturnType<typeof createTrainingCallouts>;
 
 export interface TutorialCoachInput {
   /** Changes whenever the active exercise changes (lesson, weapon step, opponent). */
@@ -43,6 +73,8 @@ export interface TrainingCoachFrame {
   readonly tutorial?: TutorialCoachInput;
   /** Present while a Playground run is on screen; the help returns for a new run or a new arena. */
   readonly playground?: Readonly<{ runKey: unknown; arena?: number }>;
+  /** Call-outs posted since the last frame, anchored on screen (undefined: at the player). */
+  readonly callouts?: readonly Readonly<{ text: string; tone: TrainingCallout["tone"]; anchor?: CoachPoint }>[];
 }
 
 /**
@@ -61,11 +93,13 @@ export class TrainingCoach {
   #idle = 0;
   #playgroundKey: unknown = undefined;
   #playgroundArena: number | undefined = undefined;
+  #callouts = 0;
 
   step(frame: TrainingCoachFrame): readonly Readonly<{ mark: CoachMark; alpha: number }>[] {
     const device = promptDevice(frame.inputMode);
     this.#tutorial(frame, device);
     this.#playground(frame, device);
+    this.#callout(frame);
     this.#queue.step(frame.deltaSeconds);
     return this.#queue
       .visible()
@@ -146,6 +180,24 @@ export class TrainingCoach {
       priority: 2,
       seconds: COACH_NUDGE_SECONDS,
     };
+  }
+
+  /** Each call-out replaces the last: the newest thing named is the one worth reading. */
+  #callout(frame: TrainingCoachFrame): void {
+    for (const callout of frame.callouts ?? []) {
+      const anchor = callout.anchor ?? frame.player;
+      this.#queue.offer({
+        id: `callout:${String(++this.#callouts)}`,
+        channel: "callout",
+        tone: callout.tone,
+        title: callout.text,
+        text: "",
+        keys: [],
+        ...(anchor ? { anchor } : {}),
+        priority: 2,
+        seconds: COACH_CALLOUT_SECONDS,
+      });
+    }
   }
 
   #playground(frame: TrainingCoachFrame, device: PromptDevice): void {
