@@ -99,7 +99,10 @@ export function rootSnareCatches(snare: RootSnareState, x: number, feetY: number
 
 /** Where a held player may stand: the nearest place to `x` inside the hold. */
 export function rootSnareHeldX(snare: RootSnareState, x: number): number {
-  return Math.max(snare.anchorX - ROOT_SNARE_RULES.holdRadius, Math.min(snare.anchorX + ROOT_SNARE_RULES.holdRadius, x));
+  return Math.max(
+    snare.anchorX - ROOT_SNARE_RULES.holdRadius,
+    Math.min(snare.anchorX + ROOT_SNARE_RULES.holdRadius, x),
+  );
 }
 
 /**
@@ -222,7 +225,7 @@ export class RootSnares {
         release(holding);
       };
       if (owner === undefined) end("defeat");
-      else if (!owner.planted || player === undefined || !player.alive) end("natural-expiry");
+      else if (player === undefined || !owner.planted || !player.alive) end("natural-expiry");
       else if (snare.snarePhase === "warning") {
         const elapsed = tick - snare.stateTick;
         if (elapsed < rules.warningTicks)

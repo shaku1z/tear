@@ -16,6 +16,7 @@ import {
   type RootbinderPhase,
   type RootbinderState,
 } from "../rootbinder-runtime";
+import { ROOT_SNARE_RULES } from "../../environment/root-snare";
 
 export function createSpecialEnemyTypes(dependencies: EnemyDependencies, Enemy: EnemyBaseConstructor) {
   const { CONFIG, FX, GAME_RANDOM, Projectile, clamp, len, lerp } = dependencies;
@@ -108,6 +109,8 @@ export function createSpecialEnemyTypes(dependencies: EnemyDependencies, Enemy: 
     rootbinderState: RootbinderState;
     /** The roots it holds right now, as the stage-object layer reports them. */
     rootLinkIds: readonly string[] = [];
+    /** Seconds until it may next mark the ground for a snare; it runs only while planted. */
+    snareCd: number = ROOT_SNARE_RULES.firstDelaySeconds;
     private rootbinderTickRemainder = 0;
 
     constructor(x: number, y: number) {
@@ -120,6 +123,15 @@ export function createSpecialEnemyTypes(dependencies: EnemyDependencies, Enemy: 
 
     get rootPhase(): RootbinderPhase {
       return this.rootbinderState.state;
+    }
+
+    /** It may mark the ground for a snare now. Like every attack, the snare waits out a hold on its attacks. */
+    get snareReady(): boolean {
+      return this.rootPhase === "planted" && this.snareCd <= 0 && this.attackHold <= 0;
+    }
+
+    snareStarted() {
+      this.snareCd = ROOT_SNARE_RULES.intervalSeconds;
     }
 
     /** Every root of this planting was cut, or one heavy hit landed. */
@@ -146,6 +158,9 @@ export function createSpecialEnemyTypes(dependencies: EnemyDependencies, Enemy: 
       this.tickTimers(dt);
       const dx = player.x - this.x;
       const still = rootbinderStandsStill(this.rootPhase);
+      // Each planting waits its first delay again; the clock runs only while it is planted.
+      if (this.rootPhase === "planted") this.snareCd = Math.max(0, this.snareCd - dt);
+      else this.snareCd = Math.max(this.snareCd, ROOT_SNARE_RULES.firstDelaySeconds);
       // It never walks at the player: it backs off until it has room to plant, and otherwise holds its ground.
       const retreats = !still && Math.abs(dx) < ROOTBINDER_RULES.standoff;
       const goal = retreats ? -Math.sign(dx || 1) * this.speed : 0;
