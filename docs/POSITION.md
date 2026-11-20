@@ -17,7 +17,7 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 | [Release readiness](#release-readiness) | Merged to main | Production deploy, after the owner has played the build. | — |
 | [Production deploy](#production-deploy) | Deployed 2026-11-13 | The next production deploy follows the Verdant, Tutorial and music work. | — |
 | [Verdant Sanctum visuals](#verdant-visuals) | In progress | Keep closing the look toward the owner's reference illustration, then a live layer (light shafts, water glints, sway) as recipe data, then Pale Traverse from a recipe. | Judge the drawn look against the reference illustration: the owner's taste decides visual work. |
-| [Verdant Sanctum gameplay](#verdant-gameplay) | In progress | Verdant waves. | Playtest the Rootbound in all three phases. |
+| [Verdant Sanctum gameplay](#verdant-gameplay) | In progress | Tune the waves against the playtest tool's wave measurements, then close Verdant. | Playtest the Rootbound in all three phases. |
 | [Tutorial and Playground experience](#training-ux) | In progress | One source of names for the drilled weapon moves (this pull request, then its floaters), then the release tutorial flow and menu fixes. | — |
 | [Pale Traverse rework](#pale-traverse) | Not started | Start once the Verdant gameplay rework has landed. | — |
 | [Player wiki](#wiki) | In progress | Review the move pull request, then confirm the Cloudflare secret question and run the first wiki deploy. | Archive shaku1z/tear-wiki after the first deploy from this repository. |
@@ -60,9 +60,9 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 ### Verdant Sanctum gameplay
 
-**In progress.** The Rootbound boss is rebuilt in all three phases as data on a shared boss move layer that Pale and later bosses reuse: Phase I's moves, Phase II's Grafts, Root Cage and Bloom Wells, and Phase III's Regrowth and Last Spring. Its body no longer hurts on touch: it blocks, and it does not play a move the player could not walk out of. The stage's Bloom Wells stand on the floor and lift the player and light enemies; who a stage field moves is one data row. The Rootbinder is rebuilt as a support that backs away, plants and roots the allies near it, so they cannot be flung or lifted until the root is cut; cutting every root or one heavy hit uproots it, and it takes more damage while planted. Its old leash on the player is replaced by a warned snare: a ring marked on the ground that holds a player who stays in it, with a cut, a 2 second release and an immunity afterwards. Verdant waves are not rebuilt yet.
+**In progress.** The Rootbound boss is rebuilt in all three phases as data on a shared boss move layer that Pale and later bosses reuse: Phase I's moves, Phase II's Grafts, Root Cage and Bloom Wells, and Phase III's Regrowth and Last Spring. Its body no longer hurts on touch: it blocks, and it does not play a move the player could not walk out of. The stage's Bloom Wells stand on the floor and lift the player and light enemies; who a stage field moves is one data row. The Rootbinder is rebuilt as a support that backs away, plants and roots the allies near it, so they cannot be flung or lifted until the root is cut; cutting every root or one heavy hit uproots it, and it takes more damage while planted. Its old leash on the player is replaced by a warned snare: a ring marked on the ground that holds a player who stays in it, with a cut, a 2 second release and an immunity afterwards. Verdant's nine waves are written: each has listed enemies in spawn order (wave 32 two ground allies and then a Rootbinder, 33 a Mender, 36 a Chimera, 38 a second Rootbinder late) and the pool fills the rest; any stage can carry such a table. Their numbers are not tuned yet.
 
-- Next: Verdant waves.
+- Next: Tune the waves against the playtest tool's wave measurements, then close Verdant.
 - Owner action: Playtest the Rootbound in all three phases.
 - Evidence: [plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md)
 
