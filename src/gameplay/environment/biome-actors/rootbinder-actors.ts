@@ -5,7 +5,8 @@ import {
   type RootbinderEnvironmentAlly,
 } from "../verdant-environment-feature";
 import type { RootbinderPhase } from "../../entities/rootbinder-runtime";
-import type { BiomeActorEnemy } from "./actor-entities";
+import type { RootSnarePlayer } from "../root-snare";
+import type { BiomeActorEnemy, BiomeActorPlayer } from "./actor-entities";
 
 /** What a root reads and writes on a live enemy. Every enemy has these through the enemy base. */
 export interface RootableEnemy extends BiomeActorEnemy {
@@ -25,6 +26,33 @@ export interface RootingEnemy extends RootableEnemy {
   readonly rootPhase: RootbinderPhase;
   rootLinkIds: readonly string[];
   uproot(): void;
+  readonly snareReady: boolean;
+  snareStarted(): void;
+}
+
+function snarePlayer(player: BiomeActorPlayer): RootSnarePlayer {
+  return {
+    get x() {
+      return player.x;
+    },
+    get y() {
+      return player.y;
+    },
+    get vx() {
+      return player.vx;
+    },
+    hh: player.hh,
+    get onGround() {
+      return player.onGround === true;
+    },
+    get alive() {
+      return player.hp > 0;
+    },
+    hold: (x, vx) => {
+      player.x = x;
+      player.vx = vx;
+    },
+  };
 }
 
 function roots(enemy: RootableEnemy): enemy is RootingEnemy {
@@ -62,9 +90,10 @@ function ally(enemy: RootableEnemy, id: string): RootbinderEnvironmentAlly {
   };
 }
 
-/** Binds live enemies to the environment phase that owns roots. */
+/** Binds live enemies and the player to the environment phase that owns roots and snares. */
 export function bindLiveRootbinderActors(
   environment: EnvironmentRuntime,
+  player: () => BiomeActorPlayer | null,
   enemies: () => readonly RootableEnemy[],
   actorId: (enemy: RootableEnemy) => string,
 ): void {
@@ -78,6 +107,8 @@ export function bindLiveRootbinderActors(
       return [];
     }
     const allies = values.map((enemy) => ({ enemy, port: ally(enemy, actorId(enemy)) }));
+    const target = player();
+    const snared = target === null ? undefined : snarePlayer(target);
     return rooting.map((enemy): RootbinderEnvironmentActor => ({
       id: actorId(enemy),
       get x() {
@@ -89,6 +120,13 @@ export function bindLiveRootbinderActors(
       get phase() {
         return enemy.rootPhase;
       },
+      get snareReady() {
+        return enemy.snareReady;
+      },
+      snareStarted: () => {
+        enemy.snareStarted();
+      },
+      ...(snared === undefined ? {} : { player: snared }),
       allies: allies.filter((entry) => entry.enemy !== enemy).map((entry) => entry.port),
       reportLinks: (ids) => {
         enemy.rootLinkIds = ids;
