@@ -44,6 +44,7 @@ describe("cloud compatibility", () => {
       getPlatform: () => createBrowserPlatformServices({ window: {} }),
       getProfile: () => deps.profile,
       getMeta: () => deps.meta,
+      statisticsAllowed: () => true,
       firebaseAccount: failing,
       shared: deps.shared,
     });
@@ -64,6 +65,7 @@ describe("cloud compatibility", () => {
       getPlatform: () => createBrowserPlatformServices({ window: {} }),
       getProfile: () => deps.profile,
       getMeta: () => deps.meta,
+      statisticsAllowed: () => true,
       shared: { ...deps.shared, available: true, submitScore: () => Promise.reject(new Error("network")) },
     });
     compatibility.Cloud.onChange(() => {
@@ -71,5 +73,30 @@ describe("cloud compatibility", () => {
     });
     await expect(compatibility.Cloud.init()).resolves.toBe("guest");
     await expect(compatibility.Cloud.submitScore("endless", "normal", { score: 1 })).resolves.toBe(false);
+  });
+
+  it("passes a run statistic to the shared service only while the player allows it", () => {
+    const deps = dependencies();
+    const logged: string[] = [];
+    let allowed = true;
+    const compatibility = createCloudCompatibility({
+      target: "standalone",
+      getPlatform: () => createBrowserPlatformServices({ window: {} }),
+      getProfile: () => deps.profile,
+      getMeta: () => deps.meta,
+      statisticsAllowed: () => allowed,
+      shared: {
+        ...deps.shared,
+        logEvent: (name) => {
+          logged.push(name);
+        },
+      },
+    });
+    compatibility.Cloud.logEvent("first");
+    allowed = false;
+    compatibility.Cloud.logEvent("second");
+    allowed = true;
+    compatibility.Cloud.logEvent("third");
+    expect(logged).toEqual(["first", "third"]);
   });
 });
