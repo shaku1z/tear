@@ -4,6 +4,7 @@
  * no recipe can make a bake slow or a layer huge.
  */
 import { shapeBounds } from "./strokes-growth";
+import { ribbonLength, RIDGE_COLUMN } from "./strokes-land";
 import {
   STAGE_ART_LIMITS,
   type LiveMotes,
@@ -41,6 +42,8 @@ function rampsOf(stroke: StageArtStroke): readonly string[] {
     case "strands":
     case "water":
     case "falls":
+    case "ridge":
+    case "ribbon":
       return [stroke.ramp];
     case "trunk":
       return [stroke.ramp, stroke.mossRamp];
@@ -56,7 +59,8 @@ function rampsOf(stroke: StageArtStroke): readonly string[] {
 const UNBOUNDED_LAYER: readonly [number, number, number, number] = [-1e4, -1e4, 2e4, 2e4];
 const ARCADE_OPERATIONS_PER_PX = 1.2;
 /** Area assumed for a layer that covers the camera range, world px² (wider than any required viewport's reach). */
-const COVERING_LAYER_AREA = 2400 * 1200;
+const COVERING_LAYER_WIDTH = 2400;
+const COVERING_LAYER_AREA = COVERING_LAYER_WIDTH * 1200;
 
 /** Brush operations a stroke performs at full detail, for the recipe budget. */
 export function strokeOperations(stroke: StageArtStroke, layerArea: number): number {
@@ -80,6 +84,13 @@ export function strokeOperations(stroke: StageArtStroke, layerArea: number): num
       return stroke.width * 2.5;
     case "scatter":
       return stroke.spots.length * stroke.count * (stroke.petals + 1);
+    case "ridge":
+      return (
+        COVERING_LAYER_WIDTH / RIDGE_COLUMN +
+        (stroke.teeth === undefined ? 0 : COVERING_LAYER_WIDTH / stroke.teeth.spacing)
+      );
+    case "ribbon":
+      return (ribbonLength(stroke) / 100) * stroke.rays;
     default:
       return 1;
   }
@@ -101,6 +112,17 @@ function checkStroke(recipe: StageArtRecipe, stroke: StageArtStroke, path: strin
       colour(value, path);
     });
   if (stroke.kind === "vignette") colour(stroke.color, path);
+  if (stroke.kind === "ridge") {
+    if (!(stroke.base > stroke.crest)) fail(path, "base must be below crest");
+    within(stroke.span, 4, 4000, `${path}.span`);
+    within(stroke.sharp, 0, 1, `${path}.sharp`);
+    if (stroke.teeth !== undefined) within(stroke.teeth.spacing, 4, 400, `${path}.teeth.spacing`);
+  }
+  if (stroke.kind === "ribbon") {
+    if (stroke.path.length < 2) fail(path, "path needs two points");
+    within(stroke.alpha, 0, 1, `${path}.alpha`);
+    within(stroke.rays, 0, 200, `${path}.rays`);
+  }
 }
 
 const LIVE = STAGE_ART_LIMITS.live;

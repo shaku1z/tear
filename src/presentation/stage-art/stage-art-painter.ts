@@ -19,6 +19,7 @@ import type { LoadedScene, SceneBitmap, SceneCanvas } from "../scenes/scene-rend
 import { parseHex, valueNoise, type Context2D, type PaintKit, type Ramp, type Rgb } from "./paint-kit";
 import type { LivePart, StageArtIdentity, StageArtLayer, StageArtRecipe, StageArtStroke } from "./stage-art-contract";
 import { compileMotes, compileWater } from "./stage-art-live";
+import { paintRibbon, paintRidge } from "./strokes-land";
 import { StageArtError, validateStageArt } from "./stage-art-validate";
 import { paintArcade, paintSurface } from "./strokes-built";
 import { paintMass, paintScatter, paintStrands, paintTrunk } from "./strokes-growth";
@@ -59,6 +60,10 @@ function strokeSteps(kit: PaintKit, stroke: StageArtStroke): Generator<void> {
       return paintVignette(kit, stroke);
     case "scatter":
       return paintScatter(kit, stroke);
+    case "ridge":
+      return paintRidge(kit, stroke);
+    case "ribbon":
+      return paintRibbon(kit, stroke);
   }
 }
 
