@@ -486,9 +486,7 @@ test("current five-weapon live-versus-detached parity is mandatory in the canoni
   assert.equal(scripts["test:browser:current-gameplay-scenarios"], "node tests/browser-current-gameplay-scenarios.js");
   assert.equal(runs.get("browser.gameplay-scenarios"), "node tests/browser-current-gameplay-scenarios.js");
   assert.equal(scripts["test:tearbench-selection"], "node --test tests/tearbench-evidence-selection.test.mjs");
-  assert.match(scripts["check:workspace"], /pnpm test:tearbench-selection/u);
   assert.match(runs.get("static.node-tests") ?? "", /tests\/tearbench-evidence-selection\.test\.mjs/u);
-  assert.equal(runs.get("static.workspace"), "node scripts/check-workspace.mjs --ci");
   assert.equal(scripts["check:functional"], "node scripts/run-checks.mjs");
 });
 

@@ -12,9 +12,8 @@ tear-crazygames/
 pnpm-lock.yaml
 package-lock.json
 
-# Vendored, preserved and synced content.
+# Vendored and synced content.
 public/
-preservation/
 wiki/
 vendor/
 
