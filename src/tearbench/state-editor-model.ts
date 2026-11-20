@@ -1,3 +1,4 @@
+import { isRecord } from "../domain/records";
 import type { TearSdlDocumentV1, TearSdlIssue, TearSdlResolved } from "./tearsdl";
 import { parseTearSdl, resolveTearSdl } from "./tearsdl";
 
@@ -89,10 +90,6 @@ export function evaluateStateSetupSource(
       }),
     });
   }
-}
-
-function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function collectDiff(before: unknown, after: unknown, path: string, differences: StateSetupValueDiff[]): void {

@@ -5,6 +5,7 @@ import type {
   EnvironmentRouteState,
   EnvironmentSnapshot,
 } from "./environment-contracts";
+import { isObject } from "../../domain/records";
 
 type EnvironmentEntry = EnvironmentFieldState | EnvironmentCombatObjectState | EnvironmentRouteState;
 /** The only capability cleanup needs from an actor-id collection. */
@@ -36,7 +37,7 @@ function cleanupEntry<T extends EnvironmentEntry>(
 
 /** The actor id an actor-reference list item names, if it is one. */
 export function environmentActorReferenceId(value: unknown): string | undefined {
-  if (typeof value !== "object" || value === null) return undefined;
+  if (!isObject(value)) return undefined;
   const actorId = (value as Readonly<{ actorId?: unknown }>).actorId;
   return typeof actorId === "string" ? actorId : undefined;
 }

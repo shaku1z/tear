@@ -10,6 +10,7 @@ import type {
   EnvironmentSnapshot,
 } from "./environment-contracts";
 import { assertEnvironmentCombatCapabilities, assertEnvironmentObjectCategory } from "./environment-definitions";
+import { isObject, isRecord } from "../../domain/records";
 
 const DEFAULT_CONFIGURATION: EnvironmentRuntimeConfiguration = Object.freeze({
   maxFields: 64,
@@ -26,11 +27,11 @@ const OWNED_DATA = new WeakSet();
 
 /** Whether `value` is an immutable graph admitted by an environment state (safe to share without a copy). */
 export function isEnvironmentOwnedData(value: unknown): boolean {
-  return typeof value === "object" && value !== null && OWNED_DATA.has(value);
+  return isObject(value) && OWNED_DATA.has(value);
 }
 
 function freezeData(value: unknown): unknown {
-  if (typeof value === "object" && value !== null && OWNED_DATA.has(value)) return value;
+  if (isObject(value) && OWNED_DATA.has(value)) return value;
   if (Array.isArray(value)) {
     const copy = new Array<unknown>(value.length);
     for (let index = 0; index < value.length; index += 1) {
@@ -39,8 +40,8 @@ function freezeData(value: unknown): unknown {
     OWNED_DATA.add(copy);
     return Object.freeze(copy);
   }
-  if (typeof value !== "object" || value === null) return value;
-  const source = value as Record<string, unknown>;
+  if (!isRecord(value)) return value;
+  const source = value;
   const copy: Record<string, unknown> = {};
   for (const key of Object.keys(source)) copy[key] = freezeData(source[key]);
   OWNED_DATA.add(copy);
@@ -207,12 +208,10 @@ export class EnvironmentState implements EnvironmentRuntimeState {
     const allocator: unknown = snapshot.allocator;
     if (
       allocator !== undefined &&
-      (!allocator ||
-        typeof allocator !== "object" ||
-        Array.isArray(allocator) ||
-        (allocator as Record<string, unknown>).version !== 1 ||
-        !Number.isSafeInteger((allocator as Record<string, unknown>).nextSequence) ||
-        Number((allocator as Record<string, unknown>).nextSequence) < 1)
+      (!isRecord(allocator) ||
+        allocator.version !== 1 ||
+        !Number.isSafeInteger(allocator.nextSequence) ||
+        Number(allocator.nextSequence) < 1)
     )
       throw new TypeError("Invalid environment allocator continuation");
     if (snapshot.allocator !== undefined)
