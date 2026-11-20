@@ -1,5 +1,6 @@
 import { secondsOf, type BossFightResult, type BossPhaseResult } from "./boss-fight";
 import { noTellDamage } from "./boss-report";
+import { median, sum, table } from "./report-text";
 
 /** How the fights of one boss, difficulty, phase and player went, over every weapon and seed played. */
 export interface BossSummaryRow {
@@ -30,15 +31,6 @@ interface Played {
   readonly phase: BossPhaseResult;
   readonly cleared: boolean;
 }
-
-function median(values: readonly number[]): number | undefined {
-  if (values.length === 0) return undefined;
-  const sorted = [...values].sort((left, right) => left - right);
-  const middle = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 1 ? sorted[middle] : ((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2;
-}
-
-const sum = (values: readonly number[]): number => values.reduce((total, value) => total + value, 0);
 
 /**
  * One row per boss, difficulty, phase and player: bosses, difficulties and players in the order the fights were
@@ -98,18 +90,6 @@ export function summariseBossFights(fights: readonly BossFightResult[]): readonl
 
 const ROMAN = ["", "I", "II", "III"];
 const percent = (share: number): string => `${(100 * share).toFixed(0)}%`;
-
-function table(rows: readonly (readonly string[])[]): string {
-  const widths = rows[0]?.map((_, column) => Math.max(...rows.map((row) => row[column]?.length ?? 0))) ?? [];
-  return rows
-    .map((row) =>
-      row
-        .map((cell, column) => cell.padEnd(widths[column] ?? 0))
-        .join("  ")
-        .trimEnd(),
-    )
-    .join("\n");
-}
 
 /** The summary: what was played, any fight that broke, and one table per boss and difficulty. */
 export function formatBossSummary(fights: readonly BossFightResult[]): string {
