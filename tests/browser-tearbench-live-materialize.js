@@ -405,10 +405,10 @@ async function main() {
           if (!window.__TEAR_RUNTIME_ENVIRONMENT__) throw new Error("test-only Tear runtime bridge was not installed");
           const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
           if (resolved !== undefined) {
-            const forged = environment.forgeResolvedScenario(resolved);
-            if (!forged.ok)
+            const built = environment.buildResolvedScenario(resolved);
+            if (!built.ok)
               throw new Error(
-                `canonical State Setup launch failed for ${scenario.id}: ${forged.phase} ${JSON.stringify(forged.issues)}`,
+                `canonical State Setup launch failed for ${scenario.id}: ${built.phase} ${JSON.stringify(built.issues)}`,
               );
           } else {
             environment.reset(scenario);
