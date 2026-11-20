@@ -29,19 +29,19 @@ withJourney({ name: "C23 State Editor" }, async ({ page, errors }) => {
   assert.equal(await page.locator("#tear-snapshot-editor-timeline option").count(), 1);
   assert.match(await page.getByText("Provenance").locator("..").textContent(), /live-tear-runtime/);
 
-  await page.getByLabel("Fork id").fill("editor-low-health");
+  await page.getByLabel("Fork id").fill("test-low-health");
   await page.getByLabel("Fork state patch (JSON)").fill(
     JSON.stringify({
       "tear.player.v1": { hp: 77 },
     }),
   );
   await page.getByRole("button", { name: "Fork checkpoint" }).evaluate((button) => button.click());
-  assert.match(await page.getByRole("status").textContent(), /Forked editor-low-health/);
+  assert.match(await page.getByRole("status").textContent(), /Forked test-low-health/);
   assert.equal(await page.locator("#tear-snapshot-editor-timeline option").count(), 2);
   assert.match(await page.getByText("Checkpoint diff").locator("..").textContent(), /tear\.player\.v1\.hp/);
 
   await page.getByRole("button", { name: "Watch checkpoint" }).evaluate((button) => button.click());
-  assert.match(await page.getByRole("status").textContent(), /Watching editor-low-health/);
+  assert.match(await page.getByRole("status").textContent(), /Watching test-low-health/);
 
   const imported = {
     format: "tearsdl",
@@ -152,7 +152,7 @@ withJourney({ name: "C23 State Editor" }, async ({ page, errors }) => {
       {
         launchedRecordedCanonical: true,
         checkpointCount: 2,
-        forkedCheckpoint: "editor-low-health",
+        forkedCheckpoint: "test-low-health",
         importExportRoundTrip: true,
         invalidScenarioRejected: true,
         builtClasses: builtClassEvidence,
