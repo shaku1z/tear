@@ -429,10 +429,28 @@ which plays the groups the game's wave planner makes, not by this report. "Stall
 player gave up after 15 seconds in which no health changed on either side. Tests:
 `tests/unit/playtest-enemies.test.ts`.
 
+Built fifth (2026-11-20): `pnpm playtest coverage`. It plays the four reports, each as its own run of the
+command (bosses twice: from Phase I, and from Phases II and III through the game's boss practice; waves over
+every Adventure stage on seed 1), and compares what they brought into play with the game's own lists: published
+enemies, enemy affixes, bosses, boss phases and upgrades (an upgrade appears when a draft offers it). The game
+keeps no list of stage objects, so that line says what appeared and cannot say what is missing. 315 fights,
+waves, runs and meetings; 897 s through the queue on a loaded machine. The first list has three entries, each
+a gap in what was played and not in the game, reported to the lead:
+- White Hart Phase III: the White Hart is not in the game's boss practice, so its fights start at Phase I and
+  no scripted player gets past Phase II in 180 s.
+- Air Superiority and Bloodrite: never offered in these drafts. Drafts repeat on a seed, so the set holds few
+  different drafts; both are offered on seeds 2 to 6 of a deep Verdant wave (checked by hand).
+
+Building it found a fault in `pnpm playtest waves`: every wave of the Grounds after its first was reported as
+broken ("the stage's story chapter did not end"). The Grounds shows no chapter there, and the wave start read
+"no chapter" as "chapter not over". `chapterHolds` in `headless/chapter.ts` now answers that question for the
+waves and the runs. Tests: `tests/unit/playtest-coverage.test.ts`, and a Grounds wave in
+`tests/unit/playtest-waves.test.ts`.
+
 Done when:
 - [ ] Every boss phase, every wave of each biome and every enemy kind is a row that starts directly, in under 1 s each.
 - [x] `pnpm playtest runs` reports where runs end and per-wave time and health cost for 3 modes, 3 difficulties and 5 weapons.
-- [ ] The coverage section lists content that never appeared; the list is empty or each entry is reported to the lead.
+- [x] The coverage section lists content that never appeared; the list is empty or each entry is reported to the lead.
 - [ ] `--compare` passes the test of failure mode 3 and prints no rows for a commit compared with itself.
 
 ### Stage 3: a stronger player

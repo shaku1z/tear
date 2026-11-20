@@ -8,7 +8,7 @@
 import process from "node:process";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadChecks } from "./run-checks.mjs";
+import { loadJudgedChecks } from "./run-checks.mjs";
 
 /** The jobs `check` must see, besides the gate groups: the scope decision and the document checks. */
 export const FIXED_JOBS = Object.freeze(["scope", "docs"]);
@@ -39,7 +39,7 @@ export function verdictProblems(needs, gate) {
 /** What the `check` job runs: reads `NEEDS`, prints each job and any problem, returns the exit code. */
 export function main(env = process.env, log = console.log) {
   const needs = JSON.parse(env.NEEDS ?? "null");
-  const problems = verdictProblems(needs, loadChecks().gate);
+  const problems = verdictProblems(needs, loadJudgedChecks().gate);
   for (const job of Object.keys(needs ?? {})) log(`${job}: ${String(needs[job].result)}`);
   if (problems.length === 0) {
     log("every needed job passed");

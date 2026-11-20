@@ -19,7 +19,7 @@ export interface KeyboardBinding {
   readonly context: KeyboardContext;
   /** The codes a prompt names, in that order, when it is not just the first (every one is in `codes`). */
   readonly named?: readonly string[];
-  /** The codes are an ordered range (1–8): a prompt names the first and last. */
+  /** The codes are an ordered range (1–4): a prompt names the first and last. */
   readonly range?: boolean;
 }
 
@@ -43,14 +43,17 @@ const BINDINGS = {
   /** Escape also releases pointer lock, which pauses through the lost-capture rule. */
   pause: { codes: ["Escape", "KeyP"], context: "play", named: ["Escape", "KeyP"] },
   "skip-lesson": { codes: ["KeyN"], context: "tutorial" },
+  // The Playground's shortcuts sit on the number row (owner, 2026-11-20): left-hand reach of
+  // WASD, no letter taken from play, so every letter stays free for a play rebind. Restore and
+  // tidy (1–2), spawn (3–4), rules (5–6). Everything else is in the Playground menu.
   "playground-menu": { codes: ["Tab"], context: "playground" },
-  abilities: { codes: ["KeyU"], context: "playground" },
-  "quick-spawn": { codes: digits(8), context: "playground", range: true },
-  "spawn-dummy": { codes: ["KeyT"], context: "playground" },
-  "summon-boss": { codes: ["KeyB"], context: "playground" },
-  "summon-echo": { codes: ["KeyM"], context: "playground" },
-  "clear-enemies": { codes: ["KeyK"], context: "playground" },
-  heal: { codes: ["KeyH"], context: "playground" },
+  heal: { codes: ["Digit1"], context: "playground" },
+  "clear-enemies": { codes: ["Digit2"], context: "playground" },
+  "spawn-dummy": { codes: ["Digit3"], context: "playground" },
+  /** The last enemy spawned from the menu again, with its count and health. */
+  "repeat-spawn": { codes: ["Digit4"], context: "playground" },
+  "toggle-freeze": { codes: ["Digit5"], context: "playground" },
+  "toggle-no-damage": { codes: ["Digit6"], context: "playground" },
   "clip-start": { codes: ["BracketLeft"], context: "engineering" },
   "clip-stop": { codes: ["BracketRight"], context: "engineering" },
 
@@ -137,7 +140,7 @@ export function anyContextKeyIn(keys: ReadonlySet<string>, context: KeyboardCont
   return KEYBOARD_ACTIONS.some((action) => live[action].context === context && anyKeyIn(keys, action));
 }
 
-/** The index of the first key of an ordered range (`quick-spawn`, `choose`) in the set, below `limit`. */
+/** The index of the first key of an ordered range (`choose`) in the set, below `limit`. */
 export function rangeKeyIn(keys: ReadonlySet<string>, action: KeyboardAction, limit = Infinity): number | null {
   const codes = live[action].codes;
   for (let index = 0; index < Math.min(limit, codes.length); index += 1) {
@@ -176,7 +179,7 @@ export function keyCodeLabel(code: string): string {
   return digit ?? code.toUpperCase();
 }
 
-/** The keys a prompt names for the action, each once: ["A", "←"], ["SHIFT"], ["1–8"]. */
+/** The keys a prompt names for the action, each once: ["A", "←"], ["SHIFT"], ["1–4"]. */
 export function keyboardLabels(action: KeyboardAction): readonly string[] {
   const binding = live[action];
   const codes = binding.codes;
@@ -190,7 +193,7 @@ export function keyboardLabels(action: KeyboardAction): readonly string[] {
   return labels;
 }
 
-/** What a prompt calls the action's keys: "E", "W / SPACE / ↑", "1–8". */
+/** What a prompt calls the action's keys: "E", "W / SPACE / ↑", "1–4". */
 export function keyboardLabel(action: KeyboardAction): string {
   return keyboardLabels(action).join(" / ");
 }

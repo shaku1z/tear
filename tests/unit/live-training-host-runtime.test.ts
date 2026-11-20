@@ -16,7 +16,6 @@ vi.mock("../../src/gameplay/training/playground-controller", () => ({
     readonly state = { labFilter: "" };
   },
   PLAYGROUND_ALL_KINDS: [],
-  PLAYGROUND_HOTKEY_KINDS: [],
 }));
 vi.mock("../../src/gameplay/training/runtime-bridge", () => ({
   createPlaygroundRuntimeBridge: () => Object.freeze({ homePlatforms: () => [] }),

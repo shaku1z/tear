@@ -19,7 +19,7 @@ import {
   createLivePlaygroundPresentation,
   type PlaygroundScreenModel,
 } from "../../src/gameplay/training/live-playground-presentation";
-import { PLAYGROUND_ALL_KINDS, PLAYGROUND_HOTKEY_KINDS } from "../../src/gameplay/training/playground-controller";
+import { PLAYGROUND_ALL_KINDS } from "../../src/gameplay/training/playground-controller";
 import { PLAYGROUND_STAGES } from "../../src/gameplay/stages";
 import { WEAPON_IDS } from "../../src/gameplay/weapon-selection";
 import { catalog, routing } from "../../public/audio/music.json";
@@ -1110,7 +1110,6 @@ function liveBuildMenu(
     arenaName: () => "ASHEN COURT",
     arenas: () => PLAYGROUND_STAGES.map((stage) => stage.name),
     tab: () => tab,
-    hotkeyKinds: PLAYGROUND_HOTKEY_KINDS,
     selectedWeapon: () => "sword",
     upgrades: () => [],
     abilityColors: () => ({}),
