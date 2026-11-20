@@ -563,6 +563,8 @@ them. Split from PR 2 because it reaches into vault maintenance and custody, not
 - **Cause:** The replay world was built as TearBench research code and players came to depend on it.
 - **Measured:** `pnpm test:determinism` green; the 16-file cycle and the `ghost -> tearbench` edges removed from the baseline; code budget not raised.
 - **Removed:** About 13 `src/tearbench` files leave; the recorded cycle is gone.
+- **Edges (the lead, 2026-11-20):** `src/app/world/detached/` is its own layer, so the one new edge is `playtest -> detached world`, not `playtest -> app`. `tearbench -> app` is never allowed, nothing in `src/app` imports `src/playtest`, and the baseline only shrinks.
+- **The `playtest -> tearbench` allowance (the lead, 2026-11-20):** it goes once no playtest file imports TearBench. PR 4 stays with the replay modules and lists in its description exactly which `playtest -> tearbench` imports remain after it; playtest-tool owns those in its rebuild, and whichever pull request moves the last one removes the allowance from `config/architecture-layers.json`.
 
 ### PR 5: one record (`record.ts`, `recorder.ts`, `verify.ts`) and the round-trip check
 
