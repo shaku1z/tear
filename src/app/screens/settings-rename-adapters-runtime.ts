@@ -7,12 +7,16 @@ import {
   buildSettingsSections,
   CREDITS_TAB,
   LICENCE_KEY_PREFIX,
+  RESET_CANCEL_KEY,
+  RESET_PROGRESS_KEY,
   rebindNote,
   rebindRowKey,
   type KeyboardRowsState,
 } from "../../presentation/settings-snapshots";
 import { isRebindableAction, type RebindableAction } from "../../domain/keyboard-remap";
 import type { BrowserInput } from "../../input/browser-input-contracts";
+import { resetProgress } from "../progress/progress-reset";
+import { createResetProgressFlow } from "../progress/progress-reset-flow";
 import { formatBuildLabel } from "../../platform/build-identity";
 import { creditsFor } from "../../platform/credits";
 import { musicPickChoices } from "../../audio/music/music-source";
@@ -24,7 +28,7 @@ import { buildMusicScreenView } from "../../presentation/music-snapshots";
 
 type Dependencies = Pick<
   GameRuntimeDependencies,
-  "APP" | "GFX" | "Input" | "PAD" | "PROFILE" | "Cloud" | "PwaUpdate" | "UI" | "build" | "privacy"
+  "APP" | "CG" | "GFX" | "Input" | "META" | "PAD" | "PROFILE" | "Cloud" | "PwaUpdate" | "UI" | "build" | "privacy"
 >;
 type Renderers = ReturnType<typeof createLiveScreenRenderers>;
 
@@ -133,6 +137,21 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
   const cycle = (key: string, values: readonly string[]): void => {
     services.settingsController.cycle(key, values);
   };
+  const progressReset = createResetProgressFlow({
+    now: () => services.window.performance.now(),
+    reset: () =>
+      resetProgress({
+        store: d.CG.store,
+        cloud: d.Cloud,
+        profile: d.PROFILE,
+        meta: d.META,
+        now: () => Date.now(),
+        writerId: () => (d.CG.live ? "crazygames" : "browser"),
+      }),
+    reload: () => {
+      services.window.location.reload();
+    },
+  });
   const credits = creditsFor(d.build.target);
   /** A credit's licence text ships with the build; it opens as a page of its own. */
   const openLicenceText = (id: string): void => {
@@ -169,6 +188,8 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
     else if (key === "privacy" && d.privacy.stance.privacyUrl !== null)
       services.window.open(d.privacy.stance.privacyUrl, "_blank", "noopener");
     else if (key.startsWith(LICENCE_KEY_PREFIX)) openLicenceText(key.slice(LICENCE_KEY_PREFIX.length));
+    else if (key === RESET_PROGRESS_KEY) progressReset.press();
+    else if (key === RESET_CANCEL_KEY) progressReset.cancel();
   };
   const renderSettings = (): void => {
     // Before the tab keys: a row waiting for a key takes Q and E too.
@@ -232,6 +253,7 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
           hasLicenceText: credit.licenceFile !== null,
         })),
       })),
+      progressReset: progressReset.view(),
       presets: presetMeta,
       controllerGlyphs: [g(0), g(1), g(2), g(3)],
       keyboard,

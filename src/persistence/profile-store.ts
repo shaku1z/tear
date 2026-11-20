@@ -1,7 +1,6 @@
 import type { CosmeticCatalog, CosmeticState } from "../domain/cosmetic-types";
 import {
   claimableGrants,
-  emptyCosmeticState,
   equipCosmetic,
   grantItems,
   markSeen,
@@ -48,6 +47,15 @@ import {
   mutableProfileWorkingCopy,
   type ProfileEnvelopeV2,
 } from "./profile-envelope";
+import {
+  freshProfile,
+  PROFILE_ENVELOPE_KEY,
+  PROFILE_MIRROR_KEY,
+  readStoredProfile,
+  type ProfileData,
+  type Tracker,
+} from "./saved-profile";
+import type { SaveProblemReporter } from "../domain/save-problems";
 
 interface SyncStore {
   readonly acknowledged?: AcknowledgedStorage;
@@ -72,34 +80,11 @@ interface MetaPort {
   addCoins(amount: number): void;
 }
 
-type Tracker = Record<string, unknown>;
-
-export interface ProfileData extends Record<string, unknown> {
-  v: number;
-  shards: number;
-  ach: Record<string, number>;
-  stats: Record<string, number | Tracker>;
-  seen: Record<string, boolean>;
-  modes: Record<string, boolean>;
-  created: number;
-  achCoinsRetrofit: boolean;
-  username?: string;
-  usernameSetAt?: number;
-  pendingFinale?: Tracker;
-  rewards?: Tracker;
-  weaponsWon?: Record<string, number>;
-  advDiffs?: Record<string, number>;
-  /** Cosmetic ownership and equipped slots (version 4); read through `cosmetics()`. */
-  cosmetics?: unknown;
-  /** The Gauntlet personal best per difficulty, an optional field; read through `gauntletBest()`. */
-  gauntletBest?: unknown;
-  /** Finished tutorial lessons and a deliberate skip, an optional field; read through `tutorialProgress()`. */
-  tutorialProgress?: unknown;
-}
+export type { ProfileData };
 
 export interface ProfileStore {
-  readonly KEY: "tear_profile";
-  readonly ENVELOPE_KEY: "tear_profile_v2";
+  readonly KEY: typeof PROFILE_MIRROR_KEY;
+  readonly ENVELOPE_KEY: typeof PROFILE_ENVELOPE_KEY;
   data: ProfileData;
   load(): ProfileData;
   flushAcknowledged(): Promise<CompletionStatus>;
@@ -163,6 +148,8 @@ export interface ProfileStoreOptions {
   readonly writerId: () => string;
   readonly onCommitted?: () => void;
   readonly onLoaded?: () => void;
+  /** Told when the stored profile cannot be used, so the player can be told. */
+  readonly reportProblem?: SaveProblemReporter;
   readonly log?: (message: string) => void;
   /** Published biome display names whose discovery counts toward progression. */
   readonly countedBiomeNames?: readonly string[];
@@ -225,19 +212,7 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
   const now = options.now ?? Date.now;
   let envelope: ProfileEnvelopeV2 | null = null;
   let envelopeWritable = true;
-  const fresh = (): ProfileData => ({
-    v: 1,
-    shards: 0,
-    ach: {},
-    stats: {},
-    seen: {},
-    modes: {},
-    created: now(),
-    achCoinsRetrofit: false,
-    // The same empty ledger migration gives an older save, so a new profile has every field from the start.
-    cosmetics: emptyCosmeticState(),
-    gauntletBest: {},
-  });
+  const fresh = (): ProfileData => freshProfile(now());
 
   let knownProfile = fresh();
   const mergeData = (target: ProfileData, remote: unknown): void => {
@@ -437,8 +412,8 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
     return status === "committed" ? result.value : status;
   }
   const profile: ProfileStore = {
-    KEY: "tear_profile",
-    ENVELOPE_KEY: "tear_profile_v2",
+    KEY: PROFILE_MIRROR_KEY,
+    ENVELOPE_KEY: PROFILE_ENVELOPE_KEY,
     data: fresh(),
     flushAcknowledged: () => commit(),
     async issueTutorial(id) {
@@ -485,34 +460,11 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
       });
     },
     load() {
-      let raw: Tracker | null = null;
-      envelopeWritable = true;
-      try {
-        const text = options.store.get(this.ENVELOPE_KEY);
-        if (text) {
-          const migrated = migrateProfileEnvelope(JSON.parse(text) as unknown, now());
-          if (migrated.ok) {
-            envelope = migrated.value;
-            raw = mutableProfileWorkingCopy(migrated.value);
-          } else envelopeWritable = false;
-        }
-      } catch {
-        envelope = null;
-        envelopeWritable = false;
-      }
-      if (!raw) {
-        let legacy: unknown;
-        try {
-          legacy = JSON.parse(options.store.get(this.KEY) ?? "{}") as unknown;
-        } catch {
-          legacy = {};
-        }
-        const migrated = migrateProfileEnvelope(legacy, now());
-        if (migrated.ok) {
-          envelope = migrated.value;
-          raw = mutableProfileWorkingCopy(migrated.value);
-        }
-      }
+      const stored = readStoredProfile(options.store, envelope, now());
+      envelope = stored.envelope;
+      envelopeWritable = stored.writable;
+      if (stored.problem !== null) options.reportProblem?.(stored.problem);
+      const raw = stored.raw;
       const source = raw ?? {};
       this.data = Object.assign(fresh(), source, {
         ach: numberMap(source.ach),

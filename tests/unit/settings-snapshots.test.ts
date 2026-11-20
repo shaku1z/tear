@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSettingsSections } from "../../src/presentation/settings-snapshots";
+import { buildSettingsSections, type SettingsResetView } from "../../src/presentation/settings-snapshots";
 
 const settings = {
   masterVolume: 1,
@@ -23,6 +23,7 @@ const environment = {
   installAvailable: false,
   update: { ready: false, applying: false },
   privacy: { privacyLink: true, termsLink: false, note: null, statistics: true },
+  progressReset: { stage: "idle", confirmable: false, failure: null } satisfies SettingsResetView,
   credits: [
     {
       label: "FONTS",
@@ -72,13 +73,52 @@ describe("settings snapshots", () => {
     expect(
       rows(busy)
         .map((row) => row.key)
-        .slice(-3),
-    ).toEqual(["install", "update", "version"]);
+        .slice(-4),
+    ).toEqual(["install", "update", "resetProgress", "version"]);
     for (const tab of ["audio", "video", "accessibility", "controls"])
       expect(buildSettingsSections(tab, settings, environment).flatMap((section) => section.rows)).not.toContainEqual(
         expect.objectContaining({ key: "version" }),
       );
   });
+  it("shows the erase of progress in General as one row, then a confirming row with a way back, then a wait", () => {
+    const general = (progressReset: SettingsResetView) =>
+      buildSettingsSections("general", settings, { ...environment, progressReset })[0]?.rows.filter((row) =>
+        row.key.startsWith("reset"),
+      );
+    expect(general({ stage: "idle", confirmable: false, failure: null })).toEqual([
+      { key: "resetProgress", label: "Reset progress", value: "RESET…", kind: "cycle" },
+    ]);
+    const armed = general({ stage: "armed", confirmable: false, failure: null });
+    expect(armed?.map((row) => row.key)).toEqual(["resetNote", "resetProgress", "resetCancel"]);
+    // Pressing ERASE does nothing until the delay after arming has passed, and the row says so by being off.
+    expect(armed?.[1]).toMatchObject({ value: "ERASE", enabled: false });
+    expect(general({ stage: "armed", confirmable: true, failure: null })?.[1]).toMatchObject({ enabled: true });
+    expect(armed?.[0]?.label).toContain("Leaderboard entries and replays stay");
+    expect(general({ stage: "working", confirmable: false, failure: null })).toEqual([
+      { key: "resetProgress", label: "Erasing all progress…", value: "", kind: "info" },
+    ]);
+  });
+
+  it("says why an erase changed nothing, above the button to try again", () => {
+    const rows = (failure: "online-failed" | "device-failed") =>
+      buildSettingsSections("general", settings, {
+        ...environment,
+        progressReset: { stage: "idle", confirmable: false, failure },
+      })[0]?.rows.filter((row) => row.key.startsWith("reset"));
+    expect(rows("online-failed")?.map((row) => row.key)).toEqual(["resetNote", "resetProgress"]);
+    expect(rows("online-failed")?.[0]?.label).toBe("Could not reach your online save. Nothing was erased.");
+    expect(rows("device-failed")?.[0]?.label).toBe("This device would not save the erase. Try again.");
+  });
+
+  it("never offers the erase on another tab", () => {
+    for (const tab of ["controls", "audio", "video", "accessibility", "credits"])
+      expect(
+        buildSettingsSections(tab, settings, environment)
+          .flatMap((section) => section.rows)
+          .some((row) => row.key.startsWith("reset")),
+      ).toBe(false);
+  });
+
   it("lists the credits tab from the build's credits: a row that opens a shipped licence, and plain rows", () => {
     expect(buildSettingsSections("credits", settings, environment)).toEqual([
       {
