@@ -359,7 +359,36 @@ describe("legacy screen renderer registry", () => {
       expect.anything(),
     );
     const labels = controls.map((control) => control.label);
-    expect(labels.slice(0, 3)).toEqual(["RESUME", "RESTART LESSON", "SKIP LESSON"]);
+    expect(labels.slice(0, 4)).toEqual(["RESUME", "RESTART LESSON", "SHOW DEMO", "SKIP LESSON"]);
+    // Until the demonstrations arrive SHOW DEMO is off; when they arrive (here, while paused) it turns
+    // on and no row moves, so a press aimed at MAIN MENU still lands on MAIN MENU.
+    expect(controls.find((control) => control.label === "SHOW DEMO")?.enabled).toBe(false);
+    const rows = (list: readonly ScreenControl[]) =>
+      list.filter((control) => control.x < 600).map((control) => [control.label, control.y, control.h]);
+    const before = rows(controls);
+    const arrived: ScreenControl[] = [];
+    createScreenRenderers(createRenderContext(arrived)).paused({
+      id: "paused",
+      abilities: [],
+      progress: [],
+      tutorial: {
+        ...controller.session(),
+        coach: {
+          available: true,
+          visible: false,
+          mode: "preview",
+          rate: 1,
+          diagnosis: "No attempt yet.",
+          canCompare: false,
+          reducedMotion: false,
+          tick: 0,
+          fromTick: 0,
+          toTick: 10,
+        },
+      },
+    });
+    expect(rows(arrived)).toEqual(before);
+    expect(arrived.find((control) => control.label === "SHOW DEMO")?.enabled).not.toBe(false);
     expect(labels).toEqual(expect.arrayContaining(["SETTINGS", "MAIN MENU"]));
     expect(labels.some((label) => /LOCKED|LESSON HELP|DIAGNOSTIC|PLAYBACK|UNFINISHED/.test(label))).toBe(false);
     expect(

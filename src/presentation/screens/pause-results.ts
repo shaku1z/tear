@@ -100,7 +100,7 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
     // The finished course leads into a real run. A course in progress can skip a lesson (it
     // stays unfinished and is listed for replay, never earned); skipping the whole tutorial is
     // chosen on the quit confirm that MAIN MENU opens, as leaving a run always is.
-    const menu: { label: string; action: ScreenAction }[] = [
+    const menu: { label: string; action: ScreenAction; enabled?: boolean }[] = [
       ...(complete && !lab ? [{ label: "START A RUN", action: { type: "run.quit", next: "setup" } as const }] : []),
       {
         label: complete || unfinished ? "KEEP PRACTICING" : "RESUME",
@@ -109,8 +109,16 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
       ...(exercise
         ? [{ label: "RESTART LESSON", action: { type: "tutorial.action", command: "restart" } as const }]
         : []),
-      ...(session.coach?.available && current?.canPractice && !drill
-        ? [{ label: "SHOW DEMO", action: { type: "tutorial.action", command: "demo" } as const }]
+      // The demonstrations arrive after the lesson starts (tutorial-gold-shipping.ts). The row is always
+      // there and turns on when they do, so the items below it never move under the player's pointer.
+      ...(current?.canPractice && !drill
+        ? [
+            {
+              label: "SHOW DEMO",
+              action: { type: "tutorial.action", command: "demo" } as const,
+              enabled: session.coach?.available === true,
+            },
+          ]
         : []),
       ...(current?.canPractice && session.phase !== "free-practice" && !drill
         ? [
@@ -139,6 +147,7 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
         h: menuH,
         label: item.label,
         action: item.action,
+        ...(item.enabled === false ? { enabled: false } : {}),
         size: ui.t.type.caption,
       });
     });
