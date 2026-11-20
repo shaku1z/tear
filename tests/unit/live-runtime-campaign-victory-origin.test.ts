@@ -177,6 +177,7 @@ function fixture(
     pushAction: () => undefined,
     routeAction: () => false,
     activateControl: () => false,
+    skipTutorial: () => undefined,
     controlsDrawn: () => true,
     skipCinematic: () => undefined,
     resetSemanticInput: () => undefined,

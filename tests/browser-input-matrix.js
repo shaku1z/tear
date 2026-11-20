@@ -286,13 +286,11 @@ async function firstTapLandsOnTheControlsThePlayerSaw(browser, configure) {
     });
     await page.waitForTimeout(holdFor(60));
     await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
-    await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.app.snapshot().screen !== "menu", undefined, {
-      timeout: STATE_WAIT_MS,
-    });
-    assert.equal(
-      await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.app.snapshot().screen),
-      "setup",
-      `${device.name}: the first tap on PLAY opens the run setup`,
+    // A fresh profile is tutorial-first, so PLAY starts the tutorial.
+    await page.waitForFunction(
+      () => window.__PANTHEON_TEST.state().mode === "tutorial" && window.__PANTHEON_TEST.state().game === "playing",
+      undefined,
+      { timeout: STATE_WAIT_MS },
     );
     const after = await input();
     assert.equal(after.mode, "touch", `${device.name}: touch owns the interface after a tap`);

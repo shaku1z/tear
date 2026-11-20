@@ -299,7 +299,11 @@ function marks(timeline) {
   };
 }
 
-/** PLAY -> ENDLESS -> START with real pointer or touch input on drawn labels; returns the page time of the START press. */
+/**
+ * PLAY -> SKIP TUTORIAL -> ENDLESS -> START with real pointer or touch input on drawn labels; returns the
+ * page time of the START press. A fresh profile is tutorial-first, so PLAY starts the tutorial and the
+ * player skips it on purpose from its pause menu (P on a keyboard, the drawn PAUSE on touch).
+ */
 async function pressStart(page, frame, profile) {
   const offset =
     frame === page
@@ -331,10 +335,14 @@ async function pressStart(page, frame, profile) {
     await page.waitForTimeout(holdFor(60));
     await page.mouse.up();
   };
-  for (const label of [/^PLAY$/u, /^ENDLESS$/u]) {
-    await click(await find(label));
-    await page.waitForTimeout(settleFor(700));
-  }
+  await click(await find(/^PLAY$/u));
+  await find(/^LESSON 1 OF \d+$/u);
+  if (profile.mobile) await click(await find(/^PAUSE$/u));
+  else await page.keyboard.press("KeyP");
+  await click(await find(/^SKIP TUTORIAL$/u));
+  await page.waitForTimeout(settleFor(700));
+  await click(await find(/^ENDLESS$/u));
+  await page.waitForTimeout(settleFor(700));
   const start = await find(/^START$/u);
   const pressedMs = await frame.evaluate(() => performance.now());
   await click(start);

@@ -154,9 +154,17 @@ const { STATE_WAIT_MS, clickTarget, pollEvery, settleFor, launchJourney } = requ
     }
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   };
+  // A fresh profile is tutorial-first: PLAY starts the tutorial. Skipping it on purpose from its
+  // pause menu opens the run setup with Adventure selected, and PLAY no longer leads into it.
   await clickTarget(page, "menu", "PLAY");
+  await waitForScreen("playing");
+  assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().mode), "tutorial");
+  await page.keyboard.press("p");
+  await waitForScreen("paused");
+  await clickTarget(page, "paused", "SKIP TUTORIAL");
   await waitForScreen("setup");
-  // A fresh profile is preselected onto the Tutorial; this journey plays Endless, as a player would pick it.
+  assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().setup.mode), "campaign");
+  // This journey plays Endless, as a player would pick it.
   await clickTarget(page, "setup", "ENDLESS");
   await page.waitForFunction(() => window.__PANTHEON_TEST.state().setup.mode === "endless");
   await clickTarget(page, "setup", "START");
