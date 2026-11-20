@@ -1,7 +1,62 @@
+import { bossTellProgress, type BossTell } from "../../gameplay/entities/boss-tells";
 import type { RootbinderPresentationFacts } from "../../gameplay/environment/rootbinder-presentation-facts";
+import { BOSS_TELL_INK } from "../enemies/renderers/boss-tell-renderer";
 
 /** Sizes of the Rootbinder's marks, in pixels. */
 const NODE = Object.freeze({ walking: 7, planted: 11, contrastExtra: 2, windupRing: 30, uprootedCross: 9 });
+
+/** The snare mark: how flat the ring lies on the ground, how much wider it starts, and its roots when it closes. */
+const SNARE_MARK = Object.freeze({
+  flatten: 0.3,
+  startScale: 1.6,
+  backingWidth: 9,
+  inkWidth: 4,
+  roots: 5,
+  rootRise: 0.9,
+});
+
+/**
+ * A snare mark, drawn over the floor from its tell: a ring on the ground that closes to the marked width as the
+ * warning runs out, then roots standing in it while it can still catch. Dark under bright, so it reads on any ground.
+ */
+function drawSnareTell(canvas: CanvasRenderingContext2D, tell: BossTell, highContrast: boolean): void {
+  const progress = bossTellProgress(tell);
+  const active = tell.stage === "active";
+  const groundY = tell.y + tell.hh;
+  const ink = active ? BOSS_TELL_INK.active : BOSS_TELL_INK.warning;
+  const strokes = [
+    [highContrast ? "#000000" : BOSS_TELL_INK.backing, SNARE_MARK.backingWidth],
+    [highContrast && !active ? "#ffffff" : ink, SNARE_MARK.inkWidth],
+  ] as const;
+  canvas.save();
+  canvas.setLineDash([]);
+  canvas.lineCap = "round";
+  for (const [color, width] of strokes) {
+    canvas.strokeStyle = color;
+    canvas.lineWidth = width;
+    // The marked area itself, steady, so the player sees exactly where not to stand.
+    canvas.beginPath();
+    canvas.ellipse(tell.x, groundY, tell.hw, tell.hw * SNARE_MARK.flatten, 0, 0, Math.PI * 2);
+    canvas.stroke();
+    if (active) {
+      for (let index = 0; index < SNARE_MARK.roots; index += 1) {
+        const x = tell.x - tell.hw + ((index + 0.5) * tell.hw * 2) / SNARE_MARK.roots;
+        canvas.beginPath();
+        canvas.moveTo(x, groundY);
+        canvas.lineTo(x, groundY - tell.hh * 2 * SNARE_MARK.rootRise);
+        canvas.stroke();
+      }
+    } else {
+      const scale = SNARE_MARK.startScale - (SNARE_MARK.startScale - 1) * progress;
+      canvas.setLineDash([10, 8]);
+      canvas.beginPath();
+      canvas.ellipse(tell.x, groundY, tell.hw * scale, tell.hw * scale * SNARE_MARK.flatten, 0, 0, Math.PI * 2);
+      canvas.stroke();
+      canvas.setLineDash([]);
+    }
+  }
+  canvas.restore();
+}
 
 /** Draws only immutable Rootbinder facts; no environment or gameplay state is mutated here. */
 export function renderRootbinderPresentation(
@@ -50,4 +105,5 @@ export function renderRootbinderPresentation(
     canvas.stroke();
   }
   canvas.restore();
+  for (const tell of facts.snareTells) drawSnareTell(canvas, tell, contrast);
 }
