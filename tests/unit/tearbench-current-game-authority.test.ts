@@ -30,7 +30,7 @@ import type { TearScenarioV1 } from "../../src/tearbench/contracts";
 import type { TearGameplayEvent } from "../../src/gameplay/runtime/gameplay-events";
 import { CANONICAL_ENGINEERING_SCENARIOS, materializeCanonicalScenario } from "../../src/tearbench/canonical-scenarios";
 import { ENVIRONMENT_REQUIRED_INVARIANT_IDS } from "../../src/tearbench/invariants";
-import { createProductionHeadlessEnvironment } from "../../src/tearbench/production-headless-environment";
+import { createProductionHeadlessEnvironment } from "../../src/playtest/headless/production-headless-environment";
 import { PRODUCTION_UPGRADE_BY_ID } from "../../src/tearbench/progression-synthesis-policy";
 import { validateTearContract } from "../../src/tearbench/validation";
 import {

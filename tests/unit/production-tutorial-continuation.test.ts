@@ -22,7 +22,7 @@ import {
   createProductionHeadlessEnvironment,
   type ProductionHeadlessCheckpoint,
   type ProductionTutorialHandoffArtifact,
-} from "../../src/tearbench/production-headless-environment";
+} from "../../src/playtest/headless/production-headless-environment";
 import type { TearScenarioV1, TearSnapshotV1 } from "../../src/tearbench/contracts";
 import {
   firstProductionC27AHashDivergence,

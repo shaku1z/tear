@@ -9,11 +9,11 @@ import { projectGameplayEventForParity } from "../../src/tearbench/gameplay-caus
 import {
   CANONICAL_ENGINEERING_SCENARIOS,
   createProductionGhostReplayComposition,
-  createProductionHeadlessEnvironment,
   buildExitLaunchSnapshot,
   type TearCausalEventV1,
   type TearObservationV1,
 } from "../../src/tearbench";
+import { createProductionHeadlessEnvironment } from "../../src/playtest/headless/production-headless-environment";
 
 const REPLAY_TRIDENT: GhostReplayTrident = {
   command: {

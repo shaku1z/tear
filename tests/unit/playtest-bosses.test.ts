@@ -16,8 +16,8 @@ import { isPracticeBossId } from "../../src/gameplay/training/boss-phase-practic
 import { readBoss, trainingResets, type BossView, type PlayerBox } from "../../src/playtest/boss-view";
 import { resolvePlayerDeath } from "../../src/gameplay/combat/combat-tail-runtime";
 import type { TearScenarioV1 } from "../../src/tearbench/contracts";
-import { createProductionHeadlessEnvironment } from "../../src/tearbench/production-headless-environment";
-import { requireProductionHeadlessScenario } from "../../src/tearbench/production-headless-scenario";
+import { createProductionHeadlessEnvironment } from "../../src/playtest/headless/production-headless-environment";
+import { requireProductionHeadlessScenario } from "../../src/playtest/headless/production-headless-scenario";
 
 function bossOnly(boss: BossFightRequest["boss"]): TearScenarioV1 {
   return bossFightScenario({

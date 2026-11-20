@@ -114,7 +114,7 @@
     },
     "tearbench.production-headless-entry": {
       "purpose": "The production headless environment entry, run outside any browser.",
-      "include": ["src/tearbench/production-headless-environment.ts"]
+      "include": ["src/playtest/headless/production-headless-environment.ts"]
     },
     "tearbench.portable-live-runtime": {
       "purpose": "Portable live TearBench environment and action routing.",

@@ -9,7 +9,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { stableVerificationHash } from "../../src/domain/hash";
 import type { GameAction } from "../../src/input/game-action";
 import type { TearScenarioV1 } from "../../src/tearbench/contracts";
-import { createProductionHeadlessEnvironment } from "../../src/tearbench/production-headless-environment";
+import { createProductionHeadlessEnvironment } from "../../src/playtest/headless/production-headless-environment";
 import { DIFFICULTY_IDS, RUN_MODE_IDS, WEAPON_IDS } from "../../src/tearbench/registries";
 import { playTicks } from "./property-arbitraries";
 import { checkProperty, fc } from "./property-harness";
