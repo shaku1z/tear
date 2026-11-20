@@ -7,8 +7,8 @@
  * repeat of a repeating boss strike has a warning of its own, in which the hit is off. v6: the Gauntlet is a run
  * of trials, one per boss (see `gauntlet-trials.ts`). v7: a boss body hurts only inside a declared move (the
  * Rootbound's blocks instead), and a move the target could not walk out of is not chosen. v8: a Bloom Well
- * stands on the floor and lifts whoever stands in it (the player and light enemies). v9: a run's first wave, and a wave that
- * follows a story, opens with a grace in which enemies close in but cannot attack.
+ * stands on the floor and lifts whoever stands in it (the player and light enemies). v9: a run's first wave,
+ * and a wave that follows a story, opens with a grace in which enemies close in but cannot attack.
  */
 export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v9";
 
