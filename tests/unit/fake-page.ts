@@ -6,7 +6,7 @@ export class FakeElement {
   target = "";
   rel = "";
   textContent = "";
-  readonly style = { cssText: "" };
+  readonly style = { cssText: "", display: "" };
   readonly attributes = new Map<string, string>();
   readonly listeners = new Map<string, () => void>();
   readonly children: FakeElement[] = [];

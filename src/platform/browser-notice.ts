@@ -77,6 +77,15 @@ function stackIn(document: Document): HTMLElement {
 }
 
 /**
+ * Notices show only while `visible` (the game shows them over the main menu, which has nothing in that corner).
+ * A later screen has controls in every corner, and a phone-sized one has none to spare, so a notice is never
+ * left over it; it comes back when the player returns to the menu, until they press its button.
+ */
+export function setNoticesVisible(document: Document, visible: boolean): void {
+  stackIn(document).style.display = visible ? "flex" : "none";
+}
+
+/**
  * The page's way to tell the player something. One rule, for every notice: a notice never blocks the first
  * screen. It is a small panel in a corner that takes no focus and no key presses (the game keeps both) and
  * takes pointer input only on itself, so the menu behind it works while it is showing.
