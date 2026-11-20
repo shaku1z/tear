@@ -175,7 +175,7 @@
       "src/tearbench/canonical-scenarios.json",
       "src/tearbench/evidence-routes.json",
       "tests/browser-c40-source-void-ghost-seek.js",
-      "tests/browser-c40-state-setup-source-void.js",
+      "tests/browser-state-setup-source-void.js",
       "tests/unit/c40-source-void-evidence-registry.test.ts"
     ],
     "scenarios": [
@@ -685,6 +685,7 @@
       "src/gameplay/run/campaign-stage-curve.ts",
       "src/gameplay/run/composition-budget.ts",
       "src/gameplay/run/wave-planner.ts",
+      "src/gameplay/run/wave-script.ts",
       "src/gameplay/run/gauntlet-trials.ts",
       "src/gameplay/run/spawn-scheduler.ts",
       "src/gameplay/run/live-wave-controller.ts",
@@ -694,6 +695,7 @@
       "tests/unit/verdant-stage-state-setup.test.ts",
       "tests/unit/verdant-wave-composition.test.ts",
       "tests/unit/verdant-wave-economy.test.ts",
+      "tests/unit/wave-script.test.ts",
       "tests/browser-progression-journeys.js"
     ],
     "scenarios": [
@@ -715,7 +717,7 @@
       "test-standalone"
     ],
     "authorityCommands": [
-      "pnpm exec vitest run tests/unit/campaign-stage-curve.test.ts tests/unit/verdant-stage-state-setup.test.ts tests/unit/verdant-wave-composition.test.ts tests/unit/verdant-wave-economy.test.ts"
+      "pnpm exec vitest run tests/unit/campaign-stage-curve.test.ts tests/unit/verdant-stage-state-setup.test.ts tests/unit/verdant-wave-composition.test.ts tests/unit/verdant-wave-economy.test.ts tests/unit/wave-script.test.ts"
     ],
     "journeyCommands": [
       "node tests/browser-progression-journeys.js"

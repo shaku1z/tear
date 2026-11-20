@@ -1066,7 +1066,8 @@
           "tests/unit/campaign-stage-curve.test.ts",
           "tests/unit/verdant-stage-state-setup.test.ts",
           "tests/unit/verdant-wave-composition.test.ts",
-          "tests/unit/verdant-wave-economy.test.ts"
+          "tests/unit/verdant-wave-economy.test.ts",
+          "tests/unit/wave-script.test.ts"
         ]
       },
       "claimIds": [

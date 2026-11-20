@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
-import { createGhostV3, GhostProductionReplayWorld, type GhostReplayTrident } from "../../src/ghost";
+import { createGhostV3, type GhostReplayTrident } from "../../src/ghost/truth-kernel";
+import { GhostProductionReplayWorld } from "../../src/ghost/replay-world";
 import { stableVerificationHash } from "../../src/domain/hash";
 import { captureProductionReplayCheckpoint } from "../../src/tearbench/production-replay-composition";
 import type { GameAction } from "../../src/input/game-action";

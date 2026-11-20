@@ -5,7 +5,8 @@ import {
 } from "../../src/tearbench/production-replay-composition";
 import { describe, expect, it } from "vitest";
 
-import { GhostProductionReplayWorld, createGhostV3, type GhostReplayTrident } from "../../src/ghost";
+import { GhostProductionReplayWorld } from "../../src/ghost/replay-world";
+import { createGhostV3, type GhostReplayTrident } from "../../src/ghost/truth-kernel";
 import { CONFIG } from "../../src/config/game-config";
 import { createProductionCombatSimulation, createProductionReplayWorld } from "../../src/tearbench";
 

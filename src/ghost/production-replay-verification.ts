@@ -1,6 +1,4 @@
 import { asRecord } from "../domain/records";
-import { readGhostBossMemory } from "./boss-memory-origin";
-import { verifyBossMemory } from "./boss-memory";
 import { readSeedRaceDecisions } from "./seed-race-decisions";
 import { requireGhostForkPermit, type GhostForkPermit } from "./fork-origin";
 import { replayEngine } from "./replay-engine";
@@ -292,15 +290,6 @@ export function verifyGhostCapsuleProductionReplay(
   capsule: GhostReadCapsule,
   forkPermit?: GhostForkPermit,
 ): GhostProductionReplayVerification {
-  try {
-    if (readGhostBossMemory(capsule.manifest.provenance)) return verifyBossMemory(capsule);
-  } catch (error) {
-    return {
-      status: "unavailable",
-      comparisons: [],
-      mappingIssues: [error instanceof Error ? error.message : String(error)],
-    };
-  }
   let forkOrigin;
   try {
     forkOrigin = requireGhostForkPermit(capsule, forkPermit);

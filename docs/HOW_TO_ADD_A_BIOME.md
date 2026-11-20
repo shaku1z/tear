@@ -58,6 +58,14 @@ A stage object is anything the stage or a boss places in the arena that has a li
   is a `root-link` a blade cuts, one snare is on the player at a time, and none follows a hold for the
   immunity time. An enemy's readiness must read `attackHold`, so a wave's opening grace covers it.
   `tests/unit/root-snare.test.ts` plays one scenario per way out on the real player.
+- **The stage's waves** are written on its curve in `src/gameplay/run/campaign-stage-curve.ts`, beside its
+  budget: `waves` has one row per local wave with the enemies the wave always has `first`, in spawn order,
+  optionally the ones it has `last`, and one line on what the wave is for. The shared planner puts them at
+  the head and tail of the spawn queue and fills the places between from the stage pool under the budget;
+  a stage without `waves` is only the pool. A wave that introduces an enemy lists it, and lists first
+  whatever that enemy needs (a Rootbinder's ground allies). `tests/unit/wave-script.test.ts` reads every
+  scripted stage and fails if a listed enemy is missing or out of order on any seed, if a row breaks the
+  budget, a cap or an unlock wave, or if the wave changes size.
 - **The biome feature** (`<biome>-environment-feature.ts`) advances its kinds each tick and is bound to the
   live entities in `src/gameplay/environment/biome-actors/` (one `bind-…-actors.ts` per biome, called from
   `bind-biome-actors.ts`). Bindings hand the runtime the player with `bindLiveContactTargets`.

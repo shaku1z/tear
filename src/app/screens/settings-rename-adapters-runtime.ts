@@ -5,6 +5,8 @@ import { RenameController, type RenameSnapshot } from "./rename-controller";
 import type { SettingsController, GameSettings } from "./settings-controller";
 import {
   buildSettingsSections,
+  CREDITS_TAB,
+  LICENCE_KEY_PREFIX,
   rebindNote,
   rebindRowKey,
   type KeyboardRowsState,
@@ -12,6 +14,7 @@ import {
 import { isRebindableAction, type RebindableAction } from "../../domain/keyboard-remap";
 import type { BrowserInput } from "../../input/browser-input-contracts";
 import { formatBuildLabel } from "../../platform/build-identity";
+import { creditsFor } from "../../platform/credits";
 import { musicPickChoices } from "../../audio/music/music-source";
 import { normalizeMusicSettingsTab } from "../../audio/music/settings";
 import { getMusicLibrary } from "../../audio/music/library";
@@ -89,6 +92,7 @@ const settingsTabs = [
   ["audio", "AUDIO"],
   ["video", "VIDEO"],
   ["accessibility", "ACCESS"],
+  [CREDITS_TAB, "CREDITS"],
 ] as const;
 
 export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRenameServices): SettingsRenameAdapters {
@@ -129,6 +133,12 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
   const cycle = (key: string, values: readonly string[]): void => {
     services.settingsController.cycle(key, values);
   };
+  const credits = creditsFor(d.build.target);
+  /** A credit's licence text ships with the build; it opens as a page of its own. */
+  const openLicenceText = (id: string): void => {
+    const file = credits.flatMap((group) => group.credits).find((credit) => credit.id === id)?.licenceFile;
+    if (file !== null && file !== undefined) services.window.open(file, "_blank", "noopener");
+  };
   const activate = (key: string): void => {
     const rebind = key.startsWith("rebind:") ? key.slice("rebind:".length) : null;
     if (rebind !== null && isRebindableAction(rebind)) {
@@ -158,6 +168,7 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
       services.window.open(d.privacy.stance.termsUrl, "_blank", "noopener");
     else if (key === "privacy" && d.privacy.stance.privacyUrl !== null)
       services.window.open(d.privacy.stance.privacyUrl, "_blank", "noopener");
+    else if (key.startsWith(LICENCE_KEY_PREFIX)) openLicenceText(key.slice(LICENCE_KEY_PREFIX.length));
   };
   const renderSettings = (): void => {
     // Before the tab keys: a row waiting for a key takes Q and E too.
@@ -212,6 +223,15 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
         note: d.privacy.stance.note,
         statistics: d.privacy.stance.sendsStatistics,
       },
+      credits: credits.map((group) => ({
+        label: group.label,
+        entries: group.credits.map((credit) => ({
+          id: credit.id,
+          name: credit.name,
+          note: [credit.use, credit.notice, credit.licence].filter((part) => part !== null).join(" · "),
+          hasLicenceText: credit.licenceFile !== null,
+        })),
+      })),
       presets: presetMeta,
       controllerGlyphs: [g(0), g(1), g(2), g(3)],
       keyboard,
@@ -223,6 +243,7 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
     services.renderers.settings({
       id: "settings",
       tab: settingsTab,
+      resettable: settingsTab !== CREDITS_TAB,
       tabs: settingsTabs.map(([id, label]) => ({ id, label, selected: id === settingsTab })),
       sections,
       canScrollUp: services.scroll() > 0,

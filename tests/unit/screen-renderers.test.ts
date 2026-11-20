@@ -12,11 +12,23 @@ import { buildMusicLibrary, publishMusicLibrary } from "../../src/audio/music/li
 import { setMusicProgressFacts } from "../../src/audio/music/music-source";
 import { progressFacts } from "../../src/domain/progress-facts";
 import { TEST_CHANNELS, index as musicIndex } from "./music-backend-harness";
-import { campaignDraftGuidance } from "../../src/app/run/run-screen-adapters";
 import { buildShopSnapshot, SHOP_LIST_TOP } from "../../src/presentation/shop-snapshot";
 import { DESKTOP } from "../../src/presentation/screens/codex-shop-metrics";
 import { CONFIG } from "../../src/config/game-config";
 import { TutorialController } from "../../src/gameplay/training/tutorial-controller";
+import { AppStateController } from "../../src/app/interface/app-state-controller";
+import {
+  createLiveScreenActionBindings,
+  type ScreenActionBindingPorts,
+} from "../../src/app/interface/screen-action-bindings";
+import { createSurfaceAvailability } from "../../src/domain/surface-availability";
+import type { AppScreen } from "../../src/domain/screen-catalog";
+import {
+  campaignDraftGuidance,
+  createLiveRunScreenAdapters,
+  type RunScreenServices,
+  type RunScreenState,
+} from "../../src/app/run/run-screen-adapters";
 import { backControl, tabs, verticalMenu } from "../../src/presentation/screens/screen-primitives";
 import { keyboardLabel } from "../../src/domain/keyboard-bindings";
 
@@ -347,7 +359,36 @@ describe("legacy screen renderer registry", () => {
       expect.anything(),
     );
     const labels = controls.map((control) => control.label);
-    expect(labels.slice(0, 3)).toEqual(["RESUME", "RESTART LESSON", "SKIP LESSON"]);
+    expect(labels.slice(0, 4)).toEqual(["RESUME", "RESTART LESSON", "SHOW DEMO", "SKIP LESSON"]);
+    // Until the demonstrations arrive SHOW DEMO is off; when they arrive (here, while paused) it turns
+    // on and no row moves, so a press aimed at MAIN MENU still lands on MAIN MENU.
+    expect(controls.find((control) => control.label === "SHOW DEMO")?.enabled).toBe(false);
+    const rows = (list: readonly ScreenControl[]) =>
+      list.filter((control) => control.x < 600).map((control) => [control.label, control.y, control.h]);
+    const before = rows(controls);
+    const arrived: ScreenControl[] = [];
+    createScreenRenderers(createRenderContext(arrived)).paused({
+      id: "paused",
+      abilities: [],
+      progress: [],
+      tutorial: {
+        ...controller.session(),
+        coach: {
+          available: true,
+          visible: false,
+          mode: "preview",
+          rate: 1,
+          diagnosis: "No attempt yet.",
+          canCompare: false,
+          reducedMotion: false,
+          tick: 0,
+          fromTick: 0,
+          toTick: 10,
+        },
+      },
+    });
+    expect(rows(arrived)).toEqual(before);
+    expect(arrived.find((control) => control.label === "SHOW DEMO")?.enabled).not.toBe(false);
     expect(labels).toEqual(expect.arrayContaining(["SETTINGS", "MAIN MENU"]));
     expect(labels.some((label) => /LOCKED|LESSON HELP|DIAGNOSTIC|PLAYBACK|UNFINISHED/.test(label))).toBe(false);
     expect(
@@ -1015,6 +1056,7 @@ describe("legacy screen renderer registry", () => {
     renderer.settings({
       id: "settings",
       tab: "controls",
+      resettable: true,
       tabs: [{ id: "controls", label: "CONTROLS" }],
       sections: [
         {
@@ -1081,6 +1123,7 @@ describe("legacy screen renderer registry", () => {
     createScreenRenderers(createRenderContext(controls)).settings({
       id: "settings",
       tab: "general",
+      resettable: true,
       tabs: [{ id: "general", label: "GENERAL" }],
       sections: [
         {
@@ -1095,6 +1138,22 @@ describe("legacy screen renderer registry", () => {
     const keys = controls.flatMap((control) => ("key" in control.action ? [control.action.key] : []));
     expect(keys).toContain("terms");
     expect(keys).not.toContain("version");
+  });
+
+  it("draws RESET DEFAULTS only on a tab that has settings to reset", () => {
+    const labels = (resettable: boolean): string[] => {
+      const controls: ScreenControl[] = [];
+      createScreenRenderers(createRenderContext(controls)).settings({
+        id: "settings",
+        tab: resettable ? "general" : "credits",
+        resettable,
+        tabs: [{ id: "general", label: "GENERAL" }],
+        sections: [{ label: "CREDITS", rows: [{ key: "credit:vite", label: "Vite", value: "", kind: "info" }] }],
+      });
+      return controls.map((control) => control.label);
+    };
+    expect(labels(true)).toContain("RESET DEFAULTS");
+    expect(labels(false)).not.toContain("RESET DEFAULTS");
   });
 
   it("uses the oracle replay-vault row geometry and a profile-specific watch intent", () => {
@@ -1205,7 +1264,7 @@ describe("legacy screen renderer registry", () => {
         });
     }
   });
-  it("offers a separate linked-pair download and named RESTORE BOTH while keeping the single download", () => {
+  it("offers the single download and names RESTORE BOTH for an imported linked file", () => {
     const controls: ScreenControl[] = [],
       renderer = createScreenRenderers(createRenderContext(controls));
     renderer.profile({
@@ -1222,7 +1281,6 @@ describe("legacy screen renderer registry", () => {
           detail: "Complete",
           available: true,
           canDownloadArchive: true,
-          canDownloadLinkedPair: true,
         },
       ],
       archive: {
@@ -1236,11 +1294,8 @@ describe("legacy screen renderer registry", () => {
       },
     });
     const downloads = controls.filter((control) => control.action.type === "profile.downloadGhostArchive");
-    expect(downloads).toHaveLength(2);
+    expect(downloads).toHaveLength(1);
     expect(downloads.find((c) => c.label === "DOWNLOAD")).toMatchObject({ action: { id: "parent" } });
-    expect(downloads.find((c) => c.label === "DOWNLOAD RUN + FINALE")).toMatchObject({
-      action: { id: "parent", paired: true },
-    });
     expect(controls.find((c) => c.action.type === "profile.restoreGhostArchive")).toMatchObject({
       label: "RESTORE BOTH",
       action: { id: "pair", revision: 0 },
@@ -1592,5 +1647,105 @@ describe("release and engineering surface rendering", () => {
     expect(row.map((control) => control.label)).toEqual(["THEATER", "CHALLENGE", "DOWNLOAD", "CHASE BEST"]);
     // The page pattern content column is 1120 wide.
     expect(row[3]).toMatchObject({ w: (1120 - 3 * 8) / 4 });
+  });
+});
+
+describe("leaving a run", () => {
+  /**
+   * A paused run with the real screen rules (a screen change they do not allow throws, as it stops
+   * the live game) and the real run adapter's way out of a run.
+   */
+  function pausedRun() {
+    const app = new AppStateController(createSurfaceAvailability("engineering"));
+    app.transition("playing");
+    app.transition("paused");
+    const ended: string[] = [];
+    const run = createLiveRunScreenAdapters(
+      {
+        screen: () => app.screen,
+        setScreen: (screen: AppScreen) => void app.transition(screen),
+        run: () => ({ waveLog: [] }),
+      } as unknown as RunScreenState,
+      {
+        cinema: { active: false },
+        clearFinale: () => undefined,
+        terminateRun: (reason: string) => void ended.push(reason),
+      } as unknown as RunScreenServices,
+    );
+    const kept = { skipped: false, mode: "" };
+    const ports: Partial<ScreenActionBindingPorts> = {
+      setScreen: (screen) => void app.transition(screen),
+      quitRun: (next) => {
+        run.quitRun(next);
+      },
+      skipTutorial: () => {
+        kept.skipped = true;
+      },
+      setSetupSelection: (kind, id) => {
+        if (kind === "mode") kept.mode = id;
+      },
+    };
+    return { app, ended, kept, run, dispatch: createLiveScreenActionBindings(ports as ScreenActionBindingPorts) };
+  }
+
+  it("ends the run as QUIT does, from its pause or its confirm, then opens the named screen", () => {
+    for (const from of ["paused", "confirmquit"] as const)
+      for (const next of ["menu", "setup"] as const) {
+        const { app, ended, run } = pausedRun();
+        if (from === "confirmquit") app.transition("confirmquit");
+        run.quitRun(next);
+        expect({ from, next, screen: app.screen, ended }).toEqual({ from, next, screen: next, ended: ["quit"] });
+      }
+  });
+
+  it("walks SKIP TUTORIAL from the course pause to the run setup through allowed screens only", () => {
+    const { app, ended, kept, dispatch } = pausedRun();
+    const controller = new TutorialController(CONFIG);
+    controller.start(1600);
+    const drawn = (): ScreenControl[] => {
+      const controls: ScreenControl[] = [],
+        renderer = createScreenRenderers(createControlContext(controls));
+      if (app.screen === "paused")
+        renderer.paused({ id: "paused", abilities: [], progress: [], tutorial: controller.session() });
+      else if (app.screen === "confirmquit") renderer.confirmquit({ id: "confirmquit", tutorial: "course" });
+      return controls;
+    };
+    // The player presses SKIP TUTORIAL where it is drawn, reached through MAIN MENU if the pause lacks it.
+    const pressed: string[] = [];
+    for (let step = 0; step < 3 && !kept.skipped; step += 1) {
+      const controls = drawn(),
+        control =
+          controls.find((entry) => entry.label === "SKIP TUTORIAL") ??
+          controls.find((entry) => entry.label === "MAIN MENU");
+      if (control === undefined) break;
+      pressed.push(`${app.screen}: ${control.label}`);
+      dispatch(control.action);
+    }
+    expect(app.screen).toBe("setup");
+    expect(kept).toEqual({ skipped: true, mode: "campaign" });
+    expect(ended).toEqual(["quit"]);
+    // Skipping ends the run as MAIN MENU > QUIT does: through the confirm, never from the pause.
+    expect(pressed).toEqual(["paused: MAIN MENU", "confirmquit: SKIP TUTORIAL"]);
+  });
+
+  it("starts a run from the finished course's pause, with no confirm, through allowed screens only", () => {
+    const { app, ended, kept, dispatch } = pausedRun();
+    const controller = new TutorialController(CONFIG);
+    controller.start(1600);
+    const controls: ScreenControl[] = [];
+    createScreenRenderers(createControlContext(controls)).paused({
+      id: "paused",
+      abilities: [],
+      progress: [],
+      tutorial: { ...controller.session(), phase: "free-practice", courseCompleted: true },
+    });
+    const start = controls.find((control) => control.label === "START A RUN");
+    expect(start?.action).toEqual({ type: "run.quit", next: "setup" });
+    if (start !== undefined) dispatch(start.action);
+    expect({ screen: app.screen, mode: kept.mode, ended }).toEqual({
+      screen: "setup",
+      mode: "campaign",
+      ended: ["quit"],
+    });
   });
 });

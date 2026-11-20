@@ -4,6 +4,7 @@ const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
 const { STATE_WAIT_MS, settleFor, trackScriptLoads, waitForScriptLoads, launchJourney } = require("./browser-waits");
+const { TUTORIAL_SKIPPED_STORAGE } = require("./browser-journey-harness");
 
 const scenarios = [
   { name: "desktop-16:9", width: 1600, height: 900, dpr: 1 },
@@ -170,6 +171,10 @@ async function main() {
       });
       const page = await context.newPage();
       await trackScriptLoads(page);
+      // The matrix captures the run setup through PLAY, so it plays as a player who skipped the tutorial.
+      await page.addInitScript((storage) => {
+        window.__TEAR_TEST_STORAGE__ = storage;
+      }, TUTORIAL_SKIPPED_STORAGE);
       if (scenario.name === "mobile-landscape") await recordDrawnLabels(page);
       const errors = [];
       page.on("pageerror", (error) => errors.push(error.stack || error.message));

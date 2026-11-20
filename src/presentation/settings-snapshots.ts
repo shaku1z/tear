@@ -100,12 +100,29 @@ export interface SettingsPrivacyView {
   /** Show the switch for anonymous run statistics. */
   readonly statistics: boolean;
 }
+/** The Credits tab's content as the build resolves it: the works it contains, grouped. */
+export interface SettingsCreditGroup {
+  readonly label: string;
+  readonly entries: readonly Readonly<{
+    id: string;
+    name: string;
+    /** What it is used for, its copyright line and its licence, as one line. */
+    note: string;
+    /** The licence text ships with the game and opens from the row. */
+    hasLicenceText: boolean;
+  }>[];
+}
+/** The tab id of the read-only Credits list: nothing on it is a setting to reset. */
+export const CREDITS_TAB = "credits";
+/** A credit row opens its licence text through this key prefix. */
+export const LICENCE_KEY_PREFIX = "licence:";
 export interface SettingsEnvironmentSnapshot {
   readonly lowGraphics: boolean;
   readonly touch: boolean;
   readonly installAvailable: boolean;
   readonly update: Readonly<{ ready: boolean; applying: boolean }>;
   readonly privacy: SettingsPrivacyView;
+  readonly credits: readonly SettingsCreditGroup[];
   /** The running build as the player reads it (version and short revision). */
   readonly buildLabel: string;
   readonly presets: Readonly<Record<string, ControllerPresetView>>;
@@ -134,6 +151,15 @@ export function buildSettingsSections(
   environment: SettingsEnvironmentSnapshot,
 ): SettingsSections {
   const normalizedTab = normalizeMusicSettingsTab(tab);
+  if (normalizedTab === CREDITS_TAB)
+    return environment.credits.map((group) => ({
+      label: group.label,
+      rows: group.entries.map((entry): SettingRowView =>
+        entry.hasLicenceText
+          ? { key: LICENCE_KEY_PREFIX + entry.id, label: entry.name, value: "LICENCE", kind: "cycle", note: entry.note }
+          : { key: "credit:" + entry.id, label: entry.name, value: "", kind: "info", note: entry.note },
+      ),
+    }));
   if (normalizedTab === "audio")
     return [
       {

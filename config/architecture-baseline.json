@@ -33,31 +33,6 @@
       "kind": "type"
     },
     {
-      "from": "src/ghost/boss-memory-origin.ts",
-      "to": "src/tearbench/contracts.ts",
-      "kind": "type"
-    },
-    {
-      "from": "src/ghost/boss-memory.ts",
-      "to": "src/tearbench/contracts.ts",
-      "kind": "type"
-    },
-    {
-      "from": "src/ghost/boss-memory.ts",
-      "to": "src/tearbench/gameplay-causal-events.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/ghost/boss-memory.ts",
-      "to": "src/tearbench/production-replay-composition.ts",
-      "kind": "type"
-    },
-    {
-      "from": "src/ghost/boss-memory.ts",
-      "to": "src/tearbench/state-codecs.ts",
-      "kind": "value"
-    },
-    {
       "from": "src/ghost/capsule-replay-envelope.ts",
       "to": "src/tearbench/contracts.ts",
       "kind": "type"
@@ -252,13 +227,8 @@
     [
       "src/ghost/application-frame-events.ts",
       "src/ghost/authoritative-receipt.ts",
-      "src/ghost/boss-memory-origin.ts",
-      "src/ghost/boss-memory.ts",
-      "src/ghost/capsule-archive.ts",
       "src/ghost/capsule-paired-archive.ts",
       "src/ghost/capsule-vault.ts",
-      "src/ghost/cold-restore-job.ts",
-      "src/ghost/cold-restore.ts",
       "src/ghost/finale-companion.ts",
       "src/ghost/fork-origin.ts",
       "src/ghost/live-causal-events.ts",

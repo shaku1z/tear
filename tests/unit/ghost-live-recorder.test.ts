@@ -5,14 +5,9 @@ vi.mock("../../src/ghost/indexeddb-vault-backend", () => ({
   createIndexedDbGhostVaultBackend: indexedDbBackendMock.create,
 }));
 
-import {
-  GhostLiveRecorder,
-  GhostLocalVault,
-  GhostStreamingRecorder,
-  createBrowserGhostLiveRecorder,
-  createMemoryGhostVaultBackend,
-  type GhostVaultBackend,
-} from "../../src/ghost";
+import { GhostLiveRecorder, createBrowserGhostLiveRecorder } from "../../src/ghost/live-recorder";
+import { GhostLocalVault, createMemoryGhostVaultBackend, type GhostVaultBackend } from "../../src/ghost/capsule-vault";
+import { GhostStreamingRecorder } from "../../src/ghost/streaming-recorder";
 
 describe("Ghost V3 live recorder sidecar", () => {
   it("binds pending drains to their original session and never adopts its late storage failure into a replacement", async () => {

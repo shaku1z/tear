@@ -1,6 +1,6 @@
 // One queue for heavy local commands, shared by every worktree of this repository.
 //
-//   pnpm queue -- pnpm test:unit:without-preservation-corpus
+//   pnpm queue -- pnpm test:unit:serial
 //   pnpm queue -- node tests/browser-playground-journeys.js
 //
 // Waiters are served in the order they joined, TEAR_QUEUE_SLOTS at a time (default 2). Light

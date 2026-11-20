@@ -6,7 +6,6 @@ import {
 } from "../../ghost/browser-capsule-vault";
 import type { TearGhostManifest } from "../../ghost/capsule-vault";
 import { createBrowserGhostColdRestore, type BrowserGhostColdRestorePort } from "../../ghost/browser-cold-restore";
-import { readGhostFinaleCompanion } from "../../ghost/finale-companion";
 import { NORMAL_GHOST_ARCHIVE_LIMITS } from "../../ghost/capsule-archive";
 import type { GhostColdRestoreJob } from "../../ghost/cold-restore-job";
 import { GhostColdRestoreError } from "../../ghost/cold-restore";
@@ -29,7 +28,6 @@ export interface GhostVaultLibraryCapsule {
   readonly repairChildId?: string;
   /** Player-safe, runtime-only Theater eligibility; custody remains unchanged. */
   readonly theaterEligible: boolean;
-  readonly canDownloadLinkedPair?: boolean;
   readonly theaterRefusal?: GhostTheaterOpenResult;
 }
 
@@ -49,7 +47,7 @@ export interface GhostVaultLibraryPort {
   readonly pickArchive: (jobId?: string) => void;
   readonly restoreArchive: (id: string, revision: number) => void;
   readonly cancelArchive: (id?: string, revision?: number) => void;
-  readonly downloadArchive: (id: string, paired?: boolean) => void;
+  readonly downloadArchive: (id: string) => void;
   readonly dispose: () => void;
 }
 
@@ -248,7 +246,7 @@ function createArchiveActions(options: GhostVaultLibraryControllerOptions, refre
         },
       );
     },
-    downloadArchive: (id: string, paired = false): void => {
+    downloadArchive: (id: string): void => {
       if (
         disposed ||
         !options.restore ||
@@ -260,7 +258,7 @@ function createArchiveActions(options: GhostVaultLibraryControllerOptions, refre
       clear();
       show("validating", "Validating original capsule chunks for local download…");
       void options.restore
-        .download(id, paired)
+        .download(id)
         .then((result) => {
           if (!current(token)) return;
           options.files?.download(result.bytes, `ghost-${result.binding.sha256.slice(0, 16)}.tearghost.json`);
@@ -353,34 +351,15 @@ export function createGhostVaultLibraryController(options: GhostVaultLibraryCont
       if (manifest.lineage?.relation === "repaired-from") repairedChildren.set(manifest.lineage.parentId, manifest.id);
     }
     const capsules = catalog.manifests
-      .map((manifest) => {
-        let linked = false;
-        try {
-          const declaration = readGhostFinaleCompanion(manifest.provenance);
-          linked =
-            declaration !== undefined
-              ? catalog.manifests.some((m) => m.id === declaration.parentId && m.status === "complete")
-              : catalog.manifests.filter((m) => {
-                  try {
-                    return m.status === "complete" && readGhostFinaleCompanion(m.provenance)?.parentId === manifest.id;
-                  } catch {
-                    return false;
-                  }
-                }).length === 1;
-        } catch {
-          /* Malformed declarations never expose the paired action. */
-        }
-        return Object.freeze({
-          ...capsuleView(
-            manifest,
-            health.get(manifest.id) === true,
-            repairedChildren.get(manifest.id),
-            theaterRefusals.get(manifest.id),
-            repairMetadata.get(manifest.id),
-          ),
-          canDownloadLinkedPair: linked && health.get(manifest.id) === true && manifest.status === "complete",
-        });
-      })
+      .map((manifest) =>
+        capsuleView(
+          manifest,
+          health.get(manifest.id) === true,
+          repairedChildren.get(manifest.id),
+          theaterRefusals.get(manifest.id),
+          repairMetadata.get(manifest.id),
+        ),
+      )
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
     return frozenSnapshot("ready", capsules, catalog.maintenance.evictedCapsuleIds, message);
   };

@@ -41,8 +41,6 @@ describe("surface availability policy", () => {
       { type: "setup.selectBoss", id: "warden" },
       { type: "career.control", command: "race" },
       { type: "replay.editor.toggle" },
-      { type: "replay.challenge.start", id: "boss-memory-save" },
-      { type: "profile.downloadGhostArchive", id: "c", paired: true },
     ];
     for (const action of engineering) {
       expect(screenActionSurface(action), JSON.stringify(action)).toBeDefined();

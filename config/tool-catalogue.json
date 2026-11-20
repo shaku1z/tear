@@ -173,8 +173,8 @@
       ],
       "duration": "minutes"
     },
-    "test:unit:without-preservation-corpus": {
-      "purpose": "Whole Vitest suite run serially, minus the ghost preservation corpus (used by check:local)",
+    "test:unit:serial": {
+      "purpose": "Whole Vitest suite run serially, one file at a time (used by check:local)",
       "effects": [
         "read-only"
       ],
@@ -526,13 +526,6 @@
         "launches-browser"
       ],
       "duration": "under-a-minute"
-    },
-    "test:preservation-corpus": {
-      "purpose": "Vitest ghost preservation corpus with a JSON report under artifacts/tearbench/checkpoints",
-      "effects": [
-        "writes-artifacts"
-      ],
-      "duration": "minutes"
     },
     "test:browser:ghost-vault-conditional-commit": {
       "purpose": "Browser check of Ghost Vault conditional commits",

@@ -1,7 +1,7 @@
 import { getNowPlaying, nowPlayingLabel, type NowPlaying } from "../audio/music/now-playing";
 import type { MenuScreenView, SetupScreenView } from "./screens/contracts";
 import type { SurfaceAvailability } from "../domain/surface-availability";
-import { FIRST_RUN_PLAY_LABEL, FIRST_RUN_SETUP_GUIDANCE } from "../gameplay/progression/first-run-guidance";
+import { FIRST_RUN_SETUP_GUIDANCE, tutorialPlayLabel } from "../gameplay/progression/first-run-guidance";
 
 /** `debug` is the runtime projection of an engineering-surface mode (Boss Test, Enemy Test). */
 export interface MenuModeSource {
@@ -53,8 +53,8 @@ export function menuMusicRow(state: NowPlaying): Readonly<{ label: string; detai
 
 export function buildMenuSnapshot(input: {
   readonly tutorialDone?: number;
-  /** The profile has never finished the tutorial and has no other history (see first-run-guidance). */
-  readonly firstRun?: boolean;
+  /** Set while the profile is tutorial-first (see first-run-guidance): the lesson PLAY continues at. */
+  readonly tutorialFirst?: Readonly<{ next: number; count: number }>;
   readonly username: string;
   readonly campaignEmblem: boolean;
   readonly signedIn: boolean;
@@ -80,7 +80,9 @@ export function buildMenuSnapshot(input: {
     unlocked: input.unlocked,
     modeLabel: input.modes.find((entry) => entry.id === input.selectedMode)?.label ?? "Endless",
     difficultyLabel: input.difficulties.find((entry) => entry.id === input.selectedDifficulty)?.label ?? "Normal",
-    ...(input.firstRun === true && input.selectedMode === "tutorial" ? { playSub: FIRST_RUN_PLAY_LABEL } : {}),
+    ...(input.tutorialFirst
+      ? { playSub: tutorialPlayLabel(input.tutorialFirst.next, input.tutorialFirst.count), playTutorial: true }
+      : {}),
     biome: input.biome,
     pendingFinale: input.pendingFinale,
   });

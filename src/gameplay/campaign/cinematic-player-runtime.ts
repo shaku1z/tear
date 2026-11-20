@@ -13,6 +13,8 @@ export interface CinematicRuntimePlayer {
 }
 
 export interface CinematicRuntimeBlade {
+  /** The trigger the blade reads in place of the player's input; see `stepCinematicPlayer`. */
+  lmbOverride?: boolean;
   prevTipX: number;
   prevTipY: number;
   tipX: number;
@@ -77,19 +79,7 @@ export function stepCinematicPlayer(options: CinematicPlayerRuntimeOptions): voi
     player.vy = Math.min(options.maxFall, player.vy + options.gravity * dt);
     player.y += player.vy * dt;
     player.onGround = false;
-    const landing = options.platforms.find((platform) => {
-      const eligible =
-        mode === "landing"
-          ? platform.void && platform.oneway && platform.materializationState !== "gone"
-          : platform.floor === true || platform.oneway === true;
-      return (
-        eligible &&
-        player.x + player.hw > platform.x &&
-        player.x - player.hw < platform.x + platform.w &&
-        priorBottom <= platform.y + 2 &&
-        player.y + player.hh >= platform.y
-      );
-    });
+    const landing = landingPlatform(mode, player, priorBottom, options.platforms);
     if (landing) {
       player.y = landing.y - player.hh;
       player.vy = 0;
@@ -105,7 +95,7 @@ export function stepCinematicPlayer(options: CinematicPlayerRuntimeOptions): voi
     player.vy = 0;
   }
   player.updateSafetyTimers(dt);
-  options.blade?.update(dt, player, options.platforms);
+  if (options.blade) updateBladeInCinematic(options.blade, mode, dt, player, options.platforms);
   if (
     mode === "finalBlade" &&
     options.finale?.phase === "cut" &&
@@ -120,4 +110,68 @@ export function stepCinematicPlayer(options: CinematicPlayerRuntimeOptions): voi
       speed: options.blade.tipSpeed,
     });
   }
+}
+
+/**
+ * The blade goes on moving in a cinematic, but only the finale's blade cut hands it the player's trigger. In
+ * every other beat the player is not in control, so the weapon sees the trigger released: a shot fired there
+ * (Riftlock's recoil) would move the player the cinematic is placing.
+ */
+function updateBladeInCinematic(
+  blade: CinematicRuntimeBlade,
+  mode: CinematicPlayerMode,
+  dt: number,
+  player: CinematicRuntimePlayer,
+  platforms: readonly CinematicRuntimePlatform[],
+): void {
+  if (mode === "finalBlade") {
+    blade.update(dt, player, platforms);
+    return;
+  }
+  const trigger = blade.lmbOverride;
+  blade.lmbOverride = false;
+  blade.update(dt, player, platforms);
+  if (trigger === undefined) delete blade.lmbOverride;
+  else blade.lmbOverride = trigger;
+}
+
+const LANDING_TOLERANCE = 2;
+
+/**
+ * What a landing beat puts the player on this step: the platform their feet passed through. A landing beat
+ * waits for the player to stand, so when no platform is left below their feet (knocked beside or below every
+ * one) they are brought to the nearest: moved over it while they are still above it, so they fall onto it,
+ * and set on it when they are already lower. They never fall for ever and hold the cinematic open.
+ */
+function landingPlatform(
+  mode: "landing" | "finalLanding",
+  player: CinematicRuntimePlayer,
+  priorBottom: number,
+  platforms: readonly CinematicRuntimePlatform[],
+): CinematicRuntimePlatform | undefined {
+  const eligible = platforms.filter((platform) =>
+    mode === "landing"
+      ? platform.void === true && platform.oneway === true && platform.materializationState !== "gone"
+      : platform.floor === true || platform.oneway === true,
+  );
+  const under = (platform: CinematicRuntimePlatform): boolean =>
+    player.x + player.hw > platform.x && player.x - player.hw < platform.x + platform.w;
+  const bottom = player.y + player.hh;
+  const passed = eligible.find(
+    (platform) => under(platform) && priorBottom <= platform.y + LANDING_TOLERANCE && bottom >= platform.y,
+  );
+  if (passed) return passed;
+  if (eligible.some((platform) => under(platform) && priorBottom <= platform.y + LANDING_TOLERANCE)) return undefined;
+  let nearest: CinematicRuntimePlatform | undefined;
+  let nearestDistance = Infinity;
+  for (const platform of eligible) {
+    const distance = Math.max(platform.x - player.x, 0, player.x - (platform.x + platform.w));
+    if (distance < nearestDistance) {
+      nearest = platform;
+      nearestDistance = distance;
+    }
+  }
+  if (nearest === undefined) return undefined;
+  player.x = Math.min(Math.max(player.x, nearest.x + player.hw), nearest.x + nearest.w - player.hw);
+  return bottom >= nearest.y ? nearest : undefined;
 }
