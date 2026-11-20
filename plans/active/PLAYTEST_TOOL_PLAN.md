@@ -450,7 +450,19 @@ Done when:
 Move the headless game and players under `src/playtest/`, rename State Forge to snapshots,
 delete `scripts/tearbench*.mjs`, the task registry and what is left of `src/agents`.
 
+The last `playtest -> tearbench` imports are this stage's to move (lead, 2026-11-20). The replay overhaul's
+third and fourth pull requests take the replay side (the snapshot contract and codecs, the world factory, the
+composition, the wave reward runtime and the combat simulation). What `src/playtest` still imports from
+`src/tearbench` after them, measured on main `c0270eff`: `contracts` (the scenario, observation and causal event
+types), `simulation-profile`, `validation`, `observation-identity`, `live-observation-actors`,
+`live-observation-projectiles`, `headless`, `gameplay-causal-events` and `production-replay-bootstrap-check`,
+which stays with the headless environment. They move into `src/playtest` with whatever only they use. The pull
+request that moves the last one also removes the `playtest -> tearbench` allowance from
+`config/architecture-layers.json`. The order is agreed with the replay overhaul first, so the two do not edit
+the same imports at the same time: these moves start after its fourth pull request is on main.
+
 Done when:
+- [ ] `src/playtest` imports nothing from `src/tearbench`, and `config/architecture-layers.json` no longer allows it.
 - [ ] `git grep -i tearbench` finds nothing outside `plans/completed/` and the replay code that waits for the replay overhaul.
 - [ ] Architecture and code-budget baselines are lower than before, never higher.
 - [ ] `pnpm check` passes.
