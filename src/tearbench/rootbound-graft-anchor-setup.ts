@@ -1,12 +1,12 @@
 import { launchResolvedLiveState } from "./live-state-setup-scenario-launch";
-import { forgeRootboundGraftAnchorState } from "./state-setup-factories";
+import { buildRootboundGraftAnchorState } from "./state-setup-factories";
 import { resolveTearSdl, type TearSdlDocumentV1 } from "./tearsdl";
 import type { TearLiveRestoreResult } from "./live-state-snapshot";
 import type { LiveRuntimeSnapshotController } from "./live-runtime-snapshots";
 import type { LiveTearRuntimeEnvironmentContext, TearStructuredRuntimeEnvironment } from "./live-runtime-contracts";
 
 /** Restores the C12 Graft fixture through the real Rootbound boss-only composition. */
-export function forgeRootboundGraftAnchorEnvironment(
+export function buildRootboundGraftAnchorEnvironment(
   environment: TearStructuredRuntimeEnvironment,
   snapshots: LiveRuntimeSnapshotController,
   context: LiveTearRuntimeEnvironmentContext,
@@ -19,5 +19,5 @@ export function forgeRootboundGraftAnchorEnvironment(
     seed: "rootbound-graft-anchor-destruction",
     start: { mode: "bossonly", difficulty: "normal", weapon: "sword", boss: "rootbound" },
   };
-  return launchResolvedLiveState(resolveTearSdl(forgeRootboundGraftAnchorState(base)), environment, snapshots, context);
+  return launchResolvedLiveState(resolveTearSdl(buildRootboundGraftAnchorState(base)), environment, snapshots, context);
 }

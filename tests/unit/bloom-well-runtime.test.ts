@@ -23,7 +23,7 @@ import {
   createProductionGhostReplayComposition,
 } from "../../src/tearbench/production-replay-composition";
 import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-setup-live-compiler";
-import { forgeBloomWellCycleState } from "../../src/tearbench/state-setup-factories";
+import { buildBloomWellCycleState } from "../../src/tearbench/state-setup-factories";
 import { resolveTearSdl, type TearSdlDocumentV1 } from "../../src/tearbench/tearsdl";
 import { environmentHash } from "../../src/tearbench/environment-codec";
 import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "../../src/tearbench/authored-environment-codec-validation";
@@ -248,10 +248,10 @@ describe("Bloom Well V1", () => {
       seed: "bloom-well-detached",
       start: { mode: "campaign", difficulty: "normal", weapon: "sword" },
     };
-    const forged = resolveTearSdl(
-      forgeBloomWellCycleState(base, createBloomWellState({ ...definition, ownerId: "player" }, 0)),
+    const built = resolveTearSdl(
+      buildBloomWellCycleState(base, createBloomWellState({ ...definition, ownerId: "player" }, 0)),
     );
-    const snapshot = compileResolvedTearSdlSnapshot(checkpoint.snapshot, forged);
+    const snapshot = compileResolvedTearSdlSnapshot(checkpoint.snapshot, built);
     const detached = createProductionGhostReplayComposition({ seed: "bloom-well-detached", mode: "campaign" }).create(
       snapshot,
     );

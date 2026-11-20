@@ -63,7 +63,7 @@ async function runCase(entry) {
       const played = await page.evaluate(
         async ({ scenario, yieldMs }) => {
           const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
-          const launched = environment.forgeResolvedScenario(scenario);
+          const launched = environment.buildResolvedScenario(scenario);
           if (!launched.ok) return { launched };
           let command = 1;
           let last = environment.captureSnapshot(`${scenario.document.id}-start`);

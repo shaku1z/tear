@@ -62,7 +62,7 @@ withJourney({ name: "C23 State Setup exit matrix" }, async ({ page }) => {
         difficulty: "hard",
         weapon: "hammer",
       });
-      const waveRestore = wave.forgeWave99Hammer();
+      const waveRestore = wave.buildWave99Hammer();
       const waveObservation = wave.observe();
       const waveSnapshot = wave.captureSnapshot("wave99-visible-proof", "reconstructed-reachable");
       const waveWorld = waveSnapshot.state["tear.world.v1"];
@@ -80,7 +80,7 @@ withJourney({ name: "C23 State Setup exit matrix" }, async ({ page }) => {
             boss,
           });
           seekBoss(runtime);
-          const restore = runtime.forgeExitLaunch({
+          const restore = runtime.buildExitLaunch({
             id,
             kind: "boss-phase",
             boss,
@@ -112,7 +112,7 @@ withJourney({ name: "C23 State Setup exit matrix" }, async ({ page }) => {
           );
           if (requiresBoss) seekBoss(runtime);
           if (boundary === "overlap") seekEnemy(runtime);
-          const restore = runtime.forgeExitLaunch({
+          const restore = runtime.buildExitLaunch({
             id,
             kind: "one-frame-boundary",
             boundary,

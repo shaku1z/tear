@@ -50,7 +50,7 @@ withJourney(
     });
     const result = await page.evaluate((scenario) => {
       const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
-      const launched = environment.forgeResolvedScenario(scenario);
+      const launched = environment.buildResolvedScenario(scenario);
       if (!launched.ok) return { launched };
       let id = 1;
       const command = (value) =>
