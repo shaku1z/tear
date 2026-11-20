@@ -10,6 +10,7 @@ export interface BiomeActorPlayer {
   readonly hw: number;
   readonly hh: number;
   readonly hp: number;
+  readonly onGround?: boolean;
   readonly invulnerable: boolean;
   readonly hazardDmgMult: number;
   takeDamage(damage: number, sourceX: number, source: never): unknown;

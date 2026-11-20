@@ -26,6 +26,7 @@ import {
   type GraftAnchorType,
   type RootboundGraftEffects,
 } from "./graft-anchor";
+import { isRootSnareState, RootSnares, type RootSnarePlayer, type RootSnareSource } from "./root-snare";
 import { advanceRootCage, installRootCage, isRootCageState, type RootCagePlacementRequest } from "./root-cage";
 import { createRootboundRegrowthConnections, type RootboundRegrowthState } from "./regrowth-link";
 import { publishEnvironmentEvent } from "./environment-events";
@@ -53,6 +54,7 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
   /** The live roots each planted Rootbinder holds, and how many of this planting's roots the player has cut. */
   readonly #rootLinks = new Map<string, readonly string[]>();
   readonly #rootCuts = new Map<string, number>();
+  readonly #snares = new RootSnares();
   readonly #rootbinderGenerations = new Map<string, number>();
 
   setActorSource(slot: string, source: (() => readonly unknown[]) | undefined): void {
@@ -69,16 +71,19 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
     }
     this.#rootLinks.clear();
     this.#rootCuts.clear();
+    this.#snares.clear();
     this.#rootbinderGenerations.clear();
     void environment;
   }
   replace(environment: EnvironmentFeatureContext): void {
     this.#rootLinks.clear();
     this.#rootCuts.clear();
+    this.#snares.replace(environment.combatObjects());
     const networks = new Map<string, string[]>();
     for (const object of environment.combatObjects()) {
       if (
         object.kind !== "root-link" ||
+        isRootSnareState(object) ||
         object.ownerId === null ||
         object.state === "destroyed" ||
         object.state === "expired"
@@ -247,6 +252,10 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
    */
   #advanceRootbinder(environment: EnvironmentFeatureContext, tick: number): void {
     const actors = this.#rootbinderActors?.() ?? [];
+    // Snares first: a snare the player cut counts as a cut root of its owner.
+    const snares = this.#snares.advance(environment, tick, actors.map(snareSource));
+    for (const ownerId of snares.cutOwners) this.#rootCuts.set(ownerId, (this.#rootCuts.get(ownerId) ?? 0) + 1);
+    if (snares.started !== null) this.#announceLink(environment, snares.started, tick);
     const present = new Set<string>();
     const rooted = new Set<string>();
     for (const actor of actors) {
@@ -284,7 +293,7 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
       } else if (planted && cuts === 0) {
         const claimed = new Set(rooted);
         for (const object of environment.combatObjects())
-          if (object.kind === "root-link" && object.state === "active" && object.targetId !== null)
+          if (isRootLinkToAlly(object) && object.state === "active" && object.targetId !== null)
             claimed.add(object.targetId);
         const free = ROOTBINDER_RULES.maxLinks - live.length;
         for (const ally of chooseRootTargets(actor, actor.allies, claimed, free)) {
@@ -292,23 +301,14 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
           environment.addCombatObject(link);
           live.push(link.id);
           rooted.add(ally.id);
-          if (environment.events)
-            publishEnvironmentEvent(
-              environment.events,
-              {
-                event: "combat-object-link-created",
-                objectId: link.id,
-                category: "combat-object",
-                objectKind: link.kind,
-              },
-              tick,
-            );
+          this.#announceLink(environment, link, tick);
         }
       }
       const held = Object.freeze(live);
       this.#rootLinks.set(actor.id, held);
       this.#rootCuts.set(actor.id, cuts);
-      actor.reportLinks(held);
+      const snareId = this.#snares.liveId(actor.id);
+      actor.reportLinks(snareId === undefined ? held : Object.freeze([...held, snareId]));
     }
     for (const [ownerId, ids] of this.#rootLinks)
       if (!present.has(ownerId)) {
@@ -321,6 +321,14 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
         this.#rootCuts.delete(ownerId);
       }
     for (const actor of actors) for (const ally of actor.allies) ally.setRooted(rooted.has(ally.id));
+  }
+  #announceLink(environment: EnvironmentFeatureContext, link: EnvironmentCombatObjectState, tick: number): void {
+    if (environment.events)
+      publishEnvironmentEvent(
+        environment.events,
+        { event: "combat-object-link-created", objectId: link.id, category: "combat-object", objectKind: link.kind },
+        tick,
+      );
   }
   /** A cut root: its ally staggers, and one standing in an active Well is thrown up by it. */
   #freeRootedAlly(environment: EnvironmentFeatureContext, ally: RootbinderEnvironmentAlly): void {
@@ -363,6 +371,7 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
     this.#rootbound(ownerId)?.applyGraftEffects?.(resolveRootboundGraftEffects(environment.combatObjects(), ownerId));
   }
   resolveCollisions(environment: EnvironmentFeatureContext): void {
+    this.#snares.hold(environment, (this.#rootbinderActors?.() ?? []).map(snareSource));
     for (const actor of this.#rootboundActors?.() ?? []) {
       const target = actor.player,
         request = actor.state.rootCagePlacement;
@@ -414,6 +423,24 @@ export interface RootbinderEnvironmentActor {
   readonly reportLinks: (ids: readonly string[]) => void;
   /** Called when the player has cut every root of this planting. */
   readonly uproot: () => void;
+  /** Its own clock says it may snare now, and the call that restarts that clock. */
+  readonly snareReady: boolean;
+  readonly snareStarted: () => void;
+  readonly player?: RootSnarePlayer;
+}
+function snareSource(actor: RootbinderEnvironmentActor): RootSnareSource {
+  return {
+    id: actor.id,
+    x: actor.x,
+    y: actor.y,
+    planted: actor.phase === "planted",
+    snareReady: actor.snareReady,
+    snareStarted: actor.snareStarted,
+    ...(actor.player === undefined ? {} : { player: actor.player }),
+  };
+}
+function isRootLinkToAlly(object: EnvironmentCombatObjectState): boolean {
+  return object.kind === "root-link" && !isRootSnareState(object);
 }
 export interface RootboundEnvironmentActor {
   readonly id: string;

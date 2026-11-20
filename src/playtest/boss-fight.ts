@@ -39,6 +39,8 @@ export interface BossPhaseResult {
   readonly phase: number;
   readonly ticks: number;
   readonly damageDealt: number;
+  /** Ticks in which the boss lost health: the hits the player landed. */
+  readonly hitsLanded: number;
   readonly bossHealed: number;
   readonly damageTaken: number;
   readonly hitsTaken: number;
@@ -83,6 +85,7 @@ interface MutablePhase {
   phase: number;
   ticks: number;
   damageDealt: number;
+  hitsLanded: number;
   bossHealed: number;
   damageTaken: number;
   hitsTaken: number;
@@ -153,6 +156,7 @@ function emptyPhase(phase: number): MutablePhase {
     phase,
     ticks: 0,
     damageDealt: 0,
+    hitsLanded: 0,
     bossHealed: 0,
     damageTaken: 0,
     hitsTaken: 0,
@@ -251,6 +255,7 @@ export function playBossFight(
         const bossChange = (after === null ? 0 : after.hp) - before.hp;
         if (bossChange < 0) row.damageDealt += -bossChange;
         else if (after !== null && after.phase === before.phase) row.bossHealed += bossChange;
+        row.hitsLanded += bossChange < 0 ? 1 : 0;
         if (hpAfter < hpBefore) {
           const lost = hpBefore - hpAfter;
           const source = attributeHit(boxAfter ?? box ?? { x: 0, y: 0, hw: 0, hh: 0 }, before, after);
