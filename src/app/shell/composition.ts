@@ -43,6 +43,7 @@ import type { CloudFactory } from "../../platform/cloud-factory";
 import type { TearBuildTarget } from "../../platform/contracts";
 import type { BuildIdentity } from "../../platform/build-identity";
 import { createPrivacyNotice } from "../../platform/browser-privacy-notice";
+import { setNoticesVisible } from "../../platform/browser-notice";
 import { privacyStanceFor } from "../../platform/privacy-stance";
 import { createStatisticsChoice, statisticsAllowed } from "../../platform/statistics-consent";
 import type { CrazyGamesSdkShape, createCrazyGamesPlatformServices } from "../../platform/crazygames";
@@ -375,6 +376,8 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   const practiceEncounterPersistence = createLivePracticeEncounterPersistence(PROFILE);
   const DAILY = createDailyChallenges({ achievements: ACH, profile: PROFILE, clock: localCalendarClock() });
   const APP = new AppStateController(surfaces);
+  // A notice never covers a screen with controls: it shows over the main menu only.
+  APP.subscribe((screen) => setNoticesVisible(document, screen === "menu"));
   // One rule for "plain main menu": the menu screen with no phone rotate gate drawn over it.
   const plainMainMenu = (): boolean => {
     const canvas = document.querySelector<HTMLCanvasElement>("#game");

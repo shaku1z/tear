@@ -5,7 +5,7 @@ import {
   PRIVACY_NOTICE_KEY,
   PRIVACY_NOTICE_VERSION,
 } from "../../src/platform/browser-privacy-notice";
-import { NOTICE_STACK_ID } from "../../src/platform/browser-notice";
+import { NOTICE_STACK_ID, setNoticesVisible } from "../../src/platform/browser-notice";
 
 /** The part of an element the notice uses, recorded so a test reads what the player would see. */
 class FakeElement {
@@ -15,7 +15,7 @@ class FakeElement {
   target = "";
   rel = "";
   textContent = "";
-  readonly style = { cssText: "" };
+  readonly style = { cssText: "", display: "" };
   readonly attributes = new Map<string, string>();
   readonly listeners = new Map<string, () => void>();
   readonly children: FakeElement[] = [];
@@ -110,6 +110,17 @@ describe("first-run privacy notice", () => {
     second.showIfDue();
     expect(second.acknowledged()).toBe(true);
     expect(shown(later)).toBe(0);
+  });
+
+  it("is hidden over any screen but the main menu, and comes back on the menu until OK is pressed", () => {
+    const page = fakePage();
+    createPrivacyNotice({ document: page.document, storage: fakeStorage(), privacyUrl: "/privacy" }).showIfDue();
+    const stack = () => page.body.find((element) => element.id === NOTICE_STACK_ID);
+    setNoticesVisible(page.document, false);
+    expect(stack()?.style.display).toBe("none");
+    expect(shown(page)).toBe(1);
+    setNoticesVisible(page.document, true);
+    expect(stack()?.style.display).toBe("flex");
   });
 
   it("never blocks the first screen: a corner panel that takes no focus, no keys and no input but its own", () => {
