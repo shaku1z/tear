@@ -4,7 +4,7 @@ import type { RewardSelectionSnapshot } from "../gameplay/run/reward-selection";
 import type { UpgradeDefinition } from "../gameplay/upgrades";
 import { MODE_IDS } from "../gameplay/run/mode-catalog";
 import { decodeTearCodecValue } from "./detached-world-hydrator";
-import type { TearCodecValue } from "./state-codecs";
+import type { TearCodecValue } from "../gameplay/snapshot/state-codec";
 import { readSeedLockedDraft, rollSeedLockedDraft } from "../gameplay/run/seed-locked-draft";
 
 /** Rebinds portable upgrade data to the executable production definition. */

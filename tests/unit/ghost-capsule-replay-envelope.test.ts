@@ -7,13 +7,13 @@ import { mapGhostCapsuleToReplayEnvelope } from "../../src/ghost/capsule-replay-
 import { isUnchangedGhostRead } from "../../src/ghost/capsule-reader";
 import { stableVerificationHash } from "../../src/domain/hash";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
+import { CODEC_REGISTRY } from "../../src/gameplay/snapshot/codec-ids";
 import {
-  CODEC_REGISTRY,
   captureCodecState,
   createDefaultStateCodecRegistry,
   type TearCodecWorld,
-  type TearSnapshotV1,
-} from "../../src/tearbench";
+} from "../../src/gameplay/snapshot/state-codec";
+import type { TearSnapshotV1 } from "../../src/gameplay/snapshot/snapshot-contract";
 
 function world(): TearCodecWorld {
   const result: TearCodecWorld = {

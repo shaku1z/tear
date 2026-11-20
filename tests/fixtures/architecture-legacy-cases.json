@@ -45,8 +45,8 @@
    "legacy": [
     "R03"
    ],
-   "file": "src/tearbench/environment-codec.ts",
-   "text": "import { assertAuroraTrackFieldState } from \"../gameplay/environment/aurora-track\";",
+   "file": "src/gameplay/snapshot/environment-codec.ts",
+   "text": "import { assertAuroraTrackFieldState } from \"../environment/aurora-track\";",
    "reject": true
   },
   {
@@ -61,13 +61,13 @@
    "legacy": [
     "S1"
    ],
-   "file": "src/tearbench/environment-codec.ts",
+   "file": "src/gameplay/snapshot/environment-codec.ts",
    "text": "interface AuroraTrackCarryState {}",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/tearbench/environment-codec.ts",
+   "file": "src/gameplay/snapshot/environment-codec.ts",
    "text": "interface EnvironmentExtensionState {}",
    "reject": false
   },

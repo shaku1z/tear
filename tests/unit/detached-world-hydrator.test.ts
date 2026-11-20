@@ -5,12 +5,11 @@ import { createCosmeticEmissionRandom } from "../../src/domain/cosmetic-emission
 
 import {
   hydrateTearCodecWorld,
-  type TearCodecId,
-  type TearCodecValue,
-  type TearCodecWorld,
   type TearWorldConstructionPort,
   type TearWorldHydrationContext,
 } from "../../src/tearbench";
+import type { TearCodecId } from "../../src/gameplay/snapshot/codec-ids";
+import type { TearCodecValue, TearCodecWorld } from "../../src/gameplay/snapshot/state-codec";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
 import { DEFAULT_COSMETIC_LOOKS } from "../../src/presentation/cosmetic-defaults";
 

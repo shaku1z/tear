@@ -145,7 +145,7 @@
     "src/presentation/world/status-debug.ts": {
       "largestFunctionStatements": 86
     },
-    "src/tearbench/live-codec-validation.ts": {
+    "src/gameplay/snapshot/validation.ts": {
       "largestFunctionStatements": 93
     },
     "src/tearbench/live-runtime-environment.ts": {

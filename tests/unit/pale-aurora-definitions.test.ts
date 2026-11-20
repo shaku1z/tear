@@ -13,9 +13,13 @@ import {
   ENVIRONMENT_ROUTE_KIND_IDS,
   environmentObjectDefinition,
 } from "../../src/gameplay/environment/environment-definitions";
-import { environmentHash, environmentSnapshotToObservation } from "../../src/tearbench/environment-codec";
-import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "../../src/tearbench/authored-environment-codec-validation";
-import { buildTearIdentityGraph, createDefaultStateCodecRegistry, type TearCodecWorld } from "../../src/tearbench";
+import { environmentHash, environmentSnapshotToObservation } from "../../src/gameplay/snapshot/environment-codec";
+import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "../../src/gameplay/snapshot/authored-environment-validation";
+import {
+  buildTearIdentityGraph,
+  createDefaultStateCodecRegistry,
+  type TearCodecWorld,
+} from "../../src/gameplay/snapshot/state-codec";
 import { buildEnvironmentFieldState, buildEnvironmentRouteState } from "../../src/tearbench/state-setup-factories";
 
 const field = createAuroraTrackFieldState({

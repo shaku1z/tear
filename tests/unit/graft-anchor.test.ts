@@ -15,8 +15,8 @@ import {
 import { ENVIRONMENT_OBJECT_DEFINITIONS } from "../../src/gameplay/environment/environment-definitions";
 import { ENVIRONMENT_FADE_TICKS } from "../../src/gameplay/environment/environment-contracts";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
-import { environmentSnapshotToObservation } from "../../src/tearbench/environment-codec";
-import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "../../src/tearbench/authored-environment-codec-validation";
+import { environmentSnapshotToObservation } from "../../src/gameplay/snapshot/environment-codec";
+import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "../../src/gameplay/snapshot/authored-environment-validation";
 import { buildRootboundGraftAnchorState } from "../../src/tearbench/state-setup-factories";
 import type { TearSdlDocumentV1 } from "../../src/tearbench/tearsdl";
 

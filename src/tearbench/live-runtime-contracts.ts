@@ -6,7 +6,7 @@ import type { TearSemanticEngineEventV1 } from "./gameplay-causal-events";
 import type { RunRandomStreamsSnapshot } from "../simulation/run-random";
 import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
 import type { TearCausalEventV1, TearObservationV1, TearScenarioV1 } from "./contracts";
-import type { TearSnapshotV1, TearStateClass } from "./contracts";
+import type { TearSnapshotV1, TearStateClass } from "../gameplay/snapshot/snapshot-contract";
 import type { EnvironmentRuntimeState } from "../gameplay/environment/environment-contracts";
 import type {
   BloomWellPresentationFacts,

@@ -14,7 +14,7 @@ import {
 import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-setup-live-compiler";
 import { PALE_STAGE_ENGINEERING_TEARSDL } from "../../src/tearbench/pale-stage-engineering-scenario";
 import { resolveTearSdl } from "../../src/tearbench/tearsdl";
-import type { TearSnapshotV1 } from "../../src/tearbench/contracts";
+import type { TearSnapshotV1 } from "../../src/gameplay/snapshot/snapshot-contract";
 
 function sourceSnapshot(): TearSnapshotV1 {
   const source = createProductionGhostReplayComposition({ seed: "pale-stage-wave-41", mode: "campaign" }).create(

@@ -4,8 +4,8 @@ import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime
 import { createLiveTearRuntimeEnvironment } from "../../src/tearbench/live-runtime-environment";
 import type { LiveTearRuntimeEnvironmentContext } from "../../src/tearbench/live-runtime-contracts";
 import type { TearProgressionLedger } from "../../src/tearbench/progression-ledger";
-import type { TearCodecId } from "../../src/tearbench/registries";
-import type { TearCodecValue, TearCodecWorld } from "../../src/tearbench/state-codecs";
+import type { TearCodecId } from "../../src/gameplay/snapshot/codec-ids";
+import type { TearCodecValue, TearCodecWorld } from "../../src/gameplay/snapshot/state-codec";
 
 function sourceWorld(): TearCodecWorld {
   const components = new Map<TearCodecId, TearCodecValue>();

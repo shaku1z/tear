@@ -1,18 +1,18 @@
 import { describe, expect, it } from "vitest";
+import { ENVIRONMENT_OBJECT_KIND_REGISTRY, runInvariantChecks, type TearObservationV1 } from "../../src/tearbench";
 import {
-  ENVIRONMENT_OBJECT_KIND_REGISTRY,
   createDefaultStateCodecRegistry,
   createLiveStateCodec,
   TearStateCodecRegistry,
   buildTearIdentityGraph,
   restoreSnapshotTransactionally,
+  type TearCodecWorld,
+} from "../../src/gameplay/snapshot/state-codec";
+import {
   environmentHash,
   projectEnvironmentSemanticSnapshot,
   environmentSnapshotToObservation,
-  runInvariantChecks,
-  type TearCodecWorld,
-  type TearObservationV1,
-} from "../../src/tearbench";
+} from "../../src/gameplay/snapshot/environment-codec";
 import { stableVerificationHash } from "../../src/domain/hash";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 import type { EnvironmentSnapshot } from "../../src/gameplay/environment/environment-contracts";

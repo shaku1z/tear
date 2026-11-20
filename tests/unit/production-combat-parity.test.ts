@@ -16,7 +16,7 @@ import {
   createProductionReplayWorld,
 } from "../../src/tearbench";
 import { createProductionCombatPhases } from "../../src/tearbench/production-combat-phases";
-import { environmentHash, environmentSnapshotToObservation } from "../../src/tearbench";
+import { environmentHash, environmentSnapshotToObservation } from "../../src/gameplay/snapshot/environment-codec";
 import { RunDnaObserver } from "../../src/gameplay/runtime/run-dna-observer";
 import { UPGRADES, applyUpgrade } from "../../src/gameplay/upgrades";
 import { GhostLiveRecorder } from "../../src/ghost/live-recorder";

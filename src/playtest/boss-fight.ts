@@ -4,7 +4,8 @@ import type { BossId } from "../gameplay/run/content-director";
 import type { RunDifficulty } from "../gameplay/run/session";
 import { isPracticeBossId, isPracticeBossPhase } from "../gameplay/training/boss-phase-practice-runtime";
 import type { WeaponId } from "../gameplay/weapon-selection";
-import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION, type TearScenarioV1 } from "../tearbench/contracts";
+import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "../gameplay/snapshot/snapshot-contract";
+import type { TearScenarioV1 } from "../tearbench/contracts";
 import { requireProductionHeadlessScenario } from "./headless/production-headless-scenario";
 import { TEAR_SIMULATION_TICKS_PER_SECOND } from "../tearbench/simulation-profile";
 import {

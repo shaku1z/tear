@@ -1,4 +1,4 @@
-import type { TearCodecValue } from "../../src/tearbench/state-codecs";
+import type { TearCodecValue } from "../../src/gameplay/snapshot/state-codec";
 import { createLiveEconomyRuntime } from "../../src/gameplay/scoring/live-economy-runtime";
 import { LiveRecordingController } from "../../src/gameplay/run/live-recording-controller";
 import { provisionalCareerEntry } from "../../src/ghost/career-archive";
@@ -13,7 +13,7 @@ import {
   captureProductionReplayCheckpoint,
   restoreProductionReplaySnapshot,
 } from "../../src/tearbench/production-replay-composition";
-import { declareSeedRace, readSeedRaceRun, seedRaceInitialBuildHash } from "../../src/ghost/seed-race-contract";
+import { declareSeedRace, readSeedRaceRun, seedRaceInitialBuildHash } from "../../src/gameplay/run/seed-race-contract";
 import { stableVerificationHash } from "../../src/domain/hash";
 import { legalSeedRaceUpgrade, type SeedRaceRun } from "../../src/gameplay/run/seed-locked-draft";
 import { createRewardRuntime } from "../../src/gameplay/run/reward-runtime";
