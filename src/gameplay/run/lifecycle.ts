@@ -1,3 +1,5 @@
+import { isRecord } from "../../domain/records";
+
 export type RunPhase =
   | "idle"
   | "preparing"
@@ -85,13 +87,9 @@ export function initialRunLifecycleSnapshot(): RunLifecycleSnapshot {
   });
 }
 
-function lifecycleRecord(value: unknown): value is Readonly<Record<string, unknown>> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 /** Strictly validates a serialized lifecycle before it can poison a restored world. */
 export function validateRunLifecycleSnapshot(value: unknown): RunLifecycleSnapshot {
-  if (!lifecycleRecord(value)) throw new TypeError("run lifecycle snapshot must be an object");
+  if (!isRecord(value)) throw new TypeError("run lifecycle snapshot must be an object");
   if (typeof value.phase !== "string" || !RUN_PHASES.some((phase) => phase === value.phase)) {
     throw new TypeError("run lifecycle phase is invalid");
   }

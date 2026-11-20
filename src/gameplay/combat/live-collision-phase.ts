@@ -1,5 +1,6 @@
 import type { TutorialAttemptFact } from "../training/tutorial-failure-coach";
 import type { CONFIG as GameConfiguration } from "../../config/game-config";
+import { isObject } from "../../domain/records";
 import type {
   HeldBladeCollisionInput,
   HeldBladeEnemy,
@@ -521,9 +522,9 @@ function runParries(host: LiveCollisionPhaseHost, held: HeldBladeCollisionInput[
       logPerfectParry: (source) => {
         if (host.blade.weapon?.id === "riftlock")
           host.blade.refillRiftChambers(config.weapons.riftlock.perfectParryRefill);
-        if (host.blade.weapon?.id === "sword" && source && typeof source === "object") host.blade.primeReversal(source);
+        if (host.blade.weapon?.id === "sword" && isObject(source)) host.blade.primeReversal(source);
         host.logWeapon("perfectParry", {
-          source: source && typeof source === "object" && "kind" in source ? Reflect.get(source, "kind") : undefined,
+          source: isObject(source) && "kind" in source ? Reflect.get(source, "kind") : undefined,
         });
       },
       projectileDeflected: (projectile) => {

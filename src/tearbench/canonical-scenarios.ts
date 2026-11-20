@@ -1,3 +1,4 @@
+import { isRecord } from "../domain/records";
 import {
   TEAR_CONTRACT_FORMAT,
   TEAR_CONTRACT_VERSION,
@@ -45,7 +46,7 @@ type CanonicalCatalogEntryWithStructuredAssertions = CanonicalCatalogEntry & {
 const GENERIC_ENVIRONMENT_SUBJECT_IDS = new Set(["generic-field", "generic-combat-object"]);
 
 function stateSetupDocumentId(value: unknown): unknown {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+  if (!isRecord(value)) return undefined;
   const documentId: unknown = Reflect.get(value, "documentId");
   return documentId;
 }

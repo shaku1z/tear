@@ -1,3 +1,5 @@
+import { asRecord } from "../../domain/records";
+
 export interface BestScore {
   readonly wave: number;
   readonly score: number;
@@ -22,8 +24,8 @@ function decode(serialized: string | null): BestScore {
   if (serialized === null) return { wave: 0, score: 0, time: 0 };
   try {
     const value: unknown = JSON.parse(serialized);
-    if (typeof value !== "object" || value === null) return { wave: 0, score: 0, time: 0 };
-    const record = value as Record<string, unknown>;
+    const record = asRecord(value);
+    if (!record) return { wave: 0, score: 0, time: 0 };
     return {
       wave: nonnegative(record.wave),
       score: nonnegative(record.score),
