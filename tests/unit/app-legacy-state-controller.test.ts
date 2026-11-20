@@ -107,4 +107,14 @@ describe("AppStateController transition matrix", () => {
     expect(() => controller.transition("playing")).toThrow(IllegalLegacyAppTransitionError);
     expect(controller.transition("playing", { practiceLaunch: true, runId: "practice-child" })).toBe("playing");
   });
+
+  it("tells a subscriber the new screen after each change, and not when the screen stays", () => {
+    const controller = new AppStateController(ENGINEERING);
+    const seen: AppScreen[] = [];
+    controller.subscribe((screen) => seen.push(screen));
+    controller.transition("playing");
+    controller.transition("playing");
+    controller.transition("paused");
+    expect(seen).toEqual(["playing", "paused"]);
+  });
 });

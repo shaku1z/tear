@@ -53,6 +53,7 @@ function fixture(serialized: string | null = null) {
     input: { forceMode: "auto", touchAimMode: "stick" },
     gamepad: { setPreset: vi.fn((value: string) => (value === "known" ? value : "default")) },
     audio,
+    statistics: { share: true },
     store: {
       get: (key: string) => values.get(key) ?? null,
       set: (key: string, value: string) => values.set(key, value),
@@ -74,6 +75,29 @@ describe("SettingsController", () => {
     expect(controller.settings).toBe(identity);
     expect(controller.settings.shake).toBe(0.4);
     expect(controller.shakeScale).toBeCloseTo(0.072);
+  });
+
+  it("starts statistics on, applies a stored opt-out at load, and writes each toggle to the shared choice", () => {
+    const fresh = fixture(null);
+    const first = new SettingsController(fresh.dependencies);
+    expect(first.settings.shareStatistics).toBe(true);
+    expect(fresh.dependencies.statistics.share).toBe(true);
+    expect(first.toggle("shareStatistics")).toBe(true);
+    expect(fresh.dependencies.statistics.share).toBe(false);
+    expect(JSON.parse(fresh.values.get("tear_settings") ?? "{}")).toMatchObject({ shareStatistics: false });
+
+    const returning = fixture(JSON.stringify({ shareStatistics: false }));
+    new SettingsController(returning.dependencies);
+    expect(returning.dependencies.statistics.share).toBe(false);
+  });
+
+  it("never turns statistics back on when the game's settings are reset", () => {
+    const test = fixture(JSON.stringify({ shareStatistics: false, shake: 0.5 }));
+    const controller = new SettingsController(test.dependencies);
+    controller.reset();
+    expect(controller.settings.shake).toBe(1);
+    expect(controller.settings.shareStatistics).toBe(false);
+    expect(test.dependencies.statistics.share).toBe(false);
   });
 
   it("sanitizes controller tuning and applies automatic low-end quality", () => {

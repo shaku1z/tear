@@ -21,7 +21,7 @@ import { buildMusicScreenView } from "../../presentation/music-snapshots";
 
 type Dependencies = Pick<
   GameRuntimeDependencies,
-  "APP" | "GFX" | "Input" | "PAD" | "PROFILE" | "Cloud" | "PwaUpdate" | "UI" | "build"
+  "APP" | "GFX" | "Input" | "PAD" | "PROFILE" | "Cloud" | "PwaUpdate" | "UI" | "build" | "privacy"
 >;
 type Renderers = ReturnType<typeof createLiveScreenRenderers>;
 
@@ -154,9 +154,10 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
     else if (key === "guide") services.setCodexGuide();
     else if (key === "install" && services.installPrompt.available) services.installPrompt.prompt();
     else if (key === "update") void d.PwaUpdate.apply();
-    else if (key === "terms")
-      services.window.open("https://www.crazygames.com/terms-and-conditions", "_blank", "noopener");
-    else if (key === "privacy") services.window.open("https://www.crazygames.com/privacy", "_blank", "noopener");
+    else if (key === "terms" && d.privacy.stance.termsUrl !== null)
+      services.window.open(d.privacy.stance.termsUrl, "_blank", "noopener");
+    else if (key === "privacy" && d.privacy.stance.privacyUrl !== null)
+      services.window.open(d.privacy.stance.privacyUrl, "_blank", "noopener");
   };
   const renderSettings = (): void => {
     // Before the tab keys: a row waiting for a key takes Q and E too.
@@ -205,6 +206,12 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
       installAvailable: services.installPrompt.available,
       update: d.PwaUpdate.snapshot(),
       buildLabel: formatBuildLabel(d.build),
+      privacy: {
+        privacyLink: d.privacy.stance.privacyUrl !== null,
+        termsLink: d.privacy.stance.termsUrl !== null,
+        note: d.privacy.stance.note,
+        statistics: d.privacy.stance.sendsStatistics,
+      },
       presets: presetMeta,
       controllerGlyphs: [g(0), g(1), g(2), g(3)],
       keyboard,
