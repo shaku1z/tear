@@ -1,167 +1,122 @@
 import { describe, expect, it } from "vitest";
 import {
-  ROOTBINDER_TIMING,
-  activateElasticLeash,
+  ROOTBINDER_RULES,
   advanceRootbinder,
-  applyElasticLeashForce,
-  breakElasticLeash,
-  createElasticLeash,
-  createRootNetwork,
+  chooseRootTargets,
+  createRootLink,
   createRootbinderState,
-  isElasticLeashValid,
-  redistributeRootNetworkKnockback,
-  type RootbinderCandidate,
+  rootbinderIsOpen,
+  rootbinderStandsStill,
+  rootbinderWindup,
+  uprootRootbinder,
+  type RootbinderAlly,
+  type RootbinderPhase,
 } from "../../src/gameplay/entities/rootbinder-runtime";
 
-const rootbinder = createRootbinderState({ id: "rb-1", worldId: "world-a", stageId: "stage-1", x: 400, y: 420 });
+const RULES = ROOTBINDER_RULES;
+const FAR = { playerDistance: RULES.standoff, links: 0 };
+const NEAR = { playerDistance: RULES.standoff - 1, links: 0 };
+const planted = () => advanceRootbinder(createRootbinderState(), RULES.walkTicks + RULES.plantWindupTicks, FAR);
+const ally = (id: string, x: number, rootable = true): RootbinderAlly => ({ id, x, y: 0, rootable });
 
-describe("Rootbinder runtime", () => {
-  it("owns the deterministic reposition through recover state machine", () => {
-    expect(rootbinder.state).toBe("reposition");
-    expect(rootbinder.transitionTick).toBe(ROOTBINDER_TIMING.repositionTicks);
-    const planted = advanceRootbinder(
-      rootbinder,
-      ROOTBINDER_TIMING.repositionTicks + ROOTBINDER_TIMING.plantWindupTicks + ROOTBINDER_TIMING.plantedTicks,
-    );
-    expect(planted.state).toBe("link-warning");
-    expect(planted.transitionTick).toBe(planted.stateTick + ROOTBINDER_TIMING.linkWarningTicks);
-    const linked = advanceRootbinder(planted, ROOTBINDER_TIMING.linkWarningTicks);
-    expect(linked.state).toBe("linked");
-    expect(linked.transitionTick).toBe(linked.stateTick + ROOTBINDER_TIMING.linkedTicks);
-    expect(advanceRootbinder(linked, ROOTBINDER_TIMING.linkedTicks).state).toBe("broken");
+describe("Rootbinder phases", () => {
+  it("walks, winds up and plants on exact ticks when the player is far enough", () => {
+    let state = createRootbinderState();
+    state = advanceRootbinder(state, RULES.walkTicks - 1, FAR);
+    expect(state.state).toBe("walk");
+    state = advanceRootbinder(state, 1, FAR);
+    expect(state).toMatchObject({ state: "plant-windup", stateTick: RULES.walkTicks });
+    state = advanceRootbinder(state, RULES.plantWindupTicks - 1, FAR);
+    expect(state.state).toBe("plant-windup");
+    expect(advanceRootbinder(state, 1, FAR).state).toBe("planted");
   });
 
-  it("accumulates incremental authoritative fixed steps between render frames", () => {
-    let current = rootbinder;
-    for (let tick = 0; tick < ROOTBINDER_TIMING.repositionTicks; tick += 1) current = advanceRootbinder(current, 1);
-    expect(current.state).toBe("plant-windup");
-    expect(current.simulationTick).toBe(ROOTBINDER_TIMING.repositionTicks);
-    expect(current.transitionTick).toBe(ROOTBINDER_TIMING.repositionTicks + ROOTBINDER_TIMING.plantWindupTicks);
+  it("keeps walking while the player is close, and plants anyway after the longest walk", () => {
+    let state = advanceRootbinder(createRootbinderState(), RULES.maxWalkTicks - 1, NEAR);
+    expect(state.state).toBe("walk");
+    state = advanceRootbinder(state, 1, NEAR);
+    expect(state.state).toBe("plant-windup");
   });
 
-  it("warns with geometry first and applies finite bounded pull without stealing controls", () => {
-    const leash = createElasticLeash({
-      id: "leash-1",
-      worldId: "world-a",
-      stageId: "stage-1",
-      sourceId: "rb-1",
-      playerId: "player",
-      sourceX: 100,
-      sourceY: 200,
-      playerX: 300,
-      playerY: 200,
-      radius: 120,
-    });
-    expect(leash.state).toBe("warning");
-    expect(leash.geometry).toMatchObject({ x: 100, y: 200, radius: 120 });
-    const player = { x: 300, y: 200, vx: 11, vy: -8, jumpEnabled: true, dashEnabled: true };
-    expect(applyElasticLeashForce(leash, player)).toEqual(player);
-    const moved = applyElasticLeashForce(activateElasticLeash(leash, 48), player);
-    expect(Number.isFinite(moved.vx) && Number.isFinite(moved.vy)).toBe(true);
-    expect(Math.abs(moved.vx - player.vx)).toBeLessThanOrEqual(leash.force.magnitude);
-    expect(moved.jumpEnabled).toBe(true);
-    expect(moved.dashEnabled).toBe(true);
-    expect(moved.vx).not.toBe(0);
-    const fixedStep = applyElasticLeashForce(
-      activateElasticLeash(leash, 48),
-      player,
-      1 / ROOTBINDER_TIMING.ticksPerSecond,
-    );
-    expect(Math.abs(fixedStep.vx - player.vx)).toBeLessThanOrEqual(
-      leash.force.magnitude / ROOTBINDER_TIMING.ticksPerSecond,
-    );
+  it("stays planted for as long as it holds a root, and pulls up after standing idle", () => {
+    const held = advanceRootbinder(planted(), RULES.idlePlantedTicks * 3, { ...FAR, links: 1 });
+    expect(held.state).toBe("planted");
+    expect(advanceRootbinder(held, RULES.idlePlantedTicks - 1, FAR).state).toBe("planted");
+    expect(advanceRootbinder(held, RULES.idlePlantedTicks, FAR).state).toBe("walk");
   });
 
-  it("rejects invalid leash references and builds a bounded partial network", () => {
-    expect(() =>
-      createElasticLeash({
-        id: "bad",
-        worldId: "world-a",
-        stageId: "stage-1",
-        sourceId: "rb-1",
-        playerId: "player",
-        sourceX: 0,
-        sourceY: 0,
-        playerX: 0,
-        playerY: 0,
-        radius: 0,
-      }),
-    ).toThrow();
-    const candidate = (id: string, overrides: Partial<RootbinderCandidate> = {}): RootbinderCandidate => ({
-      id,
-      worldId: "world-a",
-      stageId: "stage-1",
-      kind: "ordinary",
-      x: 100,
-      y: 100,
-      dead: false,
-      dying: false,
-      ...overrides,
-    });
-    const segments = createRootNetwork(
-      { id: "network-1", worldId: "world-a", stageId: "stage-1", ownerId: "rb-1", sourceX: 0, sourceY: 0 },
-      [
-        candidate("a"),
-        candidate("b"),
-        candidate("rb", { kind: "rootbinder" }),
-        candidate("boss", { kind: "boss" }),
-        candidate("dead", { dead: true }),
-      ],
-    );
-    expect(segments).toHaveLength(2);
-    expect(segments.every((segment) => !segment.procEligible && segment.ownerId === "rb-1")).toBe(true);
-    expect(new Set(segments.map((segment) => segment.targetId)).size).toBe(2);
+  it("is uprooted only while planting or planted, then recovers before it may plant again", () => {
+    expect(uprootRootbinder(createRootbinderState()).state).toBe("walk");
+    const winding = advanceRootbinder(createRootbinderState(), RULES.walkTicks, FAR);
+    expect(uprootRootbinder(winding).state).toBe("uprooted");
+    let state = uprootRootbinder(planted());
+    expect(state.state).toBe("uprooted");
+    expect(uprootRootbinder(state)).toBe(state);
+    state = advanceRootbinder(state, RULES.uprootedTicks, FAR);
+    expect(state.state).toBe("recover");
+    expect(advanceRootbinder(state, RULES.recoverTicks - 1, FAR).state).toBe("recover");
+    expect(advanceRootbinder(state, RULES.recoverTicks, FAR).state).toBe("walk");
   });
 
-  it("breaks links on sever, death, stage mismatch, invalidity, or natural expiry", () => {
-    const leash = createElasticLeash({
-      id: "leash-2",
-      worldId: "world-a",
-      stageId: "stage-1",
-      sourceId: "rb-1",
-      playerId: "player",
-      sourceX: 0,
-      sourceY: 0,
-      playerX: 150,
-      playerY: 0,
-      radius: 100,
-    });
-    const valid = {
-      worldId: "world-a",
-      stageId: "stage-1",
-      currentTick: 10,
-      expiryTick: 100,
-      sourceAlive: true,
-      playerAlive: true,
-      severed: false,
-    };
-    expect(isElasticLeashValid(activateElasticLeash(leash, 1), valid)).toBe(true);
-    expect(isElasticLeashValid(leash, { ...valid, stageId: "stage-2" })).toBe(false);
-    expect(isElasticLeashValid({ ...leash, state: "expired" }, valid)).toBe(false);
-    expect(breakElasticLeash(leash, "sever")).toMatchObject({
-      state: "destroyed",
-      integrity: 0,
-      cleanupReason: "disposal",
-    });
-    expect(breakElasticLeash(leash, "death").cleanupReason).toBe("defeat");
-    expect(breakElasticLeash(leash, "natural-expiry").cleanupReason).toBe("natural-expiry");
+  it("is the same whether advanced in one call or tick by tick, and rejects a bad tick count", () => {
+    let stepped = createRootbinderState();
+    for (let tick = 0; tick < 500; tick += 1) stepped = advanceRootbinder(stepped, 1, FAR);
+    expect(stepped).toEqual(advanceRootbinder(createRootbinderState(), 500, FAR));
+    expect(() => advanceRootbinder(createRootbinderState(), -1, FAR)).toThrow(RangeError);
+    expect(() => advanceRootbinder(createRootbinderState(), 0.5, FAR)).toThrow(RangeError);
   });
 
-  it("redistributes only bounded partial knockback and never anchors allies", () => {
-    const result = redistributeRootNetworkKnockback({
-      x: 0,
-      y: 0,
-      vx: 120,
-      vy: -240,
-      weight: 1,
-      maxRedistribution: 80,
-      edgeDistance: 20,
+  it("names the phases in which it stands still and in which it is open, and how far its wind-up is", () => {
+    const phases: readonly RootbinderPhase[] = ["walk", "plant-windup", "planted", "uprooted", "recover"];
+    expect(phases.filter(rootbinderStandsStill)).toEqual(["plant-windup", "planted", "uprooted"]);
+    expect(phases.filter(rootbinderIsOpen)).toEqual(["planted", "uprooted"]);
+    const winding = advanceRootbinder(createRootbinderState(), RULES.walkTicks + RULES.plantWindupTicks / 2, FAR);
+    expect(rootbinderWindup(winding)).toBe(0.5);
+    expect(rootbinderWindup(createRootbinderState())).toBe(0);
+    expect(rootbinderWindup(planted())).toBe(0);
+  });
+
+  it("gives the player a wind-up long enough to read", () => {
+    expect(RULES.plantWindupTicks / RULES.ticksPerSecond).toBeGreaterThanOrEqual(0.45);
+  });
+});
+
+describe("Rootbinder root targets", () => {
+  const source = { x: 0, y: 0 };
+
+  it("takes the nearest rootable allies in reach, up to the free places", () => {
+    const allies = [ally("c", 300), ally("a", 100), ally("b", 200), ally("far", RULES.linkReach + 1)];
+    expect(chooseRootTargets(source, allies, new Set(), 2).map((entry) => entry.id)).toEqual(["a", "b"]);
+    expect(chooseRootTargets(source, allies, new Set(), 9).map((entry) => entry.id)).toEqual(["a", "b", "c"]);
+    expect(chooseRootTargets(source, allies, new Set(), 0)).toEqual([]);
+  });
+
+  it("skips an ally that cannot be rooted or that a root already holds", () => {
+    const allies = [ally("a", 100, false), ally("b", 200), ally("c", 300)];
+    expect(chooseRootTargets(source, allies, new Set(["b"]), 2).map((entry) => entry.id)).toEqual(["c"]);
+  });
+
+  it("breaks a tie by id, whatever order the allies come in", () => {
+    const one = [ally("b", 100), ally("a", -100)];
+    const other = [...one].reverse();
+    expect(chooseRootTargets(source, one, new Set(), 1).map((entry) => entry.id)).toEqual(["a"]);
+    expect(chooseRootTargets(source, other, new Set(), 1).map((entry) => entry.id)).toEqual(["a"]);
+  });
+
+  it("makes each root the shared severable root-link, live at once and cut by one hit", () => {
+    const link = createRootLink({ id: "r:1", ownerId: "binder", tick: 7, source }, ally("a", 100));
+    expect(link).toMatchObject({
+      kind: "root-link",
+      ownerId: "binder",
+      targetId: "a",
+      state: "active",
+      stateTick: 7,
+      integrity: 1,
+      cleanupReason: null,
     });
-    expect(Math.abs(result.vx)).toBeLessThanOrEqual(200);
-    expect(Math.abs(result.vy)).toBeLessThanOrEqual(320);
-    expect(result.vx !== 0 || result.vy !== 0).toBe(true);
-    expect(result.anchored).toBe(false);
-    expect(result.damageReduction).toBe(1);
-    expect(result.preventDeath).toBe(false);
+    expect(link.geometry.points).toEqual([
+      { x: 0, y: 0 },
+      { x: 100, y: 0 },
+    ]);
   });
 });

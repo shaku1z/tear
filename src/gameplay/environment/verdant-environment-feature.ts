@@ -2,22 +2,19 @@ import type { EnvironmentFeature, EnvironmentFeatureContext } from "./environmen
 import {
   applyBloomWellForce,
   advanceBloomWell,
+  bloomWellContains,
   installRootboundBloomPattern,
   isBloomWellState,
   type BloomWellActor,
   type RootboundBloomPatternId,
 } from "./bloom-well";
 import {
-  applyElasticLeashForce,
-  createElasticLeash,
-  createRootNetwork,
-  installRootNetwork,
-  isElasticLeashValid,
-  isRootbinderLineValid,
-  redistributeRootNetworkKnockback,
-  type ElasticLeash,
-  type RootbinderCandidate,
-  type RootbinderState,
+  chooseRootTargets,
+  createRootLink,
+  ROOTBINDER_RULES,
+  rootLinkGeometry,
+  type RootbinderAlly,
+  type RootbinderPhase,
 } from "../entities/rootbinder-runtime";
 import {
   advanceGraftAnchor,
@@ -53,9 +50,9 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
   #bloomActors: (() => readonly BloomWellActor[]) | undefined;
   #rootbinderActors: (() => readonly RootbinderEnvironmentActor[]) | undefined;
   #rootboundActors: (() => readonly RootboundEnvironmentActor[]) | undefined;
-  readonly #rootbinderNetworks = new Map<string, readonly string[]>();
-  readonly #rootbinderLeashes = new Map<string, string>();
-  readonly #rootbinderRedistribution = new Map<string, Readonly<{ x: number; y: number }>>();
+  /** The live roots each planted Rootbinder holds, and how many of this planting's roots the player has cut. */
+  readonly #rootLinks = new Map<string, readonly string[]>();
+  readonly #rootCuts = new Map<string, number>();
   readonly #rootbinderGenerations = new Map<string, number>();
 
   setActorSource(slot: string, source: (() => readonly unknown[]) | undefined): void {
@@ -70,16 +67,14 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
       actor.applyGraftEffects?.(ROOTBOUND_NO_GRAFT_EFFECTS);
       actor.completeRootCage?.();
     }
-    this.#rootbinderNetworks.clear();
-    this.#rootbinderLeashes.clear();
-    this.#rootbinderRedistribution.clear();
+    this.#rootLinks.clear();
+    this.#rootCuts.clear();
     this.#rootbinderGenerations.clear();
     void environment;
   }
   replace(environment: EnvironmentFeatureContext): void {
-    this.#rootbinderNetworks.clear();
-    this.#rootbinderLeashes.clear();
-    this.#rootbinderRedistribution.clear();
+    this.#rootLinks.clear();
+    this.#rootCuts.clear();
     const networks = new Map<string, string[]>();
     for (const object of environment.combatObjects()) {
       if (
@@ -89,11 +84,9 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
         object.state === "expired"
       )
         continue;
-      if ("playerId" in object) this.#rootbinderLeashes.set(object.ownerId, object.id);
-      else if (object.targetId !== null)
-        networks.set(object.ownerId, [...(networks.get(object.ownerId) ?? []), object.id]);
+      if (object.targetId !== null) networks.set(object.ownerId, [...(networks.get(object.ownerId) ?? []), object.id]);
     }
-    for (const [ownerId, ids] of networks) this.#rootbinderNetworks.set(ownerId, Object.freeze(ids));
+    for (const [ownerId, ids] of networks) this.#rootLinks.set(ownerId, Object.freeze(ids));
   }
   combatObjectUpdated(environment: EnvironmentFeatureContext, object: EnvironmentCombatObjectState): void {
     if (object.ownerId === null) return;
@@ -127,7 +120,7 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
       if (result.state === "active")
         for (const actor of this.#bloomActors?.() ?? []) applyBloomWellForce(result, actor, seconds);
     }
-    this.#advanceRootbinder(environment, tick, seconds);
+    this.#advanceRootbinder(environment, tick);
     this.#advanceRootbound(environment, tick);
   }
 
@@ -247,246 +240,100 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
       actor.completeRootCage?.();
   }
 
-  #advanceRootbinder(environment: EnvironmentFeatureContext, tick: number, seconds: number): void {
-    const actors = this.#rootbinderActors?.() ?? [],
-      present = new Set<string>();
+  /**
+   * Roots: a planted Rootbinder roots the nearest allies in reach, each root is a severable root-link, and a
+   * rooted ally cannot be flung or lifted. A cut frees its ally (and launches it from an active Well); once
+   * the player has cut a root, that planting grows no new ones, and with its last root gone it is uprooted.
+   */
+  #advanceRootbinder(environment: EnvironmentFeatureContext, tick: number): void {
+    const actors = this.#rootbinderActors?.() ?? [];
+    const present = new Set<string>();
+    const rooted = new Set<string>();
     for (const actor of actors) {
       present.add(actor.id);
-      const existing = this.#rootbinderNetworks.get(actor.id);
-      if (actor.state.state === "linked" && existing === undefined) {
-        const claimed = new Set(
-          environment
-            .combatObjects()
-            .filter(
-              (object) =>
-                object.kind === "root-link" &&
-                object.ownerId !== actor.id &&
-                object.state !== "destroyed" &&
-                object.state !== "expired",
-            )
-            .map((object) => object.targetId),
-        );
-        const segments = installRootNetwork(
-          environment,
-          {
-            id: this.#nextId(actor.id, "network"),
-            worldId: environment.worldId,
-            stageId: environment.stageId,
-            ownerId: actor.id,
-            sourceX: actor.state.x,
-            sourceY: actor.state.y,
-            maxLength: actor.state.tuning.lineMaxLength,
-            tuning: actor.state.tuning,
-          },
-          actor.candidates.map((candidate) => (claimed.has(candidate.id) ? { ...candidate, linked: true } : candidate)),
-          { activeNetworks: 0, activePlayerLeashes: this.#rootbinderLeashes.size, limits: actor.state.tuning },
-        );
-        if (segments.length > 0) {
-          this.#rootbinderNetworks.set(actor.id, Object.freeze(segments.map((s) => s.id)));
-          for (const segment of segments)
-            if (environment.events)
-              publishEnvironmentEvent(
-                environment.events,
-                {
-                  event: "combat-object-link-created",
-                  objectId: segment.id,
-                  category: "combat-object",
-                  objectKind: segment.kind,
-                },
-                tick,
-              );
+      const planted = actor.phase === "planted";
+      const live: string[] = [];
+      let cuts = planted ? (this.#rootCuts.get(actor.id) ?? 0) : 0;
+      for (const id of this.#rootLinks.get(actor.id) ?? []) {
+        const link = environment.combatObjects().find((entry) => entry.id === id);
+        if (link === undefined || link.state === "expired") continue;
+        const ally = actor.allies.find((value) => value.id === link.targetId);
+        if (link.state === "destroyed") {
+          // "destroyed" with no cleanup reason is the player's cut.
+          if (link.cleanupReason === null) {
+            cuts += 1;
+            if (ally !== undefined) this.#freeRootedAlly(environment, ally);
+          }
+          continue;
         }
-      } else if (existing !== undefined && actor.state.state === "linked") {
-        let active = false;
-        for (const id of existing) {
-          const segment = environment.combatObjects().find((entry) => entry.id === id);
-          const candidate =
-            segment === undefined ? undefined : actor.candidates.find((value) => value.id === segment.targetId);
-          if (segment && candidate) active ||= this.#refresh(environment, segment, actor, candidate, tick, seconds);
-          else if (segment && segment.state !== "destroyed" && segment.state !== "expired")
-            environment.cleanupCombatObject(segment.id, "natural-expiry", tick);
+        const held =
+          planted &&
+          ally?.rootable === true &&
+          Math.hypot(ally.x - actor.x, ally.y - actor.y) <= ROOTBINDER_RULES.linkMaxLength;
+        if (!held) {
+          environment.cleanupCombatObject(id, "natural-expiry", tick);
+          continue;
         }
-        if (!active) {
-          this.#rootbinderNetworks.delete(actor.id);
-          if (this.#severed(environment, existing)) actor.sever?.();
-        }
-      } else if (existing !== undefined) {
-        for (const id of existing) {
-          const object = environment.combatObjects().find((entry) => entry.id === id);
-          if (object && object.state !== "destroyed" && object.state !== "expired")
-            environment.cleanupCombatObject(
-              id,
-              actor.state.state === "broken" ? "natural-expiry" : "stage-transition",
+        environment.updateCombatObject(id, { geometry: rootLinkGeometry(actor, ally) });
+        live.push(id);
+        rooted.add(ally.id);
+      }
+      if (planted && cuts > 0 && live.length === 0) {
+        actor.uproot();
+        cuts = 0;
+      } else if (planted && cuts === 0) {
+        const claimed = new Set(rooted);
+        for (const object of environment.combatObjects())
+          if (object.kind === "root-link" && object.state === "active" && object.targetId !== null)
+            claimed.add(object.targetId);
+        const free = ROOTBINDER_RULES.maxLinks - live.length;
+        for (const ally of chooseRootTargets(actor, actor.allies, claimed, free)) {
+          const link = createRootLink({ id: this.#nextId(actor.id), ownerId: actor.id, tick, source: actor }, ally);
+          environment.addCombatObject(link);
+          live.push(link.id);
+          rooted.add(ally.id);
+          if (environment.events)
+            publishEnvironmentEvent(
+              environment.events,
+              {
+                event: "combat-object-link-created",
+                objectId: link.id,
+                category: "combat-object",
+                objectKind: link.kind,
+              },
               tick,
             );
         }
-        this.#rootbinderNetworks.delete(actor.id);
       }
-      const player = actor.player;
-      let leashId = this.#rootbinderLeashes.get(actor.id);
-      const useful =
-        this.#rootbinderNetworks.has(actor.id) ||
-        createRootNetwork(
-          {
-            id: `${actor.id}:probe`,
-            worldId: environment.worldId,
-            stageId: environment.stageId,
-            ownerId: actor.id,
-            sourceX: actor.state.x,
-            sourceY: actor.state.y,
-            tuning: actor.state.tuning,
-          },
-          actor.candidates,
-        ).length > 0;
-      if (
-        !useful &&
-        player &&
-        player.alive &&
-        (actor.state.state === "link-warning" || actor.state.state === "linked")
-      ) {
-        if (leashId === undefined && this.#rootbinderLeashes.size < actor.state.tuning.maxPlayerLeashes) {
-          const leash = createElasticLeash({
-            id: this.#nextId(actor.id, "leash"),
-            worldId: environment.worldId,
-            stageId: environment.stageId,
-            sourceId: actor.id,
-            playerId: player.id,
-            sourceX: actor.state.x,
-            sourceY: actor.state.y,
-            playerX: player.x,
-            playerY: player.y,
-            radius: actor.state.tuning.leashRadius,
-            tuning: actor.state.tuning,
-          });
-          environment.addCombatObject(leash);
-          this.#rootbinderLeashes.set(actor.id, leash.id);
-          leashId = leash.id;
-        } else {
-          const leash = environment.combatObjects().find((entry) => entry.id === leashId) as ElasticLeash | undefined;
-          if (leash) {
-            const valid = isElasticLeashValid(leash, {
-              worldId: environment.worldId,
-              stageId: environment.stageId,
-              currentTick: actor.state.simulationTick,
-              expiryTick: actor.state.transitionTick,
-              sourceAlive: true,
-              playerAlive: player.alive,
-              severed: leash.state === "destroyed",
-            });
-            if (!valid) {
-              if (leash.state === "destroyed" && leash.cleanupReason === null) actor.sever?.();
-              else environment.cleanupCombatObject(leash.id, "natural-expiry", tick);
-              this.#rootbinderLeashes.delete(actor.id);
-            } else {
-              const active = actor.state.state === "linked";
-              if (active && leash.state === "warning")
-                environment.updateCombatObject(leash.id, { state: "active", stateTick: tick });
-              const geometry = {
-                x: actor.state.x,
-                y: actor.state.y,
-                radius: actor.state.tuning.leashRadius,
-                points: [
-                  { x: actor.state.x, y: actor.state.y },
-                  { x: player.x, y: player.y },
-                ],
-              };
-              environment.updateCombatObject(leash.id, { geometry });
-              if (active)
-                player.apply(applyElasticLeashForce({ ...leash, state: "active", geometry }, player, seconds));
-            }
-          }
-        }
-      } else if (leashId !== undefined) {
-        const leash = environment.combatObjects().find((entry) => entry.id === leashId);
-        if (leash && leash.state !== "destroyed" && leash.state !== "expired")
-          environment.cleanupCombatObject(leash.id, player?.alive === false ? "defeat" : "stage-transition", tick);
-        this.#rootbinderLeashes.delete(actor.id);
-      }
+      const held = Object.freeze(live);
+      this.#rootLinks.set(actor.id, held);
+      this.#rootCuts.set(actor.id, cuts);
+      actor.reportLinks(held);
     }
-    for (const [ownerId, ids] of this.#rootbinderNetworks)
+    for (const [ownerId, ids] of this.#rootLinks)
       if (!present.has(ownerId)) {
         for (const id of ids) {
           const object = environment.combatObjects().find((entry) => entry.id === id);
           if (object && object.state !== "destroyed" && object.state !== "expired")
             environment.cleanupCombatObject(id, "defeat", tick);
         }
-        this.#rootbinderNetworks.delete(ownerId);
+        this.#rootLinks.delete(ownerId);
+        this.#rootCuts.delete(ownerId);
       }
+    for (const actor of actors) for (const ally of actor.allies) ally.setRooted(rooted.has(ally.id));
   }
-  #refresh(
-    environment: EnvironmentFeatureContext,
-    segment: EnvironmentCombatObjectState,
-    actor: RootbinderEnvironmentActor,
-    candidate: RootbinderCandidate,
-    tick: number,
-    seconds: number,
-  ): boolean {
-    if (segment.state === "destroyed" || segment.state === "expired") return false;
-    const valid = isRootbinderLineValid({
-      worldId: environment.worldId,
-      stageId: environment.stageId,
-      targetWorldId: candidate.worldId,
-      targetStageId: candidate.stageId,
-      sourceX: actor.state.x,
-      sourceY: actor.state.y,
-      targetX: candidate.x,
-      targetY: candidate.y,
-      maxLength: actor.state.tuning.lineMaxLength,
-    });
-    if (!valid || candidate.dead || candidate.dying || candidate.geometryValid === false) {
-      environment.cleanupCombatObject(segment.id, "natural-expiry", tick);
-      return false;
-    }
-    environment.updateCombatObject(segment.id, {
-      geometry: {
-        x: actor.state.x,
-        y: actor.state.y,
-        points: [
-          { x: actor.state.x, y: actor.state.y },
-          { x: candidate.x, y: candidate.y },
-        ],
-      },
-    });
-    const edgeDistance = Math.max(
-      0,
-      Math.hypot(candidate.x - actor.state.x, candidate.y - actor.state.y) - actor.state.tuning.lineMaxLength * 0.75,
-    );
-    if (edgeDistance === 0) this.#rootbinderRedistribution.delete(segment.id);
-    if (edgeDistance > 0 && candidate.applyVelocity !== undefined) {
-      const prior = this.#rootbinderRedistribution.get(segment.id);
-      const result = redistributeRootNetworkKnockback({
-        x: candidate.x,
-        y: candidate.y,
-        vx: candidate.vx ?? 0,
-        vy: candidate.vy ?? 0,
-        weight: candidate.weight ?? 1,
-        maxRedistribution: actor.state.tuning.maxNetworkRedistribution,
-        edgeDistance,
-        seconds,
-        ...(prior === undefined ? {} : { appliedImpulseX: prior.x, appliedImpulseY: prior.y }),
-        directionX: actor.state.x - candidate.x,
-        directionY: actor.state.y - candidate.y,
-      });
-      candidate.applyVelocity(result.vx, result.vy);
-      this.#rootbinderRedistribution.set(
-        segment.id,
-        Object.freeze({ x: result.appliedImpulseX, y: result.appliedImpulseY }),
-      );
-    }
-    return true;
+  /** A cut root: its ally staggers, and one standing in an active Well is thrown up by it. */
+  #freeRootedAlly(environment: EnvironmentFeatureContext, ally: RootbinderEnvironmentAlly): void {
+    ally.stagger(ROOTBINDER_RULES.freedStaggerSeconds);
+    const lifted = environment
+      .fields()
+      .some((field) => isBloomWellState(field) && field.state === "active" && bloomWellContains(field, ally.x, ally.y));
+    if (lifted) ally.launch(ROOTBINDER_RULES.cutLaunchSpeed);
   }
-  /** True when a relationship ended because the player cut it, not because it expired or went invalid. */
-  #severed(environment: EnvironmentFeatureContext, ids: readonly string[]): boolean {
-    return ids.some((id) =>
-      environment
-        .combatObjects()
-        .some((object) => object.id === id && object.state === "destroyed" && object.cleanupReason === null),
-    );
-  }
-  #nextId(ownerId: string, kind: "network" | "leash"): string {
+  #nextId(ownerId: string): string {
     const generation = (this.#rootbinderGenerations.get(ownerId) ?? 0) + 1;
     this.#rootbinderGenerations.set(ownerId, generation);
-    return `${ownerId}:${kind}:g${String(generation)}`;
+    return `${ownerId}:root:g${String(generation)}`;
   }
   /**
    * Plants the boss's selected Well pattern once per selection; the boss records it. When the selection
@@ -516,12 +363,6 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
     this.#rootbound(ownerId)?.applyGraftEffects?.(resolveRootboundGraftEffects(environment.combatObjects(), ownerId));
   }
   resolveCollisions(environment: EnvironmentFeatureContext): void {
-    if (
-      [...this.#rootbinderLeashes.values()].some((id) =>
-        environment.combatObjects().some((object) => object.id === id && object.state === "active"),
-      )
-    )
-      return;
     for (const actor of this.#rootboundActors?.() ?? []) {
       const target = actor.player,
         request = actor.state.rootCagePlacement;
@@ -556,23 +397,23 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
   }
 }
 
+/** An ally as a root acts on it: whether a root holds it, its stagger when cut free and its launch. */
+export interface RootbinderEnvironmentAlly extends RootbinderAlly {
+  setRooted(rooted: boolean): void;
+  stagger(seconds: number): void;
+  launch(speed: number): void;
+}
 export interface RootbinderEnvironmentActor {
   readonly id: string;
-  readonly state: RootbinderState;
-  readonly candidates: readonly RootbinderCandidate[];
-  /** Staggers the Rootbinder after the player cuts its network or leash. */
-  readonly sever?: () => void;
-  readonly player?: Readonly<{
-    id: string;
-    x: number;
-    y: number;
-    vx: number;
-    vy: number;
-    jumpEnabled: boolean;
-    dashEnabled: boolean;
-    alive: boolean;
-    apply: (value: { readonly vx: number; readonly vy: number }) => void;
-  }>;
+  readonly x: number;
+  readonly y: number;
+  readonly phase: RootbinderPhase;
+  /** Every other enemy in the arena, rootable or not. */
+  readonly allies: readonly RootbinderEnvironmentAlly[];
+  /** Tells the Rootbinder which roots it holds, by stage-object id. */
+  readonly reportLinks: (ids: readonly string[]) => void;
+  /** Called when the player has cut every root of this planting. */
+  readonly uproot: () => void;
 }
 export interface RootboundEnvironmentActor {
   readonly id: string;

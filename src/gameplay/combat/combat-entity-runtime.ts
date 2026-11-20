@@ -44,6 +44,8 @@ export interface LiveCombatEntity {
   auraHaste?: number;
   tetherDR?: number;
   anchored?: boolean;
+  /** Held by a root (see `setRooted` on the enemy base); it stays anchored whatever the supports decide. */
+  rooted?: boolean;
   wallRequest?: { x: number } | null;
   firstPlayerDamageAt?: number | null;
   damageTakenMult?(): number;
@@ -401,7 +403,7 @@ export class CombatEntityRuntime {
       actor.auraSpeed = state.auraSpeed;
       actor.auraHaste = state.auraHaste;
       actor.tetherDR = state.tetherDR;
-      actor.anchored = state.anchored;
+      actor.anchored = state.anchored || actor.rooted === true;
       const buffs = actor.buffs ?? [];
       buffs.length = 0;
       buffs.push(...state.buffs);

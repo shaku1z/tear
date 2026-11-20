@@ -7,9 +7,13 @@
  * repeat of a repeating boss strike has a warning of its own, in which the hit is off. v6: the Gauntlet is a run
  * of trials, one per boss (see `gauntlet-trials.ts`). v7: a boss body hurts only inside a declared move (the
  * Rootbound's blocks instead), and a move the target could not walk out of is not chosen. v8: a Bloom Well
- * stands on the floor and lifts whoever stands in it (the player and light enemies).
+ * stands on the floor and lifts whoever stands in it (the player and light enemies). v9: a planted Rootbinder roots the
+ * allies near it (they cannot be flung or lifted until the root is cut) and no longer leashes the player.
  */
-export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v8";
+export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v9";
+
+/** The identity while a Rootbinder leashed the player and shared knockback among its allies; historical replays only. */
+export const SIX_BIOME_PALE_PREVIEW_V8_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v8";
 
 /** The identity while a stage Bloom Well caught only what was already in the air; historical replays only. */
 export const SIX_BIOME_PALE_PREVIEW_V7_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v7";
@@ -66,7 +70,8 @@ export const RULESET_STEPS: readonly RulesetStep[] = Object.freeze(
     { version: SIX_BIOME_PALE_PREVIEW_V5_RULESET_VERSION, change: "each repeat of a boss strike got its own warning" },
     { version: SIX_BIOME_PALE_PREVIEW_V6_RULESET_VERSION, change: "the Gauntlet became a run of trials" },
     { version: SIX_BIOME_PALE_PREVIEW_V7_RULESET_VERSION, change: "a boss's body stopped hurting outside its moves" },
-    { version: CURRENT_RULESET_VERSION, change: "Bloom Wells began lifting from the floor" },
+    { version: SIX_BIOME_PALE_PREVIEW_V8_RULESET_VERSION, change: "Bloom Wells began lifting from the floor" },
+    { version: CURRENT_RULESET_VERSION, change: "Rootbinders began rooting their allies" },
   ].map((step) => Object.freeze(step)),
 );
 

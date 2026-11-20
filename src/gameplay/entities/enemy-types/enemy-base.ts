@@ -78,6 +78,10 @@ export function createEnemyBase(dependencies: EnemyDependencies, bossRuntime: Bo
     auraHaste: number;
     tetherDR: number;
     anchored: boolean;
+    /** A root holds it: it cannot be flung or lifted until the root is cut. Set only by `setRooted`. */
+    rooted = false;
+    /** False for an enemy that is never rooted. */
+    rootable = true;
     /** Keeps its own height in the air: a lift leaves it alone. */
     flies = false;
     buffs: string[];
@@ -241,6 +245,12 @@ export function createEnemyBase(dependencies: EnemyDependencies, bossRuntime: Bo
     }
     applyMark() {
       this.markT = Math.max(this.markT, CONFIG.status.markDur);
+    }
+    /** A root takes or lets go of this enemy. A rooted enemy is held the way an anchored one is. */
+    setRooted(rooted: boolean) {
+      if (this.rooted === rooted) return;
+      this.rooted = rooted;
+      this.anchored = rooted;
     }
     applySeam(duration: number, throwId: number) {
       this.seamT = Math.max(this.seamT, duration || 0);
