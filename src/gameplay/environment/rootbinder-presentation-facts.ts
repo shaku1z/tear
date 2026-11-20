@@ -1,4 +1,6 @@
+import type { BossTell } from "../entities/boss-tells";
 import type { EnvironmentCombatObjectState, EnvironmentGeometry } from "./environment-contracts";
+import { isRootSnareState, rootSnareTell } from "./root-snare";
 import { rootbinderStandsStill, rootbinderWindup, type RootbinderState } from "../entities/rootbinder-runtime";
 
 export interface RootbinderPresentationOptions {
@@ -18,6 +20,8 @@ export interface RootbinderPresentationFacts {
   readonly uprooted: boolean;
   /** One line per live root, from the Rootbinder to the ally it holds. */
   readonly roots: readonly EnvironmentGeometry[];
+  /** The snare marks on the ground, in the shared tell format: where each is aimed and how far along it is. */
+  readonly snareTells: readonly BossTell[];
   readonly highContrast: boolean;
   readonly lowGraphics: boolean;
   readonly motionScale: number;
@@ -36,7 +40,17 @@ export function projectRootbinderPresentation(
     planted: rootbinderStandsStill(source.state.state),
     windup: rootbinderWindup(source.state),
     uprooted: source.state.state === "uprooted",
-    roots: Object.freeze(links.filter((link) => link.state === "active").map((link) => link.geometry)),
+    roots: Object.freeze(
+      links
+        .filter((link) => link.state === "active" && link.geometry.points !== undefined)
+        .map((link) => link.geometry),
+    ),
+    snareTells: Object.freeze(
+      links.filter(isRootSnareState).flatMap((snare) => {
+        const tell = rootSnareTell(snare);
+        return tell === null ? [] : [tell];
+      }),
+    ),
     highContrast: options.highContrast === true,
     lowGraphics: options.lowGraphics === true,
     motionScale: options.reducedMotion === true ? 0 : 1,

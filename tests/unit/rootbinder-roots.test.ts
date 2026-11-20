@@ -55,7 +55,13 @@ function scene(options: SceneOptions = {}) {
   const ids = new Map(all.map((enemy, index) => [enemy as object, `enemy:${String(index)}`]));
   const idOf = (enemy: object): string => ids.get(enemy) ?? "enemy:unknown";
   const player = createTestPlayer({ x: options.playerX ?? 1400 });
-  bindLiveRootbinderActors(environment, () => all, idOf);
+  // No player is bound: these tests are about roots on allies; the snare has its own file.
+  bindLiveRootbinderActors(
+    environment,
+    () => null,
+    () => all,
+    idOf,
+  );
   if (options.wells === true)
     bindLiveBloomWellActors(
       environment,
