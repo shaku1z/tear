@@ -7,7 +7,7 @@ const { STATE_WAIT_MS, settleFor } = require("./browser-waits");
 // message; and the next try, with the network back, must open the replay.
 const ENGINE_CHUNK = "**/assets/production-replay-composition-*.js";
 
-withJourney({ name: "Replay engine cold open", port: 8171 }, async ({ page, boot }) => {
+withJourney({ name: "Replay engine cold open" }, async ({ page, boot }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
     timeout: STATE_WAIT_MS,
   });
