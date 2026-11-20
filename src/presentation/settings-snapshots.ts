@@ -1,6 +1,12 @@
 import type { SettingRowView, SettingsScreenView } from "./screens/contracts";
 import { normalizeMusicSettingsTab } from "../audio/music/settings";
-import { keyCodeLabel, keyboardLabel, type KeyboardAction } from "../domain/keyboard-bindings";
+import {
+  keyCodeLabel,
+  keyboardBindings,
+  keyboardLabel,
+  type KeyboardAction,
+  type KeyboardContext,
+} from "../domain/keyboard-bindings";
 import { REBINDABLE_ACTIONS, type RebindOutcome, type RebindableAction } from "../domain/keyboard-remap";
 
 /** The Controls tab's keyboard rows, one per rebindable action. */
@@ -21,12 +27,26 @@ export const rebindRowKey = (action: RebindableAction): string => `rebind:${acti
 const actionName = (action: KeyboardAction): string =>
   (REBIND_ROW_LABELS as Readonly<Record<string, string>>)[action] ?? action.replaceAll("-", " ");
 
+/**
+ * Places whose keys stay reserved for them, by binding context. A refused key bound in one
+ * of these contexts is named by its place ("T is used by the Playground"), read from the
+ * binding table the place itself reads.
+ */
+const RESERVED_BY: Readonly<Partial<Record<KeyboardContext, string>>> = Object.freeze({
+  playground: "the Playground",
+  tutorial: "the Tutorial",
+  engineering: "engineering tools",
+});
+
 /** What the keyboard row says after a rebind: nothing when the key simply took. */
 export function rebindNote(action: RebindableAction, outcome: RebindOutcome, code: string): string | null {
   const key = keyCodeLabel(code);
   if (outcome.kind === "swapped") return `Swapped: ${actionName(outcome.with)} now uses the old key.`;
   if (outcome.kind !== "refused") return null;
   if (outcome.by === action) return `${key} can't be bound. Pick another key.`;
+  const place = RESERVED_BY[keyboardBindings()[outcome.by].context];
+  if (place !== undefined)
+    return `${key} is used by ${place} (${actionName(outcome.by).toLowerCase()}). Pick another key.`;
   return `${key} already means ${actionName(outcome.by).toLowerCase()}. Pick another key.`;
 }
 
@@ -270,7 +290,10 @@ export function buildSettingsSections(
         kind: "cycle",
       },
       { key: "sens", label: "Blade / mouse sensitivity", value: settings.sens.toFixed(2), kind: "stepper" },
-      {
+    ];
+    // Touch or desktop controls is a choice only where the build has touch (mobile is paused).
+    if (__TEAR_MOBILE__)
+      rows.push({
         key: "controls",
         label: "Control mode",
         value:
@@ -278,8 +301,7 @@ export function buildSettingsSections(
             ? "AUTO (" + (environment.touch ? "TOUCH" : "DESKTOP") + ")"
             : settings.controls.toUpperCase(),
         kind: "cycle",
-      },
-    ];
+      });
     if (environment.touch)
       rows.push({
         key: "touchAim",

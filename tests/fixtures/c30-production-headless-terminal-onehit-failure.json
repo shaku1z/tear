@@ -8,7 +8,7 @@
       "target": "production-headless",
       "rulesetVersion": "live",
       "contentHash": "c823f6249ab3ef05",
-      "configHash": "cdb31f56415b0cb7"
+      "configHash": "c37e9c7bf9d825d0"
     },
     "rng": {
       "legacy": { "algorithm": "mulberry32", "seed": 3418060622, "state": 3418060622, "cursor": 0 },
@@ -48,8 +48,8 @@
   },
   "actions": [],
   "terminal": {
-    "tick": 222,
-    "semanticHash": "f981b3bb62116114",
+    "tick": 403,
+    "semanticHash": "e47ed517d44103f0",
     "terminated": true,
     "truncated": false
   }

@@ -290,10 +290,12 @@ describe("boss fight measurement", () => {
       phase: 1,
       ticks: 10,
       damageDealt: 0,
+      hitsLanded: 0,
       bossHealed: 0,
       damageTaken: 40,
       hitsTaken: 2,
       exposedTicks: 0,
+      bossTravel: 0,
       hitsBy: { sweep: { hits: 1, damage: 30 }, [UNMARKED_HIT]: { hits: 1, damage: 10 } },
       objects: {},
     };

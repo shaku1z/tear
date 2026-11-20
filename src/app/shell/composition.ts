@@ -53,13 +53,14 @@ import { createRunSeed } from "../../platform/run-seed";
 import type { PwaUpdateCapability } from "../../platform/pwa-update";
 import { GHOST_WORKER_URLS } from "../replay/ghost-worker-urls";
 import { startWorkerCacheWarmup } from "../../platform/worker-cache-warmup";
+import { startDeferredModules } from "./deferred-modules";
 import { createAttract } from "../../presentation/attract";
 import { createBackdrop } from "../../presentation/backdrop";
-import { rotateGateShown } from "../../presentation/render-pipeline";
+import { rotateGateShown } from "../../presentation/rotate-gate";
 import { createSceneLibrary } from "../../presentation/scenes/scene-library";
 import { lastCoverFrameTally } from "../../presentation/music-cover-art";
-import { createSceneCanvas, loadSceneBitmap, releaseSceneBitmap } from "../../presentation/scenes/scene-bitmap";
-import { SCENE_PACKAGES } from "../../presentation/scenes/scene-registry";
+import { createSceneCanvas, releaseSceneBitmap } from "../../presentation/scenes/scene-bitmap";
+import { PAINTED_STAGES } from "../../presentation/scenes/scene-registry";
 import { createCinematics } from "../../presentation/cinematics";
 import { cosmeticRandom } from "../../presentation/cosmetic-random";
 import { createCosmeticEmissionRandom } from "../../domain/cosmetic-emission-random";
@@ -167,7 +168,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   });
   let stageArtSlices = 0;
   const Scenes = createSceneLibrary({
-    packages: SCENE_PACKAGES,
+    stages: PAINTED_STAGES,
     world: { width: worldConfig.view.w, height: worldConfig.view.h, groundY: worldConfig.world.groundY },
     // One painting slice per frame, after the frame has drawn, so a stage that paints during play never delays a frame.
     nextSlice: () =>
@@ -177,14 +178,13 @@ export function composeTearApplication(options: TearCompositionOptions): void {
         DIAG.gauge("stageArtSlices", stageArtSlices);
         requestAnimationFrame(() => setTimeout(resolve, 0));
       }),
-    loadImage: loadSceneBitmap,
     createCanvas: createSceneCanvas,
     releaseImage: releaseSceneBitmap,
     now: () => performance.now(),
     lowGraphics: () => GFX.low,
     reducedMotion: () => A11Y.reducedMotion,
     onError: (stageId, error) => {
-      console.warn(`Scene package for ${stageId} unavailable; keeping procedural art.`, error);
+      console.warn(`Stage art for ${stageId} could not be painted; keeping procedural art.`, error);
     },
   });
   const Backdrop = createBackdrop({
@@ -383,11 +383,15 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   // One rule for "plain main menu": the menu screen with no phone rotate gate drawn over it.
   const plainMainMenu = (): boolean => {
     const canvas = document.querySelector<HTMLCanvasElement>("#game");
-    const gate = canvas !== null && rotateGateShown(Input.touchActive(), canvas.clientWidth, canvas.clientHeight);
+    const gate =
+      __TEAR_MOBILE__ &&
+      canvas !== null &&
+      rotateGateShown(Input.touchActive(), canvas.clientWidth, canvas.clientHeight);
     return APP.screen === "menu" && !gate;
   };
   // The ghost worker scripts are cached by the service worker on first fetch; fetch any missing one on an idle menu.
   if (target === "standalone") startWorkerCacheWarmup(plainMainMenu, GHOST_WORKER_URLS);
+  startDeferredModules(plainMainMenu);
   // A waiting service-worker update is applied only on the plain main menu, after saves settle.
   pwaUpdate.setIdleHost({ isIdle: plainMainMenu, settle: () => PROFILE.flushAcknowledged() });
   const DIAG = new PerformanceMonitor();

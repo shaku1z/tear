@@ -6,6 +6,7 @@ import type {
   RunResultInfo,
   VictoryProgressionIntent,
 } from "./outcome-planner";
+import { isObject } from "../../domain/records";
 
 type TerminalOutcome = "defeat" | "victory";
 type BestRecord = Readonly<{ wave: number; score: number; time: number }>;
@@ -55,7 +56,7 @@ export interface OutcomeChronologyJournal {
 }
 
 function freezeDeep<T>(value: T): T {
-  if (value === null || typeof value !== "object" || Object.isFrozen(value)) return value;
+  if (!isObject(value) || Object.isFrozen(value)) return value;
   for (const child of Object.values(value as Record<string, unknown>)) freezeDeep(child);
   return Object.freeze(value);
 }

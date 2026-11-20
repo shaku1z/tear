@@ -16,6 +16,7 @@ import type {
   SlowZoneState,
   SupportTuning,
 } from "./combat-entity-contracts";
+import { isObject } from "../../domain/records";
 
 export interface LiveCombatEntity {
   id?: string;
@@ -44,6 +45,8 @@ export interface LiveCombatEntity {
   auraHaste?: number;
   tetherDR?: number;
   anchored?: boolean;
+  /** Held by a root (see `setRooted` on the enemy base); it stays anchored whatever the supports decide. */
+  rooted?: boolean;
   wallRequest?: { x: number } | null;
   firstPlayerDamageAt?: number | null;
   damageTakenMult?(): number;
@@ -401,7 +404,7 @@ export class CombatEntityRuntime {
       actor.auraSpeed = state.auraSpeed;
       actor.auraHaste = state.auraHaste;
       actor.tetherDR = state.tetherDR;
-      actor.anchored = state.anchored;
+      actor.anchored = state.anchored || actor.rooted === true;
       const buffs = actor.buffs ?? [];
       buffs.length = 0;
       buffs.push(...state.buffs);
@@ -764,10 +767,6 @@ export class CombatEntityRuntime {
       this.#hooks.checkAchievements();
     }
   }
-}
-
-function isObject(value: unknown): value is object & { id?: string } {
-  return typeof value === "object" && value !== null;
 }
 
 function isCombatEntity(value: unknown): value is LiveCombatEntity {

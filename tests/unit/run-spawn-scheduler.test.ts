@@ -9,7 +9,7 @@ import {
   type SpawnScheduleState,
 } from "../../src/gameplay/run/spawn-scheduler";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
-import { installRootNetwork, type RootbinderCandidate } from "../../src/gameplay/entities/rootbinder-runtime";
+import { createRootLink } from "../../src/gameplay/entities/rootbinder-runtime";
 import { installGraftAnchor, MAX_ACTIVE_GRAFT_ANCHORS } from "../../src/gameplay/environment/graft-anchor";
 
 class SequenceRandom implements RandomSource {
@@ -45,28 +45,14 @@ describe("spawn scheduling conformance", () => {
 
   it("keeps bounded environment objects outside the StageId-owned enemy cap", () => {
     const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "wave-cap" });
-    const candidate = (id: string, x: number): RootbinderCandidate => ({
-      id,
-      worldId: "wave-cap",
-      stageId: "verdant-sanctum",
-      kind: "ordinary",
-      x,
-      y: 400,
-      dead: false,
-      dying: false,
-    });
-    installRootNetwork(
-      environment,
-      {
-        id: "network",
-        worldId: "wave-cap",
-        stageId: "verdant-sanctum",
-        ownerId: "rootbinder",
-        sourceX: 400,
-        sourceY: 400,
-      },
-      [candidate("ally-a", 520), candidate("ally-b", 640)],
-    );
+    const source = { x: 400, y: 400 };
+    for (const [id, x] of [
+      ["ally-a", 520],
+      ["ally-b", 640],
+    ] as const)
+      environment.addCombatObject(
+        createRootLink({ id: `root:${id}`, ownerId: "rootbinder", tick: 0, source }, { id, x, y: 400, rootable: true }),
+      );
     const base = { ownerId: "rootbound", ownerPosition: { x: 800, y: 520 }, createdTick: 1 } as const;
     installGraftAnchor(environment, { ...base, graftType: "bastion", geometry: { x: 200, y: 600, radius: 20 } });
     installGraftAnchor(environment, { ...base, graftType: "mercy", geometry: { x: 600, y: 600, radius: 20 } });

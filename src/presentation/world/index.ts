@@ -3,7 +3,8 @@ import { createFinaleRenderer } from "./finale";
 import { createHudRenderer } from "./hud";
 import { createOverlayRenderers } from "./overlays";
 import { createStatusDebugRenderers } from "./status-debug";
-import { createTrainingTouchRenderers } from "./training-touch";
+import { createTutorialCardRenderer } from "./tutorial-card";
+import { createTouchControlsRenderer } from "./touch-controls";
 import { createCoachMarkRenderer } from "./coach-mark-renderer";
 
 export type * from "./contracts";
@@ -13,7 +14,9 @@ export function createWorldRenderers(context: WorldRenderContext): WorldRenderer
   const statusDebug = createStatusDebugRenderers(context);
   const finaleWorld = createFinaleRenderer(context);
   const hud = createHudRenderer(context);
-  const trainingTouch = createTrainingTouchRenderers(context);
+  const tutorial = createTutorialCardRenderer(context);
+  // Mobile is paused: production builds leave the touch controls out (plans/MOBILE_LATER.md).
+  const touch = __TEAR_MOBILE__ ? createTouchControlsRenderer(context, tutorial.takeLessonCard) : null;
   const overlays = createOverlayRenderers(context);
   const coach = createCoachMarkRenderer(context);
   return {
@@ -21,10 +24,12 @@ export function createWorldRenderers(context: WorldRenderContext): WorldRenderer
     pantheonDebug: statusDebug.pantheonDebug,
     finaleWorld,
     hud,
-    tutorialCard: trainingTouch.tutorialCard,
+    tutorialCard: tutorial.tutorialCard,
     coachMarks: coach.coachMarks,
     achievementToast: overlays.achievementToast,
-    touchControls: trainingTouch.touchControls,
+    touchControls: (snapshot) => {
+      touch?.touchControls(snapshot);
+    },
     waveBanner: overlays.waveBanner,
     bossIntro: overlays.bossIntro,
     stageBanner: overlays.stageBanner,

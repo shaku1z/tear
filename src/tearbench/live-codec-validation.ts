@@ -1,3 +1,4 @@
+import { isRecord } from "../domain/records";
 import { readBeatRunBinding } from "../gameplay/run/beat-run";
 import { readGhostRunAssistance } from "../gameplay/run/ghost-assistance";
 import type { TearCodecId } from "./registries";
@@ -12,16 +13,12 @@ function issue(codecId: TearCodecId, path: string, message: string): TearCodecIs
   return Object.freeze({ codecId, path, message });
 }
 
-function record(value: unknown): value is Readonly<Record<string, unknown>> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function finite(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
 function requireRecord(codecId: TearCodecId, payload: unknown): readonly TearCodecIssue[] {
-  return record(payload) ? [] : [issue(codecId, "$", "live codec payload must be an object")];
+  return isRecord(payload) ? [] : [issue(codecId, "$", "live codec payload must be an object")];
 }
 
 function requireArray(codecId: TearCodecId, payload: unknown): readonly TearCodecIssue[] {
@@ -47,7 +44,7 @@ function entityArray(codecId: TearCodecId, payload: unknown): readonly TearCodec
   if (structural.length > 0 || !Array.isArray(payload)) return structural;
   return Object.freeze(
     payload.flatMap((entry, index) => {
-      if (!record(entry)) return [issue(codecId, `$[${String(index)}]`, "entity must be an object")];
+      if (!isRecord(entry)) return [issue(codecId, `$[${String(index)}]`, "entity must be an object")];
       const issues: TearCodecIssue[] = [];
       if (typeof entry.id !== "string" || entry.id.length === 0) {
         issues.push(issue(codecId, `$[${String(index)}].id`, "entity requires a stable id"));
@@ -101,7 +98,7 @@ function rootboundPhaseThreeState(
 ): TearCodecIssue[] {
   const issues: TearCodecIssue[] = [];
   const regrowth = entry.regrowthState;
-  if (!record(regrowth)) {
+  if (!isRecord(regrowth)) {
     issues.push(issue(codecId, `${path}.regrowthState`, "Rootbound requires canonical Regrowth state"));
   } else {
     const phase = regrowth.phase;
@@ -215,7 +212,7 @@ function rootboundPhaseThreeState(
   }
   if (typeof entry.regrowthCalled !== "boolean") {
     issues.push(issue(codecId, `${path}.regrowthCalled`, "Regrowth call must be boolean"));
-  } else if (!entry.regrowthCalled && record(regrowth) && regrowth.phase !== "idle") {
+  } else if (!entry.regrowthCalled && isRecord(regrowth) && regrowth.phase !== "idle") {
     issues.push(issue(codecId, `${path}.regrowthCalled`, "Regrowth cannot channel before its move calls it"));
   }
   return issues;
@@ -228,7 +225,7 @@ export function validateLiveCodecPayload(codecId: TearCodecId, payload: unknown)
   }
   if (codecId === "tear.platform.v1") return requireArray(codecId, payload);
   const structural = requireRecord(codecId, payload);
-  if (structural.length > 0 || !record(payload)) return structural;
+  if (structural.length > 0 || !isRecord(payload)) return structural;
   const issues: TearCodecIssue[] = [];
   if (codecId === "tear.player.v1") {
     if (payload.id !== "player") issues.push(issue(codecId, "$.id", "player stable id must be player"));
@@ -277,7 +274,7 @@ export function validateLiveCodecPayload(codecId: TearCodecId, payload: unknown)
         issues.push(issue(codecId, "$.simulationSeconds", "simulationSeconds must be nonnegative"));
       }
     }
-    if (!record(payload.identityState))
+    if (!isRecord(payload.identityState))
       issues.push(issue(codecId, "$.identityState", "world requires identity allocator state"));
   } else if (codecId === "tear.hazard.v1") {
     if (!Array.isArray(payload.slowZones) || !Array.isArray(payload.walls)) {
@@ -319,7 +316,7 @@ export function validateLiveCodecPayload(codecId: TearCodecId, payload: unknown)
   } else if (codecId === "tear.reward.v1") {
     if (!("selection" in payload)) issues.push(issue(codecId, "$.selection", "reward codec requires selection"));
   } else if (codecId === "tear.configuration.v1") {
-    if (typeof payload.rulesetVersion !== "string" || !record(payload.values)) {
+    if (typeof payload.rulesetVersion !== "string" || !isRecord(payload.values)) {
       issues.push(issue(codecId, "$", "configuration codec requires rulesetVersion and values"));
     }
   } else if (codecId === "tear.cinematic.v1") {

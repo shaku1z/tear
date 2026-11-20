@@ -128,7 +128,19 @@ async function phoneJourney(page, scenario, viewport) {
   await settle("playing");
 }
 
+/**
+ * Which viewports run: `--desktop` (the required check), `--touch` (the phone viewports, parked
+ * while mobile is paused, plans/MOBILE_LATER.md; `pnpm check:mobile`), or both by default.
+ */
+function wantedScenarios(argv) {
+  const desktop = argv.includes("--desktop"),
+    touch = argv.includes("--touch"),
+    both = !desktop && !touch;
+  return scenarios.filter((scenario) => (scenario.name.startsWith("mobile") ? touch || both : desktop || both));
+}
+
 async function main() {
+  const chosen = wantedScenarios(process.argv.slice(2));
   const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
   const server = http.createServer((request, response) => {
     const pathname = new URL(request.url, "http://127.0.0.1").pathname;
@@ -149,7 +161,7 @@ async function main() {
   const origin = `http://127.0.0.1:${String(address.port)}`;
   const browser = await launchJourney(chromium, { headless: true });
   try {
-    for (const scenario of scenarios) {
+    for (const scenario of chosen) {
       const context = await browser.newContext({
         viewport: { width: scenario.width, height: scenario.height },
         deviceScaleFactor: scenario.dpr,
@@ -306,7 +318,7 @@ async function main() {
     server.closeAllConnections();
     await new Promise((resolve) => server.close(resolve));
   }
-  console.log(`responsive browser matrix passed (${scenarios.length} viewport/DPR scenarios)`);
+  console.log(`responsive browser matrix passed (${chosen.length} viewport/DPR scenarios)`);
 }
 
 main().catch((error) => {

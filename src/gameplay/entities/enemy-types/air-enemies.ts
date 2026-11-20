@@ -32,6 +32,10 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
       this.warnT = 0;
       this.diveX = null;
     }
+    override holdAttacks(seconds: number) {
+      super.holdAttacks(seconds);
+      this.aimTimer = Math.max(this.aimTimer, seconds);
+    }
 
     update(dt: number, _platforms: readonly EnemyPlatform[], player: EnemyPlayerPort) {
       this.tickTimers(dt);
@@ -272,6 +276,11 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
       this.bombsLeft = 0;
       this.burstT = 0;
     }
+    override holdAttacks(seconds: number) {
+      super.holdAttacks(seconds);
+      this.lobTimer = Math.max(this.lobTimer, seconds);
+      this.mineTimer = Math.max(this.mineTimer, seconds);
+    }
 
     update(dt: number, platforms: readonly EnemyPlatform[], player: EnemyPlayerPort, projectiles: EnemyProjectile[]) {
       this.tickTimers(dt);
@@ -440,6 +449,10 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
       this.color = CONFIG.colors.armored;
       this.kind = "armored";
       this.stompCd = CONFIG.armored.stompCd * 0.6;
+    }
+    override holdAttacks(seconds: number) {
+      super.holdAttacks(seconds);
+      this.stompCd = Math.max(this.stompCd, seconds);
     }
     update(dt: number, platforms: readonly EnemyPlatform[], player: EnemyPlayerPort, projectiles: EnemyProjectile[]) {
       this.tickTimers(dt);
