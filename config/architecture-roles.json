@@ -238,8 +238,15 @@
       "include": ["src/app/screens/menu-screen-adapters-runtime.ts", "src/app/run/run-start-host.ts"]
     },
     "release.developer-only": {
-      "purpose": "Developer and test code that no release build may contain: the scripted test player, the playtest tool, TearBench's browser and test-support modules and the debug harness. Other code may load it only through a dynamic import guarded by a build constant, and a release build fails when one of these modules contributes code to a bundle (scripts/release-developer-code.mjs).",
-      "include": ["@tearbench.developer-surfaces", "src/agents/**", "src/playtest/**", "src/app/engineering/debug-*.ts"],
+      "purpose": "Developer and test code that no release build may contain: the scripted test player, the playtest tool, TearBench's browser and test-support modules, the tutorial gold generator and the live-detached parity matrix (both call the eager replay engine) and the debug harness. Other code may load it only through a dynamic import guarded by a build constant, and a release build fails when one of these modules contributes code to a bundle (scripts/release-developer-code.mjs).",
+      "include": [
+        "@tearbench.developer-surfaces",
+        "src/agents/**",
+        "src/playtest/**",
+        "src/app/engineering/debug-*.ts",
+        "src/tearbench/live-detached-parity-matrix.ts",
+        "src/tearbench/tutorial-gold-generation.ts"
+      ],
       "anticipate": ["src/app/engineering/*-channel-entry.ts"]
     },
     "release.mobile-only": {

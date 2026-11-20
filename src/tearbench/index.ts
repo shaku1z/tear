@@ -7,7 +7,6 @@ export * from "../gameplay/environment/presentation-snapshot";
 export * from "../gameplay/environment/environment-cleanup";
 export * from "../gameplay/environment/bloom-well";
 export * from "../presentation/environment/bloom-well-presentation";
-export * from "./production-c27a-matrix";
 export * from "./state-validity";
 export * from "./state-setup-factories";
 export * from "./state-setup-exit-gate";

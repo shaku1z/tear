@@ -8,54 +8,54 @@ import type { TearSnapshotV1 } from "../gameplay/snapshot/snapshot-contract";
 import { projectGameplayEventForParity, type TearSemanticEngineEventV1 } from "./gameplay-causal-events";
 import { replayEngine, type ReplayEngine } from "../ghost/replay-engine";
 
-export interface ProductionC27AHashReceipt {
+export interface LiveDetachedParityHashReceipt {
   readonly tick: number;
   readonly canonical: string;
   readonly state: Readonly<Record<string, unknown>>;
 }
 
-export type ProductionC27ASegment =
+export type LiveDetachedParitySegment =
   | Readonly<{ kind: "fixed"; fromTick: number; toTick: number; actions: readonly Readonly<{ command: GameAction }>[] }>
   | Readonly<{ kind: "route"; atTick: number; actions: readonly Readonly<{ command: GameAction }>[] }>;
 
 /** A C27A browser artifact's portable, post-origin replay boundary. */
-export interface ProductionC27ATrace {
+export interface LiveDetachedParityTrace {
   readonly scenario: TearScenarioV1;
   readonly origin: TearSnapshotV1;
   readonly originInput?: AuthoritativeInputSnapshot;
   readonly schedule: Readonly<Record<string, readonly Readonly<{ tick: number; id: number; command: GameAction }>[]>>;
-  readonly hashes: readonly ProductionC27AHashReceipt[];
+  readonly hashes: readonly LiveDetachedParityHashReceipt[];
   readonly engineEventProjection: Readonly<{
     format: "tear-semantic-engine-events";
     schemaVersion: 1;
     boundary: Readonly<{ kind: "post-origin-snapshot"; originTick: number }>;
     events: readonly TearSemanticEngineEventV1[];
   }>;
-  readonly segments?: readonly ProductionC27ASegment[];
+  readonly segments?: readonly LiveDetachedParitySegment[];
   readonly routeBoundaries?: readonly unknown[];
 }
 
-export interface ProductionC27AReplayReceipt {
+export interface LiveDetachedParityReplayReceipt {
   readonly tick: number;
   readonly canonical: string;
   readonly state: CanonicalGameplayState;
 }
 
-export interface ProductionC27AReplayResult {
+export interface LiveDetachedParityReplayResult {
   readonly id: string;
-  readonly hashes: readonly ProductionC27AReplayReceipt[];
+  readonly hashes: readonly LiveDetachedParityReplayReceipt[];
   readonly engineEvents: readonly TearSemanticEngineEventV1[];
   readonly routeBoundaries: readonly unknown[];
 }
 
-export interface ProductionC27AMatrixEntry {
+export interface LiveDetachedParityMatrixEntry {
   readonly id: string;
   readonly status: "replayed" | "rejected";
-  readonly result?: ProductionC27AReplayResult;
+  readonly result?: LiveDetachedParityReplayResult;
   readonly error?: string;
 }
 
-function fallbackSegments(trace: ProductionC27ATrace): readonly ProductionC27ASegment[] {
+function fallbackSegments(trace: LiveDetachedParityTrace): readonly LiveDetachedParitySegment[] {
   let previousTick = trace.origin.tick;
   return trace.hashes.map((hash) => {
     const segment = Object.freeze({
@@ -99,7 +99,7 @@ function routeProjection(
  * This is an evidence adapter: it returns raw replay receipts and does not
  * declare that either the hashes or outward streams match live.
  */
-export function replayProductionC27ATrace(trace: ProductionC27ATrace): ProductionC27AReplayResult {
+export function replayLiveDetachedParityTrace(trace: LiveDetachedParityTrace): LiveDetachedParityReplayResult {
   let schedulerTick = trace.origin.tick;
   const gameplayEvents = new TearGameplayEventBus(() => schedulerTick);
   const nativeEvents: TearGameplayEvent[] = [];
@@ -119,7 +119,7 @@ export function replayProductionC27ATrace(trace: ProductionC27ATrace): Productio
   const { simulation } = composed;
   gameplayEvents.setTickSource(() => simulation.scheduler.tick);
   const sequencer = new EnvelopeSequencer();
-  const hashes: ProductionC27AReplayReceipt[] = [];
+  const hashes: LiveDetachedParityReplayReceipt[] = [];
   const routeBoundaries: unknown[] = [];
   const segments = trace.segments ?? fallbackSegments(trace);
 
@@ -164,16 +164,16 @@ export function replayProductionC27ATrace(trace: ProductionC27ATrace): Productio
 }
 
 /** Runs every supplied artifact independently and preserves a precise rejection per trace. */
-export function replayProductionC27AMatrix(
-  traces: readonly ProductionC27ATrace[],
-): readonly ProductionC27AMatrixEntry[] {
+export function replayLiveDetachedParityMatrix(
+  traces: readonly LiveDetachedParityTrace[],
+): readonly LiveDetachedParityMatrixEntry[] {
   return Object.freeze(
     traces.map((trace) => {
       try {
         return Object.freeze({
           id: trace.scenario.id,
           status: "replayed" as const,
-          result: replayProductionC27ATrace(trace),
+          result: replayLiveDetachedParityTrace(trace),
         });
       } catch (error) {
         return Object.freeze({
@@ -187,7 +187,10 @@ export function replayProductionC27AMatrix(
 }
 
 /** Compares a recorded source receipt without converting a mismatch into a pass. */
-export function firstProductionC27AHashDivergence(trace: ProductionC27ATrace, replay: ProductionC27AReplayResult) {
+export function firstLiveDetachedParityHashDivergence(
+  trace: LiveDetachedParityTrace,
+  replay: LiveDetachedParityReplayResult,
+) {
   const comparable = Math.min(trace.hashes.length, replay.hashes.length);
   for (let index = 0; index < comparable; index += 1) {
     const expected = trace.hashes[index];
