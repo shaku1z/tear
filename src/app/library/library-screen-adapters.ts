@@ -105,7 +105,6 @@ export interface LibraryScreenAdapters {
   readonly watchReplay: (id: string, from?: "profile" | "leaderboards") => void;
   readonly watchGhostCapsule: (id: string) => void;
   readonly publishReplay: (id: string) => void;
-  readonly repairGhostCapsule: (id: string) => void;
 }
 
 type DeferredAction = (adapters: LibraryScreenAdapters) => void;
@@ -255,11 +254,6 @@ export function createLiveLibraryScreenAdapters(services: LibraryScreenServices)
     publishReplay: (id) => {
       invokeReplay((value) => {
         value.publishReplay(id);
-      });
-    },
-    repairGhostCapsule: (id) => {
-      invokeReplay((value) => {
-        value.repairGhostCapsule(id);
       });
     },
   };

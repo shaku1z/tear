@@ -234,7 +234,6 @@ export function createCompactProfile(context: ScreenRenderContext) {
 
   /** A saved replay's vault actions, in the desktop row's order. */
   function vaultActions(replay: ReplayView): readonly FlowAction[] {
-    if (replay.repairable) return [{ label: "REPAIR", action: { type: "profile.repairGhostCapsule", id: replay.id } }];
     const items: FlowAction[] = [
       {
         label: replay.theaterUnavailable ? "CAN'T PLAY" : "◆ THEATER",

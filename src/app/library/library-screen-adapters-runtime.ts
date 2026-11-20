@@ -126,7 +126,6 @@ export interface LibraryScreenAdapters {
   readonly watchReplay: (id: string, from?: "profile" | "leaderboards") => void;
   readonly watchGhostCapsule: (id: string) => void;
   readonly publishReplay: (id: string) => void;
-  readonly repairGhostCapsule: (id: string) => void;
 }
 
 export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenServices): LibraryScreenAdapters {
@@ -307,11 +306,10 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
         id: capsule.id,
         // Player wording: these are saved replays (recordings); no ids, hashes or byte counts.
         title: "SAVED REPLAY",
-        detail: `${capsule.status === "complete" ? "Complete recording" : "Recording still saving"} · ${capsule.healthy ? "ready to watch" : "needs repair"}${capsule.repairChildId === undefined ? "" : " · repaired copy available"}`,
+        detail: `${capsule.status === "complete" ? "Complete recording" : "Recording still saving"} · ${capsule.healthy ? "ready to watch" : "damaged, can't play"}`,
         badge: "SAVED REPLAY",
         available: capsule.healthy && capsule.status === "complete" && capsule.theaterEligible,
-        theaterUnavailable: !capsule.theaterEligible,
-        repairable: capsule.repairable,
+        theaterUnavailable: !capsule.theaterEligible || !capsule.healthy,
         canDownloadArchive: capsule.healthy && capsule.status === "complete",
         timestamp: new Date(capsule.createdAt).toLocaleDateString(),
       }),
@@ -658,9 +656,6 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     },
     publishReplay: (id) => {
       replayLibrary.publish(id);
-    },
-    repairGhostCapsule: (id) => {
-      services.ghostVault.repair(id);
     },
   };
   return Object.freeze(adapters);
