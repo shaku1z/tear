@@ -48,7 +48,6 @@ function liveBossRuntime() {
       createGround: () => createBoss("warden"),
       createAir: () => createBoss("warden"),
       createSupport: () => createBoss("warden"),
-      createBoss,
       beginBossPresentation: noop,
     },
     spawning: {

@@ -206,7 +206,6 @@ export function createDetachedWorld(options: DetachedWorldOptions) {
     Source: factories.enemyTypes.Source,
     Support: factories.enemyTypes.Support,
     VoidWisp: factories.enemyTypes.VoidWisp,
-    Boss: factories.enemyTypes.Boss,
     MirrorHost: factories.mirrorTypes.MirrorHost,
     ReflectionEnemy: factories.mirrorTypes.ReflectionEnemy,
   } as unknown as GameRuntimeDependencies;
@@ -1411,7 +1410,6 @@ export function createDetachedWaveRuntime(
       createAir: (kind: string, x: number, y: number) =>
         world.entities.createEnemy(kind, x, y, run() as never) as never,
       createSupport: (kind: string) => world.entities.createEnemy(kind, 0, 0, run() as never) as never,
-      createBoss: (id?: string) => makeBoss(id ?? ""),
       // The canonical half of a boss encounter — intro freeze, fight clock,
       // carried adds, arena swap — is the shared production routine. Only the
       // banner/wipe/clip presentation is recorded.
