@@ -1,10 +1,7 @@
 import { requireRecord } from "../domain/records";
 import { stableVerificationHash, canonicalStringify } from "../domain/hash";
-import {
-  createProductionGhostReplayComposition,
-  captureProductionReplayCheckpoint,
-  type ProductionGhostReplayCompositionOptions,
-} from "../tearbench/production-replay-composition";
+import type { ProductionGhostReplayCompositionOptions } from "../tearbench/production-replay-composition";
+import { replayEngine } from "./replay-engine";
 import { createDefaultStateCodecRegistry, restoreSnapshotTransactionally } from "../tearbench/state-codecs";
 import type { TearSnapshotV1, TearCausalEventV1 } from "../tearbench/contracts";
 import { TearGameplayEventBus } from "../gameplay/runtime/gameplay-events";
@@ -205,7 +202,7 @@ export function bossMemoryReplay(
     d,
     mapped,
     clock,
-    composition: createProductionGhostReplayComposition({
+    composition: replayEngine.loaded().createProductionGhostReplayComposition({
       ...presentation,
       seed: context?.run.seed ?? "",
       inputSnapshots: new Map([[d.origin.tick, d.origin.input]]),
@@ -227,7 +224,7 @@ export function verifyBossMemory(capsule: GhostReadCapsule): GhostProductionRepl
     bus.subscribe((e) => {
       events.push(createGameplayCausalEvent(e, events.length + 1, `derived-native-${String(events.length)}`, "engine"));
     });
-    const composition = createProductionGhostReplayComposition({
+    const composition = replayEngine.loaded().createProductionGhostReplayComposition({
       seed: mapped.ghost.snapshots[0]?.seed ?? "",
       inputSnapshots: new Map([[d.origin.tick, d.origin.input]]),
       gameplayEvents: bus,
@@ -340,7 +337,7 @@ export async function saveBossMemory(
   bus.subscribe((e) => {
     actualEvents.push(createGameplayCausalEvent(e, actualEvents.length + 1, "derived-result", "engine"));
   });
-  const composition = createProductionGhostReplayComposition({
+  const composition = replayEngine.loaded().createProductionGhostReplayComposition({
     seed: original.seed,
     inputSnapshots: new Map([[entryTick, input]]),
     gameplayEvents: bus,
@@ -362,12 +359,9 @@ export async function saveBossMemory(
           if (receipt && stableVerificationHash(session.semanticProjection()) !== receipt.stateHash)
             throw new TypeError(`Source encounter continuation mismatch at ${String(tick)}`);
           if (tick === terminal.tick) {
-            const c = captureProductionReplayCheckpoint(
-              session.replay,
-              session.combat,
-              session.waveReward,
-              `${id}-endpoint`,
-            );
+            const c = replayEngine
+              .loaded()
+              .captureProductionReplayCheckpoint(session.replay, session.combat, session.waveReward, `${id}-endpoint`);
             ending.push({
               snapshot: recordingFreeBossSnapshot(c.snapshot, id),
               stateHash: c.semanticHash,

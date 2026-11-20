@@ -2,6 +2,7 @@ import { assertTutorialGoldFresh } from "./scripts/tutorial-gold-compatibility.m
 import { defineConfig, type Plugin } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { readSourceIdentitySync } from "./scripts/release-artifact.mjs";
+import { applicationChunk } from "./scripts/application-chunks.mjs";
 import {
   DEVELOPER_ONLY_ROLE,
   MOBILE_ONLY_ROLE,
@@ -163,56 +164,6 @@ function mobileCodeBoundary(name: TargetName): Plugin {
     "Reach it only behind __TEAR_MOBILE__ (mobile is paused, plans/MOBILE_LATER.md). A top-level call " +
       "in the module, such as Object.freeze, keeps it in the bundle: mark the call /* @__PURE__ */",
   );
-}
-
-const TUTORIAL_GOLD_DATA = "gameplay/training/tutorial-gold-reference-data.json";
-
-/**
- * `src/app/<folder>/` -> chunk; other folders and the app root go to runtime-app-core.
- * A group also takes the static dependencies of its modules that an earlier group
- * (in name order) has not taken, so catalog and combat hold their folders' closures
- * and core holds the rest of the application.
- */
-const APPLICATION_FOLDER_CHUNKS: Readonly<Record<string, string>> = {
-  library: "runtime-app-catalog",
-  combat: "runtime-app-combat",
-  world: "runtime-app-combat",
-};
-
-/** Keep the async application composition below the release transfer budget. */
-function applicationChunk(id: string): string | undefined {
-  const normalized = id.replaceAll("\\", "/");
-  const source = normalized.indexOf("/src/");
-  if (source < 0) return undefined;
-  const relative = normalized.slice(source + "/src/".length);
-  const topLevel = relative.split("/")[0] ?? "";
-  if (topLevel === "app") return APPLICATION_FOLDER_CHUNKS[relative.split("/")[1] ?? ""] ?? "runtime-app-core";
-  // The ~1.5 MB tutorial demonstration corpus is imported only by training
-  // preflight; its own chunk keeps it out of the startup modulepreload set.
-  if (relative === TUTORIAL_GOLD_DATA) return "tutorial-gold-reference";
-  if (topLevel === "gameplay") {
-    const area = relative.split("/").slice(1, 2)[0] ?? "core";
-    return `gameplay-${area}`;
-  }
-  if (
-    [
-      "presentation",
-      "audio",
-      "ghost",
-      "tearbench",
-      "agents",
-      "input",
-      "persistence",
-      "platform",
-      "replay",
-      "simulation",
-      "diagnostics",
-      "domain",
-      "config",
-    ].includes(topLevel)
-  )
-    return `runtime-${topLevel}`;
-  return undefined;
 }
 
 export default defineConfig(({ mode, command }) => {

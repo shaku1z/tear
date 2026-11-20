@@ -24,13 +24,13 @@ const noise = (length, seed) =>
     "",
   );
 /** A small built target: entry + one preloaded app chunk, one worker, the on-demand corpus, and a service worker. */
-async function target({ preloadGold = false, precacheGold = false, appBytes = 1_000 } = {}) {
+async function target({ preloadGold = false, precacheGold = false, appBytes = 1_000, lazyIntoStartup = false } = {}) {
   const root = await mkdtemp(join(tmpdir(), "tear-bundle-budget-"));
   roots.push(root);
   await mkdir(join(root, "assets"));
   const files = {
     "assets/index-a1.js": noise(110, 1),
-    "assets/runtime-app-core-b2.js": noise(appBytes, 2),
+    "assets/runtime-app-core-b2.js": noise(appBytes, 2) + (lazyIntoStartup ? 'import("./runtime-app-core-b2.js")' : ""),
     "assets/career-archive-worker-c3.js": noise(2_000, 3),
     "assets/tutorial-gold-reference-d4.js": noise(4_000, 4),
   };
@@ -61,6 +61,16 @@ async function target({ preloadGold = false, precacheGold = false, appBytes = 1_
 const failures = (results) => results.filter(([, ok]) => !ok).map(([label]) => label);
 
 describe("bundle budget gate", () => {
+  it("fails when a dynamic import resolves into a startup chunk, and allows the entry's own import", async () => {
+    const lazy = await measureBundleTarget(await target({ lazyIntoStartup: true }));
+    expect(lazy.startup.lazyInStartup).toEqual(["runtime-app-core-b2.js -> runtime-app-core-b2.js"]);
+    expect(failures(evaluateBundleBudgets("standalone", lazy, BUDGETS, { pwa: true }))).toEqual([
+      "standalone lazy code kept out of startup",
+    ]);
+    const clean = await measureBundleTarget(await target());
+    expect(clean.startup.lazyInStartup).toEqual([]);
+  });
+
   it("separates startup, worker, on-demand corpus and precache measurements", async () => {
     const measured = await measureBundleTarget(await target());
     expect(measured.main.file).toBe("runtime-app-core-b2.js");

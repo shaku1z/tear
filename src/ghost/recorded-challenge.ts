@@ -1,7 +1,7 @@
 import { asRecord } from "../domain/records";
 import { stableVerificationHash } from "../domain/hash";
 import type { TearCausalEventV1, TearSnapshotV1 } from "../tearbench/contracts";
-import { createProductionGhostReplayComposition } from "../tearbench/production-replay-composition";
+import { replayEngine } from "./replay-engine";
 import { TearGameplayEventBus } from "../gameplay/runtime/gameplay-events";
 import { createGameplayCausalEvent } from "../tearbench/gameplay-causal-events";
 import { mapGhostCapsuleToReplayEnvelope } from "./capsule-replay-envelope";
@@ -206,7 +206,7 @@ export function verifyRecordedGhostChallenge(
     context.run.id,
     context.simulation.applicationFrames !== undefined,
   );
-  const composition = createProductionGhostReplayComposition({
+  const composition = replayEngine.loaded().createProductionGhostReplayComposition({
     seed: anchor.seed,
     forkOrigin: origin,
     inputSnapshots: new Map([[anchor.tick, initial.input]]),
