@@ -1,10 +1,4 @@
-import {
-  TutorialFailureCoach,
-  parseTutorialFailures,
-  type TutorialAttemptFact,
-  type TutorialFailureCheckpoint,
-  type TutorialFailureView,
-} from "./tutorial-failure-coach";
+import { TutorialFailureCoach, type TutorialAttemptFact, type TutorialFailureView } from "./tutorial-failure-coach";
 import {
   sampleTutorialGold,
   tutorialGoldContactEdges,
@@ -17,7 +11,13 @@ import {
 import { shippingTutorialGold } from "./tutorial-gold-shipping";
 import type { GameAction } from "../../input/game-action";
 import type { AuthoritativeInputSnapshot } from "../runtime/authoritative-input";
-import { isRecord } from "../../domain/records";
+import {
+  MAX_POSES,
+  parseTutorialCoachCheckpoint,
+  type Attempt,
+  type Pose,
+  type TutorialCoachCheckpoint,
+} from "./tutorial-coach-checkpoint";
 
 // The shipped corpus arrives after a lesson starts; see tutorial-gold-shipping.ts.
 export { loadShippingTutorialGold, shippingTutorialGold } from "./tutorial-gold-shipping";
@@ -34,25 +34,6 @@ export interface TutorialCoachView {
   readonly fromTick: number;
   readonly toTick: number;
 }
-type Pose = readonly [tick: number, x: number, y: number, tipX: number, tipY: number, marker: string];
-type Attempt = Pick<
-  { duration: number; poses: Pose[]; contact: boolean; groundedContact: boolean },
-  "duration" | "poses" | "contact" | "groundedContact"
->;
-export type TutorialCoachCheckpoint = Readonly<{
-  readonly version: 1 | 2;
-  readonly failures?: TutorialFailureCheckpoint;
-  readonly reference: string;
-  readonly mode: TutorialCoachView["mode"];
-  readonly rate: 1 | 0.5;
-  readonly cursor: number;
-  readonly from: number;
-  readonly to: number;
-  readonly visible: boolean;
-  readonly diagnosis: string;
-  readonly current?: Attempt;
-  readonly best?: Attempt;
-}>;
 export interface TutorialGoldDisplay extends TutorialCoachView {
   readonly frame: TutorialGoldFrame;
   readonly platforms: TutorialGoldReference["platforms"];
@@ -64,8 +45,6 @@ export interface TutorialGoldDisplay extends TutorialCoachView {
   readonly markers: readonly Readonly<{ kind: string; frame: TutorialGoldFrame }>[];
   readonly trail: readonly TutorialGoldFrame[];
 }
-const MAX_POSES = 128,
-  MAX_PRESENTATION_BYTES = 24000;
 function lastWhere<T>(items: readonly T[], predicate: (item: T) => boolean): T | undefined {
   for (let index = items.length - 1; index >= 0; index--) {
     const item = items[index];
@@ -73,85 +52,6 @@ function lastWhere<T>(items: readonly T[], predicate: (item: T) => boolean): T |
   }
   return undefined;
 }
-const fields = [
-  "version",
-  "reference",
-  "mode",
-  "rate",
-  "cursor",
-  "from",
-  "to",
-  "visible",
-  "diagnosis",
-  "current",
-  "best",
-  "failures",
-];
-export function parseTutorialCoachCheckpoint(value: unknown): TutorialCoachCheckpoint | undefined {
-  if (value === undefined) return undefined;
-  if (!isRecord(value)) throw new TypeError("Invalid gold coach presentation");
-  const data = value as TutorialCoachCheckpoint;
-  const version: unknown = Reflect.get(value, "version");
-  if (
-    Object.keys(data).some((key) => !fields.includes(key)) ||
-    (version !== 1 && version !== 2) ||
-    !/^[a-f0-9]{16}$/.test(data.reference) ||
-    !["preview", "diagnostic", "comparison"].includes(data.mode) ||
-    ![1, 0.5].includes(data.rate) ||
-    ![data.cursor, data.from, data.to].every((n) => Number.isFinite(n) && n >= 0 && n <= 20000) ||
-    data.from > data.to ||
-    data.cursor < data.from ||
-    data.cursor > data.to ||
-    typeof data.visible !== "boolean" ||
-    typeof data.diagnosis !== "string" ||
-    data.diagnosis.length > 120 ||
-    JSON.stringify(data).length > MAX_PRESENTATION_BYTES
-  )
-    throw new TypeError("Invalid gold coach cursor");
-  if (version === 2) parseTutorialFailures(data.failures);
-  else if (data.failures !== undefined) throw new TypeError("Historical coach cannot contain adaptive failures");
-  if (data.mode === "comparison" && data.best === undefined) throw new RangeError("Gold coach reference incompatible");
-  // The corpus arrives after a lesson starts. Until it has, the reference is checked when it does
-  // (TutorialGhostCoach.select); once it has, a state for a reference it lacks is refused here.
-  const gold = shippingTutorialGold();
-  if (
-    gold !== undefined &&
-    !gold.references.some((reference) => reference.contentHash === data.reference && data.to <= reference.durationTicks)
-  )
-    throw new RangeError("Gold coach reference incompatible");
-  for (const raw of [data.current, data.best] as readonly unknown[])
-    if (raw !== undefined) {
-      if (!isRecord(raw)) throw new TypeError("Invalid personal attempt");
-      const attempt = raw as Attempt;
-      if (
-        Object.keys(attempt).some((key) => !["duration", "poses", "contact", "groundedContact"].includes(key)) ||
-        !Number.isSafeInteger(attempt.duration) ||
-        attempt.duration < 0 ||
-        attempt.duration > 20000 ||
-        !Array.isArray(attempt.poses) ||
-        attempt.poses.length > MAX_POSES ||
-        typeof attempt.contact !== "boolean" ||
-        typeof attempt.groundedContact !== "boolean"
-      )
-        throw new TypeError("Invalid personal attempt");
-      let previous = -1;
-      for (const rawPose of attempt.poses as readonly unknown[]) {
-        if (!Array.isArray(rawPose) || rawPose.length !== 6) throw new TypeError("Invalid personal pose");
-        const pose = rawPose as unknown as Pose;
-        if (
-          !pose.slice(0, 5).every((n) => typeof n === "number" && Number.isFinite(n)) ||
-          !Number.isSafeInteger(pose[0]) ||
-          pose[0] <= previous ||
-          pose[0] > attempt.duration ||
-          !["pose", "takeoff", "landing", "dash", "contact", "apex"].includes(pose[5])
-        )
-          throw new TypeError("Invalid personal pose");
-        previous = pose[0];
-      }
-    }
-  return structuredClone(data);
-}
-
 /** Presentation and observed-attempt evidence only. Never emits gameplay input or objective marks. */
 export class TutorialGhostCoach {
   private reference: TutorialGoldReference | undefined;

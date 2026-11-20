@@ -5,7 +5,8 @@ import type {
   PracticeBossEntry,
   PracticeBossState,
 } from "./practice-boss-catalog";
-import { TutorialGhostCoach, shippingTutorialGold, type TutorialCoachCheckpoint } from "./tutorial-ghost-coach";
+import type { TutorialCoachCheckpoint } from "./tutorial-coach-checkpoint";
+import { TutorialGhostCoach, shippingTutorialGold } from "./tutorial-ghost-coach";
 import { stableVerificationHash } from "../../domain/hash";
 import type { TutorialGoldFrame } from "./tutorial-gold-reference";
 import type { AuthoritativeInputSnapshot } from "../runtime/authoritative-input";
