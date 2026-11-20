@@ -1,4 +1,5 @@
 import type { TearWorldEntityPresentationPorts } from "../../gameplay/runtime/tear-world-simulation-factories";
+import type { CosmeticLooks } from "../../presentation/cosmetic-styles";
 import { createEnemyPresentation } from "../../presentation/enemies/enemy-presentation";
 import { createBladeRenderer } from "../../presentation/entities/blade-renderer";
 import { createMirrorRenderer } from "../../presentation/entities/mirror-renderer";
@@ -32,6 +33,8 @@ export interface LiveWorldSimulationPresentationAdapterOptions {
     lerp: EnemyPresentationOptions["lerp"];
   }>;
   readonly cosmeticRandom: () => number;
+  /** Who wears which cosmetics in this world: every blade is drawn with the style these looks give it. */
+  readonly looks: CosmeticLooks;
 }
 
 /**
@@ -47,7 +50,7 @@ export interface LiveWorldSimulationPresentationAdapterOptions {
 export function createLiveWorldSimulationPresentationAdapter(
   options: LiveWorldSimulationPresentationAdapterOptions,
 ): TearWorldEntityPresentationPorts {
-  const { clock, effects, ui, configuration, geometry, cosmeticRandom } = options;
+  const { clock, effects, ui, configuration, geometry, cosmeticRandom, looks } = options;
   const { accessibility, config, graphics, theme } = configuration;
   const { aldric, bossTheater, chargedShot, colors, exotic, juice, source, warden, world, view } = config;
   const playerPresentation = createPlayerRenderer({ colors: config.colors, graphics, theme, clamp: geometry.clamp });
@@ -64,6 +67,7 @@ export function createLiveWorldSimulationPresentationAdapter(
     clamp: geometry.clamp,
     len: geometry.len,
     lerp: geometry.lerp,
+    looks,
   });
   const projectilePresentation = createProjectileRenderer({
     clock,

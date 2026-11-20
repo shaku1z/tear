@@ -120,5 +120,11 @@ export interface CosmeticState {
   readonly active: Readonly<{ id: string; at: number }>;
 }
 
+/**
+ * What a particle burst shows, when a cosmetic may restyle it. Gameplay tags the burst; presentation decides
+ * the look. Untagged bursts are never restyled.
+ */
+export type BurstKind = "blade-hit";
+
 /** The plain object every consumer of a look takes (the dispatcher, a replay, a profile card, a co-op partner). */
 export type Loadout = Readonly<Record<string, string>>;

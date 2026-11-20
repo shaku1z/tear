@@ -1,5 +1,7 @@
 import type { MusicDirector } from "../../audio/music-director";
+import { loadoutOf } from "../../domain/cosmetics";
 import { snapshotProgress, type ProgressSource } from "../../domain/progress-facts";
+import { COSMETIC_CATALOG } from "../../gameplay/progression/cosmetic-catalog";
 import { admittedMusicProgress } from "../../audio/music/run-progress";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { GameBlade, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
@@ -128,7 +130,8 @@ export function createLiveRunStartHost(
   context: RunStartHostContext,
 ): LiveRunStartController<ReturnType<GameRuntimeDependencies["newMods"]>> {
   const { dependencies, state } = context;
-  const { CONFIG, REMOTE, GHOST, PROFILE, META, SFX, GAMEPLAY_EVENTS, Input, createRunSeed, newMods } = dependencies;
+  const { CONFIG, REMOTE, GHOST, PROFILE, META, SFX, GAMEPLAY_EVENTS, Input, createRunSeed, newMods, COSMETICS } =
+    dependencies;
   const replacement = new RunReplacementGuard({
     recording: () => GHOST.recording(),
     stopInterruptedRecording: () => {
@@ -200,6 +203,7 @@ export function createLiveRunStartHost(
       const blade = context.createBlade();
       context.configureBlade(blade, weaponId);
       blade.restoredTrail = Boolean(PROFILE.data.rewards?.restoredBladeTrail);
+      COSMETICS.wear(blade, loadoutOf(COSMETIC_CATALOG, PROFILE.cosmetics()));
       state.setPlayer(player);
       state.setBlade(blade);
       state.setEnemies([]);

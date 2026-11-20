@@ -10,6 +10,7 @@ import {
   captureProductionReplayCheckpoint,
   captureProductionRewardSelection,
   createProductionGhostReplayComposition,
+  type ProductionGhostReplayCompositionOptions,
   projectProductionReplayCanonicalState,
   type ProductionReplayBootstrap,
   type ProductionApplicationFrameConfirm,
@@ -77,6 +78,8 @@ export interface ProductionHeadlessEnvironmentOptions {
   readonly captureSourceTracks?: boolean;
   /** The build a run opened on a later wave gives its player; see `ProductionRunOpening`. */
   readonly build?: ProductionRunOpening["build"];
+  /** Who wears which cosmetics; the game's own look when absent. The simulation never reads it. */
+  readonly looks?: ProductionGhostReplayCompositionOptions["looks"];
 }
 
 export interface ProductionHeadlessTerminalArtifact {
@@ -274,6 +277,7 @@ export function createProductionHeadlessEnvironment(
           }),
       ...(snapshot === undefined || input === undefined ? {} : { inputSnapshots: new Map([[snapshot.tick, input]]) }),
       gameplayEvents,
+      ...(options.looks === undefined ? {} : { looks: options.looks }),
       ...(sourceTracks === undefined
         ? {}
         : {
