@@ -188,11 +188,11 @@
       "duration": "long"
     },
     "playtest": {
-      "purpose": "Plays the real game headless and prints results; `bosses` fights the named bosses with scripted players on fixed seeds, one table per fight",
+      "purpose": "Plays boss fights on the real game headless: `bosses` prints a table per fight and a summary, `sweep` every weapon on Easy and Normal (queue it)",
       "effects": [
         "read-only"
       ],
-      "duration": "under-a-minute"
+      "duration": "minutes"
     },
     "tearbench": {
       "purpose": "TearBench CLI (list, plan, explain, tasks, run, select, ci, parity, forge); effects depend on the subcommand",
@@ -1754,11 +1754,11 @@
       ]
     },
     "scripts/playtest.mjs": {
-      "purpose": "Playtest command: loads src/playtest through Vite, plays boss fights headless and prints the tables; --json also writes them to the named file",
+      "purpose": "Playtest command: loads src/playtest through Vite, plays boss fights headless, in worker processes when many, and prints them; --json writes them",
       "effects": [
         "read-only"
       ],
-      "duration": "under-a-minute",
+      "duration": "minutes",
       "via": [
         "playtest"
       ]
