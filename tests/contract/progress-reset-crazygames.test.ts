@@ -3,6 +3,7 @@ import { resetProgress } from "../../src/app/progress/progress-reset";
 import { CONFIG } from "../../src/config/game-config";
 import { createMetaProgression } from "../../src/gameplay/progression/meta";
 import { PROFILE_ENVELOPE_VERSION } from "../../src/persistence/profile-envelope";
+import { asRecord } from "../../src/domain/records";
 import { createProfileStore } from "../../src/persistence/profile-store";
 import { createCrazyGamesPlatformServices, type CrazyGamesSdkShape } from "../../src/platform/crazygames";
 import { createLegacyPlatformCompatibility } from "../../src/platform/legacy-compat";
@@ -18,6 +19,9 @@ const earnedProfile = JSON.stringify({
   extensions: {},
 });
 const earnedMeta = JSON.stringify({ lifetimeEarned: 500, lifetimeSpent: 200, buy: { tough: 3 } });
+
+/** The profile inside a stored envelope, as the game would read it back. */
+const storedProfile = (text: string | null | undefined) => asRecord(asRecord(JSON.parse(text ?? "{}"))?.profile);
 
 /**
  * On CrazyGames the game keeps no online copy of its own (the portal provider has no `replace`): the save lives
@@ -82,7 +86,7 @@ describe("resetting progress on the CrazyGames build", () => {
     expect(result).toBe("erased");
 
     for (const copy of [portal, device]) {
-      expect(JSON.parse(copy.get("tear_profile_v2") ?? "{}").profile).toMatchObject({
+      expect(storedProfile(copy.get("tear_profile_v2"))).toMatchObject({
         shards: 0,
         stats: {},
         modes: {},
@@ -92,7 +96,7 @@ describe("resetting progress on the CrazyGames build", () => {
       expect(copy.get("tear_profile_v2")).not.toContain("Someone");
     }
     // What the game reads next start, from the portal first, is blank too.
-    expect(JSON.parse(CG.store.get("tear_profile_v2") ?? "{}").profile.shards).toBe(0);
+    expect(storedProfile(CG.store.get("tear_profile_v2"))?.shards).toBe(0);
     expect(profile.data.shards).toBe(0);
     expect(meta.data.lifetimeEarned).toBe(0);
   });
