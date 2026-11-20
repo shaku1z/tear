@@ -132,6 +132,17 @@
       ]
     },
     {
+      "id": "cinematics",
+      "name": "Cinematics",
+      "state": "Planning: plan PR open; look board waiting for the owner",
+      "summary": "Boss phase changes stop the fight today: a ritual script freezes the combat step, locks the player and waits for a tap or a reading timeout (5.1-6.8 s each; the Source descent 11.5 s; Rootbound stands still for 12.9 s of a 32-37 s fight). Chapter openings take 25-39 s at Full. The plan makes every in-fight beat a boss move with at most a banner, cuts chapter openings and the finale to short cards that never wait, replaces the cinematic director and ritual layer with one stage beat, and adds a rule over every boss that no tick blocks input or the combat step.",
+      "next": "The lead reviews the plan and the owner approves the look board; then PR 1 (the stage beat, the banner and no slow motion).",
+      "owner_action": "Approve or correct the look board on the ledger.",
+      "evidence": [
+        "plans/active/CINEMATICS_OVERHAUL.md"
+      ]
+    },
+    {
       "id": "mobile",
       "name": "Mobile, touch and phone layouts",
       "state": "Paused by the owner 2026-11-19; out of the release builds",

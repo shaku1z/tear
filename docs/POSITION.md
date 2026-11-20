@@ -24,6 +24,7 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 | [Repository structure and workflow](#repository-structure) | In progress | After the hooks pull request merges, run pnpm setup:hooks in the canonical checkout on main (scripts/governance/README.md). | — |
 | [Playtest tool](#playtest-tool) | Stage 2 under way: stage 1 is done (pnpm playtest bosses and sweep); pnpm playtest waves opens any Adventure wave directly, runs plays whole runs from wave 1, and enemies meets each enemy kind alone | The coverage list (content that never appeared in any report), then --compare. | — |
 | [Replays](#replays) | In progress: PR 1, PR 2 and PR 2b merged (hidden replay features, replay extras and REPAIR removed); PR 3 open (snapshot codecs to src/gameplay/snapshot) | Merge PR 3, then PR 4 (the detached world moves to src/app/world/detached). | Deploy the Firestore chunk-write rules from the merged rules PR. |
+| [Cinematics](#cinematics) | Planning: plan PR open; look board waiting for the owner | The lead reviews the plan and the owner approves the look board; then PR 1 (the stage beat, the banner and no slow motion). | Approve or correct the look board on the ledger. |
 | [Mobile, touch and phone layouts](#mobile) | Paused by the owner 2026-11-19; out of the release builds | Nothing until the owner resumes mobile; plans/MOBILE_LATER.md says how to turn it back on. | Mark the CrazyGames listing desktop only. Say when mobile resumes. |
 
 <a id="release-readiness"></a>
@@ -125,6 +126,16 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 - Next: Merge PR 3, then PR 4 (the detached world moves to src/app/world/detached).
 - Owner action: Deploy the Firestore chunk-write rules from the merged rules PR.
 - Evidence: [plans/active/REPLAY_OVERHAUL_PLAN.md](../plans/active/REPLAY_OVERHAUL_PLAN.md)
+
+<a id="cinematics"></a>
+
+### Cinematics
+
+**Planning: plan PR open; look board waiting for the owner.** Boss phase changes stop the fight today: a ritual script freezes the combat step, locks the player and waits for a tap or a reading timeout (5.1-6.8 s each; the Source descent 11.5 s; Rootbound stands still for 12.9 s of a 32-37 s fight). Chapter openings take 25-39 s at Full. The plan makes every in-fight beat a boss move with at most a banner, cuts chapter openings and the finale to short cards that never wait, replaces the cinematic director and ritual layer with one stage beat, and adds a rule over every boss that no tick blocks input or the combat step.
+
+- Next: The lead reviews the plan and the owner approves the look board; then PR 1 (the stage beat, the banner and no slow motion).
+- Owner action: Approve or correct the look board on the ledger.
+- Evidence: [plans/active/CINEMATICS_OVERHAUL.md](../plans/active/CINEMATICS_OVERHAUL.md)
 
 <a id="mobile"></a>
 
