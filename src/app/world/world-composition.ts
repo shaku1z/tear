@@ -203,7 +203,7 @@ export function createLiveWorldState(session: LiveWorldSessionPort, mirrors: Liv
  * The one production world constructor: a world's replaceable state, entity
  * construction adapter, run lifecycle, environment, cinema and world context
  * (services plus transient records). The live production-world root and the
- * detached TearBench replay world (src/tearbench/production-world-factory.ts)
+ * detached TearBench replay world (src/app/world/detached/world-factory.ts)
  * both build their world here and differ only in the explicit options.
  *
  * This is deliberately world-only. The combat host, frame coordinator, input,

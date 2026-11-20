@@ -1209,7 +1209,7 @@
     "R07"
    ],
    "file": "src/gameplay/run/reward-runtime.ts",
-   "text": "import { routeLiveTearBenchAction } from \"../../tearbench/live-runtime-action-routing\";",
+   "text": "import { routeLiveTearBenchAction } from \"../../app/world/detached/action-routing\";",
    "reject": true
   },
   {
@@ -1246,15 +1246,15 @@
    "legacy": [
     "R09"
    ],
-   "file": "src/tearbench/detached-world-hydrator.ts",
-   "text": "import type { GameRuntimeDependencies } from \"../app/shell/game-runtime-dependencies\";",
+   "file": "src/app/world/detached/world-hydrator.ts",
+   "text": "import type { GameRuntimeDependencies } from \"../../shell/game-runtime-dependencies\";",
    "reject": true
   },
   {
    "legacy": [
     "R10"
    ],
-   "file": "src/tearbench/detached-world-hydrator.ts",
+   "file": "src/app/world/detached/world-hydrator.ts",
    "text": "const canvas: HTMLCanvasElement | null = null;",
    "reject": true
   },
@@ -1262,15 +1262,15 @@
    "legacy": [
     "R09"
    ],
-   "file": "src/tearbench/detached-world-hydrator.ts",
-   "text": "import type { GameRuntimeDependencies } from \"../app/shell/game-runtime-dependencies\";",
+   "file": "src/app/world/detached/world-hydrator.ts",
+   "text": "import type { GameRuntimeDependencies } from \"../../shell/game-runtime-dependencies\";",
    "reject": true
   },
   {
    "legacy": [
     "R10"
    ],
-   "file": "src/tearbench/detached-world-hydrator.ts",
+   "file": "src/app/world/detached/world-hydrator.ts",
    "text": "const canvas: HTMLCanvasElement | null = null;",
    "reject": true
   },
@@ -1302,7 +1302,7 @@
    "legacy": [
     "R14"
    ],
-   "file": "src/tearbench/live-runtime-action-routing.ts",
+   "file": "src/app/world/detached/action-routing.ts",
    "text": "const pointer = new PointerEvent(\"pointerdown\");",
    "reject": true
   },

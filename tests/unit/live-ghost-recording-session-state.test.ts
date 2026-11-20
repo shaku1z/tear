@@ -6,8 +6,8 @@ import {
   createLiveGhostFrameRecording,
   declareGhostApplicationFrames,
 } from "../../src/app/replay/ghost-frame-recording";
-import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
-import { createProductionCombatSimulation } from "../../src/tearbench/production-combat-simulation";
+import { createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
+import { createProductionCombatSimulation } from "../../src/app/world/detached/combat-simulation";
 import { GhostLiveRecorder } from "../../src/ghost/live-recorder";
 import { GhostLocalVault, createMemoryGhostVaultBackend } from "../../src/ghost/capsule-vault";
 import { GhostCapsuleReader } from "../../src/ghost/capsule-reader";

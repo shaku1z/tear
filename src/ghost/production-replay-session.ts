@@ -1,8 +1,7 @@
 import { isObject } from "../domain/records";
 import { readSeedRaceDecisions } from "./seed-race-decisions";
 import { ghostRecordingFirstTick, requireGhostForkPermit, type GhostForkPermit } from "./fork-origin";
-import type { ProductionGhostReplayCompositionOptions } from "../tearbench/production-replay-composition";
-import { replayEngine } from "./replay-engine";
+import { replayEngine, type ReplayEngine } from "./replay-engine";
 import type { GhostReadCapsule } from "./capsule-reader";
 import { mapGhostCapsuleToReplayEnvelope } from "./capsule-replay-envelope";
 import { readGhostAuthoritativeReceipt } from "./authoritative-receipt";
@@ -38,6 +37,9 @@ export interface GhostVerifiedProductionReplaySession {
   forkPractice(tick: number, mode: GhostPracticeMode): GhostPracticeChild;
 }
 
+/** The replay world's options, as the engine the application installs declares them. */
+type ReplayCompositionOptions = Parameters<ReplayEngine["createProductionGhostReplayComposition"]>[0];
+
 /**
  * Opens a verified V3 capsule as a read-only replay source. It owns neither
  * Vault writes nor player/profile state; forks are immutable practice children
@@ -45,7 +47,7 @@ export interface GhostVerifiedProductionReplaySession {
  */
 export function createGhostProductionReplaySession(
   capsule: GhostReadCapsule,
-  presentation: Pick<ProductionGhostReplayCompositionOptions, "presentation" | "renderView"> = {},
+  presentation: Pick<ReplayCompositionOptions, "presentation" | "renderView"> = {},
   forkPermit?: GhostForkPermit,
 ): GhostVerifiedProductionReplaySession {
   if (!Number.isSafeInteger(capsule.maxTick) || capsule.maxTick < 0)

@@ -1,28 +1,28 @@
-import { WEAPONS } from "../gameplay/weapons";
-import type { EnemyKind } from "../gameplay/run/content-director";
+import { WEAPONS } from "../../../gameplay/weapons";
+import type { EnemyKind } from "../../../gameplay/run/content-director";
 import {
   createTearSpawnFactPublisher,
   createTearWaveFactPublisher,
-} from "../gameplay/runtime/gameplay-event-publishers";
-import type { TearGameplayEventPort } from "../gameplay/runtime/gameplay-events";
-import { dispatchWaveClearIntents, dispatchWavePlanIntents } from "../gameplay/run/wave-intent-dispatcher";
-import type { WaveClearIntent } from "../gameplay/run/wave-clear-planner";
-import type { WavePlanIntent } from "../gameplay/run/wave-planner";
-import { LiveWaveController } from "../gameplay/run/live-wave-controller";
-import { createLiveContentRuntime } from "../gameplay/run/live-content-runtime";
-import { planBossPlacement } from "../gameplay/run/boss-placement";
-import { beginBossEncounter } from "../gameplay/run/boss-encounter";
-import { createRewardRuntime, type RewardRuntime } from "../gameplay/run/reward-runtime";
-import { eligibleTierChoices } from "../gameplay/run/reward-selection";
-import { createBossArena } from "../gameplay/training/arena-rules";
-import { PRESETS, applyPreset, rollAffixes } from "../gameplay/affixes";
-import { applyVariant, rollVariant } from "../gameplay/variants";
-import { STAGES, stageAt, stagePlatforms } from "../gameplay/stages";
-import { applyUpgrade, rollUpgrades, tierUp, UPGRADES, type UpgradeDefinition } from "../gameplay/upgrades";
-import type { GameAction } from "../input/game-action";
-import { routeLiveTearBenchAction } from "./live-runtime-action-routing";
-import type { ProductionReplayWorld } from "./production-world-factory";
-import type { ChapterPage } from "../gameplay/campaign/chapter-controller";
+} from "../../../gameplay/runtime/gameplay-event-publishers";
+import type { TearGameplayEventPort } from "../../../gameplay/runtime/gameplay-events";
+import { dispatchWaveClearIntents, dispatchWavePlanIntents } from "../../../gameplay/run/wave-intent-dispatcher";
+import type { WaveClearIntent } from "../../../gameplay/run/wave-clear-planner";
+import type { WavePlanIntent } from "../../../gameplay/run/wave-planner";
+import { LiveWaveController } from "../../../gameplay/run/live-wave-controller";
+import { createLiveContentRuntime } from "../../../gameplay/run/live-content-runtime";
+import { planBossPlacement } from "../../../gameplay/run/boss-placement";
+import { beginBossEncounter } from "../../../gameplay/run/boss-encounter";
+import { createRewardRuntime, type RewardRuntime } from "../../../gameplay/run/reward-runtime";
+import { eligibleTierChoices } from "../../../gameplay/run/reward-selection";
+import { createBossArena } from "../../../gameplay/training/arena-rules";
+import { PRESETS, applyPreset, rollAffixes } from "../../../gameplay/affixes";
+import { applyVariant, rollVariant } from "../../../gameplay/variants";
+import { STAGES, stageAt, stagePlatforms } from "../../../gameplay/stages";
+import { applyUpgrade, rollUpgrades, tierUp, UPGRADES, type UpgradeDefinition } from "../../../gameplay/upgrades";
+import type { GameAction } from "../../../input/game-action";
+import { routeLiveTearBenchAction } from "./action-routing";
+import type { ProductionReplayWorld } from "./world-factory";
+import type { ChapterPage } from "../../../gameplay/campaign/chapter-controller";
 
 export interface ProductionWaveRewardRuntimeOptions {
   readonly gameplayEvents?: TearGameplayEventPort;

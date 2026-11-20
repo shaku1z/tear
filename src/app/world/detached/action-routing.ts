@@ -1,4 +1,4 @@
-import type { GameAction } from "../input/game-action";
+import type { GameAction } from "../../../input/game-action";
 
 interface Choice {
   readonly id: string;
