@@ -83,7 +83,7 @@ describe("cosmetic data files", () => {
       "mix_preset",
     ]);
     const ready = COSMETIC_CATALOG.slots.filter((slot) => slot.hook === "ready").map((slot) => slot.id);
-    expect(ready).toEqual(["blade", "trail", "spark", "title", "banner"]);
+    expect(ready).toEqual(["blade", "trail", "spark"]);
     const notYet = COSMETIC_CATALOG.slots.filter((slot) => slot.hook === "not yet").map((slot) => slot.id);
     expect(notYet).toHaveLength(COSMETIC_CATALOG.slots.length - ready.length);
   });
