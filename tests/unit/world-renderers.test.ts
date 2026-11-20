@@ -18,7 +18,7 @@ import {
   renderRearEntities,
   type EnemyVisualSnapshot,
 } from "../../src/presentation/world/entity-layer";
-import { tutorialCardLayout } from "../../src/presentation/world/training-touch";
+import { tutorialCardLayout } from "../../src/presentation/world/tutorial-card";
 import { bossHudTop } from "../../src/presentation/world/hud";
 
 interface CanvasCall {
@@ -612,7 +612,7 @@ describe("legacy world presentation renderers", () => {
   });
 
   it("contains no gameplay coordination, persistence, audio, input or platform access", () => {
-    const files = ["status-debug.ts", "finale.ts", "hud.ts", "training-touch.ts", "overlays.ts"];
+    const files = ["status-debug.ts", "finale.ts", "hud.ts", "tutorial-card.ts", "touch-controls.ts", "overlays.ts"];
     const source = files
       .map((file) =>
         readFileSync(fileURLToPath(new URL(`../../src/presentation/world/${file}`, import.meta.url)), "utf8"),

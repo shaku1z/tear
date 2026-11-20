@@ -12,6 +12,9 @@
 // It does not fight: that a cleared wave opens the draft on such a phone is proved on the
 // test build by tests/browser-input-matrix.js, where the wave clear is deterministic.
 // TEAR_RELEASE_TOUCH_VIEWPORTS (default 844x390) lists the phone sizes to play.
+// While mobile is paused (plans/MOBILE_LATER.md) the release builds have no touch controls, so the
+// touch leg is off by default; the computer-only leg proves a phone gets one plain line instead and
+// a touchscreen laptop plays.
 //
 // Observation (test-side only): canvas text and the player's eye are read from the
 // page's own 2D draw calls, enemies from canvas pixels. Nothing in the game is called.
@@ -329,6 +332,85 @@ async function runTouchLeg(browser, origin, viewport, shot) {
     assert.deepEqual(pageErrors, [], `${leg}: the touch journey raised page errors`);
   } finally {
     await context.close();
+  }
+}
+
+const COMPUTER_ONLY_LINE = "TEAR is played on a computer for now, with a keyboard and mouse or a controller.";
+
+/**
+ * While mobile is paused (plans/MOBILE_LATER.md) the release builds carry no touch controls. A
+ * touch-only phone sees one plain line on the boot screen and the game never starts; a touchscreen
+ * laptop, which also has a mouse or trackpad, starts the game as any computer does.
+ */
+async function runComputerOnlyLeg(browser, origin, shot) {
+  const open = async (options, beforeLoad) => {
+    const context = await browser.newContext({ serviceWorkers: "block", ...options });
+    const page = await context.newPage();
+    const errors = [];
+    page.on("pageerror", (error) => errors.push(error.stack || error.message));
+    await page.route("**/*", (route) =>
+      route.request().url().startsWith(`${origin}/`) ? route.continue() : route.abort(),
+    );
+    await page.addInitScript(installObserver);
+    if (beforeLoad) await page.addInitScript(beforeLoad);
+    await page.goto(`${origin}/`, { waitUntil: "domcontentloaded", timeout: STATE_WAIT_MS });
+    return { context, page, errors };
+  };
+  const drewPlay = (page) =>
+    page.evaluate(() => window.__RELEASE_JOURNEY__.text.some((entry) => entry.t === "PLAY" && entry.a > 0.05));
+
+  const phone = await open({
+    viewport: { width: 844, height: 390 },
+    deviceScaleFactor: 2,
+    hasTouch: true,
+    isMobile: true,
+  });
+  try {
+    const line = phone.page.locator("#boot.computer .computer");
+    await line.waitFor({ state: "visible", timeout: STATE_WAIT_MS });
+    assert.equal((await line.textContent())?.trim(), COMPUTER_ONLY_LINE, "a phone reads the computer-only line");
+    // The boot screen has no buttons; give the game time it would need to draw its menu.
+    assert.equal(await phone.page.locator("#boot button, #boot a").count(), 0, "the line offers no buttons");
+    await phone.page.waitForTimeout(settleFor(3_000));
+    assert.equal(await drewPlay(phone.page), false, "a touch-only phone does not start the game");
+    await shot("computer-only-phone", phone.page);
+    assert.deepEqual(phone.errors, [], "the phone raised page errors");
+  } finally {
+    await phone.context.close();
+  }
+
+  // A touchscreen laptop: touch events and a fine pointer together. Chromium's touch emulation
+  // reports only a coarse pointer (CDP cannot emulate any-pointer either), so the page is told what
+  // such a laptop's browser reports: a coarse primary pointer and a fine one (its trackpad) too.
+  const laptop = await open({ viewport: { width: 1366, height: 768 }, hasTouch: true }, () => {
+    const original = window.matchMedia.bind(window);
+    window.matchMedia = (query) => {
+      const list = original(query);
+      if (!/\(any-pointer:\s*fine\)/u.test(query)) return list;
+      return new Proxy(list, {
+        get: (target, key) => {
+          if (key === "matches") return true;
+          const value = Reflect.get(target, key, target);
+          return typeof value === "function" ? value.bind(target) : value;
+        },
+      });
+    };
+  });
+  try {
+    const pointers = await laptop.page.evaluate(() => [
+      matchMedia("(any-pointer: coarse)").matches,
+      matchMedia("(any-pointer: fine)").matches,
+      navigator.maxTouchPoints > 0,
+    ]);
+    assert.deepEqual(pointers, [true, true, true], "the laptop has touch and a fine pointer");
+    const until = Date.now() + STATE_WAIT_MS;
+    while (Date.now() < until && !(await drewPlay(laptop.page))) await laptop.page.waitForTimeout(pollEvery(150));
+    assert.ok(await drewPlay(laptop.page), "a touchscreen laptop starts the game");
+    assert.equal(await laptop.page.locator("#boot.computer").count(), 0, "a laptop never sees the computer-only line");
+    await shot("computer-only-touch-laptop", laptop.page);
+    assert.deepEqual(laptop.errors, [], "the touchscreen laptop raised page errors");
+  } finally {
+    await laptop.context.close();
   }
 }
 
@@ -675,8 +757,10 @@ async function main() {
     );
     assert.deepEqual(debugSurface, [], "the production build must not expose test hooks");
 
-    // TEAR_RELEASE_ADVENTURE_LEGS=mouse or =touch runs one half (default: both).
-    const legs = new Set((process.env.TEAR_RELEASE_ADVENTURE_LEGS || "mouse,touch").split(","));
+    // TEAR_RELEASE_ADVENTURE_LEGS picks the legs: mouse, computer-only, touch (default: mouse and
+    // computer-only). The touch leg needs a release build with touch controls, which no target has
+    // while mobile is paused (plans/MOBILE_LATER.md).
+    const legs = new Set((process.env.TEAR_RELEASE_ADVENTURE_LEGS || "mouse,computer-only").split(","));
     let retries = 0;
     if (legs.has("mouse")) {
       // Leg 1, fresh profile: the chapter intro plays, wave 1 clears, a draft card is clicked, wave 2 begins.
@@ -708,7 +792,13 @@ async function main() {
       note("new session shows the chapter intro");
     }
 
-    // Leg 4, phones: touch only, on a browser without exitPointerLock.
+    // Leg 4, while mobile is paused: a phone gets the computer-only line, a touchscreen laptop plays.
+    if (legs.has("computer-only")) {
+      await runComputerOnlyLeg(browser, host.origin, shot);
+      note("computer-only: a touch-only phone sees the line and the game never starts; a touchscreen laptop plays");
+    }
+
+    // Leg 5, phones: touch only, on a browser without exitPointerLock.
     const touchViewports = (process.env.TEAR_RELEASE_TOUCH_VIEWPORTS || "844x390").split(",").map((size) => {
       const [width, height] = size.trim().split("x").map(Number);
       return { width, height };

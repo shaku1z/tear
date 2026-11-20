@@ -24,7 +24,7 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 | [Repository structure and workflow](#repository-structure) | In progress | After the hooks pull request merges, run pnpm setup:hooks in the canonical checkout on main (scripts/governance/README.md). | — |
 | [Playtest tool](#playtest-tool) | Stage 1 in part: pnpm playtest bosses prints a table per boss fight and phase, from Phase I or a chosen phase | Rest of stage 1: the walker player, boss movement, and the sweep over weapons and seeds. | — |
 | [TearBench C21 to C40 program](#tearbench-program) | Paused at the 2026-08-30 state | Land or close pull request 84. | — |
-| [Mobile, touch and phone layouts](#mobile) | Paused by the owner 2026-11-19 | Leave the mobile code out of the production builds while keeping it in dev and test builds. | Say when mobile resumes. |
+| [Mobile, touch and phone layouts](#mobile) | Paused by the owner 2026-11-19; out of the release builds | Nothing until the owner resumes mobile; plans/MOBILE_LATER.md says how to turn it back on. | Mark the CrazyGames listing desktop only. Say when mobile resumes. |
 
 <a id="release-readiness"></a>
 
@@ -54,7 +54,7 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 - Next: Keep closing the look toward the owner's reference illustration, then a live layer (light shafts, water glints, sway) as recipe data, then Pale Traverse from a recipe.
 - Owner action: Judge the drawn look against the reference illustration: the owner's taste decides visual work.
-- Evidence: [docs/BACKGROUND_WORKFLOW.md](BACKGROUND_WORKFLOW.md), [tests/unit/stage-art.test.ts](../tests/unit/stage-art.test.ts), [tests/unit/scene-packages.test.ts](../tests/unit/scene-packages.test.ts), [tests/unit/boss-tell-skin.test.ts](../tests/unit/boss-tell-skin.test.ts), [plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md)
+- Evidence: [docs/BACKGROUND_WORKFLOW.md](BACKGROUND_WORKFLOW.md), [tests/unit/stage-art.test.ts](../tests/unit/stage-art.test.ts), [tests/unit/scene-library.test.ts](../tests/unit/scene-library.test.ts), [tests/unit/boss-tell-skin.test.ts](../tests/unit/boss-tell-skin.test.ts), [plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md)
 
 <a id="verdant-gameplay"></a>
 
@@ -130,8 +130,8 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 ### Mobile, touch and phone layouts
 
-**Paused by the owner 2026-11-19.** The owner paused all mobile work and wants it out of the official production builds until further notice. Touch controls, stick or drag aim, the rotate gate, phone layouts, touch density and haptics exist in the source. Touch-aim fixes are parked as draft pull request 191. Sessions write anything mobile will need later in plans/MOBILE_LATER.md.
+**Paused by the owner 2026-11-19; out of the release builds.** The owner paused all mobile work. The release builds (standalone, CrazyGames, itch) leave out the touch controls, the rotate gate, the phone profile layout and haptics, and a build check fails if they come back; a touch-only phone sees one line saying TEAR is played on a computer for now. Dev and test builds keep everything. The phone browser checks are parked in the mobile group (pnpm check:mobile). Touch-aim fixes are parked as draft pull request 191. Sessions write anything mobile will need later in plans/MOBILE_LATER.md.
 
-- Next: Leave the mobile code out of the production builds while keeping it in dev and test builds.
-- Owner action: Say when mobile resumes.
+- Next: Nothing until the owner resumes mobile; plans/MOBILE_LATER.md says how to turn it back on.
+- Owner action: Mark the CrazyGames listing desktop only. Say when mobile resumes.
 - Evidence: [plans/MOBILE_LATER.md](../plans/MOBILE_LATER.md), [#191](https://github.com/shaku1z/tear/pull/191)

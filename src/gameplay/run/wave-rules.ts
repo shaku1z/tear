@@ -81,3 +81,20 @@ export function waveTitle(mode: string, wave: number, bossWave: boolean, trialCo
   if (mode === "gauntlet" && trialCount > 0 && wave >= 1) return gauntletLabel(wave, trialCount);
   return bossWave ? "BOSS" : `WAVE ${String(wave)}`;
 }
+
+/**
+ * The opening grace: how long, from the moment a wave goes live, the enemies it spawns close in without
+ * attacking. It opens a run's first wave and any wave that follows a story, in every mode. A boss wave has
+ * none: the boss's entrance is its opening.
+ */
+export const OPENING_GRACE_SECONDS = 3;
+
+/** The grace a wave opens with, in seconds; zero for a wave that has none. */
+export function openingGrace(wave: Readonly<{ wave: number; followsStory: boolean; bossWave: boolean }>): number {
+  return !wave.bossWave && (wave.wave === 1 || wave.followsStory) ? OPENING_GRACE_SECONDS : 0;
+}
+
+/** What is left of the live wave's opening grace, in seconds. A run that never recorded one has none. */
+export function openingGraceRemaining(run: Readonly<{ waveGrace?: number; waveTime?: number }>): number {
+  return Math.max(0, (run.waveGrace ?? 0) - (run.waveTime ?? 0));
+}
