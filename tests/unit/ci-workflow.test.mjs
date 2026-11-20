@@ -303,9 +303,14 @@ describe("Validate workflow", () => {
       );
   });
 
-  it("lets no diagnostics upload decide a verdict, keeps every upload a later step reads fatal, and reports a failed one", () => {
+  it("lets no check-results upload decide a verdict, keeps every upload a later step needs fatal, and reports a failed one", () => {
     // Run 44740825411 failed only because the static job's check-results upload hit ECONNRESET.
-    // Those artifacts are read by scripts/ci-check-times.mjs by hand, never by a job or workflow.
+    // Two readers use check-results artifacts, and neither needs them: the check-results action on a
+    // re-run (the flaky report), which goes on when there are none, and scripts/ci-check-times.mjs by hand.
+    const action = read(".github/actions/check-results/action.yml");
+    expect(action).toContain("pattern: check-results-${{ inputs.job }}-*");
+    expect(action).toContain("No earlier check results for $JOB; this attempt cannot report flaky checks.");
+    expect(read("scripts/ci-check-times.mjs")).toContain('"check-results-*"');
     const consumed = /^(tear-release-targets|validate-builds|tear-preview-dev)-/u;
     let diagnostics = 0;
     for (const [id, block] of Object.entries(jobBlocks)) {
@@ -323,7 +328,7 @@ describe("Validate workflow", () => {
           expect(report, where).toContain("::warning");
           expect(report, where).toContain('>> "$GITHUB_STEP_SUMMARY"');
         } else {
-          expect(name, `${where} is read by a later step, or is new and needs a decision here`).toMatch(consumed);
+          expect(name, `${where} is needed by a later step, or is new and needs a decision here`).toMatch(consumed);
           expect(step, where).not.toContain("continue-on-error");
         }
       });
