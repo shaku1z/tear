@@ -1,10 +1,10 @@
-import type { createLiveBeatThisRunController } from "../replay/beat-this-run-controller";
+import { lazyModuleReady } from "../../domain/lazy-module";
+import { replayEngine } from "../../ghost/replay-engine";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../../presentation/screens/live-screen-renderers";
 import type { BrowserGamepad } from "../../input/browser-input-contracts";
 import { ABILITY_CATEGORY_ORDER, SPECIAL_ABILITY_COLOR, abilityBadge } from "../../presentation/codex-snapshots";
 import type { GhostVaultLibraryPort } from "./ghost-vault-library-controller";
-import type { LiveGhostOwnerRecoveryController } from "../replay/ghost-owner-recovery-controller";
 import type { GhostTheaterOpenResult } from "../../ghost/theater-open-result";
 import type { CareerPort } from "./ghost-career-controller";
 
@@ -33,6 +33,7 @@ type Dependencies = Pick<
   | "CONFIG"
   | "DAILY"
   | "FirebaseProvider"
+  | "fullscreen"
   | "META"
   | "PROFILE"
   | "STAGES"
@@ -45,7 +46,6 @@ type Renderers = ReturnType<typeof createLiveScreenRenderers>;
 type Category = Readonly<{ name: string; color: string }>;
 
 export interface LibraryScreenServices {
-  readonly beat?: Pick<ReturnType<typeof createLiveBeatThisRunController>, "action" | "snapshot" | "cancel">;
   readonly chase?: Readonly<{
     choose(id: string, expectedManifestHash?: string): Promise<void>;
     chooseRace?(id: string, expectedManifestHash?: string): Promise<void>;
@@ -68,10 +68,8 @@ export interface LibraryScreenServices {
   readonly formatTime: (seconds: number) => string;
   readonly getBest: (mode: string, difficulty: string) => Readonly<{ wave: number; score: number; time?: number }>;
   readonly ghostVault: GhostVaultLibraryPort;
-  readonly ownerRecovery?: Pick<LiveGhostOwnerRecoveryController, "snapshot" | "close">;
   readonly enterReplay: (record: unknown, from: string) => boolean;
   readonly enterGhostTheater: (id: string) => Promise<GhostTheaterOpenResult>;
-  readonly enterGhostComparison: (ids: readonly string[]) => Promise<boolean>;
 }
 
 export interface LibraryScreenAdapters {
@@ -106,10 +104,7 @@ export interface LibraryScreenAdapters {
   readonly selectLeaderboardBoard: (id: string) => void;
   readonly watchReplay: (id: string, from?: "profile" | "leaderboards") => void;
   readonly watchGhostCapsule: (id: string) => void;
-  readonly compareGhostCapsule: (id: string) => void;
-  readonly openGhostComparison: () => void;
   readonly publishReplay: (id: string) => void;
-  readonly repairGhostCapsule: (id: string) => void;
 }
 
 type DeferredAction = (adapters: LibraryScreenAdapters) => void;
@@ -143,6 +138,17 @@ export function createLiveLibraryScreenAdapters(services: LibraryScreenServices)
       ensureLoaded();
     }
   }
+  /** Replaying, verifying or opening a ghost needs the replay engine: wait line, then run (or one retryable message). */
+  function invokeReplay(action: DeferredAction): void {
+    const announce = (message: string): void => {
+      invoke((value) => {
+        value.setProfileMessage(message);
+      });
+    };
+    void lazyModuleReady(replayEngine, announce, "Loading replay code…").then((ready) => {
+      if (ready) invoke(action);
+    });
+  }
   function render(renderNow: DeferredAction): void {
     if (runtime) renderNow(runtime);
     else ensureLoaded();
@@ -150,7 +156,7 @@ export function createLiveLibraryScreenAdapters(services: LibraryScreenServices)
 
   const adapters: LibraryScreenAdapters = {
     careerAction: (command, id) => {
-      invoke((value) => {
+      invokeReplay((value) => {
         value.careerAction(command, id);
       });
     },
@@ -236,33 +242,18 @@ export function createLiveLibraryScreenAdapters(services: LibraryScreenServices)
       });
     },
     watchReplay: (id, from) => {
-      invoke((value) => {
+      invokeReplay((value) => {
         value.watchReplay(id, from);
       });
     },
     watchGhostCapsule: (id) => {
-      invoke((value) => {
+      invokeReplay((value) => {
         value.watchGhostCapsule(id);
       });
     },
-    compareGhostCapsule: (id) => {
-      invoke((value) => {
-        value.compareGhostCapsule(id);
-      });
-    },
-    openGhostComparison: () => {
-      invoke((value) => {
-        value.openGhostComparison();
-      });
-    },
     publishReplay: (id) => {
-      invoke((value) => {
+      invokeReplay((value) => {
         value.publishReplay(id);
-      });
-    },
-    repairGhostCapsule: (id) => {
-      invoke((value) => {
-        value.repairGhostCapsule(id);
       });
     },
   };

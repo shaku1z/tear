@@ -7,6 +7,7 @@ import type {
   TearBuildTarget,
   Unsubscribe,
 } from "./contracts";
+import type { SaveProblemReporter } from "../domain/save-problems";
 import type { SyncStringStorage } from "./storage";
 import { markStartupMilestone } from "./startup-milestones";
 
@@ -17,6 +18,8 @@ export interface LegacyPlatformCompatibilityOptions {
   readonly storage?: SyncStringStorage;
   readonly services?: PlatformServices;
   readonly now?: () => number;
+  /** Told when a write has nowhere to be kept, so the player can be told. */
+  readonly reportProblem?: SaveProblemReporter;
 }
 
 export interface LegacyCrazyGamesFacade {
@@ -59,7 +62,12 @@ function legacyStore(
   storage: SyncStringStorage | undefined,
   sdk: CrazyGamesSdkShape | undefined,
   isLive: () => boolean,
+  reportProblem: SaveProblemReporter = () => undefined,
 ) {
+  /** A write that reached neither the portal's data nor browser storage lives only until the page closes. */
+  const notKept = (portal: boolean): void => {
+    if (!(portal && sdk?.data)) reportProblem("storage-unavailable");
+  };
   const memory = new Map<string, string>();
   const tails = new Map<string, Promise<unknown>>();
   const readBacking = async (key: string, portal = isLive()): Promise<string | null> => {
@@ -91,8 +99,10 @@ function legacyStore(
       const operation = (tails.get(key) ?? Promise.resolve()).then(
         async (): Promise<StorageAcknowledgement<string>> => {
           const portal = isLive();
-          if (!storage && !(isLive() && sdk?.data))
+          if (!storage && !(isLive() && sdk?.data)) {
+            reportProblem("storage-unavailable");
             return { status: "unavailable", reason: "Persistent storage is unavailable" };
+          }
           let value: string;
           try {
             value = change(await readBacking(key, portal));
@@ -103,6 +113,7 @@ function legacyStore(
             await writeBacking(key, value, portal);
             return { status: "committed", value };
           } catch {
+            notKept(portal);
             try {
               if ((await readBacking(key, portal)) === value) return { status: "committed", value };
             } catch {
@@ -150,9 +161,11 @@ function legacyStore(
         }
       }
       try {
-        storage?.setItem(key, value);
+        if (storage) storage.setItem(key, value);
+        else notKept(isLive());
       } catch {
-        /* memory mirror still receives the write */
+        // The memory mirror still receives the write.
+        notKept(isLive());
       }
     },
   };
@@ -269,7 +282,7 @@ export function createLegacyPlatformCompatibility(
         },
       );
     },
-    store: legacyStore(storage, options.sdk, () => facade.live),
+    store: legacyStore(storage, options.sdk, () => facade.live, options.reportProblem),
   };
 
   return {

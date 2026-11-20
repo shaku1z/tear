@@ -6,7 +6,7 @@ const { STATE_WAIT_MS } = require("./browser-waits");
 
 // The live half of the C27A parity comparison. It captures, from the real
 // application, the three things a detached world needs to be checked against:
-// the State Forge origin snapshot, the sealed action schedule, and the
+// the State Setup origin snapshot, the sealed action schedule, and the
 // authoritative per-tick state hashes. It is not itself a parity claim.
 function scenarioFor(overrides) {
   return {
@@ -151,7 +151,7 @@ function artifactPath(scenario) {
   return path.join(ARTIFACT_DIR, `${focusedCapture ? "focused-" : ""}${scenario.id}.json`);
 }
 
-withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page, buildInfo }) => {
+withJourney({ name: "C27A live parity trace" }, async ({ page, buildInfo }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: STATE_WAIT_MS });
   fs.mkdirSync(ARTIFACT_DIR, { recursive: true });
   const written = [];
@@ -280,7 +280,7 @@ withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page, build
               continue;
             }
             const tick = transition.observation.tick;
-            // A few full State Forge checkpoints make a hash mismatch diagnosable:
+            // A few full State Setup checkpoints make a hash mismatch diagnosable:
             // they say WHICH field diverged, not merely that something did.
             if (tick <= 3 || tick === 30 || tick === scenarioValue.maxTicks || terminated) {
               checkpoints.push({

@@ -1,6 +1,5 @@
-import { readGhostBossMemory } from "./boss-memory-origin";
+import { isObject, isRecord } from "../domain/records";
 import { stableVerificationHash } from "../domain/hash";
-import { readGhostFinaleCompanion } from "./finale-companion";
 import type { TearSnapshotV1 } from "../tearbench/contracts";
 import { rebaseEnvironmentSnapshot } from "../tearbench/environment-codec";
 import type { GhostReadCapsule } from "./capsule-reader";
@@ -34,14 +33,9 @@ export interface GhostForkOriginV1 {
   readonly challengeHash: string;
 }
 function object(value: unknown): Record<string, unknown> {
-  if (
-    typeof value !== "object" ||
-    value === null ||
-    Array.isArray(value) ||
-    Object.getPrototypeOf(value) !== Object.prototype
-  )
+  if (!isRecord(value) || Object.getPrototypeOf(value) !== Object.prototype)
     throw new TypeError("Fork origin requires plain data.");
-  return value as Record<string, unknown>;
+  return value;
 }
 function fields(value: unknown, names: readonly string[]): Record<string, unknown> {
   const result = object(value);
@@ -55,8 +49,7 @@ function fields(value: unknown, names: readonly string[]): Record<string, unknow
 }
 /** Absence is legacy; a present unknown declaration is never a legacy fallback. */
 export function readGhostForkOrigin(provenance: unknown): GhostForkOriginV1 | undefined {
-  if (typeof provenance !== "object" || provenance === null || !Object.hasOwn(provenance, "forkOrigin"))
-    return undefined;
+  if (!isObject(provenance) || !Object.hasOwn(provenance, "forkOrigin")) return undefined;
   const raw = fields(object(provenance).forkOrigin, [
     "format",
     "schemaVersion",
@@ -99,12 +92,7 @@ export function readGhostForkOrigin(provenance: unknown): GhostForkOriginV1 | un
   return Object.freeze(structuredClone(raw)) as unknown as GhostForkOriginV1;
 }
 export function ghostRecordingFirstTick(capsule: GhostReadCapsule): number {
-  return (
-    readGhostBossMemory(capsule.manifest.provenance)?.origin.tick ??
-    readGhostFinaleCompanion(capsule.manifest.provenance)?.origin.tick ??
-    readGhostForkOrigin(capsule.manifest.provenance)?.checkpoint.tick ??
-    0
-  );
+  return readGhostForkOrigin(capsule.manifest.provenance)?.checkpoint.tick ?? 0;
 }
 declare const brand: unique symbol;
 export interface GhostForkPermit {

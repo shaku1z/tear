@@ -2,6 +2,13 @@ import { assertTutorialGoldFresh } from "./scripts/tutorial-gold-compatibility.m
 import { defineConfig, type Plugin } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { readSourceIdentitySync } from "./scripts/release-artifact.mjs";
+import { applicationChunk } from "./scripts/application-chunks.mjs";
+import {
+  DEVELOPER_ONLY_ROLE,
+  MOBILE_ONLY_ROLE,
+  roleModulesInBundle,
+  loadRoleMatcher,
+} from "./scripts/release-developer-code.mjs";
 import {
   buildTarget,
   resolveBuildMode,
@@ -44,7 +51,6 @@ function targetHtml(target: TargetDefinition): Plugin {
  * a "standalone" artifact, which this is not).
  */
 export const PREVIEW_DEV_BASE = "/dev/";
-
 function headerRules(prefix: string): string[] {
   return [
     `${prefix}assets/*`,
@@ -117,57 +123,46 @@ function targetDependencyBoundary(name: TargetName, target: TargetDefinition): P
   };
 }
 
-const TUTORIAL_GOLD_DATA = "gameplay/training/tutorial-gold-reference-data.json";
+/** A release build fails when a module of `role` contributes code to one of its bundles. */
+function roleBoundary(name: TargetName, role: string, what: string, remedy: string): Plugin {
+  const inRole = loadRoleMatcher(role);
+  return {
+    name: `tear-${role.slice(1).replaceAll(".", "-")}-boundary`,
+    generateBundle(_options, bundle) {
+      const modules = Object.values(bundle).flatMap((item) =>
+        item.type === "chunk"
+          ? Object.entries(item.modules).map(([id, module]) => [id, module.renderedLength] as const)
+          : [],
+      );
+      const found = roleModulesInBundle(modules, inRole);
+      if (found.length > 0)
+        this.error(
+          `${name} release bundle contains ${what} (${role} in config/architecture-roles.json).\n${remedy}:\n` +
+            found.join("\n"),
+        );
+    },
+  };
+}
 
-/**
- * `src/app/<folder>/` -> chunk; other folders and the app root go to runtime-app-core.
- * A group also takes the static dependencies of its modules that an earlier group
- * (in name order) has not taken, so catalog and combat hold their folders' closures
- * and core holds the rest of the application.
- */
-const APPLICATION_FOLDER_CHUNKS: Readonly<Record<string, string>> = {
-  library: "runtime-app-catalog",
-  combat: "runtime-app-combat",
-  world: "runtime-app-combat",
-};
+/** A release build fails when developer-only code contributes to one of its bundles. */
+function developerCodeBoundary(name: TargetName): Plugin {
+  return roleBoundary(
+    name,
+    DEVELOPER_ONLY_ROLE,
+    "developer-only code",
+    "Load it through a dynamic import guarded by __TEAR_TEST_BUILD__ or __TEAR_ENGINEERING_SURFACES__",
+  );
+}
 
-/** Keep the async application composition below the release transfer budget. */
-function applicationChunk(id: string): string | undefined {
-  const normalized = id.replaceAll("\\", "/");
-  const source = normalized.indexOf("/src/");
-  if (source < 0) return undefined;
-  const relative = normalized.slice(source + "/src/".length);
-  const topLevel = relative.split("/")[0] ?? "";
-  if (topLevel === "app") return APPLICATION_FOLDER_CHUNKS[relative.split("/")[1] ?? ""] ?? "runtime-app-core";
-  // The ~1.5 MB tutorial demonstration corpus is imported only by training
-  // preflight; its own chunk keeps it out of the startup modulepreload set.
-  if (relative === TUTORIAL_GOLD_DATA) return "tutorial-gold-reference";
-  // A painted stage background (manifest and image URLs) is imported on demand
-  // when a run nears its stage; its own chunk keeps it out of the startup set.
-  if (relative.startsWith("presentation/assets/scenes/")) return undefined;
-  if (topLevel === "gameplay") {
-    const area = relative.split("/").slice(1, 2)[0] ?? "core";
-    return `gameplay-${area}`;
-  }
-  if (
-    [
-      "presentation",
-      "audio",
-      "ghost",
-      "tearbench",
-      "agents",
-      "input",
-      "persistence",
-      "platform",
-      "replay",
-      "simulation",
-      "diagnostics",
-      "domain",
-      "config",
-    ].includes(topLevel)
-  )
-    return `runtime-${topLevel}`;
-  return undefined;
+/** A release build of a target without mobile fails when mobile-only code contributes to a bundle. */
+function mobileCodeBoundary(name: TargetName): Plugin {
+  return roleBoundary(
+    name,
+    MOBILE_ONLY_ROLE,
+    "mobile-only code",
+    "Reach it only behind __TEAR_MOBILE__ (mobile is paused, plans/MOBILE_LATER.md). A top-level call " +
+      "in the module, such as Object.freeze, keeps it in the bundle: mark the call /* @__PURE__ */",
+  );
 }
 
 export default defineConfig(({ mode, command }) => {
@@ -179,6 +174,8 @@ export default defineConfig(({ mode, command }) => {
   // The preview dev build is a target's second output (config/build-targets.json "previewDev").
   const previewDev = definition.previewDev !== null && process.env[definition.previewDev.env] === "1";
   if (previewDev && !testBuild) throw new Error("the preview dev build is a test build");
+  // Test builds and `vite dev` keep the mobile modules so they stay buildable while mobile is paused.
+  const mobile = definition.mobile || testBuild || command === "serve";
   const source = readSourceIdentitySync(process.cwd());
   // A build refuses tutorial gold that no longer matches the code; the dev server does not check.
   if (command === "build") assertTutorialGoldFresh();
@@ -190,6 +187,8 @@ export default defineConfig(({ mode, command }) => {
       targetHtml(definition),
       cloudflareHeaders(definition, previewDev),
       targetDependencyBoundary(target, definition),
+      ...(testBuild ? [] : [developerCodeBoundary(target)]),
+      ...(mobile ? [] : [mobileCodeBoundary(target)]),
       ...(previewDev ? [previewDevMarking(source.revision)] : []),
       ...(definition.serviceWorker
         ? [
@@ -227,22 +226,40 @@ export default defineConfig(({ mode, command }) => {
                 clientsClaim: true,
                 navigateFallback: "/index.html",
                 // On the preview origin the dev build lives below this path; its pages
-                // must reach the network, not the release build's cached index.
-                navigateFallbackDenylist: [new RegExp(`^${PREVIEW_DEV_BASE}`, "u")],
+                // must reach the network, not the release build's cached index. So must
+                // the static pages beside the game (public/privacy.html): they are not
+                // precached (see globIgnores) and the game's index must not answer for them.
+                navigateFallbackDenylist: [
+                  new RegExp(`^${PREVIEW_DEV_BASE}`, "u"),
+                  ...definition.staticPages.map((page) => new RegExp(`^/${page}(?:\\.html)?(?:[?#]|$)`, "u")),
+                ],
                 globPatterns: ["**/*.{html,js,css,woff2,png,webmanifest}"],
                 // The tutorial corpus is fetched on demand (training preflight), not at
                 // install: it is runtime-cached on first use so it then works offline.
                 // Workers bundle a lazy copy they never request; it is not precached.
+                // The two ~1 MB workers (career archive, live ghost reference) and the two large install icons are not needed to start
+                // the game: the workers are runtime-cached on first use, and the browser
+                // fetches install icons from the network when it installs the app.
                 globIgnores: [
                   "**/node_modules/**/*",
                   "assets/tutorial-gold-reference-*.js",
                   "assets/worker-tutorial-gold-*.js",
+                  "assets/career-archive-worker-*.js",
+                  "assets/live-ghost-reference-worker-*.js",
+                  ...definition.staticPages.map((page) => `${page}.html`),
+                  "branding/icons/icon-512.png",
+                  "branding/icons/icon-maskable-512.png",
                 ],
                 runtimeCaching: [
                   {
                     urlPattern: /\/assets\/tutorial-gold-reference-[\w-]+\.js$/u,
                     handler: "CacheFirst",
                     options: { cacheName: "tear-tutorial-gold", expiration: { maxEntries: 1 } },
+                  },
+                  {
+                    urlPattern: /\/assets\/(?:career-archive|live-ghost-reference)-worker-[\w-]+\.js$/u,
+                    handler: "CacheFirst",
+                    options: { cacheName: "tear-workers", expiration: { maxEntries: 6 } },
                   },
                 ],
               },
@@ -255,6 +272,7 @@ export default defineConfig(({ mode, command }) => {
       // Engineering surfaces (research screens, Boss/Enemy Test, engineering
       // query routes and debug globals) exist only in test builds and `vite dev`.
       __TEAR_ENGINEERING_SURFACES__: JSON.stringify(testBuild || command === "serve"),
+      __TEAR_MOBILE__: JSON.stringify(mobile),
       __TEAR_BUILD_REVISION__: JSON.stringify(source.revision),
       __TEAR_BUILD_SOURCE_STATE__: JSON.stringify(source.state),
       __TEAR_BUILD_SOURCE_FINGERPRINT__: JSON.stringify(source.fingerprint),
@@ -268,6 +286,10 @@ export default defineConfig(({ mode, command }) => {
     // Workers never run a tutorial, so they never request that lazy chunk.
     worker: {
       format: "es",
+      plugins: () => [
+        ...(testBuild ? [] : [developerCodeBoundary(target)]),
+        ...(mobile ? [] : [mobileCodeBoundary(target)]),
+      ],
       rolldownOptions: {
         output: {
           codeSplitting: {

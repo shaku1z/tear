@@ -1,5 +1,5 @@
+import { isObject } from "../domain/records";
 import type { IdentityService, PlatformServices, Unsubscribe, TearBuildTarget } from "./contracts";
-import { createStandaloneGhostPublicationRuntime, type GhostPublicationRuntime } from "./ghost-publication-runtime";
 
 export type CloudStatus = "local" | "guest" | "signedin";
 
@@ -35,6 +35,12 @@ export interface AccountContext {
   sync(): Promise<void>;
 }
 
+/**
+ * What replacing the online copy of the save came to: it was replaced, this account has no online copy to
+ * replace, or it could not be done (offline, signed out of the service, refused) and the copy is unchanged.
+ */
+export type CloudReplaceResult = "replaced" | "no-online-copy" | "failed";
+
 export type SignInResult = boolean | Readonly<{ status: "needsRetry"; code: string }>;
 
 export interface AccountProvider {
@@ -45,6 +51,11 @@ export interface AccountProvider {
   signOut?(context: AccountContext): Promise<void>;
   load?(context: AccountContext): Promise<CloudSavePayload | null>;
   save?(context: AccountContext, payload: CloudSavePayload): Promise<void>;
+  /**
+   * Overwrites the online copy with `payload` outright. `save` merges, which keeps the highest value of each
+   * statistic, so it cannot take progress away. Only an account with an online copy has this.
+   */
+  replace?(context: AccountContext, payload: CloudSavePayload): Promise<boolean>;
   dispose?(): void;
 }
 
@@ -78,8 +89,12 @@ export interface CloudCompatibilityOptions {
   readonly getMeta: () => LegacyMetaPort;
   readonly firebaseAccount?: AccountProvider;
   readonly shared: SharedCloudService;
+  /**
+   * Whether an anonymous run statistic may be sent right now (see statistics-consent.ts). The facade
+   * asks before every send, so no target's shared service ever sees a statistic the player declined.
+   */
+  readonly statisticsAllowed: () => boolean;
   readonly now?: () => number;
-  readonly ghostPublication?: GhostPublicationRuntime;
 }
 
 export interface LegacyCloudFacade {
@@ -102,6 +117,8 @@ export interface LegacyCloudFacade {
   setCustomUsername(name: string): Promise<void>;
   sync(): Promise<void>;
   push(): Promise<void>;
+  /** Overwrites the online copy of the save (see `AccountProvider.replace`); never throws. */
+  replaceSave(payload: CloudSavePayload): Promise<CloudReplaceResult>;
   hasLeaderboards(): boolean;
   submitScore(mode: string, difficulty: string, entry: ScoreEntry): Promise<boolean>;
   topScores(mode: string, difficulty: string, limit: number): Promise<readonly Record<string, unknown>[] | null>;
@@ -124,7 +141,6 @@ export interface CloudCompatibility {
   readonly CrazyProvider: AccountProvider;
   readonly FirebaseProvider: AccountProvider;
   readonly Passport: SharedCloudService;
-  readonly ghostPublication: GhostPublicationRuntime;
 }
 
 interface CloudController extends LegacyCloudFacade, AccountContext {
@@ -281,7 +297,7 @@ export function createCloudCompatibility(options: CloudCompatibilityOptions): Cl
       if (!this.provider?.signIn) return false;
       try {
         const result = await this.provider.signIn(this);
-        if (typeof result === "object") {
+        if (isObject(result)) {
           this.authRetryPrompt = true;
           return result;
         }
@@ -331,6 +347,14 @@ export function createCloudCompatibility(options: CloudCompatibilityOptions): Cl
         /* local save is already authoritative */
       }
     },
+    async replaceSave(payload) {
+      if (!this.provider?.replace) return "no-online-copy";
+      try {
+        return (await this.provider.replace(this, payload)) ? "replaced" : "failed";
+      } catch {
+        return "failed";
+      }
+    },
     hasLeaderboards() {
       return options.shared.available;
     },
@@ -351,6 +375,7 @@ export function createCloudCompatibility(options: CloudCompatibilityOptions): Cl
     },
     logEvent(name, data = {}) {
       try {
+        if (!options.statisticsAllowed()) return;
         options.shared.logEvent(name, data);
       } catch {
         /* optional telemetry */
@@ -402,12 +427,5 @@ export function createCloudCompatibility(options: CloudCompatibilityOptions): Cl
     CrazyProvider: crazyProvider,
     FirebaseProvider: firebaseProvider,
     Passport: options.shared,
-    ghostPublication:
-      options.ghostPublication ??
-      createStandaloneGhostPublicationRuntime({
-        target: options.target,
-        endpoint: undefined,
-        loadBearer: () => Promise.reject(new Error("ghost publication is unavailable")),
-      }),
   });
 }

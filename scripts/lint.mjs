@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 // The one ESLint target list. `pnpm lint` and the TearBench `static.lint` task (which
 // CI's check:functional runs) both execute this file, so the two cannot drift apart.
 // Extra arguments (for example `--fix` or `--cache`) are passed through to ESLint. `--changed` lints
@@ -10,7 +9,6 @@ import { changedFiles, withinTargets } from "./changed-files.mjs";
 
 export const LINT_TARGETS = Object.freeze([
   "src",
-  "workers",
   "scripts",
   "tests",
   "vite.config.ts",

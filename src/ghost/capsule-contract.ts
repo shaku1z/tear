@@ -1,3 +1,4 @@
+import { isRecord } from "../domain/records";
 import { stableVerificationHash } from "../domain/hash";
 import type { GhostChunkEncoding } from "./capsule-codec";
 import { GHOST_RECORDING_PROFILES, type GhostRecordingProfileId } from "./recording-profiles";
@@ -20,7 +21,7 @@ export interface GhostCapsuleFidelity {
 /**
  * Declares the durable V3 track grammar without promoting an individual entry
  * to verified simulation truth. Readers validate command, causal-event, and
- * State Forge payloads at their own boundary.
+ * State Setup payloads at their own boundary.
  */
 export interface GhostCapsuleContractV1 {
   readonly format: typeof GHOST_CAPSULE_CONTRACT_FORMAT;
@@ -83,17 +84,13 @@ export interface TearGhostManifestV2 extends TearGhostManifestBase {
 
 export type TearGhostManifest = TearGhostManifestV1 | TearGhostManifestV2;
 
-function dataRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function clonePlainCapsuleData(value: unknown, depth = 0): unknown {
   if (depth > 32) throw new RangeError("capsule plain data exceeds nesting limit");
   if (value === null || typeof value === "string" || typeof value === "boolean") return value;
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "number") throw new TypeError("capsule plain data contains a non-finite number");
   if (Array.isArray(value)) return Object.freeze(value.map((entry) => clonePlainCapsuleData(entry, depth + 1)));
-  if (!dataRecord(value)) throw new TypeError("capsule plain data must be JSON-compatible");
+  if (!isRecord(value)) throw new TypeError("capsule plain data must be JSON-compatible");
   const copy: Record<string, unknown> = {};
   for (const [key, entry] of Object.entries(value)) {
     if (key === "__proto__" || key === "constructor" || key === "prototype")
@@ -105,7 +102,7 @@ function clonePlainCapsuleData(value: unknown, depth = 0): unknown {
 
 function parsePlainRecord(value: unknown, label: string): Readonly<Record<string, unknown>> | undefined {
   if (value === undefined) return undefined;
-  if (!dataRecord(value)) throw new TypeError(`${label} must be a plain object`);
+  if (!isRecord(value)) throw new TypeError(`${label} must be a plain object`);
   return clonePlainCapsuleData(value) as Readonly<Record<string, unknown>>;
 }
 
@@ -155,13 +152,13 @@ export function createGhostCapsuleContract(input: GhostCapsuleContractInput): Gh
 
 function parseCapsuleContract(value: unknown): GhostCapsuleContractV1 {
   if (
-    !dataRecord(value) ||
+    !isRecord(value) ||
     value.format !== GHOST_CAPSULE_CONTRACT_FORMAT ||
     value.schemaVersion !== GHOST_CAPSULE_CONTRACT_SCHEMA_VERSION ||
     !["declared-json-v1", "absent-legacy"].includes(String(value.provenance)) ||
-    !dataRecord(value.compatibility) ||
-    !dataRecord(value.tracks) ||
-    !dataRecord(value.quality)
+    !isRecord(value.compatibility) ||
+    !isRecord(value.tracks) ||
+    !isRecord(value.quality)
   ) {
     throw new TypeError("unsupported capsule contract");
   }
@@ -208,7 +205,7 @@ function parseCapsuleContract(value: unknown): GhostCapsuleContractV1 {
 
 function parseChunkIndex(value: unknown): TearGhostChunkIndexEntry {
   if (
-    !dataRecord(value) ||
+    !isRecord(value) ||
     typeof value.id !== "string" ||
     !["commands", "rng", "events", "results", "keyframes", "presentation"].includes(String(value.kind)) ||
     !Number.isSafeInteger(value.sequence) ||
@@ -360,7 +357,7 @@ function parseCapsuleManifestV1(value: Record<string, unknown>): TearGhostManife
     typeof value.createdAt !== "string" ||
     !Array.isArray(value.chunks) ||
     typeof value.rootIntegrity !== "string" ||
-    !dataRecord(value.fidelity) ||
+    !isRecord(value.fidelity) ||
     !["full", "reduced", "dropped"].includes(String(value.fidelity.presentation)) ||
     !Array.isArray(value.fidelity.downgrades) ||
     !value.fidelity.downgrades.every((entry) => typeof entry === "string")
@@ -387,7 +384,7 @@ function parseCapsuleManifestV1(value: Record<string, unknown>): TearGhostManife
       presentation: value.fidelity.presentation as GhostCapsuleFidelity["presentation"],
       downgrades: Object.freeze([...value.fidelity.downgrades]),
     }),
-    ...(dataRecord(value.lineage) &&
+    ...(isRecord(value.lineage) &&
     typeof value.lineage.parentId === "string" &&
     value.lineage.relation === "repaired-from"
       ? { lineage: Object.freeze({ parentId: value.lineage.parentId, relation: "repaired-from" as const }) }
@@ -404,7 +401,7 @@ function parseCapsuleManifestV2(value: Record<string, unknown>): TearGhostManife
     typeof value.createdAt !== "string" ||
     !Array.isArray(value.chunks) ||
     typeof value.rootIntegrity !== "string" ||
-    !dataRecord(value.fidelity) ||
+    !isRecord(value.fidelity) ||
     !["full", "reduced", "dropped"].includes(String(value.fidelity.presentation)) ||
     !Array.isArray(value.fidelity.downgrades) ||
     !value.fidelity.downgrades.every((entry) => typeof entry === "string")
@@ -444,7 +441,7 @@ function parseCapsuleManifestV2(value: Record<string, unknown>): TearGhostManife
     chunks,
     rootIntegrity: value.rootIntegrity,
     fidelity,
-    ...(dataRecord(value.lineage) &&
+    ...(isRecord(value.lineage) &&
     typeof value.lineage.parentId === "string" &&
     value.lineage.relation === "repaired-from"
       ? { lineage: Object.freeze({ parentId: value.lineage.parentId, relation: "repaired-from" as const }) }
@@ -453,7 +450,7 @@ function parseCapsuleManifestV2(value: Record<string, unknown>): TearGhostManife
     ...(extensions === undefined ? {} : { extensions }),
   });
   if (
-    !dataRecord(value.integrity) ||
+    !isRecord(value.integrity) ||
     value.integrity.format !== GHOST_CAPSULE_INTEGRITY_FORMAT ||
     value.integrity.schemaVersion !== GHOST_CAPSULE_INTEGRITY_SCHEMA_VERSION ||
     value.integrity.rootIntegrity !== data.rootIntegrity ||
@@ -474,7 +471,7 @@ function parseCapsuleManifestV2(value: Record<string, unknown>): TearGhostManife
 }
 
 export function parseGhostCapsuleManifest(value: unknown): TearGhostManifest {
-  if (!dataRecord(value) || value.format !== GHOST_CAPSULE_FORMAT) throw new TypeError("unsupported capsule manifest");
+  if (!isRecord(value) || value.format !== GHOST_CAPSULE_FORMAT) throw new TypeError("unsupported capsule manifest");
   if (value.schemaVersion === 1) return parseCapsuleManifestV1(value);
   if (value.schemaVersion === GHOST_CAPSULE_SCHEMA_VERSION) return parseCapsuleManifestV2(value);
   throw new TypeError("unsupported capsule manifest schema version");

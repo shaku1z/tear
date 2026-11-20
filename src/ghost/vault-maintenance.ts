@@ -1,7 +1,5 @@
 import { GhostCareerStore } from "./career-archive-store";
-import { GhostDoctor } from "./ghost-doctor";
-import { GhostVaultKnowledgeLibraries, type GhostVaultKnowledgeLibraryInventory } from "./durable-knowledge-libraries";
-import type { GhostLocalVault, TearGhostManifest } from "./capsule-vault";
+import { ghostRootIntegrity, type GhostLocalVault, type TearGhostManifest } from "./capsule-vault";
 
 export type GhostVaultRetentionTier = "pinned" | "standard" | "temporary";
 
@@ -26,7 +24,6 @@ export interface GhostVaultMaintenanceReport {
   readonly evictedCapsuleIds: readonly string[];
   readonly integrity: readonly GhostVaultIntegrityEntry[];
   readonly rebuiltIndexes: number;
-  readonly libraries: GhostVaultKnowledgeLibraryInventory;
 }
 
 export const DEFAULT_GHOST_VAULT_MAXIMUM_BYTES = 256 * 1024 * 1024;
@@ -34,6 +31,34 @@ export const GHOST_VAULT_MAINTENANCE_KEY = "vault-maintenance:v1";
 
 function sortedIds(ids: readonly string[]): readonly string[] {
   return Object.freeze([...ids].sort());
+}
+
+/** Whether every chunk of a capsule reads back and its root still matches. Damaged capsules are shown, never repaired. */
+export async function ghostCapsuleHealthy(vault: GhostLocalVault, id: string): Promise<boolean> {
+  const manifest = await vault.getManifest(id);
+  if (manifest === undefined) throw new RangeError(`manifest does not exist: ${id}`);
+  for (const entry of manifest.chunks) {
+    try {
+      await vault.readChunk(entry);
+    } catch {
+      return false;
+    }
+  }
+  return ghostRootIntegrity(manifest.chunks) === manifest.rootIntegrity;
+}
+
+/** Rewrites each capsule's manifest index entry from its manifest. */
+async function rebuildManifestIndexes(vault: GhostLocalVault, values: readonly TearGhostManifest[]): Promise<number> {
+  for (const manifest of values) {
+    await vault
+      .backend()
+      .put(
+        "indexes",
+        `manifest:${manifest.id}`,
+        JSON.stringify({ status: manifest.status, createdAt: manifest.createdAt, chunks: manifest.chunks.length }),
+      );
+  }
+  return values.length;
 }
 
 async function manifests(vault: GhostLocalVault): Promise<readonly TearGhostManifest[]> {
@@ -60,29 +85,15 @@ export async function maintainGhostVault(
     ...options.retention,
   });
   const remaining = await manifests(vault);
-  const doctor = new GhostDoctor(vault);
   const checkedAt = (options.now ?? (() => new Date().toISOString()))();
-  const scans = await Promise.all(
-    remaining.map(async (manifest) =>
-      Object.freeze({
-        manifest,
-        report: await doctor.scan(manifest.id),
-      }),
-    ),
-  );
   const integrity = Object.freeze(
-    scans.map(({ manifest, report }) =>
-      Object.freeze({
-        id: manifest.id,
-        healthy: report.healthy,
-      }),
+    await Promise.all(
+      remaining.map(async (manifest) =>
+        Object.freeze({ id: manifest.id, healthy: await ghostCapsuleHealthy(vault, manifest.id) }),
+      ),
     ),
   );
-  const libraries = new GhostVaultKnowledgeLibraries(vault.backend());
-  for (const { manifest, report } of scans) {
-    if (!report.healthy) await libraries.recordCorruptCapsule(manifest, report, checkedAt);
-  }
-  const rebuiltIndexes = await doctor.rebuildIndex();
+  const rebuiltIndexes = await rebuildManifestIndexes(vault, remaining);
   const report = Object.freeze({
     schemaVersion: 1 as const,
     checkedAt,
@@ -90,7 +101,6 @@ export async function maintainGhostVault(
     evictedCapsuleIds: sortedIds(evictedCapsuleIds),
     integrity: Object.freeze([...integrity].sort((left, right) => left.id.localeCompare(right.id))),
     rebuiltIndexes,
-    libraries: await libraries.inventory(),
   });
   await vault.backend().put("analysis", GHOST_VAULT_MAINTENANCE_KEY, JSON.stringify(report));
   return report;

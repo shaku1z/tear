@@ -7,9 +7,15 @@ Cloudflare is a publication target, not an independent source branch.
 
 1. A pull request is integrated into protected `main`.
 2. The `Validate` workflow runs the deterministic `pnpm check:functional`
-   contract at that exact SHA and uploads the resulting targets. The complete
-   `pnpm check`, including controlled-host performance evidence, runs once for
-   the final release candidate before the gate closes.
+   contract at that exact SHA, as parallel jobs that all check the same merge
+   commit, and uploads the resulting targets. Its build job builds once; the
+   browser shards download that release artifact and refuse to test it unless
+   its hash matches the build job's. The complete
+   `pnpm check` runs once for the final release candidate before the gate
+   closes. The performance test is not part of `pnpm check`: it is in the
+   nightly group. A release candidate also needs a `pnpm check:performance`
+   run on the controlled release host. A performance report whose
+   `referenceProfile.host` is `"shared"` is not release evidence.
 3. `Validate` uploads `tear-release-targets-<sha>`: `dist/standalone` (what
    the deploy workflows publish) and the CrazyGames package. Each target
    contains `build-info.json` with the repository, full SHA, target, file
@@ -68,7 +74,10 @@ applies them and answers yes or no with the reason; the merge helper calls it.
 3. **Every check is of the change merged with `main` as it is when the check
    starts.** Validate checks out the pull request's head, merges current `main`
    itself, and records both commits on the run as the `checked` annotation.
-   - A re-run therefore also tests current `main`.
+   - "Re-run all jobs" therefore also tests current `main`. "Re-run failed
+     jobs" keeps the first attempt's scope job, so it re-checks the `main` that
+     attempt recorded; `pnpm merge:ready` treats it as stale once `main` has
+     moved in files the change touches.
    - Neither a re-run nor a reopened pull request reuses GitHub's prepared
      merge ref.
    - The release artifact is named after the commit actually built.
@@ -110,6 +119,54 @@ applies them and answers yes or no with the reason; the merge helper calls it.
      hour of its push, before its run may have started.
    - The pre-push guard allows a deletion only for a name that is exactly a
      batch branch (owner decision, 2026-11-16).
+5. **The design check is answered.** The description must give a non-empty
+   answer after each of the six design-check labels of
+   [ENGINEERING_STANDARD.md](ENGINEERING_STANDARD.md) (general case, one owner,
+   the next one, cause, measured, removed). HTML comments do not count, and
+   "n/a" counts only with a reason after it. A change with nothing to design
+   (a typo, a dependency bump) may carry one line instead:
+   `Design check: not applicable — <reason>`. That line is accepted and printed.
+   - The gate's mode is in `config/design-check.json`: `off`, `observe` or
+     `enforce`. It is read from `origin/main`'s copy, never the working tree,
+     so a branch cannot switch its own gate off.
+   - The gate enforces: `merge:ready` refuses a description that leaves a
+     label unanswered. It switched from `observe` (where it prints
+     "would refuse: <reason>" and lets the merge through) after the observe
+     record over every pull request merged since the gate went in (75 on
+     2026-11-19) showed no false refusals and nothing accepted that was
+     unanswered, once #275 had fixed the label reader.
+   - `pnpm design-check:report` lists every merged pull request since
+     observe began that the gate would have refused, so false refusals can be
+     reviewed.
+   - Switching to `enforce` is the lead's decision, after a few days of
+     observe with no false refusals.
+   - A label is answered by a line whose bold span starts with it as whole
+     words, in one of three shapes:
+     - a colon inside the span: `**Cause:**`, `**Cause and check:**`,
+       `**Cause: the test, not the load.**`;
+     - a colon right after the span, behind at most one parenthetical:
+       `**Cause**:`, `**Measured** (on CI):`;
+     - a label sentence ending in a full stop: `**Cause.**`.
+
+     A colon later in the line's prose does not make a label. The answer is
+     the text after the colon inside the span plus the rest of the line or,
+     if that is empty, the indented list under it. A heading such as
+     `### Cause` does not count.
+   - False refusals found in observe, each fixed in the matcher with a test:
+     - #214 (2026-11-18) wrote `**Cause and check:**` and was reported as
+       "Cause (missing)".
+     - #205 (2026-11-18) wrote `**Measured** (…):` and answered Removed with
+       a nested list, and was reported as "Measured (missing), Removed
+       (empty)".
+     - #240 (2026-11-19) wrote `**Cause: the test, not the load.** …` and was
+       reported as "Cause (empty)". #262 (2026-11-19) wrote `**Cause.** …` and
+       passed only because the old pattern read on to a colon later in the
+       sentence. The answer it took was a fragment.
+   - Refusals the report shows that were right: #188 (no design-check
+     section) and #208 and #209 (a bare "n/a." for The next one).
+   - The labels, the rule and the mode reader live once, in
+     `scripts/design-check.mjs`. The pull request template test checks the
+     template and the standard against that list.
 
 ## Local boundary
 

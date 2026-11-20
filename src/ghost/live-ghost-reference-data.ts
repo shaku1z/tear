@@ -1,3 +1,4 @@
+import { isObject } from "../domain/records";
 import type { SeedRaceRun } from "../gameplay/run/seed-locked-draft";
 import { stableVerificationHash } from "../domain/hash";
 import type { GhostRunAssistance } from "../gameplay/run/ghost-assistance";
@@ -53,7 +54,6 @@ export interface GhostLiveReference {
   readonly splits: readonly GhostReferenceBoundary[];
 }
 export interface GhostChaseView {
-  readonly beat?: boolean;
   readonly raceRole?: "reference" | "challenger";
   readonly active: boolean;
   readonly visible: boolean;
@@ -72,7 +72,7 @@ export interface GhostChaseView {
 export function ghostReferenceArena(platforms: readonly unknown[]): string {
   return stableVerificationHash(
     platforms.map((value) => {
-      if (typeof value !== "object" || value === null) throw new TypeError("Reference platform unavailable");
+      if (!isObject(value)) throw new TypeError("Reference platform unavailable");
       const p = value as Record<string, unknown>;
       if ([p.x, p.y, p.w, p.h].some((n) => typeof n !== "number" || !Number.isFinite(n)))
         throw new TypeError("Reference platform geometry invalid");

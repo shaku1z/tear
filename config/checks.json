@@ -1,5 +1,5 @@
 {
-  "about": "Everything the required Validate check runs, in the order it runs: static (format, docs, terminology, typecheck, lint first, so most failures show within minutes; the repository guards run with the unit tests), unit, build, browser. `pnpm check` runs exactly this list locally; `pnpm check:quick` runs the fast group, which the pre-push hook runs. Nightly and weekly run on a schedule. `seconds` is the usual time on a GitHub runner. Edit this list, not the workflow, to add or remove a check.",
+  "about": "Everything the required Validate check runs, in the order it runs: static (format, docs, terminology, typecheck, lint first, so most failures show within minutes; the repository guards run with the unit tests), unit, build, browser. `pnpm check` runs exactly this list locally; `pnpm check:quick` runs the fast group, which the pre-push hook runs. Nightly and weekly run on a schedule. `seconds` is the usual time on a GitHub runner. Edit this list, not the workflow, to add or remove a check. The mobile group is parked while mobile is paused (plans/MOBILE_LATER.md): it is outside the gate and runs on demand with `pnpm check:mobile`, against a test build, which keeps the touch controls.",
   "gate": [
     "static",
     "unit",
@@ -81,26 +81,6 @@
         "seconds": 1
       },
       {
-        "id": "workspace",
-        "run": "node scripts/check-workspace.mjs --ci",
-        "seconds": 1
-      },
-      {
-        "id": "artifact-disposition",
-        "run": "node scripts/validate-artifact-disposition.mjs",
-        "seconds": 1
-      },
-      {
-        "id": "artifact-layout",
-        "run": "node scripts/check-artifact-layout.mjs",
-        "seconds": 1
-      },
-      {
-        "id": "parent-layout",
-        "run": "node scripts/check-parent-layout.mjs",
-        "seconds": 1
-      },
-      {
         "id": "music",
         "run": "node scripts/check-music.mjs",
         "seconds": 1
@@ -109,11 +89,6 @@
         "id": "game-reference",
         "run": "node scripts/check-game-reference.mjs",
         "seconds": 1
-      },
-      {
-        "id": "ghost-worker-types",
-        "run": "node scripts/check-ghost-worker-types.mjs",
-        "seconds": 3
       },
       {
         "id": "wiki",
@@ -132,7 +107,7 @@
       },
       {
         "id": "node-tests",
-        "run": "node --test --test-concurrency=1 tests/release-preflight.test.mjs tests/tutorial-gold-fingerprint.test.mjs tests/parity/parity-diff.test.mjs tests/docs-authority-checker.test.mjs tests/workspace-check.test.mjs tests/parent-layout.test.mjs tests/artifact-retention.test.mjs tests/artifact-disposition.test.mjs tests/workspace-recovery-report.test.mjs tests/workspace-recovery-second-wave.test.mjs tests/deferred-workspace-dependency.test.mjs tests/preserved-copy-comparison.test.mjs tests/remaining-workspace-inventory.test.mjs tests/workspace-quarantine.test.mjs tests/workspace-preservation-quarantine.test.mjs tests/serve-contract.test.mjs tests/code-budget.test.mjs tests/source-architecture.test.mjs tests/tearbench-evidence-selection.test.mjs tests/tearbench-performance-sample.test.mjs tests/tearbench-client-mission.test.mjs tests/tearbench-task-execution.test.mjs tests/tearbench-task-receipts.test.mjs tests/tearbench-resource-leases.test.mjs",
+        "run": "node --test --test-concurrency=1 tests/release-preflight.test.mjs tests/tutorial-gold-fingerprint.test.mjs tests/parity/parity-diff.test.mjs tests/docs-authority-checker.test.mjs tests/serve-contract.test.mjs tests/code-budget.test.mjs tests/source-architecture.test.mjs tests/tearbench-evidence-selection.test.mjs",
         "seconds": 60
       }
     ],
@@ -219,16 +194,6 @@
         "id": "cloudflare-dry-run",
         "run": "node scripts/check-cloudflare-dry-run.mjs",
         "seconds": 2
-      },
-      {
-        "id": "ghost-worker-typecheck",
-        "run": "node node_modules/typescript/bin/tsc -p tsconfig.worker.json",
-        "seconds": 1
-      },
-      {
-        "id": "ghost-worker-dry-run",
-        "run": "node node_modules/wrangler/bin/wrangler.js deploy --dry-run --config wrangler.ghost.jsonc",
-        "seconds": 1
       }
     ],
     "browser": [
@@ -279,7 +244,7 @@
       },
       {
         "id": "music-screen",
-        "run": "node tests/browser-music-screen.js",
+        "run": "node tests/browser-music-screen.js --desktop",
         "seconds": 15
       },
       {
@@ -359,12 +324,12 @@
       },
       {
         "id": "input",
-        "run": "node tests/browser-input-matrix.js",
+        "run": "node tests/browser-input-matrix.js --desktop",
         "seconds": 18
       },
       {
-        "id": "responsive-and-touch",
-        "run": "node tests/browser-responsive-matrix.js",
+        "id": "responsive",
+        "run": "node tests/browser-responsive-matrix.js --desktop",
         "seconds": 11
       },
       {
@@ -433,16 +398,30 @@
         "run": "node tests/browser-performance.js"
       },
       {
-        "id": "state-forge-runtime",
-        "run": "node tests/browser-state-forge-runtime.js"
+        "id": "watch-agent-weapon-matrix",
+        "run": "node tests/browser-scripted-agent-matrix.js",
+        "seconds": 224
       },
       {
-        "id": "state-forge-studio",
-        "run": "node tests/browser-state-forge-studio.js"
+        "id": "watch-agent-repeatability",
+        "run": "node tests/browser-scripted-agent-repeatability.js",
+        "seconds": 252
       },
       {
-        "id": "state-forge-exit-matrix",
-        "run": "node tests/browser-state-forge-exit-matrix.js"
+        "id": "state-setup-runtime",
+        "run": "node tests/browser-state-setup-runtime.js"
+      },
+      {
+        "id": "state-editor",
+        "run": "node tests/browser-state-editor.js"
+      },
+      {
+        "id": "state-setup-exit-matrix",
+        "run": "node tests/browser-state-setup-exit-matrix.js"
+      },
+      {
+        "id": "state-setup-source-void",
+        "run": "node tests/browser-state-setup-source-void.js"
       },
       {
         "id": "source-void-replay-seek",
@@ -452,6 +431,15 @@
         "id": "replay-file-round-trip",
         "run": "node tests/browser-c39-normal-capsule-roundtrip.js",
         "seconds": 43
+      },
+      {
+        "id": "vault-library",
+        "run": "node tests/browser-ghost-vault-library.js",
+        "seconds": 16
+      },
+      {
+        "id": "replay-engine-cold",
+        "run": "node tests/browser-replay-engine-cold.js"
       },
       {
         "id": "pale-aurora-track",
@@ -502,6 +490,24 @@
       {
         "id": "replay-world-and-vault",
         "run": "node node_modules/vitest/vitest.mjs run tests/unit/ghost-replay-world.test.ts tests/unit/ghost-capsule-vault.test.ts"
+      }
+    ],
+    "mobile": [
+      {
+        "id": "build-test-standalone",
+        "run": "node scripts/build-target.mjs test-standalone"
+      },
+      {
+        "id": "input-touch",
+        "run": "node tests/browser-input-matrix.js --touch"
+      },
+      {
+        "id": "responsive-phones",
+        "run": "node tests/browser-responsive-matrix.js --touch"
+      },
+      {
+        "id": "music-screen-phone",
+        "run": "node tests/browser-music-screen.js --touch"
       }
     ]
   }

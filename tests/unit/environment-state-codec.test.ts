@@ -18,9 +18,9 @@ import { createEnvironmentRuntime } from "../../src/gameplay/environment/environ
 import type { EnvironmentSnapshot } from "../../src/gameplay/environment/environment-contracts";
 import { projectCanonicalGameplayState } from "../../src/gameplay/runtime/canonical-state";
 import {
-  forgeEnvironmentCombatObjectState,
-  forgeEnvironmentFieldState,
-} from "../../src/tearbench/state-forge-factories";
+  buildEnvironmentCombatObjectState,
+  buildEnvironmentFieldState,
+} from "../../src/tearbench/state-setup-factories";
 
 const hazard = {
   slowZones: [{ id: "slow-1", x: 10, y: 20 }],
@@ -327,7 +327,7 @@ describe("Verdant C3 environment codec contract", () => {
     }).toThrow(/ordinary-proc/u);
   });
 
-  it("rejects wrong-category, duplicate, unapproved, and proc-eligible codec and forge inputs", () => {
+  it("rejects wrong-category, duplicate, unapproved, and proc-eligible codec and setup inputs", () => {
     const codec = createDefaultStateCodecRegistry().get("tear.hazard.v1");
     expect(
       codec
@@ -352,10 +352,10 @@ describe("Verdant C3 environment codec contract", () => {
       seed: "admission",
       start: { mode: "campaign", difficulty: "normal", weapon: "sword" },
     };
-    expect(() => forgeEnvironmentFieldState(base, { ...hazard.fields[0], kind: "root-link" } as never)).toThrow(
+    expect(() => buildEnvironmentFieldState(base, { ...hazard.fields[0], kind: "root-link" } as never)).toThrow(
       /not approved for field/u,
     );
-    expect(() => forgeEnvironmentCombatObjectState(base, { ...hazard.combatObjects[0], procEligible: true })).toThrow(
+    expect(() => buildEnvironmentCombatObjectState(base, { ...hazard.combatObjects[0], procEligible: true })).toThrow(
       /ordinary-proc/u,
     );
   });

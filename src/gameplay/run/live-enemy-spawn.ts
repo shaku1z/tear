@@ -3,7 +3,7 @@ import { findVariant, type EnemyVariant, type VariantSelectionContext } from "..
 import type { RandomSource } from "../../domain/random";
 import type { RunMode } from "./session";
 import type { StageId } from "../stages";
-import { bossScaling } from "./wave-rules";
+import { bossScaling, openingGraceRemaining } from "./wave-rules";
 import type { WaveSpawnSpec } from "./wave-planner";
 
 export interface LiveWaveSpawnSpec extends WaveSpawnSpec {
@@ -39,6 +39,7 @@ export interface LiveSpawnEnemy {
   climbApt?: number;
   moves?: string[];
   spawnT?: number;
+  attackHold?: number;
 }
 
 export interface LiveSpawnRun {
@@ -47,6 +48,8 @@ export interface LiveSpawnRun {
   readonly bossesBeaten?: number;
   readonly diffHp?: number;
   readonly waveKinds?: readonly string[];
+  readonly waveGrace?: number;
+  readonly waveTime?: number;
   readonly stageId?: StageId;
   readonly localWave?: number;
   readonly discoveredVariantIds?: readonly string[];
@@ -164,7 +167,7 @@ export function completeEnemySpawn<TEnemy extends LiveSpawnEnemy>(
         throw new RangeError(`unknown variant ${spec.variantId} for ${enemy.kind}`);
       }
       port.applyVariant(enemy, restoredVariant ?? spec.variant ?? port.rollVariant(enemy.kind, globalWave, context));
-      port.rollAffixes(enemy, run.wave);
+      if (spec.plain !== true) port.rollAffixes(enemy, run.wave);
     }
     if (spec.type !== "flyer" && spec.type !== "wraith") {
       const position = port.groundSpawn(enemy.hh);
@@ -177,6 +180,7 @@ export function completeEnemySpawn<TEnemy extends LiveSpawnEnemy>(
       enemy.climbApt = port.random.next();
     }
     if (enemy.kind === "chimera") enemy.moves = run.waveKinds?.length ? [...run.waveKinds] : ["charger"];
+    enemy.attackHold = openingGraceRemaining(run);
   } else {
     const scaling = bossScaling({
       mode: run.mode,

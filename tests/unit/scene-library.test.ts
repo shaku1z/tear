@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { createSceneLibrary, type SceneLibraryPorts } from "../../src/presentation/scenes/scene-library";
-import { fixturePackage } from "./scene-fixture";
+import {
+  createSceneLibrary,
+  type PaintedStage,
+  type SceneLibraryPorts,
+  type ScenePaintPorts,
+} from "../../src/presentation/scenes/scene-library";
+import type { LoadedScene, SceneBitmap, SceneCanvas } from "../../src/presentation/scenes/scene-renderer";
 
 function recordingContext() {
   const calls: string[] = [];
@@ -23,27 +28,79 @@ function recordingContext() {
   return { context, calls };
 }
 
-function sizedBitmap(width: number, height: number) {
-  return { width, height } as unknown as ImageBitmap;
+/** A stand-in for a painted layer: the library only reads its size and hands it to the canvas. */
+function layerCanvas(width: number, height: number) {
+  return { width, height } as unknown as SceneCanvas & SceneBitmap;
+}
+
+const PAPER = "#dff2d6";
+const LAYER_IMAGES = 2;
+
+/** What a painter hands back: one covering back layer and the platform surface strip. */
+function paintedScene(): LoadedScene {
+  return {
+    scene: {
+      world: { width: 1600, height: 900, groundY: 800 },
+      camera: { playerShift: 48, zoomMin: 1, zoomMax: 1.2, shake: 24 },
+      edge: { color: "#000000", feather: 72 },
+      theme: { paper: PAPER },
+      layers: [
+        {
+          id: "far",
+          image: "far",
+          rect: [-400, -300, 2400, 1500],
+          depth: 0.9,
+          plane: "back",
+          opacity: 1,
+          covers: true,
+        },
+      ],
+      platforms: {
+        material: "fixture",
+        texture: "surface",
+        scale: 1,
+        fill: "#000000",
+        shadow: { color: "#000000", opacity: 0.5, length: 40 },
+      },
+    },
+    images: new Map([
+      ["far", layerCanvas(1200, 750)],
+      ["surface", layerCanvas(256, 64)],
+    ]),
+  };
+}
+
+/** A stage that paints at once. */
+const quickStage = (): Promise<PaintedStage> => Promise.resolve({ paint: () => Promise.resolve(paintedScene()) });
+
+/** A stage whose painting finishes when the test says so. */
+function slowStage() {
+  const paints: ScenePaintPorts[] = [];
+  let finish: (loaded: LoadedScene) => void = () => undefined;
+  const loader = (): Promise<PaintedStage> =>
+    Promise.resolve({
+      paint: (paintPorts: ScenePaintPorts) => {
+        paints.push(paintPorts);
+        return new Promise<LoadedScene>((resolve) => {
+          finish = resolve;
+        });
+      },
+    });
+  return {
+    loader,
+    paints,
+    finish: () => {
+      finish(paintedScene());
+    },
+  };
 }
 
 function ports(overrides: Partial<SceneLibraryPorts> = {}): SceneLibraryPorts {
-  const manifest = fixturePackage();
-  const sizes = new Map(
-    (manifest.images as { file: string; width: number; height: number }[]).map((image) => [image.file, image]),
-  );
   return {
-    packages: {
-      "fixture-stage": () =>
-        Promise.resolve({
-          manifest,
-          files: Object.fromEntries([...sizes.keys()].map((file) => [file, `/assets/${file}`])),
-        }),
-    },
-    loadImage: (url) => {
-      const image = sizes.get(url.replace("/assets/", ""));
-      return Promise.resolve(sizedBitmap(image?.width ?? 1, image?.height ?? 1));
-    },
+    stages: { "fixture-stage": quickStage },
+    world: { width: 1600, height: 900, groundY: 800 },
+    nextSlice: () => Promise.resolve(),
+    createCanvas: layerCanvas,
     now: () => 10_000,
     lowGraphics: () => false,
     reducedMotion: () => true,
@@ -61,18 +118,18 @@ const input = {
 };
 
 describe("scene library", () => {
-  it("leaves stages without a package to their own art", () => {
+  it("leaves stages without a recipe to their own art", () => {
     const library = createSceneLibrary(ports());
     expect(library.status("grounds")).toBe("none");
     expect(library.opaque("grounds")).toBe(false);
     expect(library.paper("grounds")).toBeUndefined();
   });
 
-  it("never starts a download from a read or a draw, only from show or prefetch", () => {
-    // The menu's background draws every stage in turn. If drawing one fetched its
-    // art, a new player would download a biome before their first run.
-    const loader = vi.fn(ports().packages["fixture-stage"]);
-    const library = createSceneLibrary(ports({ packages: { "fixture-stage": loader } }));
+  it("never starts a load from a read or a draw, only from show or prefetch", () => {
+    // The menu's background draws every stage in turn. If drawing one loaded its
+    // art, a new player would paint a biome before their first run.
+    const loader = vi.fn(quickStage);
+    const library = createSceneLibrary(ports({ stages: { "fixture-stage": loader } }));
     const { context, calls } = recordingContext();
     const platform = { x: 150, y: 645, w: 330, h: 24 };
     expect(library.status("fixture-stage")).toBe("none");
@@ -94,23 +151,20 @@ describe("scene library", () => {
 
   describe("release", () => {
     const stages = (overrides: Partial<SceneLibraryPorts> = {}) => {
-      const base = ports();
-      const loader = base.packages["fixture-stage"];
-      if (loader === undefined) throw new Error("fixture loader missing");
       const released: unknown[] = [];
-      const library = createSceneLibrary({
-        ...base,
-        packages: { first: loader, second: loader, third: loader },
-        releaseImage: (image) => released.push(image),
-        ...overrides,
-      });
+      const library = createSceneLibrary(
+        ports({
+          stages: { first: quickStage, second: quickStage, third: quickStage },
+          releaseImage: (image) => released.push(image),
+          ...overrides,
+        }),
+      );
       const ready = (stageId: string) =>
         vi.waitFor(() => {
           expect(library.status(stageId)).toBe("ready");
         });
       return { library, released, ready };
     };
-    const imageCount = (fixturePackage().images as unknown[]).length;
 
     it("keeps the shown stage and the next one, and frees a stage the run has left", async () => {
       const { library, released, ready } = stages();
@@ -123,58 +177,47 @@ describe("scene library", () => {
       library.show("second");
       expect(library.status("first")).toBe("none");
       expect(library.loaded("first")).toBeUndefined();
-      expect(released).toHaveLength(imageCount);
+      expect(released).toHaveLength(LAYER_IMAGES);
       expect(library.status("second")).toBe("ready");
       library.prefetch("third");
       await ready("third");
-      expect(released).toHaveLength(imageCount);
+      expect(released).toHaveLength(LAYER_IMAGES);
       expect(library.status("second")).toBe("ready");
     });
 
-    it("frees every stage on the main menu, and loads again on the next run", async () => {
+    it("frees every stage on the main menu, and paints again on the next run", async () => {
       const { library, released, ready } = stages();
       library.show("first");
       library.prefetch("second");
       await ready("first");
       await ready("second");
       library.leave();
-      expect(released).toHaveLength(imageCount * 2);
+      expect(released).toHaveLength(LAYER_IMAGES * 2);
       expect(library.status("first")).toBe("none");
       expect(library.status("second")).toBe("none");
       library.leave();
-      expect(released).toHaveLength(imageCount * 2);
+      expect(released).toHaveLength(LAYER_IMAGES * 2);
       library.show("first");
       await ready("first");
     });
 
-    it("frees a stage that was left while it was still loading, without keeping or reporting it", async () => {
+    it("frees a stage that was left while it was still painting, without keeping or reporting it", async () => {
       const onError = vi.fn();
       const { library, released } = stages({ onError });
       library.show("first");
       library.leave();
       expect(library.status("first")).toBe("none");
       await vi.waitFor(() => {
-        expect(released).toHaveLength(imageCount);
+        expect(released).toHaveLength(LAYER_IMAGES);
       });
       expect(library.status("first")).toBe("none");
       expect(onError).not.toHaveBeenCalled();
     });
-
-    it("frees the decoded copy of a layer once its shading is baked into a canvas", async () => {
-      const baking = recordingContext();
-      const createCanvas = (width: number, height: number) =>
-        ({ width, height, getContext: () => baking.context }) as unknown as OffscreenCanvas;
-      const { library, released, ready } = stages({ createCanvas });
-      library.show("first");
-      await ready("first");
-      const far = (fixturePackage().images as { id: string; width: number }[]).find((image) => image.id === "far");
-      expect(released.map((image) => (image as { width: number }).width)).toEqual([far?.width]);
-    });
   });
 
-  it("loads on prefetch, then draws the back plane, platform texture, shadows and theme paper", async () => {
-    const loader = vi.fn(ports().packages["fixture-stage"]);
-    const library = createSceneLibrary(ports({ packages: { "fixture-stage": loader } }));
+  it("paints on prefetch, then draws the back plane, platform texture, shadows and theme paper", async () => {
+    const loader = vi.fn(quickStage);
+    const library = createSceneLibrary(ports({ stages: { "fixture-stage": loader } }));
     expect(loader).not.toHaveBeenCalled();
     library.prefetch("fixture-stage");
     expect(library.status("fixture-stage")).toBe("loading");
@@ -183,7 +226,7 @@ describe("scene library", () => {
     });
     expect(loader).toHaveBeenCalledTimes(1);
     expect(library.opaque("fixture-stage")).toBe(true);
-    expect(library.paper("fixture-stage")).toBe("#203a30");
+    expect(library.paper("fixture-stage")).toBe(PAPER);
     const { context, calls } = recordingContext();
     library.drawBack(context, input);
     expect(calls.filter((call) => call.startsWith("drawImage"))).toHaveLength(1);
@@ -200,41 +243,11 @@ describe("scene library", () => {
     expect(calls.filter((call) => call.startsWith("fillRect"))).toHaveLength(1);
   });
 
-  it("bakes shading into its covering layer once at load, so frames draw no shading", async () => {
-    const baking = recordingContext();
-    const created: { width: number; height: number }[] = [];
-    const createCanvas = (width: number, height: number) => {
-      created.push({ width, height });
-      return { width, height, getContext: () => baking.context } as unknown as OffscreenCanvas;
-    };
-    const library = createSceneLibrary(ports({ createCanvas }));
-    library.prefetch("fixture-stage");
-    await vi.waitFor(() => {
-      expect(library.status("fixture-stage")).toBe("ready");
-    });
-    const manifest = fixturePackage() as { images: { id: string; width: number; height: number }[] };
-    const far = manifest.images.find((image) => image.id === "far");
-    expect(created).toEqual([{ width: far?.width, height: far?.height }]);
-    expect(baking.calls.filter((call) => call.startsWith("fillRect"))).toHaveLength(1);
-    expect(library.loaded("fixture-stage")?.shading).toEqual([]);
-    const { context, calls } = recordingContext();
-    library.drawBack(context, input);
-    // The edge fill and the feathered edges only; the shade band is in the bitmap.
-    const unbaked = recordingContext();
-    const plain = createSceneLibrary(ports());
-    plain.prefetch("fixture-stage");
-    await vi.waitFor(() => {
-      expect(plain.status("fixture-stage")).toBe("ready");
-    });
-    plain.drawBack(unbaked.context, input);
-    expect(calls.filter((call) => call.startsWith("fillRect")).length).toBe(
-      unbaked.calls.filter((call) => call.startsWith("fillRect")).length - 1,
-    );
-  });
-
-  it("falls back for good when an image decodes at the wrong size", async () => {
+  it("falls back for good when a stage cannot be painted", async () => {
     const onError = vi.fn();
-    const library = createSceneLibrary(ports({ loadImage: () => Promise.resolve(sizedBitmap(3, 3)), onError }));
+    const broken = (): Promise<PaintedStage> =>
+      Promise.resolve({ paint: () => Promise.reject(new Error("recipe refused")) });
+    const library = createSceneLibrary(ports({ stages: { "fixture-stage": broken }, onError }));
     library.prefetch("fixture-stage");
     await vi.waitFor(() => {
       expect(library.status("fixture-stage")).toBe("failed");
@@ -255,5 +268,63 @@ describe("scene library", () => {
     expect(library.opaque("fixture-stage")).toBe(false);
     now = 1_000;
     expect(library.opaque("fixture-stage")).toBe(true);
+  });
+
+  it("keeps the caller's own art until painting finishes: never blank, nothing half painted", async () => {
+    const stage = slowStage();
+    const library = createSceneLibrary(ports({ stages: { "fixture-stage": stage.loader } }));
+    library.show("fixture-stage");
+    await vi.waitFor(() => {
+      expect(stage.paints.length).toBe(1);
+    });
+    const { context, calls } = recordingContext();
+    library.drawBack(context, input);
+    expect(library.status("fixture-stage")).toBe("loading");
+    // Not opaque tells the world to draw its own backdrop first; the scene adds nothing yet.
+    expect(library.opaque("fixture-stage")).toBe(false);
+    expect(calls).toEqual([]);
+    stage.finish();
+    await vi.waitFor(() => {
+      expect(library.status("fixture-stage")).toBe("ready");
+    });
+    library.drawBack(context, input);
+    expect(calls.some((call) => call.startsWith("drawImage"))).toBe(true);
+  });
+
+  it("paints once per load, in world units: a different view or camera never paints again", async () => {
+    const stage = slowStage();
+    const library = createSceneLibrary(ports({ stages: { "fixture-stage": stage.loader } }));
+    library.show("fixture-stage");
+    await vi.waitFor(() => {
+      expect(stage.paints.length).toBe(1);
+    });
+    stage.finish();
+    await vi.waitFor(() => {
+      expect(library.status("fixture-stage")).toBe("ready");
+    });
+    const { context } = recordingContext();
+    for (const scale of [1, 1.2]) {
+      for (const view of [input.view, { left: -400, top: -56, right: 2000, bottom: 956 }]) {
+        library.show("fixture-stage");
+        library.drawBack(context, { ...input, view, camera: { ...input.camera, scale } });
+      }
+    }
+    expect(stage.paints.length).toBe(1);
+  });
+
+  it("chooses the canvas detail from the graphics setting when the stage loads", async () => {
+    for (const [low, detail] of [
+      [false, 1],
+      [true, 0.6],
+    ] as const) {
+      const stage = slowStage();
+      const library = createSceneLibrary(ports({ stages: { "fixture-stage": stage.loader }, lowGraphics: () => low }));
+      library.show("fixture-stage");
+      await vi.waitFor(() => {
+        expect(stage.paints.length).toBe(1);
+      });
+      expect(stage.paints[0]?.detail).toBe(detail);
+      expect(stage.paints[0]?.sliceMs).toBeLessThanOrEqual(4);
+    }
   });
 });

@@ -1,5 +1,4 @@
 import { releasePointerLock } from "../../platform/browser-pointer-lock";
-import { BOSS_ROSTER } from "../../gameplay/run/content-director";
 import type { AttackPresentationCueSink } from "../../gameplay/combat/attack-presentation-cue";
 import type { LiveCampaignTrainingAssembly } from "../campaign/live-campaign-training-assembly";
 import type { LiveScreenNavigation } from "../interface/live-screen-navigation";
@@ -7,7 +6,13 @@ import type { LiveReviveCountdownState } from "../run/revive-countdown-state";
 import type { LiveRunOrchestration } from "../run/run-orchestration-composition";
 import type { LiveBrowserRuntime } from "../shell/browser-runtime";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameBlade, GameEnemy, GamePlayer, GameProjectile, GameRun } from "../shell/game-runtime-state";
+import type {
+  GameBlade,
+  GameEnemy,
+  GamePlayer,
+  GameProjectile,
+  GameRun,
+} from "../../gameplay/runtime/game-runtime-state";
 import {
   isCombatPlatform,
   isDodgeProjectile,
@@ -18,7 +23,7 @@ import {
   isWeaponEffect,
 } from "../shell/runtime-type-guards";
 import type { LiveSessionServices } from "../shell/session-services-composition";
-import type { LiveAuthoritativeInputAdapter } from "../world/authoritative-input-adapter";
+import type { LiveAuthoritativeInputAdapter } from "../../gameplay/runtime/authoritative-input-adapter";
 import type { LiveWorldComposition } from "../world/world-composition";
 import { createLiveCombatActions } from "./combat-actions";
 import { createLiveCollisionStateView, type LiveCombatAdapterContext } from "./combat-adapter-context";
@@ -145,7 +150,6 @@ export function createLiveCombatActionPorts(options: LiveCombatActionPortsOption
     dependencies,
     canvas: options.surface.canvas,
     width: W,
-    bossRosterSize: BOSS_ROSTER.length,
     environment,
     attackPresentation: options.attackPresentation,
     live: combatWorldState,

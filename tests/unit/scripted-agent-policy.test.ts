@@ -4,6 +4,7 @@ import type { TearAgentObservation } from "../../src/agents/contracts";
 import {
   BladeMotorModule,
   MovementModule,
+  PURSUE_AFTER_TICKS,
   SCRIPTED_POLICY_PROFILES,
   TearScriptedPolicy,
 } from "../../src/agents/scripted-policy";
@@ -12,7 +13,7 @@ import { createBlade } from "../../src/gameplay/entities/blade";
 import { applyWeapon } from "../../src/gameplay/weapons";
 import { CONFIG } from "../../src/config/game-config";
 import { clamp, len, lerp, lerpAngle } from "../../src/domain/geometry";
-import { createLiveAuthoritativeInputAdapter } from "../../src/app/world/authoritative-input-adapter";
+import { createLiveAuthoritativeInputAdapter } from "../../src/gameplay/runtime/authoritative-input-adapter";
 import { AuthoritativeInputState } from "../../src/gameplay/runtime/authoritative-input";
 import { EnvelopeSequencer } from "../../src/domain/envelopes";
 import { projectLiveBladeMechanics } from "../../src/tearbench/live-observation-actors";
@@ -108,7 +109,8 @@ describe("deterministic scripted agent hierarchy", () => {
       input = new AuthoritativeInputState(),
       sequence = new EnvelopeSequencer();
     let rounds = 0,
-      releases = 0;
+      releases = 0,
+      tether = 1;
     for (let tick = 1; tick <= 120 && rounds < 2; tick++) {
       const target = actor("close-opponent", blade.x + 40, blade.y),
         current = state(tick, [target]);
@@ -129,9 +131,12 @@ describe("deterministic scripted agent hierarchy", () => {
       clock.sim = tick / 120;
       blade.update(1 / 120, player, []);
       rounds += blade.drainWeaponEvents().filter((event) => event.type === "razorRound").length;
+      tether = Math.min(tether, blade.tetherFactor);
     }
     expect(rounds).toBe(2);
     expect(releases).toBeGreaterThan(0);
+    // Holding the trigger between rounds draws the tether in, as it does for a player.
+    expect(tether).toBeLessThan(0.9);
     expect(blade.riftChambers).toBe(config.weapons.riftlock.chambers - 2);
   });
   it("exercises slash, secondary, throw, recall, parry, navigation, jump, and dash mechanics", () => {
@@ -330,5 +335,30 @@ describe("deterministic scripted agent hierarchy", () => {
     });
     expect(hazard.actions).toContainEqual({ type: "move", x: -1_000, y: 0 });
     expect(hazard.actions).toContainEqual({ type: "jump", phase: "pressed" });
+  });
+
+  it("closes in on a target once its attacks have landed nothing for a while, and backs off again when they do", () => {
+    const riftlock = (tick: number, hpRatio: number): TearAgentObservation => {
+      const base = state(tick, [{ ...actor("herald", 640, 600, "herald"), hpRatio }]);
+      return observation({ ...base, run: { ...base.run, weapon: "riftlock" } });
+    };
+    const moveX = (movement: MovementModule, current: TearAgentObservation): number | undefined => {
+      const target = current.state.entities[0];
+      if (target === undefined) throw new Error("the test needs a target");
+      const move = movement.decide({ observation: current, target, profile: "competent" }).actions[0];
+      return move?.type === "move" ? move.x : undefined;
+    };
+    const movement = new MovementModule();
+    expect(moveX(movement, riftlock(0, 1))).toBe(-1_000);
+    expect(moveX(movement, riftlock(PURSUE_AFTER_TICKS - 1, 1))).toBe(-1_000);
+    expect(moveX(movement, riftlock(PURSUE_AFTER_TICKS, 1))).toBe(1_000);
+    expect(moveX(movement, riftlock(PURSUE_AFTER_TICKS + 1, 0.9))).toBe(-1_000);
+
+    // At low health the player retreats from a target in reach; a target it never hurts would hold it there for good.
+    const hurt = (tick: number): TearAgentObservation =>
+      observation(state(tick, [actor("herald", 400, 600, "herald")], { hp: 30 }));
+    const melee = new MovementModule();
+    expect(moveX(melee, hurt(0))).toBe(-1_000);
+    expect(moveX(melee, hurt(PURSUE_AFTER_TICKS))).toBe(1_000);
   });
 });

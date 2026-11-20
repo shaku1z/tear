@@ -1,9 +1,9 @@
 {
-  "standaloneMainGzipBytes": 260000,
-  "crazygamesMainGzipBytes": 260000,
+  "standaloneMainGzipBytes": 195000,
+  "crazygamesMainGzipBytes": 195000,
   "workerGzipBytes": 325000,
   "tutorialGoldGzipBytes": 475000,
-  "startupScriptBytes": 2300000,
+  "startupScriptBytes": 1990000,
   "precacheEntries": 46,
-  "precacheBytes": 7400000
+  "precacheBytes": 2800000
 }

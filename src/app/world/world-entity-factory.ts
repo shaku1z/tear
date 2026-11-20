@@ -1,7 +1,13 @@
 import type { TearWorldEntityConstructionPort } from "../../gameplay/runtime/tear-world-entity-construction";
 import { createTearWorldLegacyEntityConstruction } from "../../gameplay/runtime/tear-world-legacy-entity-construction";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameBlade, GameEnemy, GamePlayer, GameProjectile, GameRun } from "../shell/game-runtime-state";
+import type {
+  GameBlade,
+  GameEnemy,
+  GamePlayer,
+  GameProjectile,
+  GameRun,
+} from "../../gameplay/runtime/game-runtime-state";
 import { makeCombatEnemy } from "../shell/runtime-type-guards";
 import { applyVariant, findVariant } from "../../gameplay/variants";
 
@@ -91,10 +97,10 @@ export function createLiveWorldEntityFactory(
       if (typeof variantId !== "string" || variantId === "") return;
       const variant = findVariant(factoryId, variantId);
       if (variant === null)
-        throw new RangeError(`unknown ${factoryId} variant during live State Forge restore: ${variantId}`);
+        throw new RangeError(`unknown ${factoryId} variant during live State Setup restore: ${variantId}`);
       // Complete snapshots already carry the source-applied behavior and
       // stats. Reapplying a stat-scaling variant would drift their hashes;
-      // freshly forged payloads omit variantName and still need application.
+      // freshly built payloads omit variantName and still need application.
       if (actor.variantName === variant.name && typeof actor.behavior === "string" && actor.behavior !== "") return;
       applyVariant(actor, variant);
     },

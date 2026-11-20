@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 
 withJourney(
-  { name: "agent engineering journey", port: 8152, recordFrames: true },
+  { name: "agent engineering journey", recordFrames: true, tutorialSkipped: true },
   async ({ page, waitScreen, clickAndWait, waitArmed, clickLabel, clickCard }) => {
     const evidence = {
       executionClass: "engineering",

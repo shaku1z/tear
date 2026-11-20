@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { advanceEnvironmentField, environmentFieldContainsPoint } from "../../src/gameplay/environment/field-runtime";
 import type { EnvironmentFieldState } from "../../src/gameplay/environment/environment-contracts";
-import { forgeEnvironmentFieldState } from "../../src/tearbench/state-forge-factories";
+import { buildEnvironmentFieldState } from "../../src/tearbench/state-setup-factories";
 import { buildEnvironmentPresentationSnapshot } from "../../src/gameplay/environment/presentation-snapshot";
 import type { TearSdlDocumentV1 } from "../../src/tearbench/tearsdl";
 import { TearGameplayEventBus } from "../../src/gameplay/runtime/gameplay-events";
 import { resolveTearSdl } from "../../src/tearbench/tearsdl";
-import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-forge-live-compiler";
+import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-setup-live-compiler";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 
 const field: EnvironmentFieldState = {
@@ -56,7 +56,7 @@ describe("generic environment field kernel", () => {
     expect(() => advanceEnvironmentField(field, 1, 0)).toThrow(/duration/u);
   });
 
-  it("is State Forge-approved and produces data-only presentation facts", () => {
+  it("is State Setup-approved and produces data-only presentation facts", () => {
     const base: TearSdlDocumentV1 = {
       format: "tearsdl",
       schemaVersion: 1,
@@ -65,8 +65,8 @@ describe("generic environment field kernel", () => {
       seed: "field-forge",
       start: { mode: "endless", difficulty: "normal", weapon: "sword" },
     };
-    const forged = forgeEnvironmentFieldState(base, field);
-    const entry = (forged.state?.environment as { fields: readonly Record<string, unknown>[] }).fields[0];
+    const built = buildEnvironmentFieldState(base, field);
+    const entry = (built.state?.environment as { fields: readonly Record<string, unknown>[] }).fields[0];
     expect(entry?.factoryId).toBe("environment-field");
     const view = buildEnvironmentPresentationSnapshot({
       stageId: "stage",
@@ -78,7 +78,7 @@ describe("generic environment field kernel", () => {
     expect("draw" in view).toBe(false);
   });
 
-  it("keeps forged environment payload through the live compiler", () => {
+  it("keeps built environment payload through the live compiler", () => {
     const base: TearSdlDocumentV1 = {
       format: "tearsdl",
       schemaVersion: 1,
@@ -87,7 +87,7 @@ describe("generic environment field kernel", () => {
       seed: "field-forge",
       start: { mode: "endless", difficulty: "normal", weapon: "sword" },
     };
-    const resolved = resolveTearSdl(forgeEnvironmentFieldState(base, field));
+    const resolved = resolveTearSdl(buildEnvironmentFieldState(base, field));
     expect(resolved.document.state?.environment).toBeDefined();
     const source = {
       state: {

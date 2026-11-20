@@ -3,7 +3,6 @@ import type { CloudFactory } from "./cloud-factory";
 import type { AccountProvider, SharedCloudService } from "./cloud";
 import type { FirebaseCompatSdk, FirebaseCloudCompatibility } from "./firebase-cloud";
 import { REMOTE } from "../config/game-config";
-import { createStandaloneGhostPublicationRuntime } from "./ghost-publication-runtime";
 
 /** Standalone-only cloud graph. Firebase never enters portal bundles. */
 export const createStandaloneCloud: CloudFactory = (options) => {
@@ -40,6 +39,9 @@ export const createStandaloneCloud: CloudFactory = (options) => {
     async save(context, payload) {
       await (await load()).account.save?.(context, payload);
     },
+    async replace(context, payload) {
+      return (await (await load()).account.replace?.(context, payload)) ?? false;
+    },
     dispose() {
       firebase?.account.dispose?.();
     },
@@ -73,16 +75,9 @@ export const createStandaloneCloud: CloudFactory = (options) => {
       return (await load()).shared.loadGhost(...args);
     },
   };
-  const publicationEndpoint: unknown = import.meta.env.VITE_GHOST_PUBLICATION_ENDPOINT;
-  const ghostPublication = createStandaloneGhostPublicationRuntime({
-    target: "standalone",
-    endpoint: typeof publicationEndpoint === "string" ? publicationEndpoint : undefined,
-    loadBearer: async () => (await load()).ghostPublicationBearer,
-  });
   return createCloudCompatibility({
     ...options,
     firebaseAccount: account,
     shared,
-    ghostPublication,
   });
 };

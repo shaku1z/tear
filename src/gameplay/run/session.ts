@@ -58,7 +58,13 @@ export interface RunSession<TMods> {
   spawnTimer: number;
   clearTimer: number;
   runTime: number;
+  /** Simulation ticks the run has played; the Gauntlet's clear time. */
+  runTicks: number;
+  /** Hits the player has taken this run. */
+  hitsTaken: number;
   waveTime: number;
+  /** Seconds of opening grace the current wave has from the moment it goes live; zero for most waves. */
+  waveGrace: number;
   waveKills: number;
   wavePeak: number;
   waveLog: RunWaveLogEntry[];
@@ -123,7 +129,10 @@ export function createRunSession<TMods extends { weaponId?: string }>(
     spawnTimer: 0,
     clearTimer: -1,
     runTime: 0,
+    runTicks: 0,
+    hitsTaken: 0,
     waveTime: 0,
+    waveGrace: 0,
     waveKills: 0,
     wavePeak: 1,
     waveLog: [],

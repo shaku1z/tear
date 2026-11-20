@@ -7,10 +7,10 @@ import type { GhostReplayRenderView } from "../ghost/replay-world";
 import type { ProductionReplayWorldOptions } from "./production-world-factory";
 import { applyWeapon } from "../gameplay/weapons";
 import { A11Y, GFX } from "../config/game-config";
-import { launchCampaignChapter } from "../app/campaign/campaign-sequences";
-import { createCampaignChapterController } from "../app/campaign/campaign-controller-factory";
+import { launchCampaignChapter } from "../gameplay/campaign/campaign-sequences";
+import { createCampaignChapterController } from "../gameplay/campaign/campaign-controller-factory";
 import { createUiState } from "../presentation/ui-tokens";
-import { createLiveParticlePresentationState } from "../app/world/particle-presentation-state";
+import { createLiveParticlePresentationState } from "./particle-presentation-state";
 import { validateParticlePresentationBinding } from "./particle-presentation-checkpoint";
 import { prepareParticlePresentationRestore } from "./particle-presentation-checkpoint";
 import { createTearWorldConfiguration } from "../gameplay/runtime/tear-world-configuration";
@@ -31,11 +31,11 @@ import {
   type CinematicDirectorBinding,
   type CinematicDirectorPort,
 } from "../gameplay/runtime/cinematic-director";
-import { createLiveStateForgeAdapter, captureLiveRewardSelection } from "../app/engineering/state-forge-adapter";
+import { createLiveStateSetupAdapter, captureLiveRewardSelection } from "../app/engineering/state-setup-adapter";
 import {
-  createLiveStateForgeRuntimeBridge,
-  resolveStateForgeBossIntro,
-} from "../app/engineering/state-forge-runtime-bridge";
+  createLiveStateSetupRuntimeBridge,
+  resolveStateSetupBossIntro,
+} from "../app/engineering/state-setup-runtime-bridge";
 import type { RunDifficulty } from "../gameplay/run/session";
 import { RunRandomStreams, type RunRandomStreamsSnapshot } from "../simulation/run-random";
 import {
@@ -50,12 +50,14 @@ import { stableVerificationHash } from "../domain/hash";
 import type { TearBuildIdentityV1, TearSnapshotV1 } from "./contracts";
 import type { TearCodecWorld } from "./state-codecs";
 import { applyTearCodecConfiguration, hydrateTearCodecWorld } from "./detached-world-hydrator";
-import { captureLiveStateForgeSnapshot, injectedBuildIdentity } from "./live-runtime-snapshots";
+import { captureLiveStateSetupSnapshot, injectedBuildIdentity } from "./live-runtime-snapshots";
 import { createProductionCombatSimulation } from "./production-combat-simulation";
+import type { ProductionApplicationFrameConfirm } from "./production-application-frame";
 import { createProductionRunOutcomeRuntime, type ProductionRunOutcomeRuntime } from "./production-run-outcome-runtime";
 import { createProductionReplayWorld, type ProductionReplayWorld } from "./production-world-factory";
 import {
   createProductionWaveRewardRuntime,
+  type ProductionRunOpening,
   type ProductionWaveRewardIntent,
   type ProductionWaveRewardRuntime,
 } from "./production-wave-reward-runtime";
@@ -84,10 +86,9 @@ export function captureProductionRewardSelection(selection: RewardSelectionSnaps
 
 const productionWaveRewards = new WeakMap<ProductionReplayWorld, ProductionWaveRewardRuntime>();
 
-/** Explicit application-frame inputs, independent of fixed simulation ticks. */
-export type ProductionApplicationFrameConfirm = NonNullable<
-  Parameters<InstanceType<typeof CinematicTimeline.Director>["update"]>[1]
->;
+export type { ProductionApplicationFrameConfirm } from "./production-application-frame";
+
+const CONTENT_HASH = stableVerificationHash(ENTITY_KIND_REGISTRY.ids);
 
 export interface ProductionGhostReplayCompositionOptions {
   readonly observeStyle?: ProductionCombatPhaseOptions["observeStyle"];
@@ -98,6 +99,8 @@ export interface ProductionGhostReplayCompositionOptions {
   readonly mode?: string;
   readonly weaponId?: string;
   readonly difficulty?: RunDifficulty;
+  readonly firstBoss?: string;
+  readonly opening?: ProductionRunOpening;
   /** Optional immutable identity supplied by the build/composition boundary. */
   readonly buildIdentity?: Omit<TearBuildIdentityV1, "configHash">;
   readonly forkOrigin?: GhostForkOriginV1;
@@ -296,7 +299,7 @@ interface PreparedRuntimeOwners {
 
 function productionRuntimeState(replay: ProductionReplayWorld, prepared?: PreparedRuntimeOwners) {
   const transient = replay.world.context.transient;
-  return createLiveStateForgeRuntimeBridge({
+  return createLiveStateSetupRuntimeBridge({
     finale: {
       capture: replay.finale.runtime.captureBinding,
       clear: replay.finale.runtime.clearBinding,
@@ -383,7 +386,7 @@ function productionRuntimeState(replay: ProductionReplayWorld, prepared?: Prepar
 
 /**
  * Captures a natural C30 keyframe from the production replay composition.
- * It reuses the State Forge codec boundary; custody stays with its caller, so
+ * It reuses the State Setup codec boundary; custody stays with its caller, so
  * this creates neither durable storage nor worker/job recovery behavior.
  */
 export function captureProductionReplayCheckpoint(
@@ -395,7 +398,7 @@ export function captureProductionReplayCheckpoint(
   presentation?: Readonly<{ omitGoldCoach?: boolean }>,
 ): ProductionReplayCheckpointCapture {
   const runtime = productionRuntimeState(replay);
-  const stateForge = createLiveStateForgeAdapter({
+  const stateSetup = createLiveStateSetupAdapter({
     dependencies: replay.dependencies,
     entities: replay.world.entities,
     worldServices: replay.world.context.services,
@@ -461,19 +464,19 @@ export function captureProductionReplayCheckpoint(
     validateCinema: runtime.validate,
   });
   const tick = simulation.simulationRuntime.scheduler.tick;
-  const snapshot = captureLiveStateForgeSnapshot({
+  const snapshot = captureLiveStateSetupSnapshot({
     id,
     tick,
     stateClass: "recorded-canonical",
     seed: String(replay.world.state.run()?.runSeed ?? "unknown"),
-    stateForge,
-    world: stateForge.capture(),
+    stateSetup,
+    world: stateSetup.capture(),
     rng: replay.world.context.services.random.snapshot(),
     registry: createDefaultStateCodecRegistry(),
     observationClass: "structured-state",
     producer: "production-headless-checkpoint",
     target: buildIdentity?.target ?? "headless",
-    contentHash: buildIdentity?.contentHash ?? stableVerificationHash(ENTITY_KIND_REGISTRY.ids),
+    contentHash: buildIdentity?.contentHash ?? CONTENT_HASH,
     ...(buildIdentity === undefined ? {} : { buildIdentity }),
     // A required contract hash that explicitly denotes absence of a pixel capture;
     // it is not rendered-output evidence.
@@ -488,7 +491,7 @@ export function captureProductionReplayCheckpoint(
   });
 }
 
-/** Applies a saved State Forge world transactionally to a newly composed production replay world. */
+/** Applies a saved State Setup world transactionally to a newly composed production replay world. */
 export function restoreProductionReplaySnapshot(
   replay: ProductionReplayWorld,
   snapshot: TearSnapshotV1,
@@ -534,7 +537,7 @@ export function restoreProductionReplaySnapshot(
   })();
   if (staged.tick !== snapshot.tick) throw new TypeError("recorded snapshot tick does not match its run component");
   restoreUpgradeHooks({ mods: staged.run.mods, config: replay.configuration.value });
-  const restoredBossIntro = resolveStateForgeBossIntro(staged.runtime, staged.enemies);
+  const restoredBossIntro = resolveStateSetupBossIntro(staged.runtime, staged.enemies);
   const destinationWorldId = replay.world.context.environment.worldId;
   const rebasedEnvironment = rebaseEnvironmentSnapshot(staged.environment, destinationWorldId);
   const environmentIssues = validateEnvironmentCodecPayload({ slowZones: [], walls: [], ...rebasedEnvironment });
@@ -734,14 +737,12 @@ export function createProductionGhostReplayComposition(options: ProductionGhostR
         ...(options.mode === undefined ? {} : { mode: options.mode }),
         ...(options.weaponId === undefined ? {} : { weaponId: options.weaponId }),
         ...(options.difficulty === undefined ? {} : { difficulty: options.difficulty }),
+        ...(options.firstBoss === undefined ? {} : { firstBoss: options.firstBoss }),
         tutorialHandoff: () => {
           waveReward?.restoreScreen("paused");
         },
       });
-      const runtimeBuild = injectedBuildIdentity(
-        "production-headless",
-        stableVerificationHash(ENTITY_KIND_REGISTRY.ids),
-      );
+      const runtimeBuild = injectedBuildIdentity("production-headless", CONTENT_HASH);
       const inheritedBuild = snapshot?.provenance.build;
       const suppliedBuild = inheritedBuild === undefined ? (options.buildIdentity ?? runtimeBuild) : undefined;
       const bootstrap = Object.freeze({
@@ -752,7 +753,7 @@ export function createProductionGhostReplayComposition(options: ProductionGhostR
             revision: suppliedBuild?.revision ?? "unbound",
             target: suppliedBuild?.target ?? "production-headless",
             rulesetVersion: suppliedBuild?.rulesetVersion ?? "live",
-            contentHash: suppliedBuild?.contentHash ?? stableVerificationHash(ENTITY_KIND_REGISTRY.ids),
+            contentHash: suppliedBuild?.contentHash ?? CONTENT_HASH,
             configHash: stableVerificationHash(replay.configuration.value),
           }),
         rng: replay.world.context.services.random.snapshot(),
@@ -856,8 +857,8 @@ export function createProductionGhostReplayComposition(options: ProductionGhostR
       });
       productionWaveRewards.set(replay, waveReward);
       replay.bindTutorialSpawn(waveReward.spawnTutorial);
-      if (staged === undefined) waveReward.startNaturalOpening();
-      if (staged !== undefined) {
+      if (staged === undefined) waveReward.startNaturalOpening(options.opening);
+      else {
         waveReward.reward.restore(staged.reward);
         waveReward.restoreUi(staged.screen, productionFocus.get(replay) ?? -1);
         replay.tutorial.restorePresentation(staged.tutorialPresentation);

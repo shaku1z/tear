@@ -18,7 +18,7 @@ import {
   renderRearEntities,
   type EnemyVisualSnapshot,
 } from "../../src/presentation/world/entity-layer";
-import { tutorialCardLayout } from "../../src/presentation/world/training-touch";
+import { tutorialCardLayout } from "../../src/presentation/world/tutorial-card";
 import { bossHudTop } from "../../src/presentation/world/hud";
 
 interface CanvasCall {
@@ -366,6 +366,34 @@ describe("legacy world presentation renderers", () => {
     }
   });
 
+  it("draws every coach mark's title in the ink, the tone only on its rule", () => {
+    const ui = new TestUi();
+    const tones = ["info", "prompt", "success", "nudge"] as const;
+    createWorldRenderers(renderContext([], ui)).coachMarks({
+      marks: tones.map((tone, index) => ({
+        mark: {
+          id: `mark:${tone}`,
+          channel: "beat",
+          tone,
+          title: `LEARNED · ${tone.toUpperCase()}`,
+          text: "Speed is damage.",
+          keys: [],
+          anchor: { x: 300 + index * 300, y: 600 },
+          priority: index,
+          seconds: 3,
+        },
+        alpha: 1,
+      })),
+      avoid: [],
+    });
+    const titles = ui.calls.filter(
+      (call) => call.name === "tag" && typeof call.arguments[0] === "string" && call.arguments[0].startsWith("LEARNED"),
+    );
+    expect(titles).toHaveLength(tones.length);
+    for (const call of titles)
+      expect((call.arguments[1] as { color?: string }).color, String(call.arguments[0])).toBe(ui.ink);
+  });
+
   it("keeps tutorial, playground, touch and transient overlay copy intact", () => {
     const canvasCalls: CanvasCall[] = [];
     const ui = new TestUi();
@@ -387,7 +415,7 @@ describe("legacy world presentation renderers", () => {
             channel: "help",
             tone: "info",
             title: "PLAYGROUND",
-            text: "E build menu  ·  U ability lab",
+            text: "E menu  ·  U abilities",
             keys: [],
             priority: 0,
             seconds: 8,
@@ -428,7 +456,7 @@ describe("legacy world presentation renderers", () => {
         "LESSON 2 OF 5",
         "✓",
         "PLAYGROUND",
-        "E build menu  ·  U ability lab",
+        "E menu  ·  U abilities",
         "JUMP",
         "◉ MOVE",
         "DRAG TO AIM & SWING ↷",
@@ -584,7 +612,7 @@ describe("legacy world presentation renderers", () => {
   });
 
   it("contains no gameplay coordination, persistence, audio, input or platform access", () => {
-    const files = ["status-debug.ts", "finale.ts", "hud.ts", "training-touch.ts", "overlays.ts"];
+    const files = ["status-debug.ts", "finale.ts", "hud.ts", "tutorial-card.ts", "touch-controls.ts", "overlays.ts"];
     const source = files
       .map((file) =>
         readFileSync(fileURLToPath(new URL(`../../src/presentation/world/${file}`, import.meta.url)), "utf8"),

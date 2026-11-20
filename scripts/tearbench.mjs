@@ -1,16 +1,11 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { lstat, mkdir, readFile, realpath, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { readSourceIdentitySync, verifyReleaseArtifact } from "./release-artifact.mjs";
-import { verifyContentAddressedBuild } from "./tearbench-build-artifact.mjs";
+import { readSourceIdentitySync } from "./release-artifact.mjs";
 import { isPassedTearBenchRunArtifact } from "./tearbench-run-artifact.mjs";
-import { createTearBenchShadowPlan } from "./tearbench-shadow-plan.mjs";
-import { executionEnvironmentBinding, executionToolchainBinding } from "./tearbench-runtime-identity.mjs";
-import { dependencyOrderedTaskIds, registryTaskEnvironment } from "./tearbench-task-profile.mjs";
-import { taskResourceKeys, withResourceLeases } from "./tearbench-resource-leases.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const BLOOM_WELL_LIFECYCLE_TICKS = 744;
@@ -31,7 +26,6 @@ const catalog = JSON.parse(await readFile(catalogPath, "utf8"));
 const evidenceRoutes = JSON.parse(await readFile(evidenceRoutesPath, "utf8"));
 const evidencePolicy = JSON.parse(await readFile(evidencePolicyPath, "utf8"));
 const taskRegistry = JSON.parse(await readFile(taskRegistryPath, "utf8"));
-const packageSource = JSON.parse(await readFile(resolve(root, "package.json"), "utf8"));
 const publicationBoundary = JSON.parse(
   await readFile(resolve(root, "config", "campaign-publication-boundary.json"), "utf8"),
 );
@@ -67,9 +61,7 @@ const TASK_RESOURCE_CLASSES = new Set(["static", "unit", "headless", "build", "b
 if (
   taskRegistry?.schemaVersion !== 1 ||
   !Number.isSafeInteger(taskRegistry.definitionPolicyVersion) ||
-  !Array.isArray(taskRegistry.tasks) ||
-  taskRegistry.profiles === null ||
-  typeof taskRegistry.profiles !== "object"
+  !Array.isArray(taskRegistry.tasks)
 ) {
   throw new TypeError("TearBench task registry is malformed");
 }
@@ -382,26 +374,26 @@ function validateScenarioMetadata(scenario) {
   const surgicalFields = ["stage", "wave", "bossPhase"].filter(
     (field) => scenario.start !== null && typeof scenario.start === "object" && Object.hasOwn(scenario.start, field),
   );
-  const stateForge = scenario.stateForge;
-  if (surgicalFields.length > 0 && stateForge === undefined) {
-    throw new RangeError(`scenario ${scenario.id} requests exact ${surgicalFields.join(", ")} state; use State Forge`);
+  const stateSetup = scenario.stateSetup;
+  if (surgicalFields.length > 0 && stateSetup === undefined) {
+    throw new RangeError(`scenario ${scenario.id} requests exact ${surgicalFields.join(", ")} state; use State Setup`);
   }
-  if (stateForge !== undefined) {
+  if (stateSetup !== undefined) {
     if (
-      stateForge === null ||
-      typeof stateForge !== "object" ||
-      Array.isArray(stateForge) ||
-      stateForge.documentId !== scenario.id ||
+      stateSetup === null ||
+      typeof stateSetup !== "object" ||
+      Array.isArray(stateSetup) ||
+      stateSetup.documentId !== scenario.id ||
       typeof scenario.seed !== "string" ||
       !Array.isArray(scenario.backends) ||
       scenario.backends.length !== 1 ||
       scenario.backends[0] !== "live"
     ) {
-      throw new TypeError(`scenario ${scenario.id} has an invalid State Forge descriptor`);
+      throw new TypeError(`scenario ${scenario.id} has an invalid State Setup descriptor`);
     }
     if (scenario.start?.stage !== "pale-traverse" || !Number.isSafeInteger(scenario.start?.wave)) {
       throw new RangeError(
-        `scenario ${scenario.id} State Forge start must retain its exact Pale stage and wave coordinates`,
+        `scenario ${scenario.id} State Setup start must retain its exact Pale stage and wave coordinates`,
       );
     }
     if (
@@ -409,7 +401,7 @@ function validateScenarioMetadata(scenario) {
       (scenario.start?.boss !== "white-hart" || !["1", "2", "3"].includes(scenario.start?.bossPhase))
     ) {
       throw new RangeError(
-        `scenario ${scenario.id} State Forge start must retain its exact White Hart phase coordinates`,
+        `scenario ${scenario.id} State Setup start must retain its exact White Hart phase coordinates`,
       );
     }
     const tags = new Set(scenario.tags ?? []);
@@ -418,7 +410,7 @@ function validateScenarioMetadata(scenario) {
       !tags.has("unpublished-preview") ||
       ["published", "headless", "replay", "seek"].some((tag) => tags.has(tag))
     ) {
-      throw new RangeError(`scenario ${scenario.id} has an invalid State Forge publication/backend claim`);
+      throw new RangeError(`scenario ${scenario.id} has an invalid State Setup publication/backend claim`);
     }
     if (
       !Array.isArray(scenario.structuredAssertions) ||
@@ -448,8 +440,8 @@ function validateScenarioMetadata(scenario) {
   ) {
     throw new TypeError(`scenario ${scenario.id} has malformed evidence subject`);
   }
-  if (stateForge === undefined && subject.kind === "gameplay" && subject.id.startsWith("pale-")) {
-    throw new RangeError(`source-owned Pale scenario ${scenario.id} requires its State Forge descriptor`);
+  if (stateSetup === undefined && subject.kind === "gameplay" && subject.id.startsWith("pale-")) {
+    throw new RangeError(`source-owned Pale scenario ${scenario.id} requires its State Setup descriptor`);
   }
   const isRootboundGraft =
     subject.kind === "environment-combat-object" &&
@@ -543,10 +535,10 @@ function validateScenarioMetadata(scenario) {
   if (typeof command !== "string") return;
   const proof = parseApprovedEvidenceCommand(command).find((entry) => entry.kind === "node");
   if (proof === undefined) return;
-  // Surgical State Forge scenarios are materialized by the typed live bridge;
+  // Surgical State Setup scenarios are materialized by the typed live bridge;
   // their complementary browser journeys intentionally begin from a natural
-  // UI setup and cannot prove the forged coordinates through source text.
-  if (stateForge !== undefined) return;
+  // UI setup and cannot prove the built coordinates through source text.
+  if (stateSetup !== undefined) return;
   const source = readFileSync(proof.file, "utf8");
   if (
     subject.kind === "gameplay" &&
@@ -1254,15 +1246,7 @@ async function executeApprovedEvidence(command, state) {
   const steps = parseApprovedEvidenceCommand(command),
     receipts = [];
   for (const step of steps) {
-    const resources =
-      step.kind === "build"
-        ? ["resources/build"]
-        : ["canonical-live", "node"].includes(step.kind)
-          ? ["resources/browser", "resources/build"]
-          : [];
-    const receipt = await withResourceLeases(resources, (spawnStep) =>
-      executeApprovedEvidenceStep(step, state, spawnStep),
-    );
+    const receipt = await executeApprovedEvidenceStep(step, state, spawnSync);
     receipts.push(receipt);
     if (!["passed", "skipped"].includes(receipt.status)) break;
   }
@@ -1432,138 +1416,6 @@ async function executeSelectedEvidence(
   return { status, executions, obligationExecution, ...(generatedArtifact === undefined ? {} : { generatedArtifact }) };
 }
 
-function executeRegistryTask(task, spawnTask) {
-  const runner = task.runner;
-  const options = { cwd: root, stdio: "inherit", env: registryTaskEnvironment(task) };
-  if (runner.kind === "build-target") {
-    return spawnTask(process.execPath, [resolve(root, runner.executable), ...runner.args], options);
-  }
-  if (runner.kind === "node" && runner.executable === "node") {
-    return spawnTask(process.execPath, runner.args, options);
-  }
-  if (["vitest", "typescript", "eslint", "wrangler", "tearbench", "certifier"].includes(runner.kind)) {
-    return spawnTask(process.execPath, [resolve(root, runner.executable), ...runner.args], options);
-  }
-  throw new TypeError(`unsupported TearBench task runner: ${String(runner.kind)}`);
-}
-
-async function verifyRegistryBuildDependencies(task) {
-  for (const dependency of task.dependencies.filter((entry) => entry.outputId === "build-artifact")) {
-    const producer = taskById.get(dependency.taskId),
-      output = producer?.outputs.find((entry) => entry.outputId === "build-artifact");
-    const mode = producer?.runner.kind === "build-target" ? producer.runner.args[0] : undefined;
-    if (output === undefined || typeof mode !== "string")
-      throw new TypeError(`${task.taskId} has an invalid build dependency`);
-    const target = mode.endsWith("crazygames") ? "crazygames" : "standalone";
-    const directory = resolve(root, output.path),
-      info = JSON.parse(await readFile(resolve(directory, "build-info.json"), "utf8"));
-    const verified = await verifyReleaseArtifact({
-      directory,
-      expectedRepository: info.repository,
-      expectedSha: info.sha,
-      expectedTarget: target,
-      expectedMode: mode,
-      sourceDirectory: root,
-      allowDirty: true,
-    });
-    const record = JSON.parse(
-      await readFile(resolve(root, "artifacts", "tearbench", "generated", "builds", `${mode}.json`), "utf8"),
-    );
-    if (record.buildIdentityDigest !== verified.metadata.buildIdentityDigest) {
-      throw new Error(`${task.taskId} build dependency does not match its immutable build record`);
-    }
-    await verifyContentAddressedBuild({
-      workspaceRoot: root,
-      directory: resolve(root, record.contentAddressedPath),
-      expectedRecord: record,
-    });
-  }
-}
-
-async function runTaskProfile() {
-  const usage = "usage: pnpm tearbench tasks <list-profile|run-profile> <profile-id>";
-  const action = process.argv[3],
-    profileId = process.argv[4];
-  if (!["list-profile", "run-profile"].includes(action) || typeof profileId !== "string" || process.argv.length !== 5) {
-    throw new TypeError(usage);
-  }
-  const profile = taskRegistry.profiles[profileId];
-  if (!Array.isArray(profile) || profile.some((id) => !taskById.has(id)))
-    throw new RangeError(`unknown or invalid TearBench task profile: ${profileId}`);
-  const ordered = dependencyOrderedTaskIds(profile, taskRegistry.tasks);
-  if (action === "list-profile") {
-    console.log(
-      JSON.stringify(
-        { format: "tearbench-task-profile", schemaVersion: 1, profileId, declaredTaskIds: profile, taskIds: ordered },
-        null,
-        2,
-      ),
-    );
-    return;
-  }
-  for (const [index, taskId] of ordered.entries()) {
-    const task = taskById.get(taskId);
-    console.log(`TASK ${String(index + 1)}/${String(ordered.length)} ${taskId}`);
-    const result = await withResourceLeases(taskResourceKeys(task), async (spawnTask) => {
-      await verifyRegistryBuildDependencies(task);
-      return executeRegistryTask(task, spawnTask);
-    });
-    if (result.status !== 0) {
-      process.exitCode = result.status ?? 1;
-      return;
-    }
-  }
-}
-
-async function writeShadowPlan(explain = false) {
-  const usage =
-    "usage: pnpm tearbench <plan|explain> --profile <development|pull-request|protected-main|release|nightly|endurance> [--files comma,list | --files-from path | --revision sha] [--artifact path]";
-  const profileId = option("--profile");
-  if (!["development", "pull-request", "protected-main", "release", "nightly", "endurance"].includes(profileId))
-    throw new TypeError(usage);
-  const selection = evidenceForDiff(await changedFiles());
-  selection.executionRequirements = Object.freeze({
-    toolchain: executionToolchainBinding(packageSource),
-    environment: executionEnvironmentBinding(),
-  });
-  const requestedRevision = option("--revision");
-  if (requestedRevision !== undefined) {
-    const revision = spawnSync("git", ["rev-parse", requestedRevision], { cwd: root, encoding: "utf8" });
-    const parent = spawnSync("git", ["rev-parse", `${requestedRevision}^1`], { cwd: root, encoding: "utf8" });
-    if (revision.status !== 0 || parent.status !== 0)
-      throw new RangeError(`TearBench historical planning basis is not resolvable: ${requestedRevision}`);
-    selection.planningBasis = Object.freeze({
-      kind: "historical-commit",
-      revision: revision.stdout.trim(),
-      parentRevision: parent.stdout.trim(),
-    });
-  }
-  const plan = createTearBenchShadowPlan({
-    registry: taskRegistry,
-    policy: evidencePolicy,
-    selection,
-    catalog,
-    routes: evidenceRoutes,
-    profileId,
-  });
-  const output = await prepareWorkspaceOutput(
-    resolve(option("--artifact", resolve(root, "artifacts", "tearbench", "generated", "shadow-plan.json"))),
-    "artifacts/tearbench/generated/",
-    "shadow plan",
-  );
-  await writeFile(output.absolute, `${JSON.stringify(plan, null, 2)}\n`, "utf8");
-  console.log(`${plan.diagnostics.status.toUpperCase()} shadow plan ${plan.planDigest}`);
-  console.log(`profile: ${plan.profileId} (${String(plan.requiredTaskIds.length)} unique task(s))`);
-  console.log(`critical-path upper bound: ${String(plan.estimates.dependencyCriticalPathMs)} ms`);
-  console.log(`artifact: ${output.absolute}`);
-  if (explain)
-    for (const entry of plan.explanations) {
-      console.log(`${entry.taskId}: ${entry.selectedBecause.join(", ")}`);
-      if (entry.unprovedWithout.length > 0) console.log(`  unproved without: ${entry.unprovedWithout.join(", ")}`);
-    }
-  if (plan.diagnostics.status !== "complete") process.exitCode = 1;
-}
-
 export function formatFailedEvidenceExecution(evidenceExecution, outputLimit = 8_000) {
   if (evidenceExecution?.status !== "failed" || !Array.isArray(evidenceExecution.executions)) return "";
   const failures = evidenceExecution.executions.filter((entry) => entry?.status === "failed");
@@ -1652,7 +1504,7 @@ async function executeCurrentWeaponParity() {
   const selection = currentWeaponParitySelection();
   const scope = selection.scope;
   const existingPath = resolve(root, "artifacts", "tearbench", "generated", "diff-capability.json");
-  const reused = await withResourceLeases(["resources/browser", "resources/build"], async () => {
+  const reused = (() => {
     if (existsSync(existingPath)) {
       try {
         const existing = JSON.parse(readFileSync(existingPath, "utf8"));
@@ -1670,7 +1522,7 @@ async function executeCurrentWeaponParity() {
       }
     }
     return undefined;
-  });
+  })();
   if (reused !== undefined) return reused;
   return {
     ...selection,
@@ -1782,15 +1634,10 @@ export function validateServedBuildIdentity(build, source = readSourceIdentity()
 }
 
 async function executeRun(scenario, seed, repeat, artifactPath, actionTracePath, replayContextPath) {
-  return await withResourceLeases(["resources/browser", "resources/build"], (spawnTask) =>
-    executeLeasedRun(scenario, seed, repeat, artifactPath, actionTracePath, replayContextPath, spawnTask),
-  );
-}
-
-async function executeLeasedRun(scenario, seed, repeat, artifactPath, actionTracePath, replayContextPath, spawnTask) {
-  if (scenario.stateForge !== undefined && seed !== scenario.seed) {
+  const spawnTask = spawnSync;
+  if (scenario.stateSetup !== undefined && seed !== scenario.seed) {
     throw new RangeError(
-      `canonical State Forge scenario ${scenario.id} requires its authoritative catalog seed ${scenario.seed}`,
+      `canonical State Setup scenario ${scenario.id} requires its authoritative catalog seed ${scenario.seed}`,
     );
   }
   const invocations = runLiveMaterializer(
@@ -1852,36 +1699,6 @@ function workspaceRelativePath(path) {
   return stored;
 }
 
-function assertCanonicalContainment(canonicalRoot, canonicalPath, label, allowRoot = false) {
-  const stored = relative(canonicalRoot, canonicalPath).replaceAll("\\", "/");
-  if ((!allowRoot && stored === "") || stored.startsWith("../") || isAbsolute(stored))
-    throw new TypeError(`${label} resolves outside the workspace`);
-}
-
-async function prepareWorkspaceOutput(path, requiredPrefix, label) {
-  const stored = workspaceRelativePath(path);
-  if (!stored.startsWith(requiredPrefix)) throw new TypeError(`${label} must remain under ${requiredPrefix}`);
-  const absolute = resolve(root, stored);
-  const canonicalRoot = await realpath(root);
-  let ancestor = dirname(absolute);
-  while (!existsSync(ancestor)) {
-    const parent = dirname(ancestor);
-    if (parent === ancestor) throw new TypeError(`${label} has no resolvable workspace ancestor`);
-    ancestor = parent;
-  }
-  assertCanonicalContainment(canonicalRoot, await realpath(ancestor), label, true);
-  await mkdir(dirname(absolute), { recursive: true });
-  assertCanonicalContainment(canonicalRoot, await realpath(dirname(absolute)), label);
-  try {
-    const outputInfo = await lstat(absolute);
-    if (outputInfo.isSymbolicLink()) throw new TypeError(`${label} cannot overwrite a symbolic link or junction`);
-    assertCanonicalContainment(canonicalRoot, await realpath(absolute), label);
-  } catch (error) {
-    if (error?.code !== "ENOENT") throw error;
-  }
-  return Object.freeze({ stored, absolute });
-}
-
 const command = process.argv[2] ?? "help";
 try {
   if (command === "list") {
@@ -1893,7 +1710,7 @@ try {
         "usage: pnpm tearbench run <scenario-id> [--seed value] [--repeat count] [--actions path] [--artifact path]",
       );
     const scenario = scenarioById(id);
-    const seed = option("--seed", scenario.stateForge === undefined ? "1001" : scenario.seed);
+    const seed = option("--seed", scenario.stateSetup === undefined ? "1001" : scenario.seed);
     const repeat = Number.parseInt(option("--repeat", "1"), 10);
     if (!Number.isSafeInteger(repeat) || repeat < 1 || repeat > 100)
       throw new RangeError("--repeat must be an integer from 1 through 100");
@@ -1913,7 +1730,7 @@ try {
       prior.rerun?.actionTrace ?? undefined,
       resolve(artifactPath),
     );
-  } else if (command === "forge" && process.argv[3] === "wave99") {
+  } else if (command === "setup" && process.argv[3] === "wave99") {
     const artifactPath = resolve(
       option("--artifact", resolve(root, "artifacts", "tearbench", "hard-endless-wave-99-hammer.json")),
     );
@@ -1930,14 +1747,14 @@ try {
       generatedBy: "createWave99HammerPackage",
       artifacts: Object.fromEntries(
         [
-          ["legal-ledger", "The forge does not materialize a legal-ledger artifact."],
-          ["opportunity-counts", "The forge does not materialize opportunity-counts."],
-          ["configuration-trace", "The forge does not materialize a configuration trace."],
+          ["legal-ledger", "State setup does not materialize a legal-ledger artifact."],
+          ["opportunity-counts", "State setup does not materialize opportunity-counts."],
+          ["configuration-trace", "State setup does not materialize a configuration trace."],
           ["validation-report", "Test output is captured, but no report file is created."],
-          ["visible-episode", "The forge does not launch a visible episode."],
-          ["snapshot", "The forge does not materialize a snapshot."],
-          ["replay", "The forge does not materialize a replay."],
-          ["metrics", "The forge does not materialize metrics."],
+          ["visible-episode", "State setup does not launch a visible episode."],
+          ["snapshot", "State setup does not materialize a snapshot."],
+          ["replay", "State setup does not materialize a replay."],
+          ["metrics", "State setup does not materialize metrics."],
         ].map(([id, reason]) => [id, { status: "unavailable", reason }]),
       ),
       status: passed ? "passed" : "failed",
@@ -2010,13 +1827,13 @@ try {
     if (failureDiagnostics !== "") process.stderr.write(`${failureDiagnostics}\n`);
     console.log(`selection: ${artifactPath}`);
     if (evidence.status !== 0 || evidenceExecution.status === "failed") process.exitCode = 1;
-  } else if (command === "plan" || command === "explain") {
-    await writeShadowPlan(command === "explain");
-  } else if (command === "tasks") {
-    await runTaskProfile();
   } else {
+    if (command !== undefined && command !== "help" && command !== "--help") {
+      console.error(`unknown TearBench command: ${command}`);
+      process.exitCode = 1;
+    }
     console.log(
-      "TearBench CLI\n  list\n  plan --profile <profile> [--files comma,list | --files-from path] [--artifact path]\n  explain --profile <profile> [--files comma,list | --files-from path] [--artifact path]\n  tasks <list-profile|run-profile> <profile-id>\n  run <scenario-id> [--seed value] [--repeat count] [--actions path] [--artifact path]\n  rerun --artifact <run.json>\n  forge wave99 [--artifact path]\n  select [--files comma,list | --files-from path] [--artifact path]\n  ci [--files comma,list | --files-from path] [--registry path] [--artifact path]",
+      "TearBench CLI\n  list\n  run <scenario-id> [--seed value] [--repeat count] [--actions path] [--artifact path]\n  rerun --artifact <run.json>\n  setup wave99 [--artifact path]\n  select [--files comma,list | --files-from path] [--artifact path]\n  ci [--files comma,list | --files-from path] [--registry path] [--artifact path]",
     );
   }
 } catch (error) {

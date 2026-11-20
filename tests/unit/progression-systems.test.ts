@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+import { progressFacts } from "../../src/domain/progress-facts";
+import { ACHIEVEMENT_CATALOG } from "../../src/gameplay/progression/achievement-catalog";
 import {
   createAchievements,
   type Achievement,
@@ -169,6 +171,7 @@ describe("achievements", () => {
     const profile: AchievementProfilePort = {
       unlocked: (id) => unlocked.has(id),
       stat: () => 0,
+      facts: () => progressFacts({ stats: {}, ach: {} }),
       unlock: (achievement) => {
         if (unlocked.has(achievement.id)) return false;
         unlocked.add(achievement.id);
@@ -186,10 +189,10 @@ describe("achievements", () => {
       shop: [],
       clamp: (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value)),
     });
-    expect(achievements._all).toHaveLength(100);
-    expect(new Set(achievements._all.map((achievement) => achievement.id)).size).toBe(100);
+    expect(achievements._all).toHaveLength(ACHIEVEMENT_CATALOG.length);
+    expect(new Set(achievements._all.map((achievement) => achievement.id)).size).toBe(ACHIEVEMENT_CATALOG.length);
     expect(achievements._all.reduce((total, achievement) => total + achievements.coinsFor(achievement), 0)).toBe(
-      73_000,
+      75_900,
     );
   });
 
@@ -200,6 +203,7 @@ describe("achievements", () => {
     const profile: AchievementProfilePort = {
       unlocked: (id) => unlocked.has(id),
       stat: () => 0,
+      facts: () => progressFacts({ stats: {}, ach: {} }),
       unlock: (achievement) => {
         if (unlocked.has(achievement.id)) return false;
         unlocked.add(achievement.id);
@@ -221,15 +225,66 @@ describe("achievements", () => {
   });
 });
 
+describe("achievements judged by the shared condition language", () => {
+  const stats: Record<string, number> = {};
+  const unlocked = new Set<string>();
+  const profile: AchievementProfilePort = {
+    unlocked: (id) => unlocked.has(id),
+    stat: (key) => stats[key] ?? 0,
+    facts: () => progressFacts({ stats, ach: Object.fromEntries([...unlocked].map((id) => [id, 1])) }),
+    unlock: (achievement) => {
+      unlocked.add(achievement.id);
+      return true;
+    },
+  };
+  const achievements = createAchievements({
+    meta: { level: () => 0 },
+    profile,
+    audio: { rankup: () => undefined },
+    shop: [],
+    clamp: (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value)),
+  });
+  const rule = ACHIEVEMENT_CATALOG.find((entry) => entry.rule.kind === "stat-threshold" && entry.rule.goal > 1);
+  if (rule?.rule.kind !== "stat-threshold") throw new Error("expected a counted stat achievement");
+  const { stat, goal } = rule.rule;
+  const counted = achievements.byId(rule.id);
+  if (counted === undefined) throw new Error("expected the achievement at runtime");
+
+  it("unlocks on reaching the goal, not before, and reports counted progress", () => {
+    stats[stat] = goal - 1;
+    achievements.check();
+    expect(unlocked.has(rule.id)).toBe(false);
+    expect(achievements.progressText(counted)).toBe(`${String(goal - 1)} / ${String(goal)}`);
+    expect(achievements.progress(counted)).toBeCloseTo((goal - 1) / goal);
+    stats[stat] = goal;
+    achievements.check();
+    expect(unlocked.has(rule.id)).toBe(true);
+    expect(achievements.progress(counted)).toBe(1);
+  });
+
+  it("measures a manual achievement as locked until its own event", () => {
+    const manual = achievements._all.find((entry) => entry.manual);
+    if (manual === undefined) throw new Error("expected a manual achievement");
+    achievements.check();
+    expect(unlocked.has(manual.id)).toBe(false);
+    expect(achievements.progressText(manual)).toBe("Locked");
+  });
+});
+
 describe("daily challenges", () => {
   it("selects deterministically and awards each completion once", () => {
     let shards = 0;
     let saves = 0;
+    const paid = new Set<string>();
     const profile: DailyProfilePort = {
       data: {},
-      addShards: (amount) => {
+      claimShards: (receiptId, amount) => {
+        if (paid.has(receiptId)) return false;
+        paid.add(receiptId);
         shards += amount;
+        return true;
       },
+      shardsClaimable: (receiptId) => !paid.has(receiptId),
       save: () => {
         saves += 1;
       },
@@ -252,6 +307,8 @@ describe("daily challenges", () => {
     daily.bump(challenge.key, challenge.goal, challenge.mode);
     daily.bump(challenge.key, challenge.goal, challenge.mode);
     expect(shards).toBe(challenge.shards);
+    expect([...paid]).toEqual([`daily:2026-7-19:${challenge.id}`]);
+    expect(daily.isDone(challenge)).toBe(true);
     expect(achievements.pending).toHaveLength(1);
     expect(saves).toBeGreaterThan(0);
   });

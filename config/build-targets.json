@@ -6,9 +6,11 @@
     "serviceWorker": true,
     "audioProfile": "standalone",
     "fullscreenButton": true,
+    "mobile": false,
     "portalSdkScript": null,
     "cloudflareHeaders": true,
     "pruneUnrequestedFiles": false,
+    "staticPages": ["privacy"],
     "forbiddenModules": ["/src/platform/crazygames.ts", "/src/platform/crazygames-cloud.ts"],
     "testMode": "test-standalone",
     "previewDev": { "mode": "test-standalone", "output": "dist/preview-dev", "env": "TEAR_PREVIEW_DEV" },
@@ -22,9 +24,11 @@
     "serviceWorker": false,
     "audioProfile": "crazygames",
     "fullscreenButton": false,
+    "mobile": false,
     "portalSdkScript": "https://sdk.crazygames.com/crazygames-sdk-v3.js",
     "cloudflareHeaders": false,
     "pruneUnrequestedFiles": true,
+    "staticPages": [],
     "forbiddenModules": [
       "/src/platform/firebase-cloud.ts",
       "/src/platform/firebase-config.ts",
@@ -33,7 +37,7 @@
     "testMode": "test-crazygames",
     "previewDev": null,
     "package": { "path": "artifacts/packages/tear-crazygames.zip", "maxArchiveBytes": 21495808 },
-    "limits": { "maxUnpackedBytes": 26500000, "maxFiles": 1500, "maxFileBytes": null, "maxPathLength": null }
+    "limits": { "maxUnpackedBytes": 23500000, "maxFiles": 1500, "maxFileBytes": null, "maxPathLength": null }
   },
   "itch": {
     "description": "itch.io HTML5 upload: one ZIP with index.html at its root, relative URLs, local saves only (no accounts, SDK or service worker).",
@@ -42,9 +46,11 @@
     "serviceWorker": false,
     "audioProfile": "crazygames",
     "fullscreenButton": true,
+    "mobile": false,
     "portalSdkScript": null,
     "cloudflareHeaders": false,
     "pruneUnrequestedFiles": true,
+    "staticPages": [],
     "forbiddenModules": [
       "/src/platform/crazygames.ts",
       "/src/platform/crazygames-cloud.ts",
@@ -55,6 +61,6 @@
     "testMode": null,
     "previewDev": null,
     "package": { "path": "artifacts/packages/tear-itch.zip", "maxArchiveBytes": 21495808 },
-    "limits": { "maxUnpackedBytes": 26500000, "maxFiles": 1000, "maxFileBytes": 209715200, "maxPathLength": 240 }
+    "limits": { "maxUnpackedBytes": 23500000, "maxFiles": 1000, "maxFileBytes": 209715200, "maxPathLength": 240 }
   }
 }

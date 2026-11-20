@@ -1,9 +1,8 @@
-import { createLiveBeatThisRunController } from "../replay/beat-this-run-controller";
 import { createLiveSeedRace } from "../replay/seed-race-composition";
 import type { PreparedVictory } from "../../gameplay/run/outcome-planner";
 import { BestScoreRepository } from "../../gameplay/scoring/best-scores";
 import { createLiveEconomyRuntime } from "../../gameplay/scoring/live-economy-runtime";
-import type { GameBlade, GamePlayer, GameRun } from "./game-runtime-state";
+import type { GameBlade, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { AppScreen } from "../../domain/screen-catalog";
 import { initializeLivePlatformBootstrap } from "./platform-bootstrap";
@@ -14,10 +13,6 @@ import { SettingsController } from "../screens/settings-controller";
 type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
 
 export interface LiveSessionServicesOptions {
-  readonly beat?: Omit<
-    Parameters<typeof createLiveBeatThisRunController>[0],
-    "factory" | "publication" | "document" | "run"
-  >;
   readonly seedRace?: Omit<
     Parameters<typeof createLiveSeedRace>[0],
     "dependencies" | "run" | "player" | "blade" | "resetRewards"
@@ -47,6 +42,7 @@ export function createLiveSessionServices(options: LiveSessionServicesOptions) {
     input: d.Input,
     gamepad: d.PAD,
     audio: d.SFX,
+    statistics: d.privacy.statistics,
     store: d.CG.store,
     navigator: d.browserNavigator,
     matchMedia: (query) => d.browserWindow.matchMedia(query),
@@ -68,39 +64,6 @@ export function createLiveSessionServices(options: LiveSessionServicesOptions) {
     achievementTracking: options.achievementTracking,
     addProfileStat: d.profileStatsPersistence.add,
   });
-  const unavailableBeat = (): never => {
-    throw new Error("Beat This Run start unavailable");
-  };
-  const beat = createLiveBeatThisRunController({
-    factory: d.browserIndexedDb,
-    publication: d.ghostPublication,
-    document: d.browserDocument,
-    run: options.run,
-    ...(options.beat ?? {
-      screen: options.screen,
-      capture: unavailableBeat,
-      tick: unavailableBeat,
-      recording: {
-        recorder: () => null,
-        replayContext: () => undefined,
-        reset: unavailableBeat,
-        nextEventSequence: unavailableBeat,
-        setReplayContext: unavailableBeat,
-      },
-      nativeStart: {
-        session: () => ({
-          setSelectedWeapon: unavailableBeat,
-          setSelectedMode: unavailableBeat,
-          setSelectedDifficulty: unavailableBeat,
-          setSelectedBoss: unavailableBeat,
-          setRunSeed: unavailableBeat,
-        }),
-        prepare: unavailableBeat,
-        start: unavailableBeat,
-        refuse: unavailableBeat,
-      },
-    }),
-  });
   const reward = createRewardRuntime({
     ...(options.seedRace === undefined
       ? {}
@@ -108,10 +71,7 @@ export function createLiveSessionServices(options: LiveSessionServicesOptions) {
           beforeDecision: (
             decision: Parameters<ReturnType<typeof createLiveSeedRace>["recordDecision"]>[0],
             before: Parameters<ReturnType<typeof createLiveSeedRace>["recordDecision"]>[1],
-          ) =>
-            options.run().beatThisRun
-              ? beat.recordDecision(decision, before)
-              : seedRace.recordDecision(decision, before),
+          ) => seedRace.recordDecision(decision, before),
         }),
     run: options.run,
     roll: (request) =>
@@ -189,7 +149,6 @@ export function createLiveSessionServices(options: LiveSessionServicesOptions) {
     reward,
     bestScores,
     seedRace,
-    beat,
   });
 }
 

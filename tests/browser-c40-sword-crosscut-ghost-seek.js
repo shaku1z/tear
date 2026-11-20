@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 const { STATE_WAIT_MS } = require("./browser-waits");
 
-// State Forge supplies only one legal normal Sword/charger encounter. The
+// State Setup supplies only one legal normal Sword/charger encounter. The
 // primary throw, Threadcut retrace, and catch are the current live Sword
 // transport semantics. The filename remains the historical compatibility entry.
 const resolved = Object.freeze({
@@ -43,14 +43,14 @@ const resolved = Object.freeze({
 });
 
 withJourney(
-  { name: "C40 Sword Reversal Threadcut Ghost seek", port: 8308, query: { "ghost-v3-profile": "forensic-qa" } },
+  { name: "C40 Sword Reversal Threadcut Ghost seek", query: { "ghost-v3-profile": "forensic-qa" } },
   async ({ page }) => {
     await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
       timeout: STATE_WAIT_MS,
     });
     const result = await page.evaluate((scenario) => {
       const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
-      const launched = environment.forgeResolvedScenario(scenario);
+      const launched = environment.buildResolvedScenario(scenario);
       if (!launched.ok) return { launched };
       let id = 1;
       const command = (value) =>

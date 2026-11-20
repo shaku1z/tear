@@ -89,8 +89,8 @@ async function assertBoundary(target, directory) {
     if (files.size > maxFiles)
       throw new Error(`CrazyGames output exceeds the ${String(maxFiles)}-file portal limit: ${String(files.size)}`);
     // Tear's own ceiling, far below the portal's 250 MB whole-package limit: the
-    // package without painted backgrounds (23,419,147 bytes on 2026-11-16) plus
-    // the build's share for scene art in config/scene-budgets.json (3,000,000).
+    // package measured 23,419,147 bytes on 2026-11-16, rounded up. Stage
+    // backgrounds are painted by the game and add no image files to it.
     // What the portal measures for the mobile homepage is the download before the
     // first gameplay start (20 MB), which `pnpm check:load-budgets` checks.
     if (bytes > maxUnpackedBytes)

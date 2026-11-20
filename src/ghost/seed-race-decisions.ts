@@ -1,3 +1,4 @@
+import { isRecord } from "../domain/records";
 import { readBeatRunBinding } from "../gameplay/run/beat-run";
 import { stableVerificationHash } from "../domain/hash";
 import type { RewardChoice, RewardSelectionSnapshot } from "../gameplay/run/reward-selection";
@@ -52,16 +53,13 @@ export function createSeedRaceDecision(
     }),
   });
 }
-function object(v: unknown): v is Record<string, unknown> {
-  return v !== null && typeof v === "object" && !Array.isArray(v);
-}
 export function readSeedRaceDecisions(capsule: GhostReadCapsule, runId: string): readonly SeedRaceDecision[] {
   const beat = readBeatRunBinding(capsule.manifest.provenance?.beatThisRun);
   const race = readSeedRaceRun(capsule.manifest.provenance?.seedRace),
     events: SeedRaceDecision[] = [];
   for (const entry of capsule.tracks.keyframes) {
     const snapshot = entry.value;
-    if (!object(snapshot) || !object(snapshot.state) || !object(snapshot.state["tear.run.v1"])) continue;
+    if (!isRecord(snapshot) || !isRecord(snapshot.state) || !isRecord(snapshot.state["tear.run.v1"])) continue;
     const savedBeat = readBeatRunBinding(snapshot.state["tear.run.v1"].beatThisRun);
     if (stableVerificationHash(savedBeat ?? null) !== stableVerificationHash(beat ?? null))
       throw new TypeError("Beat binding differs across keyframes and provenance");
@@ -72,8 +70,8 @@ export function readSeedRaceDecisions(capsule: GhostReadCapsule, runId: string):
   for (const entry of capsule.tracks.events) {
     const e = entry.value;
     if (
-      !object(e) ||
-      !object(e.payload) ||
+      !isRecord(e) ||
+      !isRecord(e.payload) ||
       !["tear-seed-race-decision", "tear-beat-run-decision"].includes(String(e.payload.format))
     )
       continue;
@@ -98,7 +96,7 @@ export function readSeedRaceDecisions(capsule: GhostReadCapsule, runId: string):
       p.sharedHash !== (isBeat ? beat?.codeHash : race?.sharedHash) ||
       typeof p.beforeHash !== "string" ||
       !/^[a-f0-9]{16}$/u.test(p.beforeHash) ||
-      !object(d) ||
+      !isRecord(d) ||
       typeof d.kind !== "string" ||
       !["draft", "reserve", "tier", "reroll"].includes(d.kind) ||
       (d.kind === "reroll"

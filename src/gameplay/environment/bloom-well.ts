@@ -8,6 +8,8 @@ import type {
 } from "./environment-contracts";
 import type { TearGameplayEventPort } from "../runtime/gameplay-events";
 import { publishEnvironmentEvent } from "./environment-events";
+import { isObject } from "../../domain/records";
+import { fieldEnemyClass, type FieldEnemyClass } from "./field-runtime";
 
 /** Bloom Wells use authored fixed ticks so warning and force do not drift with render cadence. */
 export const BLOOM_WELL_TIMING = Object.freeze({
@@ -17,14 +19,35 @@ export const BLOOM_WELL_TIMING = Object.freeze({
   cooldownTicks: 480,
   totalTicks: 744,
 });
+export type BloomWellTarget = "player" | FieldEnemyClass;
+
 /**
  * Lift must beat gravity (2400 px/s²) or a Well is only a slow fall. The
- * authored push nets ~900 px/s² upward for the player, and the rise is capped
+ * authored push nets ~900 px/s² upward at full share, and the rise is capped
  * so a Well is a controllable vertical route rather than a launcher.
+ *
+ * `targets` is who a Well lifts and with what share of the force: the one place that decides it. A share
+ * under gravity's (about 0.73) lifts nothing off the floor and only softens a fall. Flying and anchored
+ * enemies are never moved, whatever their row.
  */
-export const BLOOM_WELL_LIFT = Object.freeze({ force: 3300, maxRiseSpeed: 600 });
+export const BLOOM_WELL_LIFT = Object.freeze({
+  force: 3300,
+  maxRiseSpeed: 600,
+  targets: Object.freeze({
+    player: 1,
+    "light-enemy": 1,
+    "heavy-enemy": 0.55,
+    boss: 0,
+  } satisfies Readonly<Record<BloomWellTarget, number>>),
+});
 
 export type BloomWellVariant = "stage" | "boss";
+
+/** Whether a Well blooms again after its rest. The stage's Wells do for the whole stage; a boss's bloom once and end. */
+export const BLOOM_WELL_RECURS: Readonly<Record<BloomWellVariant, boolean>> = Object.freeze({
+  stage: true,
+  boss: false,
+});
 
 export const ROOTBOUND_BLOOM_PATTERN_IDS = Object.freeze([
   "alternating-rise",
@@ -86,7 +109,7 @@ function assertTick(value: number, name: string): void {
 }
 
 export function isValidBloomWellForcePolicy(value: unknown): value is EnvironmentForcePolicy {
-  if (typeof value !== "object" || value === null) return false;
+  if (!isObject(value)) return false;
   const force = value as Partial<EnvironmentForcePolicy>;
   if (![force.x, force.y, force.magnitude].every((entry) => typeof entry === "number" && Number.isFinite(entry)))
     return false;
@@ -143,7 +166,11 @@ export function createBloomWellState(input: BloomWellDefinition, startTick = 0):
     bossOwnerId: definition.bossOwnerId ?? null,
     geometry: definition.geometry,
     schedule: { startTick, endTick: startTick + BLOOM_WELL_TIMING.totalTicks },
-    eligibility: { player: true, enemies: true, bosses: false },
+    eligibility: {
+      player: BLOOM_WELL_LIFT.targets.player > 0,
+      enemies: BLOOM_WELL_LIFT.targets["light-enemy"] > 0 || BLOOM_WELL_LIFT.targets["heavy-enemy"] > 0,
+      bosses: BLOOM_WELL_LIFT.targets.boss > 0,
+    },
     force: definition.force ?? { x: 0, y: -BLOOM_WELL_LIFT.force, magnitude: BLOOM_WELL_LIFT.force },
     cleanupReason: null,
     patternId: `bloom-well/${definition.patternId}`,
@@ -169,10 +196,10 @@ function stateStartedAt(startTick: number, state: BloomWellState["state"]): numb
   if (state === "cooldown") return startTick + BLOOM_WELL_TIMING.warningTicks + BLOOM_WELL_TIMING.activeTicks;
   return startTick + BLOOM_WELL_TIMING.totalTicks;
 }
-/** Stage Wells recur for the whole stage; boss-owned Wells run one authored cycle, then end. */
+/** The start of the cycle a tick falls in: a Well that recurs counts cycles from its first, another has only one. */
 function cycleStart(state: BloomWellState, tick: number): number {
   const elapsed = tick - state.startTick;
-  if (state.variant !== "stage" || elapsed < 0) return state.startTick;
+  if (!BLOOM_WELL_RECURS[state.variant] || elapsed < 0) return state.startTick;
   return state.startTick + Math.floor(elapsed / BLOOM_WELL_TIMING.totalTicks) * BLOOM_WELL_TIMING.totalTicks;
 }
 /** Pure, absolute-tick lifecycle advancement; repeated renders cannot accumulate drift. */
@@ -180,8 +207,8 @@ export function advanceBloomWell(state: BloomWellState, tick: number, events?: T
   assertTick(tick, "Bloom Well tick");
   if (state.cleanupReason !== null) return state;
   const base = cycleStart(state, tick);
-  if (state.variant !== "stage" && tick - base >= BLOOM_WELL_TIMING.totalTicks)
-    return finishedBossWell(state, tick, events);
+  if (!BLOOM_WELL_RECURS[state.variant] && tick - base >= BLOOM_WELL_TIMING.totalTicks)
+    return finishedWell(state, tick, events);
   const next = stateAt(base, tick);
   const timer = Math.max(0, tick - base) / BLOOM_WELL_TIMING.ticksPerSecond;
   const stateTick = stateStartedAt(base, next);
@@ -208,8 +235,8 @@ export function advanceBloomWell(state: BloomWellState, tick: number, events?: T
     timer,
   });
 }
-/** A boss Well's one cycle is over: it ends, and the environment removes it after the fade. */
-function finishedBossWell(state: BloomWellState, tick: number, events?: TearGameplayEventPort): BloomWellState {
+/** The one cycle of a Well that does not recur is over: it ends, and the environment removes it after the fade. */
+function finishedWell(state: BloomWellState, tick: number, events?: TearGameplayEventPort): BloomWellState {
   if (events !== undefined)
     publishEnvironmentEvent(
       events,
@@ -231,7 +258,8 @@ function finishedBossWell(state: BloomWellState, tick: number, events?: TearGame
     cleanupReason: "natural-expiry",
   });
 }
-function contains(state: BloomWellState, x: number, y: number): boolean {
+/** True when the point is inside the Well's area, whatever its state. */
+export function bloomWellContains(state: BloomWellState, x: number, y: number): boolean {
   if (state.geometry.radius !== undefined)
     return Math.hypot(x - state.geometry.x, y - state.geometry.y) <= state.geometry.radius;
   return (
@@ -242,14 +270,13 @@ function contains(state: BloomWellState, x: number, y: number): boolean {
   );
 }
 
+/** The share of the lift an actor gets, from the targets row. */
 function liftScale(actor: BloomWellActor): number {
-  if (actor.kind !== "enemy") return actor.kind === "player" ? 1 : 0;
-  if (actor.isBoss || actor.isFlyer || actor.anchored) return 0;
-  const mass = actor.mass ?? actor.weight ?? 1;
-  if (!Number.isFinite(mass) || mass <= 0) return 0;
-  if (mass > 3) return 0.18;
-  if (mass > 1.5) return 0.55;
-  return 1;
+  if (actor.kind === "player") return BLOOM_WELL_LIFT.targets.player;
+  if (actor.kind !== "enemy" || actor.isFlyer || actor.anchored) return 0;
+  const weight = actor.mass ?? actor.weight ?? 1;
+  if (!Number.isFinite(weight) || weight <= 0) return 0;
+  return BLOOM_WELL_LIFT.targets[fieldEnemyClass({ weight, ...(actor.isBoss === true ? { isBoss: true } : {}) })];
 }
 
 /** Applies only vertical acceleration to eligible actors; weapon transport is deliberately absent. */
@@ -260,7 +287,7 @@ export function applyBloomWellForce(
 ): boolean {
   const eligible =
     actor.kind === "player" ? state.eligibility.player : actor.kind === "enemy" ? state.eligibility.enemies : false;
-  if (state.state !== "active" || !eligible || !contains(state, actor.x, actor.y)) return false;
+  if (state.state !== "active" || !eligible || !bloomWellContains(state, actor.x, actor.y)) return false;
   const scale = liftScale(actor);
   if (scale <= 0 || !(seconds > 0) || !Number.isFinite(seconds)) return false;
   const rise = -BLOOM_WELL_LIFT.maxRiseSpeed * scale;

@@ -1,5 +1,6 @@
 import type { CommandEnvelope } from "../../domain/envelopes";
-import { AIM_MAGNITUDE_SCALE, AIM_TURN_SCALE, INPUT_AXIS_SCALE, type GameAction } from "../../input/game-action";
+import { AIM_MAGNITUDE_SCALE, AIM_TURN_SCALE, INPUT_AXIS_SCALE } from "../../domain/input-scales";
+import type { GameAction } from "../../input/game-action";
 
 export interface AuthoritativeInputSnapshot {
   readonly tick: number;
@@ -23,6 +24,7 @@ export class AuthoritativeInputState {
   #dashX = 0;
   #dashY = 0;
   #throwPressed = false;
+  #resumed = false;
 
   beginTick(tick: number, envelopes: readonly CommandEnvelope<GameAction>[]): void {
     if (!Number.isSafeInteger(tick) || tick < this.#tick)
@@ -33,6 +35,7 @@ export class AuthoritativeInputState {
     this.#dashX = 0;
     this.#dashY = 0;
     this.#throwPressed = false;
+    this.#resumed = false;
     for (const envelope of envelopes) {
       if (envelope.tick !== tick) throw new RangeError("action envelope tick does not match the authoritative step");
       const action = envelope.command;
@@ -56,6 +59,9 @@ export class AuthoritativeInputState {
           this.#dashPressed = true;
           this.#dashX = action.x;
           this.#dashY = action.y;
+          break;
+        case "resume":
+          this.#resumed = true;
           break;
         default:
           break;
@@ -90,6 +96,12 @@ export class AuthoritativeInputState {
   consumeThrow(): boolean {
     const value = this.#throwPressed;
     this.#throwPressed = false;
+    return value;
+  }
+  /** True on the tick control was handed back to the player; reading it clears it. */
+  consumeResume(): boolean {
+    const value = this.#resumed;
+    this.#resumed = false;
     return value;
   }
   buzz(): void {
@@ -143,6 +155,7 @@ export class AuthoritativeInputState {
     this.#dashX = 0;
     this.#dashY = 0;
     this.#throwPressed = false;
+    this.#resumed = false;
   }
 
   reset(): void {
@@ -157,5 +170,6 @@ export class AuthoritativeInputState {
     this.#dashX = 0;
     this.#dashY = 0;
     this.#throwPressed = false;
+    this.#resumed = false;
   }
 }

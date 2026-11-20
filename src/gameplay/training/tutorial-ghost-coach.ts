@@ -17,8 +17,9 @@ import {
 import { shippingTutorialGold } from "./tutorial-gold-shipping";
 import type { GameAction } from "../../input/game-action";
 import type { AuthoritativeInputSnapshot } from "../runtime/authoritative-input";
+import { isRecord } from "../../domain/records";
 
-// The shipped corpus is loaded on demand by training preflight; see tutorial-gold-shipping.ts.
+// The shipped corpus arrives after a lesson starts; see tutorial-gold-shipping.ts.
 export { loadShippingTutorialGold, shippingTutorialGold } from "./tutorial-gold-shipping";
 export interface TutorialCoachView {
   readonly available: boolean;
@@ -88,8 +89,7 @@ const fields = [
 ];
 export function parseTutorialCoachCheckpoint(value: unknown): TutorialCoachCheckpoint | undefined {
   if (value === undefined) return undefined;
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new TypeError("Invalid gold coach presentation");
+  if (!isRecord(value)) throw new TypeError("Invalid gold coach presentation");
   const data = value as TutorialCoachCheckpoint;
   const version: unknown = Reflect.get(value, "version");
   if (
@@ -119,7 +119,7 @@ export function parseTutorialCoachCheckpoint(value: unknown): TutorialCoachCheck
     throw new RangeError("Gold coach reference incompatible");
   for (const raw of [data.current, data.best] as readonly unknown[])
     if (raw !== undefined) {
-      if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new TypeError("Invalid personal attempt");
+      if (!isRecord(raw)) throw new TypeError("Invalid personal attempt");
       const attempt = raw as Attempt;
       if (
         Object.keys(attempt).some((key) => !["duration", "poses", "contact", "groundedContact"].includes(key)) ||
@@ -171,12 +171,15 @@ export class TutorialGhostCoach {
   constructor(
     private readonly corpus: () => TutorialGoldCorpus | undefined = shippingTutorialGold,
     private readonly minimumHitSpeed = Number.POSITIVE_INFINITY,
+    /** Cheap per-tick check of whether the shipped corpus has arrived; `corpus` itself may be costly. */
+    private readonly corpusArrived: () => boolean = () => shippingTutorialGold() !== undefined,
   ) {
     this.failures = new TutorialFailureCoach(minimumHitSpeed);
   }
   select(lesson: string, version: 1 | 2, eligible = true, encounter: "charger" | "breath" | "mixed" = "charger"): void {
     this.failures.select(version === 2 && eligible ? `${lesson}:${encounter === "mixed" ? "mixed" : "charger"}` : "");
-    const selection = `${lesson}:${String(version)}:${String(eligible)}`;
+    // The corpus can arrive mid-lesson, so its arrival is part of the selection: the coach looks again then.
+    const selection = `${lesson}:${String(version)}:${String(eligible)}:${String(eligible && this.corpusArrived())}`;
     if (selection === this.selection) return;
     const corpus = eligible ? this.corpus() : undefined;
     const next = corpus ? tutorialGoldReference(corpus, lesson as TutorialGoldLessonId, version) : undefined;

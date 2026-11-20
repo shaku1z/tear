@@ -1,7 +1,7 @@
-import { getNowPlaying, type NowPlaying } from "../audio/music/now-playing";
+import { getNowPlaying, nowPlayingLabel, type NowPlaying } from "../audio/music/now-playing";
 import type { MenuScreenView, SetupScreenView } from "./screens/contracts";
 import type { SurfaceAvailability } from "../domain/surface-availability";
-import { FIRST_RUN_PLAY_LABEL, FIRST_RUN_SETUP_GUIDANCE } from "../gameplay/progression/first-run-guidance";
+import { FIRST_RUN_SETUP_GUIDANCE, tutorialPlayLabel } from "../gameplay/progression/first-run-guidance";
 
 /** `debug` is the runtime projection of an engineering-surface mode (Boss Test, Enemy Test). */
 export interface MenuModeSource {
@@ -48,14 +48,13 @@ export interface BountyChoiceSource {
 /** The menu music row: always "MUSIC", with the sounding track (or a plain empty state) underneath. */
 export function menuMusicRow(state: NowPlaying): Readonly<{ label: string; detail: string }> {
   if (!state.workId) return Object.freeze({ label: "MUSIC", detail: "nothing playing yet" });
-  const station = state.stationName ? ` · ${state.stationName}` : "";
-  return Object.freeze({ label: "MUSIC", detail: `${state.title.toUpperCase()}${station}` });
+  return Object.freeze({ label: "MUSIC", detail: nowPlayingLabel(state) });
 }
 
 export function buildMenuSnapshot(input: {
   readonly tutorialDone?: number;
-  /** The profile has never finished the tutorial and has no other history (see first-run-guidance). */
-  readonly firstRun?: boolean;
+  /** Set while the profile is tutorial-first (see first-run-guidance): the lesson PLAY continues at. */
+  readonly tutorialFirst?: Readonly<{ next: number; count: number }>;
   readonly username: string;
   readonly campaignEmblem: boolean;
   readonly signedIn: boolean;
@@ -81,7 +80,9 @@ export function buildMenuSnapshot(input: {
     unlocked: input.unlocked,
     modeLabel: input.modes.find((entry) => entry.id === input.selectedMode)?.label ?? "Endless",
     difficultyLabel: input.difficulties.find((entry) => entry.id === input.selectedDifficulty)?.label ?? "Normal",
-    ...(input.firstRun === true && input.selectedMode === "tutorial" ? { playSub: FIRST_RUN_PLAY_LABEL } : {}),
+    ...(input.tutorialFirst
+      ? { playSub: tutorialPlayLabel(input.tutorialFirst.next, input.tutorialFirst.count), playTutorial: true }
+      : {}),
     biome: input.biome,
     pendingFinale: input.pendingFinale,
   });
@@ -90,7 +91,7 @@ export function buildMenuSnapshot(input: {
 const modeTrim: Readonly<Record<string, Readonly<{ glyph: string; sub: string }>>> = Object.freeze({
   campaign: { glyph: "▲", sub: "stage after stage, ever deeper" },
   endless: { glyph: "∞", sub: "biomes cycle — chase your best" },
-  gauntlet: { glyph: "☠", sub: "a full boss every 8 waves" },
+  gauntlet: { glyph: "☠", sub: "a trial for every boss" },
   playground: { glyph: "✦", sub: "open arena — test everything" },
   tutorial: { glyph: "➔", sub: "learn the blade" },
 });

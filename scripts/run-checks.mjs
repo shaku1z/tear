@@ -2,19 +2,29 @@
 //
 //   node scripts/run-checks.mjs                  every gate group in order (`pnpm check`)
 //   node scripts/run-checks.mjs fast             the fast group (`pnpm check:quick`, the pre-push hook)
-//   node scripts/run-checks.mjs static           one group: fast, static, unit, build, browser, nightly, weekly
+//   node scripts/run-checks.mjs static           one group: fast, static, unit, build, browser, nightly, weekly, mobile
 //   node scripts/run-checks.mjs browser --list   print what would run
+//   node scripts/run-checks.mjs browser --shard 2/4   one of four parts of a group (CI's parallel jobs)
 //
 // It stops at the first failing check. The browser and nightly groups serve the builds in dist/, so
-// run the build group first. On this machine, every group except `fast` first takes one of a few
-// slots shared by all worktrees of the repository (TEAR_CHECK_SLOTS, default 2), so parallel
-// sessions do not starve each other into timeouts. A full `pnpm check` that passes on a clean
+// run the build group first. On this machine, every group except `fast` first waits its turn in
+// the queue all worktrees of the repository share (scripts/queue.mjs), so parallel sessions do not
+// starve each other into timeouts. A full `pnpm check` that passes on a clean
 // checkout records the commit in the Git directory (`--passed` prints it) for the pull request.
+//
+// With TEAR_CHECK_RESULTS set to a file, each check's result is added to that file as it finishes
+// (one file per run; CI uploads it per attempt). With TEAR_CHECK_PREVIOUS set to an earlier
+// attempt's file, a check that failed there on the same tree and passes now prints a FLAKY line.
+// Nothing is retried: a failure still fails the run.
+//
+// With --keep-going (the nightly workflow only), a failing check does not stop the run: every check
+// runs, the run lists each failure at the end and still fails. Pull request runs stop at the first.
 import { spawnSync } from "node:child_process";
-import { appendFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { joinQueue, lightKind, queueDirectory, queueSlots } from "./queue.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -33,6 +43,54 @@ export function selectChecks(config, group) {
   return selected;
 }
 
+/** The time a check without a recorded `seconds` counts as when the shards are packed. */
+export const DEFAULT_CHECK_SECONDS = 60;
+
+/** Where scripts/ci-check-times.mjs writes the seconds each check took in recent Validate runs. */
+export const CHECK_TIMES = resolve(root, "config/check-times.json");
+
+/** The measured seconds by "group.id", or an empty map when there is no times file. */
+export function loadCheckTimes(path = CHECK_TIMES) {
+  if (!existsSync(path)) return {};
+  return JSON.parse(readFileSync(path, "utf8")).seconds ?? {};
+}
+
+const positive = (value) => Number.isFinite(value) && value > 0;
+
+/**
+ * Part `index` (1-based) of `count`: the checks are packed longest first, each into the part with
+ * the least time so far, and every part keeps list order. A check's time is its measured time in
+ * `measured` (by "group.id"), else its recorded `seconds`, else DEFAULT_CHECK_SECONDS. Every
+ * check lands in exactly one part, whatever the times say; a time that drifts only unbalances them.
+ */
+export function shardChecks(checks, index, count, measured = {}) {
+  if (!Number.isInteger(count) || count < 1 || !Number.isInteger(index) || index < 1 || index > count)
+    throw new RangeError(`invalid shard ${String(index)}/${String(count)}`);
+  const seconds = (check) => {
+    const time = measured[`${check.group}.${check.id}`];
+    if (positive(time)) return time;
+    return positive(check.seconds) ? check.seconds : DEFAULT_CHECK_SECONDS;
+  };
+  const order = checks
+    .map((check, position) => ({ check, position }))
+    .sort((a, b) => seconds(b.check) - seconds(a.check) || a.position - b.position);
+  const totals = Array.from({ length: count }, () => 0);
+  const part = new Map();
+  for (const { check, position } of order) {
+    const lightest = totals.indexOf(Math.min(...totals));
+    totals[lightest] += seconds(check);
+    part.set(position, lightest + 1);
+  }
+  return checks.filter((_, position) => part.get(position) === index);
+}
+
+/** "2/4" as [2, 4]; throws on anything else. */
+export function parseShard(text) {
+  const match = /^(\d+)\/(\d+)$/u.exec(text ?? "");
+  if (match === null) throw new RangeError(`--shard takes <part>/<count>, got ${String(text)}`);
+  return [Number(match[1]), Number(match[2])];
+}
+
 function git(args) {
   const result = spawnSync("git", args, { cwd: root, encoding: "utf8" });
   return result.status === 0 ? result.stdout.trim() : undefined;
@@ -43,46 +101,82 @@ function gitPath(args) {
   return value === undefined ? undefined : isAbsolute(value) ? value : resolve(root, value);
 }
 
-const alive = (pid) => {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    return error.code === "EPERM";
-  }
-};
+export const RESULTS_FORMAT = "tear-check-results.v1";
 
-/** Waits for a free machine-wide slot and returns a function that releases it. */
-export async function takeSlot({ directory, slots, staleMs = 3 * 60 * 60_000, wait = 5000, log = console.log }) {
-  mkdirSync(directory, { recursive: true });
-  const started = Date.now();
-  let announced = false;
-  for (;;) {
-    for (let index = 0; index < slots; index += 1) {
-      const slot = resolve(directory, `slot-${String(index)}.json`);
-      try {
-        writeFileSync(slot, JSON.stringify({ pid: process.pid, since: Date.now(), cwd: root }), { flag: "wx" });
-        return () => rmSync(slot, { force: true });
-      } catch {
-        try {
-          const owner = JSON.parse(readFileSync(slot, "utf8"));
-          if (!alive(owner.pid) || Date.now() - owner.since > staleMs) rmSync(slot, { force: true });
-        } catch {
-          // A slot being written right now, or already freed: try again on the next pass.
-        }
-      }
-    }
-    if (!announced) {
-      log(`waiting for one of ${String(slots)} check slot(s) held by other sessions (${directory})`);
-      announced = true;
-    }
-    await new Promise((done) => setTimeout(done, wait));
-    if (Date.now() - started > staleMs) throw new Error("gave up waiting for a check slot");
+function readResults(path) {
+  if (path === undefined || path === "") return undefined;
+  try {
+    const record = JSON.parse(readFileSync(path, "utf8"));
+    return record.format === RESULTS_FORMAT ? record : undefined;
+  } catch {
+    return undefined;
   }
+}
+
+/** Adds one check's result to the run's results file, starting the file on the run's first check. */
+export function recordResult(path, run, result) {
+  const record = readResults(path);
+  const results = record?.tree === run.tree && record?.attempt === run.attempt ? record.results : [];
+  const next = {
+    format: RESULTS_FORMAT,
+    ...run,
+    results: [...results.filter((r) => r.check !== result.check), result],
+  };
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, `${JSON.stringify(next, undefined, 2)}\n`);
+}
+
+/**
+ * The FLAKY line for a check that just passed, when an earlier attempt of the same tree failed it;
+ * undefined otherwise. A different tree is a different change, so its failure says nothing here.
+ */
+export function flakyLine(previous, tree, check, attempt) {
+  if (previous === undefined || previous.tree !== tree) return undefined;
+  const failed = previous.results.find((result) => result.check === check && result.status === "fail");
+  if (failed === undefined) return undefined;
+  return `FLAKY ${check}: failed on attempt ${String(previous.attempt)} (${failed.reason}), passed on attempt ${String(attempt)}`;
 }
 
 function summary(line) {
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${line}\n`);
+}
+
+/** Runs one check as a child process, in the repository, with its output shown. */
+function executeCheck(check) {
+  const [command, ...args] = check.args;
+  return spawnSync(command === "node" ? process.execPath : command, args, {
+    cwd: root,
+    stdio: "inherit",
+    // Checks serve the builds already in dist/; TearBench scenario runs must not rebuild them.
+    env: { ...process.env, TEARBENCH_REUSE_VERIFIED_BUILDS: "1" },
+  });
+}
+
+/**
+ * Runs `checks` in list order through `execute` (a check to { status, signal, error }). Without
+ * `keepGoing` it stops at the first failing check and returns that check's exit status; with it,
+ * every check runs and the status is 1 when any failed. `failures` names each failed check and why.
+ */
+export function runCheckList(checks, { keepGoing = false, execute = executeCheck, onPass, onFail } = {}) {
+  const failures = [];
+  for (const [index, check] of checks.entries()) {
+    const name = `${check.group}.${check.id}`;
+    const checkStarted = Date.now();
+    console.log(`CHECK ${String(index + 1)}/${String(checks.length)} ${name}`);
+    const result = execute(check);
+    const seconds = ((Date.now() - checkStarted) / 1000).toFixed(1);
+    if (result.error !== undefined || result.status !== 0) {
+      const reason = result.error?.message ?? `exit ${String(result.status ?? result.signal)}`;
+      console.error(`FAIL ${name} after ${seconds} s (${reason}): ${check.run}`);
+      onFail?.(name, seconds, reason, check);
+      failures.push(`${name} (${reason})`);
+      if (!keepGoing) return { status: result.status || 1, failures, stopped: true };
+      continue;
+    }
+    console.log(`PASS ${name} ${seconds} s`);
+    onPass?.(name, seconds);
+  }
+  return { status: failures.length > 0 ? 1 : 0, failures, stopped: false };
 }
 
 async function main(argv) {
@@ -98,47 +192,67 @@ async function main(argv) {
       return 1;
     }
   }
-  const checks = selectChecks(loadChecks(), group);
+  const shardAt = argv.indexOf("--shard");
+  const listed = selectChecks(loadChecks(), group);
+  const checks = shardAt === -1 ? listed : shardChecks(listed, ...parseShard(argv[shardAt + 1]), loadCheckTimes());
+  if (shardAt !== -1)
+    console.log(`shard ${argv[shardAt + 1]}: ${String(checks.length)} of ${String(listed.length)} check(s)`);
   if (argv.includes("--list")) {
     for (const check of checks) console.log(`${check.group}.${check.id}: ${check.run}`);
     return 0;
   }
   const local = process.env.CI === undefined;
-  const commonDir = gitPath(["rev-parse", "--git-common-dir"]);
+  const directory = queueDirectory(root);
   const release =
-    local && group !== "fast" && commonDir !== undefined
-      ? await takeSlot({
-          directory: resolve(commonDir, "tear-check-slots"),
-          slots: Math.max(1, Number(process.env.TEAR_CHECK_SLOTS ?? 2)),
-        })
+    local && lightKind(["node", "scripts/run-checks.mjs", ...argv]) === undefined && directory !== undefined
+      ? await joinQueue({ directory, slots: queueSlots(), label: `run-checks ${argv.join(" ")}` })
       : () => undefined;
   const startCommit = git(["rev-parse", "HEAD"]);
+  const resultsFile = process.env.TEAR_CHECK_RESULTS || undefined;
+  const previous = readResults(process.env.TEAR_CHECK_PREVIOUS);
+  const run = {
+    commit: startCommit,
+    // The tree, not the commit: CI merges main into the head afresh on every attempt.
+    tree: git(["rev-parse", "HEAD^{tree}"]),
+    attempt: Number(process.env.GITHUB_RUN_ATTEMPT ?? 1),
+  };
+  const record = (check, status, seconds, reason) => {
+    if (resultsFile !== undefined)
+      recordResult(resultsFile, run, { check, status, seconds: Number(seconds), ...(reason ? { reason } : {}) });
+  };
+  const keepGoing = argv.includes("--keep-going");
   const startClean = git(["status", "--porcelain"]) === "";
   const started = Date.now();
+  let outcome;
   try {
-    for (const [index, check] of checks.entries()) {
-      const checkStarted = Date.now();
-      console.log(`CHECK ${String(index + 1)}/${String(checks.length)} ${check.group}.${check.id}`);
-      const [command, ...args] = check.args;
-      const result = spawnSync(command === "node" ? process.execPath : command, args, {
-        cwd: root,
-        stdio: "inherit",
-        // Checks serve the builds already in dist/; TearBench scenario runs must not rebuild them.
-        env: { ...process.env, TEARBENCH_REUSE_VERIFIED_BUILDS: "1" },
-      });
-      const seconds = ((Date.now() - checkStarted) / 1000).toFixed(1);
-      if (result.error !== undefined || result.status !== 0) {
-        const reason = result.error?.message ?? `exit ${String(result.status ?? result.signal)}`;
-        console.error(`FAIL ${check.group}.${check.id} after ${seconds} s (${reason}): ${check.run}`);
-        summary(`### Failed: \`${check.group}.${check.id}\`\n\n\`${check.run}\` (${reason}, after ${seconds} s)\n`);
-        return result.status || 1;
-      }
-      console.log(`PASS ${check.group}.${check.id} ${seconds} s`);
-    }
+    outcome = runCheckList(checks, {
+      keepGoing,
+      onFail: (name, seconds, reason, check) => {
+        record(name, "fail", seconds, reason);
+        summary(`### Failed: \`${name}\`\n\n\`${check.run}\` (${reason}, after ${seconds} s)\n`);
+      },
+      onPass: (name, seconds) => {
+        record(name, "pass", seconds);
+        const flaky = flakyLine(previous, run.tree, name, run.attempt);
+        if (flaky !== undefined) {
+          console.log(flaky);
+          if (!local) console.log(`::warning title=Flaky check::${flaky}`);
+          summary(`### ${flaky}\n`);
+        }
+      },
+    });
   } finally {
     release();
   }
+  if (outcome.stopped) return outcome.status;
+  const { failures } = outcome;
   const total = ((Date.now() - started) / 1000).toFixed(0);
+  if (failures.length > 0) {
+    const line = `FAIL ${String(failures.length)} of ${String(checks.length)} check(s) in ${total} s`;
+    console.error(`${line}:\n${failures.map((failure) => `  ${failure}`).join("\n")}`);
+    summary(`${line}:\n\n${failures.map((failure) => `- \`${failure}\``).join("\n")}\n`);
+    return 1;
+  }
   console.log(`PASS ${String(checks.length)} check(s) in ${total} s`);
   summary(`Passed ${String(checks.length)} check(s) in ${total} s.`);
   if (group === undefined && local && passedFile !== undefined) {

@@ -30,8 +30,12 @@ export interface TailPlayer {
 export interface TailRun {
   mode: string;
   runTime: number;
+  runTicks?: number;
+  hitsTaken?: number;
   waveTime: number;
   adRevived?: boolean;
+  /** Defeats a training mode answered by restoring the player instead of ending the run. */
+  trainingResets?: number;
   _prevGround?: boolean;
   _airT?: number;
   _updraftChain?: number;
@@ -113,12 +117,14 @@ export function finalizeCombatTick(input: CombatCleanupInput): CombatCleanupResu
   const floaters = input.floaters.filter((floater) => floater.life > 0);
   const shake = input.shake > 0 ? Math.max(0, input.shake - input.shakeDecay * dt) : input.shake;
   run.runTime += dt;
+  run.runTicks = (run.runTicks ?? 0) + 1;
   run.waveTime += dt;
   hooks.updateTrick(dt);
   if (player.tookHit) {
     player.tookHit = false;
     run._dmgThisWave = true;
     run._dmgThisRun = true;
+    run.hitsTaken = (run.hitsTaken ?? 0) + 1;
     run._dmgThisStage = true;
     hooks.breakStreak();
   }
@@ -169,6 +175,7 @@ export function resolvePlayerDeath(player: TailPlayer, run: TailRun, hooks: Play
   if (run.mode === "tutorial" || run.mode === "playground") {
     player.hp = player.maxHp;
     player.iframe = 2;
+    run.trainingResets = (run.trainingResets ?? 0) + 1;
     hooks.trainingReset(player);
     return "training-reset";
   }

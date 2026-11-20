@@ -1,3 +1,4 @@
+import { isRecord } from "../domain/records";
 import {
   TEAR_CONTRACT_FORMAT,
   TEAR_CONTRACT_VERSION,
@@ -33,7 +34,7 @@ import {
 import { stageEnvironmentMechanicKinds } from "../gameplay/environment/stage-environment-definitions";
 import { effectiveInvariantIdsForScenario } from "./invariants";
 import {
-  assertPaleCanonicalStateForgeDocument,
+  assertPaleCanonicalStateSetupDocument,
   paleCanonicalDocumentForScenario,
 } from "./pale-canonical-scenario-bridge";
 
@@ -44,8 +45,8 @@ type CanonicalCatalogEntryWithStructuredAssertions = CanonicalCatalogEntry & {
 
 const GENERIC_ENVIRONMENT_SUBJECT_IDS = new Set(["generic-field", "generic-combat-object"]);
 
-function stateForgeDocumentId(value: unknown): unknown {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+function stateSetupDocumentId(value: unknown): unknown {
+  if (!isRecord(value)) return undefined;
   const documentId: unknown = Reflect.get(value, "documentId");
   return documentId;
 }
@@ -105,27 +106,27 @@ function assertSourceOwnedContent(entry: CanonicalCatalogEntry): void {
       throw new RangeError(`generic environment scenario ${entry.id} cannot claim a specialized mechanic identity`);
     }
   }
-  const stateForge = entry.stateForge;
-  if (stateForge !== undefined) {
-    const documentId = stateForgeDocumentId(stateForge);
+  const stateSetup = entry.stateSetup;
+  if (stateSetup !== undefined) {
+    const documentId = stateSetupDocumentId(stateSetup);
     const scenarioId: string = entry.id;
     if (typeof documentId !== "string" || typeof entry.seed !== "string") {
-      throw new RangeError(`canonical scenario ${scenarioId} has malformed State Forge descriptor`);
+      throw new RangeError(`canonical scenario ${scenarioId} has malformed State Setup descriptor`);
     }
     if (documentId !== entry.id) {
-      throw new RangeError(`canonical scenario ${scenarioId} State Forge document must use the canonical scenario ID`);
+      throw new RangeError(`canonical scenario ${scenarioId} State Setup document must use the canonical scenario ID`);
     }
-    assertPaleCanonicalStateForgeDocument(documentId, entry.seed, entry.stateClass);
+    assertPaleCanonicalStateSetupDocument(documentId, entry.seed, entry.stateClass);
     const document = paleCanonicalDocumentForScenario(documentId);
     if (document === undefined)
-      throw new RangeError(`canonical scenario ${entry.id} is missing its State Forge source document`);
+      throw new RangeError(`canonical scenario ${entry.id} is missing its State Setup source document`);
     for (const field of ["stage", "wave", "boss", "bossPhase"] as const) {
       if (entry.start[field] !== document.start[field]) {
-        throw new RangeError(`canonical scenario ${entry.id} ${field} disagrees with its State Forge source document`);
+        throw new RangeError(`canonical scenario ${entry.id} ${field} disagrees with its State Setup source document`);
       }
     }
     if (entry.backends.length !== 1 || entry.backends[0] !== "live") {
-      throw new RangeError(`canonical State Forge scenario ${entry.id} must be live-only`);
+      throw new RangeError(`canonical State Setup scenario ${entry.id} must be live-only`);
     }
     const tags = new Set(entry.tags);
     if (
@@ -136,16 +137,16 @@ function assertSourceOwnedContent(entry: CanonicalCatalogEntry): void {
       tags.has("replay") ||
       tags.has("seek")
     ) {
-      throw new RangeError(`canonical State Forge scenario ${entry.id} has an invalid publication/backend claim`);
+      throw new RangeError(`canonical State Setup scenario ${entry.id} has an invalid publication/backend claim`);
     }
   }
 }
 
 export function materializeCanonicalScenario(entry: CanonicalCatalogEntry): TearCanonicalScenarioV1 {
   const surgicalFields = ["stage", "wave", "bossPhase"].filter((field) => Object.hasOwn(entry.start, field));
-  if (surgicalFields.length > 0 && entry.stateForge === undefined) {
+  if (surgicalFields.length > 0 && entry.stateSetup === undefined) {
     throw new RangeError(
-      `canonical scenario ${entry.id} requests exact ${surgicalFields.join(", ")} state; use State Forge`,
+      `canonical scenario ${entry.id} requests exact ${surgicalFields.join(", ")} state; use State Setup`,
     );
   }
   const unknownFields = Object.keys(entry.start).filter(
@@ -229,11 +230,11 @@ export function materializeCanonicalScenario(entry: CanonicalCatalogEntry): Tear
   for (const assertion of requestedAssertions) INVARIANT_REGISTRY.assert(assertion);
   const structuredAssertions = (entry as CanonicalCatalogEntryWithStructuredAssertions).structuredAssertions ?? [];
   if (
-    entry.stateForge !== undefined &&
+    entry.stateSetup !== undefined &&
     (structuredAssertions.length === 0 ||
       structuredAssertions.some((assertion) => typeof assertion !== "string" || assertion.trim() === ""))
   ) {
-    throw new RangeError(`canonical State Forge scenario ${entry.id} requires subject-specific structured assertions`);
+    throw new RangeError(`canonical State Setup scenario ${entry.id} requires subject-specific structured assertions`);
   }
   const assertions = [
     ...new Set([
@@ -268,7 +269,7 @@ export function materializeCanonicalScenario(entry: CanonicalCatalogEntry): Tear
       mode,
       difficulty,
       weapon,
-      ...(entry.stateForge === undefined
+      ...(entry.stateSetup === undefined
         ? {}
         : {
             stage: entry.start.stage,

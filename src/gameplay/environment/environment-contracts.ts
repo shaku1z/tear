@@ -97,6 +97,8 @@ export interface EnvironmentCombatObjectState {
   readonly counterplayTags: readonly string[];
   readonly procEligible: boolean;
   readonly damageDedupeId: string;
+  /** The attacks that have already damaged this object, oldest first (bounded): one attack, one hit. */
+  readonly damagedBy?: readonly string[];
   readonly state: EnvironmentObjectState;
   readonly stateTick: number;
   readonly cleanupReason: EnvironmentClearReason | null;

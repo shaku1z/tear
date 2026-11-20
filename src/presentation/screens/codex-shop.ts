@@ -1,171 +1,381 @@
-import type { CodexScreenView, ScreenRenderContext, ShopScreenView } from "./contracts";
-import { clipBody, page, pageFooter, tabs } from "./screen-primitives";
-import { BESTIARY_CARD_HEIGHT, BESTIARY_ROW_PITCH } from "../codex-snapshots";
-import { SHOP_LIST_TOP, SHOP_ROW_PITCH, SHOP_SECTION_GAP, SHOP_SECTION_HEAD } from "../shop-snapshot";
-import { createCompactCodexShop } from "./compact-codex-shop";
+import type { CardView, CodexScreenView, ScreenRenderContext, ShopScreenView } from "./contracts";
+import {
+  codexShopMetrics,
+  DESKTOP,
+  type AbilityCard,
+  type BestiaryEntry,
+  type Guide,
+  type GuidePlan,
+  type Measure,
+  type Metrics,
+  type ShopItem,
+} from "./codex-shop-metrics";
+import { createPageFrame, type PageFrame, type ScrollBlock, type ScrollView } from "./page-frame";
+import { createShardShelves } from "./shard-shelves";
 
-type ShopItemView = ShopScreenView["sections"][number]["items"][number];
-const SHOP_GOLD = "#e0a326",
-  SHOP_COLUMN_WIDTH = 550,
-  SHOP_BUY_WIDTH = 96,
-  SHOP_BUY_HEIGHT = 40;
+const GOLD = "#e0a326",
+  SPECIAL_GOLD = "#e8a32e";
 
+/**
+ * Blocks side by side in columns: each column stacks its blocks `gap` apart from `inset` below the
+ * top. One column stays a list of its own blocks, so a scrolling body can rest on each row's edge;
+ * several columns become one block.
+ */
+function columns(stacks: readonly (readonly ScrollBlock[])[], gap: number, inset: number): readonly ScrollBlock[] {
+  const [only, ...others] = stacks;
+  if (only && others.length === 0) {
+    const [first, ...rest] = only;
+    if (!first) return [];
+    const lead: ScrollBlock = {
+      height: inset + first.height,
+      draw: (y, view) => {
+        first.draw(y + inset, view);
+      },
+    };
+    return [lead, ...rest];
+  }
+  const height = (blocks: readonly ScrollBlock[]): number =>
+    blocks.reduce((sum, block) => sum + block.height, 0) + Math.max(0, blocks.length - 1) * gap;
+  const draw = (y: number, view: ScrollView): void => {
+    for (const blocks of stacks) {
+      let cursor = y + inset;
+      for (const block of blocks) {
+        block.draw(cursor, view);
+        cursor += block.height + gap;
+      }
+    }
+  };
+  return [{ height: inset + Math.max(0, ...stacks.map(height)), draw }];
+}
+
+/**
+ * THE SHOP and THE CODEX (abilities, bestiary, guide): one definition of each screen that lays
+ * out at both densities through the page frame. Desktop draws the design pages (two shop columns,
+ * card grids that move by whole rows, a fixed two-column guide); the phone flows one column of
+ * shop rows, two of ability cards, one of bestiary entries and a measured guide.
+ */
 export function createCodexShopRenderers(context: ScreenRenderContext) {
-  const { ui, width } = context;
-  // Phone landscape (compact density) composes these screens as compact pages.
-  const compact = createCompactCodexShop(context);
+  const { ui } = context,
+    pf = createPageFrame(context),
+    shardShelves = createShardShelves(context, pf);
+  const measure: Measure = { textWidth: pf.textWidth, lineCount: pf.lineCount, lineHeight: pf.lineHeight };
+  const metrics = (frame: PageFrame): Metrics => codexShopMetrics(ui.t, frame, measure, context.width);
 
-  function codex(view: CodexScreenView): void {
-    if (ui.density.compact) {
-      compact.codex(view);
-      return;
-    }
-    const { canvas } = context;
-    page(context, { title: "CODEX" });
-    tabs(context, view.tabs, (id) => ({ type: "codex.selectTab", id }));
-    const subtitle =
-      view.tab === "abilities"
-        ? "STACKS pile up  ·  ★ UNIQUE are one-time  ·  ✦ SPECIAL evolve a tier with every boss  —  click to step through tiers"
-        : view.tab === "guide"
-          ? "how to wield the blade"
-          : "every foe — what it does, its stats, and the affixes it can roll";
-    ui.text(canvas, subtitle, width / 2, 184, ui.t.type.caption, "center", ui.t.alpha.muted);
-    if (view.filters && view.tab !== "guide") {
-      const sortWidth = view.tab === "abilities" ? 170 : 0,
-        gap = 8,
-        chipWidth = view.tab === "abilities" ? 120 : 128;
-      const total = view.filters.length * (chipWidth + gap) - gap + (sortWidth ? sortWidth + gap * 2 : 0);
-      const start = (width - total) / 2;
-      view.filters.forEach((filter, index) => {
-        context.enqueue({
-          x: start + index * (chipWidth + gap),
-          y: 198,
-          w: chipWidth,
-          h: 32,
-          chip: true,
-          label: filter.label,
-          selected: filter.id === view.filter,
-          size: ui.t.type.micro,
-          action: { type: "codex.selectFilter", id: filter.id },
-        });
-      });
-      if (sortWidth)
-        context.enqueue({
-          x: start + view.filters.length * (chipWidth + gap) + gap,
-          y: 198,
-          w: sortWidth,
-          h: 32,
-          chip: true,
-          label: `SORT: ${(view.sort ?? "category").toUpperCase()}`,
-          action: { type: "codex.cycleSort" },
-          size: ui.t.type.micro,
-        });
-    }
-    if (view.tab === "guide" && view.guide) guide(view.guide);
-    else if (view.tab === "bestiary") bestiaryGrid(view.cards);
-    else abilityGrid(view);
-    pageFooter(context, { canScrollUp: view.canScrollUp, canScrollDown: view.canScrollDown });
+  function shop(view: ShopScreenView): void {
+    const t = ui.t,
+      goldInk = ui.readable(GOLD),
+      shards = view.tab === "shards" ? view.shards : undefined;
+    // Tabs take the subtitle's place, as on the other tabbed pages; the status line under them says the rest.
+    const frame = pf.open({
+      title: "SHOP",
+      hue: GOLD,
+      stat: shards
+        ? {
+            value: shards.balance.toLocaleString("en-US"),
+            label: "SHARDS",
+            color: ui.readable(t.color.accent),
+            glyph: "⬡",
+          }
+        : { value: view.coins.toLocaleString("en-US"), label: "COINS", color: goldInk, glyph: "◆" },
+      tabs: view.tabs,
+      tabAction: (id) => ({ type: "shop.selectTab", id }),
+      desktop: {},
+    });
+    const m = metrics(frame);
+    // One status line under the tabs: on UPGRADES the first-run hint replaces the ledger totals.
+    const emphasis = shards === undefined && view.onboarding !== undefined;
+    const status = pf.prose(
+      frame,
+      shards
+        ? `⬡ ${shards.earned.toLocaleString("en-US")} SHARDS EARNED   ·   LOOKS ONLY — THEY NEVER CHANGE HOW A RUN PLAYS`
+        : (view.onboarding ??
+            `${String(view.ownedLevels)} / ${String(view.totalLevels)} LEVELS OWNED   ·   LIFETIME EARNED ◆ ${view.lifetimeEarned.toLocaleString("en-US")}`),
+      {
+        ...(emphasis
+          ? { size: t.type.caption, alpha: t.alpha.soft }
+          : { size: t.type.micro, alpha: t.alpha.muted, tag: t.color.muted }),
+        maxLines: 2,
+        align: m.align,
+        baseline: DESKTOP.shop.statusBaseline,
+        height: DESKTOP.shop.listTop - DESKTOP.shop.statusTop,
+      },
+    );
+    const state = pf.body(frame, {
+      head: [status],
+      list: shards ? shardShelves.shelves(frame, shards) : upgradeColumns(frame, m, view, goldInk),
+      gap: m.gap,
+      desktop: {
+        top: DESKTOP.shop.statusTop,
+        cull: { above: Number.POSITIVE_INFINITY, below: 0 },
+        canScrollUp: view.canScrollUp,
+        canScrollDown: view.canScrollDown,
+      },
+    });
+    pf.close(frame, state);
   }
 
-  function abilityGrid(view: CodexScreenView): void {
-    const { canvas } = context;
-    const columns = 4,
-      margin = 230,
-      gap = 20,
-      cardWidth = (width - margin * 2 - gap * 3) / columns;
-    const cardHeight = 150,
-      stride = 170,
-      top = 244,
-      visibleRows = 3;
-    const offset = Math.max(0, Math.round(context.scroll / stride));
-    view.cards.slice(offset * columns, (offset + visibleRows) * columns).forEach((card, localIndex) => {
-      const column = localIndex % columns,
-        row = Math.floor(localIndex / columns);
-      const x = margin + column * (cardWidth + gap),
-        y = top + row * stride;
-      const accent = card.accent ?? ui.t.color.accent,
-        accentInk = ui.readable(accent);
-      const special = card.badge?.includes("SPECIAL") === true;
-      const prized = special || card.badge?.includes("UNIQUE") === true;
-      ui.card(canvas, x, y, cardWidth, cardHeight, context.focus === offset * columns + localIndex);
-      ui.accentStrip(canvas, x, y, cardWidth, accent);
-      if (special) specialGleam(x, y, cardWidth);
-      const badgeWidth = card.badge ? cardBadge(card.badge, x, y, prized, special) : 0;
-      if (card.category) {
-        const category = ui.fitText(canvas, card.category, cardWidth - 36 - badgeWidth, {
-          size: ui.t.type.micro,
-          floor: ui.t.type.micro,
-          bold: true,
-        });
-        ui.tag(
-          canvas,
-          category.lines[0] ?? card.category,
-          x + cardWidth - 12,
-          y + 28,
-          accentInk,
-          "right",
-          ui.t.type.micro,
-        );
-      }
-      const title = ui.fitText(canvas, card.label, cardWidth - 24, {
-        size: ui.t.type.title,
-        floor: ui.t.type.label,
-        bold: true,
-      });
-      ui.displayText(canvas, title.lines[0] ?? card.label, x + 12, y + 58, title.size);
-      const tierCount = card.tierCount ?? 1,
-        tier = Math.max(0, Math.min(card.tier ?? 0, tierCount - 1));
-      let descriptionY = y + 84;
-      if (tierCount > 1) {
-        for (let index = 0; index < tierCount; index += 1) {
-          canvas.beginPath();
-          canvas.arc(x + 17 + index * 16, y + 76, 5, 0, Math.PI * 2);
-          if (index === tier) {
-            canvas.fillStyle = accent;
-            canvas.fill();
-            canvas.strokeStyle = ui.ink;
-            canvas.lineWidth = 1.2;
-            canvas.stroke();
-          } else {
-            canvas.strokeStyle = accent;
-            canvas.lineWidth = 2;
-            canvas.stroke();
-          }
-        }
-        ui.tag(
-          canvas,
-          tier === 0 ? "BASE" : `TIER ${String(tier + 1)}`,
-          x + 19 + tierCount * 16,
-          y + 81,
-          accentInk,
-          "left",
-          ui.t.type.micro,
-        );
-        descriptionY = y + 102;
-      }
-      if (card.description)
-        ui.textBox(canvas, card.description, x + 12, descriptionY, cardWidth - 24, {
-          size: ui.t.type.micro,
-          lineHeight: 17,
-          maxLines: Math.max(1, Math.floor((y + cardHeight - 8 - descriptionY) / 17) + 1),
-          alpha: ui.t.alpha.soft,
-        });
-      context.enqueue({
-        x,
-        y,
-        w: cardWidth,
-        h: cardHeight,
-        label: "",
-        hiddenBox: true,
-        action: { type: "codex.inspect", id: card.id },
+  /** The UPGRADES tab: the upgrade sections in the metrics' columns, each a gold rule and its rows. */
+  function upgradeColumns(frame: PageFrame, m: Metrics, view: ShopScreenView, goldInk: string): readonly ScrollBlock[] {
+    const s = m.shop,
+      perColumn = Math.ceil(view.sections.length / s.columns);
+    const stacks = Array.from({ length: s.columns }, (_, column) => {
+      const x = frame.left + column * s.step;
+      return view.sections.slice(column * perColumn, (column + 1) * perColumn).flatMap((section, index) => {
+        const lead = index > 0 ? s.section.lead : 0,
+          label = `${section.label}  ·  ${String(section.items.length)}`;
+        const rule: ScrollBlock = {
+          height: lead + s.section.height,
+          draw: (y) => {
+            ui.sectionLabel(context.canvas, label, x, y + lead + s.section.baseline, s.width, GOLD);
+          },
+        };
+        return [rule, ...section.items.map((item) => shopRow(frame, m, item, x, goldInk))];
       });
     });
+    return columns(stacks, m.gap, s.inset);
   }
 
-  /** The gold edge on a SPECIAL card, with a white gleam travelling along it. */
-  function specialGleam(x: number, y: number, cardWidth: number): void {
+  /** One upgrade: icon tile, name and level, pips, up to two lines of effect copy, and BUY. */
+  function shopRow(frame: PageFrame, m: Metrics, item: ShopItem, x: number, goldInk: string): ScrollBlock {
+    const width = m.shop.width,
+      p = m.shop.row(item, width),
+      t = ui.t;
+    const level = item.level ?? 0,
+      maximum = item.maxLevel ?? 0,
+      maxed = maximum > 0 && level >= maximum;
+    const draw = (y: number, view: ScrollView): void => {
+      const { canvas } = context;
+      ui.card(canvas, x, y, width, p.card, false);
+      canvas.globalAlpha = level > 0 ? 0.16 : 0.055;
+      canvas.fillStyle = level > 0 ? GOLD : ui.ink;
+      canvas.fillRect(x + p.tile.x, y + p.tile.y, p.tile.size, p.tile.size);
+      canvas.globalAlpha = 1;
+      if (item.flash && item.flash > 0) {
+        canvas.globalAlpha = item.flash * 0.3;
+        canvas.fillStyle = GOLD;
+        canvas.fillRect(x, y, width, p.card);
+        canvas.globalAlpha = 1;
+      }
+      const ink = level > 0 ? goldInk : t.color.muted;
+      ui.tag(canvas, item.glyph ?? "◆", x + p.glyph.x, y + p.glyph.y, ink, "center", p.glyph.size);
+      const name = ui.fitText(canvas, item.label, p.name.width, { size: t.type.body, floor: p.name.floor, bold: true });
+      const label = name.lines[0] ?? item.label,
+        nameX = x + p.name.x,
+        nameY = y + p.name.y;
+      ui.displayText(canvas, label, nameX, nameY, name.size);
+      if (maximum > 0) {
+        const levelX = nameX + pf.textWidth(label, name.size, true) + p.name.levelGap;
+        ui.tag(canvas, `LV ${String(level)}/${String(maximum)}`, levelX, nameY, ink, "left", t.type.micro);
+        ui.pips(canvas, x + p.pips.x, y + p.pips.y, maximum, level, GOLD);
+      }
+      if (item.description)
+        ui.textBox(canvas, item.description, nameX, y + p.copy.y, p.copy.width, {
+          size: t.type.micro,
+          lineHeight: p.copy.lineHeight,
+          alpha: t.alpha.soft,
+          maxLines: 2,
+        });
+      const buyY = y + p.buy.y,
+        keep = m.shop.keepFrom,
+        canBuy = !maxed && item.enabled !== false;
+      const visible = keep === undefined || (buyY >= keep && buyY + p.buy.h <= frame.bottom);
+      const control = {
+        x: x + p.buy.x,
+        y: buyY,
+        w: p.buy.w,
+        h: p.buy.h,
+        label: maxed ? "MAX" : (item.cost ?? "BUY"),
+        selected: maxed,
+        enabled: visible && canBuy,
+        accent: canBuy ? GOLD : undefined,
+        action: { type: "shop.buy", id: item.id } as const,
+        size: t.type.caption,
+        ...(keep === undefined ? {} : { hiddenBox: !visible }),
+      };
+      if (keep === undefined) view.enqueue(control);
+      else context.enqueue(control);
+    };
+    return { height: p.pitch, draw };
+  }
+
+  function codex(view: CodexScreenView): void {
+    const t = ui.t,
+      tab = view.tab;
+    // The sort cycles the whole ability list, so it sits with the view controls.
+    const sort =
+      tab === "abilities"
+        ? {
+            label: `SORT: ${(view.sort ?? "category").toUpperCase()}`,
+            width: DESKTOP.sort,
+            action: { type: "codex.cycleSort" } as const,
+          }
+        : undefined;
+    const filters = view.filters && tab !== "guide" ? view.filters : undefined;
+    const frame = pf.open({
+      title: "CODEX",
+      tabs: view.tabs,
+      tabAction: (id) => ({ type: "codex.selectTab", id }),
+      pickers: filters && [
+        {
+          items: filters.map((filter) => ({ ...filter, selected: filter.id === view.filter })),
+          action: (id) => ({ type: "codex.selectFilter", id }),
+          desktop: {
+            y: DESKTOP.filters.y,
+            height: DESKTOP.filters.height,
+            width: DESKTOP.filters[tab === "abilities" ? "abilities" : "bestiary"],
+          },
+          trailing: sort,
+        },
+      ],
+      desktop: {},
+    });
+    const m = metrics(frame);
+    const guide = tab === "guide" ? view.guide : undefined,
+      grid = tab === "bestiary" ? m.bestiary : m.ability;
+    const gap = tab === "guide" ? m.gap : grid.rowGap;
+    const caption = pf.prose(
+      frame,
+      tab === "guide"
+        ? m.codex.guideCaption
+        : tab === "bestiary"
+          ? "every foe — what it does, its stats, and the affixes it can roll"
+          : `STACKS pile up  ·  ★ UNIQUE are one-time  ·  ✦ SPECIAL evolve a tier with every boss  —  ${m.codex.tierHint}`,
+      {
+        size: t.type.caption,
+        maxLines: tab === "abilities" ? 3 : 2,
+        align: m.align,
+        baseline: 0,
+        height: DESKTOP.listTop - DESKTOP.captionY - gap,
+      },
+    );
+    const cell = (
+      card: CardView,
+      x: number,
+      y: number,
+      w: number,
+      h: number,
+      scroll: ScrollView,
+      index: number,
+    ): void => {
+      if (tab === "bestiary") bestiaryEntry(m, card, x, y, w, h);
+      else abilityCard(m, card, x, y, w, h, scroll, index);
+    };
+    const width = (grid.span.width - grid.gap * (grid.columns - 1)) / grid.columns;
+    const list = guide
+      ? [guideBlock(m.guide(guide), guide)]
+      : pf.grid(
+          grid.span,
+          view.cards,
+          grid.columns,
+          (row) => Math.max(...row.map((card) => grid.height(card, width))),
+          cell,
+          grid.gap,
+        );
+    const state = pf.body(frame, {
+      head: [caption],
+      list,
+      gap,
+      desktop: {
+        top: DESKTOP.captionY,
+        cull: { above: 0, below: 0 },
+        scrolls: false,
+        snap: DESKTOP.rows,
+        canScrollUp: view.canScrollUp,
+        canScrollDown: view.canScrollDown,
+      },
+    });
+    pf.close(frame, state);
+  }
+
+  function abilityCard(
+    m: Metrics,
+    card: CardView,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    view: ScrollView,
+    index: number,
+  ): void {
+    const { canvas } = context,
+      t = ui.t,
+      a = m.ability,
+      pad = a.pad;
+    const accent = card.accent ?? t.color.accent,
+      accentInk = ui.readable(accent);
+    const special = card.badge?.includes("SPECIAL") === true,
+      prized = special || card.badge?.includes("UNIQUE") === true;
+    ui.card(canvas, x, y, w, h, context.focus === index);
+    ui.accentStrip(canvas, x, y, w, accent);
+    if (special) specialEdge(x, y, w, a.gleam);
+    let badgeW = 0;
+    if (card.badge && prized) {
+      const color = special ? "#a86a0c" : ui.readable(t.color.unique);
+      badgeW = ui.badge(canvas, card.badge, x + pad, y + a.badgeY, color, "left", t.type.micro);
+    } else if (card.badge) {
+      ui.tag(canvas, card.badge, x + pad, y + a.tagY, t.color.muted, "left", t.type.micro);
+      badgeW = pf.textWidth(card.badge, t.type.micro, true);
+    }
+    const tierCount = card.tierCount ?? 1;
+    const pathW = tierPath(card, a, x + pad + (a.tiers.inline ? badgeW + t.space.md : 0), y, accent, accentInk);
+    if (card.category) {
+      const category = ui.fitText(canvas, card.category, w - pad * 3 - badgeW - (a.tiers.inline ? pathW : 0), {
+        size: t.type.micro,
+        floor: t.type.micro,
+        bold: true,
+      });
+      if (m.keepTruncated || !category.truncated)
+        ui.tag(canvas, category.lines[0] ?? card.category, x + w - pad, y + a.tagY, accentInk, "right", t.type.micro);
+    }
+    const title = ui.fitText(canvas, card.label, w - pad * 2, { size: t.type.title, floor: a.titleFloor, bold: true });
+    ui.displayText(canvas, title.lines[0] ?? card.label, x + pad, y + a.titleY, title.size);
+    const copy = a.copy(tierCount > 1, h);
+    if (card.description)
+      ui.textBox(canvas, card.description, x + pad, y + copy.y, w - pad * 2, {
+        size: t.type.micro,
+        maxLines: copy.maxLines,
+        lineHeight: a.lineHeight,
+        alpha: t.alpha.soft,
+      });
+    view.enqueue({ x, y, w, h, label: "", hiddenBox: true, action: { type: "codex.inspect", id: card.id } });
+  }
+
+  /** An evolving ability's tier pips and BASE / TIER n tag from `x`; returns the width they take. */
+  function tierPath(card: CardView, a: AbilityCard, x: number, y: number, accent: string, accentInk: string): number {
+    const { canvas } = context,
+      { r, step } = a.tiers,
+      count = card.tierCount ?? 1;
+    if (count <= 1) return 0;
+    const tier = Math.max(0, Math.min(card.tier ?? 0, count - 1)),
+      label = tier === 0 ? "BASE" : `TIER ${String(tier + 1)}`;
+    for (let pip = 0; pip < count; pip += 1) {
+      canvas.beginPath();
+      canvas.arc(x + r + pip * step, y + a.tiers.pipY, r, 0, Math.PI * 2);
+      canvas.fillStyle = accent;
+      canvas.strokeStyle = accent;
+      canvas.lineWidth = 2;
+      if (pip !== tier) canvas.stroke();
+      else {
+        canvas.fill();
+        if (!a.tiers.ring) continue;
+        canvas.strokeStyle = ui.ink;
+        canvas.lineWidth = 1.2;
+        canvas.stroke();
+      }
+    }
+    const tagX = x + count * step + a.tiers.tagGap;
+    ui.tag(canvas, label, tagX, y + a.tiers.tagY, accentInk, "left", ui.t.type.micro);
+    return tagX - x + pf.textWidth(label, ui.t.type.micro, true) + ui.t.space.md;
+  }
+
+  /** The gold edge on a SPECIAL card, with a white gleam travelling along it on desktop. */
+  function specialEdge(x: number, y: number, cardWidth: number, gleam: boolean): void {
     const { canvas } = context;
-    canvas.fillStyle = "#e8a32e";
+    canvas.fillStyle = SPECIAL_GOLD;
+    if (!gleam) {
+      canvas.fillRect(x, y + 6, cardWidth, 3);
+      return;
+    }
     canvas.globalAlpha = 0.9;
     canvas.fillRect(x, y + 6, cardWidth, 3);
     const gleamX = x + ((context.time * 80 + (x % 200)) % (cardWidth + 60)) - 30;
@@ -178,363 +388,209 @@ export function createCodexShopRenderers(context: ScreenRenderContext) {
     canvas.globalAlpha = 1;
   }
 
-  /** SPECIAL / UNIQUE cards get a filled badge, others a plain tag; returns the width it took. */
-  function cardBadge(badge: string, x: number, y: number, prized: boolean, special: boolean): number {
-    const { canvas } = context;
-    if (prized)
-      return ui.badge(canvas, badge, x + 12, y + 30, special ? "#a86a0c" : ui.readable(ui.t.color.unique), "left");
-    ui.tag(canvas, badge, x + 12, y + 28, ui.t.color.muted, "left", ui.t.type.micro);
-    canvas.font = ui.font(ui.t.type.micro, true);
-    return canvas.measureText(badge).width;
-  }
-
-  // ---- bestiary (source codexTabBestiary + drawBestiaryEntry) ----
-  function statChip(x: number, y: number, label: string, value: string): number {
+  function bestiaryEntry(m: Metrics, card: CardView, x: number, y: number, w: number, h: number): void {
     const { canvas } = context,
-      t = ui.t;
-    canvas.font = ui.font(t.type.micro, true);
-    const labelWidth = canvas.measureText(label).width;
-    canvas.font = ui.font(t.type.caption, true);
-    const valueWidth = canvas.measureText(value).width;
-    const w = Math.max(92, labelWidth + valueWidth + 28),
-      h = 26;
-    canvas.strokeStyle = "rgba(40,42,54,0.35)";
-    canvas.lineWidth = 1.5;
-    canvas.strokeRect(x, y, w, h);
-    ui.tag(canvas, label, x + 9, y + 18, t.color.muted, "left", t.type.micro);
-    canvas.fillStyle = ui.ink;
-    canvas.font = ui.font(t.type.caption, true);
-    canvas.textAlign = "right";
-    canvas.textBaseline = "alphabetic";
-    canvas.fillText(value, x + w - 9, y + 18);
-    return x + w + 8;
-  }
-
-  function affixChip(x: number, y: number, id: string, color: string, limit: number): number {
-    const { canvas } = context;
-    const txt = id.toUpperCase();
-    canvas.font = ui.font(ui.t.type.micro, true);
-    const w = canvas.measureText(txt).width + 16;
-    if (x + w > limit) return limit + 1;
-    const ink = ui.readable(color);
-    canvas.fillStyle = color;
-    canvas.globalAlpha = 0.16;
-    canvas.fillRect(x, y - 14, w, 19);
-    canvas.globalAlpha = 1;
-    canvas.strokeStyle = color;
-    canvas.lineWidth = 1;
-    canvas.strokeRect(x, y - 14, w, 19);
-    canvas.fillStyle = ink;
-    canvas.textAlign = "left";
-    canvas.fillText(txt, x + 8, y);
-    return x + w + 7;
-  }
-
-  function bestiaryEntry(card: CodexScreenView["cards"][number], x: number, y: number, w: number, h: number): void {
-    const { canvas } = context,
-      t = ui.t;
-    const ac = card.accent ?? (card.boss ? t.color.danger : t.color.accent),
-      acInk = ui.readable(ac);
+      t = ui.t,
+      b = m.bestiary;
+    const accent = card.accent ?? (card.boss ? t.color.danger : t.color.accent),
+      accentInk = ui.readable(accent);
     ui.panel(canvas, x, y, w, h);
-    ui.spine(canvas, x, y, h, ac, 6);
-    const bw = 116,
-      bx = x + 16,
-      by = y + 14;
+    ui.spine(canvas, x, y, h, accent, 6);
+    const preview = { x: x + b.preview.x, y: y + b.preview.y, w: b.preview.size, h: b.preview.size };
     canvas.strokeStyle = "rgba(40,42,54,0.3)";
     canvas.lineWidth = 1.5;
-    canvas.strokeRect(bx, by, bw, 116);
-    if (card.previewId) context.renderPreview?.(card.previewId, { x: bx, y: by, w: bw, h: 116 });
-    const ix = bx + bw + 20,
-      rx = x + w - 16,
-      textWidth = rx - ix;
-    // name line: name, role, and (right) your tally with this foe
-    let feltWidth = 0;
-    if (card.felled)
-      feltWidth = ui.badge(canvas, card.felled.label, rx, y + 30, ui.readable(card.felled.color), "right") + 12;
-    const name = ui.fitText(canvas, card.label, textWidth - feltWidth - 40, {
+    canvas.strokeRect(preview.x, preview.y, preview.w, preview.h);
+    if (card.previewId) context.renderPreview?.(card.previewId, preview);
+    const textX = preview.x + preview.w + b.textGap,
+      right = x + w - b.inset,
+      textW = right - textX,
+      nameY = y + b.nameY;
+    const felled = card.felled,
+      felledW = felled
+        ? ui.badge(canvas, felled.label, right, nameY, ui.readable(felled.color), "right", t.type.micro) + b.felledGap
+        : 0;
+    const name = ui.fitText(canvas, card.label, textW - felledW - b.nameReserve, {
       size: t.type.lead,
-      floor: t.type.label,
+      floor: b.nameFloor,
       bold: true,
     });
-    ui.displayText(canvas, name.lines[0] ?? card.label, ix, y + 30, name.size);
-    canvas.font = ui.font(name.size, true);
-    const nameWidth = canvas.measureText(name.lines[0] ?? card.label).width;
+    ui.displayText(canvas, name.lines[0] ?? card.label, textX, nameY, name.size);
+    const nameW = pf.textWidth(name.lines[0] ?? card.label, name.size, true);
     if (card.category) {
-      const role = ui.fitText(canvas, card.category, textWidth - feltWidth - nameWidth - 14, {
+      const role = ui.fitText(canvas, card.category, textW - felledW - nameW - b.roleGap, {
         size: t.type.micro,
         floor: t.type.micro,
         bold: true,
       });
-      ui.tag(canvas, role.lines[0] ?? "", ix + nameWidth + 14, y + 30, acInk, "left", t.type.micro);
+      if (role.lines[0] && (m.keepTruncated || !role.truncated))
+        ui.tag(canvas, role.lines[0], textX + nameW + b.roleGap, nameY, accentInk, "left", t.type.micro);
     }
-    let sx = ix;
-    for (const stat of card.stats ?? []) sx = statChip(sx, y + 40, stat.label, stat.value);
-    // description + variants share a measured block, so neither can run into the other
-    // Description and variants share one measured block above the bottom row: the
-    // variants line always gets the lines the description leaves (at least two).
-    const bottomRow = y + h - 8,
-      blockTop = y + 82,
-      blockBottom = bottomRow - 17,
-      lineHeight = 15;
-    const blockLines = Math.floor((blockBottom - blockTop) / lineHeight) + 1;
-    const variantLines = card.variants ? 2 : 0;
-    const description = ui.textBox(canvas, card.description ?? "", ix, blockTop, textWidth, {
-      size: t.type.micro,
-      lineHeight,
+    stats(card.stats ?? [], textX, y + b.statsY, textW, b.statChips);
+    // Description and variants share one block above the footer row.
+    const lines = b.lines(card, h),
+      copy = { size: t.type.micro, lineHeight: b.lineHeight };
+    let cursor = y + b.copyY(card);
+    const description = ui.textBox(canvas, card.description ?? "", textX, cursor, textW, {
+      ...copy,
       alpha: t.alpha.soft,
-      maxLines: Math.max(1, blockLines - variantLines),
+      maxLines: lines.description,
     });
-    if (card.variants) {
-      const variantsY = blockTop + description.height;
-      ui.textBox(canvas, "Variants: " + card.variants, ix, variantsY, textWidth, {
-        size: t.type.micro,
-        lineHeight,
+    if (card.description || b.fixedBlock) cursor += description.height;
+    if (card.variants)
+      cursor += ui.textBox(canvas, "Variants: " + card.variants, textX, cursor, textW, {
+        ...copy,
         alpha: t.alpha.muted,
-        maxLines: Math.max(1, Math.floor((blockBottom - variantsY) / lineHeight) + 1),
-      });
-    }
-    if (card.boss) {
-      ui.tag(
-        canvas,
-        "MULTI-PHASE — attacks escalate as its health falls",
-        ix,
-        bottomRow,
-        ui.readable(t.color.danger),
-        "left",
-        t.type.micro,
-      );
-    } else if (card.affixes && card.affixes.length > 0) {
-      canvas.font = ui.font(t.type.micro, true);
-      canvas.fillStyle = t.color.muted;
-      canvas.textAlign = "left";
-      canvas.textBaseline = "alphabetic";
-      canvas.fillText("CAN ROLL", ix, bottomRow);
-      let axx = ix + canvas.measureText("CAN ROLL").width + 12;
-      for (const affix of card.affixes) axx = affixChip(axx, bottomRow, affix.id, affix.color, rx);
-    }
-  }
-
-  function bestiaryGrid(cards: CodexScreenView["cards"]): void {
-    const cols = 2,
-      mx = 230,
-      gap = 24,
-      cardW = (width - mx * 2 - gap) / cols,
-      cardH = BESTIARY_CARD_HEIGHT,
-      stride = BESTIARY_ROW_PITCH,
-      top = 244,
-      vis = 3;
-    const gridRows = Math.ceil(cards.length / cols),
-      maxOff = Math.max(0, gridRows - vis);
-    const off = Math.max(0, Math.min(maxOff, Math.round(context.scroll / stride)));
-    for (let r = 0; r < vis; r += 1)
-      for (let c = 0; c < cols; c += 1) {
-        const index = (off + r) * cols + c;
-        const card = cards[index];
-        if (card === undefined) continue;
-        bestiaryEntry(card, mx + c * (cardW + gap), top + r * stride, cardW, cardH);
-      }
-  }
-
-  function guide(view: NonNullable<CodexScreenView["guide"]>): void {
-    const { canvas } = context;
-    const left = 250,
-      leftWidth = 500,
-      right = 830,
-      rightWidth = 520;
-    let y = ui.sectionLabel(canvas, "CONTROLS", left, 226, leftWidth) + 20;
-    for (const row of view.controls) {
-      ui.tag(canvas, row.keys.join(" + "), left, y, ui.readable(ui.t.color.accent), "left", ui.t.type.micro);
-      ui.textBox(canvas, row.description, left + 150, y, leftWidth - 150, {
-        size: ui.t.type.label,
-        alpha: ui.t.alpha.soft,
-        maxLines: 1,
-      });
-      y += 40;
-    }
-    ui.divider(canvas, left, y - 20, leftWidth, 0.14);
-    ui.tag(canvas, "CONTROLLER", left, y + 4, ui.t.color.muted, "left", ui.t.type.micro);
-    let controllerY = y + 4;
-    view.controller.forEach((line) => {
-      controllerY += ui.textBox(canvas, line, left + 130, controllerY, leftWidth - 130, {
-        size: ui.t.type.micro,
-        lineHeight: 18,
-        alpha: ui.t.alpha.soft,
-        maxLines: 2,
+        maxLines: lines.variants(cursor - y),
       }).height;
-    });
-    let trickY = ui.sectionLabel(canvas, "THE TRICK METER", right, 226, rightWidth) + 20;
-    for (const trick of view.tricks) {
-      ui.tag(canvas, trick.glyph, right, trickY, ui.readable(ui.t.color.accent), "left", ui.t.type.label);
-      ui.displayText(canvas, trick.name, right + 28, trickY, ui.t.type.label);
-      ui.textBox(canvas, trick.description, right + 150, trickY, rightWidth - 150 - 44, {
-        size: ui.t.type.micro,
-        alpha: ui.t.alpha.muted,
-        maxLines: 1,
-      });
-      ui.tag(
-        canvas,
-        `+${String(trick.points)}`,
-        right + rightWidth,
-        trickY,
-        trick.points >= 10 ? ui.readable("#e0a326") : ui.readable(ui.t.color.accent),
-        "right",
-        ui.t.type.label,
-      );
-      trickY += 30;
-    }
-    trickY = ui.sectionLabel(canvas, "THE LADDER", right, trickY + 14, rightWidth) + 18;
-    for (const tier of view.ladder) {
-      ui.bar(canvas, right, trickY - 10, 200, 8, tier.fraction, ui.t.color.accent);
-      ui.text(canvas, tier.name, right + 216, trickY, ui.t.type.label);
-      ui.tag(
-        canvas,
-        `×${String(tier.multiplier)}`,
-        right + rightWidth,
-        trickY,
-        tier.multiplier >= 4 ? ui.readable("#e0a326") : ui.t.color.muted,
-        "right",
-        ui.t.type.label,
-      );
-      trickY += 26;
-    }
-    ui.textBox(canvas, view.variety, right, trickY + 8, rightWidth, {
-      size: ui.t.type.micro,
-      alpha: ui.t.alpha.muted,
-      maxLines: 2,
-    });
+    bestiaryFooter(card, b, textX, y + b.footerY(cursor - y, h), right);
   }
 
-  /** One upgrade card: icon tile, name and level, pips, description and the BUY button (hidden while scrolled out). */
-  function shopItemRow(
-    item: ShopItemView,
-    x: number,
-    y: number,
-    goldInk: string,
-    viewTop: number,
-    viewBottom: number,
-  ): void {
-    const { canvas } = context;
-    const gold = SHOP_GOLD,
-      columnWidth = SHOP_COLUMN_WIDTH;
-    const buttonWidth = SHOP_BUY_WIDTH,
-      buttonHeight = SHOP_BUY_HEIGHT,
-      textRight = columnWidth - buttonWidth - 24;
-    const level = item.level ?? 0,
-      maximumLevel = item.maxLevel ?? 0;
-    const maxed = maximumLevel > 0 && level >= maximumLevel;
-    const cardHeight = SHOP_ROW_PITCH - 10;
-    ui.card(canvas, x, y, columnWidth, cardHeight, false);
-    canvas.globalAlpha = level > 0 ? 0.16 : 0.055;
-    canvas.fillStyle = level > 0 ? gold : ui.ink;
-    canvas.fillRect(x + 10, y + 10, 44, 44);
-    canvas.globalAlpha = 1;
-    if (item.flash && item.flash > 0) {
-      canvas.globalAlpha = item.flash * 0.3;
-      canvas.fillStyle = gold;
-      canvas.fillRect(x, y, columnWidth, cardHeight);
-      canvas.globalAlpha = 1;
+  /** Stats as label / value pairs: bordered chips, or one plain line that stops before the edge. */
+  function stats(list: NonNullable<CardView["stats"]>, x: number, y: number, width: number, chips: boolean): void {
+    const { canvas } = context,
+      t = ui.t;
+    let cursor = x;
+    for (const stat of list) {
+      const labelW = pf.textWidth(stat.label, t.type.micro, true),
+        valueW = pf.textWidth(stat.value, t.type.caption, true);
+      if (chips) {
+        const w = Math.max(92, labelW + valueW + 28);
+        canvas.strokeStyle = "rgba(40,42,54,0.35)";
+        canvas.lineWidth = 1.5;
+        canvas.strokeRect(cursor, y, w, 26);
+        ui.tag(canvas, stat.label, cursor + 9, y + 18, t.color.muted, "left", t.type.micro);
+        ui.tag(canvas, stat.value, cursor + w - 9, y + 18, ui.ink, "right", t.type.caption);
+        cursor += w + 8;
+        continue;
+      }
+      if (cursor + labelW + valueW + t.space.sm > x + width) break;
+      ui.tag(canvas, stat.label, cursor, y, t.color.muted, "left", t.type.micro);
+      ui.tag(canvas, stat.value, cursor + labelW + t.space.xs, y, ui.ink, "left", t.type.caption);
+      cursor += labelW + valueW + t.space.xs + t.space.xl;
     }
-    ui.tag(canvas, item.glyph ?? "◆", x + 32, y + 41, level > 0 ? goldInk : ui.t.color.muted, "center", 22);
-    canvas.font = ui.font(ui.t.type.body, true);
-    const name = ui.fitText(canvas, item.label, textRight - 66 - 150, {
-      size: ui.t.type.body,
-      floor: ui.t.type.label,
-      bold: true,
-    });
-    ui.displayText(canvas, name.lines[0] ?? item.label, x + 66, y + 26, name.size);
-    canvas.font = ui.font(name.size, true);
-    const nameWidth = canvas.measureText(name.lines[0] ?? item.label).width;
-    if (maximumLevel > 0) {
-      const levelInk = level > 0 ? goldInk : ui.t.color.muted;
-      ui.tag(
-        canvas,
-        `LV ${String(level)}/${String(maximumLevel)}`,
-        x + 78 + nameWidth,
-        y + 26,
-        levelInk,
-        "left",
-        ui.t.type.micro,
-      );
-      ui.pips(canvas, x + textRight, y + 21, maximumLevel, level, gold);
-    }
-    if (item.description) {
-      ui.textBox(canvas, item.description, x + 66, y + 47, textRight - 66, {
-        size: ui.t.type.micro,
-        lineHeight: 17,
-        alpha: ui.t.alpha.soft,
-        maxLines: 2,
-      });
-    }
-    const buttonY = y + (cardHeight - buttonHeight) / 2;
-    const visible = buttonY >= viewTop && buttonY + buttonHeight <= viewBottom;
-    const canBuy = !maxed && item.enabled !== false;
-    context.enqueue({
-      x: x + columnWidth - buttonWidth - 10,
-      y: buttonY,
-      w: buttonWidth,
-      h: buttonHeight,
-      label: maxed ? "MAX" : (item.cost ?? "BUY"),
-      selected: maxed,
-      enabled: visible && canBuy,
-      hiddenBox: !visible,
-      accent: canBuy ? gold : undefined,
-      action: { type: "shop.buy", id: item.id },
-      size: ui.t.type.caption,
-    });
   }
 
-  function shop(view: ShopScreenView): void {
-    if (ui.density.compact) {
-      compact.shop(view);
+  /** The multi-phase note for a boss, or the affixes an enemy can roll. */
+  function bestiaryFooter(card: CardView, b: BestiaryEntry, x: number, y: number, right: number): void {
+    const { canvas } = context,
+      t = ui.t,
+      chip = b.affix;
+    if (card.boss) {
+      const note = "MULTI-PHASE — attacks escalate as its health falls";
+      ui.tag(canvas, note, x, y, ui.readable(t.color.danger), "left", t.type.micro);
       return;
     }
-    const { canvas } = context;
-    const gold = SHOP_GOLD,
-      goldInk = ui.readable(gold);
-    const layout = page(context, {
-      title: "SHOP",
-      subtitle: "permanent upgrades — applied at the start of every run",
-      hue: gold,
-      stat: { value: view.coins.toLocaleString("en-US"), label: "COINS", color: goldInk, glyph: "◆" },
-    });
-    // One status row under the header: the first-run hint replaces the ledger totals.
-    const statusY = layout.bodyTop + 6;
-    if (view.onboarding)
-      ui.text(canvas, view.onboarding, width / 2, statusY, ui.t.type.caption, "center", ui.t.alpha.soft);
-    else
+    if (!card.affixes || card.affixes.length === 0) return;
+    ui.tag(canvas, "CAN ROLL", x, y, t.color.muted, "left", t.type.micro);
+    let cursor = x + pf.textWidth("CAN ROLL", t.type.micro, true) + chip.lead;
+    for (const affix of card.affixes) {
+      const label = affix.id.toUpperCase(),
+        w = pf.textWidth(label, t.type.micro, true) + chip.pad;
+      if (cursor + w > right) break;
+      canvas.fillStyle = affix.color;
+      canvas.globalAlpha = 0.16;
+      canvas.fillRect(cursor, y - chip.rise, w, chip.height);
+      canvas.globalAlpha = 1;
+      canvas.strokeStyle = affix.color;
+      canvas.lineWidth = 1;
+      canvas.strokeRect(cursor, y - chip.rise, w, chip.height);
+      ui.tag(canvas, label, cursor + chip.inset, y, ui.readable(affix.color), "left", t.type.micro);
+      cursor += w + chip.gap;
+    }
+  }
+
+  /** The guide: controls and the controller (left), the trick meter, the ladder and the variety rule (right). */
+  function guideBlock(g: GuidePlan, view: Guide): ScrollBlock {
+    const draw = (y: number): void => {
+      guideControls(g, view, y);
+      guideTricks(g, view, y);
+    };
+    return { height: g.height, draw };
+  }
+
+  function guideControls(g: GuidePlan, view: Guide, y: number): void {
+    const { canvas } = context,
+      t = ui.t,
+      { left: x, width } = g.left;
+    const rows = {
+      size: t.type.label,
+      maxLines: g.rowLines,
+      ...(g.rowLineHeight ? { lineHeight: g.rowLineHeight(t.type.label) } : {}),
+    };
+    let cursor = ui.sectionLabel(canvas, "CONTROLS", x, y + g.labelY, width) + g.after.rows;
+    for (const row of view.controls) {
+      const baseline = cursor + g.baseline;
+      ui.keyLegend(canvas, row.keys.join(" + "), x, baseline, ui.readable(t.color.accent), "left", t.type.micro);
+      ui.textBox(canvas, row.description, x + g.keyWidth, baseline, width - g.keyWidth, {
+        ...rows,
+        alpha: t.alpha.soft,
+      });
+      cursor += g.advance.control(row.description);
+    }
+    let line: number;
+    if (g.controller.rule) {
+      ui.divider(canvas, x, cursor - 20, width, 0.14);
+      ui.tag(canvas, "CONTROLLER", x, cursor + 4, t.color.muted, "left", t.type.micro);
+      line = cursor + 4;
+    } else
+      line =
+        ui.sectionLabel(canvas, "CONTROLLER", x, cursor + t.space.md + t.type.micro, width, t.color.muted) +
+        t.space.sm +
+        t.type.micro;
+    for (const text of view.controller)
+      line += ui.textBox(canvas, text, x + g.controller.x, line, width - g.controller.x, {
+        size: t.type.micro,
+        lineHeight: g.controller.lineHeight,
+        alpha: t.alpha.soft,
+        maxLines: 2,
+      }).height;
+  }
+
+  function guideTricks(g: GuidePlan, view: Guide, y: number): void {
+    const { canvas } = context,
+      t = ui.t,
+      { left: x, width } = g.right,
+      gold = ui.readable(GOLD),
+      accent = ui.readable(t.color.accent);
+    const lineHeight = (size: number) => (g.rowLineHeight ? { lineHeight: g.rowLineHeight(size) } : {});
+    let cursor = ui.sectionLabel(canvas, "THE TRICK METER", x, y + g.labelY, width) + g.after.rows;
+    for (const trick of view.tricks) {
+      const baseline = cursor + g.baseline;
+      ui.tag(canvas, trick.glyph, x, baseline, accent, "left", t.type.label);
+      ui.displayText(canvas, trick.name, x + g.trick.nameX, baseline, t.type.label);
+      ui.textBox(canvas, trick.description, x + g.trick.copyX, baseline, g.trick.copyWidth, {
+        size: t.type.micro,
+        alpha: t.alpha.muted,
+        maxLines: g.rowLines,
+        ...lineHeight(t.type.micro),
+      });
+      const points = `+${String(trick.points)}`;
+      ui.tag(canvas, points, x + width, baseline, trick.points >= 10 ? gold : accent, "right", t.type.label);
+      cursor += g.advance.trick(trick.description);
+    }
+    cursor = ui.sectionLabel(canvas, "THE LADDER", x, cursor + g.ladderBefore, width) + g.after.ladder;
+    for (const tier of view.ladder) {
+      const baseline = cursor + g.baseline;
+      ui.bar(canvas, x, baseline - g.bar.rise, g.bar.width, 8, tier.fraction, t.color.accent);
+      ui.text(canvas, tier.name, x + g.bar.width + t.space.md, baseline, t.type.label);
+      const multiplier = `×${String(tier.multiplier)}`;
       ui.tag(
         canvas,
-        `${String(view.ownedLevels)} / ${String(view.totalLevels)} LEVELS OWNED   ·   LIFETIME EARNED ◆ ${view.lifetimeEarned.toLocaleString("en-US")}`,
-        width / 2,
-        statusY,
-        ui.t.color.muted,
-        "center",
-        ui.t.type.micro,
+        multiplier,
+        x + width,
+        baseline,
+        tier.multiplier >= 4 ? gold : t.color.muted,
+        "right",
+        t.type.label,
       );
-    const columnX = [layout.left, layout.left + 570] as const,
-      columnWidth = SHOP_COLUMN_WIDTH;
-    const viewTop = SHOP_LIST_TOP,
-      viewBottom = layout.bodyBottom;
-    const split = Math.ceil(view.sections.length / 2);
-    const columns = [view.sections.slice(0, split), view.sections.slice(split)] as const;
-    clipBody(context, viewTop - 4, viewBottom, () => {
-      columns.forEach((sections, column) => {
-        const x = columnX[column] ?? columnX[0];
-        let y = viewTop + 14 - context.scroll;
-        sections.forEach((section, localSection) => {
-          y =
-            ui.sectionLabel(canvas, `${section.label}  ·  ${String(section.items.length)}`, x, y, columnWidth, gold) +
-            SHOP_SECTION_HEAD -
-            18;
-          section.items.forEach((item) => {
-            shopItemRow(item, x, y, goldInk, viewTop, viewBottom);
-            y += SHOP_ROW_PITCH;
-          });
-          if (localSection < sections.length - 1) y += SHOP_SECTION_GAP;
-        });
-      });
+      cursor += g.advance.ladder;
+    }
+    ui.textBox(canvas, view.variety, x, cursor + g.variety.offset, width, {
+      size: t.type.micro,
+      alpha: t.alpha.muted,
+      maxLines: g.variety.maxLines,
+      ...lineHeight(t.type.micro),
     });
-    pageFooter(context, { canScrollUp: view.canScrollUp, canScrollDown: view.canScrollDown });
   }
 
   return { codex, shop };

@@ -20,7 +20,7 @@ import { createLiveCameraEffectsFixture } from "./live-camera-fixture";
 import { createLiveRuntimeSnapshotController } from "./live-runtime-snapshots";
 import { projectLiveNavigationObservation } from "./live-observation-navigation";
 import { projectLiveProjectiles } from "./live-observation-projectiles";
-import { launchResolvedLiveState } from "./live-state-forge-scenario-launch";
+import { launchResolvedLiveState } from "./live-state-setup-scenario-launch";
 import {
   projectLiveActorMechanics,
   projectLiveBehaviorMode,
@@ -32,18 +32,18 @@ import {
   certifyWave99HammerProgression,
   createCanonicalWave99HammerProgression,
   createWave99HistoricalRunState,
-  forgeExitLaunchSnapshot,
-} from "./state-forge-exit-gate";
+  buildExitLaunchSnapshot,
+} from "./state-setup-exit-gate";
 import { createCampaignVictoryOrigin, createCampaignWave59RewardFrontier } from "./campaign-victory-origin";
 import { createGameplayCausalEvent, projectGameplayEventForParity } from "./gameplay-causal-events";
 import { environmentSnapshotToObservation } from "./environment-codec";
 import {
-  forgeBloomWellCycleState,
-  forgeEnvironmentCombatObjectState,
-  forgeEnvironmentFieldState,
-} from "./state-forge-factories";
-import { forgeRootbinderNetworkEnvironment } from "./rootbinder-network-forge";
-import { forgeRootboundGraftAnchorEnvironment } from "./rootbound-graft-anchor-forge";
+  buildBloomWellCycleState,
+  buildEnvironmentCombatObjectState,
+  buildEnvironmentFieldState,
+} from "./state-setup-factories";
+import { buildRootbinderNetworkEnvironment } from "./rootbinder-network-setup";
+import { buildRootboundGraftAnchorEnvironment } from "./rootbound-graft-anchor-setup";
 import { createBloomWellState, isBloomWellState } from "../gameplay/environment/bloom-well";
 import {
   projectBloomWellPresentation,
@@ -51,7 +51,7 @@ import {
 } from "../gameplay/environment/bloom-well-presentation-facts";
 import { resolveTearSdl, type TearSdlDocumentV1 } from "./tearsdl";
 import type { TearLiveRestoreResult } from "./live-state-snapshot";
-import type { StateForgeExitLaunch } from "./state-forge-exit-gate";
+import type { StateSetupExitLaunch } from "./state-setup-exit-gate";
 import type {
   LiveTearRuntimeEnvironmentContext,
   TearClassARuntimeEnvironment,
@@ -70,7 +70,7 @@ function numericSeed(seed: string): number {
   }
   return hash >>> 0 || 1;
 }
-function genericEnvironmentForge(
+function genericEnvironmentSetup(
   kind: "field" | "combat-object",
   environment: TearStructuredRuntimeEnvironment,
   snapshots: ReturnType<typeof createLiveRuntimeSnapshotController>,
@@ -114,11 +114,11 @@ function genericEnvironmentForge(
     stateTick: 0,
     cleanupReason: null,
   };
-  const forged =
-    kind === "field" ? forgeEnvironmentFieldState(base, field) : forgeEnvironmentCombatObjectState(base, combatObject);
-  return launchResolvedLiveState(resolveTearSdl(forged), environment, snapshots, context);
+  const built =
+    kind === "field" ? buildEnvironmentFieldState(base, field) : buildEnvironmentCombatObjectState(base, combatObject);
+  return launchResolvedLiveState(resolveTearSdl(built), environment, snapshots, context);
 }
-function bloomWellEnvironmentForge(
+function bloomWellEnvironmentSetup(
   environment: TearStructuredRuntimeEnvironment,
   snapshots: ReturnType<typeof createLiveRuntimeSnapshotController>,
   context: LiveTearRuntimeEnvironmentContext,
@@ -142,7 +142,7 @@ function bloomWellEnvironmentForge(
     0,
   );
   return launchResolvedLiveState(
-    resolveTearSdl(forgeBloomWellCycleState(base, field)),
+    resolveTearSdl(buildBloomWellCycleState(base, field)),
     environment,
     snapshots,
     context,
@@ -464,14 +464,14 @@ export function createLiveTearRuntimeEnvironment(
       }
       if (nextScenario.start.mode === "sandbox") throw new RangeError("sandbox is not a live run mode");
       if (nextScenario.stateClass !== "recorded-canonical") {
-        throw new RangeError(`live reset does not forge ${nextScenario.stateClass} state; use State Forge`);
+        throw new RangeError(`live reset does not set up ${nextScenario.stateClass} state; use State Setup`);
       }
       if (nextScenario.start.stage !== undefined)
-        throw new RangeError("live reset stage selection requires State Forge");
+        throw new RangeError("live reset stage selection requires State Setup");
       if (nextScenario.start.wave !== undefined && nextScenario.start.wave !== 1) {
-        throw new RangeError("live reset supports only the natural opening wave; use State Forge for exact waves");
+        throw new RangeError("live reset supports only the natural opening wave; use State Setup for exact waves");
       }
-      if (nextScenario.start.bossPhase !== undefined) throw new RangeError("boss-phase reset requires State Forge");
+      if (nextScenario.start.bossPhase !== undefined) throw new RangeError("boss-phase reset requires State Setup");
       if (nextScenario.start.boss !== undefined) {
         if (nextScenario.start.mode !== "bossonly") throw new RangeError("boss selection requires bossonly mode");
         context.selectBoss(nextScenario.start.boss);
@@ -819,14 +819,14 @@ export function createLiveTearRuntimeEnvironment(
         context.render();
         return Object.freeze({ beforeTick, afterTick, fixedTickDelta });
       },
-      advanceStateForgeCinematicBeat: () => {
+      advanceStateSetupCinematicBeat: () => {
         if (scenario === null || observation === null) {
           throw new Error("Tear runtime must be reset before cinematic advancement");
         }
         if (paused || terminated) {
           throw new Error("cinematic advancement requires a running Tear runtime");
         }
-        const advanced = context.advanceStateForgeCinematicBeat();
+        const advanced = context.advanceStateSetupCinematicBeat();
         const tick = context.authoritative()?.tick ?? observation.tick;
         if (!Number.isSafeInteger(tick) || tick < observation.tick) {
           throw new Error("cinematic advancement produced an invalid authoritative tick");
@@ -849,18 +849,18 @@ export function createLiveTearRuntimeEnvironment(
       captureSnapshot: (id: string, stateClass?: TearStateClass, seed?: string) =>
         snapshots.capture(id, stateClass, seed),
       restoreSnapshot: (snapshot: TearSnapshotV1) => snapshots.restore(snapshot),
-      forgeExitLaunch: (launch: StateForgeExitLaunch) => {
+      buildExitLaunch: (launch: StateSetupExitLaunch) => {
         if (launch.kind === "boss-finisher" && context.bossIntroActive()) {
           throw new Error("boss-finisher origin requires the production boss introduction to be complete");
         }
         const original = snapshots.capture(`source-${launch.id}`);
-        const forged = forgeExitLaunchSnapshot(original, launch);
-        if (launch.kind !== "boss-finisher") return snapshots.restore(forged);
+        const built = buildExitLaunchSnapshot(original, launch);
+        if (launch.kind !== "boss-finisher") return snapshots.restore(built);
         const progressionRuntime = context.captureProgressionRuntime();
         try {
           context.applyBossFinisher(launch.boss, launch.remainingHp);
           const committed = snapshots.capture(launch.id, "surgical-valid");
-          if (committed.hashes.exact !== forged.hashes.exact) {
+          if (committed.hashes.exact !== built.hashes.exact) {
             throw new Error("boss-finisher surgical commit changed fields outside its declared health pair");
           }
           return Object.freeze({
@@ -875,14 +875,14 @@ export function createLiveTearRuntimeEnvironment(
           throw error;
         }
       },
-      forgeWave99Hammer: () => {
+      buildWave99Hammer: () => {
         const progression = createCanonicalWave99HammerProgression();
         const replay = context.replayProgression(progression.ledger);
         const certificate = certifyWave99HammerProgression(progression),
           history = createWave99HistoricalRunState(certificate);
         const run = context.state.run(),
           player = context.state.player();
-        if (run === null || player === undefined) throw new Error("wave-99 forge requires an active live run");
+        if (run === null || player === undefined) throw new Error("wave-99 setup requires an active live run");
         run.wave = 99;
         run.score = certificate.metrics.score;
         run.waveKills = history.currentWaveKills;
@@ -892,14 +892,14 @@ export function createLiveTearRuntimeEnvironment(
         player.maxHp = certificate.metrics.maxHp;
         player.hp = certificate.metrics.hp;
         Reflect.set(run, "stateForgeEvidence", { ...certificate, liveReplay: replay, ledger: progression.ledger });
-        const forged = snapshots.capture("wave99-start", "reconstructed-reachable");
+        const built = snapshots.capture("wave99-start", "reconstructed-reachable");
         return Object.freeze({
           ok: true as const,
-          exactHash: forged.hashes.exact,
-          semanticHash: forged.hashes.semantic,
+          exactHash: built.hashes.exact,
+          semanticHash: built.hashes.semantic,
         });
       },
-      forgeCampaignFinalWave: () => {
+      buildCampaignFinalWave: () => {
         const certificate = createCampaignVictoryOrigin();
         const original = snapshots.capture("campaign-wave-59-original");
         const originalProgressionRuntime = context.captureProgressionRuntime();
@@ -921,7 +921,7 @@ export function createLiveTearRuntimeEnvironment(
             return Object.freeze({ ...restored, rolledBack: true });
           }
           const run = context.state.run();
-          if (run === null) throw new Error("campaign final-wave forge requires an active live run");
+          if (run === null) throw new Error("campaign final-wave setup requires an active live run");
           Reflect.set(
             run,
             "stateForgeEvidence",
@@ -951,13 +951,13 @@ export function createLiveTearRuntimeEnvironment(
           throw error;
         }
       },
-      forgeResolvedScenario: (resolved: Parameters<TearClassARuntimeEnvironment["forgeResolvedScenario"]>[0]) =>
+      buildResolvedScenario: (resolved: Parameters<TearClassARuntimeEnvironment["buildResolvedScenario"]>[0]) =>
         launchResolvedLiveState(resolved, environment, snapshots, context),
-      forgeEnvironmentField: () => genericEnvironmentForge("field", environment, snapshots, context),
-      forgeEnvironmentCombatObject: () => genericEnvironmentForge("combat-object", environment, snapshots, context),
-      forgeBloomWellCycle: () => bloomWellEnvironmentForge(environment, snapshots, context),
-      forgeRootbinderNetwork: () => forgeRootbinderNetworkEnvironment(environment, snapshots, context),
-      forgeRootboundGraftAnchor: () => forgeRootboundGraftAnchorEnvironment(environment, snapshots, context),
+      buildEnvironmentField: () => genericEnvironmentSetup("field", environment, snapshots, context),
+      buildEnvironmentCombatObject: () => genericEnvironmentSetup("combat-object", environment, snapshots, context),
+      buildBloomWellCycle: () => bloomWellEnvironmentSetup(environment, snapshots, context),
+      buildRootbinderNetwork: () => buildRootbinderNetworkEnvironment(environment, snapshots, context),
+      buildRootboundGraftAnchor: () => buildRootboundGraftAnchorEnvironment(environment, snapshots, context),
     });
   return Object.freeze({
     accessClass: "B" as const,
@@ -986,11 +986,11 @@ export function createLiveTearRuntimeEnvironment(
     stateHash: () => environment.stateHash(),
     environment: () => environment.environment(),
     bloomWellPresentation: (options?: BloomWellPresentationOptions) => bloomWellPresentation(environment, options),
-    forgeEnvironmentField: () => genericEnvironmentForge("field", environment, snapshots, context),
-    forgeEnvironmentCombatObject: () => genericEnvironmentForge("combat-object", environment, snapshots, context),
-    forgeBloomWellCycle: () => bloomWellEnvironmentForge(environment, snapshots, context),
-    forgeRootbinderNetwork: () => forgeRootbinderNetworkEnvironment(environment, snapshots, context),
-    forgeRootboundGraftAnchor: () => forgeRootboundGraftAnchorEnvironment(environment, snapshots, context),
+    buildEnvironmentField: () => genericEnvironmentSetup("field", environment, snapshots, context),
+    buildEnvironmentCombatObject: () => genericEnvironmentSetup("combat-object", environment, snapshots, context),
+    buildBloomWellCycle: () => bloomWellEnvironmentSetup(environment, snapshots, context),
+    buildRootbinderNetwork: () => buildRootbinderNetworkEnvironment(environment, snapshots, context),
+    buildRootboundGraftAnchor: () => buildRootboundGraftAnchorEnvironment(environment, snapshots, context),
     presentation: () => context.presentation(),
     screenshot: (policy?: TearCaptureLayerPolicyV1) => environment.screenshot(policy),
   });

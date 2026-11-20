@@ -1,8 +1,11 @@
 name: Validate
 
-# Draft pull requests do not run: a draft cannot be merged, and each run costs
-# included Actions minutes. Marking a pull request ready starts a run; start one
-# on a draft by hand with "Run workflow" if needed.
+# Draft pull requests do not run: a draft cannot be merged. Marking a pull request ready starts a
+# run; start one on a draft by hand with "Run workflow" if needed.
+#
+# The gate groups of config/checks.json run as parallel jobs (static, unit, build, and browser in
+# shards), all on one checked commit that the scope job records. The final job, named `check`, is
+# the one status the ruleset requires: it passes only when every job it needs passed.
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
@@ -15,8 +18,10 @@ on:
         required: false
         default: ""
 
+# Every job only reads. `actions: read` lets a re-run download its earlier attempt's check results.
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   # A newer push to a pull request cancels its older run. Runs on main are never
@@ -27,58 +32,47 @@ concurrency:
   cancel-in-progress: ${{ github.event_name != 'push' }}
 
 jobs:
-  check:
+  # Picks the main commit to merge, makes the checked commit, and decides whether the change is
+  # documents only. Every other job checks out this same commit.
+  scope:
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
-    # From measurement: the gate groups in config/checks.json record about 20 minutes on a
-    # runner and setup (install, browser download) about 3; the last full run on this list took
-    # about 25. The limit stays at least twice the recorded total, which tests/unit/ci-workflow
-    # checks, so a slow runner is not cut off and a hung check still stops.
-    timeout-minutes: 50
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      head: ${{ steps.main.outputs.head }}
+      main: ${{ steps.main.outputs.main }}
+      merge_main: ${{ steps.main.outputs.merge_main }}
+      commit: ${{ steps.checked.outputs.commit }}
+      docs_only: ${{ steps.validation-scope.outputs.docs_only }}
+      playwright_image: ${{ steps.image.outputs.playwright_image }}
     steps:
-      # A pull request is checked as its head merged with main as main is now,
-      # not GitHub's prepared merge ref, which a re-run reuses and a reopen can
-      # serve stale. "pnpm merge:ready" reads the recorded pair to decide whether
-      # a pass is still current.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - name: Merge current main into the change
-        if: github.event_name != 'push'
-        shell: bash
-        run: |
-          git fetch --quiet origin main
-          git -c user.name=validate -c user.email=validate@invalid merge --quiet --no-edit origin/main ||
-            { echo "::error::This change does not merge cleanly with current main. Bring it up to date."; exit 1; }
-      - name: Record what was checked
-        id: checked
-        shell: bash
-        run: |
-          head="${{ github.event.pull_request.head.sha || github.sha }}"
-          main="$(git rev-parse origin/main)"
-          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          # Every later step checks and builds this commit, not GitHub's GITHUB_SHA (its own merge ref).
-          echo "TEAR_RELEASE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
-          echo "TEAR_BUILD_GIT_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
-          echo "::notice title=checked::head=$head main=$main"
-          echo "Checked head \`$head\` merged with main \`$main\`." >> "$GITHUB_STEP_SUMMARY"
-      # A batch (pnpm merge:batch) records which pull request heads the checked commit contains;
-      # pnpm merge:ready reads this annotation, as it reads "checked".
-      - name: Record the batch members
-        if: github.event_name == 'workflow_dispatch' && inputs.batch != ''
+      # A pull request is checked as its head merged with main as main is now, not GitHub's
+      # prepared merge ref, which a re-run reuses and a reopen can serve stale. A push to main
+      # checks itself. "pnpm merge:ready" reads the recorded pair to decide whether a pass is current.
+      - name: Pick the main commit
+        id: main
         shell: bash
         env:
-          BATCH: ${{ inputs.batch }}
-        run: node scripts/merge-batch.mjs --record "$BATCH"
-      - uses: pnpm/action-setup@v4
+          EVENT: ${{ github.event_name }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          git fetch --quiet origin main
+          main="$(git rev-parse origin/main)"
+          merge_main=""
+          if [[ "$EVENT" != "push" ]]; then merge_main="$main"; fi
+          { echo "head=$HEAD_SHA"; echo "main=$main"; echo "merge_main=$merge_main"; } >> "$GITHUB_OUTPUT"
+      - name: Merge current main into the change
+        id: checked
+        uses: ./.github/actions/checked-commit
         with:
-          version: 11.15.0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          main: ${{ steps.main.outputs.merge_main }}
+          install: "false"
       # A pull request that changes only documents runs the document checks
       # instead of the game checks. Every push to main runs everything.
       - name: Resolve focused validation scope
@@ -87,54 +81,313 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
         run: |
-          gameplay_required=true
+          docs_only=false
           if [[ "$EVENT" != "push" ]] && git diff --name-only origin/main HEAD | node -e 'const files = require("fs").readFileSync(0, "utf8").split(/\r?\n/u).filter(Boolean); process.exit(files.length > 0 && files.every((file) => /^(?:docs\/|plans\/|wiki\/|(?:README|CONTRIBUTING|CRAZYGAMES|DEPLOYMENT|AGENTS|CLAUDE)\.md$|config\/position\.json$|\.github\/pull_request_template\.md$)/u.test(file)) ? 0 : 1)'; then
-            gameplay_required=false
+            docs_only=true
           fi
-          echo "gameplay_required=$gameplay_required" >> "$GITHUB_OUTPUT"
+          echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
+      - name: Name the browser jobs' image from the lockfile
+        id: image
+        run: node scripts/ci-playwright-image.mjs >> "$GITHUB_OUTPUT"
+      # A batch (pnpm merge:batch) lists the pull request heads its commit must contain. Checked here
+      # first, so a batch that checked less than it claims fails before any check runs; the `check`
+      # job records the same list again where pnpm merge:ready and merge:batch read it.
+      - name: Check the batch members
+        if: github.event_name == 'workflow_dispatch' && inputs.batch != ''
+        shell: bash
+        env:
+          BATCH: ${{ inputs.batch }}
+        run: node scripts/merge-batch.mjs --record "$BATCH"
+
+  docs:
+    needs: scope
+    if: needs.scope.outputs.docs_only == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: ./.github/actions/checked-commit
+        with:
+          main: ${{ needs.scope.outputs.merge_main }}
+          commit: ${{ needs.scope.outputs.commit }}
       - name: Check documents only
-        if: steps.validation-scope.outputs.gameplay_required == 'false'
         run: pnpm check:docs && pnpm test:docs && pnpm check:terminology && pnpm test:terminology && pnpm wiki:test
-      # The checks in config/checks.json, one step per group in the order they
-      # are listed: cheap and likely-to-fail first, so a failure shows within
-      # minutes. `pnpm check` runs the same list locally.
+
+  static:
+    needs: scope
+    if: needs.scope.outputs.docs_only == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: ./.github/actions/checked-commit
+        with:
+          main: ${{ needs.scope.outputs.merge_main }}
+          commit: ${{ needs.scope.outputs.commit }}
+      - uses: ./.github/actions/check-results
+        with:
+          job: static
       - name: Static checks (format, repository guards, typecheck, lint)
-        if: steps.validation-scope.outputs.gameplay_required == 'true'
         run: node scripts/run-checks.mjs static
+      # Read by .github/actions/check-results on a re-run of this job (to report flaky checks), which
+      # goes on without them, and by scripts/ci-check-times.mjs by hand. Nothing needs them to pass,
+      # so a failed upload must not decide the job's verdict; the next step reports it.
+      - id: check-results-upload
+        uses: actions/upload-artifact@v4
+        if: always()
+        continue-on-error: true
+        with:
+          name: check-results-static-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/check-results/results.json
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Report a failed check-results upload
+        if: always() && steps.check-results-upload.outcome == 'failure'
+        run: |
+          echo "::warning title=check-results upload failed::check-results-static-${{ github.run_attempt }} was not uploaded; the checks' verdict stands. Lost: this job's timings for scripts/ci-check-times.mjs, and a later re-run of this job cannot report flaky checks."
+          echo "- check-results upload failed for check-results-static-${{ github.run_attempt }}: the checks' verdict stands; this job's timings are lost, and a later re-run of this job cannot report flaky checks." >> "$GITHUB_STEP_SUMMARY"
+
+  unit:
+    needs: scope
+    if: needs.scope.outputs.docs_only == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: ./.github/actions/checked-commit
+        with:
+          main: ${{ needs.scope.outputs.merge_main }}
+          commit: ${{ needs.scope.outputs.commit }}
+      - uses: ./.github/actions/check-results
+        with:
+          job: unit
       - name: Unit tests
-        if: steps.validation-scope.outputs.gameplay_required == 'true'
         run: node scripts/run-checks.mjs unit
+      # Read by .github/actions/check-results on a re-run of this job (to report flaky checks), which
+      # goes on without them, and by scripts/ci-check-times.mjs by hand. Nothing needs them to pass,
+      # so a failed upload must not decide the job's verdict; the next step reports it.
+      - id: check-results-upload
+        uses: actions/upload-artifact@v4
+        if: always()
+        continue-on-error: true
+        with:
+          name: check-results-unit-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/check-results/results.json
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Report a failed check-results upload
+        if: always() && steps.check-results-upload.outcome == 'failure'
+        run: |
+          echo "::warning title=check-results upload failed::check-results-unit-${{ github.run_attempt }} was not uploaded; the checks' verdict stands. Lost: this job's timings for scripts/ci-check-times.mjs, and a later re-run of this job cannot report flaky checks."
+          echo "- check-results upload failed for check-results-unit-${{ github.run_attempt }}: the checks' verdict stands; this job's timings are lost, and a later re-run of this job cannot report flaky checks." >> "$GITHUB_STEP_SUMMARY"
+
+  # Builds every target once. The browser shards test these exact files: the release build in the
+  # artifact the deploy workflows publish, and the other builds beside it, each verified by hash.
+  build:
+    needs: scope
+    if: needs.scope.outputs.docs_only == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      hashes: ${{ steps.hashes.outputs.hashes }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: ./.github/actions/checked-commit
+        with:
+          main: ${{ needs.scope.outputs.merge_main }}
+          commit: ${{ needs.scope.outputs.commit }}
+      - uses: ./.github/actions/check-results
+        with:
+          job: build
       - name: Builds
-        if: steps.validation-scope.outputs.gameplay_required == 'true'
         run: node scripts/run-checks.mjs build
-      - run: pnpm exec playwright install --with-deps chromium
-        if: steps.validation-scope.outputs.gameplay_required == 'true'
-      - name: Browser checks
-        if: steps.validation-scope.outputs.gameplay_required == 'true'
-        run: xvfb-run -a node scripts/run-checks.mjs browser
+      - name: Record the hash of each build
+        id: hashes
+        run: echo "hashes=$(node scripts/ci-build-hashes.mjs)" >> "$GITHUB_OUTPUT"
+      # Read by .github/actions/check-results on a re-run of this job (to report flaky checks), which
+      # goes on without them, and by scripts/ci-check-times.mjs by hand. Nothing needs them to pass,
+      # so a failed upload must not decide the job's verdict; the next step reports it.
+      - id: check-results-upload
+        uses: actions/upload-artifact@v4
+        if: always()
+        continue-on-error: true
+        with:
+          name: check-results-build-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/check-results/results.json
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Report a failed check-results upload
+        if: always() && steps.check-results-upload.outcome == 'failure'
+        run: |
+          echo "::warning title=check-results upload failed::check-results-build-${{ github.run_attempt }} was not uploaded; the checks' verdict stands. Lost: this job's timings for scripts/ci-check-times.mjs, and a later re-run of this job cannot report flaky checks."
+          echo "- check-results upload failed for check-results-build-${{ github.run_attempt }}: the checks' verdict stands; this job's timings are lost, and a later re-run of this job cannot report flaky checks." >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
-        if: steps.validation-scope.outputs.gameplay_required == 'true'
         with:
           # Named after the commit actually built, which build-info.json records.
-          name: tear-release-targets-${{ steps.checked.outputs.commit }}
-          # Deploys use dist/standalone. The CrazyGames package is the storefront
-          # upload. A deploy of a build older than this needs a re-run of its
-          # Validate run (docs/RELEASE_AUTHORITY.md).
+          name: tear-release-targets-${{ needs.scope.outputs.commit }}
+          # Deploys use dist/standalone. The CrazyGames package is the storefront upload. A deploy
+          # of a build older than this needs a re-run of its Validate run
+          # (docs/RELEASE_AUTHORITY.md). Both deploy workflows refuse a run that did not pass as a
+          # whole, so a failed browser shard still blocks this build.
           path: |
             dist/standalone
             artifacts/packages/tear-crazygames.zip
           if-no-files-found: error
           retention-days: ${{ github.event_name == 'push' && 7 || 2 }}
-      # Main only, after every check passed: the test build of the same commit, served by the
-      # preview deploy below /dev/ (Boss Test, Enemy Test and the other engineering surfaces).
-      # It is its own artifact, so nothing that deploys production can pick it up.
+      # The other builds the browser shards serve. Only this run reads it.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: validate-builds-${{ needs.scope.outputs.commit }}
+          path: |
+            dist/crazygames
+            dist/test-standalone
+            dist/test-crazygames
+          if-no-files-found: error
+          retention-days: 1
+      # Main only: the test build of the same commit, served by the preview deploy below /dev/
+      # (Boss Test, Enemy Test and the other engineering surfaces). It is its own artifact, so
+      # nothing that deploys production can pick it up.
       - name: Build the preview dev build
-        if: github.event_name == 'push' && steps.validation-scope.outputs.gameplay_required == 'true'
+        if: github.event_name == 'push'
         run: node scripts/build-target.mjs test-standalone --preview-dev
       - uses: actions/upload-artifact@v4
-        if: github.event_name == 'push' && steps.validation-scope.outputs.gameplay_required == 'true'
+        if: github.event_name == 'push'
         with:
-          name: tear-preview-dev-${{ steps.checked.outputs.commit }}
+          name: tear-preview-dev-${{ needs.scope.outputs.commit }}
           path: dist/preview-dev
           if-no-files-found: error
           retention-days: 7
+
+  browser:
+    needs: [scope, build]
+    if: needs.scope.outputs.docs_only == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: read
+      actions: read
+    strategy:
+      # Every shard runs to its end, so one shard's failure does not hide another's.
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    name: browser (${{ matrix.shard }}/4)
+    # Playwright's own image for the lockfile's @playwright/test version (scripts/ci-playwright-image.mjs):
+    # Chromium and its system packages are already in it, so no shard installs them.
+    container:
+      image: ${{ needs.scope.outputs.playwright_image }}
+      options: --ipc=host
+    # The checkout is owned by the runner's user, not the container's, so git would refuse it as
+    # "dubious ownership". This marks it safe for this job's git commands only, writing no config file.
+    env:
+      GIT_CONFIG_COUNT: 1
+      GIT_CONFIG_KEY_0: safe.directory
+      GIT_CONFIG_VALUE_0: "*"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: ./.github/actions/checked-commit
+        with:
+          main: ${{ needs.scope.outputs.merge_main }}
+          commit: ${{ needs.scope.outputs.commit }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: tear-release-targets-${{ needs.scope.outputs.commit }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: validate-builds-${{ needs.scope.outputs.commit }}
+          path: dist
+      - name: Verify the builds are the build job's, by hash
+        env:
+          EXPECTED: ${{ needs.build.outputs.hashes }}
+        run: node scripts/ci-build-hashes.mjs --expect "$EXPECTED"
+      - uses: ./.github/actions/check-results
+        with:
+          job: browser-${{ matrix.shard }}
+      - name: Browser checks
+        run: xvfb-run -a node scripts/run-checks.mjs browser --shard ${{ matrix.shard }}/4
+      # Read by .github/actions/check-results on a re-run of this job (to report flaky checks), which
+      # goes on without them, and by scripts/ci-check-times.mjs by hand. Nothing needs them to pass,
+      # so a failed upload must not decide the job's verdict; the next step reports it.
+      - id: check-results-upload
+        uses: actions/upload-artifact@v4
+        if: always()
+        continue-on-error: true
+        with:
+          name: check-results-browser-${{ matrix.shard }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/check-results/results.json
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Report a failed check-results upload
+        if: always() && steps.check-results-upload.outcome == 'failure'
+        run: |
+          echo "::warning title=check-results upload failed::check-results-browser-${{ matrix.shard }}-${{ github.run_attempt }} was not uploaded; the checks' verdict stands. Lost: this job's timings for scripts/ci-check-times.mjs, and a later re-run of this job cannot report flaky checks."
+          echo "- check-results upload failed for check-results-browser-${{ matrix.shard }}-${{ github.run_attempt }}: the checks' verdict stands; this job's timings are lost, and a later re-run of this job cannot report flaky checks." >> "$GITHUB_STEP_SUMMARY"
+
+  # The required status. It fails closed: see scripts/ci-verdict.mjs.
+  check:
+    needs: [scope, docs, static, unit, build, browser]
+    if: always() && (github.event_name != 'pull_request' || !github.event.pull_request.draft)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      # pnpm merge:ready and merge:batch read these annotations from the job named `check`.
+      - name: Record what was checked
+        if: needs.scope.result == 'success'
+        shell: bash
+        env:
+          HEAD_SHA: ${{ needs.scope.outputs.head }}
+          MAIN: ${{ needs.scope.outputs.main }}
+        run: |
+          echo "::notice title=checked::head=$HEAD_SHA main=$MAIN"
+          echo "Checked head \`$HEAD_SHA\` merged with main \`$MAIN\`." >> "$GITHUB_STEP_SUMMARY"
+      - uses: ./.github/actions/checked-commit
+        if: needs.scope.result == 'success' && github.event_name == 'workflow_dispatch' && inputs.batch != ''
+        with:
+          main: ${{ needs.scope.outputs.merge_main }}
+          commit: ${{ needs.scope.outputs.commit }}
+          install: "false"
+      - name: Record the batch members
+        if: needs.scope.result == 'success' && github.event_name == 'workflow_dispatch' && inputs.batch != ''
+        shell: bash
+        env:
+          BATCH: ${{ inputs.batch }}
+        run: node scripts/merge-batch.mjs --record "$BATCH"
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - name: Every needed job passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: node scripts/ci-verdict.mjs

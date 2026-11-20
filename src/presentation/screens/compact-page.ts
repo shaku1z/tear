@@ -1,5 +1,5 @@
 import type { ReplayView, ScreenAction, ScreenControl, ScreenRenderContext } from "./contracts";
-import { backControl } from "./screen-primitives";
+import { backControl, tabs as tabStrip } from "./screen-primitives";
 
 /**
  * THE COMPACT PAGE: the phone-landscape composition shared by the library and shop
@@ -45,6 +45,9 @@ export interface CompactHeader {
   readonly sheet?: boolean | undefined;
 }
 
+/** Where a scroll lays its blocks: a page body, or any panel that scrolls (the Drills list). */
+export type ScrollRegion = Pick<CompactPage, "left" | "width" | "top" | "bottom">;
+
 /** What a block sees while it draws: the clipped body span and a visibility-checked enqueue. */
 export interface ScrollView {
   readonly top: number;
@@ -76,6 +79,40 @@ export interface FlowAction {
 const PAGE_PAD = 40;
 /** The narrowest a header tab may be before the strip drops to its own row. */
 const TAB_MIN_WIDTH = 150;
+
+/**
+ * Where a scrolled body rests: on a block's top edge, or anywhere inside a block taller than the
+ * view (so all of it can be read). The view offers whole controls only, so a body resting part-way
+ * into a row would drop that row and show an empty band at its top. `maximum` is the first rest at
+ * or past the content's end, so the last block is whole as well; `offset` is the rest nearest the
+ * input scroll `raw`. The input itself keeps moving freely (it is only clamped), so small wheel or
+ * drag steps add up to the next row instead of snapping back.
+ */
+export function scrollRest(
+  heights: readonly number[],
+  gap: number,
+  visible: number,
+  raw: number,
+): Readonly<{ offset: number; maximum: number }> {
+  const spans: (readonly [number, number])[] = [];
+  let top = 0;
+  for (const height of heights) {
+    spans.push([top, top + Math.max(0, height - visible)]);
+    top += height + gap;
+  }
+  const end = top - gap - visible;
+  const last = spans.find(([, to]) => to >= end);
+  if (end <= 0 || !last) return { offset: 0, maximum: 0 };
+  const maximum = Math.ceil(Math.max(last[0], end)),
+    target = Math.max(0, Math.min(maximum, raw));
+  let offset = 0;
+  for (const [from, to] of spans) {
+    if (from > maximum) break;
+    const rest = Math.max(from, Math.min(Math.min(to, maximum), target));
+    if (Math.abs(rest - target) < Math.abs(offset - target)) offset = rest;
+  }
+  return { offset, maximum };
+}
 
 export function createCompactPage(context: ScreenRenderContext) {
   const { ui } = context;
@@ -189,7 +226,7 @@ export function createCompactPage(context: ScreenRenderContext) {
       const strip = beside
         ? { x: besideX, y: rowTop, w: besideW }
         : { x: left, y: bottom + t.metric.btnGap, w: right - left };
-      tabStrip(tabs, spec.tabAction, strip.x, strip.y, strip.w);
+      tabStrip(context, tabs, spec.tabAction, strip.y, { x: strip.x, w: strip.w, h: ui.t.metric.btnH });
       if (!beside) bottom = strip.y + rowH;
     } else if (spec.subtitle && !spec.stat) {
       const room = right - (left + titleW + t.space.xl);
@@ -218,42 +255,6 @@ export function createCompactPage(context: ScreenRenderContext) {
       bottom: footerY - t.space.md,
       footerY,
     });
-  }
-
-  /** A tab strip in an explicit span, one full-height touch target per tab. */
-  function tabStrip(
-    tabs: readonly CompactChoice[],
-    action: (id: string) => ScreenAction,
-    x: number,
-    y: number,
-    w: number,
-  ): void {
-    const active = Math.max(
-      0,
-      tabs.findIndex((tab) => tab.selected),
-    );
-    ui.tabs(
-      context.canvas,
-      tabs.map((tab) => tab.id).join("-"),
-      tabs.map((tab) => tab.label),
-      active,
-      y,
-      (button) => {
-        const tab = tabs[button._tab ?? 0];
-        if (tab !== undefined)
-          context.enqueue({
-            x: button.x,
-            y: button.y,
-            w: button.w,
-            h: button.h,
-            label: "",
-            hiddenBox: true,
-            action: action(tab.id),
-          });
-      },
-      w,
-      { x, w, h: ui.t.metric.btnH },
-    );
   }
 
   /**
@@ -303,13 +304,17 @@ export function createCompactPage(context: ScreenRenderContext) {
    * Lays blocks top to bottom inside the page body, clamps the scroll to their measured
    * extent (and writes it back), then draws the visible blocks clipped to the body.
    */
-  function scroll(page: CompactPage, blocks: readonly ScrollBlock[], gap = ui.t.space.md): ScrollState {
+  function scroll(page: ScrollRegion, blocks: readonly ScrollBlock[], gap = ui.t.space.md): ScrollState {
     const { canvas } = context,
       visible = page.bottom - page.top;
-    const total = blocks.reduce((sum, block) => sum + block.height, 0) + Math.max(0, blocks.length - 1) * gap;
-    const maximum = Math.max(0, Math.ceil(total - visible));
-    const offset = Math.max(0, Math.min(maximum, context.scroll));
-    if (offset !== context.scroll) context.setScroll?.(offset);
+    const { offset, maximum } = scrollRest(
+      blocks.map((block) => block.height),
+      gap,
+      visible,
+      context.scroll,
+    );
+    const clamped = Math.max(0, Math.min(maximum, context.scroll));
+    if (clamped !== context.scroll) context.setScroll?.(clamped);
     const view: ScrollView = {
       top: page.top,
       bottom: page.bottom,
@@ -338,6 +343,32 @@ export function createCompactPage(context: ScreenRenderContext) {
     return { canScrollUp: offset > 0, canScrollDown: offset < maximum };
   }
 
+  /**
+   * A scrolling list inside a panel, its scroll hint on a line of its own: when the blocks overflow
+   * `region`, its last line is kept for the hint, centred under the list, so the hint never sits on
+   * what follows. A list that fits takes only its height. `bottom` is the y under the list and hint.
+   */
+  function list(
+    region: ScrollRegion,
+    blocks: readonly ScrollBlock[],
+    gap = ui.t.space.md,
+  ): ScrollState & Readonly<{ bottom: number }> {
+    const total = blocks.reduce((sum, block) => sum + block.height, 0) + Math.max(0, blocks.length - 1) * gap,
+      hintH = lineHeight(ui.t.type.caption) + ui.t.space.xs,
+      overflows = total > region.bottom - region.top;
+    const body = { ...region, bottom: overflows ? region.bottom - hintH : region.top + total };
+    const state = scroll(body, blocks, gap);
+    if (overflows)
+      ui.scrollHint(
+        context.canvas,
+        region.left + region.width / 2,
+        body.bottom + hintH / 2 + Math.round(ui.t.type.caption * 0.35),
+        state.canScrollUp,
+        state.canScrollDown,
+      );
+    return { ...state, bottom: overflows ? region.bottom : body.bottom };
+  }
+
   /** Footer row: BACK centred (when given) and the scroll hint at the right end. */
   function footer(page: CompactPage, state: ScrollState, back?: ScreenAction | null): void {
     if (back !== null) backControl(context, back);
@@ -353,15 +384,16 @@ export function createCompactPage(context: ScreenRenderContext) {
     }
   }
 
-  /** Rows of equal cells: one block per row so scrolling culls whole rows. */
+  /** Rows of equal cells across `span` (the page by default), `gap` apart: one block per row so scrolling culls whole rows. */
   function grid<Item>(
-    page: CompactPage,
+    span: Readonly<{ left: number; width: number }>,
     items: readonly Item[],
     columns: number,
     rowHeight: (row: readonly Item[]) => number,
     cell: (item: Item, x: number, y: number, w: number, h: number, view: ScrollView, index: number) => void,
+    gap = ui.t.space.md,
   ): readonly ScrollBlock[] {
-    const gap = ui.t.space.md,
+    const page = span,
       w = (page.width - gap * (columns - 1)) / columns,
       blocks: ScrollBlock[] = [];
     for (let start = 0; start < items.length; start += columns) {
@@ -567,6 +599,7 @@ export function createCompactPage(context: ScreenRenderContext) {
     header,
     toolbar,
     scroll,
+    list,
     footer,
     grid,
     section,

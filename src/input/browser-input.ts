@@ -1,46 +1,41 @@
 import { discardScenePresses } from "./scene-release";
-import type { BrowserInput, BrowserInputDependencies, Point, TouchZoneName } from "./browser-input-contracts";
+import type { BrowserInput, BrowserInputDependencies, Point } from "./browser-input-contracts";
 import { mapClientPointerToLogical } from "./pointer-coordinate";
 import {
   aimFollowsDevices,
   accumulateRelativeTravel,
   MEANINGFUL_POINTER_TRAVEL,
   ownedPointer,
-  startsOnTouch,
   type RelativeTravel,
 } from "../domain/pointer-ownership";
-import { touchControlAt, touchControlLayout } from "./touch-control-layout";
+import { createBrowserTouch } from "./browser-touch";
+import { anyContextKeyIn, anyKeyIn, bindsKey, type KeyboardAction } from "../domain/keyboard-bindings";
+
+/** Keys the browser would otherwise use to scroll the page or move focus. */
+const PAGE_KEYS: readonly KeyboardAction[] = [
+  "jump",
+  "move-up",
+  "move-down",
+  "move-left",
+  "move-right",
+  "playground-menu",
+];
+const MOVEMENT_KEYS: readonly KeyboardAction[] = ["move-left", "move-right", "move-up", "move-down"];
+const bindsAny = (actions: readonly KeyboardAction[], code: string): boolean =>
+  actions.some((action) => bindsKey(action, code));
 
 interface ClientPoint {
   readonly clientX: number;
   readonly clientY: number;
 }
 
-interface TapTrack extends Point {
-  readonly cx: number;
-  readonly cy: number;
-  readonly t: number;
-  moved: boolean;
-}
-
 // Temporary ESM browser adapter for the classic game shell. All formerly ambient
 // dependencies are explicit so the adapter can be characterized independently.
 export function createBrowserInput(dependencies: BrowserInputDependencies): BrowserInput {
-  const {
-    config: CONFIG,
-    safeArea: SAFE,
-    overscan: OVERSCAN,
-    window,
-    document,
-    navigator,
-    performance,
-    semantic,
-  } = dependencies;
-  /** Applies a touch layout change that waited for its tap to be handled (bound by init). */
-  let settleTouchLayout: () => void = () => undefined;
-  // The canvas the layout is measured against (bound by init); its CSS size sets the
-  // physical scale of the on-screen controls.
-  let layoutCanvas: HTMLCanvasElement | null = null;
+  const { config: CONFIG, overscan: OVERSCAN, window, document, performance, semantic } = dependencies;
+  // Touch for phones and tablets (browser-touch.ts). Production builds leave it out while mobile
+  // is paused (plans/MOBILE_LATER.md); a touch there reaches the game as the browser's mouse emulation.
+  const touch = __TEAR_MOBILE__ ? createBrowserTouch(dependencies) : null;
 
   const Input: BrowserInput = {
     semantic,
@@ -54,6 +49,7 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
     allowLock: false, // only request pointer lock while actually playing
     rmb: false, // right mouse button edge (throw / recall)
     lmb: false, // left mouse button held (draw tether in close)
+    keyTether: false, // tether key held: its own channel, like the controller's
     padTether: false, // controller tether-tighten held (separate channel so the pad
     // never clobbers a real mouse hold — see tetherHeld getter)
     clicked: false, // left-click edge (for menu/UI)
@@ -73,6 +69,7 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
     padScrollY: 0, // controller right-stick scroll intent (px/frame), written by gamepad.js
     padBack: false,
     padConfirmHeld: false,
+    padMenuHeld: false,
     pointerInside: true, // the mouse is over the canvas (not over DOM chrome or outside the page)
     // one-frame UI edge flags the gamepad injects (consumed by updateUI):
     _uiTabPrev: false,
@@ -109,6 +106,10 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
       this.semantic.discardUnsealed();
       this.syncSemanticMovement();
     },
+    returnControl() {
+      this.discardSemanticInput();
+      this.semantic.push({ type: "resume" });
+    },
     discardScenePresses() {
       discardScenePresses(this);
     },
@@ -122,10 +123,14 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
       this.semantic.setMovement(x, y);
     },
     setPadTether(held) {
-      const next = held;
-      if (this.padTether === next) return;
-      this.padTether = next;
-      this.semantic.push({ type: "weapon", intent: "primary", phase: next ? "pressed" : "released" });
+      if (this.padTether === held) return;
+      this.padTether = held;
+      this.semantic.push({ type: "weapon", intent: "primary", phase: held ? "pressed" : "released" });
+    },
+    setKeyTether(held) {
+      if (this.keyTether === held) return;
+      this.keyTether = held;
+      this.semantic.push({ type: "weapon", intent: "primary", phase: held ? "pressed" : "released" });
     },
     // explicit per-frame UI action snapshot. Screens read Input.ui.* instead of
     // re-deriving arrows / confirm / tabs / scroll. Populated by updateUI() each frame.
@@ -153,11 +158,12 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
       u.right = this.menuRight();
       u.confirm = this.confirmPressed();
       u.back = this.backPressed();
-      // Q/E and PageUp/PageDown are keyboard analogues of L1/R1 and L2/R2
-      u.tabPrev = this._uiTabPrev || this.pressed.has("KeyQ");
-      u.tabNext = this._uiTabNext || this.pressed.has("KeyE");
-      u.pageUp = this._uiPageUp || this.pressed.has("PageUp");
-      u.pageDown = this._uiPageDown || this.pressed.has("PageDown");
+      // The tab and page keys are keyboard analogues of L1/R1 and L2/R2. Tab keys count only
+      // while menus own input: in play the same keys throw and tether.
+      u.tabPrev = this._uiTabPrev || (this.uiMode && anyKeyIn(this.pressed, "tab-prev"));
+      u.tabNext = this._uiTabNext || (this.uiMode && anyKeyIn(this.pressed, "tab-next"));
+      u.pageUp = this._uiPageUp || anyKeyIn(this.pressed, "page-up");
+      u.pageDown = this._uiPageDown || anyKeyIn(this.pressed, "page-down");
       u.context1 = this._uiContext1;
       u.context2 = this._uiContext2;
       u.scrollX = this.padScrollX;
@@ -186,6 +192,7 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
     touchOn: false, // a real touch has happened (device capability)
     forceMode: "auto", // settings: "auto" | "touch" | "desktop" (2-in-1s can force either)
     touchActive() {
+      if (touch === null) return false;
       return this.forceMode === "touch" || (this.forceMode !== "desktop" && this.touchOn);
     },
     touchAim: false, // a finger is steering the blade
@@ -209,64 +216,57 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
     scrollFlick: 0,
     // haptic tap — the tactile arm of the juice system (no-op where unsupported, e.g. iOS)
     buzz(p) {
-      if (this.touchActive()) {
-        try {
-          navigator.vibrate(p);
-        } catch {
-          /* Haptics are optional. */
-        }
-      }
+      touch?.buzz(p);
     },
     // on-screen control layout: anchored to the real screen edges + safe area, sized in
     // physical pixels. touch-control-layout.ts owns the geometry; input hit-tests and the
     // renderer draws the same circles.
+    // Only touch draws these controls, so only a build with touch asks for them (behind touchActive).
     touchLayout() {
-      const span = CONFIG.view.h + OVERSCAN.y * 2;
-      const cssPerLogicalPixel = layoutCanvas && layoutCanvas.clientHeight > 0 ? layoutCanvas.clientHeight / span : 1;
-      return touchControlLayout({
-        width: CONFIG.view.w,
-        height: CONFIG.view.h,
-        overscanX: OVERSCAN.x,
-        overscanY: OVERSCAN.y,
-        safe: SAFE,
-        cssPerLogicalPixel,
-      });
+      if (touch === null) throw new Error("this build has no touch controls (mobile is paused)");
+      return touch.layout();
     },
     textEntryMode: false,
 
     init(canvas, requestPointerLock = () => undefined) {
-      layoutCanvas = canvas;
-      // A phone or tablet starts on touch: the first frame has the touch layout and no cursor.
-      if (startsOnTouch((query) => window.matchMedia(query))) {
-        this.touchOn = true;
-        this.setMode("touch");
-      }
+      // Every key reads the binding table (src/domain/keyboard-bindings.ts). Auto-repeat of a
+      // held key is not an edge, so holding the throw key throws once.
       window.addEventListener("keydown", (e) => {
         if (this.textEntryMode) return;
-        if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Tab"].includes(e.code)) e.preventDefault();
-        const edge = !this.held.has(e.code);
-        if (edge) this.pressed.add(e.code);
-        this.held.add(e.code);
+        const code = e.code;
+        if (bindsAny(PAGE_KEYS, code)) e.preventDefault();
+        const edge = !this.held.has(code);
+        if (edge) this.pressed.add(code);
+        this.held.add(code);
         this.setMode("keyboard"); // a real key press (gamepad-injected arrows never come through here)
-        if (["KeyA", "KeyD", "KeyW", "KeyS", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.code))
-          this.syncSemanticMovement();
-        if (edge && ["Space", "KeyW", "ArrowUp"].includes(e.code))
-          this.semantic.push({ type: "jump", phase: "pressed" });
-        if (edge && (e.code === "ShiftLeft" || e.code === "ShiftRight")) {
+        if (bindsAny(MOVEMENT_KEYS, code)) this.syncSemanticMovement();
+        if (!edge) return;
+        if (bindsKey("jump", code)) this.semantic.push({ type: "jump", phase: "pressed" });
+        if (bindsKey("dash", code)) {
           this.semantic.push({
             type: "dash",
             x: ((this.right() ? 1 : 0) - (this.left() ? 1 : 0)) * 1000,
             y: ((this.down() ? 1 : 0) - (this.up() ? 1 : 0)) * 1000,
           });
         }
-        if (edge && e.code === "KeyP") this.semantic.push({ type: "pause" });
+        // Escape is not a semantic pause: it also releases pointer lock and backs out of menus.
+        if (bindsKey("pause", code) && !bindsKey("back", code)) this.semantic.push({ type: "pause" });
+        // The throw and tether keys are the right and left mouse buttons, edge for edge, in play only:
+        // while menus own input the same keys step tabs, and a key held into play acts only on a new press.
+        if (this.uiMode) return;
+        if (bindsKey("throw", code)) {
+          this.rmb = true;
+          this.semantic.push({ type: "weapon", intent: "throw", phase: "pressed" });
+        }
+        if (bindsKey("tether", code)) this.setKeyTether(true);
       });
       window.addEventListener("keyup", (e) => {
         if (this.textEntryMode) return;
-        this.held.delete(e.code);
-        if (["KeyA", "KeyD", "KeyW", "KeyS", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.code))
-          this.syncSemanticMovement();
-        if (["Space", "KeyW", "ArrowUp"].includes(e.code)) this.semantic.push({ type: "jump", phase: "released" });
+        const code = e.code;
+        this.held.delete(code);
+        if (bindsAny(MOVEMENT_KEYS, code)) this.syncSemanticMovement();
+        if (bindsKey("jump", code)) this.semantic.push({ type: "jump", phase: "released" });
+        if (bindsKey("tether", code) && !anyKeyIn(this.held, "tether")) this.setKeyTether(false);
       });
 
       // element px -> logical px. The element spans the arena PLUS the fullscreen
@@ -366,200 +366,25 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
         { passive: false },
       );
 
-      // ---- touch: left zone = floating joystick, right zone = blade aim (drag deltas),
-      // on-screen buttons = jump/dash/throw/pause, menus = taps + vertical drag-scroll.
-      // preventDefault kills the browser's synthetic click, so TAPS ARE SYNTHESIZED here:
-      // a short, still touch becomes Input.clicked at its point — this is what makes every
-      // menu work on mobile. Hit zones are exactly the drawn controls (touch-control-layout.ts).
-      const touchesDown = new Set<number>();
-      let touchLayoutPending = false;
-      settleTouchLayout = () => {
-        if (!touchLayoutPending || touchesDown.size > 0) return;
-        touchLayoutPending = false;
-        this.touchOn = true;
-      };
-      const btnTouches: Record<number, TouchZoneName | undefined> = {}; // touch id -> zone key (fingers on buttons never aim)
-      const tapTrack: Record<number, TapTrack | undefined> = {}; // touch id -> { x, y, cx, cy, t, moved } for tap->click synthesis
-      canvas.addEventListener(
-        "touchstart",
-        (e) => {
-          e.preventDefault();
-          // The first touch on a mouse-first device changes the menus to their touch layout.
-          // In a menu that change waits until the finger has lifted and its tap has been
-          // handled (endFrame), so the tap lands on the controls the player saw.
-          if (this.uiMode && !this.touchOn) touchLayoutPending = true;
-          else this.touchOn = true;
-          this.setMode("touch");
-          const r = canvas.getBoundingClientRect();
-          for (const t of e.changedTouches) {
-            touchesDown.add(t.identifier);
-            const p = toLogical(t, r);
-            tapTrack[t.identifier] = {
-              x: p.x,
-              y: p.y,
-              cx: t.clientX,
-              cy: t.clientY,
-              t: performance.now(),
-              moved: false,
-            };
-            if (this.forceMode === "desktop") continue; // desktop mode: taps click, nothing else
-            if (this.uiMode) {
-              // menus: track for drag-scroll (tap->click synthesized on release)
-              if (this._scrollId === -1) {
-                this._scrollId = t.identifier;
-                this._scrollLY = t.clientY;
-                this._scrollV = 0;
-                this.scrollFlick = 0;
-              }
-              continue;
-            }
-            const layout = this.touchLayout();
-            const z = touchControlAt(layout, p.x, p.y);
-            if (z) {
-              btnTouches[t.identifier] = z;
-              this.btnHeld[z] = true;
-              this.buzz(8); // tactile press
-              if (z === "jump") this.tJump = true;
-              else if (z === "dash") {
-                this.tDash = true;
-                this.semantic.push({ type: "dash", x: 0, y: 0 });
-              } else if (z === "throwB") {
-                this.rmb = true;
-                this.semantic.push({ type: "weapon", intent: "throw", phase: "pressed" });
-              } else {
-                this.tPause = true;
-                this.semantic.push({ type: "pause" });
-              }
-              if (z === "jump") this.semantic.push({ type: "jump", phase: "pressed" });
-            } else if (p.x < layout.joystickZoneRight && this.joy.id === -1) {
-              this.joy = { active: true, id: t.identifier, ax: p.x, ay: p.y, dx: 0, dy: 0 };
-            } else if (this._aimId === -1) {
-              this._aimId = t.identifier;
-              this._aimLX = t.clientX;
-              this._aimLY = t.clientY;
-              this._aimAX = t.clientX;
-              this._aimAY = t.clientY; // stick anchor
-              this.steerAim("touch");
-              if (this.touchAimMode === "stick") this.stickAim = { x: 0, y: 0 };
-            } else {
-              // a SECOND finger in the aim zone = THROW, so the right thumb never has to stop
-              // sweeping (the throw inherits the blade's live momentum)
-              this.rmb = true;
-              this.semantic.push({ type: "weapon", intent: "throw", phase: "pressed" });
-            }
-          }
-        },
-        { passive: false },
-      );
-      canvas.addEventListener(
-        "touchmove",
-        (e) => {
-          e.preventDefault();
-          const r = canvas.getBoundingClientRect();
-          const boost = 1.6 * (CONFIG.touch?.aimBoost ?? 1.5);
-          for (const t of e.changedTouches) {
-            const tk = tapTrack[t.identifier];
-            // thumbs are sloppier than mice: 18px of wander still counts as a tap
-            if (tk && Math.hypot(t.clientX - tk.cx, t.clientY - tk.cy) > 18) tk.moved = true;
-            if (t.identifier === this._scrollId) {
-              const dyy = (this._scrollLY - t.clientY) * 2.2;
-              this.wheel += dyy;
-              this._scrollV = dyy; // remember velocity for flick momentum
-              this._scrollLY = t.clientY;
-            } else if (t.identifier === this.joy.id) {
-              const p = toLogical(t, r);
-              this.joy.dx = p.x - this.joy.ax;
-              this.joy.dy = p.y - this.joy.ay;
-              // DYNAMIC follow: past the max radius the anchor chases the thumb, so
-              // the neutral point is always one small motion away (no thumb drift)
-              const fm = CONFIG.touch?.joyFollow ?? 96;
-              const jm = Math.hypot(this.joy.dx, this.joy.dy);
-              if (jm > fm) {
-                const k = (jm - fm) / jm;
-                this.joy.ax += this.joy.dx * k;
-                this.joy.ay += this.joy.dy * k;
-                this.joy.dx = p.x - this.joy.ax;
-                this.joy.dy = p.y - this.joy.ay;
-              }
-              this.syncSemanticMovement();
-            } else if (t.identifier === this._aimId) {
-              if (this.touchAimMode === "stick") {
-                // RADIAL STICK: the blade reticle sits where the stick points — flicks
-                // teleport the aim across the arc, and the blade spring supplies the whip
-                const sr2 = CONFIG.touch?.stickRadius ?? 130;
-                const dead = CONFIG.touch?.stickDead ?? 10;
-                let vx = t.clientX - this._aimAX,
-                  vy = t.clientY - this._aimAY;
-                const m = Math.hypot(vx, vy);
-                if (m > sr2 * 1.3) {
-                  // follow past full deflection, like the joystick
-                  const k = (m - sr2 * 1.3) / m;
-                  this._aimAX += vx * k;
-                  this._aimAY += vy * k;
-                  vx = t.clientX - this._aimAX;
-                  vy = t.clientY - this._aimAY;
-                }
-                const m2 = Math.hypot(vx, vy);
-                const eff = m2 <= dead ? 0 : Math.min((m2 - dead) / (sr2 - dead), 1);
-                this.stickAim = m2 > 0.001 ? { x: (vx / m2) * eff, y: (vy / m2) * eff } : { x: 0, y: 0 };
-                if (m2 > 0.001) this.semantic.setAimVector(vx, vy);
-              } else {
-                this.dx += (t.clientX - this._aimLX) * boost; // thumb-drag steers the blade like a captured mouse
-                this.dy += (t.clientY - this._aimLY) * boost;
-                this._aimLX = t.clientX;
-                this._aimLY = t.clientY;
-              }
-            }
-          }
-        },
-        { passive: false },
-      );
-      const touchEnd = (e: TouchEvent): void => {
-        e.preventDefault();
-        for (const t of e.changedTouches) {
-          touchesDown.delete(t.identifier);
-          const tk = tapTrack[t.identifier];
-          if (tk && !tk.moved && performance.now() - tk.t < 450 && !btnTouches[t.identifier]) {
-            // a clean tap -> a synthesized UI click (preventDefault suppressed the native one)
-            this.clickX = tk.x;
-            this.clickY = tk.y;
-            this.clicked = true;
-            this.clickSource = "touch";
-          }
-          Reflect.deleteProperty(tapTrack, t.identifier);
-          if (t.identifier === this.joy.id) {
-            this.joy = { active: false, id: -1, ax: 0, ay: 0, dx: 0, dy: 0 };
-            this.syncSemanticMovement();
-          }
-          if (t.identifier === this._aimId) {
-            this._aimId = -1;
-            this.touchAim = false;
-            this.stickAim = null;
-          }
-          const button = btnTouches[t.identifier];
-          if (button === "jump") this.semantic.push({ type: "jump", phase: "released" });
-          if (button !== undefined) Reflect.deleteProperty(this.btnHeld, button);
-          if (t.identifier === this._scrollId) {
-            this._scrollId = -1;
-            // flick momentum: carry the last drag velocity into the wheel channel
-            if (Math.abs(this._scrollV || 0) > 6) this.scrollFlick = this._scrollV;
-            this._scrollV = 0;
-          }
-          Reflect.deleteProperty(btnTouches, t.identifier);
-        }
-      };
-      canvas.addEventListener("touchend", touchEnd, { passive: false });
-      canvas.addEventListener("touchcancel", touchEnd, { passive: false });
+      touch?.attach(this, canvas, toLogical);
       document.addEventListener("pointerlockchange", () => {
         this.locked = document.pointerLockElement === canvas;
       });
 
-      // lose focus -> drop held keys so the player doesn't run forever, and release
-      // any controller-held tether so the blade doesn't stay tightened after refocus
-      window.addEventListener("blur", () => {
+      // lose focus or the screen -> drop held keys and fingers so the player doesn't run forever
+      // (a phone may send no touchcancel for fingers that were down when the app went away), and
+      // release any controller-held tether so the blade doesn't stay tightened after coming back
+      const releaseAll = (): void => {
         this.held.clear();
+        touch?.releaseAll();
         this.setPadTether(false);
+        this.setKeyTether(false);
         this.syncSemanticMovement();
+      };
+      window.addEventListener("blur", releaseAll);
+      window.addEventListener("pagehide", releaseAll);
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) releaseAll();
       });
     },
 
@@ -573,16 +398,16 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
 
     // logical directional helpers (keyboard OR the touch joystick)
     left() {
-      return this.held.has("KeyA") || this.held.has("ArrowLeft") || (this.joy.active && this.joy.dx < -26);
+      return anyKeyIn(this.held, "move-left") || (this.joy.active && this.joy.dx < -26);
     },
     right() {
-      return this.held.has("KeyD") || this.held.has("ArrowRight") || (this.joy.active && this.joy.dx > 26);
+      return anyKeyIn(this.held, "move-right") || (this.joy.active && this.joy.dx > 26);
     },
     up() {
-      return this.held.has("KeyW") || this.held.has("ArrowUp") || (this.joy.active && this.joy.dy < -42);
+      return anyKeyIn(this.held, "move-up") || (this.joy.active && this.joy.dy < -42);
     },
     down() {
-      return this.held.has("KeyS") || this.held.has("ArrowDown") || (this.joy.active && this.joy.dy > 42);
+      return anyKeyIn(this.held, "move-down") || (this.joy.active && this.joy.dy > 42);
     },
 
     jumpPressed() {
@@ -590,21 +415,21 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
         this.tJump = false;
         return true;
       }
-      return this.pressed.has("Space") || this.pressed.has("KeyW") || this.pressed.has("ArrowUp");
+      return anyKeyIn(this.pressed, "jump");
     },
     dashPressed() {
       if (this.tDash) {
         this.tDash = false;
         return true;
       }
-      return this.pressed.has("ShiftLeft") || this.pressed.has("ShiftRight");
+      return anyKeyIn(this.pressed, "dash");
     },
     pausePressed() {
       if (this.tPause) {
         this.tPause = false;
         return true;
       }
-      return this.pressed.has("KeyP");
+      return anyKeyIn(this.pressed, "pause");
     },
     escapePressed() {
       return this.pressed.has("Escape");
@@ -615,16 +440,16 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
     // Prev/Next wrappers (which collapse Up+Left -> Prev, Down+Right -> Next exactly
     // as before, so existing screens are unchanged).
     menuUp() {
-      return this.pressed.has("ArrowUp") || this.pressed.has("KeyW");
+      return anyKeyIn(this.pressed, "menu-up");
     },
     menuDown() {
-      return this.pressed.has("ArrowDown") || this.pressed.has("KeyS");
+      return anyKeyIn(this.pressed, "menu-down");
     },
     menuLeft() {
-      return this.pressed.has("ArrowLeft") || this.pressed.has("KeyA");
+      return anyKeyIn(this.pressed, "menu-left");
     },
     menuRight() {
-      return this.pressed.has("ArrowRight") || this.pressed.has("KeyD");
+      return anyKeyIn(this.pressed, "menu-right");
     },
     menuPrev() {
       return this.menuUp() || this.menuLeft();
@@ -632,26 +457,28 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
     menuNext() {
       return this.menuDown() || this.menuRight();
     },
-    // unified tether hold: mouse OR controller. Consumers read this, not lmb, so the
-    // two input sources coexist without one clearing the other.
+    // unified tether hold: mouse, tether key OR controller. Consumers read this, not lmb,
+    // so the input sources coexist without one clearing another.
     get tetherHeld() {
-      return this.lmb || this.padTether;
+      return this.lmb || this.keyTether || this.padTether;
     },
     confirmPressed() {
-      return this.pressed.has("Enter") || this.pressed.has("NumpadEnter") || this.pressed.has("Space");
+      return anyKeyIn(this.pressed, "confirm");
     },
     // level state of every key or button that can confirm or choose on a menu; the UI
     // arms confirm on a newly opened screen only after all of these have been let go.
     confirmHeld() {
-      return (
-        this.padConfirmHeld ||
-        ["Enter", "NumpadEnter", "Space", "Digit1", "Digit2", "Digit3", "Digit4"].some((code) => this.held.has(code))
-      );
+      return this.padConfirmHeld || anyKeyIn(this.held, "confirm") || anyKeyIn(this.held, "choose");
     },
-    // semantic back: controller back, Escape, or Backspace. Keydown is ignored while a
-    // text field owns input (textEntryMode), so Backspace never leaves the rename field.
+    // level state of every menu key, controller button and stick; an end screen ignores
+    // keyboard and controller input until all of these have been let go.
+    menuInputHeld() {
+      return this.padMenuHeld || anyContextKeyIn(this.held, "menu");
+    },
+    // semantic back: controller back or the back keys. Keydown is ignored while a text
+    // field owns input (textEntryMode), so Backspace never leaves the rename field.
     backPressed() {
-      return this.padBack || this.escapePressed() || this.pressed.has("Backspace");
+      return this.padBack || anyKeyIn(this.pressed, "back");
     },
     // one-shot: the loop may run several fixed substeps per frame, so this edge must
     // be consumed on first read or a single click would throw AND recall in one frame.
@@ -687,7 +514,7 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
       }
       this.clicked = false;
       this.tPause = false;
-      settleTouchLayout();
+      touch?.settle();
     },
   };
   return Input;

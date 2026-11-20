@@ -1,10 +1,13 @@
 import type { LegacyAudioCompatibility } from "../../audio/legacy-live-audio";
 import { setMusicMode } from "../../audio/music-mode";
-import { MENU_MUSIC_DEFAULT, isMenuMusicChoice, setMenuMusic } from "../../audio/music/loadout";
-import { isStationChoice, setActiveStation } from "../../audio/music/active-station";
-import { sanitizeCinematicPreference, type CinematicPreference } from "../campaign/cinematic-preference";
+import { musicSourceValue, parseMusicSource, setMusicSource } from "../../audio/music/music-source";
+import { sanitizeCinematicPreference, type CinematicPreference } from "../../gameplay/campaign/cinematic-preference";
+import { applyKeyboardRemap, rebindKey, type RebindOutcome, type RebindableAction } from "../../domain/keyboard-remap";
+import { keyboardSettings, readKeyboardSettings, type KeyboardSettingsRead } from "../../persistence/keyboard-settings";
+import { asRecord } from "../../domain/records";
+import type { StatisticsChoice } from "../../platform/statistics-consent";
 
-export type { CinematicPreference } from "../campaign/cinematic-preference";
+export type { CinematicPreference } from "../../gameplay/campaign/cinematic-preference";
 
 export type GraphicsPreference = "auto" | "high" | "low";
 export type ControlPreference = "auto" | "desktop" | "touch";
@@ -50,12 +53,20 @@ export interface GameSettings extends Record<string, unknown> {
   vibration: VibrationPreference;
   glyphStyle: GlyphPreference;
   autoPauseDisconnect: boolean;
+  /** Anonymous run statistics: on until the player turns them off (the first-run notice says so). */
+  shareStatistics: boolean;
   musicMode: MusicModePreference;
-  /** Music: which work plays on the menu/shell ("default" = canonical). */
+  /**
+   * Music: the player's pick, in menus and in runs: `default`, a song's id, or `channel:<id>`
+   * (see `music-source.ts`). The key keeps its old name so existing saves carry over.
+   */
   menuMusic: string;
-  /** Music: active radio station ("canonical" = Director mode). */
-  station: string;
+  /** The keyboard remap, versioned (`persistence/keyboard-settings.ts`). */
+  keyboard: KeyboardSettingsRead["stored"];
 }
+
+/** Settings a past build saved and this one no longer has; dropped on load, so the next save omits them. */
+const RETIRED_SETTINGS = ["station"] as const;
 
 interface SettingsConfig {
   blade: { aimSensitivity: number };
@@ -98,6 +109,8 @@ export interface SettingsControllerDependencies {
   input: InputSettingsPort;
   gamepad: GamepadSettingsPort;
   audio: Pick<LegacyAudioCompatibility, "migrateSettings" | "applySettings">;
+  /** Where the statistics choice is published for the cloud's send gate. */
+  statistics: StatisticsChoice;
   store: SettingsStore;
   navigator: Pick<Navigator, "hardwareConcurrency">;
   matchMedia(query: string): Pick<MediaQueryList, "matches">;
@@ -141,9 +154,10 @@ function defaults(aimSensitivity: number): GameSettings {
     vibration: "medium",
     glyphStyle: "auto",
     autoPauseDisconnect: true,
+    shareStatistics: true,
     musicMode: "adaptive",
-    menuMusic: MENU_MUSIC_DEFAULT,
-    station: "canonical",
+    menuMusic: "default",
+    keyboard: keyboardSettings(),
   };
 }
 
@@ -151,10 +165,24 @@ function parseStoredSettings(serialized: string | null): Record<string, unknown>
   if (serialized === null) return {};
   try {
     const parsed: unknown = JSON.parse(serialized);
-    return typeof parsed === "object" && parsed !== null ? (parsed as Record<string, unknown>) : {};
+    return asRecord(parsed) ?? {};
   } catch {
     return {};
   }
+}
+
+/**
+ * The stored values that can be trusted: a setting keeps its stored value only when it has the type of its default
+ * (and, for a number, is finite). A value of another type is dropped, so the default stands. Names without a default
+ * (the audio record, values a newer build wrote) pass through unchanged.
+ */
+function typedLikeDefaults(defaultValues: GameSettings, stored: Record<string, unknown>): Record<string, unknown> {
+  const kept: Record<string, unknown> = {};
+  for (const [name, value] of Object.entries(stored)) {
+    const sameType = !Object.hasOwn(defaultValues, name) || typeof value === typeof defaultValues[name];
+    if (sameType && (typeof value !== "number" || Number.isFinite(value))) kept[name] = value;
+  }
+  return kept;
 }
 
 export class SettingsController {
@@ -180,8 +208,10 @@ export class SettingsController {
 
   reload(): void {
     const stored = parseStoredSettings(this.dependencies.store.get("tear_settings"));
-    const merged = Object.assign(defaults(this.dependencies.config.blade.aimSensitivity), stored);
+    const defaultValues = defaults(this.dependencies.config.blade.aimSensitivity);
+    const merged = Object.assign(defaultValues, typedLikeDefaults(defaultValues, stored));
     const migrated = this.dependencies.audio.migrateSettings(merged, stored);
+    for (const key of RETIRED_SETTINGS) Reflect.deleteProperty(migrated, key);
     for (const key of Object.keys(this.settings)) {
       if (!Object.hasOwn(migrated, key)) Reflect.deleteProperty(this.settings, key);
     }
@@ -217,10 +247,14 @@ export class SettingsController {
     config.pad.glyphStyle = glyphValues.includes(settings.glyphStyle) ? settings.glyphStyle : "auto";
     settings.musicMode = musicModeValues.includes(settings.musicMode) ? settings.musicMode : "adaptive";
     setMusicMode(settings.musicMode);
-    settings.menuMusic = isMenuMusicChoice(settings.menuMusic) ? settings.menuMusic : MENU_MUSIC_DEFAULT;
-    setMenuMusic(settings.menuMusic);
-    settings.station = isStationChoice(settings.station) ? settings.station : "canonical";
-    setActiveStation(settings.station);
+    // A value that is not a pick at all reads as the default; one this build does not know (a song
+    // or channel from a later catalog) is kept and plays as the default until it can be heard.
+    settings.menuMusic = musicSourceValue(parseMusicSource(settings.menuMusic));
+    setMusicSource(settings.menuMusic);
+    this.dependencies.statistics.share = settings.shareStatistics;
+    const keyboard = readKeyboardSettings(settings.keyboard);
+    settings.keyboard = keyboard.stored;
+    applyKeyboardRemap(keyboard.remap);
     audio.applySettings(settings);
   }
 
@@ -239,8 +273,28 @@ export class SettingsController {
   }
 
   reset(): void {
+    // A privacy choice is not a preference to put back: resetting the game's settings never turns statistics on again.
+    const { shareStatistics } = this.settings;
     for (const key of Object.keys(this.settings)) Reflect.deleteProperty(this.settings, key);
-    Object.assign(this.settings, defaults(this.#defaultAimSensitivity));
+    Object.assign(this.settings, defaults(this.#defaultAimSensitivity), { shareStatistics });
+    this.apply();
+    this.save();
+  }
+
+  /** Makes `code` the action's key (see `rebindKey`); a refused key leaves the bindings as they were. */
+  rebindKey(action: RebindableAction, code: string): RebindOutcome {
+    const outcome = rebindKey(readKeyboardSettings(this.settings.keyboard).remap, action, code);
+    if (outcome.kind === "assigned" || outcome.kind === "swapped") {
+      this.settings.keyboard = keyboardSettings(outcome.remap);
+      this.apply();
+      this.save();
+    }
+    return outcome;
+  }
+
+  /** Every key back to its default; the other settings stay. */
+  resetKeys(): void {
+    this.settings.keyboard = keyboardSettings();
     this.apply();
     this.save();
   }
@@ -285,6 +339,15 @@ export class SettingsController {
     const current = this.settings[key];
     if (typeof current !== "boolean") return false;
     this.settings[key] = !current;
+    this.apply();
+    this.save();
+    return true;
+  }
+
+  /** Sets a choice setting to one of its values; a value not offered is ignored. */
+  choose(key: string, value: string, values: readonly string[]): boolean {
+    if (!values.includes(value)) return false;
+    this.settings[key] = value;
     this.apply();
     this.save();
     return true;

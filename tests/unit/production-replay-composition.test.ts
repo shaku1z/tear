@@ -5,7 +5,10 @@ import {
   createCampaignChapterBindingSpec,
   stageCampaignChapterBinding,
 } from "../../src/gameplay/campaign/chapter-cinematic-binding";
-import { ROOTBOUND_LAST_SPRING } from "../../src/gameplay/entities/enemy-types/rootbound";
+import {
+  createBossAttackRunnerState,
+  type BossAttackRunnerState,
+} from "../../src/gameplay/entities/boss-attack-runner";
 import {
   createRootboundRegrowthConnections,
   ROOTBOUND_REGROWTH_TIMING,
@@ -23,12 +26,13 @@ import {
   restoreProductionReplayChapterBinding,
   restoreProductionReplaySnapshot,
 } from "../../src/tearbench";
-import { GhostProductionReplayWorld, createGhostV3, type GhostReplayTrident } from "../../src/ghost";
-import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-forge-live-compiler";
+import { GhostProductionReplayWorld } from "../../src/ghost/replay-world";
+import { createGhostV3, type GhostReplayTrident } from "../../src/ghost/truth-kernel";
+import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-setup-live-compiler";
 import { resolveTearSdl, type TearSdlDocumentV1 } from "../../src/tearbench/tearsdl";
 import type { ProductionReplayWorld } from "../../src/tearbench/production-world-factory";
 import type { TearSnapshotV1 } from "../../src/tearbench/contracts";
-import { createLiveParticlePresentationState } from "../../src/app/world/particle-presentation-state";
+import { createLiveParticlePresentationState } from "../../src/tearbench/particle-presentation-state";
 import { legacyCosmeticEmissionSnapshot } from "../../src/domain/cosmetic-emission-random";
 import { UPGRADES, applyUpgrade } from "../../src/gameplay/upgrades";
 
@@ -990,13 +994,11 @@ describe("production replay composition", () => {
         requiredConnectionIds: readonly string[];
         progress: number;
       }>;
-      lastSpringStage: string | null;
-      lastSpringT: number;
+      regrowthCalled: boolean;
       lastSpringUseCount: number;
-      lastSpringHitSpent: boolean;
+      moveState: BossAttackRunnerState;
       beginRegrowth(tick: number, connectionIds: readonly string[]): boolean;
       advanceRegrowth(tick: number, connectionIds: ReadonlySet<string>, broken?: boolean): unknown;
-      startLastSpring(): boolean;
     };
     boss.phaseMarker = 3;
     boss.hp = boss.maxHp * 0.2;
@@ -1004,6 +1006,7 @@ describe("production replay composition", () => {
     boss.cinematicT = 0;
     boss.state = "idle";
     boss.stateT = 0;
+    boss.regrowthCalled = true;
     source.replay.world.state.setEnemies([boss] as never);
     const links = createRootboundRegrowthConnections({
       ownerId: "enemy:1",
@@ -1056,10 +1059,26 @@ describe("production replay composition", () => {
     });
 
     boss.advanceRegrowth(40 + ROOTBOUND_REGROWTH_TIMING.channelTicks, new Set(), false);
-    boss.state = "idle";
-    boss.stateT = 0;
-    expect(boss.startLastSpring()).toBe(true);
-    boss.lastSpringT = ROOTBOUND_LAST_SPRING.warning / 2;
+    // Last Spring half-way through its tell, as the move table holds it.
+    const run = Object.freeze({
+      attackId: "last-spring",
+      stage: "tell" as const,
+      stageTick: 10,
+      facing: 1 as const,
+      origin: Object.freeze({ x: 800, y: 520 }),
+      target: Object.freeze({ x: 500, y: 800 }),
+      landed: false,
+      parried: false,
+    });
+    // Regrowth opened Phase III and Last Spring followed it: the schedule must survive the round trip.
+    boss.moveState = Object.freeze({
+      ...createBossAttackRunnerState(0),
+      run,
+      openedPhase: 3,
+      begun: 2,
+      begunAt: Object.freeze({ regrowth: 0, "last-spring": 1 }),
+    });
+    boss.lastSpringUseCount = 1;
     const spring = captureProductionReplayCheckpoint(
       source.replay,
       source.combat,
@@ -1069,10 +1088,9 @@ describe("production replay composition", () => {
     const restoredSpring = composition.create(spring.snapshot);
     const springBoss = restoredSpring.replay.world.state.enemies()[0] as never as typeof boss;
     expect(springBoss).toMatchObject({
-      lastSpringStage: "warning",
       lastSpringUseCount: 1,
-      lastSpringT: ROOTBOUND_LAST_SPRING.warning / 2,
-      lastSpringHitSpent: false,
+      regrowthCalled: true,
+      moveState: { run, openedPhase: 3, begun: 2, begunAt: { regrowth: 0, "last-spring": 1 } },
     });
     const springRoundTrip = captureProductionReplayCheckpoint(
       restoredSpring.replay,
@@ -1116,16 +1134,14 @@ describe("production replay composition", () => {
       stateClass: "surgical-valid",
       seed: spring.snapshot.seed,
       start: { mode: "bossonly", difficulty: "normal", weapon: "sword", boss: "rootbound" },
-      state: { boss: { lastSpringT: ROOTBOUND_LAST_SPRING.warning / 4 } },
+      state: { boss: { lastSpringUseCount: 2 } },
     };
     const fork = compileResolvedTearSdlSnapshot(spring.snapshot, resolveTearSdl(forkDocument));
     const forked = composition.create(fork);
-    expect((forked.replay.world.state.enemies()[0] as never as typeof boss).lastSpringT).toBe(
-      ROOTBOUND_LAST_SPRING.warning / 4,
-    );
+    expect((forked.replay.world.state.enemies()[0] as never as typeof boss).lastSpringUseCount).toBe(2);
     expect(
-      (composition.create(spring.snapshot).replay.world.state.enemies()[0] as never as typeof boss).lastSpringT,
-    ).toBe(ROOTBOUND_LAST_SPRING.warning / 2);
+      (composition.create(spring.snapshot).replay.world.state.enemies()[0] as never as typeof boss).lastSpringUseCount,
+    ).toBe(1);
     expect(fork.hashes.exact).not.toBe(spring.snapshot.hashes.exact);
   });
 

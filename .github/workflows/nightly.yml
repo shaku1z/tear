@@ -1,0 +1,93 @@
+name: Nightly checks
+
+# The nightly group of config/checks.json: slower browser journeys and scenario runs that pull
+# requests do not run. Once a day on main at an off-peak minute, or by hand with "Run workflow".
+# The result is read from the run and its check-results artifact; nothing opens issues.
+on:
+  schedule:
+    - cron: "41 7 * * *"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Commit, branch or tag to check; empty checks the branch the run was started on"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-checks
+  cancel-in-progress: false
+
+jobs:
+  # Names the browser job's image from the lockfile (scripts/ci-playwright-image.mjs).
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      playwright_image: ${{ steps.image.outputs.playwright_image }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            pnpm-lock.yaml
+            scripts/ci-playwright-image.mjs
+          sparse-checkout-cone-mode: false
+      - id: image
+        run: node scripts/ci-playwright-image.mjs >> "$GITHUB_OUTPUT"
+
+  nightly:
+    runs-on: ubuntu-latest
+    needs: image
+    # Playwright's own image for the lockfile's version: Chromium and its system packages are in it.
+    container:
+      image: ${{ needs.image.outputs.playwright_image }}
+      options: --ipc=host
+    # The checkout belongs to the runner's user, so git would refuse it as "dubious ownership".
+    # This marks it safe for this job's git commands only, writing no config file.
+    env:
+      GIT_CONFIG_COUNT: 1
+      GIT_CONFIG_KEY_0: safe.directory
+      GIT_CONFIG_VALUE_0: "*"
+    # The group has no complete recorded total yet; the first runs measure it. The limit is
+    # generous so a slow runner is not cut off, and a hung check still stops.
+    timeout-minutes: 120
+    steps:
+      # The commit the run is for: main on the schedule, the chosen branch when started by hand,
+      # or the commit named in the `ref` input (an empty input leaves the default).
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      # The summary names the commit that was checked, since it may not be the one the run is labelled with.
+      - name: Name the checked commit
+        shell: bash
+        run: echo "Checked commit $(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Record check results
+        shell: bash
+        run: echo "TEAR_CHECK_RESULTS=$RUNNER_TEMP/check-results/results.json" >> "$GITHUB_ENV"
+      # The group builds the test build itself; the performance journey also serves the release
+      # build, which only the build group makes.
+      - name: Release build
+        run: node scripts/build-target.mjs standalone
+      - name: Nightly checks
+        # Playwright passes on the browser's own stderr only under this flag. It is where Chromium
+        # says why a page or the browser died (a renderer killed for memory, a GPU process crash).
+        env:
+          DEBUG: pw:browser
+        run: xvfb-run -a node scripts/run-checks.mjs nightly --keep-going
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nightly-check-results-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/check-results/results.json
+          if-no-files-found: ignore
+          retention-days: 14

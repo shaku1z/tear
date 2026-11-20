@@ -1,6 +1,6 @@
 ---
 name: tear-autonomous-playtester
-description: Select, run, interpret, and report credible Tear gameplay evidence with TearBench. Use for gameplay changes or defects, deterministic scenarios, State Forge states, autonomous journeys, branch comparisons, and CI evidence selection; also use when deciding whether tests actually establish gameplay behavior.
+description: Select, run, interpret, and report credible Tear gameplay evidence with TearBench. Use for gameplay changes or defects, deterministic scenarios, State Setup states, autonomous journeys, branch comparisons, and CI evidence selection; also use when deciding whether tests actually establish gameplay behavior.
 ---
 
 # Tear Autonomous Playtester
@@ -9,14 +9,8 @@ Use the repository CLI and canonical gates as the authority. Do not equate unrel
 
 ## Workflow
 
-Own gameplay evidence selection, interpretation, minimization and scenario claims.
-For a planned mission, first consume the shared [client handoff](../tear-change-gate/references/evidence-handoff.md)
-and request its task IDs through `ensure-client-task`; do not duplicate equivalent
-receipts with the direct commands below. Direct focused evidence remains necessary
-for unregistered claims, which must be reported as gaps rather than claimed.
-Do not use the broad direct `ci` command to repeat registered tasks already covered
-by the mission. If an unregistered claim cannot be isolated from such a command,
-ask the coordinator to resolve its execution scope before running it.
+Own gameplay evidence selection, interpretation, narrowing and scenario claims.
+Report claims no command established as gaps rather than claiming them.
 
 1. Read `package.json`, `docs/ARCHITECTURE.md`, and the relevant diff.
 2. Put changed file paths in a newline-delimited file and run:

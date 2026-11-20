@@ -4,7 +4,6 @@ import { GhostCapsuleReader } from "./capsule-reader";
 import { GhostCareerStore } from "./career-archive-store";
 import { projectCareerEntry } from "./career-archive";
 import { verifyGhostCapsuleProductionReplay } from "./production-replay-verification";
-import { reopenRecordedGhostChallenge } from "./browser-recorded-challenge";
 
 const host = globalThis as unknown as {
   onmessage: ((event: MessageEvent<{ id: number }>) => void) | null;
@@ -20,8 +19,7 @@ host.onmessage = (event: MessageEvent<{ id: number }>) => {
       try {
         const capsule = await reader.read(entry.id);
         if (capsule.manifest.rootIntegrity !== entry.root || capsule.manifest.status !== "complete") continue;
-        const fork = await reopenRecordedGhostChallenge(indexedDB, capsule);
-        const verification = verifyGhostCapsuleProductionReplay(capsule, fork?.permit);
+        const verification = verifyGhostCapsuleProductionReplay(capsule);
         await store.retain(projectCareerEntry(capsule, verification.status === "verified"));
         host.postMessage({ id: event.data.id, progress: entry.id });
       } catch {

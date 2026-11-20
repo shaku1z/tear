@@ -1,27 +1,32 @@
 import type { UiPalette } from "./ui-contracts";
 
+/**
+ * Type scale. Barlow Condensed owns hierarchy/actions; IBM Plex Mono owns prose and data. Names describe
+ * ROLE, not size, so screens stay consistent: every screen title is `type.h1`, every tagline `type.caption`.
+ * These are the authored (desktop) sizes; touch density raises the live copy in `t.type`.
+ */
+export const TYPE_SCALE = Object.freeze({
+  wordmark: 80, // the "T E A R" logo only
+  display: 52, // full-screen splash headers (PAUSED, VICTORY, stage banner)
+  h1: 40, // primary screen title (SHOP, ABILITIES, SELECT RUN, ...)
+  h2: 30, // secondary title / dialog heading
+  title: 24, // section / card name
+  lead: 20, // buttons, emphasised values
+  body: 16, // standard copy
+  label: 15, // list rows, secondary copy
+  caption: 14, // taglines, hints
+  // Legibility floor: the smallest text a player must read. 13 logical px
+  // renders at 10.4 CSS px in a 1280×720 window (×0.8 layout scale).
+  micro: 13, // tags, pips, fine print
+});
+
 export function createUiState(colors: UiPalette) {
   return {
     ink: "#000", // live foreground colour (flipped to light on dark biomes by the game)
     // ---- TOKENS -------------------------------------------------------------
     t: {
-      // Type scale. Barlow Condensed owns hierarchy/actions; IBM Plex Mono owns
-      // prose and data. Names describe ROLE, not size, so screens
-      // stay consistent: every screen title is `type.h1`, every tagline `type.caption`.
-      type: {
-        wordmark: 80, // the "T E A R" logo only
-        display: 52, // full-screen splash headers (PAUSED, VICTORY, stage banner)
-        h1: 40, // primary screen title (SHOP, ABILITIES, SELECT RUN, ...)
-        h2: 30, // secondary title / dialog heading
-        title: 24, // section / card name
-        lead: 20, // buttons, emphasised values
-        body: 16, // standard copy
-        label: 15, // list rows, secondary copy
-        caption: 14, // taglines, hints
-        // Legibility floor: the smallest text a player must read. 13 logical px
-        // renders at 10.4 CSS px in a 1280×720 window (×0.8 layout scale).
-        micro: 13, // tags, pips, fine print
-      },
+      // a live copy of TYPE_SCALE: density rewrites these sizes in place
+      type: { ...TYPE_SCALE },
       // spacing scale (px) — vertical rhythm + paddings
       space: { xs: 6, sm: 10, md: 16, lg: 24, xl: 40 },
       // Chapter typography roles (Pantheon VI). Bundled families with deterministic
@@ -158,6 +163,8 @@ export function createUiState(colors: UiPalette) {
         focusGap: 3,
         // smallest interactive control; touch raises it to the 44 CSS px floor
         minTarget: 32,
+        // shortest row of a button list (ui.buttonFitHeight): taller only when its content needs it
+        listRowH: 46,
         // the shared page pattern (sheet-relative, see screen-primitives `page`)
         pageTitleY: 92,
         pageBodyTop: 156,
@@ -173,10 +180,13 @@ export function createUiState(colors: UiPalette) {
         muted: 0.66,
         faint: 0.52,
         ghost: 0.25,
-        // content surfaces: the sheet is effectively solid; the main-menu rail is a
-        // soft fade (rail at the screen edge, railMid at the mid stop, then clear)
-        // and each dark-surface ghost control adds its own fill (railControl)
-        sheet: 0.96,
+        // content surfaces: the sheet and the run-overlay scrim are solid, so the live
+        // scene never shows through content; the main-menu rail is a soft fade (rail at
+        // the screen edge, railMid at the mid stop, then clear), each dark-surface ghost
+        // control adds its own fill (railControl), and the menu demo keeps out of the
+        // controls (src/presentation/demo-keep-out.ts)
+        sheet: 1,
+        overlay: 1,
         rail: 0.9,
         railMid: 0.6,
         railControl: 0.42,

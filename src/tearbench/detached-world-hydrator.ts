@@ -1,3 +1,4 @@
+import { isObject, isRecord } from "../domain/records";
 import { rebindBossPracticeSource } from "../gameplay/training/boss-practice-source-restore";
 import type { TearCodecValue, TearCodecWorld } from "./state-codecs";
 import type { TearWorldEntityConstructionPort } from "../gameplay/runtime/tear-world-entity-construction";
@@ -92,10 +93,6 @@ export interface TearStagedWorld<
   readonly environment: EnvironmentSnapshot;
 }
 
-function record(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 /**
  * These are live input-projection details, not canonical game state. They
  * belong to the host adapter for the duration of one simulation tick and must
@@ -107,7 +104,7 @@ const transientInputProjectionKeys = new Set(["aiInput", "aimOverride", "lmbOver
 export function decodeTearCodecValue(value: TearCodecValue, identities: ReadonlyMap<string, object>): unknown {
   if (Array.isArray(value))
     return (value as readonly TearCodecValue[]).map((entry) => decodeTearCodecValue(entry, identities));
-  if (value === null || typeof value !== "object") return value;
+  if (!isObject(value)) return value;
   if ("$ref" in value && typeof value.$ref === "string") {
     const identity = identities.get(value.$ref);
     if (identity === undefined) throw new RangeError(`snapshot reference target is missing: ${value.$ref}`);
@@ -135,7 +132,7 @@ export function applyTearCodecPayload(
   value: TearCodecValue,
   identities: ReadonlyMap<string, object>,
 ): void {
-  if (!record(value)) throw new TypeError("live instance payload must be an object");
+  if (!isRecord(value)) throw new TypeError("live instance payload must be an object");
   for (const [key, entry] of Object.entries(value)) {
     if (key === "id" || key === "factoryId" || key === "ownerId" || transientInputProjectionKeys.has(key)) continue;
     // Constructors retain the world's stable tuning owner; its codec restores values.
@@ -164,17 +161,17 @@ function arrayComponent(
 }
 
 function stringField(value: TearCodecValue, key: string): string {
-  if (!record(value) || typeof value[key] !== "string") throw new TypeError(`live payload requires ${key}`);
+  if (!isRecord(value) || typeof value[key] !== "string") throw new TypeError(`live payload requires ${key}`);
   return value[key];
 }
 
 function numberField(value: TearCodecValue, key: string): number {
-  if (!record(value) || typeof value[key] !== "number") throw new TypeError(`live payload requires numeric ${key}`);
+  if (!isRecord(value) || typeof value[key] !== "number") throw new TypeError(`live payload requires numeric ${key}`);
   return value[key];
 }
 
 /**
- * Constructs a fresh production-shaped object graph from State Forge codecs.
+ * Constructs a fresh production-shaped object graph from State Setup codecs.
  * It intentionally has no commit operation: live/browser mutation belongs to
  * an outward adapter, while replay/headless hosts can keep the staged world.
  */
@@ -189,11 +186,11 @@ export function applyTearCodecConfiguration(
   payload: TearCodecValue,
   identities: ReadonlyMap<string, object> = new Map(),
 ): void {
-  if (!record(payload) || !record(payload.values)) {
+  if (!isRecord(payload) || !isRecord(payload.values)) {
     throw new TypeError("configuration payload requires encoded values");
   }
   const values = decodeTearCodecValue(payload.values, identities);
-  if (!record(values)) throw new TypeError("decoded configuration must be an object");
+  if (!isRecord(values)) throw new TypeError("decoded configuration must be an object");
   const mutable = target as Record<string, unknown>;
   for (const [key, value] of Object.entries(values)) mutable[key] = value;
 }
@@ -303,26 +300,28 @@ export function hydrateTearCodecWorld<
   const worldPayload = component(world, "tear.world.v1");
   const hazards = component(world, "tear.hazard.v1");
   const ui = component(world, "tear.ui.v1");
-  const tutorialPresentation = parseUiTutorialPresentationCheckpoint(record(ui) ? ui.tutorialPresentation : undefined);
+  const tutorialPresentation = parseUiTutorialPresentationCheckpoint(
+    isRecord(ui) ? ui.tutorialPresentation : undefined,
+  );
   const runtime = decodeTearCodecValue(
-    record(worldPayload) && record(worldPayload.runtime) ? worldPayload.runtime : {},
+    isRecord(worldPayload) && isRecord(worldPayload.runtime) ? worldPayload.runtime : {},
     identities,
   ) as Readonly<Record<string, unknown>>;
   const tutorialSession = parseTutorialSessionCheckpoint(runtime.tutorialSession);
-  if (record(run) && run.mode === "tutorial" && tutorialSession === undefined) {
+  if (isRecord(run) && run.mode === "tutorial" && tutorialSession === undefined) {
     throw new RangeError(
       "tutorial replay requires retained tutorial behavior; historical missing behavior is unsupported",
     );
   }
   if (
-    record(run) &&
+    isRecord(run) &&
     run.mode === "tutorial" &&
     tutorialSession?.phase === "inactive" &&
-    record(runtime.lifecycle) &&
+    isRecord(runtime.lifecycle) &&
     runtime.lifecycle.phase !== "terminated"
   )
     throw new RangeError("active tutorial run cannot restore inactive behavior");
-  if (tutorialSession?.active === true && (!record(run) || run.mode !== "tutorial"))
+  if (tutorialSession?.active === true && (!isRecord(run) || run.mode !== "tutorial"))
     throw new RangeError("active tutorial behavior requires tutorial mode");
   const platforms = decodeTearCodecValue(component(world, "tear.platform.v1"), identities) as Platform[];
   if (
@@ -337,8 +336,10 @@ export function hydrateTearCodecWorld<
       platforms: platforms as object[],
     });
   }
-  const hudPresentation = parseUiHudPresentationCheckpoint(record(ui) ? ui.hudPresentation : undefined);
-  const particlesPresentation = parseParticlePresentationCheckpoint(record(ui) ? ui.particlesPresentation : undefined);
+  const hudPresentation = parseUiHudPresentationCheckpoint(isRecord(ui) ? ui.hudPresentation : undefined);
+  const particlesPresentation = parseParticlePresentationCheckpoint(
+    isRecord(ui) ? ui.particlesPresentation : undefined,
+  );
   return Object.freeze({
     run,
     player,
@@ -346,15 +347,15 @@ export function hydrateTearCodecWorld<
     enemies,
     projectiles,
     floaters:
-      record(worldPayload) && Array.isArray(worldPayload.floaters)
+      isRecord(worldPayload) && Array.isArray(worldPayload.floaters)
         ? (decodeTearCodecValue(worldPayload.floaters, identities) as Floater[])
         : [],
     slowZones:
-      record(hazards) && Array.isArray(hazards.slowZones)
+      isRecord(hazards) && Array.isArray(hazards.slowZones)
         ? (decodeTearCodecValue(hazards.slowZones, identities) as SlowZone[])
         : [],
     walls:
-      record(hazards) && Array.isArray(hazards.walls)
+      isRecord(hazards) && Array.isArray(hazards.walls)
         ? (decodeTearCodecValue(hazards.walls, identities) as Wall[])
         : [],
     platforms,
@@ -364,7 +365,7 @@ export function hydrateTearCodecWorld<
     ...(hudPresentation === undefined ? {} : { hudPresentation }),
     ...(particlesPresentation === undefined ? {} : { particlesPresentation }),
     tick: numberField(runPayload, "tick"),
-    ...(record(worldPayload) && worldPayload.simulationSeconds !== undefined
+    ...(isRecord(worldPayload) && worldPayload.simulationSeconds !== undefined
       ? { simulationSeconds: numberField(worldPayload, "simulationSeconds") }
       : {}),
     stageIndex: numberField(runPayload, "stage"),
@@ -372,11 +373,11 @@ export function hydrateTearCodecWorld<
     configuration: decodeTearCodecValue(component(world, "tear.configuration.v1"), identities) as TearCodecValue,
     reward: port.hydrateReward(component(world, "tear.reward.v1"), run),
     weaponId: stringField(bladePayload, "weaponId"),
-    ghost: (record(worldPayload) && record(worldPayload.ghost)
+    ghost: (isRecord(worldPayload) && isRecord(worldPayload.ghost)
       ? decodeTearCodecValue(worldPayload.ghost, identities)
       : { recording: null }) as Ghost,
     identityState:
-      record(worldPayload) && record(worldPayload.identityState)
+      isRecord(worldPayload) && isRecord(worldPayload.identityState)
         ? (decodeTearCodecValue(worldPayload.identityState, identities) as IdentityState)
         : ({ nextEntityId: 1, nextWallSequence: 1, nextSlowZoneSequence: 1, claimedIds: [] } as IdentityState),
     identityBindings: Object.freeze(identityBindings),
@@ -385,25 +386,25 @@ export function hydrateTearCodecWorld<
       cinema: decodeTearCodecValue(component(world, "tear.cinematic.v1"), identities),
     }),
     environment: Object.freeze({
-      ...(record(hazards) && hazards.allocator !== undefined
+      ...(isRecord(hazards) && hazards.allocator !== undefined
         ? {
             allocator: decodeTearCodecValue(hazards.allocator, identities) as NonNullable<
               EnvironmentSnapshot["allocator"]
             >,
           }
         : {}),
-      ...(record(hazards) && typeof hazards.worldId === "string" ? { worldId: hazards.worldId } : {}),
-      stageId: record(hazards) && typeof hazards.stageId === "string" ? hazards.stageId : "unknown",
+      ...(isRecord(hazards) && typeof hazards.worldId === "string" ? { worldId: hazards.worldId } : {}),
+      stageId: isRecord(hazards) && typeof hazards.stageId === "string" ? hazards.stageId : "unknown",
       fields:
-        record(hazards) && Array.isArray(hazards.fields)
+        isRecord(hazards) && Array.isArray(hazards.fields)
           ? (decodeTearCodecValue(hazards.fields, identities) as EnvironmentSnapshot["fields"])
           : [],
       combatObjects:
-        record(hazards) && Array.isArray(hazards.combatObjects)
+        isRecord(hazards) && Array.isArray(hazards.combatObjects)
           ? (decodeTearCodecValue(hazards.combatObjects, identities) as EnvironmentSnapshot["combatObjects"])
           : [],
       routes:
-        record(hazards) && Array.isArray(hazards.routes)
+        isRecord(hazards) && Array.isArray(hazards.routes)
           ? (decodeTearCodecValue(hazards.routes, identities) as EnvironmentSnapshot["routes"])
           : [],
     }),

@@ -162,6 +162,81 @@ async function describeStall(page) {
   return `page did not answer within 5 s; ${stack}`;
 }
 
+const journeys = new WeakMap();
+
+/**
+ * Launches the browser for one journey, with one ceiling for the whole journey. Every browser test
+ * launches through this (eslint.config.mjs rejects a direct `chromium.launch`): `page.evaluate`
+ * and `page.mouse` have no timeout of their own, so a page whose main thread never comes back would
+ * otherwise hold the job until the CI limit and print nothing (nightly run 44221285956 sat two hours
+ * in the performance journey).
+ *
+ * When the ceiling passes, the test fails at once and says what it was waiting on: the step last
+ * named with `journeyStep` and what the latest page was doing (`describeStall`, with a JavaScript
+ * stack if `watchForStalls` was called for that page). Closing the browser disarms it.
+ *
+ * `limitMs` is the honest length of the whole journey with room for a slow runner, never a way to
+ * let a stuck journey pass: name a longer one as a constant beside the journey that needs it.
+ */
+async function launchJourney(chromium, launchOptions = {}, { name, limitMs = JOURNEY_LIMIT_MS } = {}) {
+  const journey = name ?? require("node:path").basename(process.argv[1] ?? "browser journey");
+  const ceiling = milliseconds("limitMs", limitMs);
+  const browser = await chromium.launch(launchOptions);
+  const state = { step: "started", page: null, timer: null };
+  const disarm = () => clearTimeout(state.timer);
+  journeys.set(browser, state);
+  const stop = (message) => {
+    disarm();
+    console.error(`${journey} ${message}`);
+    process.exit(1);
+  };
+  // A crashed page answers nothing again, so a journey waiting on it would only stop at the ceiling.
+  const track = (page) => {
+    state.page = page;
+    page.on("crash", () => stop(`failed: the page crashed in step "${state.step}" (${memoryLine()})`));
+  };
+  const follow = (context) => {
+    context.on("page", track);
+    return context;
+  };
+  const newContext = browser.newContext.bind(browser);
+  browser.newContext = async (...options) => follow(await newContext(...options));
+  const newPage = browser.newPage.bind(browser);
+  browser.newPage = async (...options) => {
+    const page = await newPage(...options);
+    track(page);
+    return page;
+  };
+  browser.on("disconnected", disarm);
+  const close = browser.close.bind(browser);
+  browser.close = async (...options) => {
+    disarm();
+    return close(...options);
+  };
+  state.timer = setTimeout(() => {
+    void (state.page ? describeStall(state.page) : Promise.resolve("no page was open")).then((stall) => {
+      stop(`did not finish within ${String(ceiling / 1000)} s, waiting in step "${state.step}": ${stall}`);
+    });
+  }, ceiling);
+  // A journey that finished but left its browser open is not held alive by its own ceiling.
+  state.timer.unref();
+  return browser;
+}
+
+/** Free and total memory of the machine, for a failure that may be the browser running out of it. */
+function memoryLine() {
+  const os = require("node:os");
+  const mib = (bytes) => String(Math.round(bytes / 2 ** 20));
+  return `free memory ${mib(os.freemem())} of ${mib(os.totalmem())} MiB`;
+}
+
+/** Names what the journey does next, so a journey that runs out of time says where it was. */
+function journeyStep(browser, step) {
+  const state = journeys.get(browser);
+  if (state === undefined) throw new Error("journeyStep needs a browser from launchJourney");
+  state.step = step;
+}
+
 function milliseconds(kind, ms) {
   if (!Number.isFinite(ms) || ms < 0) throw new RangeError(`${kind} needs a non-negative duration, got ${ms}`);
   return ms;
@@ -251,26 +326,53 @@ async function waitForPointerLock(page) {
 
 const scriptLoads = new WeakMap();
 
+/** Runs in the page: reports each worker's script URL to the tracker before the worker fetches it. */
+function reportWorkerScripts() {
+  for (const name of ["Worker", "SharedWorker"]) {
+    const Original = window[name];
+    if (typeof Original !== "function") continue;
+    window[name] = class extends Original {
+      constructor(url, options) {
+        void window.__tearWorkerScript(new URL(String(url), window.location.href).href);
+        super(url, options);
+      }
+    };
+  }
+}
+
 /**
  * Counts the page's script requests in flight. Screens and runtimes load their code as lazy chunks,
- * which are script requests; music, images and other media are not. Call it right after creating
- * the page, before the first navigation.
+ * which are script requests; music, images and other media are not. A worker's own script is not
+ * screen code either, and a worker the game terminates before its script has loaded (a screen
+ * closed during a slow load) leaves a request that Playwright never reports as finished or failed,
+ * so worker scripts are never counted. Await it right after creating the page, before the first
+ * navigation.
  */
 function trackScriptLoads(page) {
-  if (scriptLoads.has(page)) return;
+  if (scriptLoads.has(page)) return scriptLoads.get(page).ready;
   const pending = new Set();
   const waiters = new Set();
+  const workerScripts = new Set();
   const settle = (request) => {
     if (!pending.delete(request) || pending.size > 0) return;
     for (const resolve of waiters) resolve();
     waiters.clear();
   };
   page.on("request", (request) => {
-    if (request.resourceType() === "script") pending.add(request);
+    if (request.resourceType() === "script" && !workerScripts.has(request.url())) pending.add(request);
   });
   page.on("requestfinished", settle);
   page.on("requestfailed", settle);
-  scriptLoads.set(page, { pending, waiters });
+  // The page reports a worker's URL and the request event arrives in either order.
+  const ready = Promise.all([
+    page.exposeBinding("__tearWorkerScript", (_source, url) => {
+      workerScripts.add(url);
+      for (const request of pending) if (request.url() === url) settle(request);
+    }),
+    page.addInitScript(reportWorkerScripts),
+  ]);
+  scriptLoads.set(page, { pending, waiters, ready });
+  return ready;
 }
 
 /**
@@ -282,6 +384,7 @@ function trackScriptLoads(page) {
 async function waitForScriptLoads(page) {
   const tracker = scriptLoads.get(page);
   if (tracker === undefined) throw new Error("waitForScriptLoads needs trackScriptLoads(page) before navigation");
+  await tracker.ready;
   const frames = () =>
     page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   // The screen's first frames are what ask for its chunk.
@@ -302,7 +405,61 @@ async function waitForScriptLoads(page) {
   await frames();
 }
 
+/**
+ * A control's label as a test names it: letters and digits only, case-insensitive ("‹  BACK" is
+ * "back"). A label with no letters or digits ("−", "+") is matched exactly as drawn instead, so it
+ * cannot match an unlabelled control.
+ */
+const targetName = (label) =>
+  String(label)
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+    .toUpperCase();
+
+/**
+ * Clicks the control labelled `name` once a drawn frame of `screen` has registered it, at the
+ * centre the game reports. Use it for menu clicks right after a screen change, instead of a
+ * coordinate click: a screen's state changes before its first frame is drawn, and a screen with a
+ * lazy renderer draws nothing (so has no targets) until its chunk has loaded. A click before then
+ * reaches a canvas with nothing under the pointer and is ignored, as it would be for a player who
+ * clicked a button not yet on screen. Needs a test build (`window.__TEAR_UI_TARGETS__`).
+ */
+async function clickTarget(page, screen, name) {
+  let point;
+  try {
+    const handle = await page.waitForFunction(
+      ({ screen: expected, wanted }) => {
+        if (window.__TEAR_CATALOG_DEBUG__?.app.snapshot().screen !== expected) return false;
+        const normal = (label) =>
+          String(label)
+            .replace(/[^\p{L}\p{N}]+/gu, " ")
+            .trim()
+            .toUpperCase();
+        const matches = (label) => (wanted.normal === "" ? label === wanted.raw : normal(label) === wanted.normal);
+        const target = window.__TEAR_UI_TARGETS__?.().find((entry) => entry.enabled && matches(entry.label));
+        return target === undefined ? false : { x: target.clientX, y: target.clientY };
+      },
+      { screen, wanted: { normal: targetName(name), raw: String(name) } },
+      { timeout: STATE_WAIT_MS },
+    );
+    point = await handle.jsonValue();
+  } catch (error) {
+    const state = await within(
+      page.evaluate(() => ({
+        screen: window.__TEAR_CATALOG_DEBUG__?.app.snapshot().screen,
+        targets: window.__TEAR_UI_TARGETS__?.().map((entry) => entry.label) ?? "not exposed",
+      })),
+      5000,
+      "the page did not answer",
+    ).catch((reason) => String(reason));
+    throw new Error(`no enabled "${name}" target on screen ${screen}: ${JSON.stringify(state)}`, { cause: error });
+  }
+  await page.mouse.click(point.x, point.y);
+}
+
 module.exports = {
+  clickTarget,
+  reportWorkerScripts,
   trackScriptLoads,
   waitForScriptLoads,
   waitForPointerLock,
@@ -316,4 +473,6 @@ module.exports = {
   reloadPage,
   describeStall,
   watchForStalls,
+  launchJourney,
+  journeyStep,
 };

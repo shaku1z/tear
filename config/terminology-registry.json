@@ -31,7 +31,6 @@
       "src/gameplay/run/boss-definitions.ts",
       "src/gameplay/environment/*.ts",
       "src/tearbench/*.ts",
-      "docs/TEARBENCH_GHOST3_PROGRAM.md",
       "docs/tearbench-ghost3-evidence-catalog.json",
       "docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md"
     ],
@@ -200,24 +199,16 @@
         "Ghost Studio"
       ],
       "persistenceImpact": {
-        "scope": "ghost-studio-edl v1 local edit decision lists and replay-screen actions",
-        "legacyRead": [
-          "ghost-studio-edl v1"
-        ],
-        "canonicalWrite": "Replay Editor EDL/action vocabulary",
-        "preserve": [
-          "sourceGhostId",
-          "sourceRootHash",
-          "clips",
-          "edlHash",
-          "local export semantics"
-        ]
+        "scope": "Replay screen copy and replay.editor action ids only; the cut list is built in memory and never saved",
+        "legacyRead": [],
+        "canonicalWrite": "REPLAY EDITOR panel of the Theater",
+        "preserve": ["replay.editor.toggle, replay.editor.appendClip and replay.editor.media action ids", "feature:replay-editor surface id"]
       },
-      "owner": "Replay presentation/EDL owner with ghost replay compatibility owner",
-      "compatibilityStrategy": "Read old EDL/action aliases and write canonical Replay Editor labels without changing clip or source-root hashes.",
+      "owner": "Replay screen owner",
+      "compatibilityStrategy": "None needed: no code reads or writes the old name. Ghost Studio stays a deprecated alias so it cannot return in player-facing copy.",
       "removalCheckpoint": {
         "id": "G4-D-REPLAY-EDITOR",
-        "condition": "Remove Ghost Studio aliases after EDL v1 reads, canonical writes, local export, replay-screen routes, and old bookmarks pass."
+        "condition": "Remove the alias once no player-facing copy or current evidence names Ghost Studio."
       }
     },
     {
@@ -242,10 +233,48 @@
         ]
       },
       "owner": "TearBench/evidence infrastructure owner",
-      "compatibilityStrategy": "No rename in this program; Scenario Console is a facade over existing TearBench State Forge hosts.",
+      "compatibilityStrategy": "No rename in this program; Scenario Console is a facade over existing TearBench State Setup hosts.",
       "removalCheckpoint": {
         "id": "never",
         "condition": "Never remove or rename TearBench as part of terminology normalization."
+      }
+    },
+    {
+      "id": "playground-abilities",
+      "displayName": "Abilities",
+      "codeId": "playground-abilities",
+      "deprecatedAliases": ["Ability Lab"],
+      "deprecatedCopyAliases": ["Ability Lab"],
+      "persistenceImpact": {
+        "scope": "Playground menu tab copy and prompt-vocabulary action id only; no saved data",
+        "legacyRead": ["AppScreen pglab"],
+        "canonicalWrite": "ABILITIES tab of the Playground menu",
+        "preserve": ["pglab screen id", "playground.action ability:<id> and filter:<id> action ids"]
+      },
+      "owner": "Training and Playground experience owner",
+      "compatibilityStrategy": "Keep the pglab screen id and its actions; only the player-facing name changes to the ABILITIES tab of the Playground menu.",
+      "removalCheckpoint": {
+        "id": "TRAINING-UX-ABILITIES",
+        "condition": "Remove the alias once no player-facing copy or evidence names the Ability Lab."
+      }
+    },
+    {
+      "id": "practice-drills",
+      "displayName": "Drills",
+      "codeId": "practice-drills",
+      "deprecatedAliases": ["Practice Lab"],
+      "deprecatedCopyAliases": ["Practice Lab"],
+      "persistenceImpact": {
+        "scope": "Player-facing name of the practice mode opened after the Tutorial, and its tab names; no saved data",
+        "legacyRead": ["practice origin and practice session fields (practiceOnly, annexSelector, catalogSelector, bossSelector)"],
+        "canonicalWrite": "DRILLS with the tabs LESSONS, WEAPONS, ENEMIES and BOSSES",
+        "preserve": ["tutorial.action open-practice, select, select-annex, select-enemy and select-boss action ids", "saved practice origin"]
+      },
+      "owner": "Training and Playground experience owner",
+      "compatibilityStrategy": "Keep the practice session fields, saved practice origin and selection actions; only the player-facing name changes to DRILLS, and the three mode toggles become one tab action.",
+      "removalCheckpoint": {
+        "id": "TRAINING-UX-DRILLS",
+        "condition": "Remove the alias once no player-facing copy or evidence names the Practice Lab."
       }
     }
   ],
@@ -260,7 +289,6 @@
       "src/audio/signal/*.ts",
       "src/audio/music/*.ts",
       "src/agents/live-watch-agent-*.ts",
-      "src/ghost/player-experiences.ts",
       "src/tearbench/browser/*.ts",
       "src/tearbench/canonical-scenarios.json",
       "public/**/*.json",
@@ -388,18 +416,6 @@
         }
       },
       {
-        "id": "history-runtime-alignment",
-        "pathPattern": "docs/TEARBENCH_RUNTIME_ARCHITECTURE_ALIGNMENT.md",
-        "termIds": ["tearbench"],
-        "owner": "TearBench architecture history owner",
-        "reason": "The runtime alignment document records a prior architecture decision and is hash-bound evidence.",
-        "testEvidence": ["check:architecture", "preserved documentation hashes"],
-        "expiry": {
-          "checkpoint": "never",
-          "condition": "Do not rewrite historical runtime alignment wording solely for terminology."
-        }
-      },
-      {
         "id": "history-tearbench-evidence-routes",
         "pathPattern": "src/tearbench/evidence-routes.json",
         "termIds": [
@@ -418,6 +434,18 @@
       }
     ],
     "mutableCompatibility": [
+      {
+        "id": "compat-tutorial-parity-plan",
+        "pathPattern": "docs/TUTORIAL_PARITY_AND_UPGRADE_PLAN.md",
+        "termIds": ["practice-drills"],
+        "owner": "Training and Playground experience owner",
+        "reason": "The tutorial parity plan records how the Practice Lab was built, under its name at the time; the mode is now DRILLS.",
+        "testEvidence": ["check:terminology"],
+        "expiry": {
+          "checkpoint": "TRAINING-UX-DRILLS",
+          "condition": "Rewrite or retire the plan's Practice Lab sections when the alias is removed."
+        }
+      },
       {
         "id": "compat-audio-bootstrap",
         "pathPattern": "src/entrypoints/bootstrap.ts",
@@ -524,33 +552,6 @@
         }
       },
       {
-        "id": "compat-audio-signal-shim-active-station",
-        "pathPattern": "src/audio/signal/active-station.ts",
-        "termIds": ["music"],
-        "owner": "Music-surface compatibility owner",
-        "reason": "Legacy active-station import path remains a thin Music API shim.",
-        "testEvidence": ["tests/unit/music-surface-compat.test.ts"],
-        "expiry": {"checkpoint": "G4-B-MUSIC-SURFACE", "condition": "Remove after downstream imports move to src/audio/music."}
-      },
-      {
-        "id": "compat-audio-signal-shim-advanced-loadout",
-        "pathPattern": "src/audio/signal/advanced-loadout.ts",
-        "termIds": ["music"],
-        "owner": "Music-surface compatibility owner",
-        "reason": "Legacy advanced-loadout import path remains a thin Music API shim.",
-        "testEvidence": ["tests/unit/music-surface-compat.test.ts"],
-        "expiry": {"checkpoint": "G4-B-MUSIC-SURFACE", "condition": "Remove after downstream imports move to src/audio/music."}
-      },
-      {
-        "id": "compat-audio-signal-shim-loadout",
-        "pathPattern": "src/audio/signal/loadout.ts",
-        "termIds": ["music"],
-        "owner": "Music-surface compatibility owner",
-        "reason": "Legacy loadout import path remains a thin Music API shim while menuMusic values stay stable.",
-        "testEvidence": ["tests/unit/music-surface-compat.test.ts"],
-        "expiry": {"checkpoint": "G4-B-MUSIC-SURFACE", "condition": "Remove after downstream imports move to src/audio/music."}
-      },
-      {
         "id": "compat-audio-signal-shim-routing-resolver",
         "pathPattern": "src/audio/signal/music-routing-resolver.ts",
         "termIds": ["music"],
@@ -593,15 +594,6 @@
         "owner": "Music-surface compatibility owner",
         "reason": "Legacy quantize import path remains a thin Music API shim.",
         "testEvidence": ["tests/unit/music-surface-compat.test.ts"],
-        "expiry": {"checkpoint": "G4-B-MUSIC-SURFACE", "condition": "Remove after downstream imports move to src/audio/music."}
-      },
-      {
-        "id": "compat-audio-signal-shim-station",
-        "pathPattern": "src/audio/signal/station.ts",
-        "termIds": ["music"],
-        "owner": "Music-surface compatibility owner",
-        "reason": "Legacy station import path remains a thin Music API shim while station IDs stay stable.",
-        "testEvidence": ["tests/unit/music-surface-compat.test.ts", "tests/unit/music-station.test.ts"],
         "expiry": {"checkpoint": "G4-B-MUSIC-SURFACE", "condition": "Remove after downstream imports move to src/audio/music."}
       },
       {
@@ -746,70 +738,6 @@
         "expiry": {
           "checkpoint": "G4-B-MUSIC",
           "condition": "Canonical and legacy vendor path attributes are now present; retain both until the signed legacy-retirement migration gate."
-        }
-      },
-      {
-        "id": "compat-replay-editor-ghost",
-        "pathPattern": "src/ghost/player-experiences.ts",
-        "termIds": [
-          "replay-editor"
-        ],
-        "owner": "Replay EDL owner",
-        "reason": "Ghost replay/EDL implementation remains the source of truth beneath Replay Editor.",
-        "testEvidence": [
-          "tests/unit/ghost-player-experiences.test.ts",
-          "tests/unit/ghost-studio-cut-list-theater.test.ts"
-        ],
-        "expiry": {
-          "checkpoint": "G4-D-REPLAY-EDITOR",
-          "condition": "Remove only after EDL v1 dual-read and canonical Replay Editor exports pass."
-        }
-      },
-      {
-        "id": "compat-replay-editor-app",
-        "pathPattern": "src/app/*/replay-*.ts",
-        "termIds": [
-          "replay-editor"
-        ],
-        "owner": "Replay screen owner",
-        "reason": "Replay action adapters retain studio aliases until Replay Editor routing is available.",
-        "testEvidence": [
-          "tests/unit/ghost-studio-cut-list-theater.test.ts"
-        ],
-        "expiry": {
-          "checkpoint": "G4-D-REPLAY-EDITOR",
-          "condition": "Remove after canonical replay-editor action IDs and old route aliases pass."
-        }
-      },
-      {
-        "id": "compat-replay-editor-actions",
-        "pathPattern": "src/domain/screen-actions.ts",
-        "termIds": [
-          "replay-editor"
-        ],
-        "owner": "Navigation contract owner",
-        "reason": "replay.studio action IDs are serialized UI compatibility names.",
-        "testEvidence": [
-          "tests/unit/live-screen-action-bindings.test.ts",
-          "tests/unit/app-legacy-state-controller.test.ts"
-        ],
-        "expiry": {
-          "checkpoint": "G4-D-REPLAY-EDITOR",
-          "condition": "Remove only after old replay.studio actions map to canonical Replay Editor actions."
-        }
-      },
-      {
-        "id": "compat-replay-surface-route",
-        "pathPattern": "src/replay/surface-route.ts",
-        "termIds": [
-          "replay-editor"
-        ],
-        "owner": "Replay surface route owner",
-        "reason": "Canonical replay routes and legacy screen/action tokens share one explicit dual-read boundary.",
-        "testEvidence": ["tests/unit/surface-availability.test.ts"],
-        "expiry": {
-          "checkpoint": "G4-D-REPLAY-SURFACES",
-          "condition": "Remove legacy route/action aliases only after both Replay Editor and Replay Hub close conditions are signed."
         }
       },
       {
@@ -1034,7 +962,7 @@
       },
       {
         "id": "roster-history-docs",
-        "pathPattern": "docs/TEARBENCH_C40_WEAPON_ROSTER_EVIDENCE_INDEX.md",
+        "pathPattern": "docs/TEARBENCH_WEAPON_ROSTER_EVIDENCE_INDEX.md",
         "termIds": [
           "spear",
           "ringblade"

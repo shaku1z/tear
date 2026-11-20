@@ -8,7 +8,8 @@ owning test/script references in one reviewable transaction.
 
 | Topic | Primary authority | Supporting contract/evidence |
 | --- | --- | --- |
-| Where each workstream stands (generated) | [POSITION.md](POSITION.md) | Rendered from `config/position.json` by `pnpm position:render`; `check:docs` fails when it is stale or edited by hand. `config/tearbench-current-program-state.json` records only the TearBench C25–C40 program state for the 2026-08-30 production build. |
+| Where each workstream stands (generated) | [POSITION.md](POSITION.md) | Rendered from `config/position.json` by `pnpm position:render`; `check:docs` fails when it is stale or edited by hand. |
+| Engineering standard for every change, and the design check every plan and pull request answers | [ENGINEERING_STANDARD.md](ENGINEERING_STANDARD.md) | Set by the owner on 2026-11-17; `.github/pull_request_template.md` "Design check"; `tests/unit/pull-request-template.test.mjs` |
 | Decisions and their triggers | [DECISIONS.md](DECISIONS.md) | Dated entries amended in place; inferred entries are marked |
 | Pitfalls and the guard behind each rule | [PITFALLS.md](PITFALLS.md) | `tests/unit/pitfall-guards.test.mjs`; [AGENTS.md](../AGENTS.md) "Known traps" |
 | Repository layout, generated files and size caps | [REPOSITORY_MAP.md](REPOSITORY_MAP.md) | `config/size-caps.json`; `scripts/check-repository.mjs` (run by `check:docs`) |
@@ -18,7 +19,8 @@ owning test/script references in one reviewable transaction.
 | AI agent working guide | [AGENTS.md](../AGENTS.md) | [CLAUDE.md](../CLAUDE.md); `.agents/skills/`; the parent-directory `AGENTS.md` and the governance skill remain authoritative |
 | Runtime architecture and dependency direction | [ARCHITECTURE.md](ARCHITECTURE.md) | Current typed module boundaries and architecture checks |
 | Visual/design system | [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) | [VISUAL_DESIGN_DIRECTION.md](VISUAL_DESIGN_DIRECTION.md) |
-| Painted stage backgrounds | [BACKGROUND_WORKFLOW.md](BACKGROUND_WORKFLOW.md) | `pnpm scene`; `tests/unit/scene-packages.test.ts` |
+| Stage backgrounds the game draws from recipes | [BACKGROUND_WORKFLOW.md](BACKGROUND_WORKFLOW.md) | `tests/unit/stage-art.test.ts`; `config/stage-readability.json` |
+| Reference images of everything the game draws | [ASSET_SHEETS.md](ASSET_SHEETS.md) | `pnpm assets:sheets`; `tests/unit/asset-sheets.test.ts` |
 | Feature and product inventory | [FEATURE_INVENTORY.md](FEATURE_INVENTORY.md) | — |
 | Shop and upgrade design contract | [SHOP_UPGRADE_DESIGN.md](product/SHOP_UPGRADE_DESIGN.md) | — |
 | Music in the game | [TEAR_SCORE_INTEGRATION.md](TEAR_SCORE_INTEGRATION.md) | `pnpm check:music` |
@@ -26,8 +28,7 @@ owning test/script references in one reviewable transaction.
 | Performance budgets | [PERFORMANCE_BUDGETS.md](PERFORMANCE_BUDGETS.md) | — |
 | itch.io package and upload steps | [ITCH_UPLOAD.md](ITCH_UPLOAD.md) | `config/build-targets.json` (`itch`); `scripts/package-target.mjs` |
 | Browser journey coverage | [BROWSER_JOURNEY_COVERAGE.md](BROWSER_JOURNEY_COVERAGE.md) | — |
-| TearBench program and requirements | [TEARBENCH_GHOST3_PROGRAM.md](TEARBENCH_GHOST3_PROGRAM.md) | [Temporary current correction plan](../plans/TEARBENCH_CURRENT_CORRECTION_PLAN.md); [current-game alignment and permanent synchronization plan](TEARBENCH_CURRENT_GAME_ALIGNMENT_AND_SYNC_PLAN.md); [temporary verification-acceleration execution plan](TEARBENCH_VERIFICATION_ACCELERATION_EXECUTION_PLAN.md); preserved generated registries and evidence catalogs |
-| Artifact and checkpoint-evidence organization | [ARTIFACTS.md](ARTIFACTS.md) | `config/artifact-layout.json`; G5 retention and disposition records |
+| Artifact and checkpoint-evidence organization | [ARTIFACTS.md](ARTIFACTS.md) | — |
 
 `docs/checkpoints/` and `docs/checkpoints/program-normalization/` are
 append-only checkpoint/history locations. `docs/source/` is the preserved
@@ -49,7 +50,6 @@ current paths and hashes until a separately authorized atomic migration.
 | [ECONOMY_REWORK_PLAN.md](../plans/active/ECONOMY_REWORK_PLAN.md) | Active balance plan; remaining scope is live-balance validation and achievement-pool reconciliation. |
 | [RELEASE_READINESS_PLAN.md](../plans/active/RELEASE_READINESS_PLAN.md) | Active phased plan to make the game releasable to players; records the 2026-11-11 audit baseline, phase states, and the decisions reserved for the owner. |
 | [PHASE_F_MIRROR_PLAN.md](../plans/completed/PHASE_F_MIRROR_PLAN.md) | Completed historical record; not an active plan or typed-code authority. |
-| [TearBench current correction plan](../plans/TEARBENCH_CURRENT_CORRECTION_PLAN.md) | Temporary active authority for the ten corrections reopened against the protected six-stage game. |
 | [Verdant Sanctum Revision 3](../plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md) | Active Verdant biome, shared environment-runtime, TearBench, and engineering-freeze implementation authority; current publication follows the tracked six-stage boundary and does not publish Pale. |
 | [Pale Traverse Revision 3](../plans/active/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md) | Active Pale biome and engineering-freeze authority; current publication follows the tracked boundary and keeps Pale preview-only. |
 | [plans/README.md](../plans/README.md) | Index for direct, active, completed, and future archived plan locations. |

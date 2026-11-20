@@ -17,14 +17,10 @@ import {
 import { REMOTE } from "../../src/config/game-config";
 import { applyWeapon } from "../../src/gameplay/weapons";
 import { newMods, UPGRADES, applyUpgrade } from "../../src/gameplay/upgrades";
-import {
-  GhostCapsuleReader,
-  GhostLocalVault,
-  GhostStreamingRecorder,
-  createLiveGhostBootstrapEvent,
-  createMemoryGhostVaultBackend,
-  ghostLiveBootstrapEventId,
-} from "../../src/ghost";
+import { GhostCapsuleReader } from "../../src/ghost/capsule-reader";
+import { GhostLocalVault, createMemoryGhostVaultBackend } from "../../src/ghost/capsule-vault";
+import { GhostStreamingRecorder } from "../../src/ghost/streaming-recorder";
+import { createLiveGhostBootstrapEvent, ghostLiveBootstrapEventId } from "../../src/ghost/live-causal-events";
 import {
   assessGhostReplayBootstrap,
   createGhostReplayRunContext,
@@ -54,7 +50,7 @@ import type { TearCausalEventV1, TearSnapshotV1 } from "../../src/tearbench/cont
 import { AppStateController } from "../../src/app/interface/app-state-controller";
 import { createLiveGhostReferenceController } from "../../src/app/replay/ghost-reference-controller";
 import type { GhostLiveReference } from "../../src/ghost/live-ghost-reference-data";
-import type { GameRun } from "../../src/app/shell/game-runtime-state";
+import type { GameRun } from "../../src/gameplay/runtime/game-runtime-state";
 
 /** Disclosed legacy-format model, authored before sealing. No historical archive is rewritten. */
 async function sealedLegacyAim(
@@ -403,9 +399,10 @@ function actualOpeningHost(
     },
     selectedBoss: () => "shuffle",
     shuffledRoster: () => [],
+    gauntletTrials: () => [],
     bossBiome: () => 0,
     trainingPlatforms: () => [],
-    playground: { state: {}, reset: noop },
+    playground: { state: {}, reset: noop, enterArena: noop },
     tutorial: { start: noop },
     startNextWave: () => {
       order.push("opening");
@@ -1109,8 +1106,8 @@ describe("LiveRunStartController", () => {
   );
 
   it.each([
-    { legacy: false, screen: "invalid-state-forge-screen" },
-    { legacy: true, screen: "invalid-state-forge-screen" },
+    { legacy: false, screen: "invalid-state-setup-screen" },
+    { legacy: true, screen: "invalid-state-setup-screen" },
     { legacy: false, screen: "settings" },
     { legacy: true, screen: "settings" },
   ])(

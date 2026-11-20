@@ -1,8 +1,8 @@
 import type { MusicDirector } from "../../audio/music-director";
-import type { MusicRunProgress } from "../../audio/music-contracts";
-import { admittedMusicProgress, musicRunProgress } from "../../audio/music/run-progress";
+import { snapshotProgress, type ProgressSource } from "../../domain/progress-facts";
+import { admittedMusicProgress } from "../../audio/music/run-progress";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameBlade, GamePlayer, GameRun } from "../shell/game-runtime-state";
+import type { GameBlade, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
 import { LiveRunStartController } from "../../gameplay/run/live-run-start-controller";
 import { planRunStart, type RunStartPlan } from "../../gameplay/run/run-start-plan";
@@ -53,6 +53,8 @@ interface CampaignPort {
 interface PlaygroundPort {
   readonly state: Readonly<{ hpMultiplier?: number; count?: number; god?: boolean; freeze?: boolean; slow?: boolean }>;
   reset(): void;
+  /** Shows the Playground's first real arena (the Playground has no training ground). */
+  enterArena(): void;
 }
 
 interface TutorialPort {
@@ -99,6 +101,7 @@ interface RunStartHostContext {
   readonly setScreen: (screen: "playing", detail: { runId: string }) => void;
   readonly selectedBoss: () => string;
   readonly shuffledRoster: () => BossId[];
+  readonly gauntletTrials: () => BossId[];
   readonly bossBiome: (bossId: BossId) => number;
   readonly trainingPlatforms: () => unknown[];
   readonly playground: PlaygroundPort;
@@ -155,7 +158,7 @@ export function createLiveRunStartHost(
   });
   let startingPlan: RunStartPlan | null = null;
   /** Saved progress before this run's first stage marks its biome as reached. */
-  let musicProgress: MusicRunProgress | null = null;
+  let musicProgress: ProgressSource | null = null;
 
   const controller = new LiveRunStartController({
     replaceActiveRun: () => {
@@ -205,7 +208,7 @@ export function createLiveRunStartHost(
       context.world.resetTransient();
       context.services.effects.resetWorld();
       context.services.clock.reset();
-      musicProgress = musicRunProgress(PROFILE.data.stats, isBossDefinitionId);
+      musicProgress = snapshotProgress(PROFILE.data);
       const biomeTracker = PROFILE.data.stats._biomes;
       const discoveredBiomes = Object.keys((biomeTracker ?? {}) as Record<string, unknown>);
       return {
@@ -471,7 +474,7 @@ export function createLiveRunStartHost(
         context.environment.clear("boss-encounter-replacement");
         context.loadStage(context.bossBiome(first));
       } else if (mode === "gauntlet") {
-        run.bossOrder = context.shuffledRoster();
+        run.bossOrder = context.gauntletTrials();
         run.bossIdx = 0;
         run.bossesBeaten = 0;
       }
@@ -499,7 +502,7 @@ export function createLiveRunStartHost(
         run.bossOrder = context.shuffledRoster();
         run.bossIdx = 0;
         run.pg = context.playground.state;
-        run.pgArena = -1;
+        context.playground.enterArena();
       } else context.tutorial.start();
     },
     enterPlayingState: (sessionId) => {
@@ -571,6 +574,6 @@ function isRunDifficulty(value: string): value is RunDifficulty {
 
 const isBossId = isBossDefinitionId satisfies (value: string) => value is BossId;
 
-function musicProgressField(progress: MusicRunProgress | null): { progress?: MusicRunProgress } {
+function musicProgressField(progress: ProgressSource | null): { progress?: ProgressSource } {
   return progress === null ? {} : { progress };
 }

@@ -6,12 +6,15 @@ import {
   FIRST_RUN_SETUP_GUIDANCE,
   firstRunProfileFacts,
   isFirstRunProfile,
+  isTutorialFirst,
+  tutorialPlayLabel,
 } from "../../src/gameplay/progression/first-run-guidance";
 import { buildMenuSnapshot, buildSetupSnapshot } from "../../src/presentation/menu-setup-snapshots";
 import { buildGameoverSnapshot, buildWinSnapshot } from "../../src/presentation/run-screen-snapshots";
 import {
   CONTROL_HINT_RUN_LIMIT,
   CONTROL_HINT_SECONDS,
+  controlHintText,
   domChromeVisibility,
   type DomChromeInput,
 } from "../../src/presentation/dom-chrome-policy";
@@ -20,18 +23,51 @@ import { shouldDrawCanvasCursor } from "../../src/presentation/cursor-contract";
 import { createLiveWorldSessionState } from "../../src/app/world/world-session-state";
 import { CONFIG } from "../../src/config/game-config";
 import { createSurfaceAvailability } from "../../src/domain/surface-availability";
+import { promptLabel } from "../../src/domain/prompt-vocabulary";
+
+/** The keyboard confirm keys as the prompt vocabulary words them (from the binding table). */
+const CONFIRM = promptLabel("confirm", "keyboard") ?? "";
 
 const RELEASE = createSurfaceAvailability("release");
-const fresh = { tutorialDone: 0, runs: 0, modesPlayed: [] as string[] };
+const fresh = { tutorialDone: 0, runs: 0, modesPlayed: [] as string[], lessonsDone: 0, tutorialSkipped: false };
 
 describe("first-run guidance from existing profile facts", () => {
-  it("derives facts from stats and the started-modes set without a new saved field", () => {
+  it("derives facts from stats, the started-modes set and the kept tutorial progress", () => {
     const stats: Record<string, number> = { tutorialDone: 1, runs: 4 };
     const facts = firstRunProfileFacts({
       stat: (key) => stats[key] ?? 0,
       data: { modes: { campaign: true, tutorial: true } },
+      tutorialProgress: () => ({ lessons: ["jump", "move"], skipped: true }),
     });
-    expect(facts).toEqual({ tutorialDone: 1, runs: 4, modesPlayed: ["campaign", "tutorial"] });
+    expect(facts).toEqual({
+      tutorialDone: 1,
+      runs: 4,
+      modesPlayed: ["campaign", "tutorial"],
+      lessonsDone: 2,
+      tutorialSkipped: true,
+    });
+  });
+
+  it("leads PLAY into the tutorial until it is finished or skipped on purpose", () => {
+    expect(isTutorialFirst(fresh)).toBe(true);
+    // Lessons kept from an earlier course hold it, even after another mode was played.
+    const started = { ...fresh, lessonsDone: 4, runs: 1, modesPlayed: ["tutorial", "campaign"] };
+    expect(isTutorialFirst(started)).toBe(true);
+    expect(defaultRunModeFor(started)).toBe("tutorial");
+    expect(isTutorialFirst({ ...started, tutorialDone: 1 })).toBe(false);
+    expect(isTutorialFirst({ ...started, tutorialSkipped: true })).toBe(false);
+    // A skip with nothing else played sets up Adventure, like a finished tutorial.
+    expect(defaultRunModeFor({ ...fresh, tutorialSkipped: true, modesPlayed: ["tutorial"] })).toBe("campaign");
+    // A profile with other history that never started the tutorial is not led into it.
+    expect(isTutorialFirst({ ...fresh, runs: 3, modesPlayed: ["endless"] })).toBe(false);
+  });
+
+  it("words PLAY by where the tutorial continues", () => {
+    expect(tutorialPlayLabel(1, 13)).toBe(FIRST_RUN_PLAY_LABEL);
+    expect(tutorialPlayLabel(5, 13)).toBe("TUTORIAL · LESSON 5 OF 13");
+    expect(tutorialPlayLabel(14, 13)).toBe("TUTORIAL · LAST STEP");
+    // The desktop PLAY button shows 26 characters of its spaced sub-line before fitting cuts it.
+    for (let next = 1; next <= 14; next += 1) expect(tutorialPlayLabel(next, 13).length).toBeLessThanOrEqual(26);
   });
 
   it("nudges a brand-new profile to the tutorial and stops once any history exists", () => {
@@ -45,9 +81,9 @@ describe("first-run guidance from existing profile facts", () => {
   });
 
   it("defaults to Adventure after the tutorial and keeps Endless for any other history", () => {
-    expect(defaultRunModeFor({ tutorialDone: 1, runs: 0, modesPlayed: ["tutorial"] })).toBe("campaign");
-    expect(defaultRunModeFor({ tutorialDone: 1, runs: 0, modesPlayed: ["tutorial", "playground"] })).toBe("endless");
-    expect(defaultRunModeFor({ tutorialDone: 0, runs: 2, modesPlayed: ["endless"] })).toBe("endless");
+    expect(defaultRunModeFor({ ...fresh, tutorialDone: 1, modesPlayed: ["tutorial"] })).toBe("campaign");
+    expect(defaultRunModeFor({ ...fresh, tutorialDone: 1, modesPlayed: ["tutorial", "playground"] })).toBe("endless");
+    expect(defaultRunModeFor({ ...fresh, runs: 2, modesPlayed: ["endless"] })).toBe("endless");
   });
 
   it("reads the default live until the player picks, then keeps the explicit pick", () => {
@@ -67,7 +103,7 @@ describe("first-run guidance from existing profile facts", () => {
       { id: "endless", label: "Endless", blurb: "forever" },
     ];
     const difficulties = [{ id: "normal", label: "Normal", desc: "fair", mods: { score: 1, coin: 1 } }];
-    const menu = (firstRun: boolean, selectedMode: string) =>
+    const menu = (tutorialFirst: { next: number; count: number } | undefined, selectedMode: string) =>
       buildMenuSnapshot({
         username: "",
         campaignEmblem: false,
@@ -82,11 +118,14 @@ describe("first-run guidance from existing profile facts", () => {
         biome: "",
         pendingFinale: false,
         surfaces: RELEASE,
-        firstRun,
+        ...(tutorialFirst ? { tutorialFirst } : {}),
       });
-    expect(menu(true, "tutorial").playSub).toBe(FIRST_RUN_PLAY_LABEL);
-    expect(menu(true, "endless").playSub).toBeUndefined();
-    expect(menu(false, "tutorial").playSub).toBeUndefined();
+    expect(menu({ next: 1, count: 13 }, "tutorial").playSub).toBe(FIRST_RUN_PLAY_LABEL);
+    expect(menu({ next: 1, count: 13 }, "tutorial").playTutorial).toBe(true);
+    // Tutorial-first holds whatever mode setup last had selected.
+    expect(menu({ next: 6, count: 13 }, "endless").playSub).toBe("TUTORIAL · LESSON 6 OF 13");
+    expect(menu(undefined, "tutorial").playSub).toBeUndefined();
+    expect(menu(undefined, "tutorial").playTutorial).toBeUndefined();
 
     const setup = (firstRun: boolean, selectedMode: string) =>
       buildSetupSnapshot({
@@ -148,6 +187,7 @@ describe("DOM chrome over the canvas", () => {
     uiIncluded: true,
     pointerLockIncluded: true,
     touch: false,
+    fullscreenAvailable: true,
     inputMode: "mouse",
     pointerLocked: true,
     runSeconds: 1,
@@ -173,6 +213,17 @@ describe("DOM chrome over the canvas", () => {
     expect(domChromeVisibility({ ...playing, screen: "menu", uiIncluded: false }).fullscreen).toBe(false);
   });
 
+  it("hides the fullscreen button where the platform cannot go fullscreen (CrazyGames, iPhone Safari)", () => {
+    expect(domChromeVisibility({ ...playing, screen: "menu", fullscreenAvailable: false }).fullscreen).toBe(false);
+  });
+
+  it("words the control legend from the binding table and names the fullscreen key only where it works", () => {
+    expect(controlHintText(true)).toContain("E / RIGHT CLICK throw / recall");
+    expect(controlHintText(true)).toContain("Q / LEFT CLICK tether");
+    expect(controlHintText(true)).toContain("F fullscreen");
+    expect(controlHintText(false)).not.toContain("fullscreen");
+  });
+
   it("keeps the pointer-capture hint for uncaptured desktop play only", () => {
     expect(domChromeVisibility(playing).lockHint).toBe(false);
     expect(domChromeVisibility({ ...playing, pointerLocked: false }).lockHint).toBe(true);
@@ -191,8 +242,10 @@ describe("DOM chrome over the canvas", () => {
 describe("device-correct cinematic prompts", () => {
   const chapter = "TAP TO REVEAL  ·  HOLD TO SKIP CHAPTER";
   it("promises only what each device can do", () => {
-    expect(cinematicPromptForDevice(chapter, "mouse")).toBe("CLICK TO REVEAL  ·  HOLD SPACE TO SKIP CHAPTER");
-    expect(cinematicPromptForDevice(chapter, "keyboard")).toBe("SPACE TO REVEAL  ·  HOLD SPACE TO SKIP CHAPTER");
+    expect(cinematicPromptForDevice(chapter, "mouse")).toBe(`CLICK TO REVEAL  ·  HOLD ${CONFIRM} TO SKIP CHAPTER`);
+    expect(cinematicPromptForDevice(chapter, "keyboard")).toBe(
+      `${CONFIRM} TO REVEAL  ·  HOLD ${CONFIRM} TO SKIP CHAPTER`,
+    );
     expect(cinematicPromptForDevice(chapter, "gamepad", "✕")).toBe("✕ TO REVEAL  ·  HOLD ✕ TO SKIP CHAPTER");
     expect(cinematicPromptForDevice(chapter, "touch")).toBe("TAP TO REVEAL");
     expect(cinematicPromptForDevice("BRIEF SCENE  ·  HOLD TO SKIP", "touch")).toBe("BRIEF SCENE");
@@ -203,7 +256,7 @@ describe("device-correct cinematic prompts", () => {
     // The finale assist names the real key and is dropped where touch cannot hold it.
     const assist = "SWING THROUGH EACH ANCHOR  ·  HOLD CONFIRM OR WAIT FOR ASSIST";
     expect(cinematicPromptForDevice(assist, "keyboard")).toBe(
-      "SWING THROUGH EACH ANCHOR  ·  HOLD SPACE OR WAIT FOR ASSIST",
+      `SWING THROUGH EACH ANCHOR  ·  HOLD ${CONFIRM} OR WAIT FOR ASSIST`,
     );
     expect(cinematicPromptForDevice(assist, "gamepad", "✕")).toBe(
       "SWING THROUGH EACH ANCHOR  ·  HOLD ✕ OR WAIT FOR ASSIST",

@@ -8,7 +8,7 @@ import type {
   GameRun,
   GameSlowZone,
   GameTemporaryWall,
-} from "../shell/game-runtime-state";
+} from "../../gameplay/runtime/game-runtime-state";
 import type { LiveTutorialRuntime } from "../../gameplay/training/live-tutorial-runtime";
 import type { ArenaPlatform } from "../../gameplay/training/arena-rules";
 import type { AchievementToastController } from "../interface/achievement-toast-controller";
@@ -40,14 +40,11 @@ import { promptDevice, promptLabels } from "../../domain/prompt-vocabulary";
 import { trainingExercise } from "../../gameplay/training/training-exercises";
 import { createTrainingCoachPresentation } from "./training-coach-presentation";
 import { isSheetScreen } from "../../domain/screen-catalog";
+import { isObject } from "../../domain/records";
 import type { EnvironmentSnapshot } from "../../gameplay/environment/environment-contracts";
-import { projectRootbinderPresentation } from "../../gameplay/environment/rootbinder-presentation-facts";
-import { renderRootbinderPresentation } from "../../presentation/environment/rootbinder-presentation";
-import { projectBloomWellPresentation } from "../../gameplay/environment/bloom-well-presentation-facts";
-import { buildEnvironmentPresentationSnapshot } from "../../gameplay/environment/presentation-snapshot";
-import { renderBloomWellPresentation } from "../../presentation/environment/bloom-well-presentation";
-import { renderVerdantEnvironmentPresentation } from "../../presentation/environment/verdant-environment-presentation";
-import { renderPaleEnvironmentPresentation } from "../../presentation/environment/pale-environment-presentation";
+import { renderEnvironmentLayer } from "./environment-layer";
+import { gauntletTrialCard, gauntletWave } from "../../gameplay/run/gauntlet-trials";
+import { bossName } from "../../gameplay/run/content-director";
 
 type Dependencies = Pick<
   GameRuntimeDependencies,
@@ -128,7 +125,8 @@ export interface WorldPresentationServices {
   readonly tutorial: LiveTutorialRuntime;
   readonly finale: () => Finale | null;
   readonly achievementToast: AchievementToastController;
-  readonly touchOnboarding: TouchOnboardingController;
+  /** The first-touch coaching; null in a build without touch. */
+  readonly touchOnboarding: TouchOnboardingController | null;
   readonly formatTime: (seconds: number) => string;
   readonly trickColor: (multiplier: number) => string;
   readonly ease: (amount: number) => number;
@@ -264,50 +262,14 @@ export function createLiveWorldPresentationAdapters(
   const drawEnvironment = (): void => {
     const snapshot = state.environment?.();
     if (snapshot === undefined) return;
-    const presentationOptions = {
+    renderEnvironmentLayer(canvas, snapshot, state.enemies(), {
       highContrast: d.A11Y.highContrast,
       reducedMotion: d.A11Y.reducedMotion,
       lowGraphics: d.GFX.low,
       flashScale: d.A11Y.flashScale,
-    };
-    for (const field of snapshot.fields) {
-      if (field.kind !== "bloom-well") continue;
-      renderBloomWellPresentation(
-        canvas,
-        projectBloomWellPresentation(field, {
-          ...presentationOptions,
-          audioEnabled: true,
-        }),
-        d.CLOCK.sim,
-      );
-    }
-    const environmentPresentation = buildEnvironmentPresentationSnapshot(snapshot);
-    renderVerdantEnvironmentPresentation(canvas, environmentPresentation, {
-      ...presentationOptions,
       timeSeconds: d.CLOCK.sim,
+      audioEnabled: true,
     });
-    renderPaleEnvironmentPresentation(canvas, environmentPresentation, {
-      ...presentationOptions,
-      timeSeconds: d.CLOCK.sim,
-    });
-    for (const enemy of state.enemies()) {
-      if (enemy.kind !== "rootbinder") continue;
-      const root = enemy as GameEnemy & {
-        rootbinderOwnerId?: string;
-        rootbinderState?: { x: number; y: number; state: Parameters<typeof projectRootbinderPresentation>[0]["state"] };
-      };
-      const rootState = root.rootbinderState;
-      if (rootState === undefined || root.rootbinderOwnerId === undefined) continue;
-      const owned = snapshot.combatObjects.filter((object) => object.ownerId === root.rootbinderOwnerId);
-      const generationOf = (id: string): number => Number(/:(?:network|leash):g(\d+)/u.exec(id)?.[1] ?? 0);
-      const latestGeneration = owned.reduce((latest, object) => Math.max(latest, generationOf(object.id)), 0);
-      const visible =
-        latestGeneration === 0 ? owned : owned.filter((object) => generationOf(object.id) === latestGeneration);
-      renderRootbinderPresentation(
-        canvas,
-        projectRootbinderPresentation(rootState, visible, { ...presentationOptions, audioEnabled: true }),
-      );
-    }
   };
 
   const sceneInput = (
@@ -543,7 +505,10 @@ export function createLiveWorldPresentationAdapters(
       }
     },
     drawTouchControls(): void {
-      const onboarding = services.touchOnboarding.step(state.lastUiDelta(), !!d.PROFILE.stat("touchOnboarded"));
+      const onboarding = services.touchOnboarding?.step(state.lastUiDelta(), !!d.PROFILE.stat("touchOnboarded")) ?? {
+        alpha: 0,
+        completed: false,
+      };
       if (onboarding.completed) d.profileStatsPersistence.add("touchOnboarded", 1);
       world.touchControls(
         buildTouchControlsSnapshot({
@@ -563,8 +528,10 @@ export function createLiveWorldPresentationAdapters(
         buildWaveBannerSnapshot({
           remainingSeconds: state.bannerSeconds(),
           duration: d.CONFIG.juice.bannerTime,
+          mode: run.mode,
           bossWave: !!run.isBossWave,
           wave: run.wave,
+          ...(run.mode === "gauntlet" ? { trialCount: run.bossOrder.length } : {}),
           waveTag: run.waveTag,
           horde: !!run.horde,
           hordeColor: d.CONFIG.colors.charger,
@@ -596,6 +563,7 @@ export function createLiveWorldPresentationAdapters(
           stageName: stage.name || stage.current.name,
           blurb: stage.current.blurb || "",
           accent: stage.current.accent || d.THEME.ink,
+          trial: gauntletTrialBanner(run),
         }),
       );
     },
@@ -699,7 +667,7 @@ function projectBossZones(enemy: GameEnemy): readonly BossZone[] {
   if (!Array.isArray(source)) return [];
   const zones: readonly unknown[] = source;
   return zones.flatMap((zone): readonly BossZone[] => {
-    if (typeof zone !== "object" || zone === null || !("x" in zone) || typeof zone.x !== "number") return [];
+    if (!isObject(zone) || !("x" in zone) || typeof zone.x !== "number") return [];
     return [
       {
         x: zone.x,
@@ -736,4 +704,16 @@ export function projectSceneBoss(enemy: GameEnemy): SceneBoss {
     ...(zoneColor === undefined ? {} : { zoneColor }),
     zones: projectBossZones(enemy),
   };
+}
+
+/** The Gauntlet trial card's label and boss; undefined outside a Gauntlet. */
+function gauntletTrialBanner(
+  run: Readonly<{ mode: string; wave: number; bossOrder?: readonly string[] }>,
+): Readonly<{ label: string; boss: string }> | undefined {
+  if (run.mode !== "gauntlet" || run.wave < 1 || run.bossOrder === undefined) return undefined;
+  const trial = gauntletWave(run.wave).trial;
+  const boss = run.bossOrder[trial];
+  return boss === undefined
+    ? undefined
+    : { label: gauntletTrialCard(trial, run.bossOrder.length), boss: bossName(boss) };
 }

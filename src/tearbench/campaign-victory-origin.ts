@@ -1,3 +1,4 @@
+import { requireRecord } from "../domain/records";
 import { stableVerificationHash } from "../domain/hash";
 import { RunLifecycleController } from "../gameplay/run/lifecycle";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../gameplay/runtime/cinematic-director";
@@ -121,10 +122,7 @@ export function createCampaignVictoryOrigin(): CampaignVictoryOriginCertificate 
 type MutableRecord = Record<string, unknown>;
 
 function record(value: unknown, label: string): MutableRecord {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new TypeError(`${label} must be an object`);
-  }
-  return value as MutableRecord;
+  return requireRecord(value, `${label} must be an object`);
 }
 
 function certifyFrontierInput(certificate: CampaignVictoryOriginCertificate): void {
@@ -205,7 +203,7 @@ function portableUpgradeChoice(id: string): Readonly<Record<string, unknown>> {
 }
 
 /**
- * Builds the synchronous post-selection/pre-`start-next-wave` State Forge
+ * Builds the synchronous post-selection/pre-`start-next-wave` State Setup
  * position. It never executes wave 60 and never mutates the captured source.
  */
 export function createCampaignWave59RewardFrontier(
@@ -222,8 +220,8 @@ export function createCampaignWave59RewardFrontier(
   if (sourceRun.mode !== "campaign" || difficulty !== "normal" || sourceRun.weaponId !== "sword") {
     throw new TypeError("campaign reward frontier requires a Campaign Normal Sword source");
   }
-  const forged = structuredClone(sourceSnapshot);
-  const mutable = forged as unknown as MutableRecord;
+  const built = structuredClone(sourceSnapshot);
+  const mutable = built as unknown as MutableRecord;
   mutable.id = "campaign-wave-59-reward-frontier";
   mutable.tick = certificate.statistics.elapsedTicks;
   mutable.stateClass = "reconstructed-reachable";
@@ -240,11 +238,11 @@ export function createCampaignWave59RewardFrontier(
     sourceId: sourceSnapshot.id,
   });
 
-  const run = record(forged.state["tear.run.v1"], "run codec");
-  const player = record(forged.state["tear.player.v1"], "player codec");
-  const world = record(forged.state["tear.world.v1"], "world codec");
+  const run = record(built.state["tear.run.v1"], "run codec");
+  const player = record(built.state["tear.player.v1"], "player codec");
+  const world = record(built.state["tear.world.v1"], "world codec");
   const runtime = record(world.runtime, "world runtime");
-  const ui = record(forged.state["tear.ui.v1"], "UI codec");
+  const ui = record(built.state["tear.ui.v1"], "UI codec");
   const waveLog = historicalWaveLog(certificate);
   const finalWave = waveLog.at(-1);
   if (finalWave === undefined) throw new TypeError("campaign reward frontier history is empty");
@@ -312,7 +310,7 @@ export function createCampaignWave59RewardFrontier(
     if (event.type !== "draft.offered" || event.wave < 41 || event.wave > CAMPAIGN_VICTORY_ORIGIN_WAVE) return count;
     return count + event.ids.filter((id) => UPGRADES.find((choice) => choice.id === id)?.tiers !== undefined).length;
   }, 0);
-  (forged.state as MutableRecord)["tear.reward.v1"] = Object.freeze({
+  (built.state as MutableRecord)["tear.reward.v1"] = Object.freeze({
     selection: Object.freeze({
       phase: "complete",
       mode: "campaign",
@@ -328,11 +326,11 @@ export function createCampaignWave59RewardFrontier(
       revision: 2,
     }),
   });
-  (forged.state as MutableRecord)["tear.enemy.v1"] = Object.freeze([]);
-  (forged.state as MutableRecord)["tear.boss.v1"] = Object.freeze([]);
-  (forged.state as MutableRecord)["tear.projectile.v1"] = Object.freeze([]);
-  (forged.state as MutableRecord)["tear.platform.v1"] = Object.freeze(platformsForStage(finalStageIndex));
-  (forged.state as MutableRecord)["tear.cinematic.v1"] = INACTIVE_CINEMATIC_DIRECTOR_STATE_V1;
+  (built.state as MutableRecord)["tear.enemy.v1"] = Object.freeze([]);
+  (built.state as MutableRecord)["tear.boss.v1"] = Object.freeze([]);
+  (built.state as MutableRecord)["tear.projectile.v1"] = Object.freeze([]);
+  (built.state as MutableRecord)["tear.platform.v1"] = Object.freeze(platformsForStage(finalStageIndex));
+  (built.state as MutableRecord)["tear.cinematic.v1"] = INACTIVE_CINEMATIC_DIRECTOR_STATE_V1;
   run.stateForgeVictoryOrigin = Object.freeze({
     certificateId: certificate.id,
     progressionHash: certificate.ledger.progressionHash,
@@ -341,10 +339,10 @@ export function createCampaignWave59RewardFrontier(
     waveLogDerivation: "aggregate-seconds-kills-and-style-distributed-across-59-waves",
   });
   mutable.hashes = Object.freeze({
-    ...forged.hashes,
-    exact: stableVerificationHash(forged.state),
+    ...built.hashes,
+    exact: stableVerificationHash(built.state),
     progression: certificate.ledger.progressionHash,
-    environment: stableVerificationHash(projectEnvironmentHash(forged.state["tear.hazard.v1"])),
+    environment: stableVerificationHash(projectEnvironmentHash(built.state["tear.hazard.v1"])),
   });
-  return Object.freeze(forged);
+  return Object.freeze(built);
 }

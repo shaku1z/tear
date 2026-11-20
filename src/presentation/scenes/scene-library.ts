@@ -1,6 +1,5 @@
-import { validateScenePackage, type SceneCamera } from "./scene-contract";
+import type { SceneCamera, SceneWorld } from "./scene-contract";
 import {
-  bakeShading,
   drawSceneBack,
   drawSceneFront,
   drawPlatformShadows,
@@ -12,23 +11,37 @@ import {
   type SurfaceTarget,
 } from "./scene-renderer";
 
-/** What a stage's lazily imported package module provides. */
-export interface ScenePackageModule {
-  readonly manifest: unknown;
-  /** Built URL of every image file named in the manifest, keyed by file name. */
-  readonly files: Readonly<Record<string, string>>;
+/** What a drawn stage's painter is given: canvases, the world and a way to yield the thread. */
+export interface ScenePaintPorts {
+  readonly world: SceneWorld;
+  readonly createCanvas: (width: number, height: number) => SceneCanvas & SceneBitmap;
+  readonly now: () => number;
+  /** Resolves once the browser has had the thread back. */
+  readonly nextSlice: () => Promise<void>;
+  /** Longest stretch, in ms, the painter may run before yielding. */
+  readonly sliceMs: number;
+  /** Canvas resolution multiplier (below 1 on low graphics). */
+  readonly detail: number;
 }
 
-export type ScenePackageLoaders = Readonly<Record<string, () => Promise<ScenePackageModule>>>;
+/** A stage drawn from data at load: it paints its own layers. */
+export interface PaintedStage {
+  paint(ports: ScenePaintPorts): Promise<LoadedScene>;
+}
+
+/** Stage id -> lazy loader of the stage's painter and recipe. */
+export type PaintedStageLoaders = Readonly<Record<string, () => Promise<PaintedStage>>>;
 
 export type SceneStatus = "none" | "loading" | "ready" | "failed";
 
 export interface SceneLibraryPorts {
-  readonly packages: ScenePackageLoaders;
-  readonly loadImage: (url: string) => Promise<SceneBitmap>;
-  /** Canvas to bake shading into at load; without it shading draws per frame. */
-  readonly createCanvas?: (width: number, height: number) => SceneCanvas & SceneBitmap;
-  /** Frees a decoded image the library has finished with. */
+  readonly stages: PaintedStageLoaders;
+  readonly world: SceneWorld;
+  /** Resolves once the browser has had the thread back (stages paint in slices). */
+  readonly nextSlice: () => Promise<void>;
+  /** A canvas for a stage to paint a layer into. */
+  readonly createCanvas: (width: number, height: number) => SceneCanvas & SceneBitmap;
+  /** Frees a painted layer the library has finished with. */
   readonly releaseImage?: (image: SceneBitmap) => void;
   readonly now: () => number;
   readonly lowGraphics: () => boolean;
@@ -64,36 +77,36 @@ export interface SceneDrawInput {
 }
 
 /**
- * Owns every painted stage package: lazy import, decode, validation, drawing
- * and release. A stage without a ready package returns false from each draw so
- * the caller keeps its procedural art; nothing here touches simulation state.
+ * Owns every drawn stage: lazy import of its painter and recipe, painting,
+ * drawing and release. A stage that is not ready draws nothing, so the caller
+ * keeps its procedural art; nothing here touches simulation state.
  *
- * Only `show` and `prefetch` start a download. Every other call reads what has
- * already loaded, so a menu that merely draws a stage never fetches that
- * stage's art.
+ * Only `show` and `prefetch` start a load. Every other call reads what has
+ * already been painted, so a menu that merely draws a stage never loads or
+ * paints that stage's art.
  *
- * Decoded layers are held for two stages at most: the one a run is showing and
+ * Painted layers are held for two stages at most: the one a run is showing and
  * the one it reaches next. Every other stage's layers are released, so memory
  * does not grow with the number of biomes a run has passed through.
  */
 export interface SceneLibrary {
   status(stageId: string): SceneStatus;
   /**
-   * The world is drawing this stage: loads its package if it has one, and
+   * The world is drawing this stage: paints it if it has a recipe, and
    * releases every other stage except the one prefetched as next. Call it every
    * frame the stage is drawn, never from a menu.
    */
   show(stageId: string): void;
   /**
-   * The stage a run reaches next: loads its package ahead of time and keeps it
+   * The stage a run reaches next: paints it ahead of time and keeps it
    * alongside the shown stage. Call it when the run is about to need the stage.
    */
   prefetch(stageId: string): void;
-  /** No run is showing a stage (the main menu): releases every stage's decoded layers. */
+  /** No run is showing a stage (the main menu): releases every stage's painted layers. */
   leave(): void;
   /** The paper colour the theme should derive ink from, while the scene shows. */
   paper(stageId: string): string | undefined;
-  /** True once the stage's scene fully covers the view (loaded and faded in). */
+  /** True once the stage's scene fully covers the view (painted and faded in). */
   opaque(stageId: string): boolean;
   /** Draws over whatever the caller painted; while fading in, the caller draws its own art first. */
   drawBack(context: CanvasRenderingContext2D, input: SceneDrawInput): void;
@@ -103,22 +116,26 @@ export interface SceneLibrary {
   /**
    * Texture port for the stage's platform material. The material draws every
    * platform and the floor from collision geometry, in every state; this only
-   * fills the surface once the package is ready (false keeps the material's fill).
+   * fills the surface once the stage is painted (false keeps the material's fill).
    */
   surfaceMaterial(stageId: string): {
     draw(context: CanvasRenderingContext2D, rect: SurfaceTarget, floor: boolean): boolean;
   };
-  /** Test and evidence hook: the loaded package, if ready. */
+  /** Test and evidence hook: the painted stage, if ready. */
   loaded(stageId: string): LoadedScene | undefined;
 }
 
 const FADE_SECONDS = 0.6;
+/** A drawn stage hands the thread back after this long, so painting never becomes a long task. */
+const PAINT_SLICE_MS = 4;
+/** Canvas resolution of drawn stages on low graphics. */
+const LOW_GRAPHICS_DETAIL = 0.6;
 
 interface Entry {
   status: SceneStatus;
   loaded?: LoadedScene;
   readyAt: number;
-  /** Set when the stage was released while its package was still loading. */
+  /** Set when the stage was released while it was still painting. */
   released: boolean;
 }
 
@@ -127,25 +144,15 @@ function releaseImages(loaded: LoadedScene, ports: SceneLibraryPorts): void {
   for (const image of loaded.images.values()) ports.releaseImage(image);
 }
 
-async function loadScene(module: ScenePackageModule, ports: SceneLibraryPorts): Promise<LoadedScene> {
-  const scene = validateScenePackage(module.manifest);
-  const decoded = await Promise.all(
-    scene.images.map(async (image) => {
-      const url = module.files[image.file];
-      if (url === undefined) throw new Error(`scene ${scene.id}: no built URL for ${image.file}`);
-      const bitmap = await ports.loadImage(url);
-      if (bitmap.width !== image.width || bitmap.height !== image.height) {
-        throw new Error(`scene ${scene.id}: ${image.file} decoded as ${String(bitmap.width)}x${String(bitmap.height)}`);
-      }
-      return [image.id, bitmap] as const;
-    }),
-  );
-  const images = new Map(decoded);
-  if (ports.createCanvas === undefined) return Object.freeze({ scene, images, shading: scene.shading });
-  const baked = bakeShading(scene, images, ports.createCanvas);
-  // A layer with shading baked in replaces its decoded copy: free the copy now.
-  for (const [id, image] of images) if (baked.images.get(id) !== image) ports.releaseImage?.(image);
-  return baked;
+function paintScene(stage: PaintedStage, ports: SceneLibraryPorts): Promise<LoadedScene> {
+  return stage.paint({
+    world: ports.world,
+    createCanvas: ports.createCanvas,
+    now: ports.now,
+    nextSlice: ports.nextSlice,
+    sliceMs: PAINT_SLICE_MS,
+    detail: ports.lowGraphics() ? LOW_GRAPHICS_DETAIL : 1,
+  });
 }
 
 export function createSceneLibrary(ports: SceneLibraryPorts): SceneLibrary {
@@ -153,12 +160,12 @@ export function createSceneLibrary(ports: SceneLibraryPorts): SceneLibrary {
   const entry = (stageId: string): Entry | undefined => entries.get(stageId);
   const request = (stageId: string): void => {
     if (entries.has(stageId)) return;
-    const loader = Object.hasOwn(ports.packages, stageId) ? ports.packages[stageId] : undefined;
+    const loader = Object.hasOwn(ports.stages, stageId) ? ports.stages[stageId] : undefined;
     if (loader === undefined) return;
     const created: Entry = { status: "loading", readyAt: 0, released: false };
     entries.set(stageId, created);
     loader()
-      .then((module) => loadScene(module, ports))
+      .then((stage) => paintScene(stage, ports))
       .then((loaded) => {
         if (created.released) {
           releaseImages(loaded, ports);
@@ -173,7 +180,7 @@ export function createSceneLibrary(ports: SceneLibraryPorts): SceneLibrary {
         if (!created.released) ports.onError?.(stageId, error);
       });
   };
-  // The two stages whose decoded layers may stay: the shown one and the next one.
+  // The two stages whose painted layers may stay: the shown one and the next one.
   let shown: string | undefined;
   let next: string | undefined;
   const releaseOthers = (): void => {

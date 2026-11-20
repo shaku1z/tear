@@ -2,10 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   GHOST_VAULT_STORES,
-  GhostDoctor,
-  GhostCapsuleReader,
   GhostLocalVault,
-  GhostStreamingRecorder,
   capsuleDebugJson,
   createGhostCapsuleManifestV2,
   createInlineGhostEncoderWorker,
@@ -20,7 +17,10 @@ import {
   type GhostVaultStore,
   ghostCapsuleProtectionKey,
   reviseGhostCapsuleManifest,
-} from "../../src/ghost";
+} from "../../src/ghost/capsule-vault";
+import { ghostCapsuleHealthy, maintainGhostVault } from "../../src/ghost/vault-maintenance";
+import { GhostCapsuleReader } from "../../src/ghost/capsule-reader";
+import { GhostStreamingRecorder } from "../../src/ghost/streaming-recorder";
 
 describe("Ghost capsule recorder and local Vault", () => {
   it("reserves an absent protected capsule id for its exact root and permits that exact source to return", async () => {
@@ -361,7 +361,7 @@ describe("Ghost capsule recorder and local Vault", () => {
     expect(await backend.keys("journals")).toEqual([]);
   });
 
-  it("detects and quarantines corrupt chunks without preventing Vault startup", async () => {
+  it("reports a corrupt chunk as damaged without preventing Vault startup", async () => {
     const backend = createMemoryGhostVaultBackend();
     const vault = new GhostLocalVault(backend);
     const recorder = new GhostStreamingRecorder({
@@ -379,24 +379,15 @@ describe("Ghost capsule recorder and local Vault", () => {
     if (corruptId === undefined) throw new Error("fixture chunk is missing");
     await backend.put("chunks", corruptId, '{"corrupt":true}');
 
-    const doctor = new GhostDoctor(new GhostLocalVault(backend), () => "2026-07-23T00:02:00.000Z");
-    const report = await doctor.scan("corrupt-run");
-    expect(report).toMatchObject({ healthy: false, corruptChunkIds: [corruptId] });
-    const repaired = await doctor.repairChild("corrupt-run", "corrupt-run-repaired");
-    expect(repaired.repairedChildId).toBe("corrupt-run-repaired");
+    const reopened = new GhostLocalVault(backend);
+    expect(await ghostCapsuleHealthy(reopened, "corrupt-run")).toBe(false);
+    const report = await maintainGhostVault(reopened, { now: () => "2026-07-23T00:02:00.000Z" });
+    expect(report.integrity).toEqual([{ id: "corrupt-run", healthy: false }]);
+    expect(report.rebuiltIndexes).toBe(1);
+    // Damaged capsules are shown, never rewritten: the chunk and the manifest stay as they were.
     expect(await backend.get("chunks", corruptId)).toContain("corrupt");
-    expect(await backend.get("quarantine", `repair:corrupt-run-repaired:${corruptId}`)).toContain("corrupt");
-    expect(JSON.parse((await backend.get("lineage", "repair:corrupt-run-repaired")) ?? "{}")).toMatchObject({
-      parentId: "corrupt-run",
-      childId: "corrupt-run-repaired",
-      relation: "repair",
-    });
-    expect(await vault.getManifest("corrupt-run-repaired")).toMatchObject({
-      status: "repaired",
-      createdAt: "2026-07-23T00:02:00.000Z",
-      lineage: { parentId: "corrupt-run", relation: "repaired-from" },
-    });
-    expect(await doctor.rebuildIndex()).toBe(2);
+    expect(await vault.getManifest("corrupt-run")).toMatchObject({ id: "corrupt-run" });
+    expect(await backend.keys("lineage")).toEqual([]);
   });
 
   it("stops oversized and decompression-bomb imports", async () => {
@@ -736,32 +727,6 @@ describe("Ghost capsule recorder and local Vault", () => {
     expect(await vault.getManifest(copy.id)).toBeUndefined();
     expect(await vault.getManifest(original.id)).toBeUndefined();
     expect(await memory.keys("chunks")).toEqual([]);
-  });
-
-  it("rejects a prepared parent removal after a repair child wins the mutation fence", async () => {
-    const backend = createMemoryGhostVaultBackend();
-    const vault = new GhostLocalVault(backend);
-    const recorder = new GhostStreamingRecorder({
-      sessionId: "repair-parent-race",
-      createdAt: "2026-08-10T00:00:00.000Z",
-      chunkEntries: 1,
-      maxPendingWrites: 1,
-      vault,
-    });
-    await recorder.start();
-    await recorder.append({ kind: "commands", tick: 1, value: { action: "jump" } });
-    const parent = await recorder.finalize("2026-08-10T00:00:01.000Z");
-    const corruptChunk = parent.chunks[0];
-    if (corruptChunk === undefined) throw new Error("repair fixture has no chunk");
-    await backend.put("chunks", corruptChunk.id, "corrupted");
-    const removal = await vault.prepareCapsuleRemoval(parent.id);
-    const doctor = new GhostDoctor(vault, () => "2026-08-10T00:00:02.000Z");
-    await expect(doctor.repairChild(parent.id, "repair-child-race")).resolves.toMatchObject({
-      repairedChildId: "repair-child-race",
-    });
-    await expect(backend.commitIfMatches(removal.guards, removal.writes)).rejects.toThrow(/no longer matches/u);
-    expect(await vault.getManifest(parent.id)).toBeDefined();
-    expect((await vault.getManifest("repair-child-race"))?.lineage?.parentId).toBe(parent.id);
   });
 
   it("invalidates removal when an import lands during the late reference scan", async () => {

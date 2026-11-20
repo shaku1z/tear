@@ -2,13 +2,15 @@ const { chromium } = require("@playwright/test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
+const { listenOnFreePort } = require("./local-server");
 const path = require("node:path");
-const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
+const { STATE_WAIT_MS, clickTarget, pollEvery, settleFor, launchJourney } = require("./browser-waits");
+const { TUTORIAL_SKIPPED_STORAGE } = require("./browser-journey-harness");
 
 (async () => {
   const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
-  const port = Number(process.env.TEAR_TEST_PORT || 8123);
-  const baseUrl = `http://127.0.0.1:${port}`;
+  // Set once the server listens on a free port (tests/local-server.js).
+  let baseUrl = "http://127.0.0.1";
   const server = http.createServer((request, response) => {
     const pathname = new URL(request.url, "http://127.0.0.1").pathname;
     const rel = pathname === "/" ? "index.html" : pathname.slice(1);
@@ -23,9 +25,9 @@ const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
     );
     fs.createReadStream(file).pipe(response);
   });
-  await new Promise((resolve) => server.listen(port, "127.0.0.1", resolve));
+  ({ origin: baseUrl } = await listenOnFreePort(server));
   const chromePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
-  const browser = await chromium.launch({
+  const browser = await launchJourney(chromium, {
     headless: true,
     ...(fs.existsSync(chromePath) ? { executablePath: chromePath } : {}),
   });
@@ -153,12 +155,23 @@ const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
     }
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   };
-  await page.mouse.click(260, 360); // PLAY
+  // A fresh profile is tutorial-first: PLAY starts the tutorial. Skipping it on purpose, on the
+  // quit confirm that the pause's MAIN MENU opens, opens the run setup with Adventure selected,
+  // and PLAY no longer leads into it.
+  await clickTarget(page, "menu", "PLAY");
+  await waitForScreen("playing");
+  assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().mode), "tutorial");
+  await page.keyboard.press("p");
+  await waitForScreen("paused");
+  await clickTarget(page, "paused", "MAIN MENU");
+  await waitForScreen("confirmquit");
+  await clickTarget(page, "confirmquit", "SKIP TUTORIAL");
   await waitForScreen("setup");
-  // A fresh profile is preselected onto the Tutorial; this journey plays Endless, as a player would pick it.
-  await page.mouse.click(430, 255); // Endless
+  assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().setup.mode), "campaign");
+  // This journey plays Endless, as a player would pick it.
+  await clickTarget(page, "setup", "ENDLESS");
   await page.waitForFunction(() => window.__PANTHEON_TEST.state().setup.mode === "endless");
-  await page.mouse.click(800, 758); // BEGIN
+  await clickTarget(page, "setup", "START");
   await waitForScreen("playing");
   try {
     await page.waitForFunction(
@@ -185,21 +198,26 @@ const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
   assert.ok(firstMusicRun.score.run?.runId);
   await page.keyboard.press("p");
   await waitForScreen("paused");
-  await page.mouse.click(190, 271); // SETTINGS (third action on the pause rail, overlay pattern)
+  await clickTarget(page, "paused", "SETTINGS");
   await waitForScreen("settings");
-  assert.equal(await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.app.snapshot().settingsReturn), "paused");
-  await page.mouse.click(800, 840); // BACK TO PAUSE
+  assert.equal(await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.app.snapshot().back), "paused");
+  await clickTarget(page, "settings", "BACK");
   await waitForScreen("paused");
-  await page.mouse.click(190, 151); // RESUME
+  await clickTarget(page, "paused", "RESUME");
   await waitForScreen("playing");
   await page.keyboard.press("p");
   await waitForScreen("paused");
-  await page.mouse.click(190, 331); // MAIN MENU
+  await clickTarget(page, "paused", "MAIN MENU");
   await waitForScreen("confirmquit");
-  await page.mouse.click(644, 175); // QUIT (left of the confirm action row)
+  await clickTarget(page, "confirmquit", "QUIT");
   await waitForScreen("menu");
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().score.run === null);
   console.log("application state flow passed");
+  // The test build's storage starts fresh on every page load, so the skip above does not outlive
+  // the reloads below; from here on the page plays as a player who skipped the tutorial.
+  await page.addInitScript((storage) => {
+    window.__TEAR_TEST_STORAGE__ = storage;
+  }, TUTORIAL_SKIPPED_STORAGE);
 
   await page.evaluate(() => window.__PANTHEON_TEST.startMode("campaign"));
   await page.waitForFunction(
@@ -210,7 +228,7 @@ const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
 
   await page.reload({ timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__);
-  await page.mouse.click(260, 360); // PLAY -> setup/war table (renders all five weapon cards)
+  await clickTarget(page, "menu", "PLAY"); // setup/war table (renders all five weapon cards)
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running");
   await page.waitForTimeout(settleFor(500));
   if (process.env.TEAR_SCREENSHOT) await page.screenshot({ path: process.env.TEAR_SCREENSHOT });
@@ -233,14 +251,13 @@ const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
     if (i > 0) {
       await page.reload({ timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
       await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__);
-      await page.mouse.click(260, 360);
-      await page.waitForTimeout(settleFor(450));
+      await clickTarget(page, "menu", "PLAY");
     }
-    await page.mouse.click(1180, 196 + i * 60);
+    await clickTarget(page, "setup", weaponIds[i]);
     await page.waitForTimeout(settleFor(80));
-    await page.mouse.click(430, 255); // Endless (a fresh profile is preselected onto the Tutorial)
+    await clickTarget(page, "setup", "ENDLESS"); // a skipped tutorial preselects Adventure
     await page.waitForTimeout(settleFor(80));
-    await page.mouse.click(800, 758);
+    await clickTarget(page, "setup", "START");
     await page.waitForTimeout(settleFor(500));
     const debug = await page.evaluate(() => window.TEAR_WEAPON_DEBUG && window.TEAR_WEAPON_DEBUG());
     assert.equal(

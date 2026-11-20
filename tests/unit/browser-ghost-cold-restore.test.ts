@@ -3,10 +3,10 @@ import { createGhostColdRestoreBrowserPort, createBrowserGhostColdRestore } from
 import {
   createMemoryGhostVaultBackend,
   GhostLocalVault,
-  GhostStreamingRecorder,
   GHOST_VAULT_STORES,
   type GhostVaultBackend,
 } from "../../src/ghost/capsule-vault";
+import { GhostStreamingRecorder } from "../../src/ghost/streaming-recorder";
 import { GhostCapsuleReader } from "../../src/ghost/capsule-reader";
 import { inspectBrowserGhostVaultReadOnly } from "../../src/ghost/browser-capsule-vault";
 import { createIndexedDbGhostVaultBackend } from "../../src/ghost/indexeddb-vault-backend";
@@ -111,7 +111,6 @@ describe("normal browser cold restore facade", () => {
         },
         download: () => undefined,
       },
-      repair: () => Promise.reject(new Error("not requested")),
       inspect: () =>
         Promise.resolve({
           manifests: [],
@@ -122,7 +121,6 @@ describe("normal browser cold restore facade", () => {
             evictedCapsuleIds: [],
             integrity: [],
             rebuiltIndexes: 0,
-            libraries: { schemaVersion: 1, entries: [], rejectedEntryKeys: [] },
           },
         }),
     });

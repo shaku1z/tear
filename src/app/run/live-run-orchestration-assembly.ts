@@ -10,7 +10,7 @@ import type { LiveGhostPracticeSessionState } from "../replay/ghost-practice-ses
 import type { LiveGhostRecording } from "../replay/live-ghost-recording";
 import type { LiveBrowserRuntime } from "../shell/browser-runtime";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameBlade, GamePlayer, GameRun } from "../shell/game-runtime-state";
+import type { GameBlade, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveSessionServices } from "../shell/session-services-composition";
 import type { LiveTutorialPracticeStart } from "../training/tutorial-practice-start";
 import type { LiveWorldComposition } from "../world/world-composition";
@@ -61,7 +61,7 @@ export function assembleLiveRunOrchestration(options: LiveRunOrchestrationAssemb
   const { story } = campaignHost;
   const { tutorial: TUT } = trainingHost;
   const { achievements: AT, tracks: achTracks, check: achCheck } = campaignTraining.style;
-  const { controllers: runControllers, applySettings, seedRace, beat } = services;
+  const { controllers: runControllers, applySettings, seedRace } = services;
   const { awardCoins, telemetry: economyTelemetry } = services.economy;
   const { openDraft: openRewardDraft, openTier: openRewardTier } = services.reward;
   const { read: getBest, record: saveBest } = services.bestScores.api;
@@ -99,7 +99,6 @@ export function assembleLiveRunOrchestration(options: LiveRunOrchestrationAssemb
     },
     runInstalled: (run) => {
       options.chase.installed(run);
-      beat.installed(run);
     },
     selectedBoss: () => session.selectedBoss(),
     worldServices: world.context.services,
@@ -132,15 +131,8 @@ export function assembleLiveRunOrchestration(options: LiveRunOrchestrationAssemb
     resetCombatIdentity: () => {
       options.combat().combatEntityRuntime.resetIdentity();
     },
-    race: {
-      ...seedRace,
-      active: () => seedRace.active() || beat.active(),
-      finalize: () => {
-        seedRace.finalize();
-        beat.finalize();
-      },
-    },
-    createRunSeed: () => beat.seed() ?? seedRace.seed() ?? session.takeRunSeed() ?? dependencies.createRunSeed(),
+    race: seedRace,
+    createRunSeed: () => seedRace.seed() ?? session.takeRunSeed() ?? dependencies.createRunSeed(),
     withOpeningCapture: openingCapture.withCapture,
     openingExposed: openingCapture.exposed,
     discardOpeningCapture: openingCapture.discard,

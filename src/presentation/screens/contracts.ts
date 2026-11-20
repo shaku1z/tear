@@ -1,5 +1,4 @@
 import type { CareerRow, CareerQuery, CareerUsage } from "../../ghost/career-archive";
-import type { GhostCoachHistoryView } from "../../ghost/coach-history";
 import type { ScreenAction } from "../../domain/screen-actions";
 import type { AppScreen } from "../../domain/screen-catalog";
 import type { TutorialSessionView } from "../../gameplay/training/tutorial-controller";
@@ -24,6 +23,8 @@ export interface ScreenControl {
   readonly sub?: string | undefined;
   readonly accent?: string | undefined;
   readonly confirm?: boolean | undefined;
+  /** The control the screen opens on, unless the player is returning to it. */
+  readonly entryFocus?: boolean | undefined;
   readonly hiddenBox?: boolean | undefined;
   readonly size?: number | undefined;
   readonly pips?: Readonly<{ readonly n: number; readonly filled: number; readonly color: string }> | undefined;
@@ -46,6 +47,8 @@ export interface ScreenRenderContext {
   readonly focus: number;
   readonly touch: boolean;
   readonly reducedMotion: boolean;
+  /** Device pixels per logical unit this frame (the canvas backing scale): what image art picks its size by. */
+  readonly pixelScale: number;
   /** True physical viewport expressed in logical coordinates, including aspect-ratio overscan. */
   readonly screenRectangle: Readonly<{ x: number; y: number; w: number; h: number }>;
   readonly safeInsets: Readonly<{ l: number; r: number; t: number; b: number }>;
@@ -107,12 +110,8 @@ export interface ReplayView {
   readonly title: string;
   readonly detail: string;
   readonly available?: boolean;
-  readonly repairable?: boolean;
   readonly canDownloadArchive?: boolean;
-  readonly canDownloadLinkedPair?: boolean;
   readonly theaterUnavailable?: boolean;
-  readonly comparisonSelected?: boolean;
-  readonly comparisonSourceCount?: number;
   readonly badge?: string;
   readonly timestamp?: string;
   readonly thumbnailId?: string;
@@ -153,20 +152,6 @@ export interface GhostArchiveOperationView {
   readonly canCancel?: boolean;
   readonly canCancelSelection?: boolean;
 }
-export interface GhostOwnerRecoveryView {
-  readonly status: "idle" | "unavailable" | "loading" | "ready" | "recovering" | "failed";
-  readonly detail: string;
-  readonly catalogVisible: boolean;
-  readonly canLoad: boolean;
-  readonly canRecover: boolean;
-  readonly entries: readonly Readonly<{
-    capsuleId: string;
-    buildId: string;
-    rootIntegrity: string;
-    byteLength: number;
-    localStatus?: "recovered" | "already-recovered";
-  }>[];
-}
 export interface ProgressView {
   readonly label: string;
   readonly current: number;
@@ -195,6 +180,8 @@ export interface MenuScreenView {
   readonly biome?: string;
   /** Replaces the PLAY sub-label (mode · difficulty), e.g. the first-run tutorial nudge. */
   readonly playSub?: string;
+  /** Tutorial-first: PLAY starts the tutorial at its next lesson instead of opening run setup. */
+  readonly playTutorial?: boolean;
   readonly pendingFinale?: boolean;
   readonly nowPlaying?: Readonly<{ label: string; detail: string }>;
 }
@@ -243,7 +230,44 @@ export interface CodexScreenView {
     readonly variety: string;
   };
 }
+/** The colours and text a cosmetic look is made of, for the small preview on its card. */
+export interface ShardSwatchView {
+  readonly colors: readonly string[];
+  readonly text?: string;
+}
+/** One card on a shelf. `id` is null for the game own look in that slot. */
+export interface ShardCardView {
+  readonly id: string | null;
+  readonly slot: string;
+  readonly label: string;
+  readonly tier: string;
+  readonly state: "equipped" | "owned" | "available" | "locked" | "elsewhere";
+  /** Shown while the item is for sale. */
+  readonly price?: number;
+  readonly affordable: boolean;
+  /** What to do to get it, for a locked or earned-elsewhere item; empty otherwise. */
+  readonly note: string;
+  readonly isNew: boolean;
+  readonly swatch: ShardSwatchView;
+}
+export interface ShardShelfView {
+  readonly slot: string;
+  readonly label: string;
+  /** False when nothing draws this slot in a run yet. */
+  readonly hookReady: boolean;
+  readonly cards: readonly ShardCardView[];
+}
+export interface ShardsView {
+  /** Shards left to spend. */
+  readonly balance: number;
+  /** Shards earned in total. */
+  readonly earned: number;
+  readonly shelves: readonly ShardShelfView[];
+}
 export interface ShopScreenView {
+  readonly tab: string;
+  readonly tabs: readonly ChoiceView[];
+  readonly shards?: ShardsView;
   readonly race?: Readonly<{ ordinal: number; carried?: DraftCardView; pass: boolean }>;
   readonly onboarding?: string;
   readonly id: "shop";
@@ -265,6 +289,8 @@ export interface ProfileScreenView {
   readonly stats: readonly StatView[];
   readonly message?: string;
   readonly replays?: readonly ReplayView[];
+  /** Vault tab only: set while the saved replays are being read, or when they could not be. */
+  readonly vaultList?: "opening" | "failed";
   readonly canScrollUp?: boolean;
   readonly canScrollDown?: boolean;
   readonly passport?: {
@@ -305,7 +331,6 @@ export interface ProfileScreenView {
     pages: number;
   }>;
   readonly archive?: GhostArchiveOperationView;
-  readonly ownerRecovery?: GhostOwnerRecoveryView;
 }
 export interface AchievementsScreenView {
   readonly id: "achievements";
@@ -351,15 +376,7 @@ export interface ReplayChapterView {
   readonly fraction: number;
   readonly boss: boolean;
 }
-export interface ReplayComparisonView {
-  readonly eventType: string;
-  readonly occurrence: number;
-  readonly index: number;
-  readonly total: number;
-  readonly runs: readonly Readonly<{ sourceId: string; tick: number | null; semanticHash: string | null }>[];
-}
 export interface ReplayScreenView {
-  readonly finaleNavigation?: "FINALE CONTINUATION" | "BACK TO SCORED RUN";
   readonly id: "replay";
   readonly title: string;
   readonly detail: string;
@@ -379,45 +396,23 @@ export interface ReplayScreenView {
   readonly theater?: boolean;
   /** Only verified recorded checkpoints can begin an unranked practice child. */
   readonly practiceAvailable?: boolean;
-  /** C29 comparison is semantic source-simulation evidence, not output-device fidelity. */
-  readonly comparison?: ReplayComparisonView;
   readonly notice?: string;
-  /** Explicit selected-recording observations; no skill or accuracy inference. */
-  readonly bossMemory?: Readonly<{ available: boolean; title?: string; notes?: string; result?: string }>;
-  readonly challenge?: Readonly<{
-    tick: number;
-    choices: readonly Readonly<{ id: string; label: string }>[];
-    result?: string;
-    elapsedTicks?: number;
-  }>;
-  readonly coach?: GhostCoachHistoryView;
-  /** C37 verified, immutable Run DNA projection; absent metrics remain explicitly unavailable. */
-  readonly runDna?: Readonly<{
-    readonly available: boolean;
-    readonly formulaVersion: string;
-    readonly evidenceCustody: string;
-    readonly nativePolicy?: string;
-    readonly sourceMetrics: Readonly<Record<string, number | undefined>>;
-    readonly dimensions?: Readonly<Record<string, number>>;
-    readonly unavailable: readonly string[];
-  }>;
   readonly worldVisible?: boolean;
-  readonly coachReturnAvailable?: boolean;
-  readonly studioMedia?: Readonly<{
+  readonly clipExport?: Readonly<{
     available: boolean;
     status: string;
     markIn: number | undefined;
     thumbnail: string | undefined;
     duration: number | undefined;
   }>;
-  /** C37 immutable decision list; media work stays in the app adapter. */
-  readonly studioCutList?: Readonly<{
+  /** The replay editor's cut list; encoding stays in the app adapter. */
+  readonly cutList?: Readonly<{
     readonly available: boolean;
     readonly sourceGhostId?: string;
     readonly sourceRootHash?: string;
     readonly fromTick?: number;
     readonly toTick?: number;
-    readonly edlHash?: string;
+    readonly cutListHash?: string;
     readonly unavailable?: string;
     readonly clipCount?: number;
   }>;
@@ -426,7 +421,8 @@ export interface SettingRowView {
   readonly key: string;
   readonly label: string;
   readonly value: string;
-  readonly kind: "stepper" | "toggle" | "cycle";
+  /** `info` is a read-only fact (the build, for example): drawn as a label and a value, with no control. */
+  readonly kind: "stepper" | "toggle" | "cycle" | "info";
   readonly on?: boolean;
   readonly enabled?: boolean;
   readonly note?: string;
@@ -437,17 +433,24 @@ export interface SettingRowView {
 export interface SettingsScreenView {
   readonly id: "settings";
   readonly tab: string;
+  /** False on a read-only tab (Credits): RESET DEFAULTS is not drawn there. */
+  readonly resettable: boolean;
   readonly tabs: readonly ChoiceView[];
   readonly sections: readonly { readonly label: string; readonly rows: readonly SettingRowView[] }[];
-  readonly returnTo: AppScreen;
   readonly canScrollUp?: boolean;
   readonly canScrollDown?: boolean;
 }
 /**
- * How a song or collection is pictured (there is no cover art): one hue per band (a single stage
- * is one band; a mixed collection splits into up to four) and one glyph. Null draws the default.
+ * How a song or collection is pictured: one hue per band (a single stage is one band; a mixed
+ * collection splits into up to four) and one glyph, and, where its stages have paintings, `art`
+ * (up to four stage ids), drawn instead of the bands once loaded. Null draws the default.
  */
-export type MusicCoverView = Readonly<{ hues: readonly string[]; glyph: string; locked?: boolean }> | null;
+export type MusicCoverView = Readonly<{
+  hues: readonly string[];
+  glyph: string;
+  art?: readonly string[];
+  locked?: boolean;
+}> | null;
 /** One song wherever the MUSIC screen shows it: a track row, a shelf row or the transport. */
 export interface MusicSongView {
   readonly id: string;
@@ -477,13 +480,24 @@ export type MusicShelfView =
   | Readonly<{ layout: "feature"; heading: string; song: MusicSongView | null; queue: readonly string[] }>
   | Readonly<{ layout: "tiles"; heading: string; collections: readonly MusicCollectionView[] }>
   | Readonly<{ layout: "rows"; heading: string; open: string; songs: readonly MusicSongView[] }>;
-/** Home (shelves), a collection's page (Songs is the whole soundtrack's) or the playback settings. */
-export type MusicPage = "home" | "collection" | "settings";
+/** One Radio channel the player can tune to: a catalog rule over the songs they have found. */
+export interface MusicChannelView {
+  readonly id: string;
+  readonly name: string;
+  readonly description: string;
+  /** How many of its songs the player has found (never 0: an empty channel is not shown). */
+  readonly songs: number;
+  readonly cover: MusicCoverView;
+  /** It is the player's music pick, so it plays in menus and runs. */
+  readonly picked: boolean;
+}
+/** Home (shelves), the Radio, a collection's page (Songs is the whole soundtrack's) or the playback settings. */
+export type MusicPage = "home" | "radio" | "collection" | "settings";
 export interface MusicScreenView {
   readonly id: "music";
   readonly page: MusicPage;
   readonly title: string;
-  /** Rail (desktop) or chip strip (phone): Home · Songs · Settings, the current one selected. */
+  /** Rail (desktop) or chip strip (phone): Home · Radio · Songs · Settings, the current one selected; Radio only when a channel can be tuned to. */
   readonly rail: readonly ChoiceView[];
   /** The stage collections, in campaign order, for the rail's Stages list. */
   readonly stages: readonly MusicCollectionView[];
@@ -492,6 +506,8 @@ export interface MusicScreenView {
   readonly soundtrack: MusicCollectionView | null;
   /** The open collection on a collection page. */
   readonly collection: MusicCollectionView | null;
+  /** The channels the player can tune to, for the Radio page. */
+  readonly radio: readonly MusicChannelView[];
   /** Where BACK (and controller B) goes: up one level, then out to the menu. */
   readonly back: ScreenAction;
   /** What is sounding now, for the transport; null before anything has played. */
@@ -500,11 +516,15 @@ export interface MusicScreenView {
     where: string;
     art: MusicCoverView;
     previewing: boolean;
+    /** The Radio channel it is playing on, by name; null off the Radio. */
+    channel: string | null;
     /** Position in the loop, 0..1; null when unknown. */
     progress: number | null;
   }> | null;
   /** ◀◀/▶▶ step through the queue the preview started from. */
   readonly canStep: boolean;
+  /** ▶▶ moves the Radio channel on to its next song (on a channel, with no preview over it). */
+  readonly radioNext: boolean;
   /** The first song of the soundtrack, which ▶ plays when nothing is playing. */
   readonly start: Readonly<{ id: string; queue: readonly string[] }> | null;
   /** Every catalogued song in catalog order; empty while the music index is still loading. */
@@ -550,6 +570,8 @@ export interface TierUpScreenView {
 export interface PausedScreenView {
   readonly ghostChase?: Readonly<{ visible: boolean; message: string }>;
   readonly tutorial?: TutorialSessionView;
+  /** A paused Playground run: the pause offers the Playground menu. */
+  readonly playground?: boolean;
   readonly id: "paused";
   readonly runSummary?: string;
   readonly abilities: readonly CardView[];
@@ -558,6 +580,8 @@ export interface PausedScreenView {
 export interface ConfirmQuitScreenView {
   readonly id: "confirmquit";
   readonly practice?: boolean;
+  /** Leaving the tutorial: a course in progress keeps its finished lessons; drills keep nothing to lose. */
+  readonly tutorial?: "course" | "drills";
 }
 export interface ContinueScreenView {
   readonly id: "continue";
@@ -589,6 +613,9 @@ export interface GameoverScreenView {
 export interface WinScreenView {
   readonly id: "win";
   readonly campaign: boolean;
+  /** A mode's own title and first line ("GAUNTLET CLEARED"); the generic VICTORY otherwise. */
+  readonly title?: string;
+  readonly headline?: string;
   readonly score: number;
   readonly time: string;
   readonly isNew: boolean;
@@ -601,43 +628,12 @@ export interface PlaygroundScreenView {
   readonly id: "pgmenu" | "pglab";
   readonly title: string;
   readonly subtitle?: string;
+  /** The tabs of the Playground menu (SPAWN … ABILITIES); the selected one is on screen. */
+  readonly tabs?: readonly ChoiceView[];
   readonly sections: readonly { readonly label: string; readonly choices: readonly ChoiceView[] }[];
   readonly canScrollUp?: boolean;
   readonly canScrollDown?: boolean;
 }
-/** C38 review is a local authority-and-intent screen, never a transport status. */
-export interface GhostPublicationScreenView {
-  readonly id: "ghostpublication";
-  readonly status: "unavailable" | "ready" | "queued" | "uploading" | "terminal";
-  readonly detail: string;
-  readonly capsuleId?: string;
-  readonly rootIntegrity?: string;
-  readonly capability: string;
-  readonly privacy: "pseudonymous";
-  readonly visibility: "private";
-  readonly training: "no-training";
-  readonly canGrant: boolean;
-  readonly canRun?: boolean;
-  readonly canCancel?: boolean;
-  readonly attempts?: number;
-  readonly retryAt?: string;
-  readonly terminal?: string;
-}
-
-/** C39 creates only an ephemeral, sanitized support description after player approval. */
-export interface GhostSupportScreenView {
-  readonly id: "ghostsupport";
-  readonly status: "unavailable" | "ready" | "created";
-  readonly detail: string;
-  readonly capsuleId?: string;
-  readonly rootIntegrity?: string;
-  readonly build?: string;
-  readonly range?: string;
-  readonly segments?: string;
-  readonly bundleHash?: string;
-  readonly canCreate: boolean;
-}
-
 export type ScreenView =
   | MenuScreenView
   | SetupScreenView
@@ -659,9 +655,7 @@ export type ScreenView =
   | ContinueScreenView
   | GameoverScreenView
   | WinScreenView
-  | PlaygroundScreenView
-  | GhostPublicationScreenView
-  | GhostSupportScreenView;
+  | PlaygroundScreenView;
 
 export type ScreenViewById<Id extends AppScreen, View = ScreenView> =
   View extends Readonly<{ id: infer ViewId }> ? (Id extends ViewId ? View : never) : never;

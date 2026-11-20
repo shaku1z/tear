@@ -1,5 +1,5 @@
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GamePlayer, GameRun } from "../shell/game-runtime-state";
+import type { GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { RewardRuntime } from "../../gameplay/run/reward-runtime";
 import type { createLiveScreenRenderers } from "../../presentation/screens/live-screen-renderers";
 import {
@@ -14,7 +14,29 @@ import {
   type AchievementProgressSource,
   type UpgradePresentationSource,
 } from "../../presentation/run-screen-snapshots";
-import type { RunResultInfo } from "../../gameplay/run/outcome-planner";
+import type { GauntletResult, RunResultInfo } from "../../gameplay/run/outcome-planner";
+import { bossName } from "../../gameplay/run/content-director";
+import { waveTitle } from "../../gameplay/run/wave-rules";
+import { GAUNTLET_TICKS_PER_SECOND } from "../../domain/gauntlet-records";
+import type { RunExitScreen } from "../../domain/screen-actions";
+import type { GauntletResultSource } from "../../presentation/run-screen-snapshots";
+
+/** A Gauntlet result in the units the result screens show. */
+function gauntletResultSource(result: GauntletResult | undefined): Readonly<{ gauntlet?: GauntletResultSource }> {
+  if (result === undefined) return {};
+  const seconds = (ticks: number) => ticks / GAUNTLET_TICKS_PER_SECOND;
+  return {
+    gauntlet: {
+      trialsCleared: result.trialsCleared,
+      trialCount: result.trialCount,
+      bossName: bossName(result.boss),
+      seconds: seconds(result.ticks),
+      hits: result.hits,
+      best: result.best === null ? null : { seconds: seconds(result.best.ticks), hits: result.best.hits },
+      newBest: result.newBest,
+    },
+  };
+}
 import type { TutorialSessionView } from "../../gameplay/training/tutorial-controller";
 
 type Dependencies = Pick<
@@ -51,7 +73,7 @@ export interface RunScreenState {
   readonly continueSeconds: () => number;
   readonly replayAvailable: () => boolean;
   readonly setContinueSeconds: (value: number) => void;
-  readonly setScreen: (screen: "menu" | "playing") => void;
+  readonly setScreen: (screen: "menu" | "playing" | "confirmquit" | RunExitScreen) => void;
   readonly outcome: () => RunResultInfo;
 }
 
@@ -79,6 +101,8 @@ export interface RunScreenServices {
   readonly requestPointer: () => void;
   readonly persistentEffects?: () => boolean;
   readonly tutorialSession?: () => TutorialSessionView | undefined;
+  /** Steps the Drills tabs with Q / E and the pad bumpers, as on every tabbed screen. */
+  readonly stepPracticeTab?: (session: TutorialSessionView) => void;
 }
 
 export interface LiveRunScreenAdapters {
@@ -94,7 +118,8 @@ export interface LiveRunScreenAdapters {
   readonly chooseUpgrade: (index: number) => void;
   readonly chooseReserve: (index: number) => void;
   readonly chooseTierUp: (index: number) => void;
-  readonly quitRun: () => void;
+  /** Ends the run as QUIT does and opens `next` (the main menu unless named). */
+  readonly quitRun: (next?: RunExitScreen) => void;
   readonly reviveByAd: () => void;
 }
 
@@ -229,16 +254,30 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
     },
     renderPaused(): void {
       const run = state.run();
-      const tutorial = services.tutorialSession?.();
+      let tutorial = services.tutorialSession?.();
+      if (tutorial?.practiceOnly === true && services.stepPracticeTab) {
+        services.stepPracticeTab(tutorial);
+        tutorial = services.tutorialSession?.();
+      }
       if (tutorial !== undefined) {
         renderers.paused({ id: "paused", abilities: [], progress: [], tutorial });
+        return;
+      }
+      if (run.mode === "playground") {
+        renderers.paused({
+          id: "paused",
+          playground: true,
+          runSummary: "PLAYGROUND   ·   " + services.formatTime(run.runTime),
+          abilities: abilityCards(),
+          progress: [],
+        });
         return;
       }
       renderers.paused({
         ...(services.ghostChase?.().active ? { ghostChase: services.ghostChase() } : {}),
         ...buildPausedSnapshot({
           summary:
-            (run.isBossWave ? "BOSS" : "WAVE " + String(run.wave)) +
+            waveTitle(run.mode, run.wave, run.isBossWave === true, run.bossOrder.length) +
             "   ·   " +
             String(run.score) +
             " pts   ·   " +
@@ -250,7 +289,14 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
       });
     },
     renderConfirmQuit(): void {
-      renderers.confirmquit({ id: "confirmquit", practice: services.persistentEffects?.() === false });
+      const tutorial = services.tutorialSession?.();
+      renderers.confirmquit({
+        id: "confirmquit",
+        practice: services.persistentEffects?.() === false,
+        ...(tutorial === undefined
+          ? {}
+          : { tutorial: tutorial.practiceOnly === true || tutorial.courseCompleted ? "drills" : "course" }),
+      });
     },
     renderContinue(): void {
       const seconds = state.continueSeconds();
@@ -272,6 +318,7 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
           progress: progressRows(),
           log: resultLog(),
           formatTime: services.formatTime,
+          ...gauntletResultSource(outcome.gauntlet),
         }),
       );
     },
@@ -288,6 +335,7 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
           difficulty: outcome.diff ?? "",
           log: resultLog(),
           formatTime: services.formatTime,
+          ...gauntletResultSource(outcome.gauntlet),
         }),
       );
     },
@@ -303,7 +351,7 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
     chooseTierUp(index: number): void {
       reward.selectTier(index);
     },
-    quitRun(): void {
+    quitRun(next: RunExitScreen = "menu"): void {
       const run = state.run();
       const completed = run.waveLog.length;
       if (completed > 0 && services.persistentEffects?.() !== false) {
@@ -313,7 +361,12 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
       if (services.cinema.active) services.cinema.cancel("quit-run");
       services.clearFinale();
       services.terminateRun("quit");
+      // The screen rules let a run be left only from its quit confirm, to the main menu, so a run
+      // ended from its pause takes that same route (no confirm is drawn on the way) before opening
+      // `next`. Every way out of a run (QUIT, SKIP TUTORIAL, START A RUN) comes through here.
+      if (state.screen() === "paused") state.setScreen("confirmquit");
       state.setScreen("menu");
+      if (next !== "menu") state.setScreen(next);
     },
     reviveByAd(): void {
       state.setContinueSeconds(1e9);

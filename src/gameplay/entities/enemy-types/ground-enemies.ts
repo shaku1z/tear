@@ -434,6 +434,10 @@ export function createGroundEnemyTypes(dependencies: EnemyDependencies, Enemy: E
       this.aimTimer = this.cfg.aimInterval * (0.4 + GAME_RANDOM.next() * 0.6);
       this.windT = 0;
     }
+    override holdAttacks(seconds: number) {
+      super.holdAttacks(seconds);
+      this.aimTimer = Math.max(this.aimTimer, seconds);
+    }
     update(dt: number, platforms: readonly EnemyPlatform[], player: EnemyPlayerPort, projectiles: EnemyProjectile[]) {
       this.tickTimers(dt);
       // reposition up to a perched player (hold fire while climbing)

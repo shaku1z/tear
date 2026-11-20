@@ -4,6 +4,7 @@ const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
 const { decodePng } = require("./class-c-png");
 const { STATE_WAIT_MS } = require("./browser-waits");
+const { assertStageReadable } = require("./stage-readability");
 
 function paintedPixelRatio(png) {
   const { rgba } = decodePng(png);
@@ -69,12 +70,12 @@ const resolved = Object.freeze({
   resolvedHash: "verdant-stage-wave-31-engineering",
 });
 
-withJourney({ name: "Verdant C9 presentation", port: 8298 }, async ({ page, buildInfo }) => {
+withJourney({ name: "Verdant C9 presentation" }, async ({ page, buildInfo }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: STATE_WAIT_MS });
   const state = await page.evaluate((scenario) => {
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
     window.__VERDANT_C9_ENVIRONMENT__ = environment;
-    const launched = environment.forgeResolvedScenario(scenario);
+    const launched = environment.buildResolvedScenario(scenario);
     for (let index = 0; index < 12; index += 1) environment.renderFrame(1 / 60);
     const snapshot = environment.captureSnapshot("verdant-c9-browser");
     return {
@@ -89,6 +90,10 @@ withJourney({ name: "Verdant C9 presentation", port: 8298 }, async ({ page, buil
   assert.equal(state.run.stage, 3);
   assert.equal(state.hazard.stageId, "verdant-sanctum");
   assert.equal(state.bloom.length, 2);
+
+  // The drawn stage at rest keeps the interface ink readable (config/stage-readability.json).
+  const readability = await assertStageReadable(page, "verdant-sanctum");
+  console.log(`stage readability ${JSON.stringify(readability.shares)}`);
 
   const directory = path.resolve(
     __dirname,

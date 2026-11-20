@@ -1,3 +1,4 @@
+import { bossKillStat } from "../../domain/progress-facts";
 import { cleanupBossEncounterActors } from "../run/boss-encounter";
 
 export interface KillEnemy {
@@ -30,7 +31,6 @@ export interface KillRun {
   waveKills: number;
   mode: string;
   _dmgThisWave?: boolean;
-  _bossOnlyKills?: number;
   finalBossDeath?: { x: number; y: number; color?: string };
   _preBossPlatforms?: unknown[] | null;
   _brokenPlats?: unknown[] | null;
@@ -73,7 +73,6 @@ export interface KillRuntimeOptions {
   stageAccent: string;
   stageChapterBossOutro?: unknown;
   hasStageChapter: boolean;
-  bossRosterSize: number;
   scoring: { scorePerKill: number; cleanWindow: number };
   colors: { charger: string; slam: string };
   deathShards: number;
@@ -134,11 +133,7 @@ function trackKillAchievements(options: KillRuntimeOptions): void {
     options.addStat("bossKills", 1);
     options.bumpDaily("boss", 1);
     if (!run._dmgThisWave) options.addStat("bossNoHit", 1);
-    if (run.mode === "bossonly") {
-      run._bossOnlyKills = (run._bossOnlyKills ?? 0) + 1;
-      if (run._bossOnlyKills >= options.bossRosterSize) options.maxStat("gauntletFull", 1);
-    }
-    if (enemy.bossId) options.maxStat(`kill${enemy.bossId.charAt(0).toUpperCase()}${enemy.bossId.slice(1)}`, 1);
+    if (enemy.bossId) options.maxStat(bossKillStat(enemy.bossId), 1);
     if (enemy.bossId === "rootbound") {
       options.addStat("rootboundKills", 1);
       if (!run._dmgThisWave) options.addStat("rootboundNoHitKills", 1);

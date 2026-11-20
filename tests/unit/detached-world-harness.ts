@@ -1,5 +1,5 @@
 import { A11Y, CONFIG, GFX } from "../../src/config/game-config";
-import { createLiveAuthoritativeInputAdapter } from "../../src/app/world/authoritative-input-adapter";
+import { createLiveAuthoritativeInputAdapter } from "../../src/gameplay/runtime/authoritative-input-adapter";
 import { createTearWorldBootstrap } from "../../src/gameplay/runtime/tear-world-bootstrap";
 import { createLiveWorldState, type LiveWorldSessionPort } from "../../src/app/world/world-composition";
 import { createLiveWorldServices } from "../../src/app/world/world-context";
@@ -43,7 +43,6 @@ import {
   type RunResultInfo,
   type VictoryProgressionIntent,
 } from "../../src/gameplay/run/outcome-planner";
-import { BOSS_ROSTER } from "../../src/gameplay/run/content-director";
 import { createLiveWaveHost } from "../../src/app/run/wave-host";
 import { STAGES, stageAt, stagePlatforms } from "../../src/gameplay/stages";
 import { applyVariant, rollVariant } from "../../src/gameplay/variants";
@@ -231,7 +230,7 @@ export function createDetachedWorld(options: DetachedWorldOptions) {
     cinema: new CinematicTimeline.Director(config),
     worldId: options.worldId ?? `detached:${options.seed}:${options.mode ?? "endless"}`,
   });
-  // Combat, State Forge restoration, and all detached outward adapters mutate
+  // Combat, State Setup restoration, and all detached outward adapters mutate
   // the one record the portable world core owns.
   const transient = world.context.transient;
   world.context.services.random.resetRun(options.seed);
@@ -275,7 +274,7 @@ export function createDetachedWorld(options: DetachedWorldOptions) {
 
 export type DetachedWorld = ReturnType<typeof createDetachedWorld>;
 
-/** Restores the portable per-world carry captured at a State Forge boundary. */
+/** Restores the portable per-world carry captured at a State Setup boundary. */
 export function restoreDetachedTransientRuntime(
   detached: DetachedWorld,
   runtime: Readonly<Record<string, unknown>>,
@@ -828,7 +827,6 @@ export function createDetachedCombatPhases(detached: DetachedWorld, options: Det
     stageAccent: () => stageAt(stage.index).accent,
     stageChapterBossOutro: () => stageAt(stage.index).chapter.bossOutro,
     hasStageChapter: () => true,
-    bossRosterSize: BOSS_ROSTER.length,
     achievementsEnabled: nativeTracking,
     addKillScore: () => {
       addKillScore(world.state.run() as never, config.run.scorePerKill, config.run.scoreMult);
@@ -1523,6 +1521,10 @@ export function createDetachedWaveRuntime(
     loreBusy: () => false,
     achievementTracking: () => false,
     playerOneHit: () => (world.state.player() as never as { oneHit: boolean }).oneHit,
+    playerHealth: () => {
+      const player = world.state.player() as never as { hp: number; maxHp: number };
+      return { hp: player.hp, maxHp: player.maxHp };
+    },
     availableTierUpCount: () => {
       const current = run() as unknown as {
         mods: { owned: Readonly<Record<string, number>>; tier: Readonly<Record<string, number>> };

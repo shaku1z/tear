@@ -38,6 +38,12 @@ export interface ScreenFacts<Screen extends string = string> {
    * has passed.
    */
   readonly confirmArming?: true;
+  /**
+   * An end screen (with `confirmArming`): every menu input held when it opens,
+   * navigation and back included, is ignored until all of them were released and
+   * the settle window has passed, so keys held through a death never move focus.
+   */
+  readonly holdArming?: true;
   /** A reward or results screen: a click aimed at the arena must not choose, so pointers also wait for the settle window. */
   readonly pointerSettle?: true;
   /** Drawn on the paper sheet, so the controller toast sits in the sheet footer. */
@@ -97,7 +103,9 @@ const CATALOG = {
     frame: "world",
     density: "compact",
     confirmArming: true,
-    transitions: ["playing", "settings", "confirmquit", "rename"],
+    // A paused Playground opens its menu on the tab left open (ABILITIES is screen pglab):
+    // the route for touch and controller players.
+    transitions: ["playing", "pgmenu", "pglab", "settings", "confirmquit", "rename"],
   },
   draft: {
     channel: "release",
@@ -138,6 +146,7 @@ const CATALOG = {
     frame: "world",
     density: "compact",
     confirmArming: true,
+    holdArming: true,
     pointerSettle: true,
     transitions: ["playing", "gameover", "rename"],
   },
@@ -146,6 +155,7 @@ const CATALOG = {
     frame: "world",
     density: "compact",
     confirmArming: true,
+    holdArming: true,
     pointerSettle: true,
     transitions: ["menu", "playing", "replay", "rename"],
   },
@@ -154,6 +164,7 @@ const CATALOG = {
     frame: "world",
     density: "compact",
     confirmArming: true,
+    holdArming: true,
     pointerSettle: true,
     transitions: ["menu", "playing", "replay", "rename"],
   },
@@ -184,7 +195,7 @@ const CATALOG = {
     frame: "menu",
     density: "phone",
     sheet: true,
-    transitions: ["menu", "setup", "achievements", "replay", "rename", "ghostpublication", "ghostsupport"],
+    transitions: ["menu", "setup", "achievements", "replay", "rename"],
   },
   achievements: { channel: "release", frame: "menu", density: "phone", sheet: true, transitions: ["menu", "rename"] },
   leaderboards: {
@@ -198,27 +209,10 @@ const CATALOG = {
   rename: { channel: "release", frame: "menu", density: "touch", transitions: "every-other-screen" },
   pgmenu: { channel: "release", frame: "world", density: "phone", transitions: ["playing", "pglab", "rename"] },
   pglab: { channel: "release", frame: "world", density: "phone", transitions: ["playing", "pgmenu", "rename"] },
-  ghostpublication: {
-    channel: "engineering",
-    frame: "standalone",
-    density: "touch",
-    transitions: ["profile", "menu", "rename"],
-  },
-  ghostsupport: {
-    channel: "engineering",
-    frame: "standalone",
-    density: "touch",
-    transitions: ["profile", "menu", "rename"],
-  },
 } as const;
 
 /** Every application screen. */
 export type AppScreen = keyof typeof CATALOG;
-
-/** The screens whose channel is engineering. */
-export type EngineeringScreen = {
-  [Screen in AppScreen]: (typeof CATALOG)[Screen]["channel"] extends "engineering" ? Screen : never;
-}[AppScreen];
 
 /** The catalog, checked: every transition names a catalogued screen. */
 export const SCREEN_CATALOG: Readonly<Record<AppScreen, ScreenFacts<AppScreen>>> = Object.freeze(CATALOG);
@@ -250,11 +244,6 @@ export const LEGAL_TRANSITIONS: Readonly<Record<AppScreen, readonly AppScreen[]>
   ) as Record<AppScreen, readonly AppScreen[]>,
 );
 
-/** The engineering screens, in catalog order. */
-export const ENGINEERING_SCREENS: readonly EngineeringScreen[] = Object.freeze(
-  APP_SCREENS.filter((screen): screen is EngineeringScreen => SCREEN_CATALOG[screen].channel === "engineering"),
-);
-
 /** True for a screen drawn over the menu backdrop. */
 export const isMenuScreen = (screen: string): boolean => screenFacts(screen)?.frame === "menu";
 
@@ -265,6 +254,8 @@ export const isWorldScreen = (screen: string): boolean => screenFacts(screen)?.f
 export const screenDensity = (screen: string): ScreenDensity => screenFacts(screen)?.density ?? "touch";
 
 export const screenNeedsConfirmArming = (screen: string): boolean => screenFacts(screen)?.confirmArming === true;
+
+export const screenNeedsHoldArming = (screen: string): boolean => screenFacts(screen)?.holdArming === true;
 
 export const screenNeedsPointerSettle = (screen: string): boolean => screenFacts(screen)?.pointerSettle === true;
 

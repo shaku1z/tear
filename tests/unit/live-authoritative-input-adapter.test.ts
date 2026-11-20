@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest";
 import { EnvelopeSequencer } from "../../src/domain/envelopes";
 import { AuthoritativeInputState } from "../../src/gameplay/runtime/authoritative-input";
 import type { PlayerInputPort } from "../../src/gameplay/entities/player";
-import { createLiveAuthoritativeInputAdapter } from "../../src/app/world/authoritative-input-adapter";
+import { createLiveAuthoritativeInputAdapter } from "../../src/gameplay/runtime/authoritative-input-adapter";
 import { CONFIG } from "../../src/config/game-config";
 import { clamp, len, lerp, lerpAngle } from "../../src/domain/geometry";
 import { createBlade } from "../../src/gameplay/entities/blade";
 import { applyWeapon } from "../../src/gameplay/weapons";
+import { AIM_TURN_SCALE } from "../../src/domain/input-scales";
+import type { GameAction } from "../../src/input/game-action";
 
 describe("live authoritative input adapter", () => {
   it("fires real Riftlock rounds from canonical press/release edges while preserving physical fallback and override ownership at 120 Hz", () => {
@@ -83,8 +85,9 @@ describe("live authoritative input adapter", () => {
   });
   it.each([0, 250])("projects restored held aim magnitude %s on the next command-free tick", (magnitude) => {
     const player = { x: 0, y: 0, vx: 0, vy: 0, facing: 1 };
-    const blade: { aimOverride?: { x: number; y: number }; handPos(): { x: number; y: number } } = {
+    const blade: { aimOverride?: { x: number; y: number }; handPos(): { x: number; y: number }; reseatHeld(): void } = {
       handPos: () => ({ x: 14, y: 16 }),
+      reseatHeld: () => undefined,
     };
     const adapter = createLiveAuthoritativeInputAdapter({
       player: () => player,
@@ -115,8 +118,10 @@ describe("live authoritative input adapter", () => {
       lmbOverride?: boolean;
       aimOverride?: { x: number; y: number };
       handPos(): { x: number; y: number };
+      reseatHeld(): void;
     } = {
       handPos: () => ({ x: 14, y: 16 }),
+      reseatHeld: () => undefined,
     };
     const adapter = createLiveAuthoritativeInputAdapter({
       player: () => player,
@@ -141,7 +146,7 @@ describe("live authoritative input adapter", () => {
 
   it("routes throw consumption through the adapter before falling back to physical input", () => {
     const player = { x: 0, y: 0, vx: 0, vy: 0, facing: 1 };
-    const blade = { handPos: () => ({ x: 0, y: 0 }) };
+    const blade = { handPos: () => ({ x: 0, y: 0 }), reseatHeld: () => undefined };
     const adapter = createLiveAuthoritativeInputAdapter({
       player: () => player,
       blade: () => blade,
@@ -155,5 +160,66 @@ describe("live authoritative input adapter", () => {
       }),
     ).toBe(true);
     expect(fallbackCalls).toBe(1);
+  });
+  it("re-seats the held blade still along the resume tick's aim, where the same aim change without it swings", () => {
+    // Play stops with the blade at rest overhead; while it is stopped the aim moves to the left.
+    // Resuming must not open with a swing toward the new aim (a hit nobody swung).
+    const peakTipSpeed = (resume: boolean): number => {
+      const config = structuredClone(CONFIG),
+        clock = { sim: 0 };
+      const physical = {
+        touchAim: false,
+        stickAim: null,
+        locked: false,
+        mouseX: 0,
+        mouseY: 0,
+        tetherHeld: false,
+        consumeDelta: () => ({ x: 0, y: 0 }),
+      };
+      const Blade = createBlade({
+        CLOCK: clock,
+        CONFIG: config,
+        Input: physical,
+        presentation: { draw: () => undefined },
+        clamp,
+        len,
+        lerp,
+        lerpAngle,
+      });
+      const blade = new Blade(),
+        player = { x: 400, y: 500, vx: 0, vy: 0, facing: 1 };
+      const adapter = createLiveAuthoritativeInputAdapter({
+        player: () => player,
+        blade: () => blade,
+        aimRadius: () => config.blade.aimRadius,
+      });
+      const input = new AuthoritativeInputState(),
+        sequence = new EnvelopeSequencer();
+      const up = { type: "aim" as const, turn: (AIM_TURN_SCALE * 3) / 4 },
+        left = { type: "aim" as const, turn: AIM_TURN_SCALE / 2 };
+      let tick = 0;
+      const step = (actions: readonly GameAction[]) => {
+        const next = ++tick;
+        adapter.actionPort.apply(
+          input,
+          next,
+          actions.map((action) => sequence.command(next, action)),
+        );
+        clock.sim = next / 120;
+        blade.update(1 / 120, player, []);
+      };
+      step([up]);
+      for (let index = 0; index < 600; index++) step([]);
+      expect(blade.tipSpeed).toBeLessThan(1);
+      step(resume ? [left, { type: "resume" }] : [left]);
+      let peak = blade.tipSpeed;
+      for (let index = 0; index < 240; index++) {
+        step([]);
+        peak = Math.max(peak, blade.tipSpeed);
+      }
+      return peak;
+    };
+    expect(peakTipSpeed(false)).toBeGreaterThan(400);
+    expect(peakTipSpeed(true)).toBeLessThan(1);
   });
 });

@@ -33,15 +33,35 @@ const MOVE_WIND_UP_CALL: Readonly<Record<string, string>> = {
   "canopy-vault": "lineTo",
   "thorn-burst": "lineTo",
   "root-wave": "closePath",
+  "plant-graft": "ellipse",
+  "root-cage": "ellipse",
+  "bloom-shift": "arc",
+  regrowth: "ellipse",
+  "last-spring": "closePath",
 };
+const ALL_MOVES = [
+  "vine-lash",
+  "root-glide",
+  "canopy-vault",
+  "thorn-burst",
+  "root-wave",
+  "plant-graft",
+  "root-cage",
+  "bloom-shift",
+  "regrowth",
+  "last-spring",
+];
 
-function recordingCanvas(calls: string[]): CanvasRenderingContext2D {
-  const values = new Map<PropertyKey, unknown>();
+/** Records each drawing call's name in `calls` and, when given, its name and arguments in `log`. */
+function recordingCanvas(calls: string[], log?: { name: string; args: unknown[] }[]): CanvasRenderingContext2D {
+  // A real canvas starts fully opaque; the figure layer multiplies into it.
+  const values = new Map<PropertyKey, unknown>([["globalAlpha", 1]]);
   return new Proxy({} as CanvasRenderingContext2D, {
     get(_target, property): unknown {
       if (values.has(property)) return values.get(property);
-      return (): void => {
+      return (...args: unknown[]): void => {
         calls.push(String(property));
+        log?.push({ name: String(property), args });
       };
     },
     set(_target, property, value): boolean {
@@ -82,7 +102,7 @@ describe("Rootbound production foundation", () => {
       presentationId: "rootbound",
       isBoss: true,
       atk: "unavailable",
-      availableAttacks: ["vine-lash", "root-glide", "canopy-vault", "thorn-burst", "root-wave"],
+      availableAttacks: ALL_MOVES,
       phaseMarks: [0.65, 0.28],
     });
   });
@@ -106,13 +126,21 @@ describe("Rootbound production foundation", () => {
     ) as InstanceType<typeof harness.types.Rootbound> & {
       draw(canvas: CanvasRenderingContext2D, player: unknown): void;
     };
-    const calls: string[] = [];
-    boss.introT = CONFIG.bossTheater.introDur / 2;
-    boss.draw(recordingCanvas(calls), harness.player);
+    const drawing = (introT: number) => {
+      const calls: string[] = [];
+      const log: { name: string; args: unknown[] }[] = [];
+      boss.introT = introT;
+      boss.draw(recordingCanvas(calls, log), harness.player);
+      return { calls, scales: log.filter((call) => call.name === "scale").map((call) => call.args) };
+    };
+    const rising = drawing(CONFIG.bossTheater.introDur / 2);
+    const risen = drawing(0);
 
-    expect(calls.filter((name) => name === "lineTo").length).toBeGreaterThanOrEqual(14);
-    expect(calls.filter((name) => name === "arc").length).toBeGreaterThanOrEqual(7);
-    expect(calls).toEqual(expect.arrayContaining(["save", "translate", "scale", "fill", "stroke", "restore"]));
+    // The seed pod: two curved halves, each drawn as a filled and inked shape.
+    expect(rising.calls.filter((name) => name === "bezierCurveTo").length).toBeGreaterThanOrEqual(4);
+    expect(rising.calls).toEqual(expect.arrayContaining(["save", "translate", "scale", "fill", "stroke", "restore"]));
+    // The intro pose squashes the pod while it rises, and lets go once it has risen.
+    expect(rising.scales).not.toEqual(risen.scales);
   });
 
   it("hands every mark to the biome's skin, and puts a landing strike in front of the body", () => {
@@ -214,7 +242,7 @@ describe("Rootbound production foundation", () => {
     }
   });
 
-  it("keeps Memory Choir warning geometry visible in low-graphics reduced-motion rendering", () => {
+  it("draws a root from the keeper to each planted Graft in low-graphics reduced-motion rendering", () => {
     const harness = createEnemyHarness();
     createEnemyPresentation({
       A11Y: { highContrast: true, reducedMotion: true },
@@ -234,10 +262,30 @@ describe("Rootbound production foundation", () => {
     boss.update(1 / 120, harness.platforms, harness.player);
     boss.cinematicRequest = null;
     boss.cinematicT = 0;
-    expect(boss.startMemoryChoir()).toBe(true);
-    const calls: string[] = [];
-    boss.draw(recordingCanvas(calls), harness.player);
-    expect(calls).toEqual(expect.arrayContaining(["strokeRect", "setLineDash", "arc", "fillRect", "lineTo", "stroke"]));
+    // A root is a curve from the keeper's feet that ends at the foot of a Graft.
+    const roots = (): number => {
+      const log: { name: string; args: unknown[] }[] = [];
+      boss.draw(recordingCanvas([], log), harness.player);
+      const graftFeet = boss
+        .graftAnchorPlacements()
+        .map(
+          (graft) =>
+            `${String(graft.geometry.x + (graft.geometry.w ?? 0) / 2)},${String(graft.geometry.y + (graft.geometry.h ?? 0))}`,
+        );
+      return log.filter((call) => call.name === "quadraticCurveTo" && graftFeet.includes(call.args.slice(2).join(",")))
+        .length;
+    };
+    const unrooted = roots();
+    Object.assign(boss, {
+      graftRequests: [
+        { graftType: "mercy", geometry: { x: 300, y: 620, w: 54, h: 90 } },
+        { graftType: "bastion", geometry: { x: 780, y: 430, w: 54, h: 90 } },
+        { graftType: "haste", geometry: { x: 1250, y: 620, w: 54, h: 90 } },
+      ],
+      plantedGraftTypes: ["mercy", "bastion"],
+    });
+    // One root per planted Graft; the requested but unplanted one has none yet.
+    expect(roots() - unrooted).toBe(2);
   });
 
   it("places the grounded Rootbound body through the shared boss placement authority", () => {
@@ -328,7 +376,7 @@ describe("Rootbound production foundation", () => {
       phaseMarker: 1,
       phaseTag: "KEEPER OF SPRING",
       state: "idle",
-      availableAttacks: ["vine-lash", "root-glide", "canopy-vault", "thorn-burst", "root-wave"],
+      availableAttacks: ALL_MOVES,
     });
 
     boss.introT = 0.5;
@@ -354,17 +402,17 @@ describe("Rootbound production foundation", () => {
     boss.hp = boss.maxHp;
     expect(boss.phase).toBe(2);
 
-    // The opening contact grace outlasts the first recovery, so an overlapping spawn deals no touch damage.
+    // Its body never deals touch damage, so a spawn that overlaps the player costs nothing; it blocks instead.
     boss.update(1, harness.platforms, harness.player);
     expect(boss.state).toBe("idle");
-    expect(boss.contactDamageEnabled()).toBe(false);
     boss.update(0.25, harness.platforms, harness.player);
     expect(boss).toMatchObject({
       state: "idle",
       atk: "unavailable",
-      availableAttacks: ["vine-lash", "root-glide", "canopy-vault", "thorn-burst", "root-wave"],
+      availableAttacks: ALL_MOVES,
     });
-    expect(boss.contactDamageEnabled()).toBe(true);
+    expect(boss.contactDamageEnabled()).toBe(false);
+    expect(boss.bodyBlocks()).toBe(true);
   });
 
   it("cleans Rootbound idempotently at every encounter replacement boundary", () => {

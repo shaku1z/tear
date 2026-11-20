@@ -1,4 +1,6 @@
 import { releasePointerLock } from "../../platform/browser-pointer-lock";
+import { screenLoss } from "../../domain/screen-loss";
+import { anyKeyIn, keyCodes } from "../../domain/keyboard-bindings";
 import type { InputMode, Point } from "../../input/browser-input-contracts";
 import { UI_CONFIRM_SETTLE_SECONDS } from "../interface/ui-action-coordinator";
 
@@ -70,6 +72,8 @@ export interface RuntimeFrameCoordinatorOptions {
   readonly cinema: CinemaPort;
   readonly clipper: Readonly<{ start(): void; stop(): void }> | null;
   readonly autoPauseDisconnect: () => boolean;
+  /** Whether the page was hidden or lost focus since the last frame (src/platform/screen-presence.ts). */
+  readonly screen: Readonly<{ take(): Readonly<{ hidden: boolean; blurred: boolean }> }>;
   readonly advancePlayingPrelude: (deltaSeconds: number) => void;
   readonly advancePlayingSimulation: (deltaSeconds: number) => number;
   readonly resetSimulation: () => void;
@@ -118,9 +122,11 @@ export class RuntimeFrameCoordinator {
     const frameStarted = this.#options.now();
     this.#frameStartedMilliseconds = frameStarted;
     const startedPlaying = this.#options.state() === "playing";
+    // Taken every frame, so a page hidden on another screen does not pause a later run.
+    const away = this.#options.screen.take();
     this.#prepareInput(deltaSeconds);
     let simulationSteps = 0;
-    if (this.#options.state() === "playing") simulationSteps = this.#advancePlaying(deltaSeconds);
+    if (this.#options.state() === "playing") simulationSteps = this.#advancePlaying(deltaSeconds, away);
     else this.#advanceInactive();
     this.#options.applicationFrameRecording?.end(simulationSteps);
     this.#advanceApplication(deltaSeconds);
@@ -146,14 +152,8 @@ export class RuntimeFrameCoordinator {
         !pad.connected &&
         this.#options.state() === "playing" &&
         this.#options.autoPauseDisconnect()
-      ) {
-        this.#options.setState("paused");
-        try {
-          releasePointerLock(document);
-        } catch {
-          /* Pointer lock may already be gone. */
-        }
-      }
+      )
+        this.#pause();
       this.#padWasConnected = pad.connected;
     }
     input.updateUI();
@@ -162,14 +162,14 @@ export class RuntimeFrameCoordinator {
       document.body.dataset.imode = input.mode;
     }
     if (clipper !== null) {
-      if (input.pressed.has("BracketLeft")) clipper.start();
-      if (input.pressed.has("BracketRight")) clipper.stop();
+      if (anyKeyIn(input.pressed, "clip-start")) clipper.start();
+      if (anyKeyIn(input.pressed, "clip-stop")) clipper.stop();
     }
     const confirm = { key: false, touch: false, pad: false, click: false };
     if (this.#options.state() === "playing" && cinema.active) {
       const gamepad = pad?.connected ? navigator.getGamepads()[pad.index] : null;
       Object.assign(confirm, {
-        key: input.held.has("Space") || input.held.has("Enter") || input.held.has("NumpadEnter"),
+        key: anyKeyIn(input.held, "confirm"),
         touch: !!input.btnHeld.jump,
         pad: !!gamepad?.buttons[0]?.pressed,
         click: !!input.takeClick() || input.tJump,
@@ -186,23 +186,18 @@ export class RuntimeFrameCoordinator {
     input.allowLock = this.#options.state() === "playing";
   }
 
-  #advancePlaying(deltaSeconds: number): number {
-    const { canvas, document, input } = this.#options;
+  #advancePlaying(deltaSeconds: number, away: Readonly<{ hidden: boolean; blurred: boolean }>): number {
+    const { canvas, input } = this.#options;
     this.#pausedSinceMilliseconds = null;
     this.#options.advancePlayingPrelude(deltaSeconds);
     this.#options.applicationFrameRecording?.preludeApplied();
     if (input.locked) this.#wasPointerLocked = true;
-    const lostCapture = this.#wasPointerLocked && !input.locked;
-    const portraitGate = input.touchActive() && canvas.clientHeight > canvas.clientWidth;
-    if (input.pausePressed() || input.escapePressed() || lostCapture || portraitGate) {
-      this.#consume("KeyP", "Escape");
-      this.#options.setState("paused");
-      this.#wasPointerLocked = false;
-      try {
-        releasePointerLock(document);
-      } catch {
-        /* Pointer lock may already be gone. */
-      }
+    const touch = input.touchActive();
+    const lostScreen = screenLoss({ ...away, captureLost: this.#wasPointerLocked && !input.locked, touch });
+    const portraitGate = touch && canvas.clientHeight > canvas.clientWidth;
+    if (input.pausePressed() || input.escapePressed() || lostScreen !== null || portraitGate) {
+      this.#consume(...keyCodes("pause"), "Escape");
+      this.#pause();
       return 0;
     }
     return this.#options.advancePlayingSimulation(deltaSeconds);
@@ -222,21 +217,33 @@ export class RuntimeFrameCoordinator {
       // P, Escape and controller Start toggle pause. The settle window keeps the Escape
       // that released pointer lock (and paused) from also resuming; a resume that cannot
       // recapture the mouse leaves uncaptured play with the click-to-capture hint.
-      this.#consume("KeyP", "Escape");
+      this.#consume(...keyCodes("pause"), "Escape");
       if (pauseSettled) {
         this.#options.setState("playing");
         this.#options.requestPointerLock();
       }
-    } else if (state === "pgmenu" && (input.pressed.has("Tab") || input.escapePressed())) {
-      this.#consume("Tab", "Escape");
+    } else if (
+      (state === "pgmenu" || state === "pglab") &&
+      (anyKeyIn(input.pressed, "close-menu") || input.escapePressed())
+    ) {
+      // ABILITIES is a tab of the Playground menu: the close key and Escape leave it from any tab.
+      this.#consume(...keyCodes("close-menu"), "Escape");
       this.#options.setState("playing");
       this.#options.requestPointerLock();
-    } else if (state === "pglab" && (input.pressed.has("Tab") || input.escapePressed())) {
-      this.#consume("Tab", "Escape");
-      this.#options.setState("pgmenu");
     } else if (state === "replay" && input.escapePressed()) {
       this.#consume("Escape");
       this.#options.exitReplay();
+    }
+  }
+
+  /** The one way a run in play pauses: the pause key, a lost screen, the portrait gate or a lost pad. */
+  #pause(): void {
+    this.#options.setState("paused");
+    this.#wasPointerLocked = false;
+    try {
+      releasePointerLock(this.#options.document);
+    } catch {
+      /* Pointer lock may already be gone. */
     }
   }
 

@@ -12,7 +12,7 @@ import {
   type BossPhasePracticeWorld,
 } from "../../gameplay/training/boss-phase-practice-runtime";
 import type { BossPracticePort } from "../../gameplay/training/practice-boss-catalog";
-import type { GameEnemy, GameRun } from "../shell/game-runtime-state";
+import type { GameEnemy, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
 
 type Binding = Pick<BossPhasePracticeState, "encounterId" | "generation" | "bossId" | "seed">;
@@ -52,7 +52,6 @@ export function createLiveBossPhasePractice(options: {
     const binding = active.practiceBossEntry,
       actor = actors.find((entry) => entry.isBoss && entry.bossId === binding?.bossId);
     if (!binding || !actor || !isPracticeBossActor(actor)) return null;
-    const phase = actor.practicePhaseEntry();
     return {
       ...binding,
       weaponId: active.weaponId,
@@ -61,17 +60,18 @@ export function createLiveBossPhasePractice(options: {
       actor,
       cinematicActive: cinema,
       arenaReady: options.stage.platforms.length > 0,
-      phaseWorldReady:
-        binding.bossId !== "source" ||
-        phase.phase === 1 ||
-        (active.voidScroll !== null &&
-          !active.voidScroll.forming &&
-          (active.voidScroll.active || active.voidScroll.frozen) &&
-          active.voidScroll.platforms === options.stage.platforms &&
-          (phase.phase !== 3 || active.voidScroll.frozen)),
+      // Only the Source's later phases wait on the world, so only the Source is asked for its phase here.
+      phaseWorldReady: binding.bossId !== "source" || sourcePhaseWorldReady(active, actor.practicePhaseEntry().phase),
       checkpointReady: true,
     };
   };
+  const sourcePhaseWorldReady = (active: PracticeRun, phase: number): boolean =>
+    phase === 1 ||
+    (active.voidScroll !== null &&
+      !active.voidScroll.forming &&
+      (active.voidScroll.active || active.voidScroll.frozen) &&
+      active.voidScroll.platforms === options.stage.platforms &&
+      (phase !== 3 || active.voidScroll.frozen));
   const runtime = createBossPhasePracticeRuntime({
     createEncounter(request, generation, encounterId) {
       const active = run();

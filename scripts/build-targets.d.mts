@@ -12,6 +12,12 @@ export interface BuildTargetDefinition {
   readonly entry: BuildTargetName;
   /** False where the portal supplies fullscreen and forbids a custom control (CrazyGames). */
   readonly fullscreenButton: boolean;
+  /**
+   * False leaves the mobile-only modules (`release.mobile-only` in config/architecture-roles.json) out
+   * of the build and shows a touch-only device a computer-only line; the target's test build and
+   * `vite dev` keep them. Mobile is paused (owner, 2026-11-19; plans/MOBILE_LATER.md).
+   */
+  readonly mobile: boolean;
   readonly base: string;
   /** A second output of the test build, served below a path on the preview origin (null: none). */
   readonly previewDev: { readonly mode: string; readonly output: string; readonly env: string } | null;
@@ -21,6 +27,11 @@ export interface BuildTargetDefinition {
   readonly portalSdkScript: string | null;
   readonly cloudflareHeaders: boolean;
   readonly pruneUnrequestedFiles: boolean;
+  /**
+   * Pages served beside the game, as names without ".html" (public/privacy.html is "privacy"). A build
+   * that does not list a page leaves it out of the output; the service worker skips the ones it lists.
+   */
+  readonly staticPages: readonly string[];
   readonly forbiddenModules: readonly string[];
   readonly testMode: string | null;
   readonly package: { readonly path: string; readonly maxArchiveBytes: number } | null;

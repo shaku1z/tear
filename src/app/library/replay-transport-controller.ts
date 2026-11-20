@@ -1,3 +1,5 @@
+import { anyKeyIn, keyCodes } from "../../domain/keyboard-bindings";
+
 export interface ReplayTransportInput {
   readonly clicked: boolean;
   readonly clickX: number;
@@ -45,16 +47,47 @@ export function handleReplayTransport(input: {
     const click = controls.takeClick();
     if (click !== null) input.seek(((click.x - scrub.x) / scrub.width) * input.duration);
   }
-  if (controls.pressed.has("Space")) {
+  const transportKey = (action: "replay-toggle" | "replay-back" | "replay-forward", act: () => void): void => {
+    if (!anyKeyIn(controls.pressed, action)) return;
+    act();
+    for (const code of keyCodes(action)) input.consumeKey?.(code);
+  };
+  transportKey("replay-toggle", () => {
     input.toggle();
-    input.consumeKey?.("Space");
-  }
-  if (controls.pressed.has("ArrowLeft")) {
+  });
+  transportKey("replay-back", () => {
     input.seek(input.currentTime - 5);
-    input.consumeKey?.("ArrowLeft");
-  }
-  if (controls.pressed.has("ArrowRight")) {
+  });
+  transportKey("replay-forward", () => {
     input.seek(input.currentTime + 5);
-    input.consumeKey?.("ArrowRight");
+  });
+}
+
+export const REPLAY_SPEEDS = [0.25, 0.5, 1, 2, 4] as const;
+export type ReplaySpeed = (typeof REPLAY_SPEEDS)[number];
+export interface ReplayTransportState {
+  readonly playing: boolean;
+  readonly tick: number;
+  readonly speed: ReplaySpeed;
+}
+
+/** Play, pause, position and speed of one open replay. */
+export class ReplayTransport {
+  #state: ReplayTransportState = Object.freeze({ playing: false, tick: 0, speed: 1 });
+
+  state(): ReplayTransportState {
+    return this.#state;
+  }
+  play(): void {
+    this.#state = Object.freeze({ ...this.#state, playing: true });
+  }
+  pause(): void {
+    this.#state = Object.freeze({ ...this.#state, playing: false });
+  }
+  seek(tick: number): void {
+    this.#state = Object.freeze({ ...this.#state, tick: Math.max(0, Math.floor(tick)) });
+  }
+  speed(value: ReplaySpeed): void {
+    this.#state = Object.freeze({ ...this.#state, speed: value });
   }
 }

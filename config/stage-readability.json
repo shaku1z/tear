@@ -1,0 +1,10 @@
+{
+  "about": "Readability floors for a drawn stage at rest (backdrop and platforms, no actors, no interface). A zone passes when at least `floor` of its pixels give the stage's ink `contrast`:1 or better. Rectangles are x, y, width, height in the 1600x900 world frame. Read by tests/stage-readability.js; tests/unit/stage-art.test.ts requires every drawn stage to be listed in `stages`. Floors are only ever raised.",
+  "contrast": 3,
+  "zones": [
+    { "id": "interface title", "rect": [600, 0, 400, 115], "floor": 0.9 },
+    { "id": "interface status", "rect": [20, 0, 440, 100], "floor": 0.9 },
+    { "id": "play band", "rect": [0, 130, 1600, 670], "floor": 0.75 }
+  ],
+  "stages": [{ "stage": "verdant-sanctum", "check": "tests/browser-verdant-presentation.js" }]
+}

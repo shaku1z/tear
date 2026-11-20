@@ -43,6 +43,7 @@ export interface LiveWaveRun {
   pendingBossOutro: unknown;
   _biomeIdx?: number;
   waveTime: number;
+  waveGrace?: number;
   waveKills: number;
   wavePeak: number;
   mult: number;
@@ -83,6 +84,7 @@ export interface LiveWavePort {
   readonly loreBusy: () => boolean;
   readonly achievementTracking: () => boolean;
   readonly playerOneHit: () => boolean;
+  readonly playerHealth: () => Readonly<{ hp: number; maxHp: number }>;
   readonly availableTierUpCount: () => number;
 }
 
@@ -172,6 +174,7 @@ export class LiveWaveController {
     if (plan.waveTime !== null) run.waveTime = plan.waveTime;
     if (plan.waveKills !== null) run.waveKills = plan.waveKills;
     if (plan.wavePeak !== null) run.wavePeak = plan.wavePeak;
+    run.waveGrace = plan.grace;
     this.#port.executePlanIntents(plan.intents);
   }
 
@@ -241,6 +244,8 @@ export class LiveWaveController {
       waveHealBonus: run.mods.waveHeal ?? 0,
       waveClearPause: tuning.waveClearPause,
       availableTierUpCount: this.#port.availableTierUpCount(),
+      playerHealth: this.#port.playerHealth(),
+      trialCount: run.mode === "gauntlet" ? (run.bossOrder?.length ?? 0) : 0,
     });
     run.clearTimer = cleared.state.clearTimer;
     run.waveLog = [...cleared.state.waveLog];

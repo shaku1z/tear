@@ -44,6 +44,7 @@ describe("cloud compatibility", () => {
       getPlatform: () => createBrowserPlatformServices({ window: {} }),
       getProfile: () => deps.profile,
       getMeta: () => deps.meta,
+      statisticsAllowed: () => true,
       firebaseAccount: failing,
       shared: deps.shared,
     });
@@ -64,6 +65,7 @@ describe("cloud compatibility", () => {
       getPlatform: () => createBrowserPlatformServices({ window: {} }),
       getProfile: () => deps.profile,
       getMeta: () => deps.meta,
+      statisticsAllowed: () => true,
       shared: { ...deps.shared, available: true, submitScore: () => Promise.reject(new Error("network")) },
     });
     compatibility.Cloud.onChange(() => {
@@ -71,5 +73,68 @@ describe("cloud compatibility", () => {
     });
     await expect(compatibility.Cloud.init()).resolves.toBe("guest");
     await expect(compatibility.Cloud.submitScore("endless", "normal", { score: 1 })).resolves.toBe(false);
+  });
+
+  it("replaces the online save through the provider that has one, and says when it cannot", async () => {
+    const make = (provider: AccountProvider) => {
+      const deps = dependencies();
+      return createCloudCompatibility({
+        target: "standalone",
+        getPlatform: () => createBrowserPlatformServices({ window: {} }),
+        getProfile: () => deps.profile,
+        getMeta: () => deps.meta,
+        statisticsAllowed: () => true,
+        firebaseAccount: provider,
+        shared: deps.shared,
+      }).Cloud;
+    };
+    const payload = { profile: {}, meta: {} };
+    const replace = vi.fn(() => Promise.resolve(true));
+    const online = make({ kind: "firebase", init: () => Promise.resolve(), replace });
+    await online.init();
+    await expect(online.replaceSave(payload)).resolves.toBe("replaced");
+    expect(replace).toHaveBeenCalledWith(online, payload);
+
+    const refused = make({ kind: "firebase", init: () => Promise.resolve(), replace: () => Promise.resolve(false) });
+    await refused.init();
+    await expect(refused.replaceSave(payload)).resolves.toBe("failed");
+
+    const throwing = make({
+      kind: "firebase",
+      init: () => Promise.resolve(),
+      replace: () => Promise.reject(new Error("offline")),
+    });
+    await throwing.init();
+    await expect(throwing.replaceSave(payload)).resolves.toBe("failed");
+
+    // A provider without an online copy (a guest, or a portal that keeps the data itself) has nothing to replace.
+    const guest = make({ kind: "firebase", init: () => Promise.resolve() });
+    await guest.init();
+    await expect(guest.replaceSave(payload)).resolves.toBe("no-online-copy");
+  });
+
+  it("passes a run statistic to the shared service only while the player allows it", () => {
+    const deps = dependencies();
+    const logged: string[] = [];
+    let allowed = true;
+    const compatibility = createCloudCompatibility({
+      target: "standalone",
+      getPlatform: () => createBrowserPlatformServices({ window: {} }),
+      getProfile: () => deps.profile,
+      getMeta: () => deps.meta,
+      statisticsAllowed: () => allowed,
+      shared: {
+        ...deps.shared,
+        logEvent: (name) => {
+          logged.push(name);
+        },
+      },
+    });
+    compatibility.Cloud.logEvent("first");
+    allowed = false;
+    compatibility.Cloud.logEvent("second");
+    allowed = true;
+    compatibility.Cloud.logEvent("third");
+    expect(logged).toEqual(["first", "third"]);
   });
 });

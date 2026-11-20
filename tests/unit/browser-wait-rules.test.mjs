@@ -3,13 +3,21 @@ import { EventEmitter } from "node:events";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
 import { ESLint } from "eslint";
-import { describe, expect, it } from "vitest";
+import process from "node:process";
+import { describe, expect, it, vi } from "vitest";
 
 const root = resolve(import.meta.dirname, "../..");
 const eslint = new ESLint({ cwd: root });
-const { reloadPage, STATE_WAIT_MS, trackScriptLoads, waitForScriptLoads } = createRequire(import.meta.url)(
-  "../browser-waits.js",
-);
+const {
+  clickTarget,
+  journeyStep,
+  launchJourney,
+  reloadPage,
+  reportWorkerScripts,
+  STATE_WAIT_MS,
+  trackScriptLoads,
+  waitForScriptLoads,
+} = createRequire(import.meta.url)("../browser-waits.js");
 
 async function messages(code) {
   const [result] = await eslint.lintText(code, { filePath: resolve(root, "tests/rule-probe-browser.js") });
@@ -139,14 +147,107 @@ describe("reloadPage", () => {
     expect(await messages(code)).toEqual([3, 4]);
   });
 
+  it("rejects launching a browser with no journey ceiling, and accepts launchJourney", async () => {
+    const code = [
+      'const { chromium } = require("@playwright/test");',
+      'const { launchJourney } = require("./browser-waits");',
+      "async function run() {",
+      "  await chromium.launch({ headless: true });",
+      "  await chromium.launchPersistentContext('profile', { headless: true });",
+      "  await launchJourney(chromium, { headless: true });",
+      "}",
+      "module.exports = { run };",
+    ].join(String.fromCharCode(10));
+    expect(await messages(code)).toEqual([4, 5]);
+  });
+
+  it("ends a journey that runs out of time and says which step and what the page was doing", async () => {
+    const page = Object.assign(new EventEmitter(), {
+      evaluate: async () => ({ url: "http://127.0.0.1/", readyState: "complete", visibility: "visible" }),
+    });
+    const browser = Object.assign(new EventEmitter(), {
+      newContext: async () => new EventEmitter(),
+      newPage: async () => page,
+      close: async () => undefined,
+    });
+    const errors = [];
+    const exit = vi.spyOn(process, "exit").mockImplementation(() => undefined);
+    const error = vi.spyOn(console, "error").mockImplementation((line) => errors.push(line));
+    try {
+      const launched = await launchJourney({ launch: async () => browser }, {}, { name: "probe", limitMs: 20 });
+      await launched.newPage();
+      journeyStep(launched, "measuring combat");
+      await vi.waitFor(() => expect(exit).toHaveBeenCalledWith(1), { timeout: STATE_WAIT_MS });
+      expect(errors.join("\n")).toMatch(
+        /^probe did not finish within 0\.02 s, waiting in step "measuring combat": page answered .*"readyState":"complete"/u,
+      );
+    } finally {
+      exit.mockRestore();
+      error.mockRestore();
+    }
+  });
+
+  it("ends a journey at once when its page crashes, with the step and the machine's free memory", async () => {
+    const page = new EventEmitter();
+    const context = new EventEmitter();
+    const browser = Object.assign(new EventEmitter(), {
+      newContext: async () => context,
+      newPage: async () => page,
+      close: async () => undefined,
+    });
+    const errors = [];
+    const exit = vi.spyOn(process, "exit").mockImplementation(() => undefined);
+    const error = vi.spyOn(console, "error").mockImplementation((line) => errors.push(line));
+    try {
+      const launched = await launchJourney({ launch: async () => browser }, {}, { name: "probe", limitMs: 60_000 });
+      await launched.newPage();
+      journeyStep(launched, "starting the Playground");
+      page.emit("crash");
+      expect(exit).toHaveBeenCalledWith(1);
+      expect(errors[0]).toMatch(
+        /^probe failed: the page crashed in step "starting the Playground" \(free memory \d+ of \d+ MiB\)$/u,
+      );
+      // A page a context opens later is watched too.
+      await launched.newContext();
+      const later = new EventEmitter();
+      context.emit("page", later);
+      later.emit("crash");
+      expect(exit).toHaveBeenCalledTimes(2);
+    } finally {
+      exit.mockRestore();
+      error.mockRestore();
+    }
+  });
+
+  it("disarms the journey ceiling when the browser closes", async () => {
+    const browser = Object.assign(new EventEmitter(), {
+      newContext: async () => new EventEmitter(),
+      newPage: async () => new EventEmitter(),
+      close: async () => undefined,
+    });
+    const exit = vi.spyOn(process, "exit").mockImplementation(() => undefined);
+    try {
+      const launched = await launchJourney({ launch: async () => browser }, {}, { name: "probe", limitMs: 20 });
+      await launched.close();
+      await new Promise((resolve) => {
+        setTimeout(resolve, 60);
+      });
+      expect(exit).not.toHaveBeenCalled();
+    } finally {
+      exit.mockRestore();
+    }
+  });
+
   it("waits for script requests in flight and ignores media that keeps loading", async () => {
     const page = new EventEmitter();
     let frames = 0;
     page.evaluate = async () => {
       frames += 1;
     };
+    page.exposeBinding = async () => undefined;
+    page.addInitScript = async () => undefined;
     await expect(waitForScriptLoads(page)).rejects.toThrow(/trackScriptLoads/u);
-    trackScriptLoads(page);
+    await trackScriptLoads(page);
     const request = (type, url) => ({ resourceType: () => type, url: () => url });
     const music = request("media", "http://127.0.0.1/assets/stem.ogg");
     page.emit("request", music); // still loading when the screen is ready: must not hold the wait
@@ -168,6 +269,57 @@ describe("reloadPage", () => {
     await waiting;
     expect(done).toBe(true);
     expect(frames).toBe(4);
+  });
+
+  it("never waits for a worker's script, which a worker terminated mid-load leaves open for good", async () => {
+    const page = new EventEmitter();
+    page.evaluate = async () => undefined;
+    let reportWorker;
+    page.exposeBinding = async (name, callback) => {
+      expect(name).toBe("__tearWorkerScript");
+      reportWorker = (url) => callback({}, url);
+    };
+    page.addInitScript = async () => undefined;
+    await trackScriptLoads(page);
+    const request = (url) => ({ resourceType: () => "script", url: () => url });
+    const early = "http://127.0.0.1/assets/career-archive-worker.js";
+    const late = "http://127.0.0.1/assets/capsule-encoder-worker.js";
+    // The page reports the worker first: its request is never counted.
+    reportWorker(early);
+    page.emit("request", request(early));
+    await waitForScriptLoads(page);
+    // The request arrives first: the report settles it. Neither ever gets requestfinished.
+    page.emit("request", request(late));
+    const waiting = waitForScriptLoads(page);
+    reportWorker(late);
+    await waiting;
+    // A screen chunk is still waited for.
+    const chunk = request("http://127.0.0.1/assets/cold-screen-renderers.js");
+    page.emit("request", chunk);
+    let done = false;
+    const chunkWait = waitForScriptLoads(page).then(() => (done = true));
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(done).toBe(false);
+    page.emit("requestfinished", chunk);
+    await chunkWait;
+  });
+
+  it("reports each worker's script URL from the page before the worker starts", () => {
+    const reported = [];
+    const constructed = [];
+    function FakeWorker(url, options) {
+      constructed.push([String(url), options]);
+    }
+    const window = {
+      Worker: FakeWorker,
+      location: { href: "http://127.0.0.1/index.html?test=1" },
+      __tearWorkerScript: (url) => (reported.push(url), Promise.resolve()),
+    };
+    new Function("window", `(${reportWorkerScripts.toString()})()`)(window);
+    const worker = new window.Worker("/assets/career-archive-worker.js", { type: "module" });
+    expect(worker).toBeInstanceOf(FakeWorker);
+    expect(reported).toEqual(["http://127.0.0.1/assets/career-archive-worker.js"]);
+    expect(constructed).toEqual([["/assets/career-archive-worker.js", { type: "module" }]]);
   });
 
   it("reloads with the state-wait ceiling", async () => {
@@ -195,5 +347,50 @@ describe("reloadPage", () => {
     );
     expect(failure.cause.message).toContain("Timeout exceeded");
     expect(page.listenerCount("framenavigated")).toBe(0);
+  });
+});
+
+describe("clickTarget", () => {
+  // Each poll of the page sees the next drawn frame: the screen's state changes before its first
+  // frame registers its controls, as the settings screen does while its lazy renderer loads.
+  function framesPage(frames) {
+    const clicks = [];
+    let frame = 0;
+    const page = {
+      mouse: { click: async (x, y) => void clicks.push([x, y]) },
+      evaluate: async () => ({ screen: frames.at(-1).screen, targets: [] }),
+      waitForFunction: async (predicate, argument) => {
+        for (; frame < frames.length; frame += 1) {
+          const { screen, targets } = frames[frame];
+          globalThis.window = {
+            __TEAR_CATALOG_DEBUG__: { app: { snapshot: () => ({ screen }) } },
+            __TEAR_UI_TARGETS__: () => targets,
+          };
+          const value = predicate(argument);
+          delete globalThis.window;
+          if (value) return { jsonValue: async () => value };
+        }
+        throw new Error("Timeout exceeded");
+      },
+    };
+    return { page, clicks };
+  }
+  const back = { label: "‹  BACK", enabled: true, clientX: 800, clientY: 828 };
+
+  it("clicks a control only once a frame of the expected screen has registered it", async () => {
+    const { page, clicks } = framesPage([
+      { screen: "paused", targets: [{ ...back, label: "RESUME", clientY: 151 }] },
+      { screen: "settings", targets: [] },
+      { screen: "settings", targets: [{ ...back, enabled: false }] },
+      { screen: "settings", targets: [back] },
+    ]);
+    await clickTarget(page, "settings", "BACK");
+    expect(clicks).toEqual([[800, 828]]);
+  });
+
+  it("names the screen and the targets it found when the control never appears", async () => {
+    const { page, clicks } = framesPage([{ screen: "settings", targets: [] }]);
+    await expect(clickTarget(page, "settings", "BACK")).rejects.toThrow(/no enabled "BACK" target on screen settings/u);
+    expect(clicks).toEqual([]);
   });
 });

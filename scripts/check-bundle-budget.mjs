@@ -8,10 +8,30 @@ import { verifyReleaseArtifact } from "./release-artifact.mjs";
 const root = resolve(import.meta.dirname, "..");
 /** Worker bundles are fetched only when their feature starts a worker. */
 const WORKER_CHUNK = /-worker-[\w-]+\.js$/u;
-/** The tutorial demonstration corpus is fetched only by training preflight (and a lazy worker copy). */
+/** The tutorial demonstration corpus is fetched only once a lesson is played or practice opens (and a lazy worker copy). */
 const TUTORIAL_GOLD_CHUNK = /^(?:tutorial-gold-reference|worker-tutorial-gold)-[\w-]+\.js$/u;
 
 const localPath = (url) => url.replace(/^(?:\.\/|\/)/u, "");
+
+/**
+ * Dynamic imports whose target chunk the startup path loads anyway. Such an
+ * import is lazy in the source and eager in the build: its code was merged into
+ * a startup chunk, so it saves nothing. The entry's own import of the
+ * application is the one intended case (the page preloads what it imports).
+ */
+export async function dynamicImportsIntoStartup(directory, startupFiles) {
+  const startup = new Set(startupFiles.map((file) => file.split("/").at(-1)));
+  const found = [];
+  for (const file of startupFiles) {
+    const name = file.split("/").at(-1) ?? file;
+    if (/^index-/u.test(name)) continue;
+    const text = await readFile(join(directory, file), "utf8");
+    for (const match of text.matchAll(/import\(\s*["'`]\.\/([^"'`]+\.js)["'`]\s*\)/gu)) {
+      if (startup.has(match[1])) found.push(`${name} -> ${match[1]}`);
+    }
+  }
+  return found;
+}
 
 /** Sizes of one built target directory: JS chunk classes, startup scripts, and the PWA precache. */
 export async function measureBundleTarget(directory) {
@@ -36,6 +56,7 @@ export async function measureBundleTarget(directory) {
   const startupBytes = (
     await Promise.all(startupFiles.map(async (file) => (await stat(join(directory, file))).size))
   ).reduce((total, bytes) => total + bytes, 0);
+  const lazyInStartup = await dynamicImportsIntoStartup(directory, startupFiles);
   let precache;
   const serviceWorker = join(directory, "sw.js");
   if (existsSync(serviceWorker)) {
@@ -51,7 +72,7 @@ export async function measureBundleTarget(directory) {
     main: largest(chunks.filter((chunk) => !WORKER_CHUNK.test(chunk.file) && !TUTORIAL_GOLD_CHUNK.test(chunk.file))),
     worker: largest(chunks.filter((chunk) => WORKER_CHUNK.test(chunk.file))),
     tutorialGold: largest(chunks.filter((chunk) => /^tutorial-gold-reference-/u.test(chunk.file))),
-    startup: { files: startupFiles, bytes: startupBytes },
+    startup: { files: startupFiles, bytes: startupBytes, lazyInStartup },
     ...(precache === undefined ? {} : { precache }),
   };
 }
@@ -68,6 +89,13 @@ export function evaluateBundleBudgets(label, measured, budgets, { pwa }) {
     gzip("main", measured.main, budgets.mainGzipBytes),
     gzip("largest worker", measured.worker, budgets.workerGzipBytes),
     gzip("on-demand tutorial corpus", measured.tutorialGold, budgets.tutorialGoldGzipBytes),
+    [
+      `${label} lazy code kept out of startup`,
+      measured.startup.lazyInStartup.length === 0,
+      measured.startup.lazyInStartup.length === 0
+        ? "no dynamic import resolves into a startup chunk"
+        : `dynamic imports that resolve into a startup chunk: ${measured.startup.lazyInStartup.join(", ")}`,
+    ],
     [
       `${label} startup scripts`,
       measured.startup.bytes <= budgets.startupScriptBytes && startupGold.length === 0,

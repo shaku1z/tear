@@ -1,5 +1,4 @@
-import { readGhostBossMemory } from "./boss-memory-origin";
-import { assertBossMemory } from "./boss-memory";
+import { asRecord } from "../domain/records";
 import { readSeedRaceRun } from "./seed-race-contract";
 import { assertGhostForkAnchor, readGhostForkOrigin } from "./fork-origin";
 import { ghostRootIntegrity, type TearGhostManifest } from "./capsule-vault";
@@ -109,12 +108,6 @@ export type GhostReplayAdmission =
   | Readonly<{ status: "unavailable"; reason: string; context: GhostReplayRunContextV1 }>
   | Readonly<{ status: "compatible"; reason: string; context: GhostReplayRunContextV1; runtimeId: string }>;
 
-function record(value: unknown): Readonly<Record<string, unknown>> | undefined {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as Readonly<Record<string, unknown>>)
-    : undefined;
-}
-
 function nonEmptyString(value: unknown, label: string): string {
   if (typeof value !== "string" || value.trim().length === 0)
     throw new TypeError(`${label} must be a non-empty string`);
@@ -128,7 +121,7 @@ function finiteString(value: string | number, label: string): string {
 }
 
 function fingerprint(value: unknown, label: string): GhostReplayBuildFingerprint {
-  const candidate = record(value);
+  const candidate = asRecord(value);
   if (candidate === undefined) throw new TypeError(`${label} must be an object`);
   return Object.freeze({
     version: nonEmptyString(candidate.version, `${label}.version`),
@@ -141,11 +134,11 @@ function fingerprint(value: unknown, label: string): GhostReplayBuildFingerprint
 }
 
 function normalizeRng(value: unknown, label: string): Readonly<Record<string, GhostReplayRngState>> {
-  const candidate = record(value);
+  const candidate = asRecord(value);
   if (candidate === undefined || Object.keys(candidate).length === 0)
     throw new TypeError(`${label} must contain named streams`);
   const streams = Object.entries(candidate).map(([name, state]) => {
-    const snapshot = record(state);
+    const snapshot = asRecord(state);
     if (snapshot === undefined) throw new TypeError(`${label}.${name} must be an object`);
     const cursor = snapshot.cursor;
     if (cursor !== undefined && (typeof cursor !== "number" || !Number.isSafeInteger(cursor) || cursor < 0)) {
@@ -167,13 +160,13 @@ function normalizeRng(value: unknown, label: string): Readonly<Record<string, Gh
 }
 
 function normalizeContext(value: unknown, label: string): GhostReplayRunContextV1 {
-  const candidate = record(value);
+  const candidate = asRecord(value);
   if (candidate === undefined) throw new TypeError(`${label} must be an object`);
   if (candidate.format !== GHOST_REPLAY_CONTEXT_FORMAT) throw new TypeError(`${label}.format is unsupported`);
   if (candidate.schemaVersion !== GHOST_REPLAY_CONTEXT_SCHEMA_VERSION)
     throw new TypeError(`${label}.schemaVersion is unsupported`);
-  const run = record(candidate.run);
-  const simulation = record(candidate.simulation);
+  const run = asRecord(candidate.run);
+  const simulation = asRecord(candidate.simulation);
   if (run === undefined || simulation === undefined)
     throw new TypeError(`${label} requires run and simulation metadata`);
   if (simulation.ticksPerSecond !== 120) throw new TypeError(`${label}.simulation.ticksPerSecond must be 120`);
@@ -187,7 +180,7 @@ function normalizeContext(value: unknown, label: string): GhostReplayRunContextV
   if (frameDescriptor !== undefined && !("value" in frameDescriptor))
     throw new TypeError("application-frame declaration must be data");
   const frameValue: unknown = frameDescriptor?.value,
-    frames = record(frameValue);
+    frames = asRecord(frameValue);
   if (
     frames !== undefined &&
     Reflect.ownKeys(frames).some((key) => !("value" in (Object.getOwnPropertyDescriptor(frames, key) ?? {})))
@@ -204,7 +197,7 @@ function normalizeContext(value: unknown, label: string): GhostReplayRunContextV
   if (policyDescriptor !== undefined && !("value" in policyDescriptor))
     throw new TypeError("generated application-frame policy must be data");
   const policyValue: unknown = policyDescriptor?.value,
-    policy = record(policyValue);
+    policy = asRecord(policyValue);
   if (
     policy !== undefined &&
     Reflect.ownKeys(policy).some((key) => !("value" in (Object.getOwnPropertyDescriptor(policy, key) ?? {})))
@@ -288,7 +281,7 @@ function openingPredecessor(value: unknown): AppScreen {
 }
 
 function normalizeOpening(value: unknown, runId: unknown): GhostRecordedOpeningV1 {
-  const candidate = record(value);
+  const candidate = asRecord(value);
   if (
     candidate === undefined ||
     Object.getPrototypeOf(candidate) !== Object.prototype ||
@@ -345,10 +338,6 @@ const openingPermits = new WeakMap<
 
 /** Requires complete, reader-verified capsule linkage before allowing the exceptional opening UI. */
 export function issueGhostRecordedOpeningPermit(capsule: GhostReadCapsule): GhostRecordedOpeningPermit | undefined {
-  if (readGhostBossMemory(capsule.manifest.provenance)) {
-    assertBossMemory(capsule);
-    return undefined;
-  }
   if (readGhostForkOrigin(capsule.manifest.provenance) !== undefined) return undefined;
   const mapping = mapGhostCapsuleToReplayEnvelope(capsule);
   if (mapping.issues.length > 0)
@@ -360,10 +349,10 @@ export function issueGhostRecordedOpeningPermit(capsule: GhostReadCapsule): Ghos
     return snapshot?.tick === 0 && entry.tick === 0 ? [snapshot] : [];
   });
   const anchor = anchors[0],
-    ui = record(anchor?.state["tear.ui.v1"]);
+    ui = asRecord(anchor?.state["tear.ui.v1"]);
   const context = readGhostReplayRunContext(capsule.manifest.provenance);
-  const rawSimulation = record(
-    record(record(capsule.manifest.provenance)?.[GHOST_REPLAY_CONTEXT_PROVENANCE_KEY])?.simulation,
+  const rawSimulation = asRecord(
+    asRecord(asRecord(capsule.manifest.provenance)?.[GHOST_REPLAY_CONTEXT_PROVENANCE_KEY])?.simulation,
   );
   if (context === undefined && rawSimulation !== undefined && Object.hasOwn(rawSimulation, "opening"))
     throw new TypeError("supplied recorded opening descriptor is malformed or unsupported");
@@ -385,10 +374,10 @@ export function issueGhostRecordedOpeningPermit(capsule: GhostReadCapsule): Ghos
   });
   if (receipts.length !== 1 || receipts[0] === undefined)
     throw new TypeError("opening requires one original tick-zero held-input receipt");
-  const run = record(anchor.state["tear.run.v1"]),
-    world = record(anchor.state["tear.world.v1"]),
-    runtime = record(world?.runtime),
-    lifecycle = record(runtime?.lifecycle);
+  const run = asRecord(anchor.state["tear.run.v1"]),
+    world = asRecord(anchor.state["tear.world.v1"]),
+    runtime = asRecord(world?.runtime),
+    lifecycle = asRecord(runtime?.lifecycle);
   const opening = context.simulation.opening;
   const bossOrder: readonly unknown[] = Array.isArray(run?.bossOrder) ? run.bossOrder : [];
   const bossQueue: readonly unknown[] = Array.isArray(run?.spawnQueue) ? run.spawnQueue : [];
@@ -407,7 +396,7 @@ export function issueGhostRecordedOpeningPermit(capsule: GhostReadCapsule): Ghos
     bossOrder.every((id) => typeof id === "string" && isBossDefinitionId(id)) &&
     new Set(bossOrder).size === bossOrder.length &&
     bossQueue.length === 1 &&
-    record(bossQueue[0])?.type === "boss";
+    asRecord(bossQueue[0])?.type === "boss";
   if (
     context.simulation.initialState !== "opening-initialized" ||
     run?.tick !== 0 ||
@@ -439,7 +428,7 @@ export function issueGhostRecordedOpeningPermit(capsule: GhostReadCapsule): Ghos
     .map((entry) => causalEvent(entry.value))
     .find((event) => event?.id === bootstrapId);
   const start = starts[0],
-    payload = record(start?.event.payload);
+    payload = asRecord(start?.event.payload);
   if (
     starts.length !== 1 ||
     start?.entry.tick !== 0 ||
@@ -463,7 +452,7 @@ export function issueGhostRecordedOpeningPermit(capsule: GhostReadCapsule): Ghos
   }
   const completions = capsule.tracks.events.flatMap((entry) => {
     const event = causalEvent(entry.value);
-    return record(event?.payload)?.boundary === "recorded-opening-playing-exposed" ? [{ entry, event }] : [];
+    return asRecord(event?.payload)?.boundary === "recorded-opening-playing-exposed" ? [{ entry, event }] : [];
   });
   const completion = completions[0];
   if (opening !== undefined || completions.length > 0) {
@@ -485,14 +474,14 @@ export function issueGhostRecordedOpeningPermit(capsule: GhostReadCapsule): Ghos
     // its aligned held-input receipt are necessary inference, never an invented fact.
     const laterPlaying = capsule.tracks.keyframes.some((entry) => {
       const later = recordedSnapshot(entry.value),
-        laterRun = record(later?.state["tear.run.v1"]),
-        laterWorld = record(later?.state["tear.world.v1"]);
-      const laterLifecycle = record(record(laterWorld?.runtime)?.lifecycle);
+        laterRun = asRecord(later?.state["tear.run.v1"]),
+        laterWorld = asRecord(later?.state["tear.world.v1"]);
+      const laterLifecycle = asRecord(asRecord(laterWorld?.runtime)?.lifecycle);
       if (later === undefined) return false;
       return (
         entry.tick === later.tick &&
         later.tick > 0 &&
-        record(later.state["tear.ui.v1"])?.screen === "playing" &&
+        asRecord(later.state["tear.ui.v1"])?.screen === "playing" &&
         laterRun?.mode === context.run.mode &&
         String(laterRun.runSeed) === context.run.seed &&
         Number(laterRun.runTime) > 0 &&
@@ -516,7 +505,7 @@ export function issueGhostRecordedOpeningPermit(capsule: GhostReadCapsule): Ghos
       : [];
   });
   const terminal = terminals[0],
-    terminalPayload = record(terminal?.event.payload);
+    terminalPayload = asRecord(terminal?.event.payload);
   if (
     terminals.length > 0 &&
     (terminals.length !== 1 ||
@@ -563,7 +552,7 @@ export function readGhostRecordedOpeningPermit(
 
 /** Returns no context for legacy/malformed provenance; callers must fail closed instead of guessing. */
 export function readGhostReplayRunContext(provenance: unknown): GhostReplayRunContextV1 | undefined {
-  const source = record(provenance);
+  const source = asRecord(provenance);
   if (source === undefined) return undefined;
   try {
     return normalizeContext(source[GHOST_REPLAY_CONTEXT_PROVENANCE_KEY], "provenance.replayContext");
@@ -652,14 +641,6 @@ export function assessGhostReplayBootstrap(
   context: GhostReplayRunContextV1,
 ): string | undefined {
   try {
-    if (readGhostBossMemory(capsule.manifest.provenance)) {
-      assertBossMemory(capsule);
-      return undefined;
-    }
-  } catch (error) {
-    return error instanceof Error ? error.message : "Invalid Boss Memory";
-  }
-  try {
     const origin = readGhostForkOrigin(capsule.manifest.provenance);
     if (origin !== undefined) {
       assertGhostForkAnchor(capsule, origin);
@@ -670,7 +651,7 @@ export function assessGhostReplayBootstrap(
   }
   const expectedId = ghostLiveBootstrapEventId(capsule.manifest.id);
   const bootstrapEntries = capsule.tracks.events.filter((entry) => {
-    const raw = record(entry.value);
+    const raw = asRecord(entry.value);
     return raw?.id === expectedId;
   });
   if (bootstrapEntries.length !== 1) {
@@ -679,7 +660,7 @@ export function assessGhostReplayBootstrap(
   const bootstrapEntry = bootstrapEntries[0];
   if (bootstrapEntry === undefined) return "capsule bootstrap event is missing";
   const bootstrap = causalEvent(bootstrapEntry.value);
-  const payload = bootstrap === undefined ? undefined : record(bootstrap.payload);
+  const payload = bootstrap === undefined ? undefined : asRecord(bootstrap.payload);
   if (
     bootstrap === undefined ||
     bootstrapEntry.tick !== 0 ||
@@ -706,17 +687,17 @@ export function assessGhostReplayBootstrap(
   });
   const bootstrapSnapshots = snapshots.filter((snapshot) => snapshot.tick === 0);
   if (bootstrapSnapshots.length !== 1) {
-    return "capsule requires exactly one recorded-canonical tick-zero State Forge snapshot";
+    return "capsule requires exactly one recorded-canonical tick-zero State Setup snapshot";
   }
   for (const snapshot of snapshots) {
     if (snapshot.provenance.sourceId !== expectedId) {
-      return `recorded State Forge snapshot ${snapshot.id} does not cite the V3 bootstrap event`;
+      return `recorded State Setup snapshot ${snapshot.id} does not cite the V3 bootstrap event`;
     }
     if (!staticBuildMatches(snapshot.provenance.build, context.build)) {
-      return `recorded State Forge snapshot ${snapshot.id} has a different static build identity`;
+      return `recorded State Setup snapshot ${snapshot.id} has a different static build identity`;
     }
     if (snapshot.provenance.build.configHash !== stableVerificationHash(snapshot.state["tear.configuration.v1"])) {
-      return `recorded State Forge snapshot ${snapshot.id} configuration hash does not match its payload`;
+      return `recorded State Setup snapshot ${snapshot.id} configuration hash does not match its payload`;
     }
   }
   const bootstrapSnapshot = bootstrapSnapshots[0];
@@ -725,15 +706,15 @@ export function assessGhostReplayBootstrap(
     !fingerprintsMatch(bootstrapSnapshot.provenance.build, context.build) ||
     bootstrapSnapshot.seed !== context.run.seed
   ) {
-    return "tick-zero State Forge snapshot does not match replay bootstrap build or seed";
+    return "tick-zero State Setup snapshot does not match replay bootstrap build or seed";
   }
   try {
     const snapshotRng = normalizeRng(bootstrapSnapshot.state["tear.rng.v1"], "tick-zero snapshot RNG");
     if (stableVerificationHash(snapshotRng) !== stableVerificationHash(context.rng)) {
-      return "tick-zero State Forge snapshot RNG does not match replay bootstrap context";
+      return "tick-zero State Setup snapshot RNG does not match replay bootstrap context";
     }
   } catch {
-    return "tick-zero State Forge snapshot RNG is invalid";
+    return "tick-zero State Setup snapshot RNG is invalid";
   }
   return undefined;
 }

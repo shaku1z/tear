@@ -1,7 +1,7 @@
 /**
  * Load profile of the release builds: what a player downloads and waits for
  * before the first frame, before the menu accepts input, and from pressing
- * START to playing, on throttled network and CPU device profiles.
+ * PLAY (a new player's first press, into the tutorial) to playing, on throttled network and CPU device profiles.
  *
  * Each release build (`dist/standalone`, `dist/crazygames`) is
  * served the way its host serves it: text compressed (brotli, else gzip) and,
@@ -19,7 +19,7 @@
  *   node tests/browser-load-profile.js            report every target and profile
  *   node tests/browser-load-profile.js --check    also enforce config/load-budgets.json
  *
- * TEAR_LOAD_TARGETS=standalone,crazygames  TEAR_LOAD_PROFILES=desktop,laptop,phone
+ * TEAR_LOAD_TARGETS=standalone,crazygames  TEAR_LOAD_PROFILES=desktop,laptop (phone: parked with mobile)
  * TEAR_LOAD_REPEATS (default 1)  TEAR_LOAD_OUTPUT (report path)  TEAR_LOAD_START=0 (skip START)
  */
 const { chromium } = require("@playwright/test");
@@ -29,7 +29,7 @@ const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
 const zlib = require("node:zlib");
-const { SLOW_STATE_WAIT_MS, STATE_WAIT_MS, holdFor, pollEvery, settleFor } = require("./browser-waits");
+const { SLOW_STATE_WAIT_MS, STATE_WAIT_MS, holdFor, pollEvery, launchJourney } = require("./browser-waits");
 
 const projectRoot = path.resolve(__dirname, "..");
 const check = process.argv.includes("--check");
@@ -54,7 +54,9 @@ const TARGETS = Object.freeze({
 const selectedTargets = (process.env.TEAR_LOAD_TARGETS || Object.keys(TARGETS).join(","))
   .split(",")
   .filter((target) => fs.existsSync(path.join(projectRoot, TARGETS[target]?.directory ?? "missing", "index.html")));
-const selectedProfiles = (process.env.TEAR_LOAD_PROFILES || Object.keys(PROFILES).join(",")).split(",");
+// The phone profile is off by default while mobile is paused (plans/MOBILE_LATER.md): a release
+// build shows a phone the computer-only line and never starts, so there is no START to time.
+const selectedProfiles = (process.env.TEAR_LOAD_PROFILES || "desktop,laptop").split(",");
 assert.ok(
   selectedProfiles.every((profile) => profile in PROFILES),
   `TEAR_LOAD_PROFILES accepts ${Object.keys(PROFILES).join(", ")}`,
@@ -299,7 +301,11 @@ function marks(timeline) {
   };
 }
 
-/** PLAY -> ENDLESS -> START with real pointer or touch input on drawn labels; returns the page time of the START press. */
+/**
+ * A fresh player's first press into gameplay, with real pointer or touch input on the drawn label;
+ * returns the page time of the press. A fresh profile is tutorial-first, so that press is PLAY and the
+ * gameplay it starts is the tutorial's first lesson: the cold path a new player downloads and waits for.
+ */
 async function pressStart(page, frame, profile) {
   const offset =
     frame === page
@@ -331,13 +337,9 @@ async function pressStart(page, frame, profile) {
     await page.waitForTimeout(holdFor(60));
     await page.mouse.up();
   };
-  for (const label of [/^PLAY$/u, /^ENDLESS$/u]) {
-    await click(await find(label));
-    await page.waitForTimeout(settleFor(700));
-  }
-  const start = await find(/^START$/u);
+  const play = await find(/^PLAY$/u);
   const pressedMs = await frame.evaluate(() => performance.now());
-  await click(start);
+  await click(play);
   await frame.waitForFunction(() => performance.getEntriesByName("tear:gameplay-start").length > 0, undefined, {
     timeout: SLOW_STATE_WAIT_MS,
     polling: 50,
@@ -358,6 +360,9 @@ async function measureLoad(browser, target, profileId, server) {
   const page = await context.newPage();
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
+  // A script that fails to load is not a page error; index.html marks #boot failed instead.
+  const failedRequests = [];
+  page.on("requestfailed", (request) => failedRequests.push(`${request.url()} (${request.failure()?.errorText})`));
   const cdp = await context.newCDPSession(page);
   await cdp.send("Network.enable");
   // Playwright routing would disable the HTTP cache and void the warm load, so the
@@ -389,10 +394,39 @@ async function measureLoad(browser, target, profileId, server) {
       assert.ok(Date.now() < deadline, `${target}/${profileId}: game frame never attached`);
       await page.waitForTimeout(pollEvery(50));
     }
-    await frame.waitForFunction(() => performance.getEntriesByName("tear:first-frame").length > 0, undefined, {
-      timeout: SLOW_STATE_WAIT_MS,
-      polling: 100,
-    });
+    // The first frame, or a boot screen that will never give way to one: a failed boot
+    // (index.html) or the computer-only line (a device the build reads as touch-only).
+    const bootState = () =>
+      frame.evaluate(() => {
+        const boot = document.getElementById("boot");
+        return boot === null ? "removed" : `#boot.${boot.className || "loading"}: ${boot.innerText.trim()}`;
+      });
+    const outcome = await frame
+      .waitForFunction(
+        () => {
+          if (performance.getEntriesByName("tear:first-frame").length > 0) return "first-frame";
+          const boot = document.getElementById("boot");
+          if (boot?.classList.contains("failed")) return "boot-failed";
+          if (boot?.classList.contains("computer")) return "computer-only";
+          return false;
+        },
+        undefined,
+        { timeout: SLOW_STATE_WAIT_MS, polling: 100 },
+      )
+      .then((handle) => handle.jsonValue())
+      .catch(async (error) => {
+        throw new Error(
+          `${target}/${profileId}: no first frame. Boot screen: ${await bootState().catch(() => "unreadable")}; ` +
+            `page errors: ${JSON.stringify(errors)}; failed requests: ${JSON.stringify(failedRequests)}`,
+          { cause: error },
+        );
+      });
+    assert.equal(
+      outcome,
+      "first-frame",
+      `${target}/${profileId}: the game never started. Boot screen: ${await bootState()}; ` +
+        `page errors: ${JSON.stringify(errors)}; failed requests: ${JSON.stringify(failedRequests)}`,
+    );
     await frame
       .waitForFunction(() => performance.getEntriesByName("tear:loading-finished").length > 0, undefined, {
         timeout: STATE_WAIT_MS,
@@ -517,7 +551,7 @@ function enforce(report) {
 
 async function main() {
   const chromePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
-  const browser = await chromium.launch({
+  const browser = await launchJourney(chromium, {
     headless: true,
     ...(fs.existsSync(chromePath) && process.env.TEAR_LOAD_BROWSER !== "bundled" ? { executablePath: chromePath } : {}),
     args: ["--autoplay-policy=no-user-gesture-required"],

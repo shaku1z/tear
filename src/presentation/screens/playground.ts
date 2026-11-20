@@ -1,278 +1,222 @@
-import type { ChoiceView, PlaygroundScreenView, ScreenRenderContext } from "./contracts";
-import { backControl, scrollHint } from "./screen-primitives";
-import { createCompactPlayground } from "./compact-playground";
+import type { ChoiceView, PlaygroundScreenView, ScreenControl, ScreenRenderContext } from "./contracts";
+import { createActionCard, desktopActionCard, phoneActionCard } from "./action-card";
+import { buttonGrid } from "./choice-grid";
+import { createPageFrame, type FlowAction, type PageFrame, type ScrollBlock, type ScrollView } from "./page-frame";
 
-export interface GridCell {
-  readonly column: number;
-  readonly row: number;
-  readonly span: number;
+type Tokens = ScreenRenderContext["ui"]["t"];
+/** The view's choices for one section. */
+type Choices = (section: string) => readonly ChoiceView[];
+type Section = PlaygroundScreenView["sections"][number];
+
+/** Desktop chrome under the overlay header: the tab strip, then the tab's body. */
+const DESKTOP = { tabsY: 136, bodyTop: 212 } as const;
+
+/**
+ * The menu tab's numbers at each density. A group is a section of the open tab: a plain accent
+ * heading over a grid of buttons. Small groups share one band, each as wide as its share of the
+ * buttons, while the band has room (`band`).
+ */
+interface MenuMetrics {
+  readonly gap: number;
+  /** Heading block height, and the space between bands. */
+  readonly heading: number;
+  readonly bandGap: number;
+  /** A group that may share a band has at most `small` choices; a band holds at most `choices`. */
+  readonly band: Readonly<{ small: number; choices: number }>;
+  /** Columns for a group of `count` choices in `width`, alone in its band or not. */
+  readonly columns: (count: number, width: number, alone: boolean) => number;
+  readonly size: number;
+  /** Desktop buttons carry the glyph and the sub line; the phone puts the sub after the label. */
+  readonly detail: boolean;
 }
-export interface ChoiceGrid {
-  readonly columns: number;
-  readonly rows: number;
-  readonly cellWidth: number;
-  readonly cells: readonly GridCell[];
+
+/** Desktop: up to eight columns; a band shares the 1120 column. */
+function desktopMenu(): MenuMetrics {
+  return {
+    gap: 10,
+    heading: 14,
+    bandGap: 16,
+    band: { small: 5, choices: 10 },
+    columns: (count, _width, alone) => (alone ? Math.min(Math.max(count, 1), count <= 4 ? 4 : 8) : count),
+    size: 14,
+    detail: true,
+  };
+}
+
+/** Phone: full-size touch targets, the column count from the page width (narrowest 270 px), no shared bands. */
+function phoneMenu(t: Tokens): MenuMetrics {
+  const gap = t.metric.btnGap;
+  return {
+    gap: t.space.sm,
+    heading: t.type.micro + t.space.xs,
+    bandGap: 0,
+    band: { small: 0, choices: 0 },
+    columns: (_count, width) => Math.max(3, Math.floor((width + gap) / (270 + gap))),
+    size: t.type.label,
+    detail: false,
+  };
+}
+
+/** Every tab returns to the arena through RESUME (and Tab / Esc); there is no BACK. */
+const RESUME: FlowAction = { label: "RESUME", action: { type: "run.resume" } };
+
+/** Consecutive small groups share a band while it has room (never on the phone). */
+function bands(sections: readonly Section[], m: MenuMetrics): Section[][] {
+  const out: Section[][] = [];
+  for (const section of sections) {
+    if (section.choices.length === 0) continue;
+    const band = out.at(-1),
+      small = (entry: Section): boolean => entry.choices.length <= m.band.small;
+    const count = band?.reduce((total, entry) => total + entry.choices.length, 0) ?? 0;
+    if (band && small(section) && band.every(small) && count + section.choices.length <= m.band.choices)
+      band.push(section);
+    else out.push([section]);
+  }
+  return out;
 }
 
 /**
- * Flows `count` choices left to right into rows, the last one spanning `lastSpan` cells
- * (it starts a new row when the current one has too few cells left). Uses the fewest
- * columns from `minColumns` that keep the grid within `maxRows`; at `maxColumns` it
- * stops widening and grows downward instead.
+ * The PLAYGROUND menu over the frozen arena (no sheet), one definition at both densities: the tab
+ * strip, then the open tab. The build-menu tabs are groups of buttons laid out from `MenuMetrics`;
+ * ABILITIES (screen `pglab`) draws one card at both densities from `LabMetrics`. RESUME sits in
+ * the footer row on every tab.
  */
-export function choiceGrid(
-  count: number,
-  lastSpan: number,
-  options: Readonly<{ minColumns: number; maxColumns: number; maxRows: number; width: number; gap: number }>,
-): ChoiceGrid {
-  const flow = (columns: number): GridCell[] => {
-    const cells: GridCell[] = [];
-    for (let index = 0, slot = 0; index < count; index++) {
-      const span = index === count - 1 ? Math.min(lastSpan, columns) : 1;
-      if ((slot % columns) + span > columns) slot = Math.ceil(slot / columns) * columns;
-      cells.push({ column: slot % columns, row: Math.floor(slot / columns), span });
-      slot += span;
-    }
-    return cells;
-  };
-  let columns = options.minColumns,
-    cells = flow(columns);
-  const rowsOf = (list: readonly GridCell[]): number => list.reduce((rows, cell) => Math.max(rows, cell.row + 1), 0);
-  while (rowsOf(cells) > options.maxRows && columns < options.maxColumns) cells = flow(++columns);
-  return { columns, rows: rowsOf(cells), cellWidth: (options.width - options.gap * (columns - 1)) / columns, cells };
-}
-
 export function createPlaygroundRenderers(context: ScreenRenderContext) {
-  const { ui, width, height } = context;
-  // Phone landscape (compact density) composes both screens as compact pages.
-  const compact = createCompactPlayground(context);
+  const { ui, width } = context,
+    pf = createPageFrame(context),
+    card = createActionCard(context);
+  const action = (id: string) => ({ type: "playground.action", id }) as const;
+  const scrollFlags = (view: PlaygroundScreenView) => ({
+    canScrollUp: view.canScrollUp,
+    canScrollDown: view.canScrollDown,
+  });
+
+  function open(view: PlaygroundScreenView, pickers?: Parameters<typeof pf.open>[0]["pickers"]): PageFrame {
+    return pf.open({
+      title: view.title,
+      subtitle: view.subtitle,
+      sheet: false,
+      tabs: view.tabs ?? [],
+      tabAction: action,
+      pickers,
+      desktop: { tabsY: DESKTOP.tabsY },
+    });
+  }
 
   function render(view: PlaygroundScreenView): void {
-    const { canvas } = context;
-    // Source dim/header values (ee5e931): 0.88 over the frozen arena on the build
-    // menu, 0.9 in the lab, and the default accent — not a forced purple hue.
-    ui.dim(canvas, width, height, view.id === "pgmenu" ? 0.88 : 0.9);
-    if (ui.density.compact) {
-      if (view.id === "pgmenu") compact.buildMenu(view);
-      else compact.abilityLab(view);
-      return;
-    }
-    ui.header(canvas, view.title, view.subtitle, context.enterAmount);
-    if (view.id === "pgmenu") renderBuildMenu(view);
-    else renderAbilityLab(view);
-    // The hint shares the footer row with BACK (to its right), never the last row.
-    scrollHint(context, view.canScrollUp, view.canScrollDown);
-    // The build menu resumes through its own RESUME button (and Tab / Esc); only
-    // the lab carries a back control, which returns to the build menu.
-    if (view.id === "pglab") backControl(context, { type: "navigate", to: "pgmenu" });
+    // Source dim values (ee5e931): 0.88 over the frozen arena on the build menu, 0.9 in the lab.
+    const choices: Choices = (section) => view.sections.find((entry) => entry.label === section)?.choices ?? [];
+    if (view.id === "pgmenu") menuTab(view);
+    else abilityLab(view, choices);
   }
 
-  function enqueueChoice(
-    choice: PlaygroundScreenView["sections"][number]["choices"][number],
-    x: number,
-    y: number,
-    w: number,
-    h = 42,
-    size?: number,
-  ): void {
-    context.enqueue({
-      x,
-      y,
-      w,
-      h,
-      label: choice.label,
-      glyph: choice.glyph,
-      sub: choice.sub ?? choice.description,
-      selected: choice.selected,
-      enabled: choice.enabled,
-      accent: choice.accent,
-      size,
-      action: { type: "playground.action", id: choice.id },
-    });
+  function menuTab(view: PlaygroundScreenView): void {
+    const frame = open(view);
+    const m = frame.compact ? phoneMenu(ui.t) : desktopMenu();
+    const blocks = bands(view.sections, m).flatMap((band, index) => [
+      ...(index > 0 && m.bandGap > 0 ? [{ height: m.bandGap, draw: () => undefined }] : []),
+      ...bandBlocks(frame, band, m),
+    ]);
+    const desktop = { top: DESKTOP.bodyTop, cull: { above: 0, below: 0 }, ...scrollFlags(view) };
+    const state = pf.body(frame, { head: blocks, gap: m.gap, desktop });
+    pf.close(frame, state, { back: null, primary: RESUME });
   }
 
-  // The source build menu (ee5e931 js/game.js renderPgMenu): a bespoke two-column
-  // board — enemies/spawn modifiers/difficulty on the left, bosses/arena/weapons on
-  // the right, toggles and actions in a bottom band. Section headings are plain
-  // accent tags (no divider rule), matching the source.
-  function renderBuildMenu(view: PlaygroundScreenView): void {
-    const sections = new Map(view.sections.map((section) => [section.label, section]));
-    const { canvas } = context,
-      t = ui.t,
-      accent = t.color.accent;
-    const left = width / 2 - 620,
-      right = width / 2 + 20,
-      columnWidth = 600,
-      bh = 42,
-      gap = 10,
-      gridTop = 208;
-    const tag = (label: string, x: number, y: number): void => {
-      ui.tag(canvas, label, x, y, accent, "left", t.type.micro);
-    };
-    const rowY = (row: number): number => gridTop + row * (bh + gap);
-    // Everything under the enemy and boss grids is placed from the rows they use, and
-    // each grid takes as many columns as it needs to end above the bottom band
-    // (source top 640, 36 px clearance), so a new enemy or boss never lands on the next group.
-    const bandTop = 640,
-      bandClearance = 36,
-      headingGap = 26;
-    const leftStackBelow = headingGap + 66 + 4 + 38,
-      rightStackBelow = headingGap + bh + 30 + 4 + bh;
-    const rowsAbove = (below: number): number => Math.floor((bandTop - bandClearance - below - gridTop) / (bh + gap));
-    const place = (choice: ChoiceView, grid: ChoiceGrid, index: number, x: number): void => {
-      const cell = grid.cells[index];
-      if (cell === undefined) return;
-      enqueueChoice(
-        choice,
-        x + cell.column * (grid.cellWidth + gap),
-        rowY(cell.row),
-        grid.cellWidth * cell.span + gap * (cell.span - 1),
-        bh,
-        13,
-      );
-    };
-
-    // ---- left: enemies (kind-coloured), the two-cell target dummy, spawn modifiers ----
-    tag("SPAWN ENEMIES", left, 196);
-    const enemies = sections.get("SPAWN ENEMIES")?.choices ?? [];
-    // Source grid: three 196 px kinds per row (608 px), the dummy spanning two cells.
-    const enemyGrid = choiceGrid(enemies.length, 2, {
-      minColumns: 3,
-      maxColumns: 4,
-      maxRows: rowsAbove(leftStackBelow),
-      width: 3 * 196 + 2 * gap,
-      gap,
-    });
-    enemies.forEach((choice, index) => {
-      place(choice, enemyGrid, index, left);
-    });
-
-    const modifierY = rowY(enemyGrid.rows) + headingGap;
-    tag("SPAWN MODIFIERS", left, modifierY - 10);
-    ui.text(canvas, "HP", left, modifierY + 28, t.type.label);
-    sections.get("HP")?.choices.forEach((choice, index) => {
-      enqueueChoice(choice, left + 44 + index * 92, modifierY + 4, 84, 38, 13);
-    });
-    ui.text(canvas, "COUNT", left + 340, modifierY + 28, t.type.label);
-    sections.get("COUNT")?.choices.forEach((choice, index) => {
-      enqueueChoice(choice, left + 424 + index * 92, modifierY + 4, 84, 38, 13);
-    });
-
-    // difficulty — the SAME tiers the real modes use, swapped live
-    const difficultyY = modifierY + 66;
-    tag("DIFFICULTY", left, difficultyY - 10);
-    sections.get("DIFFICULTY")?.choices.forEach((choice, index) => {
-      enqueueChoice(choice, left + index * (116 + 5), difficultyY + 4, 116, 38, 11);
-    });
-
-    // ---- right: bosses, arena, weapons ----
-    tag("SUMMON A BOSS", right, 196);
-    const bosses = sections.get("SUMMON A BOSS")?.choices ?? [];
-    // Source grid: two 295 px bosses per row across the 600 px column.
-    const bossGrid = choiceGrid(bosses.length, 1, {
-      minColumns: 2,
-      maxColumns: 3,
-      maxRows: rowsAbove(rightStackBelow),
-      width: columnWidth,
-      gap,
-    });
-    bosses.forEach((choice, index) => {
-      place(choice, bossGrid, index, right);
-    });
-    const arenaY = rowY(bossGrid.rows) + headingGap;
-    tag("ARENA", right, arenaY - 10);
-    sections.get("ARENA")?.choices.forEach((choice) => {
-      enqueueChoice(choice, right, arenaY + 4, columnWidth, bh, 13);
-    });
-    const weaponY = arenaY + bh + 30;
-    tag("WEAPON  (restarts the arena)", right, weaponY - 10);
-    const weapons = sections.get("WEAPON")?.choices ?? [];
-    if (weapons.length > 0) {
-      const buttonWidth = (columnWidth - gap * (weapons.length - 1)) / weapons.length;
-      weapons.forEach((choice, index) => {
-        enqueueChoice(choice, right + index * (buttonWidth + gap), weaponY + 4, buttonWidth, bh, 13);
+  /** One band: the group headings, then each row of buttons as its own block. */
+  function bandBlocks(frame: PageFrame, band: readonly Section[], m: MenuMetrics): ScrollBlock[] {
+    const groupGap = 28,
+      total = band.reduce((sum, entry) => sum + entry.choices.length, 0),
+      room = frame.width - groupGap * (band.length - 1);
+    const keyed = band.some((section) => section.choices.some((choice) => choice.sub !== undefined));
+    let x = frame.left;
+    const placed = band.map((section) => {
+      const w = band.length === 1 ? frame.width : (room * section.choices.length) / total;
+      const columns = m.columns(section.choices.length, w, band.length === 1),
+        buttons = section.choices.map((choice) => control(choice, { x: 0, y: 0, w, h: 0 }, m, keyed));
+      const grid = buttonGrid(ui, context.canvas, buttons, {
+        minColumns: columns,
+        maxColumns: columns,
+        maxRows: Number.MAX_SAFE_INTEGER,
+        width: w,
+        gap: m.gap,
       });
+      const entry = { section, x, grid };
+      x += w + groupGap;
+      return entry;
+    });
+    const ink = ui.readable(ui.t.color.accent),
+      rows = Math.max(...placed.map((entry) => entry.grid.rows));
+    const blocks: ScrollBlock[] = [
+      {
+        height: m.heading,
+        draw: (y) => {
+          for (const entry of placed)
+            ui.tag(context.canvas, entry.section.label, entry.x, y + ui.t.type.micro, ink, "left", ui.t.type.micro);
+        },
+      },
+    ];
+    // One row height across the band: the tallest button any of its groups needs.
+    const h = Math.max(...placed.map((entry) => entry.grid.rowHeight));
+    for (let row = 0; row < rows; row++) {
+      const draw = (y: number, scrollView: ScrollView): void => {
+        for (const { section, x: left, grid } of placed)
+          section.choices.forEach((choice, index) => {
+            const cell = grid.cells[index];
+            if (cell?.row !== row) return;
+            const box = { x: left + cell.column * (grid.cellWidth + m.gap), y, w: grid.cellWidth, h };
+            scrollView.enqueue(control(choice, box, m, keyed));
+          });
+      };
+      blocks.push({ height: h, draw });
     }
-
-    // ---- bottom band: toggles + actions + resume ----
-    // Source position unless a column still ends lower at its widest grid.
-    const columnsBottom = Math.max(difficultyY + 4 + 38, weaponY + 4 + bh);
-    const toggleY = Math.max(bandTop, columnsBottom + bandClearance);
-    tag("MODIFIERS", left, toggleY - 10);
-    sections.get("MODIFIERS")?.choices.forEach((choice, index) => {
-      enqueueChoice(choice, left + index * (300 + 12), toggleY + 4, 300, bh, 13);
-    });
-    const actionY = toggleY + bh + 18;
-    sections.get("ACTIONS")?.choices.forEach((choice, index) => {
-      enqueueChoice(choice, left + index * (300 + 12), actionY, 300, bh, 13);
-    });
-    context.enqueue({
-      x: width / 2 - 160,
-      y: actionY + bh + 16,
-      w: 320,
-      h: 50,
-      label: "RESUME",
-      action: { type: "run.resume" },
-    });
+    return blocks;
   }
 
   /**
-   * Ability Lab rows (92 px pitch, matching the lab's scroll owner): name, one fitted
-   * line of effect copy that stops before the action button, and the ownership tag.
-   * Rows clip above the footer row, and a row's button is offered only while it is
-   * fully inside the clip, so nothing reaches BACK or the scroll hint.
+   * A choice as a button: desktop carries the glyph and the sub line, the phone the sub after the
+   * label. In a band where some buttons show a key, every button keeps the sub line's room (an
+   * empty one where it has no key), so all labels sit on the same line.
    */
-  function renderAbilityLab(view: PlaygroundScreenView): void {
-    const { canvas } = context,
-      t = ui.t;
-    const filters = view.sections.find((section) => section.label === "FILTERS");
-    filters?.choices.forEach((choice, index) => {
-      enqueueChoice(choice, width / 2 - 546 + index * 156, 168, 148, 34);
-    });
-    const abilities = view.sections.find((section) => section.label === "ABILITIES");
-    const cardWidth = 588,
-      cardHeight = 80,
-      rowHeight = 92,
-      top = 232,
-      left = width / 2 - cardWidth - 12;
-    const bottom = ui.sheetFooter().y - t.space.md,
-      buttonW = 102,
-      buttonH = 40;
-    const textW = cardWidth - 16 - buttonW - 32;
-    canvas.save();
-    canvas.beginPath();
-    canvas.rect(0, top - 10, width, bottom - (top - 10));
-    canvas.clip();
-    abilities?.choices.forEach((choice, index) => {
-      const x = left + (index % 2) * (cardWidth + 24),
-        y = top + Math.floor(index / 2) * rowHeight - context.scroll;
-      if (y + cardHeight < top - 10 || y > bottom) return;
-      ui.card(canvas, x, y, cardWidth, cardHeight, false);
-      ui.accentStrip(canvas, x, y, cardWidth, choice.accent);
-      const name = ui.fitText(canvas, choice.label, textW, { size: t.type.lead, floor: t.type.label, bold: true });
-      ui.displayText(canvas, name.lines[0] ?? choice.label, x + 16, y + 28, name.size);
-      if (choice.description)
-        ui.textBox(canvas, choice.description, x + 16, y + 50, textW, {
-          size: t.type.micro,
-          alpha: t.alpha.soft,
-          maxLines: 1,
-        });
-      if (choice.sub)
-        ui.tag(canvas, choice.sub, x + 16, y + 69, ui.readable(choice.accent ?? t.color.accent), "left", t.type.micro);
-      const buttonY = y + (cardHeight - buttonH) / 2;
-      if (buttonY >= top - 10 && buttonY + buttonH <= bottom) {
-        context.enqueue({
-          x: x + cardWidth - buttonW - 16,
-          y: buttonY,
-          w: buttonW,
-          h: buttonH,
-          label: choice.glyph ?? "TAKE",
-          enabled: choice.enabled,
-          action: { type: "playground.action", id: choice.id },
-        });
-      }
-    });
-    canvas.restore();
+  function control(
+    choice: ChoiceView,
+    box: Readonly<{ x: number; y: number; w: number; h: number }>,
+    m: MenuMetrics,
+    keyed = false,
+  ): ScreenControl {
+    const label = m.detail || choice.sub === undefined ? choice.label : `${choice.label} · ${choice.sub}`;
+    const sub = choice.sub ?? choice.description ?? (keyed ? " " : undefined);
+    return {
+      ...box,
+      label,
+      ...(m.detail ? { glyph: choice.glyph, sub } : {}),
+      selected: choice.selected,
+      enabled: choice.enabled,
+      accent: choice.accent,
+      size: m.size,
+      action: action(choice.id),
+    };
+  }
+
+  /**
+   * ABILITIES: the filters (buttons on desktop, chips on the phone), then the abilities in two
+   * columns: name, the effect copy, the ownership tag and the action button. A row's button is
+   * offered only while it is fully inside the list, so nothing reaches RESUME or the hint.
+   */
+  function abilityLab(view: PlaygroundScreenView, choices: Choices): void {
+    const t = ui.t;
+    const filters = { y: DESKTOP.bodyTop - 18, width: 148, height: 34, left: width / 2 - 546, buttons: true };
+    const frame = open(view, [{ items: choices("FILTERS"), action, desktop: filters }]);
+    const lh = pf.lineHeight(t.type.micro),
+      lines = (text: string, w: number, max: number): number => pf.lineCount(text, w, t.type.micro, max);
+    const m = frame.compact ? phoneActionCard(t, frame, lh, lines) : desktopActionCard(t, width);
+    const cell = (choice: ChoiceView, x: number, y: number, w: number, h: number, scrollView: ScrollView): void => {
+      card(m, choice, { x, y: y + m.inset, w, h: m.card(h) }, scrollView, action(choice.id));
+    };
+    const list = pf.grid(m.span(frame), choices("ABILITIES"), 2, m.row, cell, m.columnGap);
+    // Desktop rows start 10 px into the list (cards 40 px under the filters), and a row is drawn from 90 px above it.
+    const desktop = { top: DESKTOP.bodyTop + 30, cull: { above: 90, below: 10 }, ...scrollFlags(view) };
+    const state = pf.body(frame, { list, gap: m.gap, desktop });
+    pf.close(frame, state, { back: null, primary: RESUME });
   }
 
   return { pgmenu: render, pglab: render };

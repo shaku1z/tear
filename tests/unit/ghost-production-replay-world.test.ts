@@ -1,11 +1,12 @@
-import { createBrowserGhostReplayPresentation } from "../../src/app/replay/browser-ghost-studio-media";
+import { createBrowserGhostReplayPresentation } from "../../src/app/replay/browser-ghost-replay-presentation";
 import {
   createProductionGhostReplayComposition,
   projectProductionReplayCanonicalState,
 } from "../../src/tearbench/production-replay-composition";
 import { describe, expect, it } from "vitest";
 
-import { GhostProductionReplayWorld, createGhostV3, type GhostReplayTrident } from "../../src/ghost";
+import { GhostProductionReplayWorld } from "../../src/ghost/replay-world";
+import { createGhostV3, type GhostReplayTrident } from "../../src/ghost/truth-kernel";
 import { CONFIG } from "../../src/config/game-config";
 import { createProductionCombatSimulation, createProductionReplayWorld } from "../../src/tearbench";
 
@@ -55,6 +56,87 @@ function productionComposition(created: unknown[]) {
       });
     },
   };
+}
+
+/** A 1600x900 canvas whose context records every drawing call into `calls`. */
+function recordingCanvas(calls: string[]) {
+  const surface = { width: 1600, height: 900, getContext: () => context };
+  const context = new Proxy(
+    { canvas: surface },
+    {
+      has: () => true,
+      get(target, key) {
+        if (key === "canvas") return target.canvas;
+        if (key === "createLinearGradient" || key === "createRadialGradient")
+          return () => ({
+            addColorStop() {
+              return;
+            },
+          });
+        if (key === "measureText") return () => ({ width: 10 });
+        return (...args: unknown[]) => {
+          calls.push(`${String(key)}:${args.map(String).join(",")}`);
+        };
+      },
+    },
+  ) as unknown as CanvasRenderingContext2D;
+  return surface;
+}
+
+const noDraw = () => undefined;
+
+/** The replay presentation over recording canvases, with a stub UI kit. */
+function replayPresentation(calls: string[]) {
+  const document = { createElement: () => recordingCanvas(calls) } as unknown as Document;
+  return createBrowserGhostReplayPresentation(document, {
+    font: () => "12px sans-serif",
+    tag: noDraw,
+    text: noDraw,
+    title: noDraw,
+    bossHud: noDraw,
+    bossIntro: noDraw,
+    chapterHeader: noDraw,
+    loreFragment: noDraw,
+    chapterPrompt: noDraw,
+    biomeReveal: noDraw,
+    cinematicFrame: noDraw,
+    finaleFracture: noDraw,
+    finalReward: noDraw,
+    cinematicPrompt: noDraw,
+    bossDeclaration: noDraw,
+    dialogueCard: noDraw,
+    ink: "#000",
+    density: { touch: false, compact: false },
+    readable: (color: string) => color,
+    displayText: noDraw,
+    fitText: (_canvas: unknown, text: string, _width: number, options: { size: number }) => ({
+      size: options.size,
+      lines: [text],
+      truncated: false,
+    }),
+    textBox: (_canvas: unknown, text: string) => ({ size: 16, lines: [text], height: 24, lineHeight: 24 }),
+    keycap: () => 30,
+    keycapSize: () => ({ w: 30, h: 22 }),
+    sheetRect: () => ({ x: 180, y: 44, w: 1240, h: 820 }),
+    sheetFooter: () => ({ y: 804, h: 48, backX: 690 }),
+    t: {
+      type: { display: 40, h2: 28, title: 24, lead: 20, body: 16, label: 14, caption: 12, micro: 10 },
+      alpha: { soft: 0.5, muted: 0.66, faint: 0.2 },
+      color: { accent: "#f00", muted: "#888", paper: "#fff", danger: "#e44", scrim: "#06070c", scrimInk: "#f1eff9" },
+      metric: {
+        bossHudH: 40,
+        bossNotchH: 6,
+        bossGuardGap: 10,
+        bossGuardH: 6,
+        barH: 14,
+        hudPad: 10,
+        hudBarW: 320,
+        hudAbilityRows: 4,
+      },
+      space: { xs: 6, sm: 10, md: 16, lg: 24, xl: 40 },
+      motion: { finalRewardIn: 0.4 },
+    },
+  });
 }
 
 describe("Ghost production replay world", () => {
@@ -118,80 +200,8 @@ describe("Ghost production replay world", () => {
   });
   it("draws real reconstructed actors at two seeks without changing canonical state or either RNG", () => {
     const calls: string[] = [];
-    function canvas() {
-      const surface = { width: 1600, height: 900, getContext: () => context };
-      const context = new Proxy(
-        { canvas: surface },
-        {
-          has: () => true,
-          get(target, key) {
-            if (key === "canvas") return target.canvas;
-            if (key === "createLinearGradient" || key === "createRadialGradient")
-              return () => ({
-                addColorStop() {
-                  return;
-                },
-              });
-            if (key === "measureText") return () => ({ width: 10 });
-            return (...args: unknown[]) => {
-              calls.push(`${String(key)}:${args.map(String).join(",")}`);
-            };
-          },
-        },
-      ) as unknown as CanvasRenderingContext2D;
-      return surface;
-    }
-    const document = { createElement: canvas } as unknown as Document;
-    const noDraw = () => undefined;
-    const presentation = createBrowserGhostReplayPresentation(document, {
-      font: () => "12px sans-serif",
-      tag: noDraw,
-      text: noDraw,
-      title: noDraw,
-      bossHud: noDraw,
-      bossIntro: noDraw,
-      chapterHeader: noDraw,
-      loreFragment: noDraw,
-      chapterPrompt: noDraw,
-      biomeReveal: noDraw,
-      cinematicFrame: noDraw,
-      finaleFracture: noDraw,
-      finalReward: noDraw,
-      cinematicPrompt: noDraw,
-      bossDeclaration: noDraw,
-      dialogueCard: noDraw,
-      ink: "#000",
-      density: { touch: false, compact: false },
-      readable: (color: string) => color,
-      displayText: noDraw,
-      fitText: (_canvas: unknown, text: string, _width: number, options: { size: number }) => ({
-        size: options.size,
-        lines: [text],
-        truncated: false,
-      }),
-      textBox: (_canvas: unknown, text: string) => ({ size: 16, lines: [text], height: 24, lineHeight: 24 }),
-      keycap: () => 30,
-      keycapSize: () => ({ w: 30, h: 22 }),
-      sheetRect: () => ({ x: 180, y: 44, w: 1240, h: 820 }),
-      sheetFooter: () => ({ y: 804, h: 48, backX: 690 }),
-      t: {
-        type: { display: 40, h2: 28, title: 24, lead: 20, body: 16, label: 14, caption: 12, micro: 10 },
-        alpha: { soft: 0.5, muted: 0.66, faint: 0.2 },
-        color: { accent: "#f00", muted: "#888", paper: "#fff", danger: "#e44", scrim: "#06070c", scrimInk: "#f1eff9" },
-        metric: {
-          bossHudH: 40,
-          bossNotchH: 6,
-          bossGuardGap: 10,
-          bossGuardH: 6,
-          barH: 14,
-          hudPad: 10,
-          hudBarW: 320,
-          hudAbilityRows: 4,
-        },
-        space: { xs: 6, sm: 10, md: 16, lg: 24, xl: 40 },
-        motion: { finalRewardIn: 0.4 },
-      },
-    });
+    const canvas = () => recordingCanvas(calls);
+    const presentation = replayPresentation(calls);
     const ghost = createGhostV3({
       id: "draw-source",
       rulesetVersion: "test",
@@ -244,5 +254,39 @@ describe("Ghost production replay world", () => {
       frames.push(JSON.stringify(calls));
     }
     expect(frames[0]).not.toBe(frames[1]);
+  });
+  it("skips only environment-drawn enemies without a renderer and refuses any other", () => {
+    const calls: string[] = [];
+    const ghost = createGhostV3({
+      id: "undrawable-enemy",
+      rulesetVersion: "test",
+      sourceClassification: "native-v3",
+      trident,
+      actions: [],
+      snapshots: [],
+      events: [],
+    });
+    let owner: ReturnType<ReturnType<typeof createProductionGhostReplayComposition>["create"]> | undefined;
+    const composition = createProductionGhostReplayComposition({ seed: "draw-seed", ...replayPresentation(calls) });
+    const replay = new GhostProductionReplayWorld(ghost, {
+      create(snapshot) {
+        owner = composition.create(snapshot);
+        return owner;
+      },
+    });
+    replay.seek(60);
+    if (owner === undefined) throw new Error("test replay owner missing");
+    const [enemy] = owner.replay.world.state.enemies();
+    if (enemy === undefined) throw new Error("test replay has no enemy");
+    const target = recordingCanvas(calls).getContext();
+    const draw = () => {
+      replay.renderView().draw(target, { x: 0, y: 0, w: 640, h: 360 });
+    };
+    // The real enemy keeps its fields; hiding its draw method makes it an enemy without a renderer.
+    Reflect.defineProperty(enemy, "draw", { value: undefined });
+    Reflect.set(enemy, "kind", "rootbinder");
+    expect(draw).not.toThrow();
+    Reflect.set(enemy, "kind", "undrawable-test-kind");
+    expect(draw).toThrow("replay enemy renderer is unavailable");
   });
 });

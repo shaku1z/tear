@@ -1,21 +1,11 @@
 name: TearBench Evidence Program
 
 on:
-  # Weekly. The selected evidence is the scenario and journey set
-  # that pull requests no longer run; the static checks run on every pull request.
+  # Weekly endurance evidence that no other workflow runs: check:weekly plus the TearBench
+  # selection over the complete history. The nightly group runs daily in nightly.yml.
   schedule:
-    - cron: "17 6 * * 0"
     - cron: "23 8 * * 0"
   workflow_dispatch:
-    inputs:
-      profile:
-        description: Evidence profile (none of these profiles certifies a release)
-        required: true
-        default: nightly
-        type: choice
-        options:
-          - nightly
-          - weekly-endurance
 
 permissions:
   contents: read
@@ -25,41 +15,35 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  nightly:
-    if: (github.event_name == 'schedule' && github.event.schedule == '17 6 * * 0') || inputs.profile == 'nightly'
+  # Names the browser job's image from the lockfile (scripts/ci-playwright-image.mjs).
+  image:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 5
+    outputs:
+      playwright_image: ${{ steps.image.outputs.playwright_image }}
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 11.15.0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
-      - name: Select and run complete protected-history evidence
-        shell: bash
-        run: |
-          mkdir -p artifacts/tearbench
-          root_commit="$(git rev-list --max-parents=0 HEAD | tail -n 1)"
-          git diff --name-only "$root_commit" HEAD > artifacts/tearbench/changed-files.txt
-          pnpm tearbench select --files-from artifacts/tearbench/changed-files.txt --artifact artifacts/tearbench/nightly-selection.json
-          pnpm tearbench ci --files-from artifacts/tearbench/changed-files.txt --artifact artifacts/tearbench/nightly-ci-selection.json
-      - uses: actions/upload-artifact@v4
-        with:
-          name: tearbench-nightly-${{ github.sha }}
-          path: artifacts/tearbench
-          if-no-files-found: error
-          retention-days: 14
+          sparse-checkout: |
+            pnpm-lock.yaml
+            scripts/ci-playwright-image.mjs
+          sparse-checkout-cone-mode: false
+      - id: image
+        run: node scripts/ci-playwright-image.mjs >> "$GITHUB_OUTPUT"
 
   weekly-endurance:
-    if: (github.event_name == 'schedule' && github.event.schedule == '23 8 * * 0') || inputs.profile == 'weekly-endurance'
     runs-on: ubuntu-latest
+    needs: image
+    # Playwright's own image for the lockfile's version: Chromium and its system packages are in it.
+    container:
+      image: ${{ needs.image.outputs.playwright_image }}
+      options: --ipc=host
+    # The checkout belongs to the runner's user, so git would refuse it as "dubious ownership".
+    # This marks it safe for this job's git commands only, writing no config file.
+    env:
+      GIT_CONFIG_COUNT: 1
+      GIT_CONFIG_KEY_0: safe.directory
+      GIT_CONFIG_VALUE_0: "*"
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -70,10 +54,9 @@ jobs:
           version: 11.15.0
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version-file: .node-version
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
       - name: Run retained endurance evidence
         shell: bash
         run: |

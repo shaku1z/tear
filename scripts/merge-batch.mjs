@@ -22,6 +22,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { requiredCheckState } from "./governance/owner-safe-pr-merge.mjs";
 import { CANONICAL } from "./governance/setup-hooks.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -66,6 +67,11 @@ export function batchBranch(date = new Date()) {
  * Which pull requests go in, in which order. With numbers, those (in the order given) less any
  * `--without`; without numbers, every open, non-draft pull request into main from this repository,
  * in number order. Each choice that cannot be a member is reported with its reason.
+ *
+ * A member must be able to merge once the batch passes, and the merge helper needs its own required
+ * check to be SUCCESS (`requiredCheckState`). A check that was skipped, never reported or failed on
+ * the member's head cannot become SUCCESS without a push, so that member is left out here, the way a
+ * conflicting one is, instead of stopping `--merge` half way. A check still running stays in.
  */
 export function chooseMembers(open, { numbers = [], without = [] } = {}) {
   const byNumber = new Map(open.map((pr) => [pr.number, pr]));
@@ -84,11 +90,19 @@ export function chooseMembers(open, { numbers = [], without = [] } = {}) {
             ? `targets ${pr.baseRefName}, not main`
             : pr.isCrossRepository
               ? "from a fork"
-              : undefined;
+              : ownCheckRefusal(requiredCheckState(pr.statusCheckRollup));
     if (reason === undefined) chosen.push({ pr: number, head: pr.headRefOid, branch: pr.headRefName });
     else if (numbers.length > 0 || reason !== "a draft") refused.push({ pr: number, reason });
   }
   return { chosen, refused };
+}
+
+/** Why a member whose own required check is in `state` cannot merge, or undefined when it can. */
+function ownCheckRefusal(state) {
+  if (state === "skipped" || state === "missing")
+    return "its own checks did not run (skipped, likely a draft); push to start them";
+  if (state === "failed") return "its own required check failed; fix it and push";
+  return undefined;
 }
 
 /** Validate's step: keeps only members whose head is in the checked commit, and fails if none is. */
@@ -176,6 +190,13 @@ export function mergeMessage(pr) {
   return { subject, body: paragraphs[0] ?? pr.title };
 }
 
+/** "job: step" for each failed step of a run's jobs (Validate runs its checks in several jobs). */
+export function failedSteps(jobs) {
+  return jobs.flatMap((job) =>
+    (job.steps ?? []).filter((step) => step.conclusion === "failure").map((step) => `${job.name}: ${step.name}`),
+  );
+}
+
 /** The failed checks a batch run reports: run-checks prints `FAIL <group>.<id> ...` for each. */
 export function failedChecks(log) {
   return [...String(log).matchAll(/FAIL ([\w-]+\.[\w-]+) after/gu)].map((match) => match[1]);
@@ -229,7 +250,7 @@ function create(numbers, without) {
       "--limit",
       "100",
       "--json",
-      "number,isDraft,headRefOid,headRefName,baseRefName,isCrossRepository",
+      "number,isDraft,headRefOid,headRefName,baseRefName,isCrossRepository,statusCheckRollup",
     ]),
   );
   const { chosen, refused } = chooseMembers(open, { numbers, without });
@@ -259,6 +280,28 @@ function create(numbers, without) {
   }
 }
 
+/**
+ * Why `branch` cannot be read as a batch, or undefined when it can: its name must be exactly a
+ * batch branch name, and it must exist on origin. A name copied with extra text (a trailing colon
+ * from "batch <branch>: ...") or a branch already pruned is refused as what it is, never read as a
+ * batch whose run did not pass.
+ */
+export function batchBranchRefusal(branch, existsOnOrigin) {
+  if (!BATCH_BRANCH.test(String(branch)))
+    return `"${String(branch)}" is not a batch branch name (codex/batch-<yyyymmdd>t<hhmmss>z)`;
+  if (!existsOnOrigin(branch)) return `${branch} does not exist on origin`;
+  return undefined;
+}
+
+/** Throws when `branch` is not a batch branch on origin (batchBranchRefusal). */
+function requireBatchBranch(branch) {
+  const refusal = batchBranchRefusal(
+    branch,
+    (name) => git(["ls-remote", "--exit-code", "--heads", "origin", `refs/heads/${name}`], { allowFailure: true }).ok,
+  );
+  if (refusal !== undefined) throw new Error(refusal);
+}
+
 /** The newest Validate run started by hand on the batch branch, with its batch annotation. */
 function batchRun(branch) {
   const slug = gh(["repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"]);
@@ -269,18 +312,19 @@ function batchRun(branch) {
     ]),
   ).workflow_runs;
   const running = runs.some((entry) => entry.status !== "completed");
-  if (runs.length === 0) return { latest: undefined, job: undefined, note: "", running };
+  if (runs.length === 0) return { latest: undefined, job: undefined, jobs: [], note: "", running };
   const latest = runs[0];
-  const job = JSON.parse(gh(["api", `repos/${slug}/actions/runs/${String(latest.id)}/jobs`])).jobs.find(
-    (entry) => entry.name === "check",
-  );
+  const jobs = JSON.parse(gh(["api", `repos/${slug}/actions/runs/${String(latest.id)}/jobs`])).jobs;
+  // The batch annotation is on the required job, `check`; failed steps can be in any job.
+  const job = jobs.find((entry) => entry.name === "check");
   const notes = job ? JSON.parse(gh(["api", `repos/${slug}/check-runs/${String(job.id)}/annotations`])) : [];
   const note = notes.find((entry) => entry.title === "batch")?.message ?? "";
-  return { latest, job, note, running };
+  return { latest, job, jobs, note, running };
 }
 
 function status(branch) {
-  const { latest, job, note } = batchRun(branch);
+  requireBatchBranch(branch);
+  const { latest, jobs, note } = batchRun(branch);
   if (latest === undefined) throw new Error(`no Validate run on ${branch}`);
   console.log(`batch run ${latest.html_url}: ${latest.status}${latest.conclusion ? `, ${latest.conclusion}` : ""}`);
   console.log(note ? `members: ${note}` : "the run has not recorded its members yet");
@@ -289,8 +333,8 @@ function status(branch) {
     console.log(`merge them in the listed order, then: pnpm merge:batch --verify ${branch}`);
     return 0;
   }
-  if (latest.status === "completed" && job) {
-    const steps = job.steps.filter((step) => step.conclusion === "failure").map((step) => step.name);
+  if (latest.status === "completed" && jobs.length > 0) {
+    const steps = failedSteps(jobs);
     const log = run("gh", ["run", "view", String(latest.id), "--log-failed"], { allowFailure: true }).out;
     console.log(`failed step: ${steps.join(", ") || "(none recorded)"}`);
     const checks = failedChecks(log);
@@ -302,6 +346,60 @@ function status(branch) {
 
 const pause = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 
+/** What one read of a batch run said: which run, its status and conclusion, and its batch note. */
+export function describeRead(read) {
+  if (read.latest === undefined) return "no Validate run";
+  const { id, status, conclusion } = read.latest;
+  const note = read.note ? "a batch note" : "no batch note";
+  return `run ${String(id)}: ${String(status)}, conclusion ${String(conclusion ?? "none")}, ${note}`;
+}
+
+/**
+ * Whether one read of a batch run lets the members merge: "ready" with the run's `main` and
+ * `members`, "wait" when the run is still going or has not reported everything yet, or "refuse".
+ * GitHub can serve a finished run as still running for a moment, or its `check` job without the
+ * batch annotation, so a run that has not yet reported success with a note is waited on, never
+ * refused. A run that finished any other way is refused at once.
+ */
+export function batchReadVerdict(read) {
+  const said = describeRead(read);
+  if (read.latest === undefined) return { verdict: "refuse", said };
+  const { status, conclusion } = read.latest;
+  if (status === "completed" && conclusion !== null && conclusion !== undefined && conclusion !== "success")
+    return { verdict: "refuse", said };
+  const main = /main=([0-9a-f]{40})/u.exec(read.note)?.[1];
+  const members = /members=(\S+)/u.exec(read.note)?.[1];
+  if (status !== "completed" || conclusion !== "success" || main === undefined || members === undefined)
+    return { verdict: "wait", said };
+  return { verdict: "ready", said, main, members };
+}
+
+/** How long --merge and --verify wait for a batch run to report its result and note. */
+export const BATCH_READ_WAIT_MS = 180_000;
+
+/**
+ * Reads the batch run until `batchReadVerdict` says ready or refuse, waiting `everyMs` between
+ * reads for at most `waitMs`. Each wait names what was read. Throws, naming the last read, when the
+ * run is refused or the wait ends.
+ */
+export function awaitBatchRun(
+  branch,
+  { read, now = Date.now, sleep = pause, log = console.log, waitMs = BATCH_READ_WAIT_MS, everyMs = 15_000 },
+) {
+  const until = now() + waitMs;
+  for (;;) {
+    const result = batchReadVerdict(read(branch));
+    if (result.verdict === "ready") return result;
+    if (result.verdict === "refuse") throw new Error(`the batch run on ${branch} did not pass: ${result.said}`);
+    if (now() + everyMs > until)
+      throw new Error(
+        `the batch run on ${branch} did not report a pass with its members within ${String(waitMs / 1000)} s; last read ${result.said}`,
+      );
+    log(`waiting for the batch run on ${branch}: ${result.said}`);
+    sleep(everyMs);
+  }
+}
+
 /**
  * Merges each member through the owner merge helper, in batch order, then runs --verify. A network
  * failure is tried again (after checking that the merge did not in fact go through); a refusal
@@ -309,11 +407,8 @@ const pause = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 
  */
 function mergeAll(branch, authorized) {
   if (!authorized) throw new Error("--merge needs --authorize-owner-merge, which the merge helper requires");
-  const { latest, note } = batchRun(branch);
-  const members = /members=(\S+)/u.exec(note)?.[1];
-  if (latest?.conclusion !== "success" || members === undefined) {
-    throw new Error(`the batch run on ${branch} did not pass with recorded members`);
-  }
+  requireBatchBranch(branch);
+  const { members } = awaitBatchRun(branch, { read: batchRun });
   const helper = join(CANONICAL.root, "scripts", "governance", "owner-safe-pr-merge.mjs");
   const view = (number) =>
     JSON.parse(gh(["pr", "view", String(number), "--json", "number,state,headRefOid,title,body"]));
@@ -354,13 +449,8 @@ function mergeAll(branch, authorized) {
 }
 
 function verify(branch) {
-  const { latest, note } = batchRun(branch);
-  const main = /main=([0-9a-f]{40})/u.exec(note)?.[1];
-  const members = /members=(\S+)/u.exec(note)?.[1];
-  if (latest?.conclusion !== "success" || main === undefined || members === undefined) {
-    console.error(`the batch run on ${branch} did not pass with recorded members; nothing to verify`);
-    return 1;
-  }
+  requireBatchBranch(branch);
+  const { main, members } = awaitBatchRun(branch, { read: batchRun });
   git(["fetch", "--quiet", "origin", "main", branch]);
   const checkedTree = git(["merge-tree", "--write-tree", main, `origin/${branch}`]).out.split("\n")[0];
   const mainTree = git(["rev-parse", "origin/main^{tree}"]).out;

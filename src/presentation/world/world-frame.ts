@@ -139,7 +139,7 @@ export function renderWorldFrame<Platform extends WorldPlatform>(ports: WorldFra
   ports.drawEnvironment?.();
   renderEntityLayer(canvas, ports.enemies, ports.player, ports.entityOptions);
   for (const projectile of ports.projectiles) projectile.draw(canvas);
-  ports.drawTutorialGhost(); // The coach owns visibility, including optional completed Practice Lab comparison.
+  ports.drawTutorialGhost(); // The coach owns visibility, including the optional comparison in completed Drills.
   ports.drawPlayer();
   ports.drawBlade();
   ports.drawEffects();

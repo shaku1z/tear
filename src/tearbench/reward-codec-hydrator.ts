@@ -1,3 +1,4 @@
+import { isRecord } from "../domain/records";
 import { readBeatRunBinding } from "../gameplay/run/beat-run";
 import type { RewardSelectionSnapshot } from "../gameplay/run/reward-selection";
 import type { UpgradeDefinition } from "../gameplay/upgrades";
@@ -6,14 +7,10 @@ import { decodeTearCodecValue } from "./detached-world-hydrator";
 import type { TearCodecValue } from "./state-codecs";
 import { readSeedLockedDraft, rollSeedLockedDraft } from "../gameplay/run/seed-locked-draft";
 
-function record(value: unknown): value is Readonly<Record<string, unknown>> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 /** Rebinds portable upgrade data to the executable production definition. */
 export function hydrateRewardUpgrade(catalog: readonly UpgradeDefinition[], value: unknown): UpgradeDefinition | null {
   if (value === null) return null;
-  if (!record(value) || typeof value.id !== "string")
+  if (!isRecord(value) || typeof value.id !== "string")
     throw new TypeError("reward choice requires a production upgrade id");
   const upgrade = catalog.find((entry) => entry.id === value.id);
   if (upgrade === undefined) throw new TypeError(`reward choice references unknown production upgrade ${value.id}`);
@@ -26,10 +23,10 @@ export function hydrateRewardCodecPayload(
   payload: TearCodecValue,
   incomingRun?: unknown,
 ): RewardSelectionSnapshot<UpgradeDefinition> | null {
-  if (!record(payload) || !("selection" in payload)) throw new TypeError("reward codec requires selection");
+  if (!isRecord(payload) || !("selection" in payload)) throw new TypeError("reward codec requires selection");
   if (payload.selection === null) return null;
   const decoded = decodeTearCodecValue(payload.selection, new Map());
-  if (!record(decoded) || !Array.isArray(decoded.choices) || !Array.isArray(decoded.reserveChoices)) {
+  if (!isRecord(decoded) || !Array.isArray(decoded.choices) || !Array.isArray(decoded.reserveChoices)) {
     throw new TypeError("reward selection payload is malformed");
   }
   if (
@@ -60,7 +57,7 @@ export function hydrateRewardCodecPayload(
       }),
     );
   const seedLocked = readSeedLockedDraft(decoded.seedLocked);
-  const beat = record(incomingRun) ? readBeatRunBinding(incomingRun.beatThisRun) : undefined;
+  const beat = isRecord(incomingRun) ? readBeatRunBinding(incomingRun.beatThisRun) : undefined;
   if (beat !== undefined && seedLocked !== undefined)
     throw new TypeError("Beat private rewards cannot declare shared draft offers");
   if (seedLocked !== undefined) {

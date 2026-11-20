@@ -25,19 +25,20 @@ import type { LiveRunAbandonment } from "../run/live-run-abandonment";
 import type { LiveRunOrchestration } from "../run/run-orchestration-composition";
 import type { LiveBrowserRuntime } from "../shell/browser-runtime";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameBlade, GamePlayer, GameRun } from "../shell/game-runtime-state";
+import type { GameBlade, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { RuntimeFrameDriver } from "../shell/runtime-frame-driver";
 import type { LiveSessionServices } from "../shell/session-services-composition";
 import type { LiveInputAuthorityState } from "../world/input-authority-state";
 import { createLiveCanonicalWatchComposition } from "../world/canonical-watch-composition";
 import type { LiveWorldComposition } from "../world/world-composition";
 import type { LiveWorldSessionState } from "../world/world-session-state";
-import { createLiveStateForgeCinematicAdvance } from "./state-forge-cinematic-advance";
-import type { LiveStateForge } from "./live-state-forge-assembly";
-import { replayLiveStateForgeProgression } from "./state-forge-progression";
+import { createLiveStateSetupCinematicAdvance } from "./state-setup-cinematic-advance";
+import type { LiveStateSetup } from "./live-state-setup-assembly";
+import { replayLiveStateSetupProgression } from "./state-setup-progression";
 import type { LiveTestBuildJournals } from "./test-build-journals";
 import type * as LiveRuntimeBridge from "../../tearbench/browser/live-runtime-bridge";
 import type { installLiveGameDebug as LiveGameDebugInstaller } from "./debug-composition";
+import { createStageRestFrame } from "./stage-rest-frame";
 
 /** The runtime owners that test-build inspection hooks observe and drive. */
 export interface LiveTestBuildHookSources {
@@ -57,7 +58,7 @@ export interface LiveTestBuildHookSources {
   readonly inputAuthority: LiveInputAuthorityState;
   readonly recorder: GhostLiveRecorder | null;
   readonly ghostPractice: LiveGhostPracticeSessionState;
-  readonly stateForge: LiveStateForge;
+  readonly stateSetup: LiveStateSetup;
   readonly abandonment: LiveRunAbandonment;
   readonly journals: LiveTestBuildJournals;
   readonly canonicalState: LiveCanonicalStateCapture;
@@ -234,6 +235,13 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
       skipCinematic: () => {
         CINEMA.requestSkip();
       },
+      controlsDrawn: () => {
+        presentationHost.render();
+        return interfaceInteraction.buttons().length > 0;
+      },
+      skipTutorial: () => {
+        dependencies.PROFILE.skipTutorial();
+      },
       activateControl: (action) => {
         presentationHost.render();
         const encoded = JSON.stringify(action);
@@ -256,7 +264,7 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
       advanceApplicationFrame: (deltaSeconds) => {
         combatHost.frameCoordinator.run(deltaSeconds);
       },
-      advanceStateForgeCinematicBeat: createLiveStateForgeCinematicAdvance(CINEMA),
+      advanceStateSetupCinematicBeat: createLiveStateSetupCinematicAdvance(CINEMA),
       authoritative: () => authoritativeStep.lastResult,
       ...createLiveCanonicalWatchComposition({
         state: hostState,
@@ -288,9 +296,9 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
         if (effects.slowMotion !== undefined) impact.slowMotion = effects.slowMotion;
         if (effects.timeScale !== undefined) feel.timeScale = effects.timeScale;
       },
-      stateForge: sources.stateForge,
+      stateSetup: sources.stateSetup,
       replayProgression: (ledger) =>
-        replayLiveStateForgeProgression({ dependencies, state: hostState, configuration }, ledger),
+        replayLiveStateSetupProgression({ dependencies, state: hostState, configuration }, ledger),
       loadStage: orchestration.loadTransitionStage,
       startNextWave: runControllers.api.startNextWave,
       applyBossFinisher: (bossId, remainingHp) => {
@@ -319,18 +327,27 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
 /** Test builds only, with `?bossdebug=1`: loads the boss debug harness. */
 export function installLiveBossDebugWhenEnabled(sources: LiveTestBuildHookSources): void {
   if (__TEAR_TEST_BUILD__) {
-    // The click targets of the latest drawn frame, as a pointer click is matched against them.
+    // The click targets of the latest drawn frame, as a pointer click is matched against them, each
+    // with the page point of its centre (the inverse of the pointer's logical mapping).
+    const { canvas } = sources.browser;
+    const { CONFIG, OVERSCAN } = sources.dependencies;
     Object.defineProperty(sources.dependencies.browserWindow, "__TEAR_UI_TARGETS__", {
       configurable: true,
-      value: () =>
-        sources.interaction.buttons().map((button) => ({
+      value: () => {
+        const rect = canvas.getBoundingClientRect();
+        const spanWidth = CONFIG.view.w + OVERSCAN.x * 2;
+        const spanHeight = CONFIG.view.h + OVERSCAN.y * 2;
+        return sources.interaction.buttons().map((button) => ({
           label: button.label,
           x: button.x,
           y: button.y,
           w: button.w,
           h: button.h,
           enabled: button.enabled !== false,
-        })),
+          clientX: rect.left + ((button.x + button.w / 2 + OVERSCAN.x) / spanWidth) * rect.width,
+          clientY: rect.top + ((button.y + button.h / 2 + OVERSCAN.y) / spanHeight) * rect.height,
+        }));
+      },
     });
   }
   if (__TEAR_TEST_BUILD__ && sources.browser.pantheonDebug) {
@@ -419,5 +436,9 @@ function installBossDebug(
     authoritative: () => authoritativeStep.lastResult,
     startFinale: startAdventureFinale,
     severFinale: () => severFinaleAnchor(false),
+  });
+  Object.defineProperty(dependencies.browserWindow, "__TEAR_STAGE_REST_FRAME__", {
+    configurable: true,
+    value: createStageRestFrame({ dependencies, stage: stageRuntime, width: browser.width, height: browser.height }),
   });
 }

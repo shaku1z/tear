@@ -1,3 +1,4 @@
+import { progressFacts } from "../../src/domain/progress-facts";
 import { describe, expect, it } from "vitest";
 
 import { canonicalStringify } from "../../src/domain/hash";
@@ -127,9 +128,9 @@ describe("game-reference.v1", () => {
     ]);
     expect(result.collections.weapons.status).toBe("complete");
     expect(result.collections.upgrades.status).toBe("complete");
-    expect(result.collections.upgrades.items).toHaveLength(60);
+    expect(result.collections.upgrades.items).toHaveLength(UPGRADES.length);
     expect(result.collections.achievements.status).toBe("complete");
-    expect(result.collections.achievements.items).toHaveLength(100);
+    expect(result.collections.achievements.items).toHaveLength(ACHIEVEMENT_CATALOG.length);
     expect(result.collections.stages.status).toBe("complete");
     expect(result.collections.stages.items.map((stage) => stage.id)).toEqual([
       "grounds",
@@ -208,12 +209,12 @@ describe("game-reference.v1", () => {
   it("projects authored progression metadata without runtime callbacks", () => {
     const result = reference();
     const upgrades = result.collections.upgrades.items;
-    expect(new Set(upgrades.map((upgrade) => upgrade.id)).size).toBe(60);
+    expect(new Set(upgrades.map((upgrade) => upgrade.id)).size).toBe(UPGRADES.length);
     expect(upgrades.filter((upgrade) => upgrade.unique)).toHaveLength(36);
     expect(upgrades.filter((upgrade) => upgrade.rule.kind === "tiered")).toHaveLength(18);
     expect(upgrades.every((upgrade) => upgrade.tiers.every((tier) => tier.description.length > 0))).toBe(true);
     const achievements = result.collections.achievements.items;
-    expect(new Set(achievements.map((achievement) => achievement.id)).size).toBe(100);
+    expect(new Set(achievements.map((achievement) => achievement.id)).size).toBe(ACHIEVEMENT_CATALOG.length);
     expect(new Set(achievements.map((achievement) => achievement.category))).toEqual(
       new Set(["combat", "skill", "progress", "boss", "survival", "mastery"]),
     );
@@ -299,7 +300,12 @@ describe("game-reference.v1", () => {
     expect(Object.isFrozen(ACHIEVEMENT_CATALOG[0])).toBe(true);
     const runtime = createAchievements({
       meta: { level: () => 0 },
-      profile: { unlocked: (id) => unlocked.has(id), stat: () => 0, unlock: () => false },
+      profile: {
+        unlocked: (id) => unlocked.has(id),
+        stat: () => 0,
+        facts: () => progressFacts({ stats: {}, ach: {} }),
+        unlock: () => false,
+      },
       audio: { rankup: () => undefined },
       shop: [],
       clamp: (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value)),
@@ -331,8 +337,7 @@ describe("game-reference.v1", () => {
       const achievement = runtime.byId(entry.id);
       if (achievement === undefined) throw new Error(`runtime achievement missing ${entry.id}`);
       if (entry.rule.kind === "stat-threshold") {
-        expect(achievement.stat).toBe(entry.rule.stat);
-        expect(achievement.goal).toBe(entry.rule.goal);
+        expect(achievement.condition).toEqual({ type: "stat-threshold", stat: entry.rule.stat, goal: entry.rule.goal });
       } else if (entry.rule.kind === "manual") {
         expect(achievement.check).toBeUndefined();
         expect(achievement.current).toBeUndefined();
@@ -788,7 +793,9 @@ describe("game-reference.v1", () => {
   });
 
   it("rejects extra, duplicate, or incomplete source catalogs before reduction", () => {
-    expect(() => reference("a".repeat(40), WEAPONS, UPGRADES.slice(0, -1))).toThrow(/exactly 60/u);
+    expect(() => reference("a".repeat(40), WEAPONS, UPGRADES.slice(0, -1))).toThrow(
+      new RegExp(`exactly ${String(UPGRADES.length)}`, "u"),
+    );
     const lastUpgrade = UPGRADES.at(-1);
     if (lastUpgrade === undefined) throw new Error("missing upgrade source fixture");
     const firstUpgrade = UPGRADES.at(0);
@@ -799,7 +806,7 @@ describe("game-reference.v1", () => {
     expect(() => reference("a".repeat(40), WEAPONS, duplicateUpgrade)).toThrow(/duplicate IDs/u);
 
     expect(() => reference("a".repeat(40), WEAPONS, UPGRADES, ACHIEVEMENT_CATALOG.slice(0, -1))).toThrow(
-      /exactly 100/u,
+      new RegExp(`exactly ${String(ACHIEVEMENT_CATALOG.length)}`, "u"),
     );
     const lastAchievement = ACHIEVEMENT_CATALOG.at(-1);
     if (lastAchievement === undefined) throw new Error("missing achievement source fixture");

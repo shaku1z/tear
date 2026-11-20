@@ -11,9 +11,9 @@ describe("Verdant typed stage registries", () => {
       id: "verdant-sanctum-environment",
       stageId: "verdant-sanctum",
       initialFields: [
-        { kind: "bloom-well", slot: "left-rise", geometry: { x: 480, y: 285, w: 170, h: 470 } },
+        { kind: "bloom-well", slot: "left-rise", geometry: { x: 480, y: 285, w: 170, h: 515 } },
         // Half a cycle out of phase, so one rise column is always arming or open.
-        { kind: "bloom-well", slot: "right-rise", geometry: { x: 950, y: 285, w: 170, h: 470 }, offsetTicks: 372 },
+        { kind: "bloom-well", slot: "right-rise", geometry: { x: 950, y: 285, w: 170, h: 515 }, offsetTicks: 372 },
       ],
       maximumFields: 3,
       maximumCombatObjects: 8,
@@ -52,12 +52,9 @@ describe("Verdant typed stage registries", () => {
 
   it("dispatches presentation by stable stage identity", () => {
     expect(stagePresentationDefinition("verdant-sanctum")).toEqual({
-      backdropId: "verdant-sanctum",
       platformMaterialId: "verdant-rootstone",
-      environmentPresentationId: "verdant-sanctum",
-      reflectionPolicy: "lower-field-restrained",
-      particlePolicy: "sparse-petals-pollen",
-      lowGraphicsPolicy: "silhouette-and-telegraph-only",
+      // The table itself is checked in boss-tell-skin.test.ts.
+      bossTellSkin: expect.objectContaining({ marks: expect.any(Object) as unknown }) as unknown,
     });
     expect(stagePresentationDefinition("grounds")).toBeNull();
   });

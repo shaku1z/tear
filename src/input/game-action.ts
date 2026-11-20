@@ -1,6 +1,7 @@
-export const INPUT_AXIS_SCALE = 1_000;
-export const AIM_TURN_SCALE = 1_000_000;
-export const AIM_MAGNITUDE_SCALE = 1_000;
+import { isRecord } from "../domain/records";
+import { AIM_MAGNITUDE_SCALE, AIM_TURN_SCALE, INPUT_AXIS_SCALE } from "../domain/input-scales";
+
+export { AIM_MAGNITUDE_SCALE, AIM_TURN_SCALE, INPUT_AXIS_SCALE };
 
 export type InputPhase = "pressed" | "released";
 export type WeaponIntent = "primary" | "secondary" | "throw" | "recall";
@@ -19,6 +20,8 @@ export type GameAction =
   | Readonly<{ type: "dash"; x: number; y: number }>
   | Readonly<{ type: "interact" }>
   | Readonly<{ type: "pause" }>
+  /** Control is handed back to the player (a resume or restart): the held blade re-seats along the aim. */
+  | Readonly<{ type: "resume" }>
   | Readonly<{ type: "confirm" }>
   | Readonly<{ type: "cancel" }>
   | Readonly<{ type: "draft-choice"; choiceId: string }>
@@ -27,10 +30,6 @@ export type GameAction =
 
 export type GameActionNormalizationResult =
   Readonly<{ ok: true; action: GameAction }> | Readonly<{ ok: false; reason: string }>;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function fixedInteger(value: unknown, min: number, max: number): number | undefined {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= min && value <= max ? value : undefined;
@@ -113,6 +112,7 @@ export function normalizeGameAction(candidate: unknown): GameActionNormalization
     }
     case "interact":
     case "pause":
+    case "resume":
     case "confirm":
     case "cancel":
       return success({ type: candidate.type });

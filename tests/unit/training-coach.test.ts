@@ -13,9 +13,7 @@ const lesson = (overrides: Partial<TutorialCoachInput> = {}): TutorialCoachInput
   key: "3:CUT",
   kind: "lesson",
   title: "CUT",
-  goal: "Swing through the dummy.",
   why: "Speed is damage.",
-  actions: ["swing"],
   progress: [0, 3],
   completing: false,
   final: false,
@@ -34,18 +32,12 @@ const frame = (overrides: Partial<TrainingCoachFrame> = {}): TrainingCoachFrame 
 const ids = (marks: ReturnType<TrainingCoach["step"]>): string[] => marks.map((entry) => entry.mark.id);
 
 describe("training coach", () => {
-  it("prompts at the player when a lesson starts, worded for the device", () => {
-    const keyboard = new TrainingCoach().step(frame({ tutorial: lesson() }));
-    expect(keyboard[0]?.mark).toMatchObject({
-      id: "lesson:3:CUT:prompt",
-      keys: ["MOUSE"],
-      anchor: { x: 300, y: 600 },
-    });
-    const touch = new TrainingCoach().step(frame({ inputMode: "touch", tutorial: lesson() }));
-    expect(touch[0]?.mark.keys).toEqual(["DRAG"]);
+  it("leaves the instruction to the exercise card: nothing at the player when a lesson starts", () => {
+    for (const inputMode of ["mouse", "touch", "gamepad"] as const)
+      expect(ids(new TrainingCoach().step(frame({ inputMode, tutorial: lesson() })))).toEqual([]);
   });
 
-  it("steps back to a short count as soon as the lesson counts evidence", () => {
+  it("shows a short count at the player for each counted step", () => {
     const coach = new TrainingCoach();
     coach.step(frame({ tutorial: lesson() }));
     const marks = coach.step(frame({ tutorial: lesson({ progress: [1, 3] }) }));
@@ -57,7 +49,7 @@ describe("training coach", () => {
     expect(ids(later)).toEqual([]);
   });
 
-  it("names what was learned and why, then holds the next goal until it has played", () => {
+  it("names what was learned and why, and lets it finish over the next lesson", () => {
     const coach = new TrainingCoach();
     coach.step(frame({ tutorial: lesson() }));
     const done = coach.step(frame({ tutorial: lesson({ progress: [3, 3], completing: true }) }));
@@ -69,7 +61,7 @@ describe("training coach", () => {
     let marks = done;
     for (let elapsed = 0; elapsed < COACH_LEARNED_SECONDS + 0.5; elapsed += 0.1)
       marks = coach.step(frame({ deltaSeconds: 0.1, tutorial: next }));
-    expect(ids(marks)).toEqual(["lesson:4:LAUNCH:prompt"]);
+    expect(ids(marks)).toEqual([]);
     const weapon = new TrainingCoach();
     weapon.step(frame({ tutorial: lesson({ kind: "weapon", key: "weapon:hammer:0", title: "HAMMER" }) }));
     expect(
@@ -91,25 +83,30 @@ describe("training coach", () => {
 
   it("restarts for a new lesson and stays silent on the final hand-off", () => {
     const coach = new TrainingCoach();
-    coach.step(frame({ tutorial: lesson() }));
-    expect(ids(coach.step(frame({ tutorial: lesson({ key: "4:LAUNCH", title: "LAUNCH" }) })))).toEqual([
-      "lesson:4:LAUNCH:prompt",
-    ]);
+    let marks = coach.step(frame({ tutorial: lesson() }));
+    for (let elapsed = 0; elapsed <= COACH_IDLE_SECONDS + 0.1; elapsed += 0.1)
+      marks = coach.step(frame({ deltaSeconds: 0.1, tutorial: lesson() }));
+    expect(ids(marks)).toEqual(["lesson:3:CUT:stuck"]);
+    // A new lesson clears the old lesson's marks and restarts the stall clock.
+    expect(ids(coach.step(frame({ tutorial: lesson({ key: "4:LAUNCH", title: "LAUNCH" }) })))).toEqual([]);
     expect(ids(coach.step(frame({ tutorial: lesson({ key: "13:READY", final: true }) })))).toEqual([]);
   });
 
-  it("shows the Playground shortcuts once per run, on keyboard only", () => {
+  it("shows the Playground help once per run, worded for the device", () => {
     const run = {};
     const coach = new TrainingCoach();
     const marks = coach.step(frame({ playground: { runKey: run } }));
     expect(marks[0]?.mark).toMatchObject({ id: "playground:help", tone: "info" });
-    expect(marks[0]?.mark.text).toContain("E build menu");
+    expect(marks[0]?.mark.text).toBe("TAB menu  ·  U abilities  ·  1–8 spawn");
     let later = marks;
     for (let elapsed = 0; elapsed < COACH_HELP_SECONDS + 1; elapsed += 1)
       later = coach.step(frame({ deltaSeconds: 1, playground: { runKey: run } }));
     expect(ids(later)).toEqual([]);
     expect(ids(coach.step(frame({ playground: { runKey: run, arena: 2 } })))).toEqual(["playground:help"]);
-    for (const inputMode of ["touch", "gamepad"] as const)
-      expect(ids(new TrainingCoach().step(frame({ inputMode, playground: { runKey: run } })))).toEqual([]);
+    // Touch and controller have no shortcuts: the help points at pause, which opens the menu.
+    for (const inputMode of ["touch", "gamepad"] as const) {
+      const help = new TrainingCoach().step(frame({ inputMode, playground: { runKey: run } }))[0]?.mark;
+      expect(help).toMatchObject({ id: "playground:help", text: "Pause for the Playground menu.", keys: ["PAUSE"] });
+    }
   });
 });

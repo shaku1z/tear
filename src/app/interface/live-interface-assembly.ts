@@ -9,10 +9,11 @@ import type { LiveGhostRecording } from "../replay/live-ghost-recording";
 import type { RunResultInfo } from "../../gameplay/run/outcome-planner";
 import type { LiveReviveCountdownState } from "../run/revive-countdown-state";
 import type { LiveRunOrchestration } from "../run/run-orchestration-composition";
+import { startingStageId } from "../run/wave-composition";
 import { createLiveShopFeedbackState } from "../run/shop-feedback-state";
 import type { LiveBrowserRuntime } from "../shell/browser-runtime";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameBlade, GamePlayer, GameRun } from "../shell/game-runtime-state";
+import type { GameBlade, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveSessionServices } from "../shell/session-services-composition";
 import type { LiveWorldComposition } from "../world/world-composition";
 import type { LiveWorldSessionState } from "../world/world-session-state";
@@ -24,6 +25,10 @@ import { createLiveScreenActions, type LiveGhostLibraryScreens } from "./live-sc
 import type { LiveScreenNavigation } from "./live-screen-navigation";
 import { renderRegisteredScreen } from "./screen-registry";
 import { isMenuScreen } from "../../domain/screen-catalog";
+import { PRACTICE_TABS } from "../../gameplay/training/practice-tabs";
+
+/** The Drills tabs in the shape the shared tab stepper reads (Q/E, bumpers). */
+const PRACTICE_TAB_STEPS = Object.freeze(PRACTICE_TABS.map(({ id }) => [id] as const));
 
 export interface LiveInterfaceAssemblyOptions {
   readonly dependencies: GameRuntimeDependencies;
@@ -99,6 +104,7 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
     lockHint,
     hint: hintEl,
     fullscreenButton,
+    fullscreenAvailable,
     pantheonDebug: PANTHEON_DEBUG,
   } = browser;
   const { state: hostState, environment } = world;
@@ -108,7 +114,7 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
   const interfaceFrame = options.frame;
   const interfaceInteraction = options.interaction;
   const { reviveCountdown, hudFeedback } = options;
-  const { settingsController, settings, reward: rewardRuntime, beat } = services;
+  const { settingsController, settings, reward: rewardRuntime } = services;
   const { awardCoins } = services.economy;
   const { read: getBest, record: saveBest } = services.bestScores.api;
   const { stage: stageRuntime, story } = campaignTraining.campaign;
@@ -117,12 +123,7 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
   const { addFloater } = campaignTraining;
   const { addShake, addFlash } = campaignTraining.weapon;
   const { color: trickColor, formatTime: fmtTime, check: achCheck } = campaignTraining.style;
-  const {
-    vault: ghostVault,
-    ownerRecovery,
-    publication: ghostPublicationScreen,
-    support: ghostSupportScreen,
-  } = options.ghostLibrary;
+  const { vault: ghostVault } = options.ghostLibrary;
   const { simulation } = options.combat;
   const requestLock = browser.requestPointerLock;
   const screenRect = () => presentationHost.screenRectangle();
@@ -140,7 +141,6 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
     ghostLibrary: options.ghostLibrary,
     run: liveRun,
     requestPointerLock: requestLock,
-    presentation: () => interfaceComposition,
   });
   const interfaceComposition = createLiveInterfaceComposition(
     {
@@ -201,6 +201,7 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
           focus: interfaceInteraction.focus,
           touch: () => Input.touchActive(),
           reducedMotion: () => A11Y.reducedMotion,
+          pixelScale: () => viewport.pixelScale,
           enqueue: interfaceInteraction.enqueue,
         },
         replay: {
@@ -220,7 +221,6 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
           launchGhostPractice: options.launchGhostPractice,
         },
         library: {
-          beat,
           chase,
           dependencies,
           canvas: ctx,
@@ -234,7 +234,6 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
           formatTime: fmtTime,
           getBest,
           ghostVault,
-          ownerRecovery,
           career: options.career.port,
         },
         settings: {
@@ -295,6 +294,11 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
             TUT.session().phase !== "inactive"
               ? TUT.session()
               : undefined,
+          stepPracticeTab: (practice) => {
+            presentationHost.stepTab(PRACTICE_TAB_STEPS, practice.practiceTab ?? "lessons", (tab) => {
+              TUT.showPracticeTab(tab);
+            });
+          },
         },
         menuState: {
           selection: () => session.selection(),
@@ -308,8 +312,6 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
         },
         menuServices: { dependencies, height: H, getBest, formatTime: fmtTime, clamp, checkAchievements: achCheck },
         playground: { renderMenu: renderPgMenu, renderLab: renderPgLab },
-        ghostPublication: ghostPublicationScreen.snapshot,
-        ghostSupport: ghostSupportScreen.snapshot,
       },
       frameState: {
         screen,
@@ -322,6 +324,7 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
         setEnterAmount: interfaceFrame.setEnterAmount,
         scroll: interfaceInteraction.scroll,
         setScroll: interfaceInteraction.setScroll,
+        arrival: navigation.arrival,
         focus: interfaceInteraction.focus,
         setFocus: interfaceInteraction.setFocus,
         controls: interfaceInteraction.buttons,
@@ -359,6 +362,7 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
         lockHint,
         inputHint: hintEl,
         fullscreenButton,
+        fullscreenAvailable,
         controlHintContext: () => ({
           runSeconds: screen() === "playing" ? liveRun().runTime : 0,
           completedRuns: dependencies.PROFILE.stat("runs"),
@@ -371,14 +375,19 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
           UI.ink = THEME.ink;
           // On the main menu no run is showing a stage: painted backgrounds give their memory back.
           if (screen() === "menu") Scenes.leave();
+          // On the setup screen the run's first stage may be known: prepare it, whichever stage it is.
+          else if (screen() === "setup") {
+            const first = startingStageId(session.selectedMode(), session.selectedBoss(), dependencies.STAGES);
+            if (first !== undefined) Scenes.prefetch(first);
+          }
         },
         themeInk: () => THEME.ink,
         backdropPost: (context, stage, camera) => {
           Backdrop.post(context, stage, camera);
         },
         stageBackground: (stage) => Scenes.paper(stage.id) ?? stage.bg,
-        drawMenuAttract: () => {
-          Attract.draw(ctx);
+        drawMenuAttract: (_, keepOut) => {
+          Attract.draw(ctx, keepOut);
         },
         renderScreen: (next) => {
           renderRegisteredScreen(next, interfaceComposition.screens.renderers);

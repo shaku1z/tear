@@ -1,3 +1,4 @@
+import { isRecord } from "../domain/records";
 import { stableVerificationHash } from "../domain/hash";
 import { encodeGhostChunkPayload, type GhostChunkEncoding } from "./capsule-codec";
 
@@ -18,6 +19,23 @@ export const GHOST_VAULT_STORES = Object.freeze([
 ] as const);
 export type GhostVaultStore = (typeof GHOST_VAULT_STORES)[number];
 export const GHOST_VAULT_DATABASE_VERSION = 2;
+
+/**
+ * Key prefixes of records that removed features wrote into a player's vault. Old vaults keep
+ * these records on purpose: nothing reads or rewrites them, so the stores and the database
+ * version stay as they are. No live code may write under a retired prefix; the check is
+ * tests/unit/ghost-retired-vault-records.test.ts. A removal that leaves records behind adds
+ * its prefixes here.
+ */
+export const GHOST_VAULT_RETIRED_KEY_PREFIXES = Object.freeze([
+  { store: "uploadJobs", prefix: "ghost-publication-job:v1:", removedIn: "shaku1z/tear#204" },
+  { store: "analysis", prefix: "ghost-publication-custody:v1:", removedIn: "shaku1z/tear#204" },
+  { store: "analysis", prefix: "ghost-publication-transport:v1:", removedIn: "shaku1z/tear#204" },
+  { store: "analysis", prefix: "ghost-publication-consent:v1:", removedIn: "shaku1z/tear#204" },
+  { store: "libraries", prefix: "entry:canon:", removedIn: "shaku1z/tear#227" },
+  { store: "libraries", prefix: "entry:frontier:", removedIn: "shaku1z/tear#227" },
+  { store: "libraries", prefix: "entry:corpus:", removedIn: "shaku1z/tear#227" },
+] as const satisfies readonly Readonly<{ store: GhostVaultStore; prefix: string; removedIn: string }>[]);
 
 export type GhostChunkKind = "commands" | "rng" | "events" | "results" | "keyframes" | "presentation";
 
@@ -167,14 +185,10 @@ export interface GhostVaultWrite {
   readonly value?: string;
 }
 
-function dataRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 export function ghostVaultJournalLease(value: string | undefined): string | undefined {
   try {
     const parsed: unknown = value === undefined ? undefined : JSON.parse(value);
-    return dataRecord(parsed) && typeof parsed.leaseId === "string" ? parsed.leaseId : undefined;
+    return isRecord(parsed) && typeof parsed.leaseId === "string" ? parsed.leaseId : undefined;
   } catch {
     return undefined;
   }

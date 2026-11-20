@@ -1,8 +1,7 @@
-import { readGhostBossMemory } from "./boss-memory-origin";
-import { verifyBossMemory } from "./boss-memory";
+import { asRecord } from "../domain/records";
 import { readSeedRaceDecisions } from "./seed-race-decisions";
 import { requireGhostForkPermit, type GhostForkPermit } from "./fork-origin";
-import { createProductionGhostReplayComposition } from "../tearbench/production-replay-composition";
+import { replayEngine } from "./replay-engine";
 import type { GhostReadCapsule } from "./capsule-reader";
 import { mapGhostCapsuleToReplayEnvelope } from "./capsule-replay-envelope";
 import { readGhostAuthoritativeReceipt, type GhostAuthoritativeReceiptV1 } from "./authoritative-receipt";
@@ -156,8 +155,8 @@ export function verifyGhostCapsuleOpeningContinuation(capsule: GhostReadCapsule)
           !event.payload.introActive,
       );
       const terminals = capsule.tracks.results.flatMap((entry) => {
-        if (typeof entry.value !== "object" || entry.value === null || Array.isArray(entry.value)) return [];
-        const value = entry.value as Readonly<Record<string, unknown>>;
+        const value = asRecord(entry.value);
+        if (value === undefined) return [];
         return entry.tick === capsule.maxTick &&
           value.mode === context.run.mode &&
           value.diff === context.run.difficulty &&
@@ -216,7 +215,7 @@ export function verifyGhostCapsuleOpeningContinuation(capsule: GhostReadCapsule)
       });
     }
     const derived = createGhostV3({ ...mapped.ghost, snapshots: [anchor] });
-    const composition = createProductionGhostReplayComposition({
+    const composition = replayEngine.loaded().createProductionGhostReplayComposition({
       seed: anchor.seed,
       openingPermit: permit,
       raceDecisions: readSeedRaceDecisions(capsule, context?.run.id ?? ""),
@@ -291,15 +290,6 @@ export function verifyGhostCapsuleProductionReplay(
   capsule: GhostReadCapsule,
   forkPermit?: GhostForkPermit,
 ): GhostProductionReplayVerification {
-  try {
-    if (readGhostBossMemory(capsule.manifest.provenance)) return verifyBossMemory(capsule);
-  } catch (error) {
-    return {
-      status: "unavailable",
-      comparisons: [],
-      mappingIssues: [error instanceof Error ? error.message : String(error)],
-    };
-  }
   let forkOrigin;
   try {
     forkOrigin = requireGhostForkPermit(capsule, forkPermit);
@@ -353,7 +343,7 @@ export function verifyGhostCapsuleProductionReplay(
       mappingIssues: Object.freeze([...mappingIssues, error instanceof Error ? error.message : String(error)]),
     });
   }
-  const composition = createProductionGhostReplayComposition({
+  const composition = replayEngine.loaded().createProductionGhostReplayComposition({
     seed: mapped.ghost.snapshots[0]?.seed ?? "unknown",
     inputSnapshots: inputs,
     ...(forkOrigin === undefined ? {} : { forkOrigin }),
@@ -378,7 +368,7 @@ export function verifyGhostCapsuleProductionReplay(
           tick: receipt.tick,
           expectedHash: receipt.stateHash,
           equal: false,
-          reason: "receipt has no same-tick recorded-canonical State Forge snapshot",
+          reason: "receipt has no same-tick recorded-canonical State Setup snapshot",
         }),
       );
       continue;

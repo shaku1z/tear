@@ -391,51 +391,51 @@ test("canonical selection rejects exact start metadata instead of silently dropp
     });
     const result = rejected(["src/gameplay/stages.ts"], { catalog: surgical });
     assert.notEqual(result.status, 0);
-    assert.match(`${result.stderr}\n${result.stdout}`, /exact .* state; use State Forge/u);
+    assert.match(`${result.stderr}\n${result.stdout}`, /exact .* state; use State Setup/u);
   }
 });
 
-test("Pale State Forge selection rejects detached descriptors, false claims, and ad hoc route proof", () => {
+test("Pale State Setup selection rejects detached descriptors, false claims, and ad hoc route proof", () => {
   const mutations = [
     [
       "pale-missing-descriptor",
       (entries) => {
-        delete entries.find((entry) => entry.id === "pale-aurora-track-behavior").stateForge;
+        delete entries.find((entry) => entry.id === "pale-aurora-track-behavior").stateSetup;
       },
-      /exact .* state; use State Forge/u,
+      /exact .* state; use State Setup/u,
     ],
     [
       "pale-plain-live-substitute",
       (entries) => {
         const entry = entries.find((candidate) => candidate.id === "pale-rime-runner-behavior");
-        delete entry.stateForge;
+        delete entry.stateSetup;
         entry.start.stage = undefined;
         entry.start.wave = undefined;
         entry.evidence.command = "node tests/browser-pale-variants.js";
       },
-      /source-owned gameplay subject|unknown current gameplay subject|State Forge/u,
+      /source-owned gameplay subject|unknown current gameplay subject|State Setup/u,
     ],
     [
       "pale-false-backend",
       (entries) => {
         entries.find((entry) => entry.id === "pale-prism-seer-behavior").backends = ["headless"];
       },
-      /invalid State Forge descriptor|live-only/u,
+      /invalid State Setup descriptor|live-only/u,
     ],
     [
       "pale-false-publication",
       (entries) => {
         entries.find((entry) => entry.id === "pale-snowfall-kite-behavior").tags.push("published");
       },
-      /invalid State Forge publication/u,
+      /invalid State Setup publication/u,
     ],
     [
       "pale-wrong-descriptor",
       (entries) => {
-        entries.find((entry) => entry.id === "pale-white-hart-phase-2").stateForge.documentId =
+        entries.find((entry) => entry.id === "pale-white-hart-phase-2").stateSetup.documentId =
           "pale-white-hart-phase-3";
       },
-      /invalid State Forge descriptor/u,
+      /invalid State Setup descriptor/u,
     ],
     [
       "pale-unknown-subject",
@@ -467,26 +467,26 @@ test("Pale State Forge selection rejects detached descriptors, false claims, and
 
 test("current five-weapon live-versus-detached parity is mandatory in the canonical functional gate", () => {
   const scripts = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).scripts;
-  const registry = JSON.parse(readFileSync(join(root, "src", "tearbench", "task-registry.json"), "utf8"));
-  const functional = new Set(registry.profiles["pull-request"]);
+  const checks = JSON.parse(readFileSync(join(root, "config", "checks.json"), "utf8"));
+  const runs = new Map(
+    Object.entries(checks.groups).flatMap(([group, list]) => list.map((check) => [`${group}.${check.id}`, check.run])),
+  );
   assert.match(scripts["test:browser:current-weapon-parity"], /tearbench parity current-weapons/u);
+  assert.match(runs.get("browser.weapon-scenarios") ?? "", /tearbench\.mjs parity current-weapons/u);
   assert.equal(
     scripts["test:headless:current-weapon-parity"],
     "pnpm exec vitest run tests/unit/current-headless-weapon-parity.test.ts",
   );
-  assert.ok(functional.has("headless.test-headless-current-weapon-parity"));
   assert.equal(
     scripts["test:headless:current-gameplay-scenarios"],
     "pnpm exec vitest run tests/unit/current-headless-gameplay-scenarios.test.ts",
   );
-  assert.ok(functional.has("headless.test-headless-current-gameplay-scenarios"));
+  // unit.vitest runs every tests/unit test, the two headless files included.
+  assert.ok(runs.has("unit.vitest"));
   assert.equal(scripts["test:browser:current-gameplay-scenarios"], "node tests/browser-current-gameplay-scenarios.js");
-  assert.ok(functional.has("browser.test-browser-current-gameplay-scenarios"));
-  assert.ok(functional.has("browser.test-browser-current-weapon-parity"));
+  assert.equal(runs.get("browser.gameplay-scenarios"), "node tests/browser-current-gameplay-scenarios.js");
   assert.equal(scripts["test:tearbench-selection"], "node --test tests/tearbench-evidence-selection.test.mjs");
-  assert.match(scripts["check:workspace"], /pnpm test:tearbench-selection/u);
-  assert.ok(functional.has("unit.test-tearbench-selection"));
-  assert.ok(functional.has("static.check-workspace"));
+  assert.match(runs.get("static.node-tests") ?? "", /tests\/tearbench-evidence-selection\.test\.mjs/u);
   assert.equal(scripts["check:functional"], "node scripts/run-checks.mjs");
 });
 
@@ -510,7 +510,7 @@ test("boss, stage, progression, event, and player owners receive current mapped 
   for (const file of [
     "src/agents/live-watch-agent-host.ts",
     "src/agents/live-watch-agent-panel.ts",
-    "src/app/engineering/replay-editor.ts",
+    "src/app/replay/replay-screen-adapter.ts",
   ]) {
     const surface = select([file]);
     assert.ok(surface.routes.includes("current-player-surfaces"));
@@ -522,7 +522,7 @@ test("production replay/headless composition is explicitly dispositioned", () =>
   const selection = select([
     "src/tearbench/production-combat-phases.ts",
     "src/tearbench/production-replay-composition.ts",
-    "src/tearbench/production-headless-environment.ts",
+    "src/playtest/headless/production-headless-environment.ts",
   ]);
   assert.ok(selection.routes.includes("production-replay-headless-composition"));
   assert.ok(selection.buildTargets.includes("test-standalone"));
@@ -551,7 +551,7 @@ test("published stages select exactly six live boss encounters without preview l
 test("Pale authorities select natural White Hart plus surgical and browser evidence", () => {
   const aurora = select(["src/gameplay/environment/aurora-track-runtime.ts"]);
   assert.ok(aurora.routes.includes("pale-aurora-rimehound"));
-  assert.ok(aurora.authorityCommands.some((command) => command.includes("pale-state-forge-scenarios.test.ts")));
+  assert.ok(aurora.authorityCommands.some((command) => command.includes("pale-state-setup-scenarios.test.ts")));
   assert.ok(aurora.journeyCommands.includes("node tests/browser-pale-presentation.js"));
 
   const rimehound = select(["src/gameplay/entities/enemy-types/rimehound.ts"]);
@@ -665,7 +665,21 @@ test("the scheduled TearBench workflow inspects the complete commit range", () =
   const scheduledWorkflow = readFileSync(join(root, ".github", "workflows", "tearbench-program.yml"), "utf8");
   assert.doesNotMatch(scheduledWorkflow, /HEAD\^\s+HEAD/u);
   assert.match(scheduledWorkflow, /git rev-list --max-parents=0 HEAD/u);
-  assert.ok((scheduledWorkflow.match(/fetch-depth: 0/gu) ?? []).length >= 2);
+  assert.match(scheduledWorkflow, /fetch-depth: 0/u);
+});
+
+test("the scheduled TearBench workflow runs only the weekly endurance job, after the job naming its browser image", () => {
+  const scheduledWorkflow = readFileSync(join(root, ".github", "workflows", "tearbench-program.yml"), "utf8");
+  const jobs = scheduledWorkflow.slice(scheduledWorkflow.indexOf("\njobs:"));
+  assert.deepEqual(
+    [...jobs.matchAll(/^ {2}([\w-]+):$/gmu)].map((match) => match[1]),
+    ["image", "weekly-endurance"],
+  );
+  assert.deepEqual(
+    [...scheduledWorkflow.matchAll(/cron: "([^"]+)"/gu)].map((match) => match[1]),
+    ["23 8 * * 0"],
+  );
+  assert.match(scheduledWorkflow, /pnpm check:weekly/u);
 });
 
 test("missing active weapon evidence fails closed", () => {
@@ -808,7 +822,7 @@ test("selected player journeys are actually dispatched through safe evidence exe
       };
     }
   });
-  const selection = select(["src/app/engineering/replay-editor.ts"], {
+  const selection = select(["src/app/replay/replay-screen-adapter.ts"], {
     routes: routePath,
     catalog,
     executeEvidence: true,
@@ -859,7 +873,7 @@ test("diff scope canonicalization deduplicates and sorts changed files", () => {
 test("served build identity refuses stale revision and source fingerprint", async () => {
   const previousArgv = process.argv,
     previousLog = console.log;
-  process.argv = [process.execPath, script, "identity-test-import"];
+  process.argv = [process.execPath, script, "help"];
   console.log = () => undefined;
   let canReuseDiffCapabilityReport,
     formatFailedEvidenceExecution,

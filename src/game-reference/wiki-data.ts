@@ -62,12 +62,24 @@ export interface WikiStyleInput {
   readonly varietyMultiplier: number;
 }
 
+/** A boss move the game declares as data (a boss attack table): when it can be used and its warning. */
+export interface WikiBossMove {
+  readonly id: string;
+  readonly phases: readonly number[];
+  /** The authored warning before the move lands, in seconds. */
+  readonly tellSeconds: number;
+  /** False for a move that only places something on the stage and never strikes. */
+  readonly strikes: boolean;
+}
+
 export interface WikiDataInput {
   readonly reference: GameReferenceV1;
   /** Published enemy identities in canonical order and their Codex copy. */
   readonly enemyIds: readonly string[];
   readonly enemyCopy: Readonly<Record<string, WikiEnemyCopy>>;
   readonly bossCopy: Readonly<Record<string, string>>;
+  /** Moves of each boss that declares them as data, keyed by boss id. Older bosses declare none. */
+  readonly bossMoves: Readonly<Record<string, readonly WikiBossMove[]>>;
   /** Base stats read from real constructed instances, keyed by enemy kind or boss id. */
   readonly bodies: Readonly<Record<string, WikiBodyStats>>;
   readonly affixes: readonly EnemyAffix[];
@@ -127,6 +139,7 @@ export interface WikiDataV1 {
       color: string;
       stats: WikiBodyStats;
       phaseMarks: readonly number[];
+      moves: readonly WikiBossMove[];
     }
   >[];
   readonly stages: readonly Readonly<Omit<GameReferenceStageV1, "musicId">>[];
@@ -238,6 +251,7 @@ export function buildWikiDataV1(input: WikiDataInput): WikiDataV1 {
     color: requireRecord(input.colors, "boss", "identity colour"),
     stats: bodyStats(requireRecord(input.bodies, boss.id, "body stats")),
     phaseMarks: [...boss.phaseMarks],
+    moves: [...(input.bossMoves[boss.id] ?? [])],
   }));
 
   const release = new Set(input.releaseModeIds);

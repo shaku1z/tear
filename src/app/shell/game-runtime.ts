@@ -1,6 +1,8 @@
 import type { TearWorldConfiguration } from "../../gameplay/runtime/tear-world-configuration";
 import { tracksAchievements } from "../../gameplay/progression/achievement-runtime";
 import { dismissBootScreen } from "../../platform/browser-boot-screen";
+import { createFrameFaultHandler } from "../../platform/browser-error-screen";
+import { createScreenPresence } from "../../platform/screen-presence";
 import { assembleLiveCampaignTraining } from "../campaign/live-campaign-training-assembly";
 import { createLiveBossPhasePractice } from "../campaign/boss-phase-practice";
 import { createLiveAttackPresentation } from "../combat/attack-presentation";
@@ -10,7 +12,7 @@ import { createLiveCanonicalStateCapture, type LiveCanonicalCombatHost } from ".
 import { createLiveCombatActionPorts } from "../combat/live-combat-action-ports";
 import { createLiveCombatFramePorts } from "../combat/live-combat-frame-ports";
 import { createGhostV3BrowserTestOptions } from "../engineering/ghost-v3-browser-test-options";
-import { assembleLiveStateForge } from "../engineering/live-state-forge-assembly";
+import { assembleLiveStateSetup } from "../engineering/live-state-setup-assembly";
 import { createLiveTestBuildJournals } from "../engineering/test-build-journals";
 import {
   installLiveBossDebugWhenEnabled,
@@ -24,13 +26,10 @@ import { createLiveScreenNavigation } from "../interface/live-screen-navigation"
 import { isAppScreen, isMenuScreen } from "../../domain/screen-catalog";
 import { bindGhostArchiveFileLifecycle } from "../library/browser-ghost-archive-files";
 import { createBrowserGhostVaultLibrary } from "../library/ghost-vault-library-controller";
-import { createBrowserLiveGhostOwnerRecoveryController } from "../replay/ghost-owner-recovery-controller";
 import { createLiveGhostPracticeSessionState } from "../replay/ghost-practice-session-state";
-import { LiveGhostPublicationController } from "../replay/ghost-publication-controller";
-import { LiveGhostSupportController } from "../replay/ghost-support-controller";
 import { createLiveGhostCapture } from "../replay/live-ghost-capture";
 import { createLiveGhostChaseRuntime } from "../replay/live-ghost-chase";
-import { createLiveGhostPracticeChallenge } from "../replay/live-ghost-practice-challenge";
+import { createLiveGhostPractice } from "../replay/live-ghost-practice";
 import { createLiveGhostRecording, observeLiveGhostRecordingBoundaries } from "../replay/live-ghost-recording";
 import { createTearRunScreenFactPublisher } from "../../gameplay/runtime/gameplay-event-publishers";
 import { subscribeLiveGameplayEventFanOut } from "../run/live-gameplay-event-fanout";
@@ -39,13 +38,13 @@ import { assembleLiveRunOrchestration } from "../run/live-run-orchestration-asse
 import { createLiveReviveCountdownState } from "../run/revive-countdown-state";
 import { liveTutorialCoachFrame } from "../training/tutorial-coach-frame";
 import { createLiveTutorialPracticeStart } from "../training/tutorial-practice-start";
-import { createLiveAuthoritativeInputAdapter } from "../world/authoritative-input-adapter";
+import { createLiveAuthoritativeInputAdapter } from "../../gameplay/runtime/authoritative-input-adapter";
 import { bindBiomeActors } from "../../gameplay/environment/biome-actors/bind-biome-actors";
 import { countCanonicalStateCost } from "../world/canonical-state-cost";
 import { createLiveInputAuthorityState } from "../world/input-authority-state";
 import { createLiveBrowserRuntime } from "./browser-runtime";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
-import type { GameBlade, GamePlayer, GameRun } from "./game-runtime-state";
+import type { GameBlade, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import { createLiveProductionWorld } from "./production-world";
 import { RuntimeFrameDriver } from "./runtime-frame-driver";
 import { createLiveSessionServices } from "./session-services-composition";
@@ -53,7 +52,7 @@ import { createLiveSessionServices } from "./session-services-composition";
 /**
  * Composes the live game: browser surface, Ghost V3 sidecar, session services,
  * the production world, campaign and training, run orchestration, the combat
- * host, State Forge, interface and the frame loop. Each owner is constructed
+ * host, State Setup, interface and the frame loop. Each owner is constructed
  * here in a fixed order; collaborators built later are reached through lazy
  * ports, so construction order and side effects stay exactly as listed.
  */
@@ -68,7 +67,6 @@ export function startLiveGame(
     CG,
     CLOCK,
     CONFIG,
-    Cloud,
     DIAG,
     FX,
     GAMEPLAY_EVENTS,
@@ -83,37 +81,19 @@ export function startLiveGame(
     browserIndexedDb,
     browserNavigator,
     browserWindow,
-    ghostPublication,
   } = dependencies;
   const browserRuntime = createLiveBrowserRuntime(dependencies);
   const { canvas, viewport, requestPointerLock: requestLock } = browserRuntime;
   const inputAuthority = createLiveInputAuthorityState(requestLock);
   const requestOwnedPointerLock = inputAuthority.requestPointerLock;
-  const currentSignedInActor = (): string | undefined =>
-    Cloud.loggedIn() && Cloud.user !== null && !Cloud.user.guest ? Cloud.user.id : undefined;
   const ghostV3Options =
     createGhostV3BrowserTestOptions(browserRuntime.testMode, dependencies.engineeringQuery.search) ?? {};
   const ghostVault = createBrowserGhostVaultLibrary(browserIndexedDb);
   bindGhostArchiveFileLifecycle(browserWindow, ghostVault);
-  const ownerRecovery = createBrowserLiveGhostOwnerRecoveryController(
-    browserIndexedDb,
-    ghostPublication,
-    currentSignedInActor,
-    () => {
-      ghostVault.refresh();
-    },
-    (input, init) => browserWindow.fetch(input, init),
-  );
-  Cloud.onChange(() => {
-    ownerRecovery.accountChanged();
-  });
   const ghostRecording = createLiveGhostRecording({
     indexedDb: browserIndexedDb,
     document: browserDocument,
     recorderOptions: ghostV3Options,
-    beatFinalized: (manifestId) => {
-      beat.finalized(manifestId);
-    },
     run: liveRun,
     player: livePlayer,
     blade: liveBlade,
@@ -123,29 +103,20 @@ export function startLiveGame(
     enemyId: (actor) => combatHost.combatEntityRuntime.id(actor, "enemy"),
     practiceActive: () => ghostPracticeSession.active() !== null,
     bossIntroActive: () => hostState.bossIntro() !== null,
-    finale: () => ghostCapture.finale,
   });
   const { session: ghostV3Session, recorder: ghostV3, career, frames: ghostFrames } = ghostRecording;
-  const ghostPublicationScreen = new LiveGhostPublicationController(
-    browserIndexedDb,
-    ghostPublication,
-    currentSignedInActor,
-  );
-  const ghostSupportScreen = new LiveGhostSupportController(browserIndexedDb);
   observeLiveGhostRecordingBoundaries(ghostRecording, {
     ghost: GHOST,
     run: liveRun,
-    configurationProjection: () => liveStateForge.capture().components.get("tear.configuration.v1"),
+    configurationProjection: () => liveStateSetup.capture().components.get("tear.configuration.v1"),
     randomSnapshot: () => worldContext.services.random.snapshot(),
     chaseConfiguration: (configHash) => {
       chase.configuration(configHash);
     },
-    beatDeclaration: () => beat.declaration(),
     sessionNonce: () => browserWindow.crypto.randomUUID(),
     captureReceipt: (tick) => {
       ghostCapture.captureReceipt(tick);
     },
-    finale: () => ghostCapture.finale,
   });
   const gameplayEvents = subscribeLiveGameplayEventFanOut({
     events: GAMEPLAY_EVENTS,
@@ -170,30 +141,6 @@ export function startLiveGame(
   }
   const interfaceInteraction = createLiveInterfaceInteractionState();
   const sessionServices = createLiveSessionServices({
-    beat: {
-      screen: () => navigation.screen(),
-      capture: () => liveStateForge.capture().components,
-      tick: () => combatHost.simulationRuntime.scheduler.tick,
-      recording: ghostV3Session,
-      nativeStart: {
-        session: () => session,
-        prepare: () => {
-          chase.stop();
-          navigation.setScreen("setup");
-        },
-        start: (mode, difficulty) => {
-          startRunImmediate(mode, difficulty);
-        },
-        refuse: () => {
-          try {
-            runAbandonment.abandon("beat-start-refused");
-          } finally {
-            navigation.setScreen("menu");
-            navigation.setScreen("profile");
-          }
-        },
-      },
-    },
     dependencies,
     run: liveRun,
     player: livePlayer,
@@ -209,7 +156,7 @@ export function startLiveGame(
         },
       },
       baseline: () => configuration.baseSnapshot(),
-      capture: () => liveStateForge.capture().components,
+      capture: () => liveStateSetup.capture().components,
       setup: () => ({
         mode: session.selectedMode() as "endless",
         difficulty: session.selectedDifficulty(),
@@ -237,8 +184,8 @@ export function startLiveGame(
       interfaceComposition.screens.settings.beginRename(firstRun);
     },
   });
-  const { settings, controllers: runControllers, seedRace, beat } = sessionServices;
-  const { endRun, startRun: startRunImmediate } = runControllers.api;
+  const { settings, controllers: runControllers, seedRace } = sessionServices;
+  const { endRun } = runControllers.api;
   // Time dilation, camera framing (the void run pulls world zoom OUT), banner
   // and rank readouts, hit stop, slow motion, shake, the blade-throw cooldown,
   // dash ghosting, and the opening audio cadence are per-world transient
@@ -246,10 +193,10 @@ export function startLiveGame(
   const navigation = createLiveScreenNavigation({
     app: APP,
     input: Input,
-    beat,
     runScreenFact: createTearRunScreenFactPublisher(GAMEPLAY_EVENTS, () => RUN_LIFECYCLE.snapshot(), liveRun),
+    place: () => ({ focus: interfaceInteraction.focus(), scroll: interfaceInteraction.scroll() }),
   });
-  const interfaceFrame = createLiveInterfaceFrameState(navigation.screen());
+  const interfaceFrame = createLiveInterfaceFrameState();
   const currentOutcome = () => {
     const outcome = session.outcome();
     if (outcome === null) throw new Error("Outcome screen requires a completed run");
@@ -288,11 +235,11 @@ export function startLiveGame(
     input: Input,
     run: liveRun,
   });
-  // One world owns the transient records read by combat, State Forge, and diagnostics.
+  // One world owns the transient records read by combat, State Setup, and diagnostics.
   const { transient } = worldContext;
   const CINEMA = worldContext.cinema;
   const ghostPracticeSession = createLiveGhostPracticeSessionState();
-  const persistentEffects = () => ghostPracticeSession.active() === null && !seedRace.active() && !beat.active();
+  const persistentEffects = () => ghostPracticeSession.active() === null && !seedRace.active();
   const journals = createLiveTestBuildJournals(SFX);
   const practiceStart = createLiveTutorialPracticeStart();
   const campaignTraining = assembleLiveCampaignTraining({
@@ -412,7 +359,19 @@ export function startLiveGame(
       },
     }),
   );
-  const frameDriver = new RuntimeFrameDriver(browserWindow);
+  const frameDriver = new RuntimeFrameDriver(
+    browserWindow,
+    createFrameFaultHandler({
+      document: browserDocument,
+      build: dependencies.build,
+      reload: () => {
+        browserWindow.location.reload();
+      },
+      report: (error) => {
+        console.error("TEAR stopped: a frame threw.", error);
+      },
+    }),
+  );
   const combatAdapters = createLiveCombatActionPorts({
     dependencies,
     surface: browserRuntime,
@@ -450,7 +409,6 @@ export function startLiveGame(
     run: liveRun,
     player: livePlayer,
     blade: liveBlade,
-    challenge: () => ghostPracticeChallenge.challenge,
     ghostCapture: () => ghostCapture,
   });
   const coordinatorContext = {
@@ -468,6 +426,7 @@ export function startLiveGame(
     cinema: CINEMA,
     clipper: dependencies.Clipper ?? null,
     autoPauseDisconnect: () => settings.autoPauseDisconnect,
+    screen: createScreenPresence(browserWindow, browserDocument),
     requestPointerLock: requestOwnedPointerLock,
     exitReplay: () => {
       interfaceComposition.screens.replay.exit();
@@ -567,7 +526,7 @@ export function startLiveGame(
       ...hostState.projectiles().map((projectile) => combatRuntime.id(projectile, "projectile")),
     ]);
   });
-  const liveStateForge = assembleLiveStateForge({
+  const liveStateSetup = assembleLiveStateSetup({
     dependencies,
     world,
     campaignTraining,
@@ -582,33 +541,23 @@ export function startLiveGame(
   });
   const ghostCapture = createLiveGhostCapture({
     recording: ghostRecording,
-    stateForge: liveStateForge,
+    stateSetup: liveStateSetup,
     world,
     combat: combatHost,
     canonicalState: captureLiveCanonicalState,
-    campaign: campaignTraining.campaign,
-    navigation,
     run: liveRun,
     player: livePlayer,
     blade: liveBlade,
   });
-  const ghostPracticeChallenge = createLiveGhostPracticeChallenge({
-    indexedDb: browserIndexedDb,
-    recording: ghostRecording,
+  const ghostPractice = createLiveGhostPractice({
     capture: ghostCapture,
-    stateForge: liveStateForge,
+    stateSetup: liveStateSetup,
     practice: ghostPracticeSession,
     world,
-    combat: combatHost,
-    canonicalState: captureLiveCanonicalState,
     navigation,
-    gameplayEvents,
-    abandonment: runAbandonment,
     ghost: GHOST,
     input: Input,
     requestPointerLock: requestLock,
-    player: livePlayer,
-    addFloater: campaignTraining.addFloater,
   });
   const interfaceComposition = assembleLiveInterface({
     dependencies,
@@ -626,13 +575,8 @@ export function startLiveGame(
     hudFeedback,
     chase,
     career,
-    ghostLibrary: {
-      vault: ghostVault,
-      ownerRecovery,
-      publication: ghostPublicationScreen,
-      support: ghostSupportScreen,
-    },
-    launchGhostPractice: ghostPracticeChallenge.launch,
+    ghostLibrary: { vault: ghostVault },
+    launchGhostPractice: ghostPractice.launch,
     abandonRun: (reason) => {
       runAbandonment.abandon(reason);
     },
@@ -659,7 +603,7 @@ export function startLiveGame(
     inputAuthority,
     recorder: ghostV3,
     ghostPractice: ghostPracticeSession,
-    stateForge: liveStateForge,
+    stateSetup: liveStateSetup,
     abandonment: runAbandonment,
     journals,
     canonicalState: captureLiveCanonicalState,

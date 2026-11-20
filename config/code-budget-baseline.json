@@ -3,22 +3,22 @@
   "note": "Debt recorded by `node scripts/check-code-budget.mjs --update`. Values may only fall; see docs/ARCHITECTURE.md.",
   "files": {
     "src/agents/live-watch-agent-host.ts": {
-      "largestFunctionStatements": 100
+      "largestFunctionStatements": 94
     },
     "src/agents/live-watch-agent-panel.ts": {
       "maxLineLength": 171
     },
     "src/app/engineering/debug-harness.ts": {
-      "chars": 29266
+      "chars": 29185
     },
     "src/audio/stems/validate.ts": {
       "largestFunctionStatements": 83
     },
     "src/config/game-config.ts": {
-      "chars": 27922
+      "chars": 27592
     },
     "src/game-reference/game-reference.ts": {
-      "chars": 30731
+      "chars": 30503
     },
     "src/gameplay/combat/held-blade-collision-runtime.ts": {
       "largestFunctionStatements": 171
@@ -63,8 +63,8 @@
       "chars": 26787
     },
     "src/gameplay/training/tutorial-controller.ts": {
-      "chars": 47038,
-      "largestFunctionStatements": 170
+      "chars": 45395,
+      "largestFunctionStatements": 169
     },
     "src/gameplay/upgrades.ts": {
       "chars": 29224
@@ -75,14 +75,14 @@
     "src/gameplay/voidgen-inspection.ts": {
       "largestFunctionStatements": 111
     },
-    "src/ghost/publication-transport.ts": {
-      "largestFunctionStatements": 100
-    },
     "src/ghost/replay-admission.ts": {
-      "chars": 26832
+      "chars": 26698
     },
     "src/input/browser-gamepad.ts": {
       "largestFunctionStatements": 124
+    },
+    "src/playtest/headless/production-headless-environment.ts": {
+      "chars": 27871
     },
     "src/presentation/attract-runtime.ts": {
       "largestFunctionStatements": 92
@@ -91,7 +91,7 @@
       "largestFunctionStatements": 106
     },
     "src/presentation/backdrop.ts": {
-      "chars": 25964,
+      "chars": 25909,
       "largestFunctionStatements": 140
     },
     "src/presentation/combat/attack-presentation-director.ts": {
@@ -102,9 +102,6 @@
     },
     "src/presentation/enemies/renderers/base-renderers.ts": {
       "largestFunctionStatements": 81
-    },
-    "src/presentation/enemies/renderers/rootbound-renderer.ts": {
-      "largestFunctionStatements": 127
     },
     "src/presentation/enemies/renderers/source-renderer.ts": {
       "largestFunctionStatements": 165
@@ -119,28 +116,19 @@
       "largestFunctionStatements": 105
     },
     "src/presentation/entities/blade-renderer.ts": {
-      "largestFunctionStatements": 202
+      "largestFunctionStatements": 186
     },
     "src/presentation/entities/projectile-renderer.ts": {
-      "largestFunctionStatements": 488
+      "largestFunctionStatements": 471
     },
     "src/presentation/environment/verdant-environment-presentation.ts": {
-      "largestFunctionStatements": 164
+      "largestFunctionStatements": 120
     },
     "src/presentation/particles.ts": {
       "largestFunctionStatements": 139
     },
-    "src/presentation/platform-materials/pale-ice.ts": {
-      "largestFunctionStatements": 82
-    },
     "src/presentation/platform-materials/verdant-rootstone.ts": {
       "largestFunctionStatements": 129
-    },
-    "src/presentation/screens/career-archive.ts": {
-      "maxLineLength": 175
-    },
-    "src/presentation/screens/leaderboards-replays.ts": {
-      "maxLineLength": 229
     },
     "src/presentation/tear-wipe.ts": {
       "largestFunctionStatements": 106
@@ -164,16 +152,13 @@
       "largestFunctionStatements": 93
     },
     "src/tearbench/live-runtime-environment.ts": {
-      "chars": 29599
+      "chars": 29591
     },
     "src/tearbench/production-combat-phases.ts": {
-      "chars": 30134
-    },
-    "src/tearbench/production-headless-environment.ts": {
-      "chars": 31998
+      "chars": 30070
     },
     "src/tearbench/production-replay-composition.ts": {
-      "chars": 35031
+      "chars": 34925
     },
     "src/tearbench/tutorial-course-driver.ts": {
       "largestFunctionStatements": 209

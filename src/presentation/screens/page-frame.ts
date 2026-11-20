@@ -2,13 +2,24 @@ import type { ReplayView, ScreenAction, ScreenRenderContext } from "./contracts"
 import {
   createCompactPage,
   type CompactChoice,
+  type CompactHeader,
   type CompactPage,
   type FlowAction,
   type ScrollBlock,
   type ScrollState,
   type ScrollView,
 } from "./compact-page";
-import { chips, clipBody, page, pageFooter, replayRow, tabs } from "./screen-primitives";
+import {
+  chips,
+  clipBody,
+  page,
+  pageFooter,
+  pageLayout,
+  replayRow,
+  scrollHint,
+  tabs,
+  type ChipRow,
+} from "./screen-primitives";
 
 /**
  * THE PAGE FRAME: one screen definition that lays out at both densities. A screen states its
@@ -18,8 +29,8 @@ import { chips, clipBody, page, pageFooter, replayRow, tabs } from "./screen-pri
  *
  * - Desktop draws the design page (`page`, `tabs`, `chips`, `pageFooter` from screen-primitives)
  *   with the chrome at the positions the screen gives in `desktop`. The body starts at a fixed
- *   y: a pinned head, then a clipped list that scrolls by the app's scroll (the app owns the
- *   desktop scroll extent), then a pinned tail above the footer.
+ *   y: a pinned head, then a list (clipped and scrolled by the app's scroll when it scrolls;
+ *   the app owns the desktop scroll extent), then a pinned tail above the footer.
  * - Phone (compact density) draws the compact page (`compact-page.ts`): a header row with the
  *   tabs, the pickers as a chip toolbar, and one body that flows the caption, head, list and
  *   tail top to bottom, measures itself and owns its scroll.
@@ -27,13 +38,19 @@ import { chips, clipBody, page, pageFooter, replayRow, tabs } from "./screen-pri
 export interface PickerGroup {
   readonly items: readonly CompactChoice[];
   readonly action: (id: string) => ScreenAction;
-  /** Desktop chip row: centred at `y`, each chip `width` x `height`. */
-  readonly desktop: Readonly<{ y: number; width: number; height: number }>;
+  /** The desktop row (see `ChipRow`). */
+  readonly desktop: Omit<ChipRow, "trailing">;
+  /** A view control (the codex sort): at the right end of the header row (phone) or of this chip row (desktop, `width` wide). */
+  readonly trailing?: Readonly<{ label: string; action: ScreenAction; width: number }> | undefined;
 }
 
 export interface PageSpec {
   readonly title: string;
+  /** One muted line beside (phone) or under (desktop) the title. */
+  readonly subtitle?: string | undefined;
   readonly hue?: string | undefined;
+  /** A figure at the right of the title row (the shop's coins). */
+  readonly stat?: CompactHeader["stat"];
   readonly tabs?: readonly CompactChoice[] | undefined;
   readonly tabAction?: ((id: string) => ScreenAction) | undefined;
   /** One muted line under the tabs (desktop) or at the top of the body (phone). */
@@ -41,6 +58,8 @@ export interface PageSpec {
   readonly pickers?: readonly PickerGroup[] | undefined;
   /** Desktop chrome positions. */
   readonly desktop: Readonly<{ tabsY?: number; captionY?: number }>;
+  /** Without a sheet (the playground over its frozen arena): the overlay header on desktop, the safe frame on the phone. */
+  readonly sheet?: false | undefined;
 }
 
 export interface PageFrame {
@@ -59,41 +78,107 @@ export interface PageFrame {
   readonly compactPage: CompactPage | null;
 }
 
+/** A block, or a slot the phone closes up when it has nothing to show (see `prose`). */
+type Slot = ScrollBlock | undefined;
+
+/** Page turning. Phone: the buttons and the page line (with the note) end the body. Desktop: they sit in the footer row, the note on a line above it. */
+export interface Pager {
+  readonly previous: FlowAction;
+  readonly next: FlowAction;
+  readonly label: string;
+  readonly note?: string | undefined;
+}
+const PAGER = { buttonY: 6, buttonH: 36, label: 30, noteHeight: 26, noteBaseline: 22 } as const;
+
 export interface PageBody {
-  readonly head?: readonly ScrollBlock[] | undefined;
-  readonly list?: readonly ScrollBlock[] | undefined;
-  readonly tail?: readonly ScrollBlock[] | undefined;
+  readonly head?: readonly Slot[] | undefined;
+  readonly list?: readonly Slot[] | undefined;
+  readonly tail?: readonly Slot[] | undefined;
+  readonly pager?: Pager | undefined;
   /** Space between blocks: the design spacing on desktop is usually built into the block heights. */
   readonly gap: number;
   /**
    * Desktop: the body's first y, the scroll state the app computed for the list, and which list
    * blocks are drawn: a block whose top is within `cull.above` over the list top and
-   * `cull.below` short of its bottom (the design keeps a partly hidden row out).
+   * `cull.below` short of its bottom (the design keeps a partly hidden row out). A list that
+   * does not scroll (`scrolls: false`) is laid out from its top and drawn unclipped.
    */
   readonly desktop: Readonly<{
     top: number;
     cull: Readonly<{ above: number; below: number }>;
+    scrolls?: boolean | undefined;
+    /** A list that moves by whole blocks: `snap` blocks from the one the scroll rounds to (blocks of one height). */
+    snap?: number | undefined;
     canScrollUp?: boolean | undefined;
     canScrollDown?: boolean | undefined;
   }>;
 }
 
+/** Wrapped muted copy (see `prose`). `box` draws it as a left text box on desktop, else one `ui.text` line. */
+interface ProseOptions {
+  readonly size: number;
+  readonly maxLines: number;
+  readonly align: "center" | "left";
+  readonly alpha?: number | undefined;
+  /** Desktop: baseline below the block top, and the block height (or the measured height plus `gap`). */
+  readonly baseline: number;
+  readonly height?: number | undefined;
+  readonly gap?: number | undefined;
+  readonly box?: boolean | undefined;
+  /** Desktop: draw the line as a tag in this colour. */
+  readonly tag?: string | undefined;
+}
+
+/** A desktop button position (`x` absolute). */
+export type ButtonSlot = Readonly<{ x: number; w: number }>;
+
+const present = (blocks: readonly Slot[] | undefined): ScrollBlock[] =>
+  (blocks ?? []).filter((block): block is ScrollBlock => block !== undefined);
+
 /** Desktop drawing of the content column: the design page's centred 1120 column. */
 const DESKTOP_COLUMN = 1120;
+
+/** `count` equal desktop buttons across the frame, `gap` apart. */
+export function evenSlots(frame: PageFrame, count: number, gap: number): readonly ButtonSlot[] {
+  const w = (frame.width - (count - 1) * gap) / count;
+  return Array.from({ length: count }, (_, i) => ({ x: frame.left + (i * (frame.width + gap)) / count, w }));
+}
 
 export function createPageFrame(context: ScreenRenderContext) {
   const { ui } = context,
     kit = createCompactPage(context);
+  /** A view that enqueues every control (pinned desktop parts). */
+  const unclipped = (top: number, bottom: number): ScrollView => ({
+    top,
+    bottom,
+    enqueue(control) {
+      context.enqueue(control);
+    },
+  });
 
   /** Draws the chrome for the density in use and returns the frame the body lays out in. */
   function open(spec: PageSpec): PageFrame {
     if (ui.density.compact) {
-      let compactPage = kit.header({ title: spec.title, hue: spec.hue, tabs: spec.tabs, tabAction: spec.tabAction });
+      let compactPage = kit.header({
+        title: spec.title,
+        subtitle: spec.subtitle,
+        hue: spec.hue,
+        stat: spec.stat,
+        tabs: spec.tabs,
+        tabAction: spec.tabAction,
+        trailing: spec.pickers?.find((group) => group.trailing)?.trailing,
+        sheet: spec.sheet,
+      });
       if (spec.pickers) compactPage = kit.toolbar(compactPage, spec.pickers);
       const lead = spec.caption ? [kit.prose(compactPage, spec.caption, { maxLines: 2 })] : [];
       return Object.freeze({ compact: true, ...compactPage, lead, compactPage });
     }
-    const layout = page(context, { title: spec.title, hue: spec.hue });
+    let layout: Readonly<{ bodyTop: number; bodyBottom: number }>;
+    if (spec.sheet === false) {
+      // The overlay header; the screen places its own rows (the body top is the page's).
+      ui.header(context.canvas, spec.title, spec.subtitle, context.enterAmount, spec.hue);
+      layout = { bodyTop: pageLayout(context).bodyTop, bodyBottom: ui.sheetFooter().y - ui.t.space.md };
+    } else layout = page(context, { title: spec.title, subtitle: spec.subtitle, hue: spec.hue, stat: spec.stat });
     if (spec.tabs && spec.tabAction) tabs(context, spec.tabs, spec.tabAction, spec.desktop.tabsY);
     if (spec.caption && spec.desktop.captionY !== undefined)
       ui.text(
@@ -105,8 +190,8 @@ export function createPageFrame(context: ScreenRenderContext) {
         "center",
         ui.t.alpha.muted,
       );
-    for (const group of spec.pickers ?? [])
-      chips(context, group.items, group.action, group.desktop.y, group.desktop.width, group.desktop.height);
+    for (const { items, action, desktop, trailing } of spec.pickers ?? [])
+      chips(context, items, action, { ...desktop, trailing });
     const left = context.width / 2 - DESKTOP_COLUMN / 2;
     return Object.freeze({
       compact: false,
@@ -121,19 +206,33 @@ export function createPageFrame(context: ScreenRenderContext) {
     });
   }
 
+  /** The pager's phone blocks: the buttons, then the page line with the note. */
+  function pagerBlocks(frame: PageFrame, pager: Pager | undefined): ScrollBlock[] {
+    if (!pager) return [];
+    const line = pager.note ? `${pager.label} · ${pager.note}` : pager.label;
+    return [
+      actions(frame, [pager.previous, pager.next], { height: 0, size: 0, blockHeight: 0, slots: [] }),
+      prose(frame, line, { size: ui.t.type.caption, maxLines: 2, align: "left", baseline: 0 }),
+    ];
+  }
+
   /** Lays the body out and draws it; returns whether it can scroll. */
   function body(frame: PageFrame, spec: PageBody): ScrollState {
-    const head = spec.head ?? [],
-      list = spec.list ?? [],
-      tail = spec.tail ?? [];
-    if (frame.compactPage) return kit.scroll(frame.compactPage, [...frame.lead, ...head, ...list, ...tail], spec.gap);
-    const fixed: ScrollView = {
-      top: frame.top,
-      bottom: frame.bottom,
-      enqueue(control) {
-        context.enqueue(control);
-      },
-    };
+    const head = present(spec.head),
+      list = present(spec.list),
+      tail = present(spec.tail);
+    if (frame.compactPage)
+      return kit.scroll(
+        frame.compactPage,
+        [...frame.lead, ...head, ...list, ...tail, ...pagerBlocks(frame, spec.pager)],
+        spec.gap,
+      );
+    if (spec.pager) {
+      const { noteHeight: height, noteBaseline: baseline } = PAGER;
+      const options = { size: ui.t.type.caption, maxLines: 1, align: "left", baseline, height, box: true } as const;
+      tail.push(prose(frame, spec.pager.note, options) ?? { height, draw: () => undefined });
+    }
+    const fixed = unclipped(frame.top, frame.bottom);
     let y = spec.desktop.top;
     for (const block of head) {
       block.draw(y, fixed);
@@ -141,7 +240,8 @@ export function createPageFrame(context: ScreenRenderContext) {
     }
     const tailHeight = tail.reduce((sum, block) => sum + block.height, 0);
     const listTop = y,
-      listBottom = frame.bottom - tailHeight;
+      listBottom = frame.bottom - tailHeight,
+      scrolls = spec.desktop.scrolls !== false;
     if (list.length > 0) {
       const view: ScrollView = {
         top: listTop,
@@ -150,14 +250,20 @@ export function createPageFrame(context: ScreenRenderContext) {
           if (control.y >= listTop && control.y + control.h <= listBottom) context.enqueue(control);
         },
       };
-      clipBody(context, listTop, listBottom, () => {
-        let rowY = listTop - context.scroll;
-        for (const block of list) {
+      const snap = spec.desktop.snap,
+        pitch = (list[0]?.height ?? 0) + spec.gap;
+      const first =
+        snap && pitch > 0 ? Math.max(0, Math.min(list.length - snap, Math.round(context.scroll / pitch))) : 0;
+      const drawList = (): void => {
+        let rowY = listTop - (scrolls && !snap ? context.scroll : 0);
+        for (const block of snap ? list.slice(first, first + snap) : list) {
           if (rowY >= listTop - spec.desktop.cull.above && rowY <= listBottom - spec.desktop.cull.below)
             block.draw(rowY, view);
           rowY += block.height + spec.gap;
         }
-      });
+      };
+      if (scrolls) clipBody(context, listTop, listBottom, drawList);
+      else drawList();
     }
     let tailY = listBottom;
     for (const block of tail) {
@@ -170,10 +276,50 @@ export function createPageFrame(context: ScreenRenderContext) {
     };
   }
 
-  /** The footer row: BACK and the scroll hint. */
-  function close(frame: PageFrame, state: ScrollState): void {
-    if (frame.compactPage) kit.footer(frame.compactPage, state);
-    else pageFooter(context, state);
+  /**
+   * The footer row: BACK (none with `back: null`), or `primary` in its place (the playground's
+   * RESUME), the scroll hint and, on desktop, the pager.
+   */
+  function close(
+    frame: PageFrame,
+    state: ScrollState,
+    options: Readonly<{ back?: ScreenAction | null; primary?: FlowAction | undefined; pager?: Pager | undefined }> = {},
+  ): void {
+    const { primary } = options,
+      metric = ui.t.metric;
+    if (primary) {
+      const y = frame.compactPage?.footerY ?? pageLayout(context).footerY,
+        x = frame.centerX - metric.backW / 2;
+      const size = ui.t.type.lead;
+      context.enqueue({ x, y, w: metric.backW, h: metric.btnH, label: primary.label, size, action: primary.action });
+    }
+    if (frame.compactPage) {
+      kit.footer(frame.compactPage, state, options.back);
+      return;
+    }
+    if (options.back === null) {
+      scrollHint(context, state.canScrollUp, state.canScrollDown);
+      return;
+    }
+    const footer = pageFooter(context, { ...state, ...(options.back ? { back: options.back } : {}) });
+    const pager = options.pager;
+    if (!pager) return;
+    const slots = [
+      { x: frame.left, w: 170 },
+      { x: frame.left + 182, w: 150 },
+    ];
+    const buttons = { height: PAGER.buttonH, size: ui.t.type.label, blockHeight: 0, slots };
+    const view = unclipped(footer.footerY, context.height);
+    actions(frame, [pager.previous, pager.next], buttons).draw(footer.footerY + PAGER.buttonY, view);
+    ui.text(
+      context.canvas,
+      pager.label,
+      frame.right,
+      footer.footerY + PAGER.label,
+      ui.t.type.caption,
+      "right",
+      ui.t.alpha.muted,
+    );
   }
 
   /**
@@ -238,29 +384,46 @@ export function createPageFrame(context: ScreenRenderContext) {
     return { height: desktop.pitch, draw };
   }
 
-  /** Wrapped muted copy: one centred line on desktop, a measured paragraph on the phone. */
-  function prose(
-    frame: PageFrame,
-    text: string,
-    options: Readonly<{ size: number; maxLines: number; align: "center" | "left"; baseline: number; height: number }>,
-  ): ScrollBlock {
+  /**
+   * Wrapped copy (muted unless `alpha` says otherwise): a measured paragraph on the phone; on
+   * desktop one `ui.text` line or, with `box`, a text box. Without text it is a slot: the phone
+   * closes it up, desktop keeps its `height` empty.
+   */
+  function prose(frame: PageFrame, text: string, options: ProseOptions): ScrollBlock;
+  function prose(frame: PageFrame, text: string | undefined, options: ProseOptions): Slot;
+  function prose(frame: PageFrame, text: string | undefined, options: ProseOptions): Slot {
+    const alpha = options.alpha ?? ui.t.alpha.muted;
     if (frame.compactPage)
-      return kit.prose(frame.compactPage, text, {
-        size: options.size,
-        maxLines: options.maxLines,
-        align: options.align,
-      });
+      return text === undefined ? undefined : kit.prose(frame.compactPage, text, { ...options, alpha });
+    if (text === undefined)
+      return options.height === undefined ? undefined : { height: options.height, draw: () => undefined };
+    const x = options.align === "center" ? frame.centerX : frame.left;
+    if (!options.box) {
+      const { tag } = options;
+      const draw = (y: number): void => {
+        if (tag) ui.tag(context.canvas, text, x, y + options.baseline, tag, options.align, options.size);
+        else ui.text(context.canvas, text, x, y + options.baseline, options.size, options.align, alpha);
+      };
+      return { height: options.height ?? 0, draw };
+    }
+    const box = { size: options.size, alpha, maxLines: options.maxLines };
+    const height =
+      options.height ??
+      ui.textBox(context.canvas, text, x, 0, frame.width, { ...box, measureOnly: true }).height + (options.gap ?? 0);
     const draw = (y: number): void => {
-      ui.text(context.canvas, text, frame.centerX, y + options.baseline, options.size, options.align, ui.t.alpha.muted);
+      ui.textBox(context.canvas, text, x, y + options.baseline, frame.width, box);
     };
-    return { height: options.height, draw };
+    return { height, draw };
   }
 
-  /** A row of flow buttons: one centred button at a fixed size on desktop, wrapping touch targets on the phone. */
+  /**
+   * A row of flow buttons: wrapping touch targets on the phone; on desktop each item at its
+   * slot (the last slot repeats when there are more items than slots).
+   */
   function actions(
     frame: PageFrame,
     items: readonly FlowAction[],
-    desktop: Readonly<{ width: number; height: number; size: number; blockHeight: number }>,
+    desktop: Readonly<{ height: number; size: number; blockHeight: number; slots: readonly ButtonSlot[] }>,
   ): ScrollBlock {
     if (frame.compactPage) {
       const width = frame.width;
@@ -270,16 +433,20 @@ export function createPageFrame(context: ScreenRenderContext) {
       };
     }
     const draw = (y: number, view: ScrollView): void => {
-      for (const item of items)
+      items.forEach((item, index) => {
+        const slot = desktop.slots[Math.min(index, desktop.slots.length - 1)];
+        if (!slot) return;
         view.enqueue({
-          x: frame.centerX - desktop.width / 2,
+          x: slot.x,
           y,
-          w: desktop.width,
+          w: slot.w,
           h: desktop.height,
           label: item.label,
           size: desktop.size,
+          ...(item.enabled === undefined ? {} : { enabled: item.enabled }),
           action: item.action,
         });
+      });
     };
     return { height: desktop.blockHeight, draw };
   }
@@ -292,8 +459,10 @@ export function createPageFrame(context: ScreenRenderContext) {
     replay,
     prose,
     actions,
+    grid: kit.grid,
     textWidth: kit.textWidth,
     lineHeight: kit.lineHeight,
+    lineCount: kit.lineCount,
   });
 }
 

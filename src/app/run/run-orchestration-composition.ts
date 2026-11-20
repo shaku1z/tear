@@ -4,7 +4,13 @@ import type { RunDifficulty, RunMode } from "../../gameplay/run/session";
 import type { MusicDirector } from "../../audio/music-director";
 import type { RunLifecycleController } from "../../gameplay/run/lifecycle";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameBlade, GameEnemy, GamePlayer, GameProjectile, GameRun } from "../shell/game-runtime-state";
+import type {
+  GameBlade,
+  GameEnemy,
+  GamePlayer,
+  GameProjectile,
+  GameRun,
+} from "../../gameplay/runtime/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
 import type { LiveWorldEntityConstructionPort } from "../world/world-entity-factory";
 import type { LiveWorldServices } from "../world/world-context";
@@ -198,6 +204,7 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
     },
     selectedBoss: options.selectedBoss,
     shuffledRoster: content.shuffledRoster,
+    gauntletTrials: content.gauntletTrials,
     bossBiome: content.bossBiome,
     trainingPlatforms: () => playgroundRuntime.homePlatforms(),
     playground: playgroundRuntime,

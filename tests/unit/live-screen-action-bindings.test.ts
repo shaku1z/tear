@@ -20,25 +20,6 @@ describe("live screen action bindings", () => {
     expect(startSelectedRace).toHaveBeenCalledExactlyOnceWith();
     expect(startSelectedRun).toHaveBeenCalledOnce();
   });
-  it("routes only explicit cloud catalog and selected recovery actions through eager ports", () => {
-    const loadOwnGhostCapsules = vi.fn(),
-      recoverOwnGhostCapsule = vi.fn(),
-      closeOwnGhostCatalog = vi.fn(),
-      resetScroll = vi.fn();
-    const dispatch = createLiveScreenActionBindings({
-      loadOwnGhostCapsules,
-      recoverOwnGhostCapsule,
-      closeOwnGhostCatalog,
-      resetScroll,
-    } as unknown as ScreenActionBindingPorts);
-    dispatch({ type: "profile.loadOwnGhostCapsules" });
-    dispatch({ type: "profile.recoverOwnGhostCapsule", id: "selected-original" });
-    dispatch({ type: "profile.closeOwnGhostCatalog" });
-    expect(loadOwnGhostCapsules).toHaveBeenCalledExactlyOnceWith();
-    expect(recoverOwnGhostCapsule).toHaveBeenCalledExactlyOnceWith("selected-original");
-    expect(closeOwnGhostCatalog).toHaveBeenCalledOnce();
-    expect(resetScroll).toHaveBeenCalledTimes(2);
-  });
   it("dispatches normal archive picking synchronously through eager ports with exact job revision controls", () => {
     const ghostFiles = {
       pickArchive: vi.fn(),
@@ -59,34 +40,17 @@ describe("live screen action bindings", () => {
     expect(ghostFiles.cancelArchive).toHaveBeenLastCalledWith();
     dispatch({ type: "profile.downloadGhostArchive", id: "capsule" });
     expect(ghostFiles.downloadArchive).toHaveBeenCalledExactlyOnceWith("capsule");
-    dispatch({ type: "profile.downloadGhostArchive", id: "capsule", paired: true });
-    expect(ghostFiles.downloadArchive).toHaveBeenLastCalledWith("capsule", true);
   });
 
-  it("maps canonical Replay Editor actions and legacy Studio actions to one adapter", () => {
-    const toggleStudio = vi.fn(),
-      createStudioCutList = vi.fn();
+  it("maps the replay editor actions to the replay adapter", () => {
+    const toggleReplayEditor = vi.fn(),
+      appendClip = vi.fn();
     const dispatch = createLiveScreenActionBindings({
-      replay: { toggleStudio, createStudioCutList },
+      replay: { toggleReplayEditor, appendClip },
     } as unknown as ScreenActionBindingPorts);
     dispatch({ type: "replay.editor.toggle" });
-    dispatch({ type: "replay.studio.toggle" });
-    dispatch({ type: "replay.editor.createCutList" });
-    dispatch({ type: "replay.studio.createCutList" });
-    expect(toggleStudio).toHaveBeenCalledTimes(2);
-    expect(createStudioCutList).toHaveBeenCalledTimes(2);
-  });
-
-  it("routes support review and creation only through explicit semantic actions", () => {
-    const openGhostSupport = vi.fn(),
-      createGhostSupport = vi.fn();
-    const dispatch = createLiveScreenActionBindings({
-      openGhostSupport,
-      createGhostSupport,
-    } as unknown as ScreenActionBindingPorts);
-    dispatch({ type: "profile.openGhostSupport", id: "capsule-1" });
-    dispatch({ type: "ghostsupport.create" });
-    expect(openGhostSupport).toHaveBeenCalledWith("capsule-1");
-    expect(createGhostSupport).toHaveBeenCalledOnce();
+    dispatch({ type: "replay.editor.appendClip" });
+    expect(toggleReplayEditor).toHaveBeenCalledTimes(1);
+    expect(appendClip).toHaveBeenCalledTimes(1);
   });
 });

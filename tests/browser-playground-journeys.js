@@ -10,7 +10,7 @@ const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
 // in the annex flow ship); TEAR_PRACTICE_LAB_ONLY=1 runs the Practice Lab alone.
 const journey = (practiceLab) =>
   withJourney(
-    { name: practiceLab ? "practice lab journeys" : "playground journeys", port: practiceLab ? 8145 : 8144 },
+    { name: practiceLab ? "practice lab journeys" : "playground journeys" },
     async ({ page, boot, waitScreen }) => {
       async function pressUntilScreen(key, screen) {
         for (let attempt = 0; attempt < 12; attempt++) {
@@ -99,7 +99,8 @@ const journey = (practiceLab) =>
         });
         const directory = process.env.TEAR_PRACTICE_LAB_ARTIFACT_DIR;
         if (directory) fs.mkdirSync(path.resolve(directory), { recursive: true });
-        const clickLabel = async (label) => {
+        // Where a label is drawn once the screen has eased in: two reads a frame apart agree.
+        const labelAt = async (label) => {
           try {
             await page.waitForFunction(
               (expected) => window.__TEAR_PRACTICE_LAB_TEXT__?.some((entry) => entry.text === expected),
@@ -116,10 +117,26 @@ const journey = (practiceLab) =>
               await page.screenshot({ path: path.join(path.resolve(directory), "practice-lab-failure.png") });
             throw error;
           }
-          const point = await page.evaluate(
-            (expected) => window.__TEAR_PRACTICE_LAB_TEXT__.findLast((entry) => entry.text === expected),
+          const handle = await page.waitForFunction(
+            (expected) => {
+              const entry = window.__TEAR_PRACTICE_LAB_TEXT__.findLast((candidate) => candidate.text === expected);
+              const point = entry ? { x: Math.round(entry.x), y: Math.round(entry.y) } : null;
+              const previous = window.__TEAR_PRACTICE_LAB_LAST_POINT__;
+              window.__TEAR_PRACTICE_LAB_LAST_POINT__ = { label: expected, point };
+              return point &&
+                previous?.label === expected &&
+                previous.point?.x === point.x &&
+                previous.point.y === point.y
+                ? point
+                : null;
+            },
             label,
+            { polling: "raf", timeout: STATE_WAIT_MS },
           );
+          return handle.jsonValue();
+        };
+        const clickLabel = async (label) => {
+          const point = await labelAt(label);
           await page.mouse.click(point.x, point.y);
         };
         const savedEffects = () =>
@@ -150,7 +167,7 @@ const journey = (practiceLab) =>
         assert.equal(before.earned, 1000);
         assert.equal(before.spent, 375);
         assert.equal(before.buy.sharp, 1);
-        await clickLabel("PRACTICE LAB");
+        await clickLabel("DRILLS");
         await waitScreen("paused");
         let session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
         assert.equal(session.practiceOnly, true);
@@ -161,6 +178,14 @@ const journey = (practiceLab) =>
           "historical lesson history must remain unknown",
         );
         if (directory) await page.screenshot({ path: path.join(path.resolve(directory), "practice-lab-selector.png") });
+        // Q / E step the Drills tabs, as on every tabbed screen.
+        const openTab = () => page.evaluate(() => window.__PANTHEON_TEST.tutorial().session.practiceTab);
+        assert.equal(await openTab(), "lessons");
+        await page.keyboard.press("e");
+        await page.waitForFunction(() => window.__PANTHEON_TEST.tutorial().session.practiceTab === "weapons");
+        await page.keyboard.press("q");
+        await page.waitForFunction(() => window.__PANTHEON_TEST.tutorial().session.practiceTab === "lessons");
+        assert.equal(await openTab(), "lessons");
         await clickLabel("LAUNCH");
         await waitScreen("playing");
         assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.tutorial().lessonIndex), 4);
@@ -171,7 +196,7 @@ const journey = (practiceLab) =>
         await waitScreen("playing");
         assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.tutorial().counters.launch ?? 0), 0);
         await pressUntilScreen("p", "paused");
-        await clickLabel("WEAPON ANNEXES");
+        await clickLabel("WEAPONS");
         if (directory)
           await page.screenshot({ path: path.join(path.resolve(directory), "practice-lab-weapon-annexes.png") });
         for (const weapon of ["sword", "hammer", "greatsword", "chainblade", "riftlock"]) {
@@ -197,7 +222,7 @@ const journey = (practiceLab) =>
           assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().weapon), weapon);
           await pressUntilScreen("p", "paused");
         }
-        await clickLabel("ENEMY CATALOG");
+        await clickLabel("ENEMIES");
         session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
         assert.equal(session.enemyCatalog.find((entry) => entry.id === "charger").knowledge, "confirmed-defeated");
         assert.equal(
@@ -206,7 +231,7 @@ const journey = (practiceLab) =>
           "aggregate old support kills must not invent subtype history",
         );
         await page.waitForFunction(() =>
-          window.__TEAR_PRACTICE_LAB_TEXT__.some((entry) => entry.text === "HISTORY NOT RECORDED"),
+          window.__TEAR_PRACTICE_LAB_TEXT__.some((entry) => entry.text === "NOT MET YET"),
         );
         if (directory)
           await page.screenshot({ path: path.join(path.resolve(directory), "practice-lab-enemy-catalog.png") });
@@ -244,14 +269,37 @@ const journey = (practiceLab) =>
         assert.equal(opponent.snapshot.state["tear.enemy.v1"].length, 1);
         assert.equal(opponent.snapshot.state["tear.enemy.v1"][0].kind, "charger");
         assert.notEqual(opponent.snapshot.state["tear.enemy.v1"][0].tutDummy, true);
+        // A restart issues a full-health opponent and hands control back with the held blade at rest
+        // along the aim (reseatHeld), so the click on RESTART LESSON cannot open play with a swing.
         await pressUntilScreen("p", "paused");
         await clickLabel("RESTART LESSON");
         await waitScreen("playing");
         opponent = await opponentAttempt();
         assert.equal(opponent.session.enemyPractice.defeated, false);
-        assert.equal(opponent.snapshot.state["tear.enemy.v1"][0].hp, opponent.snapshot.state["tear.enemy.v1"][0].maxHp);
+        {
+          // If it is ever seen damaged, say how long it had been alive (spawnT counts down from its
+          // spawn-in) and what was near it in that same snapshot.
+          const state = opponent.snapshot.state;
+          const enemy = state["tear.enemy.v1"][0];
+          const pick = (value, keys) => Object.fromEntries(keys.map((key) => [key, value?.[key]]));
+          assert.equal(
+            enemy.hp,
+            enemy.maxHp,
+            `restarted practice opponent was damaged before the first read: ${JSON.stringify({
+              heldHits: opponent.state.combatTrace.heldHits,
+              enemy: pick(enemy, ["x", "y", "vx", "vy", "spawnT", "aliveT", "atk", "atkT", "flash", "hitCd", "stun"]),
+              enemyStatus: pick(enemy, ["bleedStacks", "burnT", "burnDps", "_deathCause", "affixes"]),
+              blade: pick(state["tear.blade.v1"], ["state", "x", "y", "tipX", "tipY", "tipSpeed", "swingActive"]),
+              player: pick(state["tear.player.v1"], ["x", "y", "vx", "vy", "hp"]),
+              projectiles: state["tear.projectile.v1"]?.length,
+              hazards: pick(state["tear.hazard.v1"], ["stageId", "fields", "combatObjects"]),
+              clock: state["tear.world.v1"]?.clock,
+              simulationSeconds: state["tear.world.v1"]?.simulationSeconds,
+            })}`,
+          );
+        }
         await pressUntilScreen("p", "paused");
-        await clickLabel("BOSS PRACTICE");
+        await clickLabel("BOSSES");
         session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
         assert.equal(session.bossCatalog.length, 18);
         assert.equal(session.bossCatalog.find((entry) => entry.id === "colossus:1").knowledge, "defeated-identity");
@@ -326,16 +374,16 @@ const journey = (practiceLab) =>
         // Re-enter through the ordinary setup screen after a full page reload.
         await clickLabel("PLAY");
         await waitScreen("setup");
-        await clickLabel("PRACTICE LAB");
+        await clickLabel("DRILLS");
         await waitScreen("paused");
         session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
         assert.equal(session.practiceOnly, true);
         assert.equal(session.phase, "free-practice");
-        await clickLabel("ENEMY CATALOG");
+        await clickLabel("ENEMIES");
         session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
         assert.equal(session.enemyCatalog.find((entry) => entry.id === "charger").knowledge, "confirmed-defeated");
         assert.equal(session.enemyCatalog.find((entry) => entry.id === "mender").canPractice, false);
-        await clickLabel("BOSS PRACTICE");
+        await clickLabel("BOSSES");
         session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
         assert.equal(session.bossCatalog.find((entry) => entry.id === "warden:2").canPractice, true);
         assert.equal(session.bossCatalog.find((entry) => entry.id === "warden:3").canPractice, false);
@@ -378,32 +426,72 @@ const journey = (practiceLab) =>
       });
       console.log("playground journey: combat hotkey spawns survive the tail commit");
 
-      // The in-world E shortcut shown by the production Playground help opens the tools.
-      await pressUntilScreen("e", "pgmenu");
-      console.log("playground journey: build menu open");
+      // Every Playground control below is reached through its rendered label, so the journey
+      // follows the layout instead of fixed coordinates.
+      await page.evaluate(() => {
+        const captured = [],
+          original = CanvasRenderingContext2D.prototype.fillText;
+        CanvasRenderingContext2D.prototype.fillText = function playgroundText(value, x, y, ...rest) {
+          captured.push({ text: String(value), x, y });
+          if (captured.length > 1500) captured.splice(0, 750);
+          return original.call(this, value, x, y, ...rest);
+        };
+        window.__PLAYGROUND_TEXT__ = captured;
+      });
+      const drawn = (label) =>
+        page.evaluate((expected) => window.__PLAYGROUND_TEXT__.findLast((entry) => entry.text === expected), label);
+      const tabOpen = (heading) =>
+        page.waitForFunction(
+          (expected) => window.__PLAYGROUND_TEXT__.some((entry) => entry.text === expected),
+          heading,
+          { timeout: STATE_WAIT_MS },
+        );
+      const clickText = async (label) => {
+        await page.evaluate(() => window.__PLAYGROUND_TEXT__.splice(0));
+        await tabOpen(label);
+        const point = await drawn(label);
+        await page.mouse.click(point.x, point.y);
+      };
+
+      // Tab opens the menu on its first tab (E throws; the menu key is Tab in the binding table).
+      await pressUntilScreen("Tab", "pgmenu");
+      await page.evaluate(() => window.__PLAYGROUND_TEXT__.splice(0));
+      await tabOpen("ENEMIES");
+      console.log("playground journey: menu open on SPAWN");
       const enemiesBefore = await page.evaluate(() => window.__PANTHEON_TEST.state().enemyCount);
-      await page.mouse.click(278, 229); // spawn the first enemy kind
+      await clickText("CHARGER");
       await page.waitForFunction((before) => window.__PANTHEON_TEST.state().enemyCount > before, enemiesBefore, {
         timeout: STATE_WAIT_MS,
       });
       console.log("playground journey: enemy spawned");
 
-      await page.mouse.click(330, 721); // ABILITY LAB
+      // Q / E step the tabs; a click opens one directly.
+      await page.evaluate(() => window.__PLAYGROUND_TEXT__.splice(0));
+      await page.keyboard.press("e");
+      await tabOpen("SUMMON A BOSS");
+      await clickText("ARENA");
+      await tabOpen("ARENA");
+      assert.equal(await drawn("TRAINING GROUNDS"), undefined, "the Tutorial's training ground is not an arena");
+      console.log("playground journey: tabs switch by key and by click");
+
+      await clickText("ABILITIES");
       await waitScreen("pglab");
-      console.log("playground journey: ability lab open");
-      await page.mouse.click(721, 272); // TAKE the first available ability
-      await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-      await page.mouse.wheel(0, 500);
-      await page.mouse.click(800, 850); // BUILD MENU (lab back control)
-      await waitScreen("pgmenu");
-      console.log("playground journey: returned to build menu");
-      await page.mouse.click(800, 780); // RESUME (source-position band under the actions row)
+      console.log("playground journey: abilities tab open");
+      await clickText("TAKE");
+      await clickText("RESUME");
       await waitScreen("playing");
       console.log("playground journey: pointer resume");
 
+      // U opens ABILITIES; Tab leaves the menu from any tab.
       await pressUntilScreen("u", "pglab");
-      await pressUntilScreen("Tab", "pgmenu");
       await pressUntilScreen("Tab", "playing");
+      // Pause offers the menu: the route touch and controller players use.
+      await pressUntilScreen("Escape", "paused");
+      await clickText("PLAYGROUND MENU");
+      await waitScreen("pglab");
+      console.log("playground journey: pause opens the menu on the tab left open");
+      await clickText("RESUME");
+      await waitScreen("playing");
       assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().mode), "playground");
     },
   );

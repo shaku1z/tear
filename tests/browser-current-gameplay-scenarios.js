@@ -20,24 +20,24 @@ const hasSharedBrowserSubject = (entry) =>
   entry.subject.kind === "gameplay" ||
   entry.subject.kind === "environment-field" ||
   entry.subject.kind === "environment-combat-object";
-const stateForgeScenarios = canonicalScenarios.filter(
-  (entry) => hasSharedBrowserSubject(entry) && entry.stateForge !== undefined,
+const stateSetupScenarios = canonicalScenarios.filter(
+  (entry) => hasSharedBrowserSubject(entry) && entry.stateSetup !== undefined,
 );
 const scenarios = canonicalScenarios.filter(
-  (entry) => hasSharedBrowserSubject(entry) && entry.stateForge === undefined,
+  (entry) => hasSharedBrowserSubject(entry) && entry.stateSetup === undefined,
 );
 
 async function main() {
   const assertionsByScenario = await loadCanonicalAssertions();
-  for (const entry of stateForgeScenarios) {
-    assert.equal(entry.stateForge.documentId, entry.id, `${entry.id} must own its matching State Forge document`);
+  for (const entry of stateSetupScenarios) {
+    assert.equal(entry.stateSetup.documentId, entry.id, `${entry.id} must own its matching State Setup document`);
     assert.equal(
       entry.evidence.command,
       `pnpm tearbench run ${entry.id}`,
-      `${entry.id} must own canonical live State Forge execution outside the natural reset journey`,
+      `${entry.id} must own canonical live State Setup execution outside the natural reset journey`,
     );
   }
-  await withJourney({ name: "current canonical gameplay scenario subjects", port: 8298 }, async ({ page }) => {
+  await withJourney({ name: "current canonical gameplay scenario subjects" }, async ({ page }) => {
     await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__PANTHEON_TEST);
     for (const entry of scenarios) {
       assert.ok(entry.backends.includes("live"), `${entry.id} must honestly declare its live evidence backend`);
@@ -217,10 +217,10 @@ async function main() {
               break;
             }
             case "generic-field": {
-              const forge = environment.forgeEnvironmentField();
-              if (!forge.ok) throw new Error("generic field must launch through State Forge restore");
+              const setup = environment.buildEnvironmentField();
+              if (!setup.ok) throw new Error("generic field must launch through State Setup restore");
               const env = environment.environment();
-              const forgedState = env.snapshot();
+              const builtState = env.snapshot();
               const fieldId = "generic-field-state";
               const transitions = [];
               for (let tick = 0; tick < 3; tick += 1) transitions.push(step());
@@ -235,7 +235,7 @@ async function main() {
                 );
               evidence = {
                 fieldId,
-                forgedState,
+                builtState,
                 finalState: finalField?.state,
                 transitionEvents: transitions.flatMap((transition) => transition.events.map((event) => event.type)),
               };
@@ -244,8 +244,8 @@ async function main() {
             case "verdant-bloom-well": {
               if (scenario.maxTicks !== 744)
                 throw new Error("Bloom Well browser proof must use BLOOM_WELL_TIMING.totalTicks");
-              const forge = environment.forgeBloomWellCycle();
-              if (!forge.ok) throw new Error("Bloom Well must launch through State Forge restore");
+              const setup = environment.buildBloomWellCycle();
+              if (!setup.ok) throw new Error("Bloom Well must launch through State Setup restore");
               const env = environment.environment();
               const fieldId = "verdant-bloom-well";
               const states = [];
@@ -257,7 +257,7 @@ async function main() {
                 const snapshot = env.snapshot();
                 const field = snapshot.fields.find((entry) => entry.id === fieldId);
                 if (field === undefined)
-                  throw new Error("Bloom Well State Forge restore did not produce the authored field");
+                  throw new Error("Bloom Well State Setup restore did not produce the authored field");
                 states.push(field.state);
                 hashes.push(environment.stateHash());
                 return field;
@@ -281,7 +281,7 @@ async function main() {
               evidence = {
                 states,
                 hashes,
-                forgedState: env.snapshot(),
+                builtState: env.snapshot(),
                 presentation,
                 weaponTransportUnchanged: JSON.stringify(bladeBefore) === JSON.stringify(bladeAfter),
               };
@@ -299,8 +299,8 @@ async function main() {
               break;
             }
             case "generic-combat-object": {
-              const forge = environment.forgeEnvironmentCombatObject();
-              if (!forge.ok) throw new Error("generic combat object must launch through State Forge restore");
+              const setup = environment.buildEnvironmentCombatObject();
+              if (!setup.ok) throw new Error("generic combat object must launch through State Setup restore");
               const env = environment.environment();
               const objectId = "generic-combat-object-state";
               const before = env.snapshot().combatObjects.find((entry) => entry.id === objectId);
@@ -328,15 +328,15 @@ async function main() {
               break;
             }
             case "verdant-root-network": {
-              const forge = environment.forgeRootbinderNetwork();
-              if (!forge.ok) throw new Error("Rootbinder network must launch through State Forge restore");
+              const setup = environment.buildRootbinderNetwork();
+              if (!setup.ok) throw new Error("Rootbinder network must launch through State Setup restore");
               const env = environment.environment();
               const initialObjects = env.snapshot().combatObjects.filter((object) => object.kind === "root-link");
               if (initialObjects.length !== 2 || initialObjects.some((object) => object.procEligible !== false)) {
-                throw new Error("Rootbinder State Forge restore did not produce two non-proc root links");
+                throw new Error("Rootbinder State Setup restore did not produce two non-proc root links");
               }
               const first = initialObjects[0];
-              if (first === undefined) throw new Error("Rootbinder State Forge restore produced no link");
+              if (first === undefined) throw new Error("Rootbinder State Setup restore produced no link");
               const damage = env.damageCombatObject(
                 first.id,
                 2,
@@ -354,7 +354,7 @@ async function main() {
                 .events()
                 .map((event) => event.type)
                 .filter((type) => type.startsWith("world.environment-"));
-              // State Forge restores pre-existing links; it must not fabricate a
+              // State Setup restores pre-existing links; it must not fabricate a
               // causal link-created event. The live mutation chronology begins at
               // damage, proceeds to destruction, then cleans the surviving link.
               const damageIndex = eventTypes.indexOf("world.environment-combat-object-damaged");
@@ -362,7 +362,7 @@ async function main() {
               const cleanedIndex = eventTypes.indexOf("world.environment-object-cleaned");
               const ordered = damageIndex >= 0 && destroyedIndex > damageIndex && cleanedIndex > destroyedIndex;
               evidence = {
-                forgedState: runtime.snapshot(),
+                builtState: runtime.snapshot(),
                 initialObjects,
                 damage,
                 final,
@@ -378,9 +378,9 @@ async function main() {
               break;
             }
             case "rootbound-graft-anchor": {
-              const forge = environment.forgeRootboundGraftAnchor();
-              if (!forge.ok)
-                throw new Error(`Rootbound Graft must launch through State Forge restore: ${JSON.stringify(forge)}`);
+              const setup = environment.buildRootboundGraftAnchor();
+              if (!setup.ok)
+                throw new Error(`Rootbound Graft must launch through State Setup restore: ${JSON.stringify(setup)}`);
               const env = environment.environment();
               const beforeObservation = environment.observe();
               const boss = beforeObservation.entities.find((actor) => actor.kind === "rootbound");
@@ -432,7 +432,8 @@ async function main() {
                 .slice(eventCountBeforeDamage)
                 .filter((event) => event.type === "world.environment-object-cleaned" && event.actorId === graft.id);
               const finalObservation = environment.observe();
-              const expectedOwnerGraftIds = ["enemy:1:graft:bastion", "enemy:1:graft:mercy", "enemy:1:graft:haste"];
+              // The restored fight holds the one Mercy Graft; the keeper plants the others later, one at a time.
+              const expectedOwnerGraftIds = ["enemy:1:graft:mercy"];
               const oneStableOwnerGraftSet = pollOwnerGrafts.every(
                 (entries) =>
                   entries.length === expectedOwnerGraftIds.length &&
@@ -447,12 +448,11 @@ async function main() {
                   ([entry]) =>
                     entry?.id === graft.id &&
                     entry.state === "destroyed" &&
-                    entry.stateTick === beforeObservation.tick + 1 &&
-                    entry.recoverySpentHealthFraction === graft.recoverySpentHealthFraction,
+                    entry.stateTick === beforeObservation.tick + 1,
                 );
               const mercyEffectProjection = pollGrafts.map(([entry]) => entry?.state === "active");
               evidence = {
-                forge,
+                setup,
                 graft,
                 damage,
                 polls: pollGrafts,

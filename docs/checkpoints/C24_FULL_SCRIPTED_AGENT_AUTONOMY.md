@@ -6,6 +6,56 @@ Complete as of 2026-07-26 for the named Class A engineering exit gate.
 C24 does not claim Class B physical-input evidence, Class C pixel-only
 autonomy, a learned policy, or release certification.
 
+## Reading a red run today (2026-11-18)
+
+A failing `tests/browser-scripted-agent-autonomy.js` is not a regression by itself. The journey has no passing
+baseline for what it runs now:
+
+- The result below is the only recorded completion. It used `ringblade` and finished wave 50 with 1 HP.
+- On 2026-07-28 the five-weapon roster removed `ringblade` and the journey switched to `riftlock` (commit
+  `45e04113`). No completion with `riftlock` was recorded afterwards.
+- The weekly check that passed through 2026-11-08 did not run this journey. It runs only when `pnpm tearbench ci`
+  selects it as evidence.
+- Weekly run 44218184366 (2026-11-17) ended in a game over at wave 17, hp 0, with 6 enemies alive. #170 recorded
+  the same loss in the repeatability journey, and its completion assertions were removed there.
+- A headless replay of an easy `riftlock` campaign with the same player lost on seeds 117, 1, 2 and 3, between
+  waves 5 and 9. Most of the damage was contact damage from chargers and armored enemies in groups of five or
+  six. Nothing in those runs looked like a broken game state.
+
+Not established: whether the game became harder after July or the player was always this weak with `riftlock`.
+
+What the journey asserts now: the run starts from the visible panel, goes through the real setup, play and
+draft screens, and reaches one of the game's own ends with no page error and no watchdog stop. A win ends on
+the menu with status `completed`; a defeat ends on the game-over screen with reason `terminal-gameover`. Any
+other stop (a watchdog, an invariant, the batch limit) still fails it.
+
+**Open goal: the scripted player finishes an easy `riftlock` campaign.** Where it stands, headless, competent
+profile, 2026-11-18. "Before" is the player that only backs away; "after" is the player that closes in when its
+attacks have landed nothing for 6 seconds (`PURSUE_AFTER_TICKS` in `src/agents/scripted-policy.ts`):
+
+| Seed | Before: defeated at wave | After: defeated at wave    |
+| ---- | ------------------------ | -------------------------- |
+| 117  | 9                        | 9                          |
+| 1    | 6                        | 5                          |
+| 2    | 7                        | 7                          |
+| 3    | 5                        | 5                          |
+| 4    | 2                        | still alive at 28 (750 s)  |
+| 5    | 8                        | 8                          |
+| 6    | 14                       | 15                         |
+| 7    | 9                        | 8                          |
+
+In the browser journey seed 117 was defeated at wave 17 in weekly run 44218184366 (commit `68f6c034`). On main
+of 2026-11-18 the same journey reached wave 23 and then stalled: one `herald` support enemy was left walking on a
+platform, the player stayed on the ground about 520 pixels away, health did not change for 16,000 ticks, and no
+watchdog stopped the run. The cause was in the player, not the game. With `riftlock` it always moved away from its
+target and its hits only land within about 120 pixels (a thrown Riftlock is recalled at once), so it never reached
+an enemy that does not come to it; at low health every weapon backed away the same way. The player now closes in
+after 6 seconds without a hit landing. `tests/unit/scripted-player-pursuit.test.ts` plays that case on the real
+game, headless, for every weapon: one herald left alone must fall within 25 seconds.
+
+The goal is met when the journey prints `C24 end: campaign completed`; at that point the completion can become
+an assertion again.
+
 ## Exit-gate result
 
 The competent scripted policy completed Easy Adventure from the visible Watch
@@ -30,6 +80,13 @@ in two fresh browser contexts against one immutable full build tree. Both
 repeats produced the same run seed, terminal summary, transitions, drafts,
 mechanic summary, sample count, and transcript hash
 `abb81bcd43592dd2d098bae495d17b0ac63234662bc3a2623ef39d91834b95d6`.
+
+Since 2026-11-18 the repeatability journey compares the first 60 samples of 200 frames (about 24,000 ticks, to
+about wave 8) instead of two whole campaigns. Two runs from one seed are compared sample by sample, so a fixed
+stretch proves the same thing per tick, and two whole campaigns never fitted in the 600-second journey limit: the
+nightly check had not passed once. `C24_REPEAT_MAX_SAMPLES` sets a longer comparison by hand. What the shorter
+run leaves out: a difference that first appears after wave 8 in the browser. Headless, `pnpm test:determinism`
+and the simulation determinism property cover any tick.
 The immutable test-build SHA-256 was
 `d1f6d46cf33163100a04fee94f6a16c3ecfe70b5af6f7feb41358aa1b28871bf`.
 
@@ -61,7 +118,9 @@ so it is not wired into the production policy.
 
 `tests/browser-scripted-agent-matrix.js` drives all five production weapons in
 real simulation and now fails unless the declared collective core set is
-observed:
+observed: Each weapon plays until it has shown its own mechanics and any shared mechanic no earlier
+weapon has shown, to a limit of 60 batches of 200 frames; Riftlock goes first because it can show all of them.
+The journey prints batches, ticks and seconds per weapon. The set:
 
 - held slash;
 - launch and airborne juggle;

@@ -7,11 +7,30 @@ import type { ScreenControl, ScreenRenderContext, ScreenUiPort } from "../../src
 import { createScreenRenderers } from "../../src/presentation/screens";
 import { buildMusicScreenView } from "../../src/presentation/music-snapshots";
 import { validateMusicRoutingManifest } from "../../src/audio/music/music-routing-validate";
-import { campaignDraftGuidance } from "../../src/app/run/run-screen-adapters";
-import { buildShopSnapshot } from "../../src/presentation/shop-snapshot";
+import { parseMusicCatalog } from "../../src/audio/music/catalog";
+import { buildMusicLibrary, publishMusicLibrary } from "../../src/audio/music/library";
+import { setMusicProgressFacts } from "../../src/audio/music/music-source";
+import { progressFacts } from "../../src/domain/progress-facts";
+import { TEST_CHANNELS, index as musicIndex } from "./music-backend-harness";
+import { buildShopSnapshot, SHOP_LIST_TOP } from "../../src/presentation/shop-snapshot";
+import { DESKTOP } from "../../src/presentation/screens/codex-shop-metrics";
 import { CONFIG } from "../../src/config/game-config";
 import { TutorialController } from "../../src/gameplay/training/tutorial-controller";
+import { AppStateController } from "../../src/app/interface/app-state-controller";
+import {
+  createLiveScreenActionBindings,
+  type ScreenActionBindingPorts,
+} from "../../src/app/interface/screen-action-bindings";
+import { createSurfaceAvailability } from "../../src/domain/surface-availability";
+import type { AppScreen } from "../../src/domain/screen-catalog";
+import {
+  campaignDraftGuidance,
+  createLiveRunScreenAdapters,
+  type RunScreenServices,
+  type RunScreenState,
+} from "../../src/app/run/run-screen-adapters";
 import { backControl, tabs, verticalMenu } from "../../src/presentation/screens/screen-primitives";
+import { keyboardLabel } from "../../src/domain/keyboard-bindings";
 
 class TestUi implements ScreenUiPort {
   readonly ink = "#000";
@@ -60,6 +79,7 @@ class TestUi implements ScreenUiPort {
       settingsControlH: 42,
       settingsStepperW: 54,
       minTarget: 32,
+      listRowH: 46,
       railFadeW: 800,
       railFadeMid: 0.56,
     },
@@ -90,6 +110,12 @@ class TestUi implements ScreenUiPort {
   fitText(...values: Parameters<ScreenUiPort["fitText"]>): ReturnType<ScreenUiPort["fitText"]> {
     return { size: values[3].size, lines: [values[1]], truncated: false, overflow: false };
   }
+  buttonFitWidth(...values: Parameters<ScreenUiPort["buttonFitWidth"]>): number {
+    return values[0].measureText(values[1].label).width + 16;
+  }
+  buttonFitHeight(...values: Parameters<ScreenUiPort["buttonFitHeight"]>): number {
+    return values[1].sub === undefined ? this.t.metric.listRowH : this.t.metric.listRowH + 8;
+  }
   emptyState(...values: Parameters<ScreenUiPort["emptyState"]>): number {
     return values[4] + 60;
   }
@@ -107,6 +133,9 @@ class TestUi implements ScreenUiPort {
   }
   tag(): void {
     return;
+  }
+  keyLegend(...values: Parameters<ScreenUiPort["keyLegend"]>): number {
+    return values[0].measureText(values[1]).width;
   }
   header(): void {
     return;
@@ -197,6 +226,7 @@ function createControlContext(controls: ScreenControl[]): ScreenRenderContext {
     focus: 0,
     touch: false,
     reducedMotion: false,
+    pixelScale: 1,
     screenRectangle: { x: 0, y: 0, w: 1600, h: 900 },
     safeInsets: { l: 0, r: 0, t: 0, b: 0 },
     enqueue(control): void {
@@ -248,6 +278,7 @@ function createRenderContext(controls: ScreenControl[]): ScreenRenderContext {
     focus: 0,
     touch: false,
     reducedMotion: false,
+    pixelScale: 1,
     screenRectangle: { x: 0, y: 0, w: 1600, h: 900 },
     safeInsets: { l: 0, r: 0, t: 0, b: 0 },
     enqueue(control): void {
@@ -257,11 +288,12 @@ function createRenderContext(controls: ScreenControl[]): ScreenRenderContext {
 }
 
 describe("legacy screen renderer registry", () => {
-  it("keeps boss phase controls and every Lab menu item reachable at 800 by 360 with the existing scroll owner", () => {
+  it("keeps every boss phase reachable by scrolling the Drills list at 800 by 360", () => {
     const controller = new TutorialController(CONFIG);
     controller.openPractice(800, 1);
     const found: string[] = [];
-    for (const scroll of [0, 144]) {
+    // The list scrolls over its measured extent (the shared scrolling list clamps past the end).
+    for (let scroll = 0; scroll <= 2400; scroll += 24) {
       // A small landscape touch screen runs the compact density (tutorial pause uses its tight composition).
       const controls: ScreenControl[] = [],
         context = createRenderContext(controls);
@@ -270,7 +302,7 @@ describe("legacy screen renderer registry", () => {
       const renderer = createScreenRenderers({ ...context, ui, width: 800, height: 360, scroll });
       renderer.paused({
         id: "paused",
-        tutorial: { ...controller.session(), bossSelector: true, bossCatalog: practiceBossCatalog(() => 1) },
+        tutorial: { ...controller.session(), practiceTab: "bosses", bossCatalog: practiceBossCatalog(() => 1) },
       } as Parameters<typeof renderer.paused>[0]);
       expect(controls.every((control) => control.y >= 0 && control.y + control.h <= 360 && control.h >= 24)).toBe(true);
       found.push(
@@ -282,7 +314,7 @@ describe("legacy screen renderer registry", () => {
     expect(new Set(found).size).toBe(18);
   });
 
-  it("keeps local Vault controls stable and renders an explicit separate owner recovery catalog", () => {
+  it("keeps local Vault controls stable below the import toolbar", () => {
     const controls: ScreenControl[] = [],
       renderer = createScreenRenderers(createControlContext(controls));
     const local = {
@@ -303,43 +335,13 @@ describe("legacy screen renderer registry", () => {
         },
       ],
     };
-    const inactive = {
-      status: "unavailable" as const,
-      detail: "Sign in to your account.",
-      catalogVisible: false,
-      canLoad: false,
-      canRecover: false,
-      entries: [],
-    };
-    renderer.profile({ ...local, ownerRecovery: inactive });
-    expect(controls.find((control) => control.label === "MY ACCOUNT'S REPLAYS")).toMatchObject({
-      enabled: false,
-      action: { type: "profile.loadOwnGhostCapsules" },
-    });
+    renderer.profile(local);
     // The vault toolbar sits under the tabs (y 306); rows start below it (306 + 62).
     expect(controls.find((control) => control.label === "DOWNLOAD")).toMatchObject({
       x: 968,
       y: 430,
       action: { id: "local-source" },
     });
-    controls.length = 0;
-    renderer.profile({
-      ...local,
-      ownerRecovery: {
-        ...inactive,
-        status: "ready",
-        catalogVisible: true,
-        canLoad: true,
-        canRecover: true,
-        entries: [{ capsuleId: "cloud-source", buildId: "source-build", rootIntegrity: "root", byteLength: 123 }],
-      },
-    });
-    expect(controls.find((control) => control.label === "RESTORE TO THIS DEVICE")).toMatchObject({
-      enabled: true,
-      action: { type: "profile.recoverOwnGhostCapsule", id: "cloud-source" },
-    });
-    expect(controls.some((control) => control.label === "DOWNLOAD" || control.label.includes("THEATER"))).toBe(false);
-    expect(controls.some((control) => control.action.type === "profile.closeOwnGhostCatalog")).toBe(true);
   });
   it("pauses the Tutorial on the current lesson with plain actions and only reached lessons", () => {
     const controls: ScreenControl[] = [],
@@ -357,7 +359,36 @@ describe("legacy screen renderer registry", () => {
       expect.anything(),
     );
     const labels = controls.map((control) => control.label);
-    expect(labels.slice(0, 3)).toEqual(["RESUME", "RESTART LESSON", "SKIP LESSON"]);
+    expect(labels.slice(0, 4)).toEqual(["RESUME", "RESTART LESSON", "SHOW DEMO", "SKIP LESSON"]);
+    // Until the demonstrations arrive SHOW DEMO is off; when they arrive (here, while paused) it turns
+    // on and no row moves, so a press aimed at MAIN MENU still lands on MAIN MENU.
+    expect(controls.find((control) => control.label === "SHOW DEMO")?.enabled).toBe(false);
+    const rows = (list: readonly ScreenControl[]) =>
+      list.filter((control) => control.x < 600).map((control) => [control.label, control.y, control.h]);
+    const before = rows(controls);
+    const arrived: ScreenControl[] = [];
+    createScreenRenderers(createRenderContext(arrived)).paused({
+      id: "paused",
+      abilities: [],
+      progress: [],
+      tutorial: {
+        ...controller.session(),
+        coach: {
+          available: true,
+          visible: false,
+          mode: "preview",
+          rate: 1,
+          diagnosis: "No attempt yet.",
+          canCompare: false,
+          reducedMotion: false,
+          tick: 0,
+          fromTick: 0,
+          toTick: 10,
+        },
+      },
+    });
+    expect(rows(arrived)).toEqual(before);
+    expect(arrived.find((control) => control.label === "SHOW DEMO")?.enabled).not.toBe(false);
     expect(labels).toEqual(expect.arrayContaining(["SETTINGS", "MAIN MENU"]));
     expect(labels.some((label) => /LOCKED|LESSON HELP|DIAGNOSTIC|PLAYBACK|UNFINISHED/.test(label))).toBe(false);
     expect(
@@ -378,7 +409,7 @@ describe("legacy screen renderer registry", () => {
     expect(controls[1]?.label).toBe("KEEP PRACTICING");
     expect(controls.some((control) => control.label === "SKIP LESSON")).toBe(false);
   });
-  it("offers an explicit unlocked Practice Lab without labeling unknown historical lessons as learned", () => {
+  it("offers explicit unlocked Drills without labeling unknown historical lessons as learned", () => {
     const controls: ScreenControl[] = [],
       context = createRenderContext(controls),
       title = vi.spyOn(context.ui, "title"),
@@ -390,7 +421,7 @@ describe("legacy screen renderer registry", () => {
     renderer.paused({ id: "paused", abilities: [], progress: [], tutorial: controller.session() });
     expect(title).toHaveBeenCalledWith(
       expect.anything(),
-      "PRACTICE LAB",
+      "DRILLS",
       expect.anything(),
       expect.anything(),
       expect.anything(),
@@ -399,6 +430,25 @@ describe("legacy screen renderer registry", () => {
       (control) => control.action.type === "tutorial.action" && control.action.command === "select",
     );
     expect(exercises).toHaveLength(13);
+    // One tab row, the hubs' shared strip (hit boxes only), replaces the three mode buttons.
+    const tabs = controls.filter(
+      (control) => control.action.type === "tutorial.action" && control.action.command === "tab",
+    );
+    expect(
+      tabs.map((control) => [
+        control.action.type === "tutorial.action" && control.action.command === "tab" && control.action.tab,
+        control.hiddenBox,
+      ]),
+    ).toEqual([
+      ["lessons", true],
+      ["weapons", true],
+      ["enemies", true],
+      ["bosses", true],
+    ]);
+    expect(controller.session().practiceTab).toBe("lessons");
+    expect(controls.some((control) => /ANNEXES|CATALOG|BOSS PRACTICE|BASELINE EXERCISES/u.test(control.label))).toBe(
+      false,
+    );
     expect(
       exercises.every(
         (control) => control.enabled && !control.label.includes("✓") && !control.label.includes("LOCKED"),
@@ -434,7 +484,7 @@ describe("legacy screen renderer registry", () => {
         .every((control) => control.y + control.h <= context.height),
     ).toBe(true);
     controls.length = 0;
-    controller.showAnnexes();
+    controller.showPracticeTab("weapons");
     controller.selectAnnex("hammer");
     renderer.paused({ id: "paused", abilities: [], progress: [], tutorial: controller.session() });
     expect(
@@ -445,7 +495,7 @@ describe("legacy screen renderer registry", () => {
     expect(controls.some((control) => control.label === "SHOW DEMO")).toBe(false);
     controls.length = 0;
     copy.mockClear();
-    controller.showCatalog();
+    controller.showPracticeTab("enemies");
     renderer.paused({
       id: "paused",
       abilities: [],
@@ -460,16 +510,16 @@ describe("legacy screen renderer registry", () => {
     });
     expect(controls.find((control) => control.label === "CHARGER")).toMatchObject({
       enabled: true,
-      sub: "CONFIRMED DEFEATED",
+      sub: "DEFEATED",
       action: { command: "select-enemy", lessonId: "charger" },
     });
     expect(controls.find((control) => control.label === "MENDER")).toMatchObject({
       enabled: false,
-      sub: "HISTORY NOT RECORDED",
+      sub: "NOT MET YET",
     });
     expect(controls.some((control) => control.label === "SHOW DEMO")).toBe(false);
     expect(copy.mock.calls.map(([line]) => line).join(" ")).toContain(
-      "Confirmed defeated uses an existing recorded kill.",
+      "Opponents you have met in a run are listed here.",
     );
     expect(copy.mock.calls.map(([line]) => line).join(" ")).not.toContain("slam");
     const lastRowBottom = Math.max(
@@ -477,7 +527,10 @@ describe("legacy screen renderer registry", () => {
         .filter((control) => control.action.type === "tutorial.action" && control.action.command === "select-enemy")
         .map((control) => control.y + control.h),
     );
-    expect(copy.mock.calls.every(([, , y]) => y >= lastRowBottom + 28)).toBe(true);
+    // The help starts under the list, a gap clear of its last row (its first line's top below it).
+    expect(
+      copy.mock.calls.every(([, , y]) => y - context.ui.t.type.caption >= lastRowBottom + context.ui.t.space.sm),
+    ).toBe(true);
     expect(context.canvas.textBaseline).toBe("alphabetic");
     controls.length = 0;
     renderer.menu({
@@ -491,7 +544,7 @@ describe("legacy screen renderer registry", () => {
       difficultyLabel: "Normal",
       practiceAvailable: true,
     });
-    expect(controls.find((control) => control.label === "PRACTICE LAB")?.action).toEqual({
+    expect(controls.find((control) => control.label === "DRILLS")?.action).toEqual({
       type: "tutorial.action",
       command: "open-practice",
     });
@@ -528,6 +581,8 @@ describe("legacy screen renderer registry", () => {
       const draft = { id: "draft" as const, wave: 1, rerolls: 0, cards: [{ id: "speed", label: "SPEED" }] };
       renderer.draft(draft);
       const draftControls = [...controls];
+      // The reroll button names the key the binding table gives it.
+      expect(draftControls.map((control) => control.label)).toContain(`⟳  REROLL · 0  [${keyboardLabel("reroll")}]`);
       controls.length = 0;
       lines.length = 0;
       renderer.draft({ ...draft, onboarding: campaignDraftGuidance("campaign", 1, 0, 0) ?? "" });
@@ -542,6 +597,7 @@ describe("legacy screen renderer registry", () => {
       controls.length = 0;
       lines.length = 0;
       const shop = buildShopSnapshot({
+        tab: "upgrades",
         items: [{ id: "hp", cat: "vit", name: "HP", maxLevel: 2, desc: "health" }],
         realCoins: 0,
         displayedCoins: 0,
@@ -562,10 +618,10 @@ describe("legacy screen renderer registry", () => {
       controls.length = 0;
       renderer.shop(shop);
       expect(controls).toEqual(shopControls);
-      // The first-run hint takes the header status row at the subtitle's own (caption) size.
+      // The first-run hint takes the status row under the tabs, at caption size, above the list.
       const hint = hints.find((entry) => entry.text.includes("Buying is optional"));
       expect(hint).toMatchObject({ size: ui.t.type.caption });
-      expect((hint?.y ?? 0) > 138 && (hint?.y ?? 0) < 180).toBe(true);
+      expect((hint?.y ?? 0) > DESKTOP.shop.statusTop && (hint?.y ?? 0) < SHOP_LIST_TOP).toBe(true);
     }
   });
   it("is exhaustive for every canonical application screen", () => {
@@ -578,8 +634,6 @@ describe("legacy screen renderer registry", () => {
       "continue",
       "draft",
       "gameover",
-      "ghostpublication",
-      "ghostsupport",
       "leaderboards",
       "menu",
       "music",
@@ -607,11 +661,13 @@ describe("legacy screen renderer registry", () => {
     let written = -1;
     const music = JSON.parse(
       readFileSync(fileURLToPath(new URL("../../public/audio/music.json", import.meta.url)), "utf8"),
-    ) as { catalog: { works: { id: string; title: string }[] }; routing: unknown };
-    const library = {
-      songs: music.catalog.works.map((work) => ({ ...work, seconds: 30 })),
-      routing: validateMusicRoutingManifest(music.routing),
-    };
+    ) as { catalog: unknown; routing: unknown };
+    const catalog = parseMusicCatalog(music.catalog);
+    const library = buildMusicLibrary(
+      catalog,
+      validateMusicRoutingManifest(music.routing),
+      Object.fromEntries(catalog.works.map((work) => [work.id, 30])),
+    );
     const view = (page: string) =>
       buildMusicScreenView({
         settings: {},
@@ -641,7 +697,7 @@ describe("legacy screen renderer registry", () => {
       "◀◀",
       "▶▶",
     ]);
-    expect(types()).toContainEqual({ type: "navigate", to: "menu" });
+    expect(types()).toContainEqual({ type: "navigate.back" });
     for (const control of controls) expect(control.y + control.h).toBeLessThanOrEqual(900);
 
     // A stage's page: the crumb back, PLAY over the stage's songs, one row per song with that queue.
@@ -668,7 +724,47 @@ describe("legacy screen renderer registry", () => {
 
     controls.length = 0;
     createScreenRenderers(context).music(view("settings"));
-    expect(controls.filter((control) => control.action.type === "settings.activate")).toHaveLength(3);
+    // Music (the pick) and Soundtrack behavior.
+    expect(controls.filter((control) => control.action.type === "settings.activate")).toHaveLength(2);
+  });
+
+  it("draws the Radio: a row per channel the player can tune to, PLAY to pick it, STOP on the pick; ▶▶ moves it on", () => {
+    const controls: ScreenControl[] = [];
+    setMusicProgressFacts(() => progressFacts({ stats: {}, ach: {} }));
+    const library = publishMusicLibrary(
+      parseMusicCatalog({ ...musicIndex.catalog, ...TEST_CHANNELS }),
+      validateMusicRoutingManifest(musicIndex.routing),
+    );
+    const view = (menuMusic: string, channel: Readonly<{ channelId: string; channelName: string }> | null) =>
+      buildMusicScreenView({
+        settings: { menuMusic },
+        library,
+        nowPlaying: { workId: "fillet", title: "Fillet", since: 1, ...channel },
+        preview: null,
+        page: "radio",
+        now: 15_001,
+      });
+    const context = { ...createRenderContext(controls), scroll: 0, setScroll: () => undefined };
+    const picks = () => controls.filter((control) => control.action.type === "music.pick");
+
+    createScreenRenderers(context).music(view("default", null));
+    expect(controls.map((control) => control.action)).toContainEqual({ type: "navigate", to: "music", tab: "radio" });
+    // A new player can tune to Calm only: Bosses holds nothing found, My mix and Odd cannot be honoured.
+    expect(picks().map((control) => [control.label, control.action])).toEqual([
+      ["▶  PLAY", { type: "music.pick", value: "channel:calm" }],
+    ]);
+    expect(controls.some((control) => control.action.type === "music.next")).toBe(false);
+
+    controls.length = 0;
+    createScreenRenderers(context).music(view("channel:calm", { channelId: "calm", channelName: "Calm" }));
+    expect(picks().map((control) => [control.label, control.action])).toEqual([
+      ["■  STOP", { type: "music.pick", value: "default" }],
+    ]);
+    expect(controls.filter((control) => control.action.type === "music.next").map((control) => control.label)).toEqual([
+      "▶▶",
+    ]);
+    for (const control of controls) expect(control.y + control.h).toBeLessThanOrEqual(900);
+    setMusicProgressFacts(null);
   });
 
   it("records semantic navigation and menu actions without coordinating state", () => {
@@ -754,6 +850,7 @@ describe("legacy screen renderer registry", () => {
       "draft-reserve-tierup.ts",
       "pause-results.ts",
       "codex-shop.ts",
+      "codex-shop-metrics.ts",
       "profile-achievements.ts",
     ];
     const source = [
@@ -834,6 +931,8 @@ describe("legacy screen renderer registry", () => {
     const item = (id: string) => ({ id, label: id.toUpperCase(), level: 0, maxLevel: 3, cost: "10c", enabled: true });
     renderer.shop({
       id: "shop",
+      tab: "upgrades",
+      tabs: [],
       coins: 100,
       ownedLevels: 0,
       totalLevels: 18,
@@ -845,12 +944,16 @@ describe("legacy screen renderer registry", () => {
         { label: "FORTUNE", items: [item("f1"), item("f2")] },
       ],
     });
-    const buys = controls.filter((control) => control.action.type === "shop.buy");
+    const buyY = (id: string) =>
+      controls.find((control) => control.action.type === "shop.buy" && control.action.id === id)?.y ?? Number.NaN;
     // 88 px rows (two-line descriptions), 14 px between categories; columns flow independently.
-    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "v1")?.y).toBe(243);
-    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "b1")?.y).toBe(551);
-    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "t1")?.y).toBe(243);
-    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "f1")?.y).toBe(375);
+    // A category label takes the shop's fixed head (the game's sectionLabel always advances 18 px),
+    // not this test UI's 24 px advance. The first BUY sits a fixed distance under the list top.
+    const first = SHOP_LIST_TOP + 57;
+    expect(buyY("v1")).toBe(first);
+    expect(buyY("b1")).toBe(first + 302);
+    expect(buyY("t1")).toBe(first);
+    expect(buyY("f1")).toBe(first + 126);
   });
 
   it("models Codex guide details and rich profile/achievement surfaces without gameplay callbacks", () => {
@@ -953,8 +1056,8 @@ describe("legacy screen renderer registry", () => {
     renderer.settings({
       id: "settings",
       tab: "controls",
+      resettable: true,
       tabs: [{ id: "controls", label: "CONTROLS" }],
-      returnTo: "menu",
       sections: [
         {
           label: "CONTROLS",
@@ -978,7 +1081,6 @@ describe("legacy screen renderer registry", () => {
         "replay.togglePause",
         "replay.restart",
         "replay.practice",
-        "replay.runDna.toggle",
         "replay.toggleInfo",
         "replay.exit",
         "settings.activate",
@@ -1013,6 +1115,44 @@ describe("legacy screen renderer registry", () => {
       h: 44,
       enabled: true,
     });
+  });
+
+  it("draws a read-only settings row without a control to press", () => {
+    const controls: ScreenControl[] = [];
+    createScreenRenderers(createRenderContext(controls)).settings({
+      id: "settings",
+      tab: "general",
+      resettable: true,
+      tabs: [{ id: "general", label: "GENERAL" }],
+      sections: [
+        {
+          label: "GENERAL",
+          rows: [
+            { key: "terms", label: "Terms of Service", value: "OPEN", kind: "cycle" },
+            { key: "version", label: "Version", value: "v0.1.0 · 820e8e9", kind: "info" },
+          ],
+        },
+      ],
+    });
+    const keys = controls.flatMap((control) => ("key" in control.action ? [control.action.key] : []));
+    expect(keys).toContain("terms");
+    expect(keys).not.toContain("version");
+  });
+
+  it("draws RESET DEFAULTS only on a tab that has settings to reset", () => {
+    const labels = (resettable: boolean): string[] => {
+      const controls: ScreenControl[] = [];
+      createScreenRenderers(createRenderContext(controls)).settings({
+        id: "settings",
+        tab: resettable ? "general" : "credits",
+        resettable,
+        tabs: [{ id: "general", label: "GENERAL" }],
+        sections: [{ label: "CREDITS", rows: [{ key: "credit:vite", label: "Vite", value: "", kind: "info" }] }],
+      });
+      return controls.map((control) => control.label);
+    };
+    expect(labels(true)).toContain("RESET DEFAULTS");
+    expect(labels(false)).not.toContain("RESET DEFAULTS");
   });
 
   it("uses the oracle replay-vault row geometry and a profile-specific watch intent", () => {
@@ -1123,7 +1263,7 @@ describe("legacy screen renderer registry", () => {
         });
     }
   });
-  it("offers a separate linked-pair download and named RESTORE BOTH while keeping the single download", () => {
+  it("offers the single download and names RESTORE BOTH for an imported linked file", () => {
     const controls: ScreenControl[] = [],
       renderer = createScreenRenderers(createRenderContext(controls));
     renderer.profile({
@@ -1140,7 +1280,6 @@ describe("legacy screen renderer registry", () => {
           detail: "Complete",
           available: true,
           canDownloadArchive: true,
-          canDownloadLinkedPair: true,
         },
       ],
       archive: {
@@ -1154,11 +1293,8 @@ describe("legacy screen renderer registry", () => {
       },
     });
     const downloads = controls.filter((control) => control.action.type === "profile.downloadGhostArchive");
-    expect(downloads).toHaveLength(2);
+    expect(downloads).toHaveLength(1);
     expect(downloads.find((c) => c.label === "DOWNLOAD")).toMatchObject({ action: { id: "parent" } });
-    expect(downloads.find((c) => c.label === "DOWNLOAD RUN + FINALE")).toMatchObject({
-      action: { id: "parent", paired: true },
-    });
     expect(controls.find((c) => c.action.type === "profile.restoreGhostArchive")).toMatchObject({
       label: "RESTORE BOTH",
       action: { id: "pair", revision: 0 },
@@ -1203,11 +1339,6 @@ describe("legacy screen renderer registry", () => {
       const rowTypes = new Set([
         "profile.watchGhostCapsule",
         "profile.downloadGhostArchive",
-        "profile.compareGhostCapsule",
-        "profile.openGhostComparison",
-        "profile.openGhostPublication",
-        "profile.openGhostSupport",
-        "profile.repairGhostCapsule",
         "profile.watchReplay",
         "profile.pinReplay",
         "profile.publishReplay",
@@ -1324,7 +1455,7 @@ describe("legacy screen renderer registry", () => {
     expect(JSON.stringify(controls)).not.toContain("codec restore rejected");
   });
 
-  it("offers a semantic repair action only for an unhealthy Vault capsule", () => {
+  it("shows an unhealthy Vault capsule as CAN'T PLAY and offers no repair", () => {
     const controls: ScreenControl[] = [];
     const renderer = createScreenRenderers(createRenderContext(controls));
     renderer.profile({
@@ -1338,21 +1469,22 @@ describe("legacy screen renderer registry", () => {
         {
           id: "damaged-capsule",
           title: "Ghost V3 - COACHING",
-          detail: "COMPLETE - 3 CHUNKS - NEEDS REPAIR",
+          detail: "Complete recording · damaged, can't play",
           available: false,
-          repairable: true,
-          badge: "DURABLE CAPSULE",
+          theaterUnavailable: true,
+          badge: "SAVED REPLAY",
         },
       ],
     });
-    expect(controls.find((control) => control.action.type === "profile.repairGhostCapsule")).toMatchObject({
-      label: "REPAIR",
+    expect(controls.find((control) => control.action.type === "profile.watchGhostCapsule")).toMatchObject({
+      label: "CAN'T PLAY",
       x: 968,
       y: 324,
       w: 110,
       h: 40,
-      action: { type: "profile.repairGhostCapsule", id: "damaged-capsule" },
+      action: { type: "profile.watchGhostCapsule", id: "damaged-capsule" },
     });
+    expect(controls.some((control) => control.label === "REPAIR")).toBe(false);
     expect(controls.some((control) => control.action.type === "profile.watchReplay")).toBe(false);
   });
 
@@ -1451,7 +1583,7 @@ describe("release and engineering surface rendering", () => {
   });
   it("closes up the Career command row when a command surface is unavailable", () => {
     const controls: ScreenControl[] = [];
-    const hidden = new Set(["coach", "publish", "race"]);
+    const hidden = new Set(["race"]);
     const context: ScreenRenderContext = {
       ...createRenderContext(controls),
       available: (action) => action.type !== "career.control" || !hidden.has(action.command),
@@ -1477,7 +1609,6 @@ describe("release and engineering surface rendering", () => {
       bosses: [],
       style: null,
       nearMiss: [],
-      sharing: "private",
       gameVersion: "0.1.0",
       unavailable: [],
       beatAttempt: false,
@@ -1508,10 +1639,110 @@ describe("release and engineering surface rendering", () => {
     const row = controls.filter(
       (control) =>
         control.action.type === "career.control" &&
-        ["watch", "challenge", "download", "chase", "coach", "publish", "race"].includes(control.action.command),
+        ["watch", "download", "chase", "race"].includes(control.action.command),
     );
-    expect(row.map((control) => control.label)).toEqual(["THEATER", "CHALLENGE", "DOWNLOAD", "CHASE BEST"]);
+    expect(row.map((control) => control.label)).toEqual(["THEATER", "DOWNLOAD", "CHASE BEST"]);
     // The page pattern content column is 1120 wide.
-    expect(row[3]).toMatchObject({ w: (1120 - 3 * 8) / 4 });
+    expect(row[2]).toMatchObject({ w: (1120 - 2 * 8) / 3 });
+  });
+});
+
+describe("leaving a run", () => {
+  /**
+   * A paused run with the real screen rules (a screen change they do not allow throws, as it stops
+   * the live game) and the real run adapter's way out of a run.
+   */
+  function pausedRun() {
+    const app = new AppStateController(createSurfaceAvailability("engineering"));
+    app.transition("playing");
+    app.transition("paused");
+    const ended: string[] = [];
+    const run = createLiveRunScreenAdapters(
+      {
+        screen: () => app.screen,
+        setScreen: (screen: AppScreen) => void app.transition(screen),
+        run: () => ({ waveLog: [] }),
+      } as unknown as RunScreenState,
+      {
+        cinema: { active: false },
+        clearFinale: () => undefined,
+        terminateRun: (reason: string) => void ended.push(reason),
+      } as unknown as RunScreenServices,
+    );
+    const kept = { skipped: false, mode: "" };
+    const ports: Partial<ScreenActionBindingPorts> = {
+      setScreen: (screen) => void app.transition(screen),
+      quitRun: (next) => {
+        run.quitRun(next);
+      },
+      skipTutorial: () => {
+        kept.skipped = true;
+      },
+      setSetupSelection: (kind, id) => {
+        if (kind === "mode") kept.mode = id;
+      },
+    };
+    return { app, ended, kept, run, dispatch: createLiveScreenActionBindings(ports as ScreenActionBindingPorts) };
+  }
+
+  it("ends the run as QUIT does, from its pause or its confirm, then opens the named screen", () => {
+    for (const from of ["paused", "confirmquit"] as const)
+      for (const next of ["menu", "setup"] as const) {
+        const { app, ended, run } = pausedRun();
+        if (from === "confirmquit") app.transition("confirmquit");
+        run.quitRun(next);
+        expect({ from, next, screen: app.screen, ended }).toEqual({ from, next, screen: next, ended: ["quit"] });
+      }
+  });
+
+  it("walks SKIP TUTORIAL from the course pause to the run setup through allowed screens only", () => {
+    const { app, ended, kept, dispatch } = pausedRun();
+    const controller = new TutorialController(CONFIG);
+    controller.start(1600);
+    const drawn = (): ScreenControl[] => {
+      const controls: ScreenControl[] = [],
+        renderer = createScreenRenderers(createControlContext(controls));
+      if (app.screen === "paused")
+        renderer.paused({ id: "paused", abilities: [], progress: [], tutorial: controller.session() });
+      else if (app.screen === "confirmquit") renderer.confirmquit({ id: "confirmquit", tutorial: "course" });
+      return controls;
+    };
+    // The player presses SKIP TUTORIAL where it is drawn, reached through MAIN MENU if the pause lacks it.
+    const pressed: string[] = [];
+    for (let step = 0; step < 3 && !kept.skipped; step += 1) {
+      const controls = drawn(),
+        control =
+          controls.find((entry) => entry.label === "SKIP TUTORIAL") ??
+          controls.find((entry) => entry.label === "MAIN MENU");
+      if (control === undefined) break;
+      pressed.push(`${app.screen}: ${control.label}`);
+      dispatch(control.action);
+    }
+    expect(app.screen).toBe("setup");
+    expect(kept).toEqual({ skipped: true, mode: "campaign" });
+    expect(ended).toEqual(["quit"]);
+    // Skipping ends the run as MAIN MENU > QUIT does: through the confirm, never from the pause.
+    expect(pressed).toEqual(["paused: MAIN MENU", "confirmquit: SKIP TUTORIAL"]);
+  });
+
+  it("starts a run from the finished course's pause, with no confirm, through allowed screens only", () => {
+    const { app, ended, kept, dispatch } = pausedRun();
+    const controller = new TutorialController(CONFIG);
+    controller.start(1600);
+    const controls: ScreenControl[] = [];
+    createScreenRenderers(createControlContext(controls)).paused({
+      id: "paused",
+      abilities: [],
+      progress: [],
+      tutorial: { ...controller.session(), phase: "free-practice", courseCompleted: true },
+    });
+    const start = controls.find((control) => control.label === "START A RUN");
+    expect(start?.action).toEqual({ type: "run.quit", next: "setup" });
+    if (start !== undefined) dispatch(start.action);
+    expect({ screen: app.screen, mode: kept.mode, ended }).toEqual({
+      screen: "setup",
+      mode: "campaign",
+      ended: ["quit"],
+    });
   });
 });

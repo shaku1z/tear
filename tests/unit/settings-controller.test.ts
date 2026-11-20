@@ -2,6 +2,30 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { LegacyAudioCompatibility } from "../../src/audio/legacy-live-audio";
 import { SettingsController } from "../../src/app/screens/settings-controller";
+import { catalog, routing } from "../../public/audio/music.json";
+import { parseMusicCatalog } from "../../src/audio/music/catalog";
+import { publishMusicLibrary } from "../../src/audio/music/library";
+import { validateMusicRoutingManifest } from "../../src/audio/music/music-routing-validate";
+import {
+  getMusicSource,
+  heardSource,
+  musicSourceValue,
+  parseMusicSource,
+  setMusicProgressFacts,
+  setMusicSource,
+} from "../../src/audio/music/music-source";
+import { progressFacts } from "../../src/domain/progress-facts";
+
+/** The menu-music row's choices before the Radio (the retired `MENU_MUSIC_CHOICES`). */
+const OLD_MENU_MUSIC_CHOICES = [
+  "default",
+  "fillet",
+  "shopkeeper",
+  "slicing-life-1",
+  "slicing-life-2",
+  "beserker",
+  "the-source",
+] as const;
 
 function fixture(serialized: string | null = null) {
   const values = new Map<string, string>();
@@ -29,6 +53,7 @@ function fixture(serialized: string | null = null) {
     input: { forceMode: "auto", touchAimMode: "stick" },
     gamepad: { setPreset: vi.fn((value: string) => (value === "known" ? value : "default")) },
     audio,
+    statistics: { share: true },
     store: {
       get: (key: string) => values.get(key) ?? null,
       set: (key: string, value: string) => values.set(key, value),
@@ -52,6 +77,29 @@ describe("SettingsController", () => {
     expect(controller.shakeScale).toBeCloseTo(0.072);
   });
 
+  it("starts statistics on, applies a stored opt-out at load, and writes each toggle to the shared choice", () => {
+    const fresh = fixture(null);
+    const first = new SettingsController(fresh.dependencies);
+    expect(first.settings.shareStatistics).toBe(true);
+    expect(fresh.dependencies.statistics.share).toBe(true);
+    expect(first.toggle("shareStatistics")).toBe(true);
+    expect(fresh.dependencies.statistics.share).toBe(false);
+    expect(JSON.parse(fresh.values.get("tear_settings") ?? "{}")).toMatchObject({ shareStatistics: false });
+
+    const returning = fixture(JSON.stringify({ shareStatistics: false }));
+    new SettingsController(returning.dependencies);
+    expect(returning.dependencies.statistics.share).toBe(false);
+  });
+
+  it("never turns statistics back on when the game's settings are reset", () => {
+    const test = fixture(JSON.stringify({ shareStatistics: false, shake: 0.5 }));
+    const controller = new SettingsController(test.dependencies);
+    controller.reset();
+    expect(controller.settings.shake).toBe(1);
+    expect(controller.settings.shareStatistics).toBe(false);
+    expect(test.dependencies.statistics.share).toBe(false);
+  });
+
   it("sanitizes controller tuning and applies automatic low-end quality", () => {
     const test = fixture(
       JSON.stringify({
@@ -73,6 +121,15 @@ describe("SettingsController", () => {
     expect(test.config.pad.glyphStyle).toBe("auto");
     expect(test.dependencies.graphics.low).toBe(true);
     expect(controller.settings.padPreset).toBe("default");
+  });
+
+  it("reads a stored array as no settings: every default stands and no index becomes a setting", () => {
+    const test = fixture(JSON.stringify([0.4, true, "low"]));
+    const controller = new SettingsController(test.dependencies);
+    const defaults = new SettingsController(fixture().dependencies).settings;
+
+    expect(controller.settings).toEqual(defaults);
+    expect(Object.keys(controller.settings)).not.toContain("0");
   });
 
   it("recovers from malformed storage and persists the current record", () => {
@@ -120,5 +177,28 @@ describe("SettingsController", () => {
     const test = fixture(JSON.stringify({ cinematics: "director-cut" }));
     const controller = new SettingsController(test.dependencies);
     expect(controller.settings.cinematics).toBe("full");
+  });
+
+  it("loads a save from before the Radio: the retired station is dropped and the old menu pick is read as a pick", () => {
+    // Every value the old menu-music row offered, saved beside the station a past build kept.
+    for (const old of OLD_MENU_MUSIC_CHOICES) {
+      const test = fixture(JSON.stringify({ station: "still", menuMusic: old }));
+      const controller = new SettingsController(test.dependencies);
+      expect(controller.settings).not.toHaveProperty("station");
+      expect(controller.settings.menuMusic).toBe(old);
+      expect(getMusicSource()).toEqual(parseMusicSource(old));
+      controller.save();
+      expect(JSON.parse(test.values.get("tear_settings") ?? "{}")).not.toHaveProperty("station");
+    }
+    setMusicSource("default");
+  });
+
+  it("plays an old menu pick only if the player has found that song; any other old pick plays the default", () => {
+    setMusicProgressFacts(() => progressFacts({ stats: {}, ach: {} }));
+    const library = publishMusicLibrary(parseMusicCatalog(catalog), validateMusicRoutingManifest(routing));
+    const heard = OLD_MENU_MUSIC_CHOICES.map((old) => musicSourceValue(heardSource(parseMusicSource(old), library)));
+    // A new player: the two menu songs need nothing; the stage and boss songs are not found yet.
+    expect(heard).toEqual(["default", "fillet", "shopkeeper", "default", "default", "default", "default"]);
+    setMusicProgressFacts(null);
   });
 });

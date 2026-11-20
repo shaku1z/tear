@@ -1,8 +1,8 @@
 import { createCareerArchiveRenderer } from "./career-archive";
 import type { AchievementsScreenView, ProfileScreenView, ScreenRenderContext } from "./contracts";
 import { clipBody, page, pageFooter, replayRow, tabs } from "./screen-primitives";
-import { createCompactCareer } from "./compact-career";
 import { createCompactProfile } from "./compact-profile";
+import { profileListEmptyState } from "./profile-list-empty-state";
 
 const PROFILE_HUE = "#b06cff";
 /** First y under the profile tab strip; the snapshot's scroll bounds use the same value. */
@@ -25,17 +25,16 @@ const ARCHIVE_STATUS: Readonly<Record<string, string>> = Object.freeze({
 export function createProfileAchievementRenderers(context: ScreenRenderContext) {
   const { ui } = context;
   const career = createCareerArchiveRenderer(context);
-  // Phone landscape (compact density) composes these screens as compact pages.
-  const compact = createCompactProfile(context),
-    compactCareer = createCompactCareer(context);
+  // Phone landscape (compact density) composes these screens as compact pages. Only touch reaches
+  // compact density, so production builds (no touch while mobile is paused) leave the layout out.
+  const compact = __TEAR_MOBILE__ ? createCompactProfile(context) : null;
 
   function profile(view: ProfileScreenView): void {
     if (view.career) {
-      if (ui.density.compact) compactCareer(view.career);
-      else career(view.career);
+      career(view.career);
       return;
     }
-    if (ui.density.compact) {
+    if (compact !== null && ui.density.compact) {
       compact.profile(view);
       return;
     }
@@ -49,45 +48,6 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
     let top = PROFILE_CONTENT_TOP;
 
     if (view.tab === "vault") top = vaultToolbar(view, top);
-    if (view.tab === "vault" && view.ownerRecovery?.catalogVisible === true) {
-      const recovery = view.ownerRecovery;
-      if (recovery.entries.length === 0 && recovery.status === "ready")
-        ui.emptyState(canvas, "◇", "No saved replays in your account", context.width / 2, top + 120);
-      clipBody(context, top - 8, bottom, () => {
-        recovery.entries.forEach((entry, index) => {
-          const y = top + index * 96 - context.scroll;
-          if (y + 80 < top || y > bottom) return;
-          ui.card(canvas, left, y, listWidth, 84, false);
-          ui.displayText(canvas, `SAVED REPLAY ${String(index + 1)}`, left + 20, y + 32, ui.t.type.lead);
-          ui.text(
-            canvas,
-            entry.localStatus === "already-recovered"
-              ? "Already on this device"
-              : entry.localStatus === "recovered"
-                ? "Restored to this device"
-                : "Stored in your account",
-            left + 20,
-            y + 58,
-            ui.t.type.caption,
-            "left",
-            ui.t.alpha.soft,
-          );
-          if (y + 22 >= top && y + 62 <= bottom)
-            context.enqueue({
-              x: left + listWidth - 300,
-              y: y + 22,
-              w: 280,
-              h: 40,
-              label: "RESTORE TO THIS DEVICE",
-              enabled: recovery.canRecover,
-              action: { type: "profile.recoverOwnGhostCapsule", id: entry.capsuleId },
-            });
-        });
-      });
-      pageFooter(context, { canScrollUp: view.canScrollUp, canScrollDown: view.canScrollDown });
-      return;
-    }
-
     const listEmpty = (view.tab === "replays" || view.tab === "vault") && (view.replays?.length ?? 0) === 0;
     if (view.message && !listEmpty) {
       ui.textBox(canvas, view.message, context.width / 2, top + 4, listWidth, {
@@ -100,23 +60,10 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
     }
 
     if ((view.tab === "replays" || view.tab === "vault") && view.replays) {
-      const linkedPair = view.tab === "vault" && view.replays.some((r) => r.canDownloadLinkedPair);
-      const rowHeight = linkedPair ? 128 : 96;
+      const rowHeight = 96;
       if (listEmpty) {
-        const line = view.tab === "vault" ? "No saved replays yet" : "No runs recorded yet";
-        const detail =
-          view.tab === "vault"
-            ? (view.message ?? "Every run you finish is saved here automatically, ready to watch from the start.")
-            : (view.emptyMessage ?? "Every real run lands here automatically.");
-        const ctaY = ui.emptyState(
-          canvas,
-          view.tab === "vault" ? "◆" : "▶",
-          line,
-          context.width / 2,
-          top + 110,
-          detail,
-          720,
-        );
+        const empty = profileListEmptyState(view);
+        const ctaY = ui.emptyState(canvas, empty.glyph, empty.line, context.width / 2, top + 110, empty.detail, 720);
         if (view.tab === "replays")
           context.enqueue({
             x: context.width / 2 - 130,
@@ -146,85 +93,20 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
               size: ui.t.type.micro,
               action: { type: "profile.downloadGhostArchive", id: replay.id },
             });
-          if (view.tab === "vault" && replay.repairable) {
-            enqueueRow({
-              x: actionsX,
-              y: y + 18,
-              w: 110,
-              h: 40,
-              label: "REPAIR",
-              action: { type: "profile.repairGhostCapsule", id: replay.id },
-            });
-          } else {
-            enqueueRow({
-              x: actionsX,
-              y: y + 18,
-              w: 110,
-              h: 40,
-              size: ui.t.type.label,
-              label: view.tab === "vault" ? "◆ THEATER" : "▶  WATCH",
-              enabled: replay.available,
-              ...(view.tab === "vault" && replay.theaterUnavailable ? { label: "CAN'T PLAY" } : {}),
-              action:
-                view.tab === "vault"
-                  ? { type: "profile.watchGhostCapsule", id: replay.id }
-                  : { type: "profile.watchReplay", id: replay.id },
-            });
-          }
-          if (view.tab === "vault" && !replay.repairable) {
-            enqueueRow({
-              x: actionsX + 118,
-              y: y + 18,
-              w: 126,
-              h: 40,
-              size: ui.t.type.label,
-              label: replay.comparisonSelected ? "SELECTED" : "SELECT",
-              enabled: replay.available,
-              selected: replay.comparisonSelected,
-              action: { type: "profile.compareGhostCapsule", id: replay.id },
-            });
-            if ((replay.comparisonSourceCount ?? 0) >= 2) {
-              enqueueRow({
-                x: actionsX + 252,
-                y: y + 18,
-                w: 132,
-                h: 40,
-                size: ui.t.type.label,
-                label: `COMPARE ${String(replay.comparisonSourceCount)}`,
-                action: { type: "profile.openGhostComparison" },
-              });
-            }
-            enqueueRow({
-              x: actionsX + 252,
-              y: y + 62,
-              w: 132,
-              h: 28,
-              label: "PUBLISH",
-              size: ui.t.type.micro,
-              enabled: replay.available,
-              action: { type: "profile.openGhostPublication", id: replay.id },
-            });
-            enqueueRow({
-              x: actionsX + 124,
-              y: y + 62,
-              w: 120,
-              h: 28,
-              label: "SUPPORT",
-              size: ui.t.type.micro,
-              enabled: replay.available,
-              action: { type: "profile.openGhostSupport", id: replay.id },
-            });
-          }
-          if (view.tab === "vault" && replay.canDownloadLinkedPair)
-            enqueueRow({
-              x: actionsX,
-              y: y + 96,
-              w: 252,
-              h: 28,
-              size: ui.t.type.micro,
-              label: "DOWNLOAD RUN + FINALE",
-              action: { type: "profile.downloadGhostArchive", id: replay.id, paired: true },
-            });
+          enqueueRow({
+            x: actionsX,
+            y: y + 18,
+            w: 110,
+            h: 40,
+            size: ui.t.type.label,
+            label: view.tab === "vault" ? "◆ THEATER" : "▶  WATCH",
+            enabled: replay.available,
+            ...(view.tab === "vault" && replay.theaterUnavailable ? { label: "CAN'T PLAY" } : {}),
+            action:
+              view.tab === "vault"
+                ? { type: "profile.watchGhostCapsule", id: replay.id }
+                : { type: "profile.watchReplay", id: replay.id },
+          });
           if (replay.local) {
             enqueueRow({
               x: actionsX + 118,
@@ -366,14 +248,12 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
     pageFooter(context, { canScrollUp: view.canScrollUp, canScrollDown: view.canScrollDown });
   }
 
-  /** Vault import / account-restore controls as one toolbar under the tabs; returns the next free y. */
+  /** Vault import controls as one toolbar under the tabs; returns the next free y. */
   function vaultToolbar(view: ProfileScreenView, top: number): number {
     const { canvas } = context,
-      left = context.width / 2 - 560,
-      right = left + 1120;
-    const archive = view.archive,
-      recovery = view.ownerRecovery;
-    if (archive === undefined && recovery === undefined) return top;
+      left = context.width / 2 - 560;
+    const archive = view.archive;
+    if (archive === undefined) return top;
     let x = left;
     const button = (
       label: string,
@@ -384,53 +264,25 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
       context.enqueue({ x, y: top, w, h: 36, label, size: ui.t.type.label, enabled, action });
       x += w + 10;
     };
-    if (archive !== undefined) {
-      button("IMPORT A REPLAY FILE", 250, { type: "profile.pickGhostArchive" }, archive.canPick);
-      if (archive.jobId !== undefined && archive.revision !== undefined) {
-        if (archive.canReselect)
-          button("CHOOSE AGAIN", 170, { type: "profile.reselectGhostArchive", id: archive.jobId });
-        if (archive.canRestore)
-          button(archive.pairedCapsuleIds ? "RESTORE BOTH" : "RESTORE", 150, {
-            type: "profile.restoreGhostArchive",
-            id: archive.jobId,
-            revision: archive.revision,
-          });
-        if (archive.canCancel)
-          button("CANCEL", 120, { type: "profile.cancelGhostRestore", id: archive.jobId, revision: archive.revision });
-      }
-      if (archive.canCancelSelection) button("CANCEL", 120, { type: "profile.cancelGhostArchiveSelection" });
-    }
-    if (recovery !== undefined) {
-      if (recovery.catalogVisible)
-        context.enqueue({
-          x: right - 470,
-          y: top,
-          w: 200,
-          h: 36,
-          label: "‹ THIS DEVICE",
-          size: ui.t.type.label,
-          action: { type: "profile.closeOwnGhostCatalog" },
+    button("IMPORT A REPLAY FILE", 250, { type: "profile.pickGhostArchive" }, archive.canPick);
+    if (archive.jobId !== undefined && archive.revision !== undefined) {
+      if (archive.canReselect) button("CHOOSE AGAIN", 170, { type: "profile.reselectGhostArchive", id: archive.jobId });
+      if (archive.canRestore)
+        button(archive.pairedCapsuleIds ? "RESTORE BOTH" : "RESTORE", 150, {
+          type: "profile.restoreGhostArchive",
+          id: archive.jobId,
+          revision: archive.revision,
         });
-      context.enqueue({
-        x: right - 260,
-        y: top,
-        w: 260,
-        h: 36,
-        label: "MY ACCOUNT'S REPLAYS",
-        size: ui.t.type.label,
-        enabled: recovery.canLoad,
-        action: { type: "profile.loadOwnGhostCapsules" },
-      });
+      if (archive.canCancel)
+        button("CANCEL", 120, { type: "profile.cancelGhostRestore", id: archive.jobId, revision: archive.revision });
     }
-    const status =
-      archive === undefined
-        ? ""
-        : [
-            ARCHIVE_STATUS[archive.status] ?? "",
-            archive.pairedCapsuleIds ? "Includes the scored run and its finale." : "",
-          ]
-            .filter(Boolean)
-            .join(" ");
+    if (archive.canCancelSelection) button("CANCEL", 120, { type: "profile.cancelGhostArchiveSelection" });
+    const status = [
+      ARCHIVE_STATUS[archive.status] ?? "",
+      archive.pairedCapsuleIds ? "Includes the scored run and its finale." : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
     if (status)
       ui.textBox(canvas, status, left, top + 56, 1120, {
         size: ui.t.type.caption,
@@ -543,7 +395,7 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
   }
 
   function achievements(view: AchievementsScreenView): void {
-    if (ui.density.compact) {
+    if (compact !== null && ui.density.compact) {
       compact.achievements(view);
       return;
     }

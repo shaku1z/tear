@@ -1,4 +1,4 @@
-import { encodeStudioVp8Webm } from "../../src/app/replay/browser-ghost-studio-webm";
+import { encodeClipVp8Webm } from "../../src/app/replay/browser-replay-clip-webm";
 import { describe, expect, it, vi } from "vitest";
 
 const fixture = vi.hoisted((): { sessionCalls: number; mapped: unknown; session?: unknown } => ({
@@ -18,9 +18,6 @@ vi.mock("../../src/ghost/production-replay-session", () => ({
 }));
 
 import { createGhostTheaterScreenAdapter } from "../../src/app/library/ghost-theater-screen-adapter";
-import { createGhostCapsuleManifestV2 } from "../../src/ghost/capsule-contract";
-import { createGhostReplayRunContext } from "../../src/ghost/replay-admission";
-import { ghostCoachCandidate, projectGhostCoachHistory } from "../../src/ghost/coach-history";
 import type { ReplayScreenView } from "../../src/presentation/screens/contracts";
 import type { GhostReadCapsule } from "../../src/ghost/capsule-reader";
 
@@ -54,7 +51,6 @@ describe("Ghost Theater open result", () => {
       render: (view: ReplayScreenView) => {
         rendered.push(view);
       },
-      width: () => 1600,
       deltaSeconds: () => 0,
       nativeTransport: () => ({
         controls,
@@ -64,13 +60,6 @@ describe("Ghost Theater open result", () => {
         },
       }),
       launchPractice: () => ({ ok: false as const, message: "unused" }),
-      coachHistory: {
-        list: () => Promise.resolve([]),
-        current: () => Promise.resolve(true),
-        analyze: () => {
-          throw new Error("unused");
-        },
-      },
     };
     const theater = createGhostTheaterScreenAdapter(services);
     expect(theater.open(hostileCapsule(), "profile").kind).toBe("opened");
@@ -94,7 +83,7 @@ describe("Ghost Theater open result", () => {
     pressed.add("Space");
     theater.render();
     expect(theater.status()?.paused).toBe(true);
-    theater.toggleStudio();
+    theater.toggleReplayEditor();
     controls.clicked = true;
     const accepted = takeClick.mock.calls.length;
     pressed.clear();
@@ -102,7 +91,7 @@ describe("Ghost Theater open result", () => {
     theater.render();
     expect(seeks.at(-1)).toBe(1680);
     expect(takeClick).toHaveBeenCalledTimes(accepted);
-    theater.toggleStudio();
+    theater.toggleReplayEditor();
     controls.clicked = false;
     pressed.clear();
     theater.seekBy(-5);
@@ -127,16 +116,8 @@ describe("Ghost Theater open result", () => {
       render: (view) => {
         rendered.push(view);
       },
-      width: () => 1200,
       deltaSeconds: () => 0,
       launchPractice: () => ({ ok: false, message: "unused" }),
-      coachHistory: {
-        list: () => Promise.resolve([]),
-        current: () => Promise.resolve(false),
-        analyze: () => {
-          throw new Error("unused");
-        },
-      },
     });
 
     const result = theater.open(hostileCapsule(), "profile");
@@ -157,117 +138,6 @@ describe("Ghost Theater open result", () => {
   });
 });
 
-describe("Coach cited seek refusal", () => {
-  it.each(["seek", "render"])(
-    "keeps a genuine session %s failure visible without adopting the cited tick",
-    async (failure) => {
-      const context = createGhostReplayRunContext({
-        runId: "run",
-        seed: "engineering",
-        mode: "endless",
-        difficulty: "normal",
-        weaponId: "sword",
-        ticksPerSecond: 120,
-        build: {
-          version: "1",
-          revision: "test",
-          target: "test-standalone",
-          rulesetVersion: "test",
-          contentHash: "test",
-          configHash: "test",
-        },
-        rng: { gameplay: { algorithm: "xorshift32", state: "1" } },
-      });
-      const make = (id: string) =>
-        createGhostCapsuleManifestV2({
-          id,
-          status: "complete",
-          createdAt: "2026-10-19T10:00:00Z",
-          recordingProfile: "coaching",
-          provenance: { replayContext: context },
-          chunks: [],
-          rootIntegrity: `root-${id}`,
-          fidelity: { presentation: "full", downgrades: [] },
-        });
-      const target = ghostCoachCandidate(make("target")),
-        other = ghostCoachCandidate(make("other"));
-      const output = projectGhostCoachHistory([
-        {
-          candidate: target,
-          receipts: [120, 240],
-          events: [
-            {
-              format: "tear-contract",
-              kind: "event",
-              schemaVersion: 1,
-              id: "native-throw",
-              type: "blade.thrown",
-              tick: 140,
-              phase: "player-and-blade",
-              sequence: 1,
-              source: "engine",
-              payload: { weaponId: "sword", throwId: 1, x: 1, y: 2 },
-            },
-          ],
-        },
-        { candidate: other, receipts: [120, 240], events: [] },
-      ]);
-      fixture.mapped = { ghost: { events: [] }, issues: [] };
-      fixture.session = {
-        verifiedReceiptTicks: [120, 240],
-        sourceRootHash: "root",
-        seek(tick: number) {
-          if (tick === 140 && failure === "seek") throw new Error("source continuation refused");
-          return { tick, semanticHash: "hash" };
-        },
-        renderFrame(tick: number) {
-          if (tick === 140 && failure === "render") throw new Error("source continuation refused");
-          return { tick };
-        },
-      };
-      const rendered: ReplayScreenView[] = [];
-      const theater = createGhostTheaterScreenAdapter({
-        render: (view) => {
-          rendered.push(view);
-        },
-        width: () => 1600,
-        deltaSeconds: () => 0,
-        launchPractice: () => ({ ok: false, message: "unused" }),
-        coachHistory: {
-          list: () => Promise.resolve([target, other]),
-          current: () => Promise.resolve(true),
-          analyze: () => ({
-            result: Promise.resolve(output),
-            cancel() {
-              return;
-            },
-          }),
-        },
-      });
-      expect(theater.open({ ...hostileCapsule(), manifest: make("target"), maxTick: 240 }, "profile").kind).toBe(
-        "opened",
-      );
-      theater.openCoach();
-      await vi.waitFor(() => {
-        theater.render();
-        expect(rendered.at(-1)?.coach?.candidates.length).toBe(1);
-      });
-      theater.selectCoachBaseline("other");
-      await vi.waitFor(() => {
-        theater.render();
-        expect(rendered.at(-1)?.coach?.result).toBeDefined();
-      });
-      theater.viewCoachMoment("throws:native-throw");
-      await vi.waitFor(() => {
-        theater.render();
-        expect(rendered.at(-1)?.notice).toContain("Replay halted: source continuation refused");
-      });
-      expect(rendered.at(-1)?.elapsed).toBe("0:00");
-      fixture.session = undefined;
-    },
-  );
-});
-
 describe("Theater local media ownership", () => {
   it("keeps ordered chosen ranges and discards a cancelled/replaced source's late encoder result", async () => {
     fixture.mapped = { ghost: { events: [] }, issues: [] };
@@ -286,22 +156,14 @@ describe("Theater local media ownership", () => {
       render: (view) => {
         rendered.push(view);
       },
-      width: () => 1600,
       deltaSeconds: () => 0,
       launchPractice: () => ({ ok: false, message: "unused" }),
-      coachHistory: {
-        list: () => Promise.resolve([]),
-        current: () => Promise.resolve(true),
-        analyze: () => {
-          throw new Error("unused");
-        },
-      },
-      studioMedia: {
+      clipExport: {
         available: () => true,
         dispose: vi.fn(),
         download: downloads,
-        render: (_capsule, _session, edl, signal) => {
-          expect(edl.clips.map((clip) => [clip.sourceFromTick, clip.sourceToTick, clip.speed])).toEqual([
+        render: (_capsule, _session, cutList, signal) => {
+          expect(cutList.clips.map((clip) => [clip.sourceFromTick, clip.sourceToTick, clip.speed])).toEqual([
             [120, 240, 0.5],
             [0, 120, 2],
           ]);
@@ -318,31 +180,31 @@ describe("Theater local media ownership", () => {
       maxTick: 240,
     } as GhostReadCapsule;
     expect(theater.open(capsule, "profile").kind).toBe("opened");
-    theater.toggleStudio();
+    theater.toggleReplayEditor();
     theater.jumpCheckpoint(1);
-    theater.markStudioIn();
+    theater.markClipIn();
     theater.jumpCheckpoint(1);
     theater.setSpeed(0.5);
-    theater.createStudioCutList();
+    theater.appendClip();
     theater.restart();
-    theater.markStudioIn();
+    theater.markClipIn();
     theater.jumpCheckpoint(1);
     theater.setSpeed(2);
-    theater.createStudioCutList();
-    theater.exportStudio();
+    theater.appendClip();
+    theater.exportClips();
     theater.render();
-    expect(rendered.at(-1)?.studioMedia?.status).toBe("rendering");
-    theater.cancelStudio();
+    expect(rendered.at(-1)?.clipExport?.status).toBe("rendering");
+    theater.cancelClipExport();
     expect(signals[0]?.aborted).toBe(true);
     theater.exit();
     expect(theater.open(capsule, "profile").kind).toBe("opened");
-    theater.toggleStudio();
+    theater.toggleReplayEditor();
     finish?.({ thumbnail: "late" } as never);
     await Promise.resolve();
     theater.render();
-    expect(rendered.at(-1)?.studioMedia?.status).toBe("idle");
-    expect(rendered.at(-1)?.studioMedia?.thumbnail).toBeUndefined();
-    theater.downloadStudio();
+    expect(rendered.at(-1)?.clipExport?.status).toBe("idle");
+    expect(rendered.at(-1)?.clipExport?.thumbnail).toBeUndefined();
+    theater.downloadClip();
     expect(downloads).not.toHaveBeenCalled();
     fixture.session = undefined;
   });
@@ -403,7 +265,7 @@ describe("Theater local media ownership", () => {
     vi.stubGlobal("VideoEncoder", Encoder);
     try {
       const order: number[] = [],
-        bytes = await encodeStudioVp8Webm(
+        bytes = await encodeClipVp8Webm(
           { width: 640, height: 360 } as HTMLCanvasElement,
           31,
           (index) => {
@@ -493,17 +355,12 @@ describe("Theater local media ownership", () => {
     vi.stubGlobal("VideoEncoder", Encoder);
     try {
       await expect(
-        encodeStudioVp8Webm(
-          { width: 640, height: 360 } as HTMLCanvasElement,
-          30,
-          vi.fn(),
-          new AbortController().signal,
-        ),
+        encodeClipVp8Webm({ width: 640, height: 360 } as HTMLCanvasElement, 30, vi.fn(), new AbortController().signal),
       ).rejects.toThrow(/support/);
       expect(frameClosed).not.toHaveBeenCalled();
       supported = true;
       const abort = new AbortController(),
-        rendering = encodeStudioVp8Webm({ width: 640, height: 360 } as HTMLCanvasElement, 30, vi.fn(), abort.signal);
+        rendering = encodeClipVp8Webm({ width: 640, height: 360 } as HTMLCanvasElement, 30, vi.fn(), abort.signal);
       await vi.waitFor(() => {
         expect(flush).toHaveBeenCalledOnce();
       });

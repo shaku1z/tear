@@ -5,7 +5,7 @@ import {
   createLiveWorldEntityFactory,
   type LiveWorldEntityDependencies,
 } from "../../src/app/world/world-entity-factory";
-import type { GameRun } from "../../src/app/shell/game-runtime-state";
+import type { GameRun } from "../../src/gameplay/runtime/game-runtime-state";
 import { findVariant } from "../../src/gameplay/variants";
 
 interface ConstructorCall {

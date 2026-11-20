@@ -11,11 +11,11 @@ that web portal.
 
 ## Prerequisites
 
-- Node.js 24 (`.node-version`; `package.json` requires `>=24`).
+- Node.js 24 (`.node-version` names the exact version CI installs; `package.json` requires `>=24`).
 - pnpm 11.15.0, the version pinned in `package.json`. Run `corepack enable`
   once and Corepack provides it.
-- Chrome or Playwright's Chromium for the browser tests. CI runs
-  `pnpm exec playwright install --with-deps chromium`.
+- Chrome or Playwright's Chromium for the browser tests: `pnpm exec playwright install --with-deps chromium`.
+  CI's browser jobs run in Playwright's image for the lockfile's version instead, so they install nothing.
 
 ## Commands
 
@@ -47,6 +47,51 @@ covers routine work. Do not run
 `pnpm deploy` expecting a deployment: it only builds and runs a Wrangler dry run
 (see [DEPLOYMENT.md](DEPLOYMENT.md)).
 
+## Property tests
+
+A property test states a rule that must hold for every input ("a saved profile loads back the same") and lets
+[fast-check](https://fast-check.dev) try many generated inputs. On a failure it shrinks the input to a small one that
+still fails.
+
+- **Where:** `tests/unit/<area>.property.test.ts`. The normal unit run, the CI shards and `pnpm test:related` pick
+  them up like any other unit test.
+- **How:** import `checkProperty` (or `checkAsyncProperty`) and `fc` from `tests/unit/property-harness.ts`; never call
+  `fc.assert` or import `fast-check` yourself (`tests/unit/property-harness.test.ts` fails if you do). Shared input
+  generators (any JSON, stored text, game actions) are in `tests/unit/property-arbitraries.ts`; add yours there when a
+  second file needs it.
+- **Seed:** fixed, so CI and every machine try the same inputs. A failure prints the seed, the shrunk input, the
+  reason and the exact command that replays that one input.
+- **Budget:** `checkProperty(property)` tries 200 inputs, for rules over plain data; `checkProperty(property,
+  "simulation")` tries 12, for rules that run the game. Keep a property file within a few seconds.
+- **Deeper search before a pull request:** `TEAR_PROPERTY_SCALE=50` multiplies every budget and `TEAR_PROPERTY_SEED=7`
+  tries other inputs; add `--testTimeout=0`, because a deep run is longer than the 5 s test limit.
+
+```ts
+import { checkProperty, fc } from "./property-harness";
+
+it("sorting twice changes nothing", () => {
+  checkProperty(
+    fc.property(fc.array(fc.integer()), (values) => {
+      const sorted = [...values].sort((a, b) => a - b);
+      expect([...sorted].sort((a, b) => a - b)).toEqual(sorted);
+    }),
+  );
+});
+```
+
+Four things that go wrong:
+
+- **Do not change a generated input.** fast-check prints the input after the run, so a changed one hides what failed.
+  Copy it first.
+- **Take lists and ranges from the game** (`WEAPON_IDS`, `RUN_MODE_IDS`, the input scales), so the next weapon or
+  mode is covered without editing the test.
+- **Compare a stored copy as text.** JSON writes `-0` as `0`, so `toEqual` on a value read back from storage fails on
+  a difference no game rule can see.
+- **Keep long inputs cheap to shrink.** Build a long string by repeating a short generated piece; shrinking a
+  16,000-character generated string takes minutes.
+
+A property that finds a bug lands with the fix, in its own pull request that names the bug.
+
 ## Where things live
 
 | Path | Contents |
@@ -61,6 +106,7 @@ covers routine work. Do not run
 | `src/persistence/`, `src/platform/` | Saved data formats and migrations; storage, cloud, CrazyGames, PWA and other host adapters. |
 | `src/replay/`, `src/ghost/` | Run recording and replay. `ghost/` also holds the replay vault and several unfinished replay-based features. |
 | `src/agents/` | The scripted test player: a bot that plays the real game in test builds and headless runs. |
+| `src/playtest/` | The playtest tool: plays boss fights headless with scripted players and measures them. Run it with `pnpm playtest bosses`, or `pnpm playtest sweep` for every weapon on Easy and Normal. |
 | `src/tearbench/` | TearBench, the game's verification system (scenarios, headless runs, CI evidence selection). |
 | `src/config/`, `src/game-reference/` | Tuning values, and the exported game data the wiki consumes. |
 | `tests/` | Vitest tests in `tests/unit/` and `tests/contract/`; browser tests are `tests/*.js`; Node tests for scripts are `tests/*.mjs`. |
@@ -86,12 +132,13 @@ does not seed test storage or load those hooks, so use a test build for them.
 ## How a change reaches players
 
 1. Open a pull request against `main`. `main` is protected.
-2. The **Validate** workflow (`.github/workflows/ci.yml`) runs
-   `pnpm check:functional`, the full functional gate (about 15 minutes in CI).
-   Pull requests that change only documentation run the documentation gates
-   instead.
+2. The **Validate** workflow (`.github/workflows/ci.yml`) runs the checks of
+   `pnpm check:functional` as parallel jobs: static, unit, one build, and the
+   browser checks in four shards that test that build. The required check
+   `check` passes only when every one of them passed. Pull requests that change
+   only documentation run the documentation gates instead.
 3. After merge, Validate runs again on `main` and stores the built targets as a
-   workflow artifact for 14 days.
+   workflow artifact for 7 days.
 4. A maintainer starts the manual **Deploy Cloudflare Production** workflow with
    that Validate run ID, and the `Production` environment requires approval.
    The workflow deploys the stored artifact; it does not rebuild.

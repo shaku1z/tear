@@ -5,6 +5,9 @@ import {
   type PracticeBossState,
 } from "./practice-boss-catalog";
 import type { TutorialArenaId } from "./tutorial-arenas";
+import { resumedTutorialCourse, TUTORIAL_LESSON_IDS, type TutorialLessonId } from "./tutorial-lesson-ids";
+import type { TutorialMark } from "./tutorial-marks";
+import { practiceTabFlags, practiceTabFromFlags, type PracticeTab } from "./practice-tabs";
 import { productionGhostTraces, type TutorialGhostFrame, type TutorialGhostScript } from "./tutorial-production-ghost";
 import type { CONFIG as GameConfiguration } from "../../config/game-config";
 import {
@@ -26,63 +29,8 @@ import {
 } from "./practice-enemy-catalog";
 import type { EnemyKind } from "../run/content-director";
 import type { TutorialCoachView, TutorialGoldDisplay } from "./tutorial-ghost-coach";
+import { isRecord, requireRecord } from "../../domain/records";
 
-export type TutorialMark =
-  | "airHit"
-  | "dash"
-  | "deflect"
-  | "jump"
-  | "launch"
-  | "moveL"
-  | "moveR"
-  | "evade"
-  | "parry"
-  | "punish"
-  | "recall"
-  | "slam"
-  | "strike"
-  | "superslam"
-  | "throwHit"
-  | "updraft";
-
-/** Style events accepted by the live tutorial host; encounter marks have their own controller owner. */
-export const TUTORIAL_MARKS: ReadonlySet<string> = new Set([
-  "airHit",
-  "dash",
-  "deflect",
-  "jump",
-  "launch",
-  "moveL",
-  "moveR",
-  "parry",
-  "recall",
-  "slam",
-  "strike",
-  "superslam",
-  "throwHit",
-  "updraft",
-]);
-export function isTutorialMark(value: string): value is TutorialMark {
-  return TUTORIAL_MARKS.has(value);
-}
-
-export const TUTORIAL_LESSON_IDS = [
-  "move",
-  "jump",
-  "dash",
-  "cut",
-  "launch",
-  "juggle",
-  "slam",
-  "power-slam",
-  "updraft",
-  "throw",
-  "parry",
-  "read-the-charge",
-  "field-test",
-  "ready",
-] as const;
-export type TutorialLessonId = (typeof TUTORIAL_LESSON_IDS)[number];
 export type TutorialSessionPhase = "inactive" | "course" | "lesson-practice" | "free-practice";
 type FieldEncounter = "charger" | "breath" | "mixed";
 /** The few session facts the gold coach selects by (see `TutorialController.coachSelection`). */
@@ -104,13 +52,12 @@ export interface TutorialSessionView {
   readonly skipped?: readonly TutorialLessonId[];
   readonly coach?: TutorialCoachView;
   readonly practiceOnly?: boolean;
-  readonly annexSelector?: boolean;
+  /** The open Drills tab (practice only). */
+  readonly practiceTab?: PracticeTab;
   readonly annex?: Readonly<TutorialWeaponAnnexState>;
   readonly annexes?: readonly Readonly<{ id: string; title: string; current: boolean }>[];
-  readonly catalogSelector?: boolean;
   readonly enemyPractice?: Readonly<PracticeEnemyState>;
   readonly bossPractice?: Readonly<PracticeBossState>;
-  readonly bossSelector?: boolean;
   readonly bossCatalog?: readonly PracticeBossEntry[];
   readonly enemyCatalog?: readonly PracticeEnemyEntry[];
   readonly phase: TutorialSessionPhase;
@@ -132,9 +79,7 @@ export interface TutorialSessionView {
 export type TutorialSessionCheckpoint = ReturnType<TutorialController["captureSession"]>;
 export function parseTutorialSessionCheckpoint(value: unknown): TutorialSessionCheckpoint | undefined {
   if (value === undefined) return undefined;
-  if (typeof value !== "object" || value === null || Array.isArray(value))
-    throw new TypeError("Invalid tutorial session");
-  const data = value as Record<string, unknown>;
+  const data = requireRecord(value, "Invalid tutorial session");
   const ids = (entry: unknown): entry is TutorialLessonId[] =>
     Array.isArray(entry) &&
     new Set(entry as unknown[]).size === entry.length &&
@@ -197,9 +142,7 @@ export function parseTutorialSessionCheckpoint(value: unknown): TutorialSessionC
     "updraft",
   ];
   if (
-    typeof data.counters !== "object" ||
-    data.counters === null ||
-    Array.isArray(data.counters) ||
+    !isRecord(data.counters) ||
     Object.entries(data.counters).some(
       ([key, number]) => !marks.includes(key) || typeof number !== "number" || !Number.isFinite(number) || number < 0,
     )
@@ -254,12 +197,10 @@ export function parseTutorialSessionCheckpoint(value: unknown): TutorialSessionC
   if (data.version === 3 || data.version === 4 || data.version === 5 || data.version === 6) {
     const origin = data.practiceOrigin;
     if (
-      typeof origin !== "object" ||
-      origin === null ||
-      Array.isArray(origin) ||
-      (origin as Record<string, unknown>).kind !== "durable-profile-completion" ||
-      !Number.isSafeInteger((origin as Record<string, unknown>).tutorialDone) ||
-      Number((origin as Record<string, unknown>).tutorialDone) <= 0 ||
+      !isRecord(origin) ||
+      origin.kind !== "durable-profile-completion" ||
+      !Number.isSafeInteger(origin.tutorialDone) ||
+      Number(origin.tutorialDone) <= 0 ||
       data.courseSessionId !== "" ||
       data.completionAwarded ||
       data.phase === "course" ||
@@ -369,7 +310,6 @@ export interface TutorialLesson {
   readonly description: string;
   /** Current plain-language instruction for multi-step encounter lessons. */
   readonly instruction?: (counters: Readonly<Partial<Record<TutorialMark, number>>>) => string;
-  readonly keys: readonly string[];
   /** Legacy lesson-local counters; Cutting Room uses entryMarks below. */
   readonly objectiveMarks?: readonly TutorialMark[];
   readonly arena?: TutorialArenaId;
@@ -435,6 +375,8 @@ export type TutorialIntent =
   | Readonly<{ type: "navigate"; screen: "menu" }>
   | Readonly<{ type: "release-pointer" }>
   | Readonly<{ type: "complete-course"; courseSessionId: string }>
+  /** A course lesson was finished; the profile keeps it, so the next course starts after it. */
+  | Readonly<{ type: "lesson-complete"; lessonId: TutorialLessonId }>
   | Readonly<{ type: "achievement-check" }>;
 
 export interface TutorialGhostSnapshot {
@@ -463,7 +405,6 @@ const LESSONS: TutorialLesson[] = [
   {
     title: "MOVE",
     description: "Run with A and D. Warm up — move both ways.",
-    keys: ["A", "D"],
     objectiveMarks: ["moveL", "moveR"],
     progress: (n) => [(count(n, "moveL") > 25 ? 1 : 0) + (count(n, "moveR") > 25 ? 1 : 0), 2],
     complete: (n) => count(n, "moveL") > 25 && count(n, "moveR") > 25,
@@ -471,7 +412,6 @@ const LESSONS: TutorialLesson[] = [
   {
     title: "JUMP",
     description: "W or Space to jump. Hold S on a ledge to drop through it.",
-    keys: ["W", "SPACE"],
     objectiveMarks: ["jump"],
     progress: (n) => [bounded(count(n, "jump"), 2), 2],
     complete: (n) => count(n, "jump") >= 2,
@@ -479,7 +419,6 @@ const LESSONS: TutorialLesson[] = [
   {
     title: "DASH",
     description: "Shift to dash — steer it mid-flight with W / A / S / D.",
-    keys: ["SHIFT"],
     objectiveMarks: ["dash"],
     progress: (n) => [bounded(count(n, "dash"), 2), 2],
     complete: (n) => count(n, "dash") >= 2,
@@ -487,7 +426,6 @@ const LESSONS: TutorialLesson[] = [
   {
     title: "CUT",
     description: "The blade follows your mouse — SPEED IS DAMAGE. Slash the dummy, fast.",
-    keys: ["MOUSE"],
     objectiveMarks: ["strike"],
     dummyCount: 1,
     progress: (n) => [bounded(count(n, "strike"), 3), 3],
@@ -496,7 +434,6 @@ const LESSONS: TutorialLesson[] = [
   {
     title: "LAUNCH",
     description: "A fast UPWARD swing pops an enemy into the air.",
-    keys: ["MOUSE ↑"],
     objectiveMarks: ["launch"],
     dummyCount: 1,
     progress: (n) => [bounded(count(n, "launch"), 1), 1],
@@ -505,7 +442,6 @@ const LESSONS: TutorialLesson[] = [
   {
     title: "JUGGLE",
     description: "Launch it — then cut it again before it lands.",
-    keys: ["MOUSE ↑", "MOUSE"],
     objectiveMarks: ["airHit"],
     dummyCount: 1,
     progress: (n) => [bounded(count(n, "airHit"), 2), 2],
@@ -514,7 +450,6 @@ const LESSONS: TutorialLesson[] = [
   {
     title: "SLAM",
     description: "While airborne, strike DOWN through an enemy — a slam hits harder.",
-    keys: ["W", "MOUSE ↓"],
     objectiveMarks: ["slam", "superslam"],
     dummyCount: 1,
     progress: (n) => [count(n, "slam") + count(n, "superslam") >= 1 ? 1 : 0, 1],
@@ -523,7 +458,6 @@ const LESSONS: TutorialLesson[] = [
   {
     title: "POWER SLAM",
     description: "Dash DOWN to fall fast, then slam mid-fall — a fast descent hits far harder.",
-    keys: ["S + SHIFT", "MOUSE ↓"],
     objectiveMarks: ["superslam"],
     dummyCount: 1,
     progress: (n) => [bounded(count(n, "superslam"), 1), 1],
@@ -532,7 +466,6 @@ const LESSONS: TutorialLesson[] = [
   {
     title: "UPDRAFT",
     description: "Launch WHILE RISING — jump first, then swing up hard.",
-    keys: ["W", "MOUSE ↑"],
     objectiveMarks: ["updraft"],
     dummyCount: 1,
     progress: (n) => [bounded(count(n, "updraft"), 1), 1],
@@ -542,7 +475,6 @@ const LESSONS: TutorialLesson[] = [
     title: "THROW",
     description:
       "Right-click to hurl the blade through an enemy. Move within tether range, then right-click again to recall it.",
-    keys: ["RMB"],
     objectiveMarks: ["throwHit", "recall"],
     dummyCount: 1,
     progress: (n) => [(count(n, "throwHit") >= 1 ? 1 : 0) + (count(n, "recall") >= 1 ? 1 : 0), 2],
@@ -551,7 +483,6 @@ const LESSONS: TutorialLesson[] = [
   {
     title: "PARRY",
     description: "Swing FAST through an incoming shot to send it back. Perfect timing homes it.",
-    keys: ["MOUSE"],
     objectiveMarks: ["parry", "deflect"],
     ranged: true,
     progress: (n) => [count(n, "parry") >= 1 ? 2 : bounded(count(n, "deflect"), 2), 2],
@@ -560,7 +491,6 @@ const LESSONS: TutorialLesson[] = [
   {
     title: "READY",
     description: "That's the whole blade. Cut clean. Keep moving. The Tear awaits.",
-    keys: [],
     objectiveMarks: [],
     final: true,
     progress: () => [0, 1],
@@ -578,7 +508,6 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   {
     title: "MOVE",
     description: "Run left for one full second, then right for one full second.",
-    keys: ["A", "D"],
     arena: "runway",
     entryMarks: ["moveL", "moveR"],
     teachingFocus: "movement",
@@ -587,8 +516,7 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   },
   {
     title: "JUMP",
-    description: "Jump three times. Use the ledges to climb.",
-    keys: ["W", "SPACE"],
+    description: "Jump three times. Height opens routes.",
     arena: "vertical-gate",
     entryMarks: ["jump"],
     teachingFocus: "movement",
@@ -597,8 +525,7 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   },
   {
     title: "DASH",
-    description: "Dash through the lane three times. Steer the burst; do not just spend it.",
-    keys: ["SHIFT"],
+    description: "Dash three times. Steer the burst; do not just spend it.",
     arena: "dash-lane",
     entryMarks: ["dash"],
     teachingFocus: "movement",
@@ -608,7 +535,6 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   {
     title: "CUT",
     description: "Six clean cuts. Blade speed comes from deliberate movement.",
-    keys: ["MOUSE"],
     arena: "blade-range",
     entryMarks: ["strike"],
     teachingFocus: "blade",
@@ -619,7 +545,6 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   {
     title: "LAUNCH",
     description: "Make three upward openings. Every launch must happen in this block.",
-    keys: ["MOUSE UP"],
     arena: "launch-bay",
     entryMarks: ["launch"],
     teachingFocus: "momentum",
@@ -630,7 +555,6 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   {
     title: "JUGGLE",
     description: "Launch now, then keep the target airborne for three further hits.",
-    keys: ["MOUSE UP", "MOUSE"],
     arena: "air-chain",
     entryMarks: ["launch", "airHit"],
     teachingFocus: "momentum",
@@ -641,7 +565,6 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   {
     title: "SLAM",
     description: "Take height and drive down through the target twice. Height becomes force.",
-    keys: ["W", "MOUSE DOWN"],
     arena: "drop-well",
     entryMarks: ["slam", "superslam"],
     teachingFocus: "momentum",
@@ -652,7 +575,6 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   {
     title: "POWER SLAM",
     description: "Accelerate downward, then land two true power slams. No inherited credit.",
-    keys: ["S + SHIFT", "MOUSE DOWN"],
     arena: "dive-channel",
     entryMarks: ["superslam"],
     teachingFocus: "momentum",
@@ -663,7 +585,6 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   {
     title: "UPDRAFT",
     description: "While rising, carve up twice. A good cut can make the next route possible.",
-    keys: ["W", "MOUSE UP"],
     arena: "liftwell",
     entryMarks: ["jump", "launch", "strike", "updraft"],
     teachingFocus: "momentum",
@@ -674,7 +595,6 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   {
     title: "THROW",
     description: "Hit twice at range and recall twice. The blade stays part of your movement.",
-    keys: ["RMB"],
     arena: "throw-lane",
     entryMarks: ["throwHit", "recall"],
     teachingFocus: "blade",
@@ -685,7 +605,6 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   {
     title: "PARRY",
     description: "Return two shots. A counter is a route change, not a panic button.",
-    keys: ["MOUSE"],
     arena: "counterline",
     entryMarks: ["parry", "deflect"],
     teachingFocus: "counterplay",
@@ -696,7 +615,6 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   {
     title: "READ THE CHARGE",
     description: "Watch for the commitment. Dash clear when the Charger lunges.",
-    keys: ["SHIFT"],
     arena: "read-line",
     entryMarks: ["evade"],
     teachingFocus: "enemy",
@@ -707,7 +625,6 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   {
     title: "FIELD TEST",
     description: "Complete one clean combat route.",
-    keys: ["SHIFT", "MOUSE"],
     arena: "field-floor",
     entryMarks: ["evade", "punish"],
     teachingFocus: "encounter",
@@ -723,7 +640,6 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   {
     title: "READY",
     description: "Move, make space, take height, and return pressure. The Tear awaits.",
-    keys: [],
     arena: "ready-room",
     entryMarks: [],
     teachingFocus: "ready",
@@ -789,11 +705,9 @@ export class TutorialController {
   private interWaveRemaining = 0;
   private practiceOrigin: TutorialPracticeOrigin | undefined;
   private annex: TutorialWeaponAnnexState | undefined;
-  private annexSelector = false;
+  private practiceTab: PracticeTab = "lessons";
   private enemyPractice: PracticeEnemyState | undefined;
-  private catalogSelector = false;
   private bossPractice: PracticeBossState | undefined;
-  private bossSelector = false;
 
   get lessonId(): TutorialLessonId {
     return TUTORIAL_LESSON_IDS[this.lessonIndex] ?? "move";
@@ -827,13 +741,11 @@ export class TutorialController {
       ...(this.practiceOrigin === undefined
         ? {}
         : {
-            annexSelector: this.annexSelector,
+            practiceTab: this.practiceTab,
             annexes: TUTORIAL_WEAPON_ANNEXES.map(({ id, title }) => ({ id, title, current: this.annex?.id === id })),
           }),
       ...(this.annex === undefined ? {} : { annex: { ...this.annex } }),
-      ...(this.catalogSelector ? { catalogSelector: true } : {}),
       ...(this.enemyPractice === undefined ? {} : { enemyPractice: { ...this.enemyPractice } }),
-      ...(this.bossSelector ? { bossSelector: true } : {}),
       ...(this.bossPractice ? { bossPractice: this.bossPractice } : {}),
       instruction: lesson.instruction?.(this.counters) ?? lesson.description,
       progress: lesson.progress(this.counters),
@@ -870,7 +782,6 @@ export class TutorialController {
     this.annex = undefined;
     this.enemyPractice = undefined;
     this.bossPractice = undefined;
-    this.bossSelector = false;
     this.enterLesson(0);
     this.bossPractice = state;
     this.pendingArena = null;
@@ -878,9 +789,7 @@ export class TutorialController {
     this.completed.clear();
     this.active = true;
     this.phase = "lesson-practice";
-    this.bossSelector = true;
-    this.catalogSelector = false;
-    this.annexSelector = false;
+    this.practiceTab = "bosses";
     return true;
   }
   syncBoss(state: PracticeBossState): void {
@@ -890,26 +799,10 @@ export class TutorialController {
       this.phase = "free-practice";
     }
   }
-  showBosses(): void {
-    if (this.practiceOrigin) {
-      this.bossSelector = !this.bossSelector;
-      this.catalogSelector = false;
-      this.annexSelector = false;
-    }
-  }
-  showAnnexes(): void {
-    if (this.practiceOrigin !== undefined) {
-      this.annexSelector = !this.annexSelector;
-      this.bossSelector = false;
-      this.catalogSelector = false;
-    }
-  }
-  showCatalog(): void {
-    if (this.practiceOrigin !== undefined) {
-      this.catalogSelector = !this.catalogSelector;
-      this.bossSelector = false;
-      this.annexSelector = false;
-    }
+  /** Opens one Drills tab: exactly one list shows (LESSONS is the baseline exercises). */
+  showPracticeTab(tab: PracticeTab): void {
+    if (this.practiceOrigin === undefined) return;
+    this.practiceTab = tab;
   }
   selectEnemy(entry: PracticeEnemyEntry): boolean {
     if (!this.practiceOrigin || !entry.canPractice || entry.knowledge === "unknown" || !isPracticeEnemy(entry.id))
@@ -924,15 +817,13 @@ export class TutorialController {
     this.annex = undefined;
     this.enemyPractice = undefined;
     this.bossPractice = undefined;
-    this.bossSelector = false;
     this.enterLesson(0);
     this.enemyPractice = enemy;
     this.counters = {};
     this.completed.clear();
     this.active = true;
     this.phase = "lesson-practice";
-    this.catalogSelector = true;
-    this.annexSelector = false;
+    this.practiceTab = "enemies";
     this.pendingArena = "field-floor";
     return true;
   }
@@ -942,15 +833,13 @@ export class TutorialController {
     this.annex = undefined;
     this.enemyPractice = undefined;
     this.bossPractice = undefined;
-    this.bossSelector = false;
-    this.catalogSelector = false;
     this.enterLesson(0);
     this.annex = annex;
     this.counters = {};
     this.completed.clear();
     this.active = true;
     this.phase = "lesson-practice";
-    this.annexSelector = true;
+    this.practiceTab = "weapons";
     this.pendingArena = weaponAnnexLesson(annex).arena ?? "runway";
     return true;
   }
@@ -968,11 +857,9 @@ export class TutorialController {
     const index = TUTORIAL_LESSON_IDS.findIndex((entry) => entry === id);
     if (index < 0 || id === "ready" || !this.reached.has(id as TutorialLessonId)) return false;
     this.annex = undefined;
-    this.annexSelector = false;
+    this.practiceTab = "lessons";
     this.enemyPractice = undefined;
-    this.catalogSelector = false;
     this.bossPractice = undefined;
-    this.bossSelector = false;
     this.active = true;
     this.phase = this.completionAwarded || this.practiceOrigin !== undefined ? "lesson-practice" : "course";
     this.enterLesson(index);
@@ -1014,6 +901,10 @@ export class TutorialController {
     this.coachDemoTime = 6;
     this.coachIdle = 0;
     return true;
+  }
+  /** The course a finished tutorial hands to the next run, read without building a checkpoint. */
+  freePracticeCourse(): string | undefined {
+    return this.phase === "free-practice" ? this.courseSessionId : undefined;
   }
   captureSession() {
     const checkpoint = {
@@ -1067,9 +958,7 @@ export class TutorialController {
       coachIdle: this.coachIdle,
       coachDemoTime: this.coachDemoTime,
       helpVisible: this.helpVisible,
-      ...(this.annexSelector ? { annexSelector: true } : {}),
-      ...(this.catalogSelector ? { catalogSelector: true } : {}),
-      ...(this.bossSelector ? { bossSelector: true } : {}),
+      ...practiceTabFlags(this.practiceTab),
     };
   }
   restoreSession(value: unknown): void {
@@ -1123,23 +1012,20 @@ export class TutorialController {
     this.coachIdle = value?.coachIdle ?? 0;
     this.coachDemoTime = value?.coachDemoTime ?? 0;
     this.helpVisible = value?.helpVisible ?? false;
-    this.annexSelector = value?.annexSelector === true;
-    this.catalogSelector = value?.catalogSelector === true;
-    this.bossSelector = value?.bossSelector === true;
+    this.practiceTab = practiceTabFromFlags(value);
   }
 
   constructor(config: typeof GameConfiguration) {
     this.configuration = config;
   }
 
-  start(viewportWidth: number, courseSessionId = "tutorial"): void {
+  /** Starts the course after the lessons the profile kept (see `resumedTutorialCourse`). */
+  start(viewportWidth: number, courseSessionId = "tutorial", finished: readonly string[] = []): void {
     this.practiceOrigin = undefined;
     this.annex = undefined;
-    this.annexSelector = false;
+    this.practiceTab = "lessons";
     this.enemyPractice = undefined;
-    this.catalogSelector = false;
     this.bossPractice = undefined;
-    this.bossSelector = false;
     this.curriculumVersion = 2;
     this.fieldEncounter = "charger";
     this.interWaveRemaining = 0;
@@ -1147,6 +1033,8 @@ export class TutorialController {
     this.phase = "course";
     this.reached = new Set(["move"]);
     this.completed.clear();
+    const resumed = resumedTutorialCourse(finished);
+    for (const id of resumed.done) this.completed.add(id);
     this.skipped.clear();
     this.completionAwarded = false;
     this.helpVisible = false;
@@ -1172,6 +1060,10 @@ export class TutorialController {
     this.chargeRecoveryWindow = 0;
     this.chargeCommitAwayX = 0;
     this.bladeAwayTime = 0;
+    if (resumed.opening > 0) {
+      for (const id of resumed.done) this.reached.add(id);
+      this.enterLesson(resumed.opening);
+    }
   }
 
   /** Eligibility is a saved profile fact, never a fabricated historical course. */
@@ -1222,7 +1114,6 @@ export class TutorialController {
         return {
           ...lesson,
           coachCharger: false,
-          keys: [],
           entryMarks: [],
           description:
             "INTER-WAVE — BREATHE. Wave 1 clear. Next: launch, follow through in the air, and return a shot.",
@@ -1237,7 +1128,6 @@ export class TutorialController {
           coachCharger: false,
           dummyCount: 1,
           ranged: true,
-          keys: ["MOUSE UP", "MOUSE"],
           entryMarks: ["launch", "airHit", "deflect", "parry"],
           instruction: (n) =>
             count(n, "launch") < 1
@@ -1501,12 +1391,19 @@ export class TutorialController {
         this.evidencePulse = false;
         return [...intents, { type: "sound", cue: "rankup" }, { type: "reset-training-space" }];
       }
-      this.completed.add(TUTORIAL_LESSON_IDS[this.lessonIndex] ?? "move");
-      this.skipped.delete(TUTORIAL_LESSON_IDS[this.lessonIndex] ?? "move");
+      this.finishLesson(intents);
       this.completionDelay = 1.1;
       intents.push({ type: "sound", cue: "rankup" });
     }
     return intents;
+  }
+
+  /** Counts the current lesson done; a course reports it too, for the profile to keep. */
+  private finishLesson(intents: TutorialIntent[]): void {
+    const id = TUTORIAL_LESSON_IDS[this.lessonIndex] ?? "move";
+    this.completed.add(id);
+    this.skipped.delete(id);
+    if (this.phase === "course") intents.push({ type: "lesson-complete", lessonId: id });
   }
 
   ghostSnapshot(groundY: number): TutorialGhostSnapshot {

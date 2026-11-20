@@ -16,14 +16,15 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 | --- | --- | --- | --- |
 | [Release readiness](#release-readiness) | Merged to main | Production deploy, after the owner has played the build. | — |
 | [Production deploy](#production-deploy) | Deployed 2026-11-13 | The next production deploy follows the Verdant, Tutorial and music work. | — |
-| [Verdant Sanctum visuals](#verdant-visuals) | In progress | Living motion (water, light, foliage) as package data, in its own pull request. | Judge the look: the owner's taste decides visual work. A sharper, wider source painting that meets the brief in docs/BACKGROUND_WORKFLOW.md would remove most of the readability shading. |
-| [Verdant Sanctum gameplay](#verdant-gameplay) | In progress | Its pull request, then the lead's review. | Playtest the reworked stage. |
-| [Tutorial and Playground experience](#training-ux) | In progress | Its pull request, then the lead's review. | — |
+| [Verdant Sanctum visuals](#verdant-visuals) | In progress | Keep closing the look toward the owner's reference illustration, then a live layer (light shafts, water glints, sway) as recipe data, then Pale Traverse from a recipe. | Judge the drawn look against the reference illustration: the owner's taste decides visual work. |
+| [Verdant Sanctum gameplay](#verdant-gameplay) | In progress | Close Verdant: the owner plays the waves and the Rootbinder; then Pale. | Playtest the Rootbound in all three phases. |
+| [Tutorial and Playground experience](#training-ux) | In progress | One source of names for the drilled weapon moves (this pull request, then its floaters), then the release tutorial flow and menu fixes. | — |
 | [Pale Traverse rework](#pale-traverse) | Not started | Start once the Verdant gameplay rework has landed. | — |
 | [Player wiki](#wiki) | In progress | Review the move pull request, then confirm the Cloudflare secret question and run the first wiki deploy. | Archive shaku1z/tear-wiki after the first deploy from this repository. |
 | [Repository structure and workflow](#repository-structure) | In progress | After the hooks pull request merges, run pnpm setup:hooks in the canonical checkout on main (scripts/governance/README.md). | — |
-| [Playtest tool](#playtest-tool) | Planned; stage 1 waits on pull request 138 | Stage 1: the measurement core and a per-boss, per-phase report. | — |
-| [TearBench C21 to C40 program](#tearbench-program) | Paused at the 2026-08-30 state | Land or close pull request 84. | — |
+| [Playtest tool](#playtest-tool) | Stage 2 under way: stage 1 is done (pnpm playtest bosses and sweep); pnpm playtest waves opens any Adventure wave directly and prints a row per wave of a stage | pnpm playtest runs (full runs: where they end, time and health cost per wave), then the enemies report, the coverage list and --compare. | — |
+| [Replays](#replays) | In progress: PR 1 and PR 2 merged (hidden replay features and replay extras removed); PR 2b open (REPAIR) | Merge PR 2b, then PR 3 (the snapshot codecs move to src/gameplay/snapshot). | Deploy the Firestore chunk-write rules from the merged rules PR. |
+| [Mobile, touch and phone layouts](#mobile) | Paused by the owner 2026-11-19; out of the release builds | Nothing until the owner resumes mobile; plans/MOBILE_LATER.md says how to turn it back on. | Mark the CrazyGames listing desktop only. Say when mobile resumes. |
 
 <a id="release-readiness"></a>
 
@@ -49,31 +50,31 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 ### Verdant Sanctum visuals
 
-**In progress.** Verdant has a painted background drawn from a scene package, with platforms still drawn by the game from collision geometry. The same format, command and checks work for any biome; a Pale Traverse placeholder fixture proves it. The background does not move yet.
+**In progress.** The game draws Verdant itself at load from a stage art recipe (src/presentation/stage-art): a key light, an atmosphere, colour ramps and layers of shared strokes (foliage, trunks, ruined arcades, water, light), painted in short slices into layers the scene renderer composes. The painted image package is gone. Any biome reaches the same look with a recipe; Pale Traverse is next. Boss warnings and strikes on Verdant are drawn as roots and thorns rising from the floor, from a table on the stage's presentation definition that any biome can supply. The background does not move yet.
 
-- Next: Living motion (water, light, foliage) as package data, in its own pull request.
-- Owner action: Judge the look: the owner's taste decides visual work. A sharper, wider source painting that meets the brief in docs/BACKGROUND_WORKFLOW.md would remove most of the readability shading.
-- Evidence: [docs/BACKGROUND_WORKFLOW.md](BACKGROUND_WORKFLOW.md), [tests/unit/scene-packages.test.ts](../tests/unit/scene-packages.test.ts), [plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md)
+- Next: Keep closing the look toward the owner's reference illustration, then a live layer (light shafts, water glints, sway) as recipe data, then Pale Traverse from a recipe.
+- Owner action: Judge the drawn look against the reference illustration: the owner's taste decides visual work.
+- Evidence: [docs/BACKGROUND_WORKFLOW.md](BACKGROUND_WORKFLOW.md), [tests/unit/stage-art.test.ts](../tests/unit/stage-art.test.ts), [tests/unit/scene-library.test.ts](../tests/unit/scene-library.test.ts), [tests/unit/boss-tell-skin.test.ts](../tests/unit/boss-tell-skin.test.ts), [plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md)
 
 <a id="verdant-gameplay"></a>
 
 ### Verdant Sanctum gameplay
 
-**In progress.** A session is reworking the Verdant stage, its enemies and its boss, which the owner found broken and unfinished.
+**In progress.** The Rootbound boss is rebuilt in all three phases as data on a shared boss move layer that Pale and later bosses reuse: Phase I's moves, Phase II's Grafts, Root Cage and Bloom Wells, and Phase III's Regrowth and Last Spring. Its body no longer hurts on touch: it blocks, and it does not play a move the player could not walk out of. The stage's Bloom Wells stand on the floor and lift the player and light enemies; who a stage field moves is one data row. The Rootbinder is rebuilt as a support that backs away, plants and roots the allies near it, so they cannot be flung or lifted until the root is cut; cutting every root or one heavy hit uproots it, and it takes more damage while planted. Its old leash on the player is replaced by a warned snare: a ring marked on the ground that holds a player who stays in it, with a cut, a 2 second release and an immunity afterwards. Verdant's nine waves are written: each has listed enemies in spawn order (wave 32 two ground allies and then a Rootbinder, 33 a Mender, 36 a Chimera, 38 a second Rootbinder late) and the pool fills the rest; any stage can carry such a table. Listed enemies arrive without affixes. The waves were measured with the playtest tool on 24 seeds: nothing justified a change to their size or health.
 
-- Next: Its pull request, then the lead's review.
-- Owner action: Playtest the reworked stage.
+- Next: Close Verdant: the owner plays the waves and the Rootbinder; then Pale.
+- Owner action: Playtest the Rootbound in all three phases.
 - Evidence: [plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md)
 
 <a id="training-ux"></a>
 
 ### Tutorial and Playground experience
 
-**In progress.** A session is reworking the Tutorial and Playground popups, menus, flow, navigation and explanations.
+**In progress.** A session is reworking the Tutorial and Playground popups, menus, flow, navigation and explanations. Drills has LESSONS, WEAPONS, ENEMIES and BOSSES tabs, and its phone list is sized from its content.
 
-- Next: Its pull request, then the lead's review.
+- Next: One source of names for the drilled weapon moves (this pull request, then its floaters), then the release tutorial flow and menu fixes.
 - Owner action: none
-- Evidence: [docs/TUTORIAL_PARITY_AND_UPGRADE_PLAN.md](TUTORIAL_PARITY_AND_UPGRADE_PLAN.md)
+- Evidence: [docs/TUTORIAL_PARITY_AND_UPGRADE_PLAN.md](TUTORIAL_PARITY_AND_UPGRADE_PLAN.md), [plans/active/DRILLED_MOVE_NAMES.md](../plans/active/DRILLED_MOVE_NAMES.md)
 
 <a id="pale-traverse"></a>
 
@@ -109,18 +110,28 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 ### Playtest tool
 
-**Planned; stage 1 waits on pull request 138.** One command, pnpm playtest, that plays the game headless with scripted players on fixed seeds and reports clear rates, time to kill, damage taken and differences between builds. It is built from the working parts of TearBench and the scripted player and replaces both names. Verified on 2026-11-16: the scripted player runs headless at 13 to 15 times real time and the same seed reproduces exactly.
+**Stage 2 under way: stage 1 is done (pnpm playtest bosses and sweep); pnpm playtest waves opens any Adventure wave directly and prints a row per wave of a stage.** One command, pnpm playtest, that plays the game headless with scripted players on fixed seeds and reports clear rates, time to kill, damage taken and differences between builds. It is built from the working parts of TearBench and the scripted player and replaces both names. Verified on 2026-11-16: the scripted player runs headless at 13 to 15 times real time and the same seed reproduces exactly.
 
-- Next: Stage 1: the measurement core and a per-boss, per-phase report.
+- Next: pnpm playtest runs (full runs: where they end, time and health cost per wave), then the enemies report, the coverage list and --compare.
 - Owner action: none
 - Evidence: [plans/active/PLAYTEST_TOOL_PLAN.md](../plans/active/PLAYTEST_TOOL_PLAN.md)
 
-<a id="tearbench-program"></a>
+<a id="replays"></a>
 
-### TearBench C21 to C40 program
+### Replays
 
-**Paused at the 2026-08-30 state.** The TearBench certification program state is recorded for the production build and is still checked by check:docs. Pull request 84 (five-run canary qualification) is open; its commits are already in main.
+**In progress: PR 1 and PR 2 merged (hidden replay features and replay extras removed); PR 2b open (REPAIR).** Players reach two replay systems today: Ghost 2 (position samples in localStorage, used by the REPLAYS tab, the feed and leaderboard links) and the Ghost V3 capsules (re-simulated, in IndexedDB, used by VAULT, CAREER and the Theater). The plan replaces both with one versioned record and five plain modules (record, store, watch, share, verify), moves the replay world and snapshot codecs out of TearBench, and deletes src/ghost (118 replay modules and about 800,000 characters today).
 
-- Next: Land or close pull request 84.
-- Owner action: none
-- Evidence: [config/tearbench-current-program-state.json](../config/tearbench-current-program-state.json), [plans/TEARBENCH_MASTER_HANDOFF.md](../plans/TEARBENCH_MASTER_HANDOFF.md), [#84](https://github.com/shaku1z/tear/pull/84)
+- Next: Merge PR 2b, then PR 3 (the snapshot codecs move to src/gameplay/snapshot).
+- Owner action: Deploy the Firestore chunk-write rules from the merged rules PR.
+- Evidence: [plans/active/REPLAY_OVERHAUL_PLAN.md](../plans/active/REPLAY_OVERHAUL_PLAN.md)
+
+<a id="mobile"></a>
+
+### Mobile, touch and phone layouts
+
+**Paused by the owner 2026-11-19; out of the release builds.** The owner paused all mobile work. The release builds (standalone, CrazyGames, itch) leave out the touch controls, the rotate gate, the phone profile layout and haptics, and a build check fails if they come back; a touch-only phone sees one line saying TEAR is played on a computer for now. Dev and test builds keep everything. The phone browser checks are parked in the mobile group (pnpm check:mobile). Touch-aim fixes are parked as draft pull request 191. Sessions write anything mobile will need later in plans/MOBILE_LATER.md.
+
+- Next: Nothing until the owner resumes mobile; plans/MOBILE_LATER.md says how to turn it back on.
+- Owner action: Mark the CrazyGames listing desktop only. Say when mobile resumes.
+- Evidence: [plans/MOBILE_LATER.md](../plans/MOBILE_LATER.md), [#191](https://github.com/shaku1z/tear/pull/191)

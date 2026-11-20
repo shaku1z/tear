@@ -1,5 +1,6 @@
 import { PUBLISHED_ENEMY_IDENTITY_IDS, type EnemyKind } from "../run/content-director";
 import type { TutorialIntent, TutorialLesson, TutorialUpdateSnapshot } from "./tutorial-controller";
+import { requireRecord } from "../../domain/records";
 
 export type PracticeEnemyKnowledge = "confirmed-defeated" | "encountered" | "save-unconfirmed" | "unknown";
 export interface PracticeEnemyEntry {
@@ -42,9 +43,7 @@ export function practiceEnemyCatalog(
   });
 }
 export function validatePracticeEnemy(value: unknown): PracticeEnemyState {
-  if (typeof value !== "object" || value === null || Array.isArray(value))
-    throw new TypeError("Invalid practice enemy");
-  const state = value as Record<string, unknown>;
+  const state = requireRecord(value, "Invalid practice enemy");
   if (
     Object.keys(state).some((key) => !["id", "weaponId", "knowledge", "spawned", "defeated"].includes(key)) ||
     typeof state.id !== "string" ||
@@ -74,7 +73,6 @@ export function practiceEnemyLesson(state: PracticeEnemyState): TutorialLesson {
       : "Read this opponent's real attacks and recovery. Defeat it, or pause to reset instantly. Training death recovery stays on; no rewards or discovery are earned here.",
     arena: "field-floor",
     teachingFocus: "enemy",
-    keys: ["MOUSE", "SHIFT", "RMB"],
     progress: () => [state.defeated ? 1 : 0, 1],
     complete: () => state.defeated,
   };

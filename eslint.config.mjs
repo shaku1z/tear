@@ -3,6 +3,8 @@ import globals from "globals";
 import path from "node:path";
 import tseslint from "typescript-eslint";
 
+import { oneRecordGuard } from "./scripts/eslint-rules/one-record-guard.mjs";
+
 const inwardLayers = Object.freeze({
   domain: new Set([
     "app",
@@ -21,6 +23,7 @@ const inwardLayers = Object.freeze({
 
 const tearArchitecture = {
   rules: {
+    "one-record-guard": oneRecordGuard,
     "inward-imports": {
       meta: {
         type: "problem",
@@ -70,15 +73,9 @@ export default tseslint.config(
       "node_modules*/**",
       "vendor/**",
       "tear-crazygames/**",
-      "workers/worker-configuration.d.ts",
-      "scripts/release-artifact.d.mts",
-      "scripts/campaign-publication-boundary.d.mts",
-      "scripts/tutorial-gold-compatibility.d.mts",
-      "scripts/build-targets.d.mts",
-      "scripts/scene/hidden-paint.d.mts",
-      "scripts/scene/package-files.d.mts",
-      "scripts/scene/pixel-checks.d.mts",
-      "scripts/scene/reports.d.mts",
+      // Hand-written types for the .mjs tools beside them (config/tool-catalogue.json lists each
+      // under "declarations"); the TypeScript projects that import them check them.
+      "scripts/**/*.d.mts",
     ],
   },
   eslint.configs.recommended,
@@ -88,7 +85,7 @@ export default tseslint.config(
     files: [
       "src/**/*.ts",
       "tests/**/*.ts",
-      "workers/**/*.ts",
+      "scripts/asset-sheets/**/*.ts",
       "vite.config.ts",
       "vitest.config.ts",
       "vitest.endurance.config.ts",
@@ -249,6 +246,13 @@ export default tseslint.config(
             "Do not wait for networkidle: wait for the state you need, or for a screen's lazy code with waitForScriptLoads(page) from tests/browser-waits.js.",
         },
         {
+          // A journey with no ceiling of its own holds the CI job until the job limit and prints
+          // nothing: page.evaluate and page.mouse never time out (nightly run 44221285956, two hours).
+          selector: "CallExpression[callee.object.name='chromium'][callee.property.name=/^launch/]",
+          message:
+            "Launch the browser with launchJourney(chromium, options) from tests/browser-waits.js: it gives the whole journey one ceiling and says what it was waiting on when it runs out.",
+        },
+        {
           // The same race when reading: a projectile found by one page call can be gone by the next.
           selector:
             "CallExpression[callee.property.name='evaluate']:has(MemberExpression[property.name='projectiles'])",
@@ -280,6 +284,12 @@ export default tseslint.config(
         },
       ],
     },
+  },
+  {
+    // One plain-object guard: only src/domain/records.ts compares typeof with "object".
+    files: ["src/**/*.ts"],
+    plugins: { tear: tearArchitecture },
+    rules: { "tear/one-record-guard": "error" },
   },
   {
     files: ["src/domain/**/*.ts", "src/simulation/**/*.ts", "src/gameplay/**/*.ts"],

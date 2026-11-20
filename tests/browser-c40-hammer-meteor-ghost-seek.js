@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 const { STATE_WAIT_MS } = require("./browser-waits");
 
-// This is deliberately a Hammer-specific forensic journey. It forges a normal
+// This is deliberately a Hammer-specific forensic journey. It sets up a normal
 // endless state and uses only semantic intent; it never writes an embedded or
 // meteor state into the production world.
 const resolved = Object.freeze({
@@ -40,14 +40,14 @@ const resolved = Object.freeze({
 });
 
 withJourney(
-  { name: "C40 Hammer terrain Meteor Ghost seek", port: 8306, query: { "ghost-v3-profile": "forensic-qa" } },
+  { name: "C40 Hammer terrain Meteor Ghost seek", query: { "ghost-v3-profile": "forensic-qa" } },
   async ({ page }) => {
     await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
       timeout: STATE_WAIT_MS,
     });
     const result = await page.evaluate((scenario) => {
       const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
-      const launched = environment.forgeResolvedScenario(scenario);
+      const launched = environment.buildResolvedScenario(scenario);
       if (!launched.ok) return { launched };
       let id = 1;
       const command = (value) =>

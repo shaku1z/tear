@@ -7,7 +7,7 @@ import { createLiveSourceVoidController } from "../app/run/source-void-controlle
 import { stageAt } from "../gameplay/stages";
 import type { EnemyKind } from "../gameplay/run/content-director";
 import { A11Y, CONFIG, GFX, REMOTE } from "../config/game-config";
-import { createLiveAuthoritativeInputAdapter } from "../app/world/authoritative-input-adapter";
+import { createLiveAuthoritativeInputAdapter } from "../gameplay/runtime/authoritative-input-adapter";
 import { createLiveWorldComposition, type LiveWorldSessionPort } from "../app/world/world-composition";
 import type { GameRuntimeDependencies } from "../app/shell/game-runtime-dependencies";
 import { aabbOverlap, clamp, len, lerp, lerpAngle, segPointDist, segSegmentDist } from "../domain/geometry";
@@ -52,6 +52,8 @@ export interface ProductionReplayWorldOptions {
   readonly mode?: string;
   readonly weaponId?: string;
   readonly difficulty?: RunDifficulty;
+  /** Boss-only mode: the boss chosen on the start screen. It is fought first; the roster is drawn after it. */
+  readonly firstBoss?: string;
   /** Source-owned persisted discovery projection for detached Endless/Gauntlet runs. */
   readonly discoveredVariantIds?: readonly string[];
   /** Host-only notification; completion never issues a new run seed or writes progress. */
@@ -93,7 +95,7 @@ function detachedPresentationPorts(
   });
 }
 
-/** The minimal legal run shape used before a captured State Forge snapshot replaces it. */
+/** The minimal legal run shape used before a captured State Setup snapshot replaces it. */
 export function productionRunSeed(seed: string): number {
   let hash = 0x811c9dc5;
   for (let index = 0; index < seed.length; index += 1) {
@@ -276,6 +278,7 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
   const run = {
     ...createProductionReplayRun(options.mode, options.weaponId, runSeed, difficulty),
     variantDiscovery: [...(options.discoveredVariantIds ?? [])],
+    ...(options.firstBoss === undefined ? {} : { bossOrder: [options.firstBoss] }),
   };
   world.state.setRun(run as never);
   configuration.resetToBase();
@@ -473,10 +476,12 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
       tutorialSpawn = spawn;
     },
     tutorialHandoff: () => {
-      const session = tutorial.captureSession();
-      return world.state.run()?.mode === "tutorial" && session?.phase === "free-practice"
-        ? Object.freeze({ status: "awaiting-next-run" as const, courseSessionId: session.courseSessionId })
-        : null;
+      // Asked twice every tick, so it reads two fields and never builds a session checkpoint.
+      if (world.state.run()?.mode !== "tutorial") return null;
+      const courseSessionId = tutorial.freePracticeCourse();
+      return courseSessionId === undefined
+        ? null
+        : Object.freeze({ status: "awaiting-next-run" as const, courseSessionId });
     },
     installTrainingHome: () => {
       stage.platforms = trainingPlatforms(config.view.w, config.view.h, config.world.groundY).map((platform) => ({

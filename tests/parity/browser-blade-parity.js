@@ -3,9 +3,10 @@ const assert = require("node:assert/strict");
 const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const http = require("node:http");
+const { listenOnFreePort } = require("../local-server");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
-const { STATE_WAIT_MS, holdFor, pollEvery } = require("../browser-waits");
+const { STATE_WAIT_MS, holdFor, pollEvery, launchJourney } = require("../browser-waits");
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "..", "..");
 const fixtureArgument = process.argv.find((argument) => argument.startsWith("--fixture="));
@@ -167,8 +168,9 @@ function contentType(file) {
   return "application/octet-stream";
 }
 
-function createStaticServer(root, port) {
-  const baseUrl = `http://127.0.0.1:${String(port)}`;
+function createStaticServer(root) {
+  // Set once the server listens on a free port (tests/local-server.js).
+  let baseUrl = "http://127.0.0.1";
   const server = http.createServer((request, response) => {
     const pathname = decodeURIComponent(new URL(request.url, baseUrl).pathname);
     const relative = pathname === "/" ? "index.html" : pathname.slice(1);
@@ -181,8 +183,12 @@ function createStaticServer(root, port) {
     fs.createReadStream(file).pipe(response);
   });
   return {
-    baseUrl,
-    listen: () => new Promise((resolve) => server.listen(port, "127.0.0.1", resolve)),
+    get baseUrl() {
+      return baseUrl;
+    },
+    listen: async () => {
+      ({ origin: baseUrl } = await listenOnFreePort(server));
+    },
     close: async () => {
       server.closeAllConnections();
       await new Promise((resolve) => server.close(resolve));
@@ -674,7 +680,7 @@ async function captureTrace(browser, kind, baseUrl, root, fixture) {
       firstRunJobs.push({ id, captureTick: plannedTick, action: null, actionTick: null });
     } else {
       const actionTick = plannedTick + 1;
-      plannedTick = actionTick + 12;
+      plannedTick = actionTick + captureAfterTicks(action);
       firstRunJobs.push({ id, captureTick: plannedTick, action, actionTick });
     }
     planned.set(index, plannedTick);
@@ -733,7 +739,7 @@ async function captureTrace(browser, kind, baseUrl, root, fixture) {
         snapshot = await page.evaluate(() => window.__TEAR_PARITY_ADAPTER__.snapshot());
       } else if (await page.evaluate(() => window.__TEAR_PARITY_ADAPTER__.screen() === "playing")) {
         const actionTick = targetTick + 1;
-        targetTick = actionTick + 12;
+        targetTick = actionTick + captureAfterTicks(action);
         await queueTickJobs(page, [{ id: captureId, captureTick: targetTick, action, actionTick }]);
         snapshot = await readTickCapture(page, captureId);
       } else {
@@ -767,6 +773,20 @@ async function captureTrace(browser, kind, baseUrl, root, fixture) {
   };
   await page.close();
   return trace;
+}
+
+/**
+ * How many ticks after an in-play action its checkpoint is read: 12 unless the fixture names it.
+ * A checkpoint about the tick an action resolves (a parry, say) reads 1 tick later, so what it
+ * asserts does not depend on how far the world moved on in the ticks after.
+ */
+function captureAfterTicks(action) {
+  const ticks = action.captureAfterTicks ?? 12;
+  assert.ok(
+    Number.isSafeInteger(ticks) && ticks >= 1,
+    `captureAfterTicks must be a whole number of ticks, at least 1; got ${ticks}`,
+  );
+  return ticks;
 }
 
 function checkpoint(trace, label) {
@@ -965,15 +985,13 @@ async function main() {
     assert.equal(oracleHead, ORACLE_REVISION, `oracle worktree is ${oracleHead}; expected ${ORACLE_REVISION}`);
   }
 
-  const currentServer = createStaticServer(currentRoot, Number(process.env.TEAR_PARITY_CURRENT_PORT || 8134));
-  const oracleServer = currentOnly
-    ? null
-    : createStaticServer(oracleRoot, Number(process.env.TEAR_PARITY_ORACLE_PORT || 8135));
+  const currentServer = createStaticServer(currentRoot);
+  const oracleServer = currentOnly ? null : createStaticServer(oracleRoot);
   let browser;
   try {
     await currentServer.listen();
     if (oracleServer) await oracleServer.listen();
-    browser = await chromium.launch({ headless: true });
+    browser = await launchJourney(chromium, { headless: true });
     const currentTrace = await captureTrace(browser, "current", currentServer.baseUrl, currentRoot, fixture);
     fs.mkdirSync(OUTPUT_ROOT, { recursive: true });
     const currentFile = path.join(OUTPUT_ROOT, `${fixture.id}.current.json`);

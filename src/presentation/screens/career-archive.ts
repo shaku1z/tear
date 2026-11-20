@@ -1,7 +1,16 @@
-import { careerRowKey, type CareerEntry } from "../../ghost/career-archive";
-export { careerRowKey } from "../../ghost/career-archive";
+import type { CareerEntry } from "../../ghost/career-archive";
+import { careerRowKey } from "../../domain/career-row-key";
+export { careerRowKey } from "../../domain/career-row-key";
 import type { ProfileScreenView, ScreenAction, ScreenRenderContext } from "./contracts";
-import { page, pageFooter } from "./screen-primitives";
+import {
+  createPageFrame,
+  evenSlots,
+  type ButtonSlot,
+  type FlowAction,
+  type PageFrame,
+  type ScrollBlock,
+  type ScrollView,
+} from "./page-frame";
 
 export const labels: Readonly<Record<string, string>> = {
   history: "ALL RUNS",
@@ -18,10 +27,7 @@ export const labels: Readonly<Record<string, string>> = {
 const PROFILE_HUE = "#b06cff";
 export const SOURCE_COMMANDS = Object.freeze([
   ["THEATER", "watch"],
-  ["COACH", "coach"],
-  ["CHALLENGE", "challenge"],
   ["DOWNLOAD", "download"],
-  ["PUBLISH", "publish"],
   ["CHASE BEST", "chase"],
   ["RACE THIS REFERENCE", "race"],
 ] as const);
@@ -83,187 +89,254 @@ export function runFacts(
   return facts.filter((fact) => fact.length > 0);
 }
 
-/** Presentation only; text editing and source actions use explicit application ports. */
+type Tokens = ScreenRenderContext["ui"]["t"];
+type CareerView = NonNullable<ProfileScreenView["career"]>;
+type Selected = NonNullable<CareerView["selected"]>;
+type Line = Readonly<{ size: number; maxLines: number; baseline: number; height?: number; gap?: number }>;
+/** Desktop placement of a button row: its block height and where each button sits. */
+type Buttons = Readonly<{ blockHeight: number; slots: (frame: PageFrame, count: number) => readonly ButtonSlot[] }>;
+
+/** What both densities draw, with different numbers: the drawers read only this and `DESKTOP`. */
+interface CareerMetrics {
+  readonly gap: number;
+  readonly count: Line;
+  readonly fact: Line;
+  readonly unavailable: Line;
+  /** The run's status line: its message, or the delete question. */
+  readonly status: Line;
+  readonly row: Readonly<{
+    button: number;
+    summaryY: number;
+    summaryLines: number;
+    height: (space: number, count: number, lines: () => number) => number;
+    summary: (height: number) => boolean;
+  }>;
+}
+
+const METRICS: Readonly<Record<"desktop" | "phone", (t: Tokens) => CareerMetrics>> = {
+  desktop: (t) => ({
+    gap: 0,
+    count: { size: t.type.caption, maxLines: 1, baseline: 0, height: 18 },
+    fact: { size: t.type.body, maxLines: 2, baseline: 0, gap: 6 },
+    unavailable: { size: t.type.caption, maxLines: 2, baseline: 0, gap: 0 },
+    status: { size: t.type.caption, maxLines: 1, baseline: 0, height: 18 },
+    row: {
+      button: 38,
+      summaryY: 56,
+      summaryLines: 1,
+      height: (space, count) => Math.max(48, Math.min(92, space / Math.max(3, count))),
+      summary: (height) => height >= 62,
+    },
+  }),
+  phone: (t) => ({
+    gap: t.space.md,
+    count: { size: t.type.caption, maxLines: 2, baseline: 0 },
+    fact: { size: t.type.body, maxLines: 3, baseline: 0 },
+    unavailable: { size: t.type.caption, maxLines: 2, baseline: 0 },
+    status: { size: t.type.caption, maxLines: 2, baseline: 0 },
+    row: {
+      button: t.metric.minTarget,
+      summaryY: t.metric.minTarget + t.space.xs + t.type.caption,
+      summaryLines: 2,
+      height: (_space, _count, lines) => t.metric.minTarget + t.space.xs + lines() * Math.round(t.type.caption * 1.25),
+      summary: () => true,
+    },
+  }),
+};
+
+/** Desktop buttons at fixed offsets from the column's left (a negative offset counts from its right). */
+const at =
+  (...places: readonly (readonly [number, number])[]) =>
+  (frame: PageFrame): readonly ButtonSlot[] =>
+    places.map(([x, w]) => ({ x: x < 0 ? frame.left + frame.width + x : frame.left + x, w }));
+const even = (blockHeight: number): Buttons => ({ blockHeight, slots: (frame, n) => evenSlots(frame, n, 8) });
+
+/** The desktop design's placements, which the phone page does not use (it flows and measures instead). */
+const DESKTOP = {
+  button: 36,
+  filters: { blockHeight: 66, slots: at([0, 220], [232, 250], [494, 190], [696, 120], [-230, 230]) },
+  runActions: { blockHeight: 74, slots: at([0, 230], [242, 190], [444, 170], [626, 170]) },
+  confirm: { blockHeight: 82, slots: at([0, 240], [252, 150]) },
+  sources: even(44),
+  keep: even(38),
+  /** Room for the run rows: under the filters and the count line, above the pager's note line. */
+  rowSpace: (frame: PageFrame) => frame.bottom - 26 - (frame.top + 84),
+  cull: { above: 0, below: 38 },
+  empty: { centre: 120, wrap: 640, ctaWidth: 0, ctaHeight: 0 },
+} as const;
+
+/** The CAREER ARCHIVE: the run list (filters, rows, paging) or one run's facts and actions, at both densities. */
 export function createCareerArchiveRenderer(context: ScreenRenderContext) {
-  return (view: NonNullable<ProfileScreenView["career"]>): void => {
-    const { ui, canvas, width } = context;
-    const layout = page(context, {
+  const { ui } = context,
+    frames = createPageFrame(context);
+  const back: ScreenAction = { type: "profile.selectTab", id: "bests" };
+
+  const control = (label: string, command: string, enabled = true, id?: string): FlowAction => ({
+    label,
+    enabled,
+    action: { type: "career.control", command, ...(id ? { id } : {}) },
+  });
+
+  return (view: CareerView): void => {
+    const m = METRICS[ui.density.compact ? "phone" : "desktop"](ui.t);
+    const frame = frames.open({
       title: "CAREER ARCHIVE",
       subtitle: "every run recorded on this device",
       hue: PROFILE_HUE,
+      desktop: {},
     });
-    const left = layout.left,
-      available = layout.contentWidth;
-    const back: ScreenAction = { type: "profile.selectTab", id: "bests" };
-    const line = (
-      text: string,
-      y: number,
-      options: Readonly<{ muted?: boolean; size?: number; maxLines?: number }> = {},
-    ): number =>
-      ui.textBox(canvas, text, left, y, available, {
-        size: options.size ?? ui.t.type.caption,
-        alpha: options.muted === true ? ui.t.alpha.muted : ui.t.alpha.soft,
-        maxLines: options.maxLines ?? 1,
-      }).height;
-    const button = (
-      label: string,
-      command: string,
-      x: number,
-      y: number,
-      w = 170,
-      enabled = true,
-      id?: string,
-      h = 36,
-    ) => {
-      context.enqueue({
-        x,
-        y,
-        w,
-        h,
-        label,
-        size: ui.t.type.label,
-        enabled,
-        action: { type: "career.control", command, ...(id ? { id } : {}) },
-      });
-    };
-    const toolbarY = layout.bodyTop;
-    /** Ways to use the run's recording; commands whose surface this build does not offer are omitted and the row closes up. */
-    const sourceActions = (e: CareerEntry, y: number, eligible: (command: string) => boolean): void => {
-      const sources = SOURCE_COMMANDS.filter(
-        ([, command]) => context.available?.({ type: "career.control", command }) !== false,
-      );
-      const slots = sources.length,
-        slotWidth = (available - (slots - 1) * 8) / slots;
-      sources.forEach(([label, command], i) => {
-        const enabled = e.present && (e.kind === "capsule" || command === "watch") && eligible(command);
-        button(label, command, left + (i * (available + 8)) / slots, y, slotWidth, enabled);
-      });
-    };
-    /** Tagging and retention for the run on this device. */
-    const keepActions = (e: CareerEntry, retention: string, y: number): void => {
-      const commands = [
-        ["TAGS", "tags"],
-        [retention === "pinned" ? "UNPIN" : "PIN", "pin"],
-        ["KEEP…", "retention"],
-        ["DELETE LOCAL", "delete"],
-      ] as const;
-      commands.forEach(([label, command], i) => {
-        button(
-          label,
-          command,
-          left + (i * (available + 8)) / 4,
-          y,
-          (available - 24) / 4,
-          e.kind === "capsule" || command === "pin" || command === "delete",
-        );
-      });
-    };
-    if (!view.selected) {
-      button("SEARCH / FILTERS", "search", left, toolbarY, 220);
-      button(labels[view.query.view] ?? title(view.query.view), "view", left + 232, toolbarY, 250);
-      button(`SORT: ${view.query.sort.toUpperCase()}`, "sort", left + 494, toolbarY, 190);
-      button("CLEAR", "clear", left + 696, toolbarY, 120);
-      button("RECEIVE BEAT CODE", "beat-receive", left + available - 230, toolbarY, 230);
-      line(
-        `${view.total.toLocaleString("en-US")} ${view.total === 1 ? "run" : "runs"} found · ${view.retained.toLocaleString("en-US")} kept on this device${view.indexing ? " · still reading older runs…" : ""}`,
-        toolbarY + 66,
-        { muted: true },
-      );
-      const listTop = toolbarY + 84,
-        listBottom = layout.bodyBottom - 26;
-      const rowHeight = Math.max(48, Math.min(92, (listBottom - listTop) / Math.max(3, view.rows.length)));
-      view.rows.forEach((row, i) => {
-        const e = row.entry,
-          y = listTop + i * rowHeight;
-        if (y + 38 > listBottom) return;
-        button(
-          `${title(e.mode)} · ${title(e.weapon)} · ${title(e.result)}`,
-          "select",
-          left,
-          y,
-          available,
-          true,
-          careerRowKey(row),
-          38,
-        );
-        if (rowHeight >= 62) {
-          const summary =
-            view.query.view === "dna-evolution"
-              ? Object.entries(e.dna)
-                  .map(([key, value]) => `${key} ${percent(value)}`)
-                  .join(" · ") || "Run DNA not recorded for this run"
-              : `${e.date.slice(0, 10)} · wave ${unknown(e.wave)} · score ${e.score === null ? "—" : e.score.toLocaleString("en-US")}${row.notes.retention === "pinned" ? " · pinned" : ""}${row.notes.tags.length ? ` · ${row.notes.tags.join(", ")}` : ""}`;
-          line(row.detail ?? summary, y + 56, { muted: true });
-        }
-      });
-      if (!view.rows.length)
-        ui.emptyState(
-          canvas,
-          "◇",
-          view.status === "loading" ? "Reading your runs…" : "No runs match",
-          width / 2,
-          listTop + 120,
-          view.status === "loading"
-            ? undefined
-            : "Try CLEAR to drop the filters, or play a run — it is recorded here automatically.",
-          640,
-        );
-      const footer = pageFooter(context, { back });
-      button("‹ PREVIOUS", "previous", left, footer.footerY + 6, 170, view.page > 0);
-      button("NEXT ›", "next", left + 182, footer.footerY + 6, 150, view.page + 1 < view.pages);
-      ui.text(
-        canvas,
-        `Page ${String(view.page + 1)} / ${String(Math.max(1, view.pages))}`,
-        layout.right,
-        footer.footerY + 30,
-        ui.t.type.caption,
-        "right",
-        ui.t.alpha.muted,
-      );
-      if (view.message) line(view.message, layout.bodyBottom - 4, { muted: true });
-      return;
+    const desktop = { top: frame.top, cull: DESKTOP.cull, scrolls: false };
+    const pager = view.selected
+      ? undefined
+      : {
+          previous: control("‹ PREVIOUS", "previous", view.page > 0),
+          next: control("NEXT ›", "next", view.page + 1 < view.pages),
+          label: `Page ${String(view.page + 1)} / ${String(Math.max(1, view.pages))}`,
+          note: view.message || undefined,
+        };
+    const parts = view.selected ? detail(frame, m, view, view.selected) : list(frame, m, view);
+    frames.close(frame, frames.body(frame, { ...parts, pager, gap: m.gap, desktop }), { back, pager });
+  };
+
+  function buttons(frame: PageFrame, items: readonly FlowAction[], place: Buttons): ScrollBlock {
+    const slots = place.slots(frame, items.length);
+    return frames.actions(frame, items, {
+      height: DESKTOP.button,
+      size: ui.t.type.label,
+      blockHeight: place.blockHeight,
+      slots,
+    });
+  }
+
+  function line(frame: PageFrame, text: string, style: Line, alpha?: number): ScrollBlock;
+  function line(frame: PageFrame, text: string | undefined, style: Line, alpha?: number): ScrollBlock | undefined;
+  function line(frame: PageFrame, text: string | undefined, style: Line, alpha = ui.t.alpha.muted) {
+    return frames.prose(frame, text, { ...style, align: "left", alpha, box: true });
+  }
+
+  function list(frame: PageFrame, m: CareerMetrics, view: CareerView) {
+    const filters = [
+      control("SEARCH / FILTERS", "search"),
+      control(labels[view.query.view] ?? title(view.query.view), "view"),
+      control(`SORT: ${view.query.sort.toUpperCase()}`, "sort"),
+      control("CLEAR", "clear"),
+    ];
+    const found = `${view.total.toLocaleString("en-US")} ${view.total === 1 ? "run" : "runs"} found`,
+      kept = `${view.retained.toLocaleString("en-US")} kept on this device`;
+    const head = [
+      buttons(frame, filters, DESKTOP.filters),
+      line(frame, `${found} · ${kept}${view.indexing ? " · still reading older runs…" : ""}`, m.count),
+    ];
+    if (view.rows.length === 0) {
+      const loading = view.status === "loading";
+      const copy = {
+        glyph: "◇",
+        line: loading ? "Reading your runs…" : "No runs match",
+        detail: loading
+          ? undefined
+          : "Try CLEAR to drop the filters, or play a run — it is recorded here automatically.",
+      };
+      return { head, list: [frames.emptyState(frame, copy, undefined, DESKTOP.empty)] };
     }
-    const { entry: e, notes, detail } = view.selected;
+    const space = DESKTOP.rowSpace(frame);
+    return { head, list: view.rows.map((row) => runRow(frame, m, view, row, space)) };
+  }
+
+  function summaryOf(view: CareerView, row: CareerView["rows"][number]): string {
+    const e = row.entry;
+    if (row.detail) return row.detail;
+    if (view.query.view === "dna-evolution")
+      return (
+        Object.entries(e.dna)
+          .map(([key, value]) => `${key} ${percent(value)}`)
+          .join(" · ") || "Run DNA not recorded for this run"
+      );
+    const score = e.score === null ? "—" : e.score.toLocaleString("en-US"),
+      pinned = row.notes.retention === "pinned" ? " · pinned" : "",
+      tags = row.notes.tags.length ? ` · ${row.notes.tags.join(", ")}` : "";
+    return `${e.date.slice(0, 10)} · wave ${unknown(e.wave)} · score ${score}${pinned}${tags}`;
+  }
+
+  /** One run: a full-width button naming it, with its summary under it when there is room. */
+  function runRow(
+    frame: PageFrame,
+    m: CareerMetrics,
+    view: CareerView,
+    row: CareerView["rows"][number],
+    space: number,
+  ): ScrollBlock {
+    const t = ui.t,
+      e = row.entry,
+      summary = summaryOf(view, row);
+    const label = `${title(e.mode)} · ${title(e.weapon)} · ${title(e.result)}`;
+    const height = m.row.height(space, view.rows.length, () =>
+      frames.lineCount(summary, frame.width, t.type.caption, m.row.summaryLines),
+    );
+    const draw = (y: number, scrollView: ScrollView): void => {
+      const { action } = control(label, "select", true, careerRowKey(row));
+      scrollView.enqueue({
+        x: frame.left,
+        y,
+        w: frame.width,
+        h: m.row.button,
+        label,
+        size: t.type.label,
+        enabled: true,
+        action,
+      });
+      if (m.row.summary(height))
+        ui.textBox(context.canvas, summary, frame.left, y + m.row.summaryY, frame.width, {
+          size: t.type.caption,
+          maxLines: m.row.summaryLines,
+          lineHeight: frames.lineHeight(t.type.caption),
+          alpha: t.alpha.muted,
+        });
+    };
+    return { height, draw };
+  }
+
+  function detail(frame: PageFrame, m: CareerMetrics, view: CareerView, selected: Selected) {
+    const t = ui.t,
+      { entry: e, notes } = selected;
     const raceEligible = e.seedRaceRole === "reference" && e.verified === "receipts" && e.result !== null;
     const chaseEligible =
       !e.beatAttempt &&
       !e.assisted &&
       e.verified === "receipts" &&
-      detail?.startsWith("Recorded category best") === true;
-    button("BACK TO RESULTS", "back", left, toolbarY, 230);
-    button(
-      e.beatAttempt ? "BEAT RESULT" : "BEAT THIS RUN",
-      e.beatAttempt ? "beat-review" : "beat",
-      left + 242,
-      toolbarY,
-      190,
-      e.present && e.kind === "capsule",
+      selected.detail?.startsWith("Recorded category best") === true;
+    const top: FlowAction[] = [control("BACK TO RESULTS", "back")];
+    const facts = runFacts(e, selected.detail, notes, chaseEligible).map((fact, index) =>
+      line(frame, fact, { ...m.fact, size: index === 0 ? t.type.lead : m.fact.size }, t.alpha.soft),
     );
-    if (e.beatAttempt) {
-      button("SAVE RESULT", "beat-save", left + 444, toolbarY, 170);
-      button("RETRY BEAT", "beat-retry", left + 626, toolbarY, 170);
-    }
-    const actionsY = layout.bodyBottom - 82;
-    let y = toolbarY + 74;
-    for (const [index, fact] of runFacts(e, detail, notes, chaseEligible).entries()) {
-      if (y > actionsY - 56) break;
-      y += line(fact, y, { size: index === 0 ? ui.t.type.lead : ui.t.type.body, maxLines: 2 }) + 6;
-    }
-    if (e.unavailable.length > 0 && y <= actionsY - 56)
-      line(`Not recorded for this run: ${e.unavailable.join(", ")}`, y, { muted: true, maxLines: 2 });
+    if (e.unavailable.length > 0)
+      facts.push(line(frame, `Not recorded for this run: ${e.unavailable.join(", ")}`, m.unavailable));
+    const head = [buttons(frame, top, DESKTOP.runActions)];
     if (view.confirming) {
-      line("Delete this run from this device? Its tags go too. Copies you shared elsewhere stay.", actionsY - 18);
-      button("DELETE LOCAL", "confirm-delete", left, actionsY, 240);
-      button("KEEP", "cancel-delete", left + 252, actionsY, 150);
-    } else {
-      sourceActions(
-        e,
-        actionsY,
-        (command) => (command !== "chase" || chaseEligible) && (command !== "race" || raceEligible),
-      );
-      keepActions(e, notes.retention, actionsY + 44);
+      const question = "Delete this run from this device? Its tags go too. Copies you shared elsewhere stay.";
+      const choice = [control("DELETE LOCAL", "confirm-delete"), control("KEEP", "cancel-delete")];
+      const tail = [line(frame, question, m.status, t.alpha.soft), buttons(frame, choice, DESKTOP.confirm)];
+      return { head, list: facts, tail };
     }
-    if (view.message && !view.confirming) line(view.message, actionsY - 18, { muted: true });
-    pageFooter(context, { back });
-  };
+    // Ways to use the run's recording; commands this build does not offer are left out and the row closes up.
+    const eligible = (command: string): boolean =>
+      e.present &&
+      (e.kind === "capsule" || command === "watch") &&
+      (command !== "chase" || chaseEligible) &&
+      (command !== "race" || raceEligible);
+    const sources = SOURCE_COMMANDS.filter(
+      ([, command]) => context.available?.({ type: "career.control", command }) !== false,
+    ).map(([label, command]) => control(label, command, eligible(command)));
+    const keep = [
+      control("TAGS", "tags", e.kind === "capsule"),
+      control(notes.retention === "pinned" ? "UNPIN" : "PIN", "pin"),
+      control("KEEP…", "retention", e.kind === "capsule"),
+      control("DELETE LOCAL", "delete"),
+    ];
+    const tail = [
+      line(frame, view.message || undefined, m.status),
+      buttons(frame, sources, DESKTOP.sources),
+      buttons(frame, keep, DESKTOP.keep),
+    ];
+    return { head, list: facts, tail };
+  }
 }

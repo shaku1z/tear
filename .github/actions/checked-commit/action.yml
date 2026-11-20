@@ -1,0 +1,51 @@
+name: Check out the checked commit
+description: >-
+  Every Validate job checks the same commit: a pull request's head merged with one main commit, made
+  with a fixed identity and date so each job's merge is the identical commit the scope job recorded.
+  Then Node, pnpm and the dependencies.
+inputs:
+  main:
+    description: The main commit to merge (empty on a push to main, which checks itself)
+    required: true
+  commit:
+    description: The commit the scope job recorded; empty only in the scope job itself
+    required: false
+    default: ""
+  install:
+    description: Install pnpm and the dependencies
+    required: false
+    default: "true"
+outputs:
+  commit:
+    description: The checked commit
+    value: ${{ steps.merge.outputs.commit }}
+runs:
+  using: composite
+  steps:
+    # A pull request is checked as its head merged with main as main was when the scope job ran,
+    # not GitHub's prepared merge ref, which a re-run reuses and a reopen can serve stale.
+    - name: Merge main into the change
+      id: merge
+      shell: bash
+      env:
+        MAIN: ${{ inputs.main }}
+        EXPECTED: ${{ inputs.commit }}
+      # The runner's own Node runs it (setup-node comes later); it uses only Node's built-in modules.
+      # It also writes TEAR_RELEASE_SHA and TEAR_BUILD_GIT_SHA, which every later step reads.
+      run: node scripts/ci-checked-commit.mjs
+    - if: inputs.install == 'true'
+      uses: pnpm/action-setup@v4
+      with:
+        version: 11.15.0
+    - if: inputs.install == 'true'
+      uses: actions/setup-node@v4
+      with:
+        node-version-file: .node-version
+        cache: pnpm
+    - if: inputs.install != 'true'
+      uses: actions/setup-node@v4
+      with:
+        node-version-file: .node-version
+    - if: inputs.install == 'true'
+      shell: bash
+      run: pnpm install --frozen-lockfile

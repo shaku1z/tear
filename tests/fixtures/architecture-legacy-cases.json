@@ -14,7 +14,7 @@
     "R06"
    ],
    "file": "src/tearbench/__planted-world-violation.ts",
-   "text": "import type { GameEnemy } from \"../app/shell/game-runtime-state\";",
+   "text": "import type { GameEnemy } from \"../gameplay/runtime/game-runtime-state\";",
    "reject": true
   },
   {
@@ -1278,15 +1278,15 @@
    "legacy": [
     "R11"
    ],
-   "file": "src/tearbench/production-headless-environment.ts",
-   "text": "import { startLiveGame } from \"../app/shell/game-runtime\";",
+   "file": "src/playtest/headless/production-headless-environment.ts",
+   "text": "import { startLiveGame } from \"../../app/shell/game-runtime\";",
    "reject": true
   },
   {
    "legacy": [
     "R12"
    ],
-   "file": "src/tearbench/production-headless-environment.ts",
+   "file": "src/playtest/headless/production-headless-environment.ts",
    "text": "const canvas: HTMLCanvasElement | null = null;",
    "reject": true
   },
@@ -1319,7 +1319,7 @@
     "R16"
    ],
    "file": "src/tearbench/index.ts",
-   "text": "export * from \"./state-forge-studio\";",
+   "text": "export * from \"./state-editor\";",
    "reject": true
   },
   {

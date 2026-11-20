@@ -1,3 +1,4 @@
+import { isRecord } from "../domain/records";
 import type { CommandEnvelope } from "../domain/envelopes";
 import type { TearScoreReplayMetadata } from "../domain/tear-score-replay";
 import { hasMonotonicEnvelopes } from "../domain/envelopes";
@@ -54,10 +55,6 @@ export interface ReplayValidationIssue {
 
 export type ReplayValidationResult =
   Readonly<{ ok: true; replay: ReplayEnvelopeV2 }> | Readonly<{ ok: false; issues: readonly ReplayValidationIssue[] }>;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function nonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;

@@ -5,10 +5,14 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  batchBranchRefusal,
+  awaitBatchRun,
+  batchReadVerdict,
   BATCH_BRANCH,
   batchBranch,
   chooseMembers,
   failedChecks,
+  failedSteps,
   formatMembers,
   isNetworkFailure,
   mergeMessage,
@@ -24,6 +28,7 @@ afterEach(() => {
   for (const directory of made.splice(0)) fs.rmSync(directory, { recursive: true, force: true });
 });
 
+const green = [{ name: "check", conclusion: "SUCCESS" }];
 const open = [
   {
     number: 7,
@@ -32,6 +37,7 @@ const open = [
     headRefName: "codex/a",
     baseRefName: "main",
     isCrossRepository: false,
+    statusCheckRollup: green,
   },
   {
     number: 3,
@@ -40,6 +46,7 @@ const open = [
     headRefName: "codex/b",
     baseRefName: "main",
     isCrossRepository: false,
+    statusCheckRollup: green,
   },
   {
     number: 5,
@@ -48,6 +55,7 @@ const open = [
     headRefName: "codex/c",
     baseRefName: "main",
     isCrossRepository: false,
+    statusCheckRollup: green,
   },
   {
     number: 9,
@@ -56,6 +64,7 @@ const open = [
     headRefName: "x",
     baseRefName: "main",
     isCrossRepository: true,
+    statusCheckRollup: green,
   },
   {
     number: 4,
@@ -64,6 +73,7 @@ const open = [
     headRefName: "codex/d",
     baseRefName: "release",
     isCrossRepository: false,
+    statusCheckRollup: green,
   },
 ];
 
@@ -84,6 +94,31 @@ describe("pnpm merge:batch", () => {
       { pr: 5, reason: "a draft" },
       { pr: 3, reason: "left out with --without" },
       { pr: 42, reason: "not an open pull request" },
+    ]);
+  });
+
+  it("leaves out a member whose own checks were skipped, never reported or failed, and keeps one still running", () => {
+    const member = (number, statusCheckRollup) => ({ ...open[0], number, statusCheckRollup });
+    // #296: every check on its head ran while it was a draft and was skipped.
+    const skipped = ["scope", "docs", "static", "unit", "build", "check"].map((name) => ({
+      name,
+      conclusion: "SKIPPED",
+    }));
+    const { chosen, refused } = chooseMembers(
+      [
+        member(296, skipped),
+        member(297, []),
+        member(298, [{ name: "check", conclusion: "FAILURE" }]),
+        member(299, [{ name: "check", status: "IN_PROGRESS", conclusion: "" }]),
+        member(300, green),
+      ],
+      { numbers: [296, 297, 298, 299, 300] },
+    );
+    expect(chosen.map((entry) => entry.pr)).toEqual([299, 300]);
+    expect(refused).toEqual([
+      { pr: 296, reason: "its own checks did not run (skipped, likely a draft); push to start them" },
+      { pr: 297, reason: "its own checks did not run (skipped, likely a draft); push to start them" },
+      { pr: 298, reason: "its own required check failed; fix it and push" },
     ]);
   });
 
@@ -164,6 +199,16 @@ describe("pnpm merge:batch", () => {
     expect(failedChecks(log)).toEqual(["unit.vitest", "browser.pale-variants"]);
   });
 
+  it("names the failed steps of every job of a run, not only the required one", () => {
+    const jobs = [
+      { name: "unit", steps: [{ name: "Unit tests", conclusion: "success" }] },
+      { name: "browser (3/4)", steps: [{ name: "Browser checks", conclusion: "failure" }] },
+      { name: "check", steps: [{ name: "Every needed job passed", conclusion: "failure" }] },
+      { name: "docs" },
+    ];
+    expect(failedSteps(jobs)).toEqual(["browser (3/4): Browser checks", "check: Every needed job passed"]);
+  });
+
   describe("Validate's --record step", { timeout: 30_000 }, () => {
     function repo() {
       const directory = fs.mkdtempSync(path.join(os.tmpdir(), "tear-batch-record-"));
@@ -198,5 +243,93 @@ describe("pnpm merge:batch", () => {
       expect(record(directory, `7:${"7".repeat(40)}`).status).toBe(1);
       expect(record(directory, "7:nope").status).toBe(1);
     });
+  });
+});
+
+describe("reading the batch run before --merge", () => {
+  const main = "6814d997dbeafc0e69ddc8a54efec02573ae354b";
+  const note = `main=${main} members=296:${"5".repeat(40)},282:${"6".repeat(40)}`;
+  const run = (status, conclusion) => ({ id: 44694875420, status, conclusion });
+
+  it("merges only on a passed run with its note, and names what it read otherwise", () => {
+    expect(batchReadVerdict({ latest: run("completed", "success"), note })).toMatchObject({
+      verdict: "ready",
+      main,
+      members: `296:${"5".repeat(40)},282:${"6".repeat(40)}`,
+    });
+    // The partial reads GitHub can serve right after a run ends: still running, or no annotation yet.
+    expect(batchReadVerdict({ latest: run("in_progress", null), note: "" })).toEqual({
+      verdict: "wait",
+      said: "run 44694875420: in_progress, conclusion none, no batch note",
+    });
+    expect(batchReadVerdict({ latest: run("completed", "success"), note: "" })).toEqual({
+      verdict: "wait",
+      said: "run 44694875420: completed, conclusion success, no batch note",
+    });
+    expect(batchReadVerdict({ latest: run("completed", "failure"), note: "" })).toEqual({
+      verdict: "refuse",
+      said: "run 44694875420: completed, conclusion failure, no batch note",
+    });
+    expect(batchReadVerdict({ latest: undefined, note: "" })).toEqual({ verdict: "refuse", said: "no Validate run" });
+  });
+
+  it("waits through a partial read and merges on the next full one", () => {
+    const reads = [
+      { latest: run("completed", "success"), note: "" },
+      { latest: run("completed", "success"), note },
+    ];
+    let clock = 0;
+    const waits = [];
+    const result = awaitBatchRun("codex/batch-20261120t072326z", {
+      read: () => reads.shift(),
+      now: () => clock,
+      sleep: (ms) => (clock += ms),
+      log: (line) => waits.push(line),
+    });
+    expect(result.verdict).toBe("ready");
+    expect(reads).toEqual([]);
+    expect(waits).toEqual([
+      "waiting for the batch run on codex/batch-20261120t072326z: run 44694875420: completed, conclusion success, no batch note",
+    ]);
+  });
+
+  it("gives up after the wait, naming the last read, and refuses a failed run without waiting", () => {
+    let clock = 0;
+    const options = { now: () => clock, sleep: (ms) => (clock += ms), log: () => undefined };
+    expect(() =>
+      awaitBatchRun("codex/batch-x", { ...options, read: () => ({ latest: run("completed", "success"), note: "" }) }),
+    ).toThrow(
+      "the batch run on codex/batch-x did not report a pass with its members within 180 s; last read run 44694875420: completed, conclusion success, no batch note",
+    );
+    expect(clock).toBeLessThanOrEqual(180_000);
+    clock = 0;
+    expect(() =>
+      awaitBatchRun("codex/batch-x", { ...options, read: () => ({ latest: run("completed", "cancelled"), note }) }),
+    ).toThrow(
+      "the batch run on codex/batch-x did not pass: run 44694875420: completed, conclusion cancelled, a batch note",
+    );
+    expect(clock).toBe(0);
+  });
+});
+
+describe("the batch branch --status, --merge and --verify are asked about", () => {
+  const onOrigin = new Set(["codex/batch-20261120t072326z"]);
+  const exists = (name) => onOrigin.has(name);
+
+  it("refuses a name copied with extra text, and says so", () => {
+    // The lead's wrapper captured "batch codex/batch-…: #…" with its colon.
+    expect(batchBranchRefusal("codex/batch-20261120t072326z:", exists)).toBe(
+      '"codex/batch-20261120t072326z:" is not a batch branch name (codex/batch-<yyyymmdd>t<hhmmss>z)',
+    );
+    expect(batchBranchRefusal(undefined, exists)).toBe(
+      '"undefined" is not a batch branch name (codex/batch-<yyyymmdd>t<hhmmss>z)',
+    );
+  });
+
+  it("refuses a batch branch that is not on origin, and accepts one that is", () => {
+    expect(batchBranchRefusal("codex/batch-20261120t000000z", exists)).toBe(
+      "codex/batch-20261120t000000z does not exist on origin",
+    );
+    expect(batchBranchRefusal("codex/batch-20261120t072326z", exists)).toBeUndefined();
   });
 });

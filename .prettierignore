@@ -12,9 +12,8 @@ tear-crazygames/
 pnpm-lock.yaml
 package-lock.json
 
-# Vendored, preserved and synced content.
+# Vendored and synced content.
 public/
-preservation/
 wiki/
 vendor/
 
@@ -35,10 +34,6 @@ vendor/
 !/wrangler*.jsonc
 
 # Generated code.
-# `pnpm generate:ghost-types` writes this from `wrangler types`, and
-# `pnpm check:ghost-types` compares it with fresh output.
-workers/worker-configuration.d.ts
-workers/.worker-configuration.*.d.ts
 # Contour tables generated from registered stage masks (see each file header).
 src/presentation/verdant-foreground-occlusion.ts
 src/presentation/verdant-pool-receiver.ts

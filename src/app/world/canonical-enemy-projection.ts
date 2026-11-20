@@ -1,6 +1,6 @@
 import type { RuntimeEnemyState } from "../../gameplay/runtime/canonical-state";
 import type { EnemyTypes } from "../../gameplay/entities/enemies";
-import type { GameEnemy } from "../shell/game-runtime-state";
+import type { GameEnemy } from "../../gameplay/runtime/game-runtime-state";
 
 /** Preserves authored deterministic actor state in live canonical receipts. */
 export function projectLiveCanonicalEnemy(entity: GameEnemy): RuntimeEnemyState {

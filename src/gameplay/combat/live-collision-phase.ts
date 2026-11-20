@@ -1,5 +1,6 @@
 import type { TutorialAttemptFact } from "../training/tutorial-failure-coach";
 import type { CONFIG as GameConfiguration } from "../../config/game-config";
+import { isObject } from "../../domain/records";
 import type {
   HeldBladeCollisionInput,
   HeldBladeEnemy,
@@ -26,6 +27,7 @@ import {
   type ParryRun,
 } from "./blade-parry-runtime";
 import {
+  resolveBodyBlocks,
   resolveEnemyContact,
   resolveHostileBladeContact,
   type ContactEnemy,
@@ -48,6 +50,7 @@ import type { BladePlayerPort } from "../entities/blade-contracts";
 import {
   resolveEnvironmentWeaponProjectileContacts,
   resolveHeldEnvironmentWeaponContacts,
+  resolveThrownEnvironmentWeaponContacts,
   type EnvironmentWeaponContactPort,
 } from "./environment-weapon-contact-runtime";
 
@@ -221,9 +224,18 @@ export function runLiveCollisionPhase(host: LiveCollisionPhaseHost, dt: number):
       ...(host.environmentTick === undefined ? {} : { tick: host.environmentTick() }),
     });
   }
+  if (host.environment !== undefined && blade.thrown)
+    resolveThrownEnvironmentWeaponContacts({
+      environment: host.environment,
+      blade,
+      segment: blade.thrownCollisionSegment(),
+      pad: blade.thrownCollisionPad(),
+      ...(host.environmentTick === undefined ? {} : { tick: host.environmentTick() }),
+    });
   runThrown(host);
   runParries(host, held);
   host.combat.resolveProjectilePhases(dt, projectileTuning(host));
+  resolveBodyBlocks(state.enemies, player, host.width, dt, host.overlap);
   resolveEnemyContact(state.enemies, player, {
     overlaps: host.overlap,
     segmentDistance: () => Infinity,
@@ -510,9 +522,9 @@ function runParries(host: LiveCollisionPhaseHost, held: HeldBladeCollisionInput[
       logPerfectParry: (source) => {
         if (host.blade.weapon?.id === "riftlock")
           host.blade.refillRiftChambers(config.weapons.riftlock.perfectParryRefill);
-        if (host.blade.weapon?.id === "sword" && source && typeof source === "object") host.blade.primeReversal(source);
+        if (host.blade.weapon?.id === "sword" && isObject(source)) host.blade.primeReversal(source);
         host.logWeapon("perfectParry", {
-          source: source && typeof source === "object" && "kind" in source ? Reflect.get(source, "kind") : undefined,
+          source: isObject(source) && "kind" in source ? Reflect.get(source, "kind") : undefined,
         });
       },
       projectileDeflected: (projectile) => {

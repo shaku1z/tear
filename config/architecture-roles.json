@@ -24,8 +24,7 @@
         "src/gameplay/entities/rootbinder-runtime.ts",
         "src/gameplay/entities/enemy-types/rootbound.ts",
         "src/gameplay/entities/enemy-types/rootbound-tuning.ts",
-        "src/gameplay/entities/enemy-types/rootbound-moves.ts",
-        "src/gameplay/entities/enemy-types/rootbound-tells.ts"
+        "src/gameplay/entities/enemy-types/rootbound-moves.ts"
       ]
     },
     "biome.pale.implementation": {
@@ -41,7 +40,7 @@
       ]
     },
     "biome.verdant.implementation": {
-      "purpose": "Every module that implements Verdant-specific behaviour (gameplay, presentation, app wiring, TearBench forge); forbidden targets for Pale and neutral code.",
+      "purpose": "Every module that implements Verdant-specific behaviour (gameplay, presentation, app wiring, TearBench state setup); forbidden targets for Pale and neutral code.",
       "include": [
         "src/gameplay/environment/bloom-well.ts",
         "src/gameplay/environment/bloom-well-presentation-facts.ts",
@@ -53,10 +52,9 @@
         "src/gameplay/entities/enemy-types/rootbound.ts",
         "src/gameplay/entities/enemy-types/rootbound-tuning.ts",
         "src/gameplay/entities/enemy-types/rootbound-moves.ts",
-        "src/gameplay/entities/enemy-types/rootbound-tells.ts",
         "src/presentation/environment/bloom-well-presentation.ts",
         "src/gameplay/environment/biome-actors/bloom-well-actors.ts",
-        "src/tearbench/rootbound-graft-anchor-forge.ts"
+        "src/tearbench/rootbound-graft-anchor-setup.ts"
       ]
     },
     "environment.neutral-foundation": {
@@ -116,7 +114,7 @@
     },
     "tearbench.production-headless-entry": {
       "purpose": "The production headless environment entry, run outside any browser.",
-      "include": ["src/tearbench/production-headless-environment.ts"]
+      "include": ["src/playtest/headless/production-headless-environment.ts"]
     },
     "tearbench.portable-live-runtime": {
       "purpose": "Portable live TearBench environment and action routing.",
@@ -134,8 +132,8 @@
       "purpose": "Browser/developer UI and test-support modules that the portable barrel must not expose.",
       "include": ["@tearbench.browser-adapters", "src/tearbench/test-support/**"],
       "anticipate": [
-        "src/tearbench/state-forge-studio.ts",
-        "src/tearbench/live-state-forge-studio-host.ts",
+        "src/tearbench/state-editor.ts",
+        "src/tearbench/live-state-editor-host.ts",
         "src/tearbench/test-environment.ts"
       ]
     },
@@ -175,9 +173,9 @@
       "purpose": "The only modules that may import the handoff: the composition root and the first-gesture audio facade.",
       "include": ["src/app/shell/composition.ts", "src/audio/legacy-synth.ts"]
     },
-    "app.world-runtime-types": {
-      "purpose": "Concrete app world types that portable TearBench code must not consume.",
-      "include": ["src/app/shell/game-runtime-state.ts"]
+    "gameplay.world-runtime-types": {
+      "purpose": "Concrete live world state types that portable TearBench code must not consume.",
+      "include": ["src/gameplay/runtime/game-runtime-state.ts"]
     },
     "app.live-runtime-root": {
       "purpose": "The live runtime wiring root (startLiveGame); it composes typed owners and must not own world, interface or session state itself.",
@@ -195,11 +193,11 @@
     "app.document-owners": {
       "purpose": "App modules that may touch the browser document directly; everything else in src/app receives it through the composition port.",
       "include": [
-        "src/app/replay/browser-boss-memory.ts",
         "src/app/library/browser-ghost-archive-files.ts",
         "src/app/replay/browser-ghost-career-search.ts",
         "src/app/replay/browser-ghost-career.ts",
-        "src/app/replay/browser-ghost-studio-media.ts",
+        "src/app/replay/browser-ghost-replay-presentation.ts",
+        "src/app/replay/browser-replay-clip-export.ts",
         "src/app/shell/composition.ts",
         "src/app/campaign/campaign-training-composition.ts",
         "src/app/engineering/debug-harness.ts",
@@ -234,9 +232,37 @@
       "purpose": "Modules that still write PROFILE directly instead of through a composition-owned persistence adapter. Ratchet target: empty (plan step 12).",
       "include": ["src/app/screens/menu-screen-adapters-runtime.ts", "src/app/run/run-start-host.ts"]
     },
-    "engineering.channel-entries": {
-      "purpose": "Engineering-channel entry modules that composition loads only through a build-guarded dynamic import. None exists today; the pattern guards the next one.",
+    "release.developer-only": {
+      "purpose": "Developer and test code that no release build may contain: the scripted test player, the playtest tool, TearBench's browser and test-support modules and the debug harness. Other code may load it only through a dynamic import guarded by a build constant, and a release build fails when one of these modules contributes code to a bundle (scripts/release-developer-code.mjs).",
+      "include": ["@tearbench.developer-surfaces", "src/agents/**", "src/playtest/**", "src/app/engineering/debug-*.ts"],
       "anticipate": ["src/app/engineering/*-channel-entry.ts"]
+    },
+    "release.mobile-only": {
+      "purpose": "Phone and tablet code that a production build leaves out while mobile is paused (owner, 2026-11-19; plans/MOBILE_LATER.md): the touch input layer and its control layout, the drawn touch controls and their coaching, the rotate gate and the phone profile layout. Other code reaches it only behind __TEAR_MOBILE__, and a build of a target whose mobile is false in config/build-targets.json fails when one of these modules contributes code to a bundle (scripts/release-developer-code.mjs).",
+      "include": [
+        "src/input/browser-touch.ts",
+        "src/input/touch-control-layout.ts",
+        "src/presentation/world/touch-controls.ts",
+        "src/presentation/rotate-gate.ts",
+        "src/presentation/screens/compact-profile.ts",
+        "src/app/training/touch-onboarding-controller.ts"
+      ]
+    },
+    "release.mobile-guarded-importers": {
+      "purpose": "Shared modules that value-import mobile-only code and reach it only behind __TEAR_MOBILE__, so a production build shakes it out. A new importer goes through one of these.",
+      "include": [
+        "src/input/browser-input.ts",
+        "src/presentation/world/index.ts",
+        "src/presentation/render-pipeline.ts",
+        "src/presentation/screens/profile-achievements.ts",
+        "src/app/interface/interface-composition.ts",
+        "src/app/interface/presentation-composition.ts",
+        "src/app/shell/composition.ts"
+      ]
+    },
+    "release.build-guarded-importers": {
+      "purpose": "Release modules that still import developer-only code with a static import and rely on a build constant and tree-shaking to drop it. Ratchet target: empty.",
+      "include": ["src/app/engineering/test-build-runtime-hooks.ts", "src/app/shell/composition.ts"]
     },
     "size.authored-data-exceptions": {
       "purpose": "Authored data tables exempt from the 700-line (line-equivalent) module limit.",

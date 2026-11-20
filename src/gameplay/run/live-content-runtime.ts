@@ -1,5 +1,7 @@
 import type { RandomSource } from "../../domain/random";
 import { shuffledBossRoster, type BossId } from "./content-director";
+import { gauntletTrialOrder } from "./gauntlet-trials";
+import { bossIdsAvailableOn } from "../stages";
 import {
   completeEnemySpawn,
   constructLiveEnemy,
@@ -42,6 +44,8 @@ export interface LiveContentRuntimeOptions<TEnemy extends LiveSpawnEnemy> {
 
 export interface LiveContentRuntimeApi<TEnemy extends LiveSpawnEnemy> {
   readonly shuffledRoster: () => BossId[];
+  /** The Gauntlet's trial order for a new run (see `gauntletTrialOrder`). */
+  readonly gauntletTrials: () => BossId[];
   readonly modeWaves: (mode: string) => number;
   readonly contentWave: () => number;
   readonly sideSpawn: () => number;
@@ -77,6 +81,7 @@ export function createLiveContentRuntime<TEnemy extends LiveSpawnEnemy>(
   };
   const api: LiveContentRuntimeApi<TEnemy> = {
     shuffledRoster: () => shuffledBossRoster(options.random),
+    gauntletTrials: () => gauntletTrialOrder(bossIdsAvailableOn("gauntlet"), options.random),
     modeWaves: (mode: string) => options.modes().find((candidate) => candidate.id === mode)?.waves ?? 0,
     contentWave: () => {
       const run = options.run();

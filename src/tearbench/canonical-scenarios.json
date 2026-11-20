@@ -21,8 +21,7 @@
     ],
     "maxTicks": 240,
     "testFiles": [
-      "tests/unit/run-lifecycle.test.ts",
-      "tests/unit/app-state-machine.test.ts"
+      "tests/unit/run-lifecycle.test.ts"
     ],
     "evidence": {
       "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
@@ -560,7 +559,7 @@
       "tests/unit/white-hart-foundation.test.ts",
       "tests/unit/white-hart-phases.test.ts",
       "tests/unit/white-hart-route-runtime.test.ts",
-      "tests/unit/white-hart-state-forge.test.ts"
+      "tests/unit/white-hart-state-setup.test.ts"
     ],
     "evidence": {
       "command": "pnpm build:test:standalone && node tests/browser-pale-white-hart-phases.js",
@@ -788,7 +787,7 @@
     ],
     "maxTicks": 24,
     "testFiles": [
-      "tests/unit/rootbinder-network.test.ts"
+      "tests/unit/rootbinder-roots.test.ts"
     ],
     "evidence": {
       "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
@@ -909,7 +908,7 @@
   },
   {
     "id": "chainblade-hook-sling-catch-seek",
-    "description": "Forge one current Chainblade/charger encounter, prove its production Hook & Sling, recall, and catch lifecycle, seal it, and verify fresh production seeks at supported retained receipts.",
+    "description": "Set up one current Chainblade/charger encounter, prove its production Hook & Sling, recall, and catch lifecycle, seal it, and verify fresh production seeks at supported retained receipts.",
     "subject": {
       "kind": "weapon",
       "id": "chainblade"
@@ -961,7 +960,7 @@
   },
   {
     "id": "hammer-meteor-terrain-catch-seek",
-    "description": "Forge one normal Hammer state, throw down onto authored terrain, prove the real Meteor resolve and catch lifecycle, seal it, and verify fresh production seeks at each retained receipt.",
+    "description": "Set up one normal Hammer state, throw down onto authored terrain, prove the real Meteor resolve and catch lifecycle, seal it, and verify fresh production seeks at each retained receipt.",
     "subject": {
       "kind": "weapon",
       "id": "hammer"
@@ -1012,7 +1011,7 @@
   },
   {
     "id": "greatsword-wheelcut-catch-seek",
-    "description": "Forge one normal Greatsword encounter, prove the live spinning Wheel Cut route into a controlled recall and catch, seal it, and verify fresh Ghost V3 production seeks at each retained receipt.",
+    "description": "Set up one normal Greatsword encounter, prove the live spinning Wheel Cut route into a controlled recall and catch, seal it, and verify fresh Ghost V3 production seeks at each retained receipt.",
     "subject": {
       "kind": "weapon",
       "id": "greatsword"
@@ -1062,7 +1061,7 @@
   },
   {
     "id": "sword-reversal-threadcut-catch-seek",
-    "description": "Forge one current Sword/charger encounter, prove its production Threadcut throw/recall and catch lifecycle, retain native weapon evidence, and verify fresh production seeks at supported retained checkpoints; Reversal has its separate source-owned contact proof.",
+    "description": "Set up one current Sword/charger encounter, prove its production Threadcut throw/recall and catch lifecycle, retain native weapon evidence, and verify fresh production seeks at supported retained checkpoints; Reversal has its separate source-owned contact proof.",
     "subject": {
       "kind": "weapon",
       "id": "sword"
@@ -1114,7 +1113,7 @@
   },
   {
     "id": "riftlock-loose-cannon-catch-seek",
-    "description": "Forge one normal Riftlock/charger encounter, prove Loose Cannon capture into a Backblast recall and catch, seal it, and verify fresh Ghost V3 production seeks at each retained receipt.",
+    "description": "Set up one normal Riftlock/charger encounter, prove Loose Cannon capture into a Backblast recall and catch, seal it, and verify fresh Ghost V3 production seeks at each retained receipt.",
     "subject": {
       "kind": "weapon",
       "id": "riftlock"
@@ -1165,7 +1164,7 @@
   },
   {
     "id": "pale-aurora-track-behavior",
-    "description": "Forge the source-owned Pale Aurora Track and observe its live directional field lifecycle.",
+    "description": "Set up the source-owned Pale Aurora Track and observe its live directional field lifecycle.",
     "subject": {
       "kind": "gameplay",
       "id": "pale-aurora-track"
@@ -1179,7 +1178,7 @@
     },
     "seed": "pale-aurora-track-behavior-seed",
     "stateClass": "surgical-valid",
-    "stateForge": {
+    "stateSetup": {
       "documentId": "pale-aurora-track-behavior"
     },
     "backends": [
@@ -1209,7 +1208,7 @@
     "maxTicks": 180,
     "testFiles": [
       "tests/unit/pale-aurora-definitions.test.ts",
-      "tests/unit/pale-state-forge-scenarios.test.ts"
+      "tests/unit/pale-state-setup-scenarios.test.ts"
     ],
     "evidence": {
       "command": "pnpm tearbench run pale-aurora-track-behavior",
@@ -1229,7 +1228,7 @@
   },
   {
     "id": "pale-rimehound-aurora-interaction",
-    "description": "Forge the source-owned Rimehound pack on an Aurora Track and observe their live interaction.",
+    "description": "Set up the source-owned Rimehound pack on an Aurora Track and observe their live interaction.",
     "subject": {
       "kind": "gameplay",
       "id": "pale-rimehound-aurora"
@@ -1243,7 +1242,7 @@
     },
     "seed": "pale-rimehound-aurora-interaction-seed",
     "stateClass": "surgical-valid",
-    "stateForge": {
+    "stateSetup": {
       "documentId": "pale-rimehound-aurora-interaction"
     },
     "backends": [
@@ -1278,7 +1277,7 @@
     "testFiles": [
       "tests/unit/pale-aurora-runtime.test.ts",
       "tests/unit/rimehound.test.ts",
-      "tests/unit/pale-state-forge-scenarios.test.ts"
+      "tests/unit/pale-state-setup-scenarios.test.ts"
     ],
     "evidence": {
       "command": "pnpm tearbench run pale-rimehound-aurora-interaction",
@@ -1298,7 +1297,7 @@
   },
   {
     "id": "pale-rime-runner-behavior",
-    "description": "Forge the source-owned Rime Runner variant through its real Charger factory and observe counterplay.",
+    "description": "Set up the source-owned Rime Runner variant through its real Charger factory and observe counterplay.",
     "subject": {
       "kind": "gameplay",
       "id": "pale-rime-runner"
@@ -1312,7 +1311,7 @@
     },
     "seed": "pale-rime-runner-behavior-seed",
     "stateClass": "surgical-valid",
-    "stateForge": {
+    "stateSetup": {
       "documentId": "pale-rime-runner-behavior"
     },
     "backends": [
@@ -1359,7 +1358,7 @@
   },
   {
     "id": "pale-prism-seer-behavior",
-    "description": "Forge the source-owned Prism Seer variant through its real Ranged factory and observe counterplay.",
+    "description": "Set up the source-owned Prism Seer variant through its real Ranged factory and observe counterplay.",
     "subject": {
       "kind": "gameplay",
       "id": "pale-prism-seer"
@@ -1373,7 +1372,7 @@
     },
     "seed": "pale-prism-seer-behavior-seed",
     "stateClass": "surgical-valid",
-    "stateForge": {
+    "stateSetup": {
       "documentId": "pale-prism-seer-behavior"
     },
     "backends": [
@@ -1420,7 +1419,7 @@
   },
   {
     "id": "pale-snowfall-kite-behavior",
-    "description": "Forge the source-owned Snowfall Kite variant through its real Flyer factory and observe counterplay.",
+    "description": "Set up the source-owned Snowfall Kite variant through its real Flyer factory and observe counterplay.",
     "subject": {
       "kind": "gameplay",
       "id": "pale-snowfall-kite"
@@ -1434,7 +1433,7 @@
     },
     "seed": "pale-snowfall-kite-behavior-seed",
     "stateClass": "surgical-valid",
-    "stateForge": {
+    "stateSetup": {
       "documentId": "pale-snowfall-kite-behavior"
     },
     "backends": [
@@ -1481,7 +1480,7 @@
   },
   {
     "id": "pale-hailcaster-behavior",
-    "description": "Forge the source-owned Hailcaster variant through its real Bomber factory and observe counterplay.",
+    "description": "Set up the source-owned Hailcaster variant through its real Bomber factory and observe counterplay.",
     "subject": {
       "kind": "gameplay",
       "id": "pale-hailcaster"
@@ -1495,7 +1494,7 @@
     },
     "seed": "pale-hailcaster-behavior-seed",
     "stateClass": "surgical-valid",
-    "stateForge": {
+    "stateSetup": {
       "documentId": "pale-hailcaster-behavior"
     },
     "backends": [
@@ -1542,7 +1541,7 @@
   },
   {
     "id": "pale-glacier-guard-behavior",
-    "description": "Forge the source-owned Glacier Guard variant through its real Armored factory and observe counterplay.",
+    "description": "Set up the source-owned Glacier Guard variant through its real Armored factory and observe counterplay.",
     "subject": {
       "kind": "gameplay",
       "id": "pale-glacier-guard"
@@ -1556,7 +1555,7 @@
     },
     "seed": "pale-glacier-guard-behavior-seed",
     "stateClass": "surgical-valid",
-    "stateForge": {
+    "stateSetup": {
       "documentId": "pale-glacier-guard-behavior"
     },
     "backends": [
@@ -1603,7 +1602,7 @@
   },
   {
     "id": "pale-white-hart-phase-1",
-    "description": "Forge White Hart phase 1 as an unpublished surgical boundary through the production boss factory.",
+    "description": "Set up White Hart phase 1 as an unpublished surgical boundary through the production boss factory.",
     "subject": {
       "kind": "gameplay",
       "id": "pale-white-hart-phase-1"
@@ -1619,7 +1618,7 @@
     },
     "seed": "pale-white-hart-phase-1-seed",
     "stateClass": "surgical-valid",
-    "stateForge": {
+    "stateSetup": {
       "documentId": "pale-white-hart-phase-1"
     },
     "backends": [
@@ -1647,7 +1646,7 @@
     ],
     "maxTicks": 240,
     "testFiles": [
-      "tests/unit/white-hart-state-forge.test.ts"
+      "tests/unit/white-hart-state-setup.test.ts"
     ],
     "evidence": {
       "command": "pnpm tearbench run pale-white-hart-phase-1",
@@ -1667,7 +1666,7 @@
   },
   {
     "id": "pale-white-hart-phase-2",
-    "description": "Forge White Hart phase 2 as an unpublished surgical boundary through the production boss factory.",
+    "description": "Set up White Hart phase 2 as an unpublished surgical boundary through the production boss factory.",
     "subject": {
       "kind": "gameplay",
       "id": "pale-white-hart-phase-2"
@@ -1683,7 +1682,7 @@
     },
     "seed": "pale-white-hart-phase-2-seed",
     "stateClass": "surgical-valid",
-    "stateForge": {
+    "stateSetup": {
       "documentId": "pale-white-hart-phase-2"
     },
     "backends": [
@@ -1711,7 +1710,7 @@
     ],
     "maxTicks": 240,
     "testFiles": [
-      "tests/unit/white-hart-state-forge.test.ts"
+      "tests/unit/white-hart-state-setup.test.ts"
     ],
     "evidence": {
       "command": "pnpm tearbench run pale-white-hart-phase-2",
@@ -1731,7 +1730,7 @@
   },
   {
     "id": "pale-white-hart-phase-3",
-    "description": "Forge White Hart phase 3 as an unpublished surgical boundary through the production boss factory.",
+    "description": "Set up White Hart phase 3 as an unpublished surgical boundary through the production boss factory.",
     "subject": {
       "kind": "gameplay",
       "id": "pale-white-hart-phase-3"
@@ -1747,7 +1746,7 @@
     },
     "seed": "pale-white-hart-phase-3-seed",
     "stateClass": "surgical-valid",
-    "stateForge": {
+    "stateSetup": {
       "documentId": "pale-white-hart-phase-3"
     },
     "backends": [
@@ -1775,7 +1774,7 @@
     ],
     "maxTicks": 240,
     "testFiles": [
-      "tests/unit/white-hart-state-forge.test.ts"
+      "tests/unit/white-hart-state-setup.test.ts"
     ],
     "evidence": {
       "command": "pnpm tearbench run pale-white-hart-phase-3",

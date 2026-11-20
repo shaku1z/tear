@@ -1,3 +1,4 @@
+import { asRecord } from "../domain/records";
 import { AudioSystem } from "./audio-system";
 import { createBrowserAudioContextFactory, unwrapBrowserAudioContext, unwrapBrowserAudioNode } from "./browser-audio";
 import type { AudioEffectsBackend, AudioEffectsBackendHost } from "./effects-contracts";
@@ -12,19 +13,15 @@ import type {
   MusicRunSessionMetadata,
 } from "./music-contracts";
 import { createInstalledPrimaryMusicBackend } from "./music-backend-registry";
-import { migrateAudioSettings } from "../persistence/audio-settings";
+import { AUDIO_SETTINGS_KEY, migrateAudioSettings, readStoredAudioSettings } from "../persistence/audio-settings";
 import type { LegacySynthContract } from "./legacy-synth-contracts";
 
-const LEGACY_SETTINGS_KEY = "tear_settings";
-
-function objectRecord(value: unknown): Record<string, unknown> {
-  return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
-}
+const LEGACY_SETTINGS_KEY = AUDIO_SETTINGS_KEY;
 
 function readLocalSettings(storage: Storage): Record<string, unknown> {
   try {
     const value: unknown = JSON.parse(storage.getItem(LEGACY_SETTINGS_KEY) ?? "{}");
-    return objectRecord(value);
+    return asRecord(value) ?? {};
   } catch {
     return {};
   }
@@ -86,8 +83,7 @@ export class LegacyAudioSettingsStore implements AudioSettingsStore {
   }
 
   load(): Partial<AudioMixerSettings> {
-    const record = readLocalSettings(this.#storage);
-    return migrateAudioSettings(record.audio ?? record);
+    return readStoredAudioSettings(this.#storage);
   }
 
   save(settings: AudioMixerSettings): void {

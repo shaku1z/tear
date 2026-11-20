@@ -1,5 +1,6 @@
 import type {
   Align,
+  ButtonLabelSpec,
   ButtonSpec,
   CompactLayoutMode,
   Rect,
@@ -11,6 +12,27 @@ import { truthyOr } from "./value-fallback";
 import { wrapSpaceSeparated } from "./ui-text-fit";
 import { densityTokens, isCompactDensity, type DensityProfile } from "./ui-density";
 import { inkIsLight, withAlpha } from "./ui-color";
+
+/**
+ * The default button's padding: what its text never draws into. A centred label keeps `centred`
+ * clear in total; a left-aligned one (glyph or sub line) starts `left` in, after a glyph slot of at
+ * least `glyphMin` plus `glyphGap`, and keeps `right` clear (or `pip` per pip plus `pipsRight`).
+ * Vertically the text keeps `y` clear above and below; with a sub line the label centre sits
+ * `subLift` above the button's centre and the sub line `subDrop` below it. Drawing and fitting
+ * (`buttonFitWidth`, `buttonFitHeight`) both read it.
+ */
+const BUTTON_PAD = Object.freeze({
+  centred: 16,
+  left: 16,
+  right: 14,
+  glyphMin: 17,
+  glyphGap: 13,
+  pip: 14,
+  pipsRight: 24,
+  y: 9,
+  subLift: 10,
+  subDrop: 13,
+});
 
 export function createUiFoundation(dependencies: UiDependencies) {
   const {
@@ -379,6 +401,57 @@ export function createUiFoundation(dependencies: UiDependencies) {
         ctx.fillText(line, x, first + index * lineHeight);
       });
     },
+    /** The button width its label (and sub line) needs to sit on one line at full size. */
+    buttonFitWidth(this: UiRuntime, ctx: CanvasRenderingContext2D, b: ButtonLabelSpec): number {
+      ctx.save();
+      ctx.font = this.font(
+        truthyOr(b.size, () => this.t.type.lead),
+        true,
+      );
+      let width = ctx.measureText(b.label).width;
+      if (b.sub) {
+        ctx.font = this.font(this.t.type.micro, false);
+        width = Math.max(width, ctx.measureText(b.sub).width);
+      }
+      ctx.restore();
+      return Math.ceil(width + this._buttonChrome(b));
+    },
+    /**
+     * The height a button `w` wide needs for its text at full size: the label's lines (two when it
+     * cannot sit on one), or the label over its sub line, `BUTTON_PAD.y` clear above and below, and
+     * never shorter than a list row (`metric.listRowH`). A button list sizes its rows from it.
+     */
+    buttonFitHeight(
+      this: UiRuntime,
+      ctx: CanvasRenderingContext2D,
+      b: ButtonLabelSpec & Readonly<{ w: number }>,
+    ): number {
+      const size = truthyOr(b.size, () => this.t.type.lead);
+      // With a sub line the label keeps one line and the pair is centred as the draw places it.
+      const text = b.sub
+        ? 2 * Math.max(BUTTON_PAD.subLift + size / 2, BUTTON_PAD.subDrop + this.t.type.micro / 2)
+        : (this.buttonFitWidth(ctx, b) <= b.w ? 0 : Math.round(size * 1.12)) + size;
+      return Math.max(this.t.metric.listRowH, Math.ceil(text + 2 * BUTTON_PAD.y));
+    },
+    /**
+     * The button's label layout: the shared fitting rule over the room its padding leaves, on one
+     * line beside a sub line, else wrapping to two when the height allows. Drawing uses it, and a
+     * layout check can ask it whether a label would be cut (`truncated`).
+     */
+    buttonLabelFit(
+      this: UiRuntime,
+      ctx: CanvasRenderingContext2D,
+      b: ButtonLabelSpec & Readonly<{ w: number; h: number }>,
+    ) {
+      const size = truthyOr(b.size, () => this.t.type.lead);
+      return this._fitLabel(ctx, b.label, b.w - this._buttonChrome(b), size, b.sub ? 0 : b.h, false);
+    },
+    /** Horizontal room the button's padding, glyph slot and pips take from its label. */
+    _buttonChrome(this: UiRuntime, b: Omit<ButtonLabelSpec, "label" | "size">): number {
+      if (!b.glyph && !b.sub) return BUTTON_PAD.centred;
+      const glyph = b.glyph ? Math.max(BUTTON_PAD.glyphMin, this.t.type.label) + BUTTON_PAD.glyphGap : 0;
+      return BUTTON_PAD.left + glyph + (b.pips ? b.pips.n * BUTTON_PAD.pip + BUTTON_PAD.pipsRight : BUTTON_PAD.right);
+    },
     button(this: UiRuntime, ctx: CanvasRenderingContext2D, b: ButtonSpec, active?: boolean) {
       const t = this.t;
       if (b.ghost) {
@@ -429,38 +502,36 @@ export function createUiFoundation(dependencies: UiDependencies) {
       const cy2 = b.y + b.h / 2;
       ctx.textBaseline = "middle";
       if (b.pips) this.pips(ctx, b.x + b.w - 14, cy2, b.pips.n, b.pips.filled, selected ? t.color.paper : b.pips.color);
-      const size = truthyOr(b.size, () => t.type.lead);
       if (b.glyph || b.sub) {
-        let lx2 = b.x + 16;
+        let lx2 = b.x + BUTTON_PAD.left;
         if (b.glyph) {
           // the icon slot grows with the type token (touch density) like the label
-          const glyphSize = Math.max(17, t.type.label);
+          const glyphSize = Math.max(BUTTON_PAD.glyphMin, t.type.label);
           ctx.globalAlpha = selected ? 1 : 0.6 + 0.4 * a;
           ctx.fillStyle = selected ? t.color.paper : truthyOr(b.accent, () => t.color.accent);
           ctx.font = this.font(glyphSize, true);
           ctx.textAlign = "left";
           ctx.fillText(b.glyph, lx2, cy2 + 1);
           ctx.globalAlpha = 1;
-          lx2 += glyphSize + 13;
+          lx2 += glyphSize + BUTTON_PAD.glyphGap;
         }
-        const rightReserve = b.pips ? b.pips.n * 14 + 24 : 14;
-        const room = b.x + b.w - lx2 - rightReserve;
-        const fit = this._fitLabel(ctx, b.label, room, size, b.sub ? 0 : b.h, false);
+        const room = b.w - this._buttonChrome(b);
+        const fit = this.buttonLabelFit(ctx, b);
         ctx.fillStyle = selected ? t.color.paper : on ? this.ink : "#8b8d98";
         ctx.font = this.font(fit.size, true);
         ctx.textAlign = "left";
-        this._drawLines(ctx, fit.lines, lx2, (b.sub ? cy2 - 10 : cy2) + 1, fit.size);
+        this._drawLines(ctx, fit.lines, lx2, (b.sub ? cy2 - BUTTON_PAD.subLift : cy2) + 1, fit.size);
         if (b.sub) {
           const sub = this.fitText(ctx, b.sub, room, { size: t.type.micro, floor: t.type.micro });
           ctx.globalAlpha = selected ? 0.85 : t.alpha.muted;
           ctx.font = this.font(sub.size, false);
-          ctx.fillText(sub.lines[0] ?? "", lx2, cy2 + 13);
+          ctx.fillText(sub.lines[0] ?? "", lx2, cy2 + BUTTON_PAD.subDrop);
           ctx.globalAlpha = 1;
         }
         ctx.textBaseline = "alphabetic";
         return;
       }
-      const fit = this._fitLabel(ctx, b.label, b.w - 16, size, b.h, false);
+      const fit = this.buttonLabelFit(ctx, b);
       ctx.font = this.font(fit.size, true);
       ctx.textAlign = "center";
       this._drawLines(ctx, fit.lines, b.x + b.w / 2, cy2 + 1, fit.size);

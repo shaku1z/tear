@@ -1,5 +1,7 @@
 # C37 - Coach to Practice Verified Projection Foundation
 
+The replay Coach, the knowledge libraries and `tests/browser-ghost-v3-live-capture.js` named in this note were removed in shaku1z/tear#227.
+
 **Status:** native recorded-observation history is implemented in normal Theater;
 built-browser acceptance is pending. The legacy selected-pair analyzer remains a
 compatibility API. Challenges, rendered Studio media and inferred skill coaching
@@ -423,6 +425,8 @@ remain open; source-only tests do not establish those outcomes.
 
 
 ## Beat This Run: local source implementation, normal browser acceptance pending
+
+Beat This Run was removed in shaku1z/tear#204.
 
 Career exposes **BEAT THIS RUN**, **RECEIVE BEAT CODE**, **BEAT RESULT**,
 **SAVE RESULT** and **RETRY BEAT**. A bounded `BTR1` code binds an already-public

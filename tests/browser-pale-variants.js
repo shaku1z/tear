@@ -12,7 +12,7 @@ const variants = [
   ["armored", "glacier-guard", "Glacier Guard", null],
 ];
 
-withJourney({ name: "Pale PT3-C4 variants", port: 8354 }, async ({ page, waitScreen, buildInfo }) => {
+withJourney({ name: "Pale PT3-C4 variants" }, async ({ page, waitScreen, buildInfo }) => {
   await page.evaluate(() => window.__PANTHEON_TEST.startMode("playground"));
   await waitScreen("playing");
   const directory = path.resolve(

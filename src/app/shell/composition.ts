@@ -1,7 +1,9 @@
+import { COSMETIC_CATALOG } from "../../gameplay/progression/cosmetic-catalog";
 import { createLiveTutorialCompletionPersistence } from "../progress/tutorial-completion-persistence";
 import { createLivePracticeEncounterPersistence } from "../progress/practice-encounter-persistence";
 import { createLegacySynthFacade } from "../../audio/legacy-synth";
 import { createBrowserAudioContextHandoff } from "../../audio/audio-context-handoff";
+import { setMusicProgressFacts } from "../../audio/music/music-source";
 import { A11Y, CONFIG, GFX, OVERSCAN, REMOTE, SAFE, THEME } from "../../config/game-config";
 import {
   aabbOverlap,
@@ -39,15 +41,27 @@ import { createBrowserInput } from "../../input/browser-input";
 import { createProfileStore } from "../../persistence/profile-store";
 import type { CloudFactory } from "../../platform/cloud-factory";
 import type { TearBuildTarget } from "../../platform/contracts";
+import type { BuildIdentity } from "../../platform/build-identity";
+import { createPrivacyNotice } from "../../platform/browser-privacy-notice";
+import { createSaveNotice } from "../../platform/browser-save-notice";
+import { setNoticesVisible } from "../../platform/browser-notice";
+import { privacyStanceFor } from "../../platform/privacy-stance";
+import { createStatisticsChoice, statisticsAllowed } from "../../platform/statistics-consent";
 import type { CrazyGamesSdkShape, createCrazyGamesPlatformServices } from "../../platform/crazygames";
 import { createLegacyPlatformCompatibility } from "../../platform/legacy-compat";
+import { browserFullscreen } from "../../platform/browser";
 import { createRunSeed } from "../../platform/run-seed";
 import type { PwaUpdateCapability } from "../../platform/pwa-update";
+import { GHOST_WORKER_URLS } from "../replay/ghost-worker-urls";
+import { startWorkerCacheWarmup } from "../../platform/worker-cache-warmup";
+import { startDeferredModules } from "./deferred-modules";
 import { createAttract } from "../../presentation/attract";
 import { createBackdrop } from "../../presentation/backdrop";
+import { rotateGateShown } from "../../presentation/rotate-gate";
 import { createSceneLibrary } from "../../presentation/scenes/scene-library";
-import { createSceneCanvas, loadSceneBitmap, releaseSceneBitmap } from "../../presentation/scenes/scene-bitmap";
-import { SCENE_PACKAGES } from "../../presentation/scenes/scene-registry";
+import { lastCoverFrameTally } from "../../presentation/music-cover-art";
+import { createSceneCanvas, releaseSceneBitmap } from "../../presentation/scenes/scene-bitmap";
+import { PAINTED_STAGES } from "../../presentation/scenes/scene-registry";
 import { createCinematics } from "../../presentation/cinematics";
 import { cosmeticRandom } from "../../presentation/cosmetic-random";
 import { createCosmeticEmissionRandom } from "../../domain/cosmetic-emission-random";
@@ -114,6 +128,8 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     engineeringQuery,
   } = options;
   const compositionWindow = window as CompositionWindow;
+  // The one record of which build is running: replays carry it, Settings and the error screen show it.
+  const build: BuildIdentity = Object.freeze({ version: "0.1.0", revision: __TEAR_BUILD_REVISION__, target });
   // Test storage seeding stays test-build-only even where `vite dev` admits engineering surfaces.
   const tearTestMode = __TEAR_TEST_BUILD__ && engineeringQuery.get("test") === "1";
   // Test pages may seed the isolated adapter before composition. Production never
@@ -121,7 +137,9 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   const disposableValues = new Map<string, string>(
     tearTestMode ? Object.entries(compositionWindow.__TEAR_TEST_STORAGE__ ?? {}) : [],
   );
-  const tearTestEnvironment = tearTestMode ? createTearTestEnvironment("live-test-composition") : undefined;
+  const tearTestEnvironment = tearTestMode
+    ? createTearTestEnvironment("live-test-composition", { fullscreen: browserFullscreen(document) })
+    : undefined;
   const disposableStorage = tearTestMode
     ? {
         getItem: (key: string) => disposableValues.get(key) ?? null,
@@ -149,16 +167,25 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     reducedMotion: () => A11Y.reducedMotion,
     random: cosmeticEmissionRandom.next,
   });
+  let stageArtSlices = 0;
   const Scenes = createSceneLibrary({
-    packages: SCENE_PACKAGES,
-    loadImage: loadSceneBitmap,
+    stages: PAINTED_STAGES,
+    world: { width: worldConfig.view.w, height: worldConfig.view.h, groundY: worldConfig.world.groundY },
+    // One painting slice per frame, after the frame has drawn, so a stage that paints during play never delays a frame.
+    nextSlice: () =>
+      new Promise((resolve) => {
+        stageArtSlices += 1;
+        // Diagnostics show how many painting slices have run, so a frame-time run can tell whether a bake shared its window.
+        DIAG.gauge("stageArtSlices", stageArtSlices);
+        requestAnimationFrame(() => setTimeout(resolve, 0));
+      }),
     createCanvas: createSceneCanvas,
     releaseImage: releaseSceneBitmap,
     now: () => performance.now(),
     lowGraphics: () => GFX.low,
     reducedMotion: () => A11Y.reducedMotion,
     onError: (stageId, error) => {
-      console.warn(`Scene package for ${stageId} unavailable; keeping procedural art.`, error);
+      console.warn(`Stage art for ${stageId} could not be painted; keeping procedural art.`, error);
     },
   });
   const Backdrop = createBackdrop({
@@ -266,8 +293,11 @@ export function composeTearApplication(options: TearCompositionOptions): void {
       theme: THEME,
     },
   });
+  // A save that cannot be read or kept is told to the player once, whichever part of the game finds out.
+  const saveNotice = createSaveNotice(document);
   const platform = createLegacyPlatformCompatibility({
     target,
+    reportProblem: saveNotice.report,
     ...(sdk === undefined ? {} : { sdk }),
     ...(createCrazyGamesServices === undefined ? {} : { createCrazyGamesServices }),
     ...(disposableStorage === undefined ? {} : { storage: disposableStorage }),
@@ -277,6 +307,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
 
   const PROFILE = createProfileStore({
     store: CG.store,
+    reportProblem: saveNotice.report,
     onCommitted: () => {
       if (PROFILE.pendingRewards().length > 0) void tutorialCompletionPersistence.retry();
     },
@@ -287,10 +318,13 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     getMeta: () => META,
     writerId: () => (CG.live ? "crazygames" : "browser"),
     countedBiomeNames: STAGES.map(({ name }) => name),
+    getCosmeticCatalog: () => COSMETIC_CATALOG,
     log: (message) => {
       console.log(message);
     },
   });
+  // The music pick and the Radio hear only songs this player has found.
+  setMusicProgressFacts(() => PROFILE.facts());
   const GAMEPLAY_EVENTS = new TearGameplayEventBus(() => Input.semantic.lastSealedTick);
   const { GHOST, VAULT } = createLegacyReplayCompatibility({
     store: CG.store,
@@ -304,21 +338,36 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     gameplayEvents: GAMEPLAY_EVENTS,
     defaults: {
       rulesetVersion: CURRENT_RULESET_VERSION,
-      build: { version: "0.1.0", revision: __TEAR_BUILD_REVISION__, target },
+      build,
       ticksPerSecond: 120,
       weaponId: "sword",
       weaponSchemaVersion: "final-five-v1",
       tearScore: () => SFX.musicReplayMetadata(),
     },
   });
-  const { Cloud, FirebaseProvider, ghostPublication } = createCloud({
+  // What the build keeps and the player's choice about statistics. A statistic is sent only when the build
+  // sends them, the player has not turned them off, and the player has seen the first-run notice.
+  const privacyStance = privacyStanceFor(target);
+  const statisticsChoice = createStatisticsChoice();
+  const privacyNotice =
+    privacyStance.sendsStatistics && privacyStance.privacyUrl !== null
+      ? createPrivacyNotice({ document, storage: window.localStorage, privacyUrl: privacyStance.privacyUrl })
+      : null;
+  const { Cloud, FirebaseProvider } = createCloud({
     target,
     getPlatform: () => platform.services,
     getProfile: () => PROFILE,
     getMeta: () => META,
+    statisticsAllowed: () =>
+      statisticsAllowed({
+        stance: privacyStance,
+        choice: statisticsChoice,
+        noticeAcknowledged: () => privacyNotice?.acknowledged() ?? false,
+      }),
   });
   const { META, SHOP } = createMetaProgression<UpgradeDefinition, UpgradeApplyContext & ProgressionApplyContext>({
     store: CG.store,
+    reportProblem: saveNotice.report,
     config: worldConfig,
     cloud: Cloud,
     random: GAME_RANDOM_STREAMS.stream("draft"),
@@ -332,6 +381,24 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   const practiceEncounterPersistence = createLivePracticeEncounterPersistence(PROFILE);
   const DAILY = createDailyChallenges({ achievements: ACH, profile: PROFILE, clock: localCalendarClock() });
   const APP = new AppStateController(surfaces);
+  // A notice never covers a screen with controls: it shows over the main menu only.
+  APP.subscribe((screen) => {
+    setNoticesVisible(document, screen === "menu");
+  });
+  // One rule for "plain main menu": the menu screen with no phone rotate gate drawn over it.
+  const plainMainMenu = (): boolean => {
+    const canvas = document.querySelector<HTMLCanvasElement>("#game");
+    const gate =
+      __TEAR_MOBILE__ &&
+      canvas !== null &&
+      rotateGateShown(Input.touchActive(), canvas.clientWidth, canvas.clientHeight);
+    return APP.screen === "menu" && !gate;
+  };
+  // The ghost worker scripts are cached by the service worker on first fetch; fetch any missing one on an idle menu.
+  if (target === "standalone") startWorkerCacheWarmup(plainMainMenu, GHOST_WORKER_URLS);
+  startDeferredModules(plainMainMenu);
+  // A waiting service-worker update is applied only on the plain main menu, after saves settle.
+  pwaUpdate.setIdleHost({ isIdle: plainMainMenu, settle: () => PROFILE.flushAcknowledged() });
   const DIAG = new PerformanceMonitor();
   const achievementToastPersistence = createLiveAchievementToastPersistence(PROFILE);
   const biomeProgressPersistence = createLiveBiomeProgressPersistence(PROFILE);
@@ -370,7 +437,10 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     browserNavigator: navigator,
     browserStorage: window.localStorage,
     browserWindow: window,
+    privacy: { stance: privacyStance, statistics: statisticsChoice },
+    build,
     CG,
+    fullscreen: () => platform.services.fullscreen,
     CLOCK,
     CONFIG: worldConfig,
     Charger,
@@ -379,7 +449,6 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     Clipper: clipper,
     Cloud,
     Colossus,
-    ghostPublication,
     DAILY,
     DIAG,
     Echo,
@@ -460,6 +529,8 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     weaponCapsuleIntersectsSegment,
   } satisfies GameRuntimeDependencies;
   startLiveGame(gameRuntimeDependencies, worldConfiguration);
+  // Test pages drive the canvas by clicks and must not be covered; they send no statistics either way.
+  if (!tearTestMode) privacyNotice?.showIfDue();
 
   if (tearTestMode) {
     const observedSemanticActions: ReturnType<typeof Input.drainSemanticActions>[number][] = [];
@@ -491,6 +562,8 @@ export function composeTearApplication(options: TearCompositionOptions): void {
       abilities: UPGRADES.filter((upgrade) => ["stormbank", "overrun", "sever"].includes(upgrade.id)).map(
         (upgrade) => upgrade.name,
       ),
+      // The achievement count the achievements screen shows, so a journey never hard-codes it.
+      achievementCount: () => ACH.list.length,
       input: Object.freeze({
         startRecording: () => {
           Input.startSemanticRecording();
@@ -524,6 +597,11 @@ export function composeTearApplication(options: TearCompositionOptions): void {
         },
       }),
       app: Object.freeze({ snapshot: () => APP.snapshot() }),
+      // What the last drawn frame's MUSIC covers showed: paintings, bands, or bands still waiting.
+      musicCovers: Object.freeze({ snapshot: lastCoverFrameTally }),
+      // What the isolated storage holds now, so a journey can boot a fresh page from it: the
+      // same contents a reload would find in the browser's real storage.
+      storage: Object.freeze({ snapshot: () => Object.fromEntries(disposableValues) }),
       viewport: Object.freeze({
         snapshot: () => {
           const canvas = document.querySelector<HTMLCanvasElement>("#game");

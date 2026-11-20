@@ -1,5 +1,6 @@
 import type { EnvironmentSnapshot, EnvironmentObjectState } from "./environment-contracts";
 import { isEnvironmentOwnedData } from "./environment-state";
+import { isObject } from "../../domain/records";
 
 export interface EnvironmentPresentationSnapshot {
   readonly stageId: string;
@@ -21,7 +22,6 @@ export interface EnvironmentPresentationSnapshot {
     geometry: EnvironmentSnapshot["combatObjects"][number]["geometry"];
     integrityRatio: number;
     counterplayTags: readonly string[];
-    connectionGeometry?: EnvironmentSnapshot["combatObjects"][number]["geometry"];
   }>[];
   readonly routes: readonly Readonly<{
     id: string;
@@ -50,8 +50,7 @@ function bounds(geometry: Readonly<{ x: number; y: number; w?: number; h?: numbe
  * state) is still cloned so the view never aliases mutable caller data.
  */
 function detached(value: unknown): unknown {
-  if (value === null || (typeof value !== "object" && typeof value !== "function" && typeof value !== "symbol"))
-    return value;
+  if (!isObject(value) && typeof value !== "function" && typeof value !== "symbol") return value;
   return isEnvironmentOwnedData(value) ? value : structuredClone(value);
 }
 
@@ -95,6 +94,7 @@ const COMBAT_BASE = new Set([
   "counterplayTags",
   "procEligible",
   "damageDedupeId",
+  "damagedBy",
   "cleanupReason",
 ]);
 const ROUTE_BASE = new Set(["id", "kind", "state", "points", "stateTick", "ownerId", "cleanupReason"]);

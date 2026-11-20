@@ -58,13 +58,13 @@
       ],
       "textRegex": ".*",
       "implementationRefs": [
-        "src/app/engineering/state-forge-adapter.ts",
+        "src/app/engineering/state-setup-adapter.ts",
         "src/tearbench/live-state-snapshot.ts",
         "src/tearbench/live-codec-validation.ts"
       ],
       "evidenceRefs": [
-        "tests/browser-state-forge-runtime.js",
-        "docs/checkpoints/C23_PRODUCTION_GRADE_STATE_FORGE.md"
+        "tests/browser-state-setup-runtime.js",
+        "docs/checkpoints/C23_PRODUCTION_GRADE_STATE_SETUP.md"
       ],
       "notes": "C23 captures all registered live runtime domains, reloads the browser document, restores the snapshot, and matches the next 600 exact hashes under the same semantic actions."
     },
@@ -78,12 +78,12 @@
       ],
       "textRegex": ".*",
       "implementationRefs": [
-        "src/app/engineering/state-forge-adapter.ts",
+        "src/app/engineering/state-setup-adapter.ts",
         "src/tearbench/state-codecs.ts"
       ],
       "evidenceRefs": [
-        "tests/browser-state-forge-runtime.js",
-        "docs/checkpoints/C23_PRODUCTION_GRADE_STATE_FORGE.md"
+        "tests/browser-state-setup-runtime.js",
+        "docs/checkpoints/C23_PRODUCTION_GRADE_STATE_SETUP.md"
       ],
       "notes": "Candidate state is rebuilt and validated off-world; both validation failure and an induced mid-commit failure leave the active world at its prior exact hash."
     },
@@ -102,11 +102,11 @@
       "implementationRefs": [
         "src/tearbench/progression-ledger.ts",
         "src/tearbench/progression-replay.ts",
-        "src/app/engineering/state-forge-progression.ts"
+        "src/app/engineering/state-setup-progression.ts"
       ],
       "evidenceRefs": [
         "tests/unit/tearbench-progression-ledger.test.ts",
-        "tests/browser-state-forge-exit-matrix.js"
+        "tests/browser-state-setup-exit-matrix.js"
       ],
       "notes": "The canonical scheduler emits legal events and live reconstruction replays draft mutations and tier evolutions in ledger order through production upgrade functions with expected configuration hashes."
     },
@@ -126,12 +126,12 @@
       ],
       "textRegex": ".*",
       "implementationRefs": [
-        "src/tearbench/state-forge-exit-gate.ts",
+        "src/tearbench/state-setup-exit-gate.ts",
         "src/tearbench/state-validity.ts"
       ],
       "evidenceRefs": [
-        "tests/browser-state-forge-exit-matrix.js",
-        "docs/checkpoints/C23_PRODUCTION_GRADE_STATE_FORGE.md"
+        "tests/browser-state-setup-exit-matrix.js",
+        "docs/checkpoints/C23_PRODUCTION_GRADE_STATE_SETUP.md"
       ],
       "notes": "The canonical Hard Endless wave-99 Hammer case launches visibly with a legal synthetic ledger, exactly 99 picks and mutations, separate validity evidence, a live snapshot, Ghost runtime state, metrics, and failure fields. This rule does not promote the separate replay-artifact requirement."
     },
@@ -372,9 +372,9 @@
       "sourceSections": [68, 69, 73, 75, 79],
       "textRegex": "(Ghost Vault|capsule|chunk index|journal|quota|Ghost Doctor|quarantine)",
       "excludeTextRegex": "(IndexedDB|browser restart|real worker|cross-session|cloud)",
-      "implementationRefs": ["src/ghost/capsule-vault.ts", "src/ghost/ghost-doctor.ts"],
+      "implementationRefs": ["src/ghost/capsule-vault.ts", "src/ghost/vault-maintenance.ts"],
       "evidenceRefs": ["tests/unit/ghost-capsule-vault.test.ts"],
-      "notes": "Memory-backed capsule/Vault and Doctor helpers exist; durable IndexedDB and worker behavior do not."
+      "notes": "Memory-backed capsule/Vault and its health scan exist; durable IndexedDB and worker behavior do not."
     },
     {
       "id": "EVID-GHOST-THEATER-PROTOTYPE",
@@ -383,20 +383,9 @@
       "sourceSections": [70, 72, 79],
       "textRegex": "(Ghost Theater|replay world|seek|Ghost Lens|event-aligned|trajectory diff|Practice from here)",
       "excludeTextRegex": "(player can|accessible|mobile|real capsule|browser)",
-      "implementationRefs": ["src/ghost/replay-world.ts", "src/ghost/theater.ts"],
+      "implementationRefs": ["src/ghost/replay-world.ts"],
       "evidenceRefs": ["tests/unit/ghost-replay-world.test.ts"],
-      "notes": "Transport, seek, comparison, and practice helpers exist without a complete player-facing Theater."
-    },
-    {
-      "id": "EVID-GHOST-COACH-CONTRACT",
-      "priority": 80,
-      "state": "contract",
-      "sourceSections": [72, 76],
-      "textRegex": "(Run Autopsy|Ghost Coach|draft regret|one-fix|skill graph|replay-to-drill)",
-      "excludeTextRegex": "(player can|visible|real counterfactual|measured improvement)",
-      "implementationRefs": ["src/ghost/coach.ts"],
-      "evidenceRefs": ["tests/unit/ghost-coach.test.ts"],
-      "notes": "Pure analysis contracts exist; real evidence ingestion and player UI are absent."
+      "notes": "Seek and practice helpers exist; the comparison and lens helpers were removed with the replay overhaul."
     },
     {
       "id": "EVID-PLAYER-EXPERIENCE-CONTRACTS",
@@ -405,20 +394,9 @@
       "sourceSections": [71, 72, 79],
       "textRegex": "(Chase Your Best|Ghost Race|Beat This Run|Boss Memory|Daily Echo|Learning Ghost|Nemesis Ghost|Run DNA|career archive|Ghost Studio)",
       "excludeTextRegex": "(player can|visible|export.*media|complete UI)",
-      "implementationRefs": ["src/ghost/player-experiences.ts"],
-      "evidenceRefs": ["tests/unit/ghost-player-experiences.test.ts"],
-      "notes": "Definitions and pure proof/EDL/DNA helpers exist; complete player experiences do not."
-    },
-    {
-      "id": "EVID-GHOST-CLOUD-CONTRACTS",
-      "priority": 75,
-      "state": "contract",
-      "sourceSections": [73, 74, 78],
-      "textRegex": "(publication|upload|verification verdict|eligibility|privacy class|moderation|relay|D1|R2)",
-      "excludeTextRegex": "(authenticated|deployed|real service|cross-device|player can|atomic upload)",
-      "implementationRefs": ["src/ghost/cloud-publication.ts", "workers/ghost-publication.ts", "migrations/ghost/0001_ghost_publication.sql"],
-      "evidenceRefs": ["tests/unit/ghost-cloud-publication.test.ts"],
-      "notes": "Local service contracts, Worker source, and schema exist; no live-service outcome is claimed."
+      "implementationRefs": ["src/ghost/run-dna-theater.ts"],
+      "evidenceRefs": ["tests/unit/ghost-run-dna-theater.test.ts"],
+      "notes": "The Run DNA calculation remains for CAREER; the challenge proof and other experience helpers were removed with the replay overhaul."
     },
     {
       "id": "EVID-PRESERVATION-CONTRACTS",

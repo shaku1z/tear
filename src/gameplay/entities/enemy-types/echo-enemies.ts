@@ -282,6 +282,7 @@ export function createEchoEnemyTypes(
         weight: 0.65,
       });
       this.kind = "wisp";
+      this.flies = true;
       this.color = CONFIG.colors.perfect;
       this.noScore = true;
       this.isVoidWisp = true;

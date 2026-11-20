@@ -726,8 +726,6 @@ describe("production TearBench combat parity", () => {
     expect(new Set(ids).size).toBe(3);
     expect(ids).toEqual([...adds, clone].map((enemy) => core.combatEntityRuntime.id(enemy as object, "enemy")));
   });
-
-  // Source descent, restored stream continuity and malformed bindings are covered by ghost-finale-companion.test.ts.
 });
 
 function semanticBindingFixture() {

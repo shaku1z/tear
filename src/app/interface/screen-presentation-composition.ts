@@ -13,10 +13,10 @@ import {
   type MenuScreenState,
 } from "../screens/menu-screen-adapters";
 import {
-  createLiveReplayEditor,
-  type ReplayEditorAdapter as ReplayScreenAdapter,
-  type ReplayEditorServices as ReplayScreenServices,
-} from "../engineering/replay-editor";
+  createLiveReplayScreenAdapter,
+  type ReplayScreenAdapter,
+  type ReplayScreenServices,
+} from "../replay/replay-screen-adapter";
 import { createLiveRunScreenAdapters, type RunScreenServices, type RunScreenState } from "../run/run-screen-adapters";
 import {
   createLiveScreenActionBindings,
@@ -30,14 +30,10 @@ import {
   type SettingsRenameServices,
 } from "../screens/settings-rename-adapters";
 import { isAppScreen, type AppScreen } from "../../domain/screen-catalog";
-import type { GhostPublicationScreenView, GhostSupportScreenView } from "../../presentation/screens/contracts";
 
 type RendererBase = Omit<LiveScreenRendererOptions, "dispatch" | "renderPreview">;
 type ReplayBase = Omit<ReplayScreenServices, "renderers" | "categories" | "fallbackCategory" | "specialColor">;
-type LibraryBase = Omit<
-  LibraryScreenServices,
-  "renderers" | "enterReplay" | "enterGhostTheater" | "enterGhostComparison"
->;
+type LibraryBase = Omit<LibraryScreenServices, "renderers" | "enterReplay" | "enterGhostTheater">;
 type SettingsBase = Omit<SettingsRenameServices, "renderers" | "setCodexGuide">;
 type RunServicesBase = Omit<
   RunScreenServices,
@@ -53,6 +49,7 @@ type ActionBase = Omit<
   | "quitRun"
   | "revive"
   | "buyShopItem"
+  | "shop"
   | "library"
   | "replay"
   | "settings"
@@ -71,8 +68,6 @@ export interface LiveScreenPresentationOptions {
   readonly menuState: MenuScreenState;
   readonly menuServices: MenuServicesBase;
   readonly playground: Readonly<{ renderMenu: () => void; renderLab: () => void }>;
-  readonly ghostPublication: () => GhostPublicationScreenView;
-  readonly ghostSupport: () => GhostSupportScreenView;
 }
 
 export interface LiveScreenPresentationComposition {
@@ -109,7 +104,7 @@ export function createLiveScreenPresentationComposition(
       else library.drawReplayPreview(id, bounds);
     },
   });
-  const replay: ReplayScreenAdapter = createLiveReplayEditor({
+  const replay: ReplayScreenAdapter = createLiveReplayScreenAdapter({
     ...options.replay,
     renderers: renderer,
     categories: () => library.categories,
@@ -134,16 +129,9 @@ export function createLiveScreenPresentationComposition(
         options.actions.ghostFiles.downloadArchive(id);
         return;
       }
-      if (command === "publish") {
-        options.actions.openGhostPublication(id);
-        return;
-      }
       const result = await replay.enterGhostCapsule(id, "profile");
       if (result.kind === "refused") throw new Error(result.detail);
-      if (command === "coach") replay.openCoach();
-      else if (command === "challenge") replay.openChallenges();
     },
-    enterGhostComparison: (ids) => replay.enterGhostComparison(ids, "profile"),
   });
   const settings: SettingsRenameAdapters = createLiveSettingsRenameAdapters({
     ...options.settings,
@@ -174,6 +162,7 @@ export function createLiveScreenPresentationComposition(
       quitRun: run.quitRun,
       revive: run.reviveByAd,
       buyShopItem: menu.buyShopItem,
+      shop: menu,
       library,
       replay,
       settings,
@@ -208,12 +197,6 @@ export function createLiveScreenPresentationComposition(
       rename: settings.renderRename,
       pgmenu: options.playground.renderMenu,
       pglab: options.playground.renderLab,
-      ghostpublication: () => {
-        renderer.ghostpublication(options.ghostPublication());
-      },
-      ghostsupport: () => {
-        renderer.ghostsupport(options.ghostSupport());
-      },
     }),
     chooseUpgrade: run.chooseUpgrade,
     chooseReserve: run.chooseReserve,

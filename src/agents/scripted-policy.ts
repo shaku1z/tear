@@ -103,6 +103,8 @@ export interface BladeMotorDecision {
 }
 
 export class BladeMotorModule implements TearAgentModule<BladeMotorInput, BladeMotorDecision> {
+  #triggerHeld = false;
+
   decide(input: BladeMotorInput): BladeMotorDecision {
     const decision = this.#decide(input);
     if (input.observation.state.run.weapon !== "riftlock") return decision;
@@ -112,11 +114,16 @@ export class BladeMotorModule implements TearAgentModule<BladeMotorInput, BladeM
     const requested = decision.actions.some(
       (action) => action.type === "weapon" && action.intent === "primary" && action.phase === "pressed",
     );
+    // The Riftlock fires when its trigger is pressed, and holding the trigger draws the tether in,
+    // as it does for a player. So the motor presses when a round is ready, holds through the
+    // cooldown, and lets go for one tick once the next round is ready, so the next press fires it.
+    const hold = requested && (ready ? !this.#triggerHeld : this.#triggerHeld);
+    this.#triggerHeld = hold;
     return {
       ...decision,
       actions: [
         ...decision.actions.filter((action) => action.type !== "weapon" || action.intent !== "primary"),
-        { type: "weapon", intent: "primary", phase: ready && requested ? "pressed" : "released" },
+        { type: "weapon", intent: "primary", phase: hold ? "pressed" : "released" },
       ],
     };
   }
@@ -235,14 +242,40 @@ export class RecoveryModule implements TearAgentModule<BladeMotorInput, Movement
   }
 }
 
+/**
+ * How long the player lets its attacks land nothing before it closes in on its target: 6 seconds at 120 ticks a
+ * second, longer than an enemy that is coming takes to arrive. Backing away only works against enemies that come to
+ * the player; one that stays put is never reached.
+ */
+export const PURSUE_AFTER_TICKS = 720;
+
+/** Counts the ticks since the enemies in play last lost health or changed in number. */
+class DamageProgress {
+  #count = -1;
+  #health = 0;
+  #since = 0;
+
+  stalledTicks(state: TearAgentObservation["state"]): number {
+    const enemies = state.entities.filter((entity) => !["platform", "hazard", "projectile"].includes(entity.kind));
+    const health = enemies.reduce((sum, entity) => sum + (entity.hpRatio ?? 1), 0);
+    if (enemies.length !== this.#count || health < this.#health || state.tick < this.#since) this.#since = state.tick;
+    this.#count = enemies.length;
+    this.#health = health;
+    return state.tick - this.#since;
+  }
+}
+
 export class MovementModule implements TearAgentModule<BladeMotorInput, MovementDecision> {
   readonly #recovery = new RecoveryModule();
+  readonly #progress = new DamageProgress();
 
   decide(input: BladeMotorInput): MovementDecision {
     const player = input.observation.state.player;
     const target = input.target;
     const blade = input.observation.state.blade;
-    const riftlock = input.observation.state.run.weapon === "riftlock";
+    // Nothing has landed for a while: close in as a melee weapon would, also at low health, until something does.
+    const pursuing = this.#progress.stalledTicks(input.observation.state) >= PURSUE_AFTER_TICKS;
+    const riftlock = input.observation.state.run.weapon === "riftlock" && !pursuing;
     if (
       ["embedded", "hooked"].includes(blade.state) &&
       Math.hypot(blade.handX - player.x, blade.handY - player.y) > 210
@@ -283,7 +316,7 @@ export class MovementModule implements TearAgentModule<BladeMotorInput, Movement
         recovering: true,
       };
     }
-    const recovery = this.#recovery.decide(input);
+    const recovery = pursuing ? null : this.#recovery.decide(input);
     if (recovery !== null) return recovery;
     if (target === undefined) return { actions: [{ type: "move", x: 0, y: 0 }], recovering: false };
     const dx = target.x - player.x;

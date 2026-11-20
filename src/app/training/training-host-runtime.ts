@@ -1,12 +1,18 @@
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameEnemy, GameRun } from "../shell/game-runtime-state";
+import type { GameEnemy, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
 import {
   createLiveTutorialRuntime,
   resetTutorialActors,
   recoverTutorialBlade,
 } from "../../gameplay/training/live-tutorial-runtime";
-import { PLAYGROUND_ALL_KINDS, PlaygroundController } from "../../gameplay/training/playground-controller";
+import { stepUiTab } from "../interface/ui-action-coordinator";
+import { PLAYGROUND_TABS } from "../../gameplay/training/runtime-bridge";
+import {
+  PLAYGROUND_ALL_KINDS,
+  PLAYGROUND_HOTKEY_KINDS,
+  PlaygroundController,
+} from "../../gameplay/training/playground-controller";
 import { createPlaygroundRuntimeBridge } from "../../gameplay/training/runtime-bridge";
 import { createLivePlaygroundPresentation } from "../../gameplay/training/live-playground-presentation";
 import type { PlaygroundScreenModel } from "../../gameplay/training/live-playground-presentation";
@@ -18,6 +24,8 @@ import { AUTHORED_BOSS_ROSTER } from "../../gameplay/run/content-director";
 import type { LiveWaveSpawnSpec } from "../../gameplay/run/live-enemy-spawn";
 import type { RunDifficulty } from "../../gameplay/run/session";
 import { practiceEnemyCatalog } from "../../gameplay/training/practice-enemy-catalog";
+import { padPromptLabel } from "../../presentation/world/tutorial-input-prompts";
+import { anyKeyIn } from "../../domain/keyboard-bindings";
 
 interface TrainingLifecycle {
   terminate(reason: string): void;
@@ -76,7 +84,7 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
     config: d.CONFIG,
     viewportWidth: context.width,
     groundY: () => d.CONFIG.world.groundY,
-    skipPressed: () => d.Input.pressed.has("KeyN"),
+    skipPressed: () => anyKeyIn(d.Input.pressed, "skip-lesson"),
     movingLeft: () => player().aiInput?.left() === true,
     movingRight: () => player().aiInput?.right() === true,
     player,
@@ -135,6 +143,9 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
         );
       return status;
     },
+    recordLesson: (lessonId) => {
+      d.PROFILE.recordTutorialLesson(lessonId);
+    },
     checkAchievements: () => {
       d.ACH.check();
     },
@@ -186,8 +197,12 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
       context.addFloater(actor.x, actor.y - 60, text, emphasis, color);
     },
     navigate: (screen) => {
-      context.navigate(screen);
-      if (screen === "pglab") context.resetScroll();
+      // ABILITIES is the menu's last tab on its own screen: U opens it directly, and the
+      // menu reopens on it when it was the tab left open.
+      if (screen === "pglab") runtime.tab = "abilities";
+      const target = screen === "pgmenu" && runtime.tab === "abilities" ? "pglab" : screen;
+      context.navigate(target);
+      if (target === "pglab") context.resetScroll();
     },
     releasePointer: context.releasePointer,
     requestPointer: context.requestPointer,
@@ -248,6 +263,7 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
   const presentation = createLivePlaygroundPresentation({
     run: () => requireRun(state),
     inputDevice: () => d.Input.mode,
+    padLabel: padPromptLabel(d.PAD),
     oneHit: () => player().oneHit,
     kinds: PLAYGROUND_ALL_KINDS,
     difficulties: () => d.CONFIG.difficulties,
@@ -257,12 +273,25 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
     uiAccent: () => "#13c4d6",
     stageAccent: () => context.stage.current.accent,
     arenaName: () => runtime.arenaName(),
+    arenas: () => d.PLAYGROUND_STAGES.map((stage) => stage.name),
+    // Q / E and L1 / R1 step the menu's tabs, as on every tabbed screen.
+    // The tab keys count only while menus own input (Input.updateUI), so the key that opened
+    // the menu in play never also steps a tab.
+    tab: () => {
+      const next = stepUiTab(PLAYGROUND_TABS, runtime.tab, d.Input.ui.tabPrev, d.Input.ui.tabNext);
+      if (next.changed) {
+        d.SFX.ui();
+        runtime.dispatchAction(`tab:${next.key}`);
+      }
+      return runtime.tab;
+    },
+    hotkeyKinds: PLAYGROUND_HOTKEY_KINDS,
     selectedWeapon: context.selectedWeapon,
     upgrades: () => d.UPGRADES,
     abilityColors: context.abilityColors,
     labFilter: () => controller.state.labFilter,
     viewportHeight: context.height,
-    // The Ability Lab's phone composition (compact density) measures and clamps its own scroll extent.
+    // The ABILITIES tab's phone composition (compact density) measures and clamps its own scroll extent.
     scroll: context.scroll,
     setScroll: (value) => {
       if (!d.UI.density.compact) context.setScroll(value);

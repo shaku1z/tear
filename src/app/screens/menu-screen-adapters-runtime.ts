@@ -1,61 +1,8 @@
-import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { createLiveScreenRenderers } from "../../presentation/screens/live-screen-renderers";
-import type { BrowserGamepad } from "../../input/browser-input-contracts";
 import { buildMenuSnapshot } from "../../presentation/menu-setup-snapshots";
-import { firstRunProfileFacts, isFirstRunProfile } from "../../gameplay/progression/first-run-guidance";
+import { firstRunProfileFacts, isTutorialFirst } from "../../gameplay/progression/first-run-guidance";
+import { nextTutorialLesson } from "../../gameplay/training/tutorial-lesson-ids";
 import type { createLiveSetupShopRenderers } from "../run/setup-shop-renderers";
-
-type Dependencies = Pick<
-  GameRuntimeDependencies,
-  | "Attract"
-  | "CG"
-  | "Cloud"
-  | "CONFIG"
-  | "DAILY"
-  | "Input"
-  | "META"
-  | "PROFILE"
-  | "SFX"
-  | "SHOP"
-  | "shopPurchaseProgressPersistence"
-  | "surfaces"
-  | "UI"
-  | "WEAPONS"
-> &
-  Readonly<{ PAD: BrowserGamepad }>;
-type ScreenRenderers = ReturnType<typeof createLiveScreenRenderers>;
-type BestScore = Readonly<{ wave: number; score: number; time?: number }>;
-
-export interface MenuScreenState {
-  readonly selection: () => Readonly<{ mode: string; difficulty: string; weapon: string; boss: string }>;
-  readonly scroll: () => number;
-  readonly setScroll: (value: number) => void;
-  readonly time: () => number;
-  readonly shop: () => Readonly<{
-    displayedCoins: number | null;
-    flash: Readonly<{ id: string; time: number }> | null;
-  }>;
-  readonly setShop: (
-    value: Readonly<{ displayedCoins: number | null; flash: Readonly<{ id: string; time: number }> | null }>,
-  ) => void;
-}
-
-export interface MenuScreenServices {
-  readonly dependencies: Dependencies;
-  readonly renderers: ScreenRenderers;
-  readonly height: number;
-  readonly getBest: (mode: string, difficulty: string) => BestScore;
-  readonly formatTime: (seconds: number) => string;
-  readonly clamp: (value: number, minimum: number, maximum: number) => number;
-  readonly checkAchievements: () => void;
-}
-
-export interface LiveMenuScreenAdapters {
-  readonly renderMenu: () => void;
-  readonly renderSetup: () => void;
-  readonly renderShop: () => void;
-  readonly buyShopItem: (id: string) => void;
-}
+import type { LiveMenuScreenAdapters, MenuScreenServices, MenuScreenState } from "./menu-screen-adapters";
 
 export function createLiveMenuScreenAdaptersRuntime(
   state: MenuScreenState,
@@ -77,7 +24,9 @@ export function createLiveMenuScreenAdaptersRuntime(
         buildMenuSnapshot({
           username: d.PROFILE.username(),
           tutorialDone: d.PROFILE.stat("tutorialDone"),
-          firstRun: isFirstRunProfile(firstRunProfileFacts(d.PROFILE)),
+          ...(isTutorialFirst(firstRunProfileFacts(d.PROFILE))
+            ? { tutorialFirst: nextTutorialLesson(d.PROFILE.tutorialProgress().lessons) }
+            : {}),
           campaignEmblem: d.PROFILE.data.rewards?.campaignEmblem === true,
           signedIn: d.Cloud.loggedIn(),
           coins: d.META.coins(),
@@ -104,6 +53,18 @@ export function createLiveMenuScreenAdaptersRuntime(
     },
     buyShopItem(id: string): void {
       if (cold) cold.buyShopItem(id);
+      else ensureCold();
+    },
+    selectShopTab(id: string): void {
+      if (cold) cold.selectShopTab(id);
+      else ensureCold();
+    },
+    buyCosmetic(id: string): void {
+      if (cold) cold.buyCosmetic(id);
+      else ensureCold();
+    },
+    equipCosmetic(slot: string, id: string | null): void {
+      if (cold) cold.equipCosmetic(slot, id);
       else ensureCold();
     },
   });

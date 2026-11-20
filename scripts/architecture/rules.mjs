@@ -140,9 +140,9 @@ const PORTABLE_RULES = [
     "tearbench.structural-world-ports",
     ["R06"],
     ["src/tearbench/**"],
-    ["@app.world-runtime-types"],
+    ["@gameplay.world-runtime-types"],
     "portable TearBench modules must consume structural simulation ports, not concrete app world types",
-    { fixtures: { reject: [{ imports: "@app.world-runtime-types", type: true }], accept: [] } },
+    { fixtures: { reject: [{ imports: "@gameplay.world-runtime-types", type: true }], accept: [] } },
   ),
   importRule(
     "gameplay.portable-core-imports",
@@ -171,7 +171,7 @@ const PORTABLE_RULES = [
     ["@tearbench.detached-world"],
     OUTWARD,
     "detached TearBench world modules cannot depend on outward app, presentation, service, or Ghost 2 adapters",
-    { fixtures: { reject: [{ imports: "@app.world-runtime-types", type: true }], accept: [] } },
+    { fixtures: { reject: [{ ...APP_IMPORT_FIXTURE, type: true }], accept: [] } },
   ),
   textRule(
     "tearbench.detached-world-browser-globals",
@@ -647,10 +647,10 @@ const STRUCTURE_RULES = [
     "engineering.lazy-channel",
     ["N1"],
     ["src/**"],
-    ["@engineering.channel-entries"],
-    "engineering-channel modules may only be loaded through a guarded dynamic import, never a static value import",
+    ["@release.developer-only"],
+    "developer-only modules may only be loaded through a guarded dynamic import, never a static value import",
     {
-      except: ["@engineering.channel-entries"],
+      except: ["@release.developer-only", "@release.build-guarded-importers"],
       edges: "static-value",
       fixtures: {
         reject: [{ imports: "src/app/engineering/example-channel-entry", file: "@app.live-runtime-root" }],
@@ -658,6 +658,21 @@ const STRUCTURE_RULES = [
           { imports: "src/app/engineering/example-channel-entry", type: true, file: "@app.live-runtime-root" },
           { dynamic: "src/app/engineering/example-channel-entry", file: "@app.live-runtime-root" },
         ],
+      },
+    },
+  ),
+  importRule(
+    "mobile.build-guarded",
+    ["N2"],
+    ["src/**"],
+    ["@release.mobile-only"],
+    "mobile-only modules may be value-imported only by mobile-only modules and the guarded importers, which reach them behind __TEAR_MOBILE__",
+    {
+      except: ["@release.mobile-only", "@release.mobile-guarded-importers"],
+      edges: "static-value",
+      fixtures: {
+        reject: [{ imports: "src/input/browser-touch", file: "src/input/browser-gamepad.ts" }],
+        accept: [{ imports: "src/input/browser-touch", type: true, file: "src/input/browser-gamepad.ts" }],
       },
     },
   ),

@@ -30,10 +30,8 @@ The user considers oracle commit `ee5e93141d67cc02505b2227b3be0b10d1819e1c` ("fi
 
 ## Completion
 
-Own immutable oracle A/B claims. Use the shared
-[client handoff](../tear-change-gate/references/evidence-handoff.md) and its
-`client-status` / `ensure-client-task` protocol for planned evidence. Bind both
-comparison identities, retain oracle/source/fixture invalidators and gaps, and
-leave final full-gate coordination to `tear-change-gate`.
+Own immutable oracle A/B claims. Name both sides of every comparison and hand claims,
+commands, evidence and gaps to `tear-change-gate` using the shared [evidence handoff](../tear-change-gate/references/evidence-handoff.md); leave final
+full-gate coordination to it.
 
 Report: oracle evidence (file:line at ee5e931), divergence classification, what was restored vs already-matching, parity proof gathered, and remaining unverified surfaces (e.g. user-owed feel playtests). Never claim "matches the source" from a text diff alone when feel or rendering is implicated.

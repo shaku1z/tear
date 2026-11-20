@@ -1,3 +1,4 @@
+import type { ShopShardsPort } from "../screens/menu-screen-adapters";
 import { createScreenActionRouter } from "./screen-action-router";
 import type { AppScreen } from "../../domain/screen-catalog";
 import type { LibraryScreenAdapters } from "../library/library-screen-adapters";
@@ -7,7 +8,9 @@ import type { RunDifficulty, RunMode } from "../../gameplay/run/session";
 import type { GhostVaultLibraryPort } from "../library/ghost-vault-library-controller";
 import { screenActionAvailable, type SurfaceAvailability } from "../../domain/surface-availability";
 import type { ScreenAction } from "../../presentation/screens/contracts";
+import type { RunExitScreen } from "../../domain/screen-actions";
 import { setMusicPreview, stepMusicPreview } from "../../audio/music/preview";
+import { requestNextSong } from "../../audio/music/music-source";
 
 export interface ScreenActionBindingPorts {
   readonly controlChase?: (command: "toggle" | "stop") => void;
@@ -16,11 +19,15 @@ export interface ScreenActionBindingPorts {
     "pickArchive" | "restoreArchive" | "cancelArchive" | "downloadArchive"
   >;
   readonly setScreen: (screen: AppScreen) => void;
+  /** Returns to the screen the current one was opened from. */
+  readonly back: () => void;
   readonly resetScroll: () => void;
   readonly setSetupSelection: (kind: "mode" | "difficulty" | "weapon" | "boss", id: string) => void;
   readonly startSelectedRace?: () => void;
   readonly startSelectedRun: () => void;
   readonly startRun: (mode: RunMode, difficulty: RunDifficulty) => void;
+  /** Records that the player left the tutorial on purpose. */
+  readonly skipTutorial: () => void;
   readonly currentRun: () => Readonly<{ mode: RunMode; diff: RunDifficulty }>;
   readonly resumeFinale: () => void;
   readonly claimFinale: () => void;
@@ -29,7 +36,8 @@ export interface ScreenActionBindingPorts {
   readonly chooseReserve: (index: number) => void;
   readonly chooseTier: (index: number) => void;
   readonly requestPointer: () => void;
-  readonly quitRun: () => void;
+  /** Ends the run as QUIT does and opens `next` (the main menu unless named); see the run adapter. */
+  readonly quitRun: (next?: RunExitScreen) => void;
   readonly revive: () => void;
   readonly endRun: () => void;
   readonly retryRun: () => void;
@@ -37,46 +45,24 @@ export interface ScreenActionBindingPorts {
   readonly campaignDifficulty: () => RunDifficulty;
   readonly resetSettings: () => void;
   readonly buyShopItem: (id: string) => void;
-  readonly openGhostPublication: (id: string) => void;
-  readonly grantGhostPublication: () => void;
-  readonly runGhostPublicationOnce: () => void;
-  readonly cancelGhostPublication: () => void;
-  readonly openGhostSupport: (id: string) => void;
-  readonly createGhostSupport: () => void;
-  readonly loadOwnGhostCapsules: () => void;
-  readonly recoverOwnGhostCapsule: (id: string) => void;
-  readonly closeOwnGhostCatalog: () => void;
+  readonly shop: ShopShardsPort;
   readonly signIn: () => void;
   readonly signOut: () => void;
   readonly pinReplay: (id: string, pinned: boolean) => boolean;
   readonly deleteReplay: (id: string) => void;
   readonly dispatchPlayground: (id: string) => void;
-  readonly tutorialAction?: (
-    command:
-      | "open-practice"
-      | "restart"
-      | "select"
-      | "help"
-      | "demo"
-      | "coach-rate"
-      | "coach-compare"
-      | "coach-diagnostic"
-      | "skip"
-      | "assist"
-      | "annexes"
-      | "select-annex"
-      | "catalog"
-      | "select-enemy"
-      | "bosses"
-      | "select-boss",
-    lessonId?: string,
-  ) => void;
+  readonly tutorialAction?: (action: Extract<ScreenAction, { type: "tutorial.action" }>) => void;
   readonly library: LibraryScreenAdapters;
   readonly replay: ReplayScreenAdapter;
   readonly settings: SettingsRenameAdapters;
 }
 
 export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) {
+  /** The one way out of a run: it ends as QUIT ends it, then `next` opens (the run setup with Adventure selected). */
+  const leaveRun = (next: RunExitScreen = "menu"): void => {
+    ports.quitRun(next);
+    if (next === "setup") ports.setSetupSelection("mode", "campaign");
+  };
   return createScreenActionRouter({
     navigate: (action) => {
       ports.setScreen(action.to);
@@ -88,6 +74,9 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
       }
       // MUSIC opens on Home from outside; inside it, the tab names the page.
       if (action.to === "music") ports.settings.selectMusicPage(action.tab ?? "home");
+    },
+    "navigate.back": () => {
+      ports.back();
     },
     "menu.resumeFinale": () => {
       ports.resumeFinale();
@@ -138,11 +127,15 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
       ports.startRun(run.mode, run.diff);
     },
     "run.quit": (action) => {
-      ports.quitRun();
-      if (action.next === "setup") {
-        ports.setSetupSelection("mode", "campaign");
-        ports.setScreen("setup");
-      }
+      leaveRun(action.next);
+    },
+    "tutorial.continue": () => {
+      ports.setSetupSelection("mode", "tutorial");
+      ports.startSelectedRun();
+    },
+    "tutorial.skip": () => {
+      ports.skipTutorial();
+      leaveRun("setup");
     },
     "continue.revive": () => {
       ports.revive();
@@ -184,8 +177,23 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "music.stopPreview": () => {
       setMusicPreview(null);
     },
+    "music.pick": (action) => {
+      ports.settings.pickMusic(action.value);
+    },
+    "music.next": () => {
+      requestNextSong();
+    },
     "shop.buy": (action) => {
       ports.buyShopItem(action.id);
+    },
+    "shop.selectTab": (action) => {
+      ports.shop.selectShopTab(action.id);
+    },
+    "shards.buy": (action) => {
+      ports.shop.buyCosmetic(action.id);
+    },
+    "shards.equip": (action) => {
+      ports.shop.equipCosmetic(action.slot, action.id);
     },
     "profile.selectTab": (action) => {
       ports.library.selectProfileTab(action.id);
@@ -195,15 +203,6 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     },
     "profile.watchGhostCapsule": (action) => {
       ports.library.watchGhostCapsule(action.id);
-    },
-    "profile.compareGhostCapsule": (action) => {
-      ports.library.compareGhostCapsule(action.id);
-    },
-    "profile.openGhostComparison": () => {
-      ports.library.openGhostComparison();
-    },
-    "profile.repairGhostCapsule": (action) => {
-      ports.library.repairGhostCapsule(action.id);
     },
     "career.control": (action) => {
       ports.library.careerAction(action.command, action.id);
@@ -227,37 +226,7 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
       ports.ghostFiles.cancelArchive();
     },
     "profile.downloadGhostArchive": (action) => {
-      if (action.paired === true) ports.ghostFiles.downloadArchive(action.id, true);
-      else ports.ghostFiles.downloadArchive(action.id);
-    },
-    "profile.loadOwnGhostCapsules": () => {
-      ports.resetScroll();
-      ports.loadOwnGhostCapsules();
-    },
-    "profile.recoverOwnGhostCapsule": (action) => {
-      ports.recoverOwnGhostCapsule(action.id);
-    },
-    "profile.closeOwnGhostCatalog": () => {
-      ports.resetScroll();
-      ports.closeOwnGhostCatalog();
-    },
-    "profile.openGhostPublication": (action) => {
-      ports.openGhostPublication(action.id);
-    },
-    "profile.openGhostSupport": (action) => {
-      ports.openGhostSupport(action.id);
-    },
-    "ghostpublication.grant": () => {
-      ports.grantGhostPublication();
-    },
-    "ghostpublication.runOnce": () => {
-      ports.runGhostPublicationOnce();
-    },
-    "ghostpublication.cancel": () => {
-      ports.cancelGhostPublication();
-    },
-    "ghostsupport.create": () => {
-      ports.createGhostSupport();
+      ports.ghostFiles.downloadArchive(action.id);
     },
     "profile.signIn": () => {
       ports.signIn();
@@ -317,60 +286,27 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "replay.practice": () => {
       ports.replay.practice();
     },
-    "replay.coach.viewMoment": (action) => {
-      ports.replay.viewCoachMoment(action.id);
-    },
-    "replay.coach.control": (action) => {
-      ports.replay.controlCoach(action.command, action.delta);
-    },
-    "replay.challenge.open": () => {
-      ports.replay.openChallenges();
-    },
-    "replay.challenge.start": (action) => {
-      ports.replay.startChallenge(action.id);
-    },
-    "replay.coach.open": () => {
-      ports.replay.openCoach();
-    },
-    "replay.coach.selectBaseline": (action) => {
-      ports.replay.selectCoachBaseline(action.id);
-    },
-    "replay.coach.practice": (action) => {
-      ports.replay.practiceCoachFinding(action.findingId);
-    },
-    "replay.runDna.toggle": () => {
-      ports.replay.toggleRunDna();
-    },
     "replay.editor.toggle": () => {
-      ports.replay.toggleStudio();
+      ports.replay.toggleReplayEditor();
     },
-    "replay.editor.createCutList": () => {
-      ports.replay.createStudioCutList();
+    "replay.editor.appendClip": () => {
+      ports.replay.appendClip();
     },
     "replay.editor.media": (action) => {
       const actions = {
-        markIn: ports.replay.markStudioIn,
-        clear: ports.replay.clearStudioCuts,
-        export: ports.replay.exportStudio,
-        cancel: ports.replay.cancelStudio,
-        download: ports.replay.downloadStudio,
+        markIn: ports.replay.markClipIn,
+        clear: ports.replay.clearClips,
+        export: ports.replay.exportClips,
+        cancel: ports.replay.cancelClipExport,
+        download: ports.replay.downloadClip,
       };
       actions[action.command]();
-    },
-    "replay.studio.toggle": () => {
-      ports.replay.toggleStudio();
-    },
-    "replay.studio.createCutList": () => {
-      ports.replay.createStudioCutList();
     },
     "replay.toggleInfo": () => {
       ports.replay.toggleInfo();
     },
     "replay.speed": (action) => {
       ports.replay.setSpeed(action.value);
-    },
-    "replay.finale": () => {
-      ports.replay.openFinale?.();
     },
     "replay.exit": () => {
       ports.replay.exit();
@@ -379,7 +315,7 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
       ports.dispatchPlayground(action.id);
     },
     "tutorial.action": (action) => {
-      ports.tutorialAction?.(action.command, action.lessonId);
+      ports.tutorialAction?.(action);
     },
     "codex.selectTab": (action) => {
       ports.library.selectCodexTab(action.id);

@@ -3,9 +3,23 @@ import type { createLiveScreenRenderers } from "../../presentation/screens/live-
 import type { AppScreen } from "../../domain/screen-catalog";
 import { RenameController, type RenameSnapshot } from "./rename-controller";
 import type { SettingsController, GameSettings } from "./settings-controller";
-import { buildSettingsSections } from "../../presentation/settings-snapshots";
-import { MENU_MUSIC_CHOICES } from "../../audio/music/loadout";
-import { STATION_CHOICES } from "../../audio/music/active-station";
+import {
+  buildSettingsSections,
+  CREDITS_TAB,
+  LICENCE_KEY_PREFIX,
+  RESET_CANCEL_KEY,
+  RESET_PROGRESS_KEY,
+  rebindNote,
+  rebindRowKey,
+  type KeyboardRowsState,
+} from "../../presentation/settings-snapshots";
+import { isRebindableAction, type RebindableAction } from "../../domain/keyboard-remap";
+import type { BrowserInput } from "../../input/browser-input-contracts";
+import { resetProgress } from "../progress/progress-reset";
+import { createResetProgressFlow } from "../progress/progress-reset-flow";
+import { formatBuildLabel } from "../../platform/build-identity";
+import { creditsFor } from "../../platform/credits";
+import { musicPickChoices } from "../../audio/music/music-source";
 import { normalizeMusicSettingsTab } from "../../audio/music/settings";
 import { getMusicLibrary } from "../../audio/music/library";
 import { getNowPlaying } from "../../audio/music/now-playing";
@@ -14,7 +28,7 @@ import { buildMusicScreenView } from "../../presentation/music-snapshots";
 
 type Dependencies = Pick<
   GameRuntimeDependencies,
-  "APP" | "GFX" | "Input" | "PAD" | "PROFILE" | "Cloud" | "PwaUpdate" | "UI"
+  "APP" | "CG" | "GFX" | "Input" | "META" | "PAD" | "PROFILE" | "Cloud" | "PwaUpdate" | "UI" | "build" | "privacy"
 >;
 type Renderers = ReturnType<typeof createLiveScreenRenderers>;
 
@@ -44,6 +58,7 @@ export interface SettingsRenameAdapters {
   readonly renderMusic: () => void;
   readonly selectSettingsTab: (id: string) => void;
   readonly selectMusicPage: (page: string) => void;
+  readonly pickMusic: (value: string) => void;
   readonly stepSetting: (key: string, direction: number) => void;
   readonly toggleSetting: (key: string) => void;
   readonly activateSetting: (key: string) => void;
@@ -56,6 +71,24 @@ export interface SettingsRenameAdapters {
   readonly markRenamePrompted: () => void;
 }
 
+export type RebindCapture =
+  Readonly<{ kind: "none" }> | Readonly<{ kind: "cancel" }> | Readonly<{ kind: "key"; code: string }>;
+
+/**
+ * Takes this frame's input for a keyboard row that is waiting for a key, and consumes it
+ * so the menu does not also act on it. Escape or any controller input cancels.
+ */
+export function captureRebindKey(input: Pick<BrowserInput, "mode" | "pressed" | "padBack" | "ui">): RebindCapture {
+  const code = [...input.pressed][0];
+  if (code === undefined && !input.padBack) return Object.freeze({ kind: "none" });
+  input.pressed.clear();
+  input.padBack = false;
+  Object.assign(input.ui, { up: false, down: false, left: false, right: false, confirm: false, back: false });
+  Object.assign(input.ui, { tabPrev: false, tabNext: false, pageUp: false, pageDown: false });
+  if (code === undefined || code === "Escape" || input.mode !== "keyboard") return Object.freeze({ kind: "cancel" });
+  return Object.freeze({ kind: "key", code });
+}
+
 const presetOrder = ["default", "standard", "tear", "classic", "split"] as const;
 const settingsTabs = [
   ["general", "GENERAL"],
@@ -63,6 +96,7 @@ const settingsTabs = [
   ["audio", "AUDIO"],
   ["video", "VIDEO"],
   ["accessibility", "ACCESS"],
+  [CREDITS_TAB, "CREDITS"],
 ] as const;
 
 export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRenameServices): SettingsRenameAdapters {
@@ -71,6 +105,23 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
     maximumScroll = 0,
     musicPage = "home",
     musicOpenedFrom = "home";
+  let keyboard: KeyboardRowsState = Object.freeze({ listening: null, note: null });
+  const listenFor = (action: RebindableAction | null, note: KeyboardRowsState["note"] = null): void => {
+    keyboard = Object.freeze({ listening: action, note });
+  };
+  const takeRebindKey = (): void => {
+    const action = keyboard.listening;
+    if (action === null) return;
+    const capture = captureRebindKey(d.Input);
+    if (capture.kind === "none") return;
+    if (capture.kind === "cancel") {
+      listenFor(null);
+      return;
+    }
+    const outcome = services.settingsController.rebindKey(action, capture.code);
+    const text = rebindNote(action, outcome, capture.code);
+    listenFor(null, text === null ? null : { row: rebindRowKey(action), text });
+  };
   const rename = new RenameController({
     document: services.document,
     canvas: services.canvas,
@@ -86,8 +137,38 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
   const cycle = (key: string, values: readonly string[]): void => {
     services.settingsController.cycle(key, values);
   };
+  const progressReset = createResetProgressFlow({
+    now: () => services.window.performance.now(),
+    reset: () =>
+      resetProgress({
+        store: d.CG.store,
+        cloud: d.Cloud,
+        profile: d.PROFILE,
+        meta: d.META,
+        now: () => Date.now(),
+        writerId: () => (d.CG.live ? "crazygames" : "browser"),
+      }),
+    reload: () => {
+      services.window.location.reload();
+    },
+  });
+  const credits = creditsFor(d.build.target);
+  /** A credit's licence text ships with the build; it opens as a page of its own. */
+  const openLicenceText = (id: string): void => {
+    const file = credits.flatMap((group) => group.credits).find((credit) => credit.id === id)?.licenceFile;
+    if (file !== null && file !== undefined) services.window.open(file, "_blank", "noopener");
+  };
   const activate = (key: string): void => {
-    if (key === "gfx") cycle(key, ["auto", "high", "low"]);
+    const rebind = key.startsWith("rebind:") ? key.slice("rebind:".length) : null;
+    if (rebind !== null && isRebindableAction(rebind)) {
+      listenFor(rebind);
+      return;
+    }
+    listenFor(null);
+    if (key === "resetKeys") {
+      services.settingsController.resetKeys();
+      listenFor(null, { row: key, text: "Every key is back to its default." });
+    } else if (key === "gfx") cycle(key, ["auto", "high", "low"]);
     else if (key === "padPreset") cycle(key, presetOrder);
     else if (key === "tetherMode") cycle(key, ["hold", "toggle"]);
     else if (key === "vibration") {
@@ -98,19 +179,25 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
     else if (key === "touchAim") cycle(key, ["stick", "drag"]);
     else if (key === "cinematics") cycle(key, ["full", "brief", "off"]);
     else if (key === "musicMode") cycle(key, ["adaptive", "full", "calm", "dynamic"]);
-    else if (key === "menuMusic") cycle(key, [...MENU_MUSIC_CHOICES]);
-    else if (key === "station") cycle(key, [...STATION_CHOICES]);
+    else if (key === "menuMusic") cycle(key, musicPickChoices(getMusicLibrary()));
     else if (key === "guide") services.setCodexGuide();
     else if (key === "install" && services.installPrompt.available) services.installPrompt.prompt();
     else if (key === "update") void d.PwaUpdate.apply();
-    else if (key === "terms")
-      services.window.open("https://www.crazygames.com/terms-and-conditions", "_blank", "noopener");
-    else if (key === "privacy") services.window.open("https://www.crazygames.com/privacy", "_blank", "noopener");
+    else if (key === "terms" && d.privacy.stance.termsUrl !== null)
+      services.window.open(d.privacy.stance.termsUrl, "_blank", "noopener");
+    else if (key === "privacy" && d.privacy.stance.privacyUrl !== null)
+      services.window.open(d.privacy.stance.privacyUrl, "_blank", "noopener");
+    else if (key.startsWith(LICENCE_KEY_PREFIX)) openLicenceText(key.slice(LICENCE_KEY_PREFIX.length));
+    else if (key === RESET_PROGRESS_KEY) progressReset.press();
+    else if (key === RESET_CANCEL_KEY) progressReset.cancel();
   };
   const renderSettings = (): void => {
+    // Before the tab keys: a row waiting for a key takes Q and E too.
+    takeRebindKey();
     settingsTab = services.stepTab(settingsTabs, settingsTab, () => {
       services.setScroll(0);
       maximumScroll = 0;
+      listenFor(null);
     });
     const g = (index: number): string => d.PAD.glyph(index);
     const presetMeta = Object.freeze({
@@ -150,8 +237,26 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
       touch: d.Input.touchActive(),
       installAvailable: services.installPrompt.available,
       update: d.PwaUpdate.snapshot(),
+      buildLabel: formatBuildLabel(d.build),
+      privacy: {
+        privacyLink: d.privacy.stance.privacyUrl !== null,
+        termsLink: d.privacy.stance.termsUrl !== null,
+        note: d.privacy.stance.note,
+        statistics: d.privacy.stance.sendsStatistics,
+      },
+      credits: credits.map((group) => ({
+        label: group.label,
+        entries: group.credits.map((credit) => ({
+          id: credit.id,
+          name: credit.name,
+          note: [credit.use, credit.notice, credit.licence].filter((part) => part !== null).join(" · "),
+          hasLicenceText: credit.licenceFile !== null,
+        })),
+      })),
+      progressReset: progressReset.view(),
       presets: presetMeta,
       controllerGlyphs: [g(0), g(1), g(2), g(3)],
+      keyboard,
     });
     const rowCount = sections.reduce((count, section) => count + section.rows.length, 0);
     // Matches the settings renderer: settingsRowH per row, 48 per section head, list from y=214 to the page footer (900 - 110 - 214 = 576 visible).
@@ -160,9 +265,9 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
     services.renderers.settings({
       id: "settings",
       tab: settingsTab,
+      resettable: settingsTab !== CREDITS_TAB,
       tabs: settingsTabs.map(([id, label]) => ({ id, label, selected: id === settingsTab })),
       sections,
-      returnTo: d.APP.settingsReturn,
       canScrollUp: services.scroll() > 0,
       canScrollDown: services.scroll() < maximumScroll,
     });
@@ -203,12 +308,16 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
     selectSettingsTab: (id) => {
       settingsTab = normalizeMusicSettingsTab(id);
       services.setScroll(0);
+      listenFor(null);
     },
     selectMusicPage: (page) => {
       // A collection remembers the page it was opened from, so BACK goes up one level.
       if (page.startsWith("collection:") && !musicPage.startsWith("collection:")) musicOpenedFrom = musicPage;
       if (page !== musicPage) services.setScroll(0);
       musicPage = page;
+    },
+    pickMusic: (value) => {
+      services.settingsController.choose("menuMusic", value, musicPickChoices(getMusicLibrary()));
     },
     stepSetting: (key, direction) => {
       services.settingsController.step(key, direction);

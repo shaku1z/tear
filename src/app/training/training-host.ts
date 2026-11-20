@@ -1,16 +1,17 @@
 import type { LiveTutorialRuntime } from "../../gameplay/training/live-tutorial-runtime";
-import { loadShippingTutorialGold } from "../../gameplay/training/tutorial-gold-shipping";
+import { loadShippingTutorialGold, shippingTutorialGoldStatus } from "../../gameplay/training/tutorial-gold-shipping";
 import type { PlaygroundRuntimeBridge } from "../../gameplay/training/runtime-bridge";
 import type {
   createLivePlaygroundPresentation,
   PlaygroundScreenModel,
 } from "../../gameplay/training/live-playground-presentation";
 import type { ArenaPlatform } from "../../gameplay/training/arena-rules";
-import type { TutorialGhostSnapshot, TutorialMark } from "../../gameplay/training/tutorial-controller";
+import type { TutorialGhostSnapshot } from "../../gameplay/training/tutorial-controller";
+import type { TutorialMark } from "../../gameplay/training/tutorial-marks";
 import type { LiveWaveSpawnSpec } from "../../gameplay/run/live-enemy-spawn";
 import type { RunDifficulty } from "../../gameplay/run/session";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameEnemy, GameRun } from "../shell/game-runtime-state";
+import type { GameEnemy, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
 import type { AppScreen } from "../../domain/screen-catalog";
 
@@ -70,7 +71,6 @@ function emptyProgress(): readonly [number, number] {
 const fallbackLesson: ReturnType<LiveTutorialRuntime["step"]> = Object.freeze({
   t: "",
   d: "",
-  keys: Object.freeze([]),
   need: undefined,
   ranged: undefined,
   final: undefined,
@@ -97,15 +97,26 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
     labFilter: "all",
   };
 
-  // The tutorial gold corpus is fetched by the same preflight, so a lesson never
-  // starts before its demonstrations exist. A failed corpus load is retried by
-  // the next preflight; meanwhile the coach shows no demonstration.
+  // Preflight waits for the training code only. The coach's demonstrations (the tutorial gold corpus)
+  // are asked for once a lesson is being played, so a new player's first PLAY does not wait for them
+  // and they do not share the bandwidth of the code the lesson needs. The coach shows them when they
+  // arrive; a failed load leaves the course playable without them, and the next lesson asks again.
   const ensureLoaded = (): Promise<void> => {
     loading ??= import("./training-host-runtime").then((module) => {
       loaded = module.createLiveTrainingHostRuntime(context);
       if (bossPractice) loaded.tutorial.bindBossPractice(bossPractice);
     });
-    return Promise.all([loading, loadShippingTutorialGold()]).then(() => undefined);
+    return loading;
+  };
+  // A failed load is asked for again once per session started (PLAY into the tutorial, or opening
+  // practice), never every tick.
+  let retryDemonstrations = true;
+  const requestDemonstrations = (): void => {
+    const status = shippingTutorialGoldStatus();
+    if (status === "idle" || (status === "failed" && retryDemonstrations)) {
+      retryDemonstrations = false;
+      void loadShippingTutorialGold();
+    }
   };
   const tutorial: LiveTutorialRuntime = {
     openPractice: (tutorialDone) => loaded?.tutorial.openPractice(tutorialDone) ?? false,
@@ -123,9 +134,6 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
     restart: () => loaded?.tutorial.restart() ?? false,
     selectLesson: (id) => loaded?.tutorial.selectLesson(id) ?? false,
     selectAnnex: (id) => loaded?.tutorial.selectAnnex(id) ?? false,
-    showAnnexes: () => {
-      loaded?.tutorial.showAnnexes();
-    },
     bindBossPractice: (port) => {
       bossPractice = port;
       loaded?.tutorial.bindBossPractice(port);
@@ -144,14 +152,13 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
       loaded?.tutorial.captureCoachCommands(commands);
     },
     coachAction: (command) => loaded?.tutorial.coachAction(command) ?? false,
-    showBosses: () => {
-      loaded?.tutorial.showBosses();
+    showPracticeTab: (tab) => {
+      // Each Drills tab is its own list, so a new tab opens at its top.
+      loaded?.tutorial.showPracticeTab(tab);
+      context.resetScroll();
     },
     selectBoss: (id, retained) => loaded?.tutorial.selectBoss(id, retained) ?? false,
     selectEnemy: (id) => loaded?.tutorial.selectEnemy(id) ?? false,
-    showCatalog: () => {
-      loaded?.tutorial.showCatalog();
-    },
     weaponEffect: (weaponId, effect) => {
       loaded?.tutorial.weaponEffect(weaponId, effect);
     },
@@ -160,6 +167,7 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
     },
     demonstrate: () => loaded?.tutorial.demonstrate() ?? false,
     captureSession: () => loaded?.tutorial.captureSession(),
+    freePracticeCourse: () => loaded?.tutorial.freePracticeCourse(),
     validateSession: (value, weaponId, actors, candidate) => {
       if (!loaded && value !== undefined) throw new Error("Load training before restoring a tutorial session");
       loaded?.tutorial.validateSession(value, weaponId, actors, candidate);
@@ -210,7 +218,7 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
     },
     start() {
       if (loaded === undefined) throw new Error("Training preflight must complete before tutorial start");
-      loaded.tutorial.start(preparedCourseId ?? "unissued");
+      loaded.tutorial.start(preparedCourseId ?? "unissued", context.dependencies.PROFILE.tutorialProgress().lessons);
     },
     stop() {
       loaded?.tutorial.stop();
@@ -225,6 +233,8 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
       loaded?.tutorial.drawGhost();
     },
     update(seconds: number) {
+      // Runs only while a tutorial lesson is being played, after its first frame has been drawn.
+      requestDemonstrations();
       loaded?.tutorial.update(seconds);
     },
   };
@@ -239,6 +249,15 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
     setDifficulty(id) {
       if (loaded === undefined) throw new Error("Training preflight must complete before playground setup");
       loaded.runtime.setDifficulty(id);
+    },
+    get tab() {
+      return loaded?.runtime.tab ?? "spawn";
+    },
+    set tab(value) {
+      if (loaded) loaded.runtime.tab = value;
+    },
+    enterArena() {
+      loaded?.runtime.enterArena();
     },
     nextArena() {
       loaded?.runtime.nextArena();
@@ -267,7 +286,7 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
           slow: false,
           hpMultiplier: 1,
           count: 1,
-          arena: -1,
+          arena: 0,
           labFilter: "all",
         });
     },
@@ -298,7 +317,12 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
       if (!loaded || !Number.isSafeInteger(tutorialDone) || tutorialDone <= 0) return false;
       context.selectWeapon("sword");
       context.startPractice();
-      return loaded.tutorial.openPractice(tutorialDone);
+      const opened = loaded.tutorial.openPractice(tutorialDone);
+      if (opened) {
+        retryDemonstrations = true;
+        requestDemonstrations();
+      }
+      return opened;
     },
     controller: Object.freeze({
       get state() {
@@ -310,6 +334,7 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
       await ensureLoaded();
       const issued = await context.dependencies.tutorialCompletionPersistence?.issue();
       preparedCourseId = issued?.id ?? "unissued";
+      retryDemonstrations = true;
       try {
         start();
         if (issued?.status !== "committed") {

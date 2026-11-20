@@ -1,3 +1,13 @@
+import { rulesetRefusal } from "../../gameplay/run/ruleset-version";
+import { asRecord } from "../../domain/records";
+
+/** Why a saved recording cannot be watched under today's ruleset, or null. */
+export function recordingRefusal(record: Readonly<Record<string, unknown>>): string | null {
+  const provenance = asRecord(record.provenance);
+  const version = provenance === undefined ? undefined : provenance.rulesetVersion;
+  return rulesetRefusal(typeof version === "string" ? version : undefined);
+}
+
 interface ReplayIndexEntry {
   readonly id: string;
   readonly shareId?: string | null;
@@ -39,6 +49,7 @@ export class ReplayLibraryController {
     const local = this.#ports.vault.get(id);
     if (local !== null) {
       this.#setMessage(from, "");
+      if (this.#refused(local, from)) return;
       if (!this.#ports.enterReplay(local, from))
         this.#setMessage(from, "replay unavailable — it uses an older weapon runtime");
       return;
@@ -49,12 +60,19 @@ export class ReplayLibraryController {
       .then((record) => {
         if (sequence !== this.#watchSequence) return;
         this.#setMessage(from, "");
+        if (record !== null && this.#refused(record, from)) return;
         if (record === null || !this.#ports.enterReplay(record, from))
           this.#setMessage(from, "replay unavailable — it uses an older weapon runtime");
       })
       .catch(() => {
         if (sequence === this.#watchSequence) this.#setMessage(from, "couldn't load that replay");
       });
+  }
+
+  #refused(record: Record<string, unknown>, from: "profile" | "leaderboards"): boolean {
+    const refusal = recordingRefusal(record);
+    if (refusal !== null) this.#setMessage(from, `replay unavailable — ${refusal}`);
+    return refusal !== null;
   }
 
   publish(id: string): void {

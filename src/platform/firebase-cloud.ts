@@ -1,9 +1,6 @@
+import { asRecord } from "../domain/records";
 import type { AccountProvider, CloudSavePayload, CloudUser, SharedCloudService, SignInResult } from "./cloud";
 import type { FirebaseClientConfig } from "./firebase-config";
-import {
-  createFirebaseGhostPublicationBearerPort,
-  type GhostPublicationBearerPort,
-} from "./firebase-publication-bearer";
 
 type DataRecord = Record<string, unknown>;
 
@@ -94,8 +91,6 @@ export interface FirebaseCloudOptions {
 export interface FirebaseCloudCompatibility {
   readonly account: AccountProvider;
   readonly shared: SharedCloudService;
-  /** Safe action-time bearer port; never exposes Firebase Auth or a UID. */
-  readonly ghostPublicationBearer: GhostPublicationBearerPort;
 }
 
 export function createBrowserScriptLoader(documentLike: Document): (url: string) => Promise<void> {
@@ -112,10 +107,6 @@ export function createBrowserScriptLoader(documentLike: Document): (url: string)
       documentLike.head.appendChild(script);
     });
   };
-}
-
-function asRecord(value: unknown): DataRecord | null {
-  return typeof value === "object" && value !== null && !Array.isArray(value) ? (value as DataRecord) : null;
 }
 
 function number(value: unknown, fallback = 0): number {
@@ -155,15 +146,6 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
   let authUid: string | null = null;
   let retryMerge = false;
   let removeAuthListener: (() => void) | undefined;
-  const ghostPublicationBearer = createFirebaseGhostPublicationBearerPort(() => {
-    const user = auth?.currentUser;
-    if (!auth || !user || typeof (user as { readonly getIdToken?: unknown }).getIdToken !== "function")
-      return auth ? { currentUser: null } : null;
-    const tokenUser = user as AuthUser & { getIdToken(): Promise<string> };
-    return Object.freeze({
-      currentUser: Object.freeze({ isAnonymous: tokenUser.isAnonymous, getIdToken: () => tokenUser.getIdToken() }),
-    });
-  });
 
   const race = async <T>(promise: Promise<T>, milliseconds = timeoutMs): Promise<T> =>
     await new Promise<T>((resolve, reject) => {
@@ -331,6 +313,16 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
         /* retry on next save */
       }
     },
+    async replace(_context, payload) {
+      if (!db || !authUid) return false;
+      try {
+        // No merge: the document becomes exactly this payload, so nothing the player earned survives in it.
+        await race(db.collection("users").doc(authUid).set({ profile: payload.profile, meta: payload.meta }));
+        return true;
+      } catch {
+        return false;
+      }
+    },
     dispose() {
       removeAuthListener?.();
       removeAuthListener = undefined;
@@ -423,7 +415,8 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
       void passport().then(async (session) => {
         if (!session) return;
         try {
-          await session.db.collection("telemetry").add({ event: name, uid: session.uid, ts: now(), ...data });
+          // Anonymous by construction: the document carries no account id, only the event and its figures.
+          await session.db.collection("telemetry").add({ event: name, ts: now(), ...data });
         } catch {
           /* optional telemetry */
         }
@@ -539,12 +532,12 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
       if (!session) return null;
       try {
         const document = await race(session.db.collection("ghosts").doc(`${mode}_${difficulty}`).get());
-        return document.exists ? asRecord(document.data()) : null;
+        return document.exists ? (asRecord(document.data()) ?? null) : null;
       } catch {
         return null;
       }
     },
   };
 
-  return Object.freeze({ account, shared, ghostPublicationBearer });
+  return Object.freeze({ account, shared });
 }

@@ -1,4 +1,3 @@
-import type { createLiveBeatThisRunController } from "../replay/beat-this-run-controller";
 import type { CareerPort } from "./ghost-career-controller";
 import type { LibraryScreenServices as SharedLibraryScreenServices } from "./library-screen-adapters";
 import { legacyCareerRow } from "../../ghost/career-archive";
@@ -31,9 +30,9 @@ import {
 import { ReplayLibraryController } from "./replay-library-controller";
 import { renderReplayThumbnail } from "../../presentation/replay-thumbnail";
 import type { GhostVaultLibraryPort } from "./ghost-vault-library-controller";
-import type { LiveGhostOwnerRecoveryController } from "../replay/ghost-owner-recovery-controller";
 import type { GhostTheaterOpenResult } from "../../ghost/theater-open-result";
 import { createLiveBestiaryPreview } from "./bestiary-preview";
+import { VAULT_OPENING_MESSAGE, vaultListState } from "../../presentation/screens/profile-list-empty-state";
 
 type Dependencies = Pick<
   GameRuntimeDependencies,
@@ -50,6 +49,7 @@ type Dependencies = Pick<
   | "DAILY"
   | "Echo"
   | "FirebaseProvider"
+  | "fullscreen"
   | "Flyer"
   | "META"
   | "PROFILE"
@@ -72,7 +72,6 @@ type Renderers = ReturnType<typeof createLiveScreenRenderers>;
 type Category = Readonly<{ name: string; color: string }>;
 
 export interface LibraryScreenServices {
-  readonly beat?: Pick<ReturnType<typeof createLiveBeatThisRunController>, "action" | "snapshot" | "cancel">;
   readonly chase?: NonNullable<SharedLibraryScreenServices["chase"]>;
   readonly dependencies: Dependencies;
   readonly renderers: Renderers;
@@ -90,10 +89,8 @@ export interface LibraryScreenServices {
   readonly career?: CareerPort;
   readonly enterCareerSource?: (id: string, command: string, expectedManifestHash?: string) => unknown;
   readonly ghostVault: GhostVaultLibraryPort;
-  readonly ownerRecovery?: Pick<LiveGhostOwnerRecoveryController, "snapshot" | "close">;
   readonly enterReplay: (record: unknown, from: string) => boolean;
   readonly enterGhostTheater: (id: string) => Promise<GhostTheaterOpenResult>;
-  readonly enterGhostComparison: (ids: readonly string[]) => Promise<boolean>;
 }
 
 export interface LibraryScreenAdapters {
@@ -128,10 +125,7 @@ export interface LibraryScreenAdapters {
   readonly selectLeaderboardBoard: (id: string) => void;
   readonly watchReplay: (id: string, from?: "profile" | "leaderboards") => void;
   readonly watchGhostCapsule: (id: string) => void;
-  readonly compareGhostCapsule: (id: string) => void;
-  readonly openGhostComparison: () => void;
   readonly publishReplay: (id: string) => void;
-  readonly repairGhostCapsule: (id: string) => void;
 }
 
 export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenServices): LibraryScreenAdapters {
@@ -206,7 +200,6 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
   const codexTierView: Record<string, number> = {};
   let profileTab = "bests",
     profileMessage = "",
-    comparisonSources: string[] = [],
     achievementFilter = "all";
   let leaderboardTab = "global",
     leaderboardMode = "",
@@ -264,13 +257,18 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     });
     const guide =
       codexTab === "guide"
-        ? buildCodexGuide(d.CONFIG.trick.pts, d.CONFIG.trick.tiers, {
-            jump: d.PAD.bindingLabel("jump"),
-            dash: d.PAD.bindingLabel("dash"),
-            throw: d.PAD.bindingLabel("throw"),
-            tether: d.PAD.bindingLabel("tether"),
-            pause: d.PAD.glyph(9),
-          })
+        ? buildCodexGuide(
+            d.CONFIG.trick.pts,
+            d.CONFIG.trick.tiers,
+            {
+              jump: d.PAD.bindingLabel("jump"),
+              dash: d.PAD.bindingLabel("dash"),
+              throw: d.PAD.bindingLabel("throw"),
+              tether: d.PAD.bindingLabel("tether"),
+              pause: d.PAD.glyph(9),
+            },
+            d.fullscreen().available,
+          )
         : undefined;
     const result = buildCodexScreenSnapshot({
       tab: codexTab,
@@ -296,7 +294,6 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     profileTab = services.stepTab(profileTabs, profileTab, () => {
       services.setScroll(0);
       profileMessage = "";
-      services.ownerRecovery?.close();
       if (profileTab !== "career") career?.close();
     });
     let ghostVault = services.ghostVault.snapshot();
@@ -304,31 +301,21 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       services.ghostVault.refresh();
       ghostVault = services.ghostVault.snapshot();
     }
-    const healthyCapsuleIds = new Set(
-      ghostVault.capsules
-        .filter((capsule) => capsule.healthy && capsule.status === "complete")
-        .map((capsule) => capsule.id),
-    );
-    comparisonSources = comparisonSources.filter((id) => healthyCapsuleIds.has(id));
     const vaultReplays = ghostVault.capsules.map((capsule) =>
       Object.freeze({
         id: capsule.id,
         // Player wording: these are saved replays (recordings); no ids, hashes or byte counts.
         title: "SAVED REPLAY",
-        detail: `${capsule.status === "complete" ? "Complete recording" : "Recording still saving"} · ${capsule.healthy ? "ready to watch" : "needs repair"}${capsule.repairChildId === undefined ? "" : " · repaired copy available"}`,
+        detail: `${capsule.status === "complete" ? "Complete recording" : "Recording still saving"} · ${capsule.healthy ? "ready to watch" : "damaged, can't play"}`,
         badge: "SAVED REPLAY",
         available: capsule.healthy && capsule.status === "complete" && capsule.theaterEligible,
-        theaterUnavailable: !capsule.theaterEligible,
-        repairable: capsule.repairable,
+        theaterUnavailable: !capsule.theaterEligible || !capsule.healthy,
         canDownloadArchive: capsule.healthy && capsule.status === "complete",
-        canDownloadLinkedPair: capsule.canDownloadLinkedPair === true,
         timestamp: new Date(capsule.createdAt).toLocaleDateString(),
-        comparisonSelected: comparisonSources.includes(capsule.id),
-        comparisonSourceCount: comparisonSources.length,
       }),
     );
     if (profileTab === "vault" && ghostVault.message !== undefined) profileMessage = ghostVault.message;
-    else if (profileTab === "vault" && ghostVault.status === "loading") profileMessage = "Opening your saved replays…";
+    else if (profileTab === "vault" && ghostVault.status === "loading") profileMessage = VAULT_OPENING_MESSAGE;
     else if (profileTab === "vault" && ghostVault.evictedCapsuleIds.length > 0) {
       profileMessage = `${String(ghostVault.evictedCapsuleIds.length)} older saved ${ghostVault.evictedCapsuleIds.length === 1 ? "replay was" : "replays were"} removed to make room.`;
     } else if (profileTab === "vault" && ghostVault.status === "ready" && ghostVault.capsules.length === 0) {
@@ -338,7 +325,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       profileTab === "vault" &&
       ghostVault.status === "ready" &&
       ghostVault.capsules.length > 0 &&
-      profileMessage === "Opening your saved replays…"
+      profileMessage === VAULT_OPENING_MESSAGE
     )
       profileMessage = "";
     const signedIn = d.Cloud.loggedIn(),
@@ -353,9 +340,8 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
             services.formatTime,
           )
         : [];
-    // The vault toolbar (import / account restore) sits above the list: profile-achievements vaultToolbar.
-    const archiveInset =
-      profileTab === "vault" && (ghostVault.archive !== undefined || services.ownerRecovery !== undefined) ? 84 : 0;
+    // The vault toolbar (import) sits above the list: profile-achievements vaultToolbar.
+    const archiveInset = profileTab === "vault" && ghostVault.archive !== undefined ? 84 : 0;
     const result = buildProfileSnapshot({
       tab: profileTab,
       tabs: profileTabs,
@@ -405,15 +391,9 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       formatTime: services.formatTime,
       difficultyAccent: (id) => difficultyHeat[id] ?? d.UI.t.color.danger,
     });
-    const ownerRecovery = profileTab === "vault" ? services.ownerRecovery?.snapshot() : undefined;
-    const maximumScroll =
-      ownerRecovery?.catalogVisible === true
-        ? Math.max(0, ownerRecovery.entries.length * 96 - (services.height - 110 - 390))
-        : result.maximumScroll;
-    clampScroll(maximumScroll);
-    const beatMessage = services.beat?.snapshot().message;
-    const chaseMessage =
-      beatMessage !== undefined && beatMessage.length > 0 ? beatMessage : services.chase?.snapshot().message;
+    clampScroll(result.maximumScroll);
+    const chaseMessage = services.chase?.snapshot().message;
+    const vaultList = profileTab === "vault" ? vaultListState(ghostVault.status) : undefined;
     services.renderers.profile({
       ...result.view,
       ...(profileTab === "career" && career
@@ -425,11 +405,8 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
             },
           }
         : {}),
-      ...(ownerRecovery === undefined ? {} : { ownerRecovery }),
-      ...(ownerRecovery?.catalogVisible === true
-        ? { canScrollUp: services.scroll() > 0, canScrollDown: services.scroll() < maximumScroll }
-        : {}),
       ...(profileTab === "vault" && ghostVault.archive !== undefined ? { archive: ghostVault.archive } : {}),
+      ...(vaultList === undefined ? {} : { vaultList }),
     });
   };
   const renderAchievements = (): void => {
@@ -618,26 +595,16 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       if (count > 1) codexTierView[id] = ((codexTierView[id] ?? 0) + 1) % count;
     },
     careerAction: (command, id) => {
-      if (command.startsWith("beat")) {
-        const entry = career?.snapshot().selected?.entry;
-        services.beat?.action(command, entry?.id, entry?.manifestHash);
-        return;
-      }
-      if (command !== "suspend") services.beat?.cancel();
       if (command !== "chase" && command !== "race") services.chase?.cancelPreparation();
       if (command === "suspend") career?.close();
       else if (command === "select" && id) career?.select(id);
-      else if (["watch", "coach", "challenge", "download", "publish", "chase", "race"].includes(command)) {
+      else if (["watch", "download", "chase", "race"].includes(command)) {
         void career?.sourceAction(async (source) => {
           if (career.snapshot().selected?.entry.kind === "legacy-visual") {
             if (command !== "watch") throw new Error("This tool requires a canonical capsule");
             replayLibrary.watch(source, "profile");
             return undefined;
           } else {
-            if (command === "challenge" && career.snapshot().selected?.entry.seedRaceRole)
-              throw new Error(
-                "Seed-Locked Race requires a fresh Race This Reference start; local challenge forks are unsupported",
-              );
             await services.enterCareerSource?.(source, command, career.snapshot().selected?.entry.manifestHash);
             if (
               (command === "chase" || command === "race") &&
@@ -651,7 +618,6 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     },
     selectProfileTab: (id) => {
       if (id !== "career") career?.close();
-      services.ownerRecovery?.close();
       profileTab = id;
       services.setScroll(0);
       profileMessage = "";
@@ -683,51 +649,13 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       void services.enterGhostTheater(id).then((result) => {
         if (result.kind === "refused") {
           services.ghostVault.setTheaterEligibility(id, result);
-          profileMessage = "This replay can't be played back right now.";
+          profileMessage =
+            result.category === "ruleset-retired" ? result.detail : "This replay can't be played back right now.";
         }
-      });
-    },
-    compareGhostCapsule: (id) => {
-      const capsule = services.ghostVault.snapshot().capsules.find((entry) => entry.id === id);
-      if (capsule?.healthy !== true || capsule.status !== "complete" || !capsule.theaterEligible) {
-        profileMessage = "Only complete saved replays can be compared.";
-        return;
-      }
-      if (comparisonSources.includes(id)) {
-        comparisonSources = comparisonSources.filter((source) => source !== id);
-        profileMessage =
-          comparisonSources.length === 0
-            ? "Comparison selection cleared."
-            : `${String(comparisonSources.length)} comparison source(s) selected.`;
-        return;
-      }
-      if (comparisonSources.length >= 9) {
-        profileMessage = "You can compare up to nine replays at once.";
-        return;
-      }
-      comparisonSources = [...comparisonSources, id];
-      profileMessage =
-        comparisonSources.length < 2
-          ? "Replay selected. Choose at least one more to compare."
-          : `${String(comparisonSources.length)} comparison sources selected. Press COMPARE to open them.`;
-    },
-    openGhostComparison: () => {
-      if (comparisonSources.length < 2) {
-        profileMessage = "Choose at least two saved replays to compare.";
-        return;
-      }
-      const sources = Object.freeze([...comparisonSources]);
-      profileMessage = "Opening the comparison…";
-      void services.enterGhostComparison(sources).then((opened) => {
-        if (opened) comparisonSources = [];
-        else profileMessage = "Those replays could not be opened for comparison.";
       });
     },
     publishReplay: (id) => {
       replayLibrary.publish(id);
-    },
-    repairGhostCapsule: (id) => {
-      services.ghostVault.repair(id);
     },
   };
   return Object.freeze(adapters);

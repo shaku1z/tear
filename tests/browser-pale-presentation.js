@@ -88,12 +88,12 @@ const resolved = Object.freeze({
   resolvedHash: "pale-stage-wave-41-engineering",
 });
 
-withJourney({ name: "Pale PT3-C5 presentation", port: 8355 }, async ({ page, buildInfo }) => {
+withJourney({ name: "Pale PT3-C5 presentation" }, async ({ page, buildInfo }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: STATE_WAIT_MS });
   const state = await page.evaluate((scenario) => {
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
     window.__PALE_C5_ENVIRONMENT__ = environment;
-    const launched = environment.forgeResolvedScenario(scenario);
+    const launched = environment.buildResolvedScenario(scenario);
     for (let index = 0; index < 12; index += 1) environment.renderFrame(1 / 60);
     const snapshot = environment.captureSnapshot("pale-c5-browser");
     return { launched, run: snapshot.state["tear.run.v1"], hazard: snapshot.state["tear.hazard.v1"] };
@@ -110,7 +110,7 @@ withJourney({ name: "Pale PT3-C5 presentation", port: 8355 }, async ({ page, bui
       ["aurora-track", 1],
     ],
   );
-  // The detached State Forge renderer is not the active input owner, so it
+  // The detached State Setup renderer is not the active input owner, so it
   // cannot acquire browser pointer lock. Suppress only the unrelated DOM hint;
   // the captured canvas remains the exact rendered gameplay frame.
   await page.evaluate(() => {
@@ -192,7 +192,7 @@ withJourney({ name: "Pale PT3-C5 presentation", port: 8355 }, async ({ page, bui
           flashScale: 0,
           audioEnabled: false,
         },
-        captureOverlayPolicy: "detached-state-forge-pointer-lock-hint-suppressed",
+        captureOverlayPolicy: "detached-state-setup-pointer-lock-hint-suppressed",
         screenshots: captures,
       },
       null,

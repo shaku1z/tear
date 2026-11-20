@@ -2,16 +2,46 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
-const { STATE_WAIT_MS } = require("./browser-waits");
+const { STATE_WAIT_MS, clickTarget } = require("./browser-waits");
 
 withJourney(
-  { name: "progression journeys", port: 8142, recordFrames: true },
+  { name: "progression journeys", recordFrames: true },
   async ({ page, boot, waitScreen, clickAndWait, waitArmed, labelPoint, clickLabel, clickCard }) => {
     function requireHook(hooks, name) {
       assert.ok(hooks.includes(name), `built artifact is missing required PANTHEON_DEBUG hook: ${name}`);
     }
     async function settleInput() {
       await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    }
+    /** Whether the last drawn frame contains exactly this text. */
+    async function drawn(text) {
+      return page.evaluate(
+        (wanted) => window.__TEAR_JOURNEY_FRAME__.texts.some((entry) => entry.text === wanted),
+        text,
+      );
+    }
+    async function waitDrawn(text) {
+      await page.waitForFunction(
+        (wanted) => window.__TEAR_JOURNEY_FRAME__.texts.some((entry) => entry.text === wanted),
+        text,
+        { timeout: STATE_WAIT_MS },
+      );
+    }
+    /** Tabs register an unlabelled target, so they are clicked where their label is drawn. */
+    async function clickDrawn(label) {
+      const point = await labelPoint(label);
+      await page.mouse.click(point.x, point.y);
+    }
+    const storageSnapshot = () => page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.storage.snapshot());
+    /**
+     * Boots a fresh page whose isolated storage starts with `values`: what a reload finds in the
+     * browser's storage. Init scripts run in the order they were added, so this seed is the last word.
+     */
+    async function reloadWith(values) {
+      await page.addInitScript((seed) => {
+        window.__TEAR_TEST_STORAGE__ = seed;
+      }, values);
+      await boot();
     }
 
     if (process.env.TEAR_CONTEXTUAL_ONBOARDING_ONLY === "1") {
@@ -134,7 +164,15 @@ withJourney(
         `${tab} tab keeps the profile open`,
       );
     }
-    await clickAndWait(800, 850, "menu");
+    // CAREER draws the career archive page; its BACK returns to the profile tabs.
+    await clickDrawn("CAREER");
+    await waitDrawn("CAREER ARCHIVE");
+    assert.ok(await drawn("every run recorded on this device"), "the career archive page drew its subtitle");
+    assert.ok(await drawn("Page 1 / 1"), "the career archive page drew its page counter");
+    await clickTarget(page, "profile", "BACK");
+    await waitDrawn("CAREER");
+    await clickTarget(page, "profile", "BACK");
+    await waitScreen("menu");
 
     await clickAndWait(260, 513, "achievements");
     await page.mouse.click(518, 347);
@@ -205,6 +243,90 @@ withJourney(
     );
     await page.keyboard.press("Escape");
     await waitScreen("profile");
+    await clickTarget(page, "profile", "BACK");
+    await waitScreen("menu");
+
+    // Shop purchase with coins, kept across a reload. The first purchase also earns the
+    // "Invested" achievement by the same real click, so its toast and unlock are checked too.
+    const seeded = { ...(await storageSnapshot()) };
+    seeded.tear_meta = JSON.stringify({ lifetimeEarned: 1000, lifetimeSpent: 0, buy: {} });
+    await reloadWith(seeded);
+    await clickTarget(page, "menu", "SHOP");
+    await waitScreen("shop");
+    await waitDrawn("1,000");
+    await clickTarget(page, "shop", "325c"); // Toughness, level 0 to 1
+    await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.storage.snapshot().tear_meta.includes('"tough":1'));
+    const bought = JSON.parse((await storageSnapshot()).tear_meta);
+    assert.equal(bought.buy.tough, 1, "the click bought one level of Toughness");
+    assert.equal(bought.lifetimeSpent, 325, "the purchase charged its price once");
+    assert.equal(bought.rewardReceipts?.receipts?.["achievement:first_buy"], 75, "the first purchase paid Invested");
+    await waitDrawn("Invested");
+    assert.ok(await drawn("UNLOCKED · COMMON"), "the achievement toast drew");
+    await waitDrawn("750"); // 1,000 - 325 + 75 for Invested
+    assert.ok(await drawn("LV 1/8"), "the shop shows Toughness at level 1");
+
+    // Two settings: one audio (master volume down two steps) and one input (double-tap dash on).
+    await clickTarget(page, "shop", "BACK");
+    await waitScreen("menu");
+    await clickTarget(page, "menu", "SETTINGS");
+    await waitScreen("settings");
+    await clickDrawn("AUDIO");
+    await waitDrawn("Master volume");
+    // The first stepper is master volume (60%). Two steps down give 40%, which no other row shows.
+    for (const volume of [0.5, 0.4]) {
+      await clickTarget(page, "settings", "−");
+      await page.waitForFunction(
+        (wanted) =>
+          JSON.parse(window.__TEAR_CATALOG_DEBUG__.storage.snapshot().tear_settings ?? "{}").masterVolume === wanted,
+        volume,
+        { timeout: STATE_WAIT_MS },
+      );
+    }
+    await waitDrawn("40%");
+    await clickDrawn("CONTROLS");
+    await waitDrawn("Directional double-tap dash");
+    await clickTarget(page, "settings", "OFF"); // the first toggle is double-tap dash
+    await page.waitForFunction(() =>
+      (window.__TEAR_CATALOG_DEBUG__.storage.snapshot().tear_settings ?? "").includes('"dashDoubleTap":true'),
+    );
+    const changed = JSON.parse((await storageSnapshot()).tear_settings);
+    assert.equal(changed.masterVolume, 0.4, "master volume stepped from 60% to 40%");
+    assert.equal(changed.dashDoubleTap, true, "double-tap dash turned on");
+    await clickTarget(page, "settings", "BACK");
+    await waitScreen("menu");
+
+    // Reload: the purchase, the coins, the achievement and both settings are read back from storage.
+    await reloadWith(await storageSnapshot());
+    await clickTarget(page, "menu", "SHOP");
+    await waitScreen("shop");
+    await waitDrawn("750");
+    assert.ok(await drawn("LV 1/8"), "Toughness is still owned after the reload");
+    await clickTarget(page, "shop", "BACK");
+    await waitScreen("menu");
+    await clickTarget(page, "menu", "ACHIEVEMENTS");
+    await waitScreen("achievements");
+    // Invested is the one unlock, in the MASTERY category.
+    const achievementCount = await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.achievementCount());
+    await waitDrawn(`1 / ${String(achievementCount)}`);
+    assert.ok(
+      await page.evaluate(() =>
+        window.__TEAR_JOURNEY_FRAME__.texts.some((entry) => /^MASTERY\s+1\/16$/u.test(entry.text)),
+      ),
+      "the achievements page counts Invested under MASTERY after the reload",
+    );
+    await clickTarget(page, "achievements", "BACK");
+    await waitScreen("menu");
+    await clickTarget(page, "menu", "SETTINGS");
+    await waitScreen("settings");
+    await clickDrawn("AUDIO");
+    await waitDrawn("Master volume");
+    assert.ok(await drawn("40%"), "master volume is still 40% after the reload");
+    await clickDrawn("CONTROLS");
+    await waitDrawn("Directional double-tap dash");
+    assert.ok(
+      await page.evaluate(() => window.__TEAR_UI_TARGETS__().some((target) => target.label === "ON")),
+      "double-tap dash is still on after the reload",
+    );
   },
 )
   .then(() => console.log("browser progression journeys passed"))

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createLiveGhostBootstrapEvent, createLiveGhostCausalEvent } from "../../src/ghost";
+import { createLiveGhostBootstrapEvent, createLiveGhostCausalEvent } from "../../src/ghost/live-causal-events";
 import { validateTearContract } from "../../src/tearbench";
 
 describe("Ghost V3 causal event adapter", () => {

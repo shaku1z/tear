@@ -1,3 +1,4 @@
+import { asRecord } from "../domain/records";
 import { hasMonotonicEnvelopes } from "../domain/envelopes";
 import { normalizeGameAction } from "../input/game-action";
 import type { ReplayActionEnvelope } from "../replay/envelope";
@@ -10,7 +11,7 @@ import {
   type TearWorldFactory,
 } from "../tearbench/state-codecs";
 import { validateTearContract } from "../tearbench/validation";
-import type { GhostCapsuleEntry, GhostReadCapsule } from "./capsule-reader";
+import { isUnchangedGhostRead, type GhostCapsuleContents, type GhostCapsuleEntry } from "./capsule-reader";
 import { createGhostV3, GhostTimeline, type GhostEnvelopeV3, type GhostReplayTrident } from "./truth-kernel";
 
 export interface GhostCapsuleReplayIssue {
@@ -34,19 +35,13 @@ function issue(
   issues.push(Object.freeze({ track, tick, reason }));
 }
 
-function object(value: unknown): Readonly<Record<string, unknown>> | undefined {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as Readonly<Record<string, unknown>>)
-    : undefined;
-}
-
 function commands(
   entries: readonly GhostCapsuleEntry[],
   issues: GhostCapsuleReplayIssue[],
 ): readonly ReplayActionEnvelope[] {
   const parsed: ReplayActionEnvelope[] = [];
   for (const entry of entries) {
-    const value = object(entry.value);
+    const value = asRecord(entry.value);
     if (
       value?.kind !== "command" ||
       !Number.isSafeInteger(value.id) ||
@@ -86,7 +81,7 @@ function recordedCanonicalSnapshot(value: unknown): TearSnapshotV1 | undefined {
 function isolatedCodecFactory(): TearWorldFactory {
   return Object.freeze({
     createEmpty: (): TearCodecWorld => ({ components: new Map(), references: new Map(), entityIds: new Set() }),
-    // This boundary intentionally validates only the versioned State Forge
+    // This boundary intentionally validates only the versioned State Setup
     // contract. Production hydration has host-owned constructors and must not
     // be used to decide whether untrusted capsule bytes are admissible.
     validate: () => [],
@@ -194,7 +189,7 @@ function events(
   }
 }
 
-function visualSamples(capsule: GhostReadCapsule): readonly Readonly<{ tick: number; value: unknown }>[] {
+function visualSamples(capsule: GhostCapsuleContents): readonly Readonly<{ tick: number; value: unknown }>[] {
   const compactKeyframes = capsule.tracks.keyframes.filter((entry) => {
     const contract = validateTearContract(entry.value);
     return !contract.ok || contract.value.kind !== "snapshot";
@@ -217,7 +212,21 @@ function rulesetVersion(snapshots: readonly TearSnapshotV1[]): string {
  * truth. Missing or malformed tracks degrade capability rather than inventing
  * actions, state, causal events, or verification status.
  */
-export function mapGhostCapsuleToReplayEnvelope(capsule: GhostReadCapsule): GhostCapsuleReplayMapping {
+export function mapGhostCapsuleToReplayEnvelope(capsule: GhostCapsuleContents): GhostCapsuleReplayMapping {
+  // One read is validated once: every caller that holds the same read gets the same result.
+  // Only an unchanged read is remembered; any other capsule object is validated on every call.
+  if (!isUnchangedGhostRead(capsule)) return validateAndMap(capsule);
+  let mapping = MAPPED_READS.get(capsule);
+  if (mapping === undefined) {
+    mapping = validateAndMap(capsule);
+    MAPPED_READS.set(capsule, mapping);
+  }
+  return mapping;
+}
+
+const MAPPED_READS = new WeakMap<GhostCapsuleContents, GhostCapsuleReplayMapping>();
+
+function validateAndMap(capsule: GhostCapsuleContents): GhostCapsuleReplayMapping {
   const issues: GhostCapsuleReplayIssue[] = [];
   const actionTrack = commands(capsule.tracks.commands, issues);
   const snapshotTrack = snapshots(capsule.tracks.keyframes, issues);

@@ -2,9 +2,11 @@ const { chromium } = require("@playwright/test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
+const { listenOnFreePort } = require("./local-server");
 const path = require("node:path");
 const { chapterOpeningCarriesThroughOnEveryDevice } = require("./browser-chapter-opening");
-const { STATE_WAIT_MS, holdFor, notWithin, pollEvery } = require("./browser-waits");
+const { STATE_WAIT_MS, clickTarget, holdFor, notWithin, pollEvery, launchJourney } = require("./browser-waits");
+const { TUTORIAL_SKIPPED_STORAGE } = require("./browser-journey-harness");
 
 async function moveCapturedPointer(page, from, to) {
   await page.evaluate(
@@ -235,7 +237,8 @@ async function pointerBelongsToTheMouseAlone(browser, configure) {
  * A tablet starts on touch, so its first tap meets the touch layout it was drawn. A laptop with
  * a touch screen starts on the mouse; its first tap is resolved against the mouse layout the
  * player saw, and the menu changes to its touch layout only afterwards. Either way the first
- * tap on PLAY opens the run setup (it once opened the Shop, which sat under the moved layout).
+ * tap on PLAY presses PLAY, which starts the tutorial on a fresh profile (it once opened the
+ * Shop, which sat under the moved layout).
  */
 async function firstTapLandsOnTheControlsThePlayerSaw(browser, configure) {
   for (const device of [
@@ -285,13 +288,11 @@ async function firstTapLandsOnTheControlsThePlayerSaw(browser, configure) {
     });
     await page.waitForTimeout(holdFor(60));
     await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
-    await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.app.snapshot().screen !== "menu", undefined, {
-      timeout: STATE_WAIT_MS,
-    });
-    assert.equal(
-      await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.app.snapshot().screen),
-      "setup",
-      `${device.name}: the first tap on PLAY opens the run setup`,
+    // A fresh profile is tutorial-first, so PLAY starts the tutorial.
+    await page.waitForFunction(
+      () => window.__PANTHEON_TEST.state().mode === "tutorial" && window.__PANTHEON_TEST.state().game === "playing",
+      undefined,
+      { timeout: STATE_WAIT_MS },
     );
     const after = await input();
     assert.equal(after.mode, "touch", `${device.name}: touch owns the interface after a tap`);
@@ -364,34 +365,110 @@ async function aimStaysWithTheDeviceThatLastAimed(browser, configure) {
   await page.close();
 }
 
-async function main() {
-  const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
-  const port = Number(process.env.TEAR_INPUT_TEST_PORT || 8128);
-  const baseUrl = `http://127.0.0.1:${port}`;
-  const server = http.createServer((request, response) => {
-    const pathname = new URL(request.url, baseUrl).pathname;
-    const file = path.resolve(root, pathname === "/" ? "index.html" : pathname.slice(1));
-    if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
-      response.writeHead(404).end();
+/** Headless pages never lose visibility or focus, so the test sends what a phone or browser would. */
+async function leaveTheScreen(page, how) {
+  await page.evaluate((kind) => {
+    if (kind === "blur") {
+      window.dispatchEvent(new Event("blur"));
+      window.dispatchEvent(new Event("focus"));
       return;
     }
-    response.setHeader(
-      "Content-Type",
-      file.endsWith(".js") ? "text/javascript" : file.endsWith(".html") ? "text/html" : "application/octet-stream",
-    );
-    fs.createReadStream(file).pipe(response);
+    const set = (hidden) => {
+      Object.defineProperty(document, "hidden", { configurable: true, get: () => hidden });
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        get: () => (hidden ? "hidden" : "visible"),
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+    };
+    set(true);
+    set(false);
+  }, how);
+}
+
+/**
+ * docs/CURSOR_INPUT_CONTRACT.md "Losing the screen": a run in play pauses when the page is hidden
+ * (every device) or loses focus while touch owns the input; a desktop blur does not pause, and a
+ * screen that is not play keeps its screen. The finger that was down is let go.
+ */
+const screenOf = (page) => page.evaluate(() => window.__PANTHEON_TEST.state().game);
+async function playIn(page) {
+  await page.evaluate(() => window.__PANTHEON_TEST.startMode("playground"));
+  await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing");
+}
+
+/** The phone half of "Losing the screen": hidden or shaded, a run pauses and lets the finger go. */
+async function aRunPausesWhenThePhoneLosesTheScreen(browser, configure) {
+  const screen = screenOf;
+  const play = playIn;
+  const context = await browser.newContext({
+    viewport: { width: 844, height: 390 },
+    deviceScaleFactor: 2,
+    hasTouch: true,
+    isMobile: true,
   });
-  await new Promise((resolve) => server.listen(port, "127.0.0.1", resolve));
-  const browser = await chromium.launch({ headless: true });
+  const phone = await context.newPage();
+  await configure(phone);
+  const cdp = await context.newCDPSession(phone);
+  await play(phone);
+  // A thumb rests on the movement stick when the phone locks.
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: 120, y: 300, id: 1 }] });
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: 190, y: 300, id: 1 }] });
+  await phone.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().mode === "touch");
+  const travel = async () => {
+    const from = await phone.evaluate(() => window.__PANTHEON_TEST.state().playerTrace?.x);
+    await phone.waitForTimeout(notWithin(500));
+    return (await phone.evaluate(() => window.__PANTHEON_TEST.state().playerTrace?.x)) - from;
+  };
+  const held = await travel();
+  assert.ok(held > 40, `the held stick walks the player (moved ${held})`);
+  await leaveTheScreen(phone, "hide");
+  await phone.waitForFunction(() => window.__PANTHEON_TEST.state().game === "paused");
+  await phone.evaluate(() => window.__PANTHEON_TEST.resume());
+  // A few pixels of slide are left from the walk; a stick still held would walk as far as before.
+  const after = await travel();
+  assert.ok(after < held / 4, `the finger down when the screen went away is let go (moved ${after}, held ${held})`);
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
 
-  async function configure(page) {
-    await page.route("**/*", (route) =>
-      route.request().url().startsWith(`${baseUrl}/`) ? route.continue() : route.abort(),
-    );
-    await page.goto(`${baseUrl}/?test=1&bossdebug=1`, { timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
-    await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__ && window.__PANTHEON_TEST);
-  }
+  // A notification shade over a page that stays visible.
+  await phone.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing");
+  await leaveTheScreen(phone, "blur");
+  await phone.waitForFunction(() => window.__PANTHEON_TEST.state().game === "paused");
 
+  // A draft keeps its screen, and the run after it is not paused by the old loss.
+  await phone.evaluate(() => window.__PANTHEON_TEST.startMode("endless", "easy"));
+  await phone.waitForFunction(() => {
+    const state = window.__PANTHEON_TEST.state();
+    if (state.active) window.__PANTHEON_TEST.skip();
+    return state.game === "playing" && !state.active;
+  });
+  await phone.evaluate(() => window.__PANTHEON_TEST.openDraft({ preserveRun: true }));
+  await phone.waitForFunction(() => window.__PANTHEON_TEST.state().game === "draft");
+  await leaveTheScreen(phone, "hide");
+  await phone.waitForTimeout(notWithin(300));
+  assert.equal(await screen(phone), "draft", "a draft keeps its screen when the page is hidden");
+  await context.close();
+}
+
+/** The desktop half of "Losing the screen": hidden pauses, a blur does not. */
+async function aRunPausesWhenTheDesktopLosesTheScreen(browser, configure) {
+  const screen = screenOf;
+  const play = playIn;
+  const desktop = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  await configure(desktop);
+  await play(desktop);
+  await desktop.mouse.move(400, 360);
+  await desktop.mouse.move(600, 360, { steps: 4 });
+  await leaveTheScreen(desktop, "blur");
+  await desktop.waitForTimeout(notWithin(400));
+  assert.equal(await screen(desktop), "playing", "devtools or a second monitor taking focus does not pause");
+  await leaveTheScreen(desktop, "hide");
+  await desktop.waitForFunction(() => window.__PANTHEON_TEST.state().game === "paused");
+  await desktop.close();
+}
+
+/** A thumb on the movement stick walks the live player, and lifting it stops the walk. */
+async function touchMovesTheLivePlayer(browser, configure) {
   const touch = await browser.newPage({ viewport: { width: 960, height: 540 }, hasTouch: true, isMobile: true });
   await configure(touch);
   await touch.evaluate(() => window.__PANTHEON_TEST.startMode("playground"));
@@ -458,7 +535,67 @@ async function main() {
     { timeout: STATE_WAIT_MS },
   );
   await touch.close();
+}
 
+/**
+ * Which devices run: `--desktop` (the required check), `--touch` (parked while mobile is paused,
+ * plans/MOBILE_LATER.md; `pnpm check:mobile`), or both by default.
+ */
+function wantedDevices(argv) {
+  const desktop = argv.includes("--desktop"),
+    touch = argv.includes("--touch");
+  return desktop || touch ? { desktop, touch } : { desktop: true, touch: true };
+}
+
+async function main() {
+  const want = wantedDevices(process.argv.slice(2));
+  const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
+  // Set once the server listens on a free port (tests/local-server.js).
+  let baseUrl = "http://127.0.0.1";
+  const server = http.createServer((request, response) => {
+    const pathname = new URL(request.url, baseUrl).pathname;
+    const file = path.resolve(root, pathname === "/" ? "index.html" : pathname.slice(1));
+    if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+      response.writeHead(404).end();
+      return;
+    }
+    response.setHeader(
+      "Content-Type",
+      file.endsWith(".js") ? "text/javascript" : file.endsWith(".html") ? "text/html" : "application/octet-stream",
+    );
+    fs.createReadStream(file).pipe(response);
+  });
+  ({ origin: baseUrl } = await listenOnFreePort(server));
+  const browser = await launchJourney(chromium, { headless: true });
+
+  async function configure(page) {
+    await page.route("**/*", (route) =>
+      route.request().url().startsWith(`${baseUrl}/`) ? route.continue() : route.abort(),
+    );
+    await page.goto(`${baseUrl}/?test=1&bossdebug=1`, { timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__ && window.__PANTHEON_TEST);
+  }
+
+  if (want.touch) await touchMovesTheLivePlayer(browser, configure);
+  if (want.desktop) await desktopPointerAndController(browser, configure);
+
+  if (want.touch) await phoneWithoutPointerLockOpensTheDraft(browser, configure);
+  if (want.desktop) await pointerBelongsToTheMouseAlone(browser, configure);
+  if (want.touch) await firstTapLandsOnTheControlsThePlayerSaw(browser, configure);
+  await chapterOpeningCarriesThroughOnEveryDevice(browser, configure, want);
+  if (want.desktop) await aimStaysWithTheDeviceThatLastAimed(browser, configure);
+  if (want.touch) await aRunPausesWhenThePhoneLosesTheScreen(browser, configure);
+  if (want.desktop) await aRunPausesWhenTheDesktopLosesTheScreen(browser, configure);
+
+  await browser.close();
+  await new Promise((resolve) => server.close(resolve));
+  console.log(
+    `browser input matrix passed (${[want.desktop ? "desktop" : "", want.touch ? "touch" : ""].filter(Boolean).join(" and ")})`,
+  );
+}
+
+/** The mouse over an ultrawide window, then a controller through menus, capture and every mode. */
+async function desktopPointerAndController(browser, configure) {
   const ultrawide = await browser.newPage({ viewport: { width: 1920, height: 800 } });
   await configure(ultrawide);
   await ultrawide.waitForFunction(() => document.body.dataset.imode === "mouse");
@@ -487,6 +624,10 @@ async function main() {
       value: () => (window.__testGamepad ? [window.__testGamepad] : []),
     });
   });
+  // The controller leg drives the run setup through PLAY, so it plays as a player who skipped the tutorial.
+  await controller.addInitScript((storage) => {
+    window.__TEAR_TEST_STORAGE__ = storage;
+  }, TUTORIAL_SKIPPED_STORAGE);
   await configure(controller);
   await controller.evaluate(() => {
     const buttons = Array.from({ length: 16 }, () => ({ pressed: false, touched: false, value: 0 }));
@@ -506,10 +647,10 @@ async function main() {
   await controller.evaluate(
     () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
   );
-  await controller.mouse.click(260, 360);
+  await clickTarget(controller, "menu", "PLAY");
   await controller.waitForFunction(() => window.__PANTHEON_TEST.state().game === "setup");
-  // A fresh profile is preselected onto the Tutorial; pick Endless the way a player would.
-  await controller.mouse.click(430, 255);
+  // A skipped tutorial preselects Adventure; pick Endless the way a player would.
+  await clickTarget(controller, "setup", "ENDLESS");
   await controller.waitForFunction(() => window.__PANTHEON_TEST.state().setup.mode === "endless");
   await controller.evaluate(() => {
     window.__testGamepad.buttons[2] = { pressed: true, touched: true, value: 1 };
@@ -681,16 +822,6 @@ async function main() {
   });
   await controller.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.app.snapshot().screen === "paused");
   await controller.close();
-
-  await phoneWithoutPointerLockOpensTheDraft(browser, configure);
-  await pointerBelongsToTheMouseAlone(browser, configure);
-  await firstTapLandsOnTheControlsThePlayerSaw(browser, configure);
-  await chapterOpeningCarriesThroughOnEveryDevice(browser, configure);
-  await aimStaysWithTheDeviceThatLastAimed(browser, configure);
-
-  await browser.close();
-  await new Promise((resolve) => server.close(resolve));
-  console.log("browser touch/controller input matrix passed");
 }
 
 main().catch((error) => {

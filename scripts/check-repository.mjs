@@ -1,5 +1,6 @@
 // Repository-shape checks run by check:docs (and so check:quick and CI's static.check-docs task):
-// docs/REPOSITORY_MAP.md names every tracked top-level entry, and tracked files in the document and
+// docs/REPOSITORY_MAP.md names every tracked top-level entry, nothing its "Not tracked" table lists
+// (build output, caches, generated evidence) is tracked, and tracked files in the document and
 // evidence folders stay under a size cap unless config/size-caps.json gives them their own ceiling.
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -36,10 +37,32 @@ export function mappedEntries(markdown) {
   return entries.sort();
 }
 
+/** Every code span in the first column of the "Not tracked" table: generated folders that must stay out of git. */
+export function untrackedEntries(markdown) {
+  const entries = [];
+  let inTable = false;
+  for (const line of markdown.replaceAll("\r\n", "\n").split("\n")) {
+    if (/^## Not tracked\s*$/u.test(line)) inTable = true;
+    else if (line.startsWith("## ")) inTable = false;
+    else if (inTable && line.startsWith("|")) {
+      const firstCell = line.split("|")[1] ?? "";
+      for (const match of firstCell.matchAll(/`([^`]+)`/gu)) entries.push(match[1]);
+    }
+  }
+  return entries.sort();
+}
+
+/** Tracked top-level entries that the map says are generated and never committed. */
+export function trackedGeneratedEntries(markdown, files) {
+  const generated = new Set(untrackedEntries(markdown));
+  return trackedTopLevelEntries(files).filter((entry) => generated.has(entry));
+}
+
 export function checkRepositoryMap(root, files = trackedFiles(root)) {
   const mapPath = path.join(root, REPOSITORY_MAP_PATH);
   if (!fs.existsSync(mapPath)) return { errors: [`${REPOSITORY_MAP_PATH} is missing`] };
-  const mapped = mappedEntries(fs.readFileSync(mapPath, "utf8"));
+  const markdown = fs.readFileSync(mapPath, "utf8");
+  const mapped = mappedEntries(markdown);
   const present = trackedTopLevelEntries(files);
   const mappedSet = new Set(mapped);
   const presentSet = new Set(present);
@@ -53,6 +76,10 @@ export function checkRepositoryMap(root, files = trackedFiles(root)) {
   ];
   const duplicates = mapped.filter((entry, index) => mapped.indexOf(entry) !== index);
   for (const entry of new Set(duplicates)) errors.push(`${REPOSITORY_MAP_PATH} lists ${entry} twice`);
+  for (const entry of trackedGeneratedEntries(markdown, files))
+    errors.push(
+      `${entry} is tracked, but ${REPOSITORY_MAP_PATH} lists it under "Not tracked": generated output is never committed`,
+    );
   return { errors, entries: present.length };
 }
 
@@ -96,5 +123,5 @@ if (process.argv[1] !== undefined && path.resolve(process.argv[1]) === fileURLTo
   if (errors.length > 0) {
     console.error(errors.join("\n"));
     process.exitCode = 1;
-  } else console.log("repository map and size caps hold");
+  } else console.log("repository map, generated folders and size caps hold");
 }

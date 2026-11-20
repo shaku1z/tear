@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark light" />
+  <title>Privacy - TEAR: BLADE</title>
+  <link rel="icon" type="image/png" href="/branding/icons/icon-192.png" />
+  <style>
+    :root {
+      --page: #0a0b10;
+      --ink: #f1eff9;
+      --muted: #a9a6b8;
+      --accent: #13c4d6;
+      --rule: #2a2c3a;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --page: #f6f5fb;
+        --ink: #15161d;
+        --muted: #4d4f60;
+        --accent: #006f7c;
+        --rule: #cfcde0;
+      }
+    }
+    html {
+      background: var(--page);
+    }
+    body {
+      overflow-wrap: anywhere;
+      margin: 0 auto;
+      max-width: 42rem;
+      padding: 2rem 1.25rem 4rem;
+      background: var(--page);
+      color: var(--ink);
+      font: 1rem/1.65 "IBM Plex Mono", "Courier New", "Liberation Mono", monospace;
+    }
+    h1 {
+      margin: 0 0 0.25rem;
+      font-size: 1.75rem;
+      letter-spacing: 0.04em;
+    }
+    h2 {
+      margin: 2.25rem 0 0.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--rule);
+      font-size: 1.2rem;
+    }
+    p,
+    ul {
+      margin: 0.6rem 0;
+    }
+    li {
+      margin: 0.4rem 0;
+    }
+    a {
+      color: var(--accent);
+    }
+    .meta {
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Privacy</h1>
+    <p class="meta">TEAR: BLADE. Effective 19 November 2026.</p>
+    <p><a href="/">Back to the game</a></p>
+
+    <h2>Who this is from</h2>
+    <p>
+      TEAR is made by its developer (GitHub: <a href="https://github.com/shaku1z">shaku1z</a>), who is the person
+      responsible for the data described here. You can reach the developer through
+      <a href="https://github.com/shaku1z/tear/issues">https://github.com/shaku1z/tear/issues</a>. That page is
+      public, so do not put personal information in an issue.
+    </p>
+    <p>
+      This page covers the version of the game played at its own address. The copies of the game on CrazyGames and
+      itch.io are separate builds. They send nothing to the services below, and CrazyGames keeps its own privacy
+      terms for its site.
+    </p>
+
+    <h2>What the game collects</h2>
+    <ul>
+      <li>
+        <strong>An anonymous sign-in.</strong> When the game starts it signs you in to Google Firebase without
+        asking for a name or email. This gives your browser an anonymous account identifier.
+      </li>
+      <li>
+        <strong>Your cloud save.</strong> Your progress (profile statistics, unlocks, coins and your chosen display name) is stored under your
+        anonymous account so it can follow you between sessions. Only your own account can read or change it.
+      </li>
+      <li>
+        <strong>Sign-in with Google (optional).</strong> If you choose to sign in with Google, Google handles that
+        sign-in and keeps the account. The game receives your Google display name and does not store your email
+        address.
+      </li>
+      <li>
+        <strong>Leaderboard entries and published replays (public).</strong> When you finish a run that earns a place,
+        the game stores your leaderboard name, score, wave, time and your anonymous account identifier. A personal-best
+        replay of the run, with a small preview image, can be published alongside it. Anyone can see leaderboard
+        entries and replays.
+      </li>
+      <li>
+        <strong>Anonymous run statistics (optional).</strong> At the end of a run the game can send the mode,
+        difficulty, wave, score, time and some economy figures, to help balance the game. This record carries no name
+        and no account identifier. You can turn it off in Settings, under General, with "Share anonymous run
+        statistics". When it is off, nothing is sent.
+      </li>
+      <li>
+        <strong>Game balance settings.</strong> The game fetches a few numbers (such as reward multipliers) from
+        Firebase Remote Config. Google receives the request details any web request carries, such as your IP address.
+      </li>
+      <li>
+        <strong>Hosting logs.</strong> The site is served by Cloudflare, which records standard request information
+        (such as IP address, browser and the page requested) to deliver the site and keep it secure.
+      </li>
+    </ul>
+    <p>
+      The game also keeps your progress and settings in your own browser's storage on your device.
+    </p>
+
+    <h2>Why, and the legal basis</h2>
+    <ul>
+      <li>
+        Cloud save, leaderboards and replays are the game's online features. The data above is needed to provide them.
+      </li>
+      <li>
+        Anonymous run statistics are used to balance the game. The legal basis is the developer's legitimate interest
+        in improving the game, and you can switch them off at any time.
+      </li>
+      <li>
+        Sign-in with Google happens only when you choose it, which is your consent. You can sign out at any time.
+      </li>
+      <li>Hosting logs are kept for delivering the site and its security, a legitimate interest.</li>
+    </ul>
+
+    <h2>Who receives the data</h2>
+    <ul>
+      <li>
+        <strong>Google (Firebase)</strong> stores the cloud save, leaderboards, replays and run statistics, and runs
+        the anonymous sign-in and Remote Config.
+      </li>
+      <li><strong>Cloudflare</strong> hosts the site and keeps the hosting logs.</li>
+    </ul>
+    <p>
+      Both companies operate in the United States and elsewhere, so your data can be transferred to and processed in
+      the United States. Leaderboard entries and replays are public to everyone.
+    </p>
+
+    <h2>How long it is kept</h2>
+    <ul>
+      <li>
+        Cloud saves, leaderboard entries and replays are kept until they are deleted at your request, or replaced when
+        you beat your own best.
+      </li>
+      <li>
+        Run statistics carry no identifier, so they cannot be linked back to you. They are kept for as long as they
+        are useful for balancing the game.
+      </li>
+      <li>Cloudflare keeps hosting logs under its own retention rules.</li>
+    </ul>
+
+    <h2>Your rights</h2>
+    <p>
+      You can ask what the game holds about you, and ask for it to be deleted, by opening an issue at
+      <a href="https://github.com/shaku1z/tear/issues">https://github.com/shaku1z/tear/issues</a>. Say what you want
+      (access or deletion) and give your leaderboard name, but nothing more personal. The developer will reply there
+      about how to confirm that the data is yours. Run statistics cannot be found or deleted on request, because they
+      carry no identifier. Depending on where you live you may also have the right to object to processing, to correct
+      your data, and to complain to your local data protection authority.
+    </p>
+    <p>
+      Turning off "Share anonymous run statistics" in Settings stops the statistics. "Reset progress" in Settings,
+      under General, erases your cloud save and your progress on this device. Leaderboard entries and published
+      replays are not part of it. Clearing the site's data in your browser removes what the game keeps on your
+      device, and the game then starts with a new anonymous account.
+    </p>
+
+    <h2>Children</h2>
+    <p>
+      TEAR is not directed at children under 13, and the developer does not knowingly collect data from them. If you
+      believe a child's data has been stored, open an issue and it will be removed.
+    </p>
+
+    <h2>Changes</h2>
+    <p>
+      If what the game collects changes in a way that matters, this page changes with it, the effective date at the
+      top is updated, and the game shows its first-run notice again.
+    </p>
+  </main>
+</body>
+</html>

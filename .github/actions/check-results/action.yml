@@ -1,0 +1,38 @@
+name: Record check results
+description: >-
+  Each job writes its checks' results to one file per attempt, uploaded as check-results-<job>-<attempt>.
+  On a re-run, the newest earlier attempt's file for the same job is fetched first, so a check that
+  failed there and passes now on the same tree prints a FLAKY line and a warning. Re-running one
+  failed job therefore compares that job alone. Nothing is retried; this only reports. It needs no
+  gh CLI, so it works the same on the runner and inside the browser jobs' container.
+inputs:
+  job:
+    description: The job's name in the artifact (static, unit, build, browser-1, ...)
+    required: true
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: echo "TEAR_CHECK_RESULTS=$RUNNER_TEMP/check-results/results.json" >> "$GITHUB_ENV"
+    # Every earlier attempt's file for this job, each in its own folder named after the artifact.
+    - if: github.run_attempt > 1
+      uses: actions/download-artifact@v4
+      with:
+        pattern: check-results-${{ inputs.job }}-*
+        path: ${{ runner.temp }}/previous-check-results
+        github-token: ${{ github.token }}
+        run-id: ${{ github.run_id }}
+    - if: github.run_attempt > 1
+      shell: bash
+      env:
+        JOB: ${{ inputs.job }}
+      run: |
+        for ((attempt = GITHUB_RUN_ATTEMPT - 1; attempt >= 1; attempt--)); do
+          file="$RUNNER_TEMP/previous-check-results/check-results-$JOB-$attempt/results.json"
+          if [[ -f "$file" ]]; then
+            echo "TEAR_CHECK_PREVIOUS=$file" >> "$GITHUB_ENV"
+            echo "Comparing with attempt $attempt of $JOB."
+            exit 0
+          fi
+        done
+        echo "No earlier check results for $JOB; this attempt cannot report flaky checks."

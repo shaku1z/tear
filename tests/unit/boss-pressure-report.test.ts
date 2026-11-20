@@ -37,6 +37,8 @@ type PhaseRow = readonly [travelPerSecond: number, hits: number, damage: number,
 type Measured = readonly [PhaseRow, PhaseRow, PhaseRow];
 
 type PlayerKind = "walker" | "reader";
+/** How close to a wall the reading player will stand. */
+const ARENA_MARGIN = 40;
 
 function measure(id: BossId, phase: 1 | 2 | 3, kind: PlayerKind = "walker"): PhaseRow {
   const harness = createEnemyHarness([0.25, 0.75, 0.4, 0.6, 0.1, 0.9]);
@@ -100,8 +102,13 @@ function measure(id: BossId, phase: 1 | 2 | 3, kind: PlayerKind = "walker"): Pha
       );
       if (threat?.mark === "lane" && jumpT <= 0 && threat.remainingSeconds <= 0.25) jumpT = 0.75;
       else if (threat !== undefined && threat.mark !== "lane") {
-        const away = player.x >= threat.x ? 1 : -1;
-        const side = player.x + away * 200 > CONFIG.view.w - 40 || player.x + away * 200 < 40 ? -away : away;
+        // Leaves by the nearer side of the marked area that is still inside the arena.
+        const left = threat.x - threat.hw - player.hw;
+        const right = threat.x + threat.hw + player.hw;
+        const canLeft = left > ARENA_MARGIN;
+        const canRight = right < CONFIG.view.w - ARENA_MARGIN;
+        const nearer = player.x - left <= right - player.x ? -1 : 1;
+        const side = canLeft && canRight ? nearer : canLeft ? -1 : canRight ? 1 : nearer;
         player.x += side * CONFIG.player.moveSpeed * DT;
       }
       jumpT = Math.max(0, jumpT - DT);
@@ -134,8 +141,8 @@ function measure(id: BossId, phase: 1 | 2 | 3, kind: PlayerKind = "walker"): Pha
 }
 
 /**
- * Today's numbers. See the header before changing a row. The Rootbound stands still in Phases II and
- * III and lands a fraction of what Aldric and the White Hart land; its rebuild is judged on this table.
+ * Today's numbers, on Normal (the unscaled base config: boss health and damage multipliers 1). See the header
+ * before changing a row. The Rootbound's rebuild is judged on this table; all three phases are rebuilt.
  */
 const BOSS_PRESSURE_RECORD: Readonly<Record<BossId, Measured>> = {
   warden: [
@@ -158,28 +165,40 @@ const BOSS_PRESSURE_RECORD: Readonly<Record<BossId, Measured>> = {
     [414, 23, 409, 0],
     [790, 22, 404, 0],
   ],
-  // Phase I and III play the move table (rootbound-moves.ts): the keeper glides, vaults and lunges, and is open after its heavy moves.
+  // Every phase plays the move table (rootbound-moves.ts): the keeper glides, vaults and lunges, and is open
+  // after its heavy moves. Phase II adds planting, the cage and the Wells; it was [0, 5, 70, 0] before its rebuild.
+  // Phase III opens with Regrowth and plays Last Spring every fourth move, at a shorter pause; it was
+  // [72, 12, 248, 4.6] while it still stood to heal and ran the old Last Spring.
   rootbound: [
     [150, 14, 252, 9.1],
-    [0, 5, 70, 0],
-    [72, 12, 248, 4.6],
+    [141, 11, 208, 9.1],
+    [111, 12, 264, 12.3],
   ],
 };
 
-/** Rootbound Phases I and III against the reading player: what is left once the marks are answered. */
-// Phase I: every move can be answered. Phase III: what still lands is the old Last Spring floor band,
-// which wants a platform, not a step aside; it is rebuilt with Phase III.
-const READING_PLAYER_RECORD: readonly [PhaseRow, PhaseRow] = [
-  [44, 0, 0, 2.5],
-  [26, 10, 208, 1.9],
+/** Rootbound against the reading player: what is left once the marks are answered. */
+// Phases I and II: every move can be answered. Phase III: Last Spring is left by the nearer edge of its band.
+// Regrowth's root wave warns of each repeat, so the reader jumps all of them; it took 3 hits (48) from them
+// while a repeat came with no tell of its own. It took one more, [33, 1, 16, 8], from a Thorn Burst that
+// started while it stood between the keeper and the left wall; the keeper no longer plays a move the player
+// could not walk out of, so nothing lands.
+const READING_PLAYER_RECORD: Measured = [
+  [43, 0, 0, 3.1],
+  [46, 0, 0, 2.4],
+  [23, 0, 0, 8.4],
 ];
 
 describe("boss pressure report", { timeout: 180_000 }, () => {
   it("rootbound's move phases are answerable: a player who reads the marks takes far less", () => {
-    const measured = [measure("rootbound", 1, "reader"), measure("rootbound", 3, "reader")] as const;
+    const measured: Measured = [
+      measure("rootbound", 1, "reader"),
+      measure("rootbound", 2, "reader"),
+      measure("rootbound", 3, "reader"),
+    ];
     if (process.env.TEAR_BOSS_PRESSURE_REPORT === "1") console.log(`rootbound reader: ${JSON.stringify(measured)}`);
     expect(measured).toEqual(READING_PLAYER_RECORD);
-    expect(measured[0][2]).toBeLessThan(BOSS_PRESSURE_RECORD.rootbound[0][2] / 2);
+    for (const phase of [0, 1, 2] as const)
+      expect(measured[phase][2]).toBeLessThan(BOSS_PRESSURE_RECORD.rootbound[phase][2] / 2);
   });
 
   it.each(BOSSES)("%s matches its recorded movement and hits against a moving player", (id) => {

@@ -3,7 +3,8 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
-const { STATE_WAIT_MS, notWithin, settleFor } = require("./browser-waits");
+const { STATE_WAIT_MS, notWithin, settleFor, launchJourney } = require("./browser-waits");
+const { TUTORIAL_SKIPPED_STORAGE } = require("./browser-journey-harness");
 
 (async () => {
   const target = process.argv[2] || process.env.TEAR_SMOKE_TARGET || "standalone";
@@ -38,8 +39,12 @@ const { STATE_WAIT_MS, notWithin, settleFor } = require("./browser-waits");
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
   if (!address || typeof address === "string") throw new Error("test server did not bind");
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchJourney(chromium, { headless: true });
   const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
+  // The smoke clicks PLAY -> ENDLESS -> START, so it plays as a player who skipped the tutorial.
+  await page.addInitScript((storage) => {
+    window.__TEAR_TEST_STORAGE__ = storage;
+  }, TUTORIAL_SKIPPED_STORAGE);
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.route("**/*", (route) => {

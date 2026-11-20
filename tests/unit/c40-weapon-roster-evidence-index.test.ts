@@ -16,7 +16,7 @@ type RosterProof = Readonly<{
 
 describe("C40 weapon-roster engineering evidence index", () => {
   it("aggregates exactly the five named non-certifying action-family proofs", () => {
-    const index = readJson("docs/tearbench-c40-weapon-roster-evidence-index.json") as {
+    const index = readJson("docs/tearbench-weapon-roster-evidence-index.json") as {
       schemaVersion: number;
       kind: string;
       status: string;
@@ -37,7 +37,7 @@ describe("C40 weapon-roster engineering evidence index", () => {
   });
 
   it("points every indexed proof at its canonical non-certifying scenario and narrow route", () => {
-    const index = readJson("docs/tearbench-c40-weapon-roster-evidence-index.json") as {
+    const index = readJson("docs/tearbench-weapon-roster-evidence-index.json") as {
       proofs: readonly RosterProof[];
     };
     const scenarios = readJson("src/tearbench/canonical-scenarios.json") as readonly Record<string, unknown>[];
@@ -60,7 +60,7 @@ describe("C40 weapon-roster engineering evidence index", () => {
   });
 
   it("does not overclaim C40 completion or create generated certification coverage", () => {
-    const index = readJson("docs/tearbench-c40-weapon-roster-evidence-index.json") as { nonClaims: readonly string[] };
+    const index = readJson("docs/tearbench-weapon-roster-evidence-index.json") as { nonClaims: readonly string[] };
     const evidenceCatalog = readJson("docs/tearbench-ghost3-evidence-catalog.json") as {
       rules: readonly { id: string }[];
     };

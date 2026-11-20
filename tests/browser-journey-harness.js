@@ -3,10 +3,12 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
+const { listenOnFreePort } = require("./local-server");
 const {
   STATE_WAIT_MS,
   JOURNEY_LIMIT_MS,
-  describeStall,
+  journeyStep,
+  launchJourney,
   pollEvery,
   trackScriptLoads,
   waitForScriptLoads,
@@ -63,6 +65,15 @@ function recordCanvasFrames() {
   window.__TEAR_JOURNEY_FRAME__ = frame;
 }
 
+/**
+ * Isolated test storage for a player who skipped the tutorial on purpose: PLAY opens the run setup
+ * instead of starting the tutorial (a fresh profile is tutorial-first). The legacy profile key is
+ * migrated on load, so this is the smallest stored profile that says so.
+ */
+const TUTORIAL_SKIPPED_STORAGE = Object.freeze({
+  tear_profile: JSON.stringify({ tutorialProgress: { lessons: {}, skipped: true } }),
+});
+
 async function withJourney(options, run) {
   const buildDirectory = process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone";
   const root = path.resolve(__dirname, "..", "dist", buildDirectory);
@@ -97,8 +108,8 @@ async function withJourney(options, run) {
   assert.equal(buildInfo.sourceRevision, source.revision, "served build source revision is stale");
   assert.equal(buildInfo.sourceState, source.state, "served build source state is stale");
   assert.equal(buildInfo.sourceFingerprint, source.fingerprint, "served build source fingerprint is stale");
-  const port = Number(process.env.TEAR_JOURNEY_PORT || options.port);
-  const baseUrl = `http://127.0.0.1:${String(port)}`;
+  // Set once the server listens on a free port (tests/local-server.js).
+  let baseUrl = "http://127.0.0.1";
   // When each request reached this server and when its response finished, for stall reports.
   const serverLog = [];
   const server = http.createServer((request, response) => {
@@ -131,12 +142,13 @@ async function withJourney(options, run) {
   });
   let browser;
   try {
-    await new Promise((resolve) => server.listen(port, "127.0.0.1", resolve));
+    ({ origin: baseUrl } = await listenOnFreePort(server));
     const chromePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
-    browser = await chromium.launch({
-      headless: true,
-      ...(fs.existsSync(chromePath) ? { executablePath: chromePath } : {}),
-    });
+    browser = await launchJourney(
+      chromium,
+      { headless: true, ...(fs.existsSync(chromePath) ? { executablePath: chromePath } : {}) },
+      { name: options.name, limitMs: options.limitMs ?? JOURNEY_LIMIT_MS },
+    );
     // Journey suites repeatedly navigate the same instrumented page. Keep the
     // production service worker out of this harness so an activation/update
     // race cannot replace the exact test build between boots. PWA behavior has
@@ -152,19 +164,27 @@ async function withJourney(options, run) {
     page.setDefaultTimeout(STATE_WAIT_MS);
     page.setDefaultNavigationTimeout(STATE_WAIT_MS);
     await watchForStalls(page, { serverLog });
-    trackScriptLoads(page);
-    if (options.settings) {
-      await page.addInitScript((settings) => {
-        window.__TEAR_TEST_STORAGE__ = {
-          tear_settings: JSON.stringify({
-            gfx: settings.gfx,
-            reducedMotion: settings.reducedMotion,
-            highContrast: settings.highContrast,
-            flash: settings.flashScale,
-          }),
-        };
-      }, options.settings);
-    }
+    await trackScriptLoads(page);
+    // The isolated test storage a page starts with. `tutorialSkipped` plays as a player who
+    // skipped the tutorial on purpose, so PLAY opens the run setup; without it a fresh profile is
+    // tutorial-first and PLAY starts the tutorial.
+    const seeded = {
+      ...(options.settings
+        ? {
+            tear_settings: JSON.stringify({
+              gfx: options.settings.gfx,
+              reducedMotion: options.settings.reducedMotion,
+              highContrast: options.settings.highContrast,
+              flash: options.settings.flashScale,
+            }),
+          }
+        : {}),
+      ...(options.tutorialSkipped ? TUTORIAL_SKIPPED_STORAGE : {}),
+    };
+    if (Object.keys(seeded).length > 0)
+      await page.addInitScript((storage) => {
+        window.__TEAR_TEST_STORAGE__ = storage;
+      }, seeded);
     if (options.colorScheme || options.reducedMotion) {
       await page.emulateMedia({ colorScheme: options.colorScheme, reducedMotion: options.reducedMotion });
     }
@@ -353,38 +373,22 @@ async function withJourney(options, run) {
     const served = await page.request.get(`${baseUrl}/build-info.json`);
     assert.ok(served.ok(), "served build-info.json is unavailable");
     assert.deepEqual(await served.json(), buildInfo, "served build metadata differs from the verified local artifact");
-    // One ceiling for the whole journey: page.evaluate has no timeout, so a page whose main thread
-    // never comes back would otherwise hold the job until the CI limit and print nothing.
-    const limitMs = options.limitMs ?? JOURNEY_LIMIT_MS;
-    let limitTimer;
-    const overLimit = new Promise((_resolve, reject) => {
-      limitTimer = setTimeout(() => {
-        void describeStall(page).then((stall) => {
-          reject(new Error(`${options.name} did not finish within ${String(limitMs / 1000)} s: ${stall}`));
-        });
-      }, limitMs);
+    // The whole journey's ceiling was armed by launchJourney above.
+    journeyStep(browser, `${options.name}: running`);
+    await run({
+      page,
+      errors,
+      baseUrl,
+      boot,
+      waitScreen,
+      clickAndWait,
+      buildInfo,
+      waitArmed,
+      labelPoint,
+      clickLabel,
+      cardCentre,
+      clickCard,
     });
-    try {
-      await Promise.race([
-        run({
-          page,
-          errors,
-          baseUrl,
-          boot,
-          waitScreen,
-          clickAndWait,
-          buildInfo,
-          waitArmed,
-          labelPoint,
-          clickLabel,
-          cardCentre,
-          clickCard,
-        }),
-        overLimit,
-      ]);
-    } finally {
-      clearTimeout(limitTimer);
-    }
     assert.deepEqual(errors, [], `${options.name} page errors: ${errors.join("\n")}`);
   } finally {
     if (browser && options.browserCloseTimeoutMs) {
@@ -440,4 +444,4 @@ async function waitForBrowserValue(
   }
 }
 
-module.exports = { withJourney, waitForBrowserValue };
+module.exports = { withJourney, waitForBrowserValue, TUTORIAL_SKIPPED_STORAGE };

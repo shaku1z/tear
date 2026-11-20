@@ -1,46 +1,37 @@
-import { readGhostBossMemory } from "../../ghost/boss-memory-origin";
 import { replayClock } from "../../presentation/replay-snapshots";
-import type { createBrowserBossMemory } from "../replay/browser-boss-memory";
-import { handleReplayTransport, type ReplayNativeTransport } from "./replay-transport-controller";
 import {
-  recordedGhostChallengeChoices,
-  type RecordedGhostChallenge,
-  type RecordedGhostChallengeResult,
-} from "../../ghost/recorded-challenge";
-import type { GhostForkPermit } from "../../ghost/fork-origin";
+  handleReplayTransport,
+  REPLAY_SPEEDS,
+  ReplayTransport,
+  type ReplayNativeTransport,
+  type ReplaySpeed,
+} from "./replay-transport-controller";
 import type { ProductionGhostReplayCompositionOptions } from "../../tearbench/production-replay-composition";
-import type { GhostStudioBrowserMediaPort, GhostStudioWebmArtifact } from "../replay/browser-ghost-studio-media";
+import type { ReplayClipExportPort, ReplayClipWebm } from "../replay/browser-replay-clip-export";
 import type { GhostVerifiedReplayRenderView } from "../../ghost/production-replay-session";
-import { createStudioEdl } from "../../ghost/player-experiences";
 import type { GhostReadCapsule } from "../../ghost/capsule-reader";
 import { mapGhostCapsuleToReplayEnvelope } from "../../ghost/capsule-replay-envelope";
 import {
   createGhostProductionReplaySession,
   type GhostVerifiedProductionReplaySession,
 } from "../../ghost/production-replay-session";
-import { GhostTheaterTransport, type GhostTheaterState } from "../../ghost/theater";
 import type { GhostPracticeChild, GhostSeekResult } from "../../ghost/replay-world";
 import type { ReplayScreenView } from "../../presentation/screens/contracts";
 import type { AppScreen } from "../../domain/screen-catalog";
 import type { GhostPracticeLaunchResult } from "../replay/ghost-practice-launch";
-import { ghostCoachCandidate } from "../../ghost/coach-history";
-import { createGhostCoachHistoryController, type GhostCoachHistoryPort } from "./ghost-coach-history-controller";
-import { projectGhostRunDnaTheater } from "../../ghost/run-dna-theater";
-import { createGhostStudioCutListFromTheater } from "../../ghost/studio-cut-list-theater";
-import type { GhostStudioEditDecisionList } from "../../ghost/player-experiences";
+import { appendTheaterClip, type ReplayCutList } from "../../ghost/replay-cut-list";
 import { refuseGhostTheater, type GhostTheaterOpenResult } from "../../ghost/theater-open-result";
+import { readGhostReplayRunContext } from "../../ghost/replay-admission";
+import { rulesetRefusal } from "../../gameplay/run/ruleset-version";
 
 export interface GhostTheaterScreenServices {
   readonly render: (view: ReplayScreenView) => void;
   readonly presentation?: Pick<ProductionGhostReplayCompositionOptions, "presentation" | "renderView">;
   readonly drawWorld?: (view: GhostVerifiedReplayRenderView) => void;
-  readonly studioMedia?: GhostStudioBrowserMediaPort;
-  readonly bossMemory?: ReturnType<typeof createBrowserBossMemory>;
-  readonly width: () => number;
+  readonly clipExport?: ReplayClipExportPort;
   readonly deltaSeconds: () => number;
   readonly nativeTransport?: () => ReplayNativeTransport;
   readonly launchPractice: (child: GhostPracticeChild) => GhostPracticeLaunchResult;
-  readonly coachHistory: GhostCoachHistoryPort;
 }
 
 export interface GhostTheaterScreenStatus {
@@ -54,37 +45,27 @@ export interface GhostTheaterScreenStatus {
 interface GhostTheaterContext {
   readonly capsule: GhostReadCapsule;
   readonly session: GhostVerifiedProductionReplaySession;
-  readonly transport: GhostTheaterTransport;
+  readonly transport: ReplayTransport;
   readonly from: AppScreen;
   readonly checkpoints: readonly number[];
   result: GhostSeekResult;
   infoVisible: boolean;
   fractionalTicks: number;
   message?: string;
-  challengeOpen: boolean;
-  challengeResult: RecordedGhostChallengeResult | undefined;
-  challengeChoices: readonly RecordedGhostChallenge[];
-  readonly choiceCache: Map<number, readonly RecordedGhostChallenge[]>;
   firstTick: number;
   lastTick: number;
-  coachOpen: boolean;
-  runDnaOpen: boolean;
-  studioOpen: boolean;
-  studioCutList: GhostStudioEditDecisionList | undefined;
+  editorOpen: boolean;
+  cutList: ReplayCutList | undefined;
   frame: GhostVerifiedReplayRenderView | undefined;
-  coachScene: boolean;
-  studioMark: number | undefined;
-  studioAbort: AbortController | undefined;
-  studioArtifact: GhostStudioWebmArtifact | undefined;
-  studioStatus: "idle" | "rendering" | "ready" | "failed" | "cancelled" | "download-requested";
-  finaleAvailable?: boolean;
+  clipMark: number | undefined;
+  exportAbort: AbortController | undefined;
+  exportedClip: ReplayClipWebm | undefined;
+  exportStatus: "idle" | "rendering" | "ready" | "failed" | "cancelled" | "download-requested";
 }
 
 const TICKS_PER_SECOND = 120;
-const SPEEDS = [0.25, 0.5, 1, 2, 4] as const;
-
-function isSpeed(value: number): value is (typeof SPEEDS)[number] {
-  return SPEEDS.includes(value as (typeof SPEEDS)[number]);
+function isSpeed(value: number): value is ReplaySpeed {
+  return REPLAY_SPEEDS.includes(value as ReplaySpeed);
 }
 
 /**
@@ -94,18 +75,13 @@ function isSpeed(value: number): value is (typeof SPEEDS)[number] {
  */
 export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServices) {
   let context: GhostTheaterContext | undefined;
-  let memoryOwner: AbortController | undefined;
-  const history = createGhostCoachHistoryController(services.coachHistory);
-  const invalidateStudio = (): void => {
-    memoryOwner?.abort();
-    memoryOwner = undefined;
-    services.bossMemory?.close();
-    context?.studioAbort?.abort();
-    services.studioMedia?.dispose();
+  const invalidateExport = (): void => {
+    context?.exportAbort?.abort();
+    services.clipExport?.dispose();
     if (context !== undefined) {
-      context.studioAbort = undefined;
-      context.studioArtifact = undefined;
-      context.studioStatus = "idle";
+      context.exportAbort = undefined;
+      context.exportedClip = undefined;
+      context.exportStatus = "idle";
     }
   };
 
@@ -127,30 +103,15 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
     }
   };
 
-  const challengeChoices = () => {
-    if (!context?.checkpoints.includes(context.result.tick)) return [];
-    const cached = context.choiceCache.get(context.result.tick);
-    if (cached) return cached;
-    const snapshot = mapGhostCapsuleToReplayEnvelope(context.capsule).ghost.snapshots.find(
-      (entry) => entry.tick === context?.result.tick,
-    );
-    const choices = snapshot === undefined ? [] : recordedGhostChallengeChoices(context.capsule, snapshot);
-    context.choiceCache.set(context.result.tick, choices);
-    return choices;
-  };
   const view = (): ReplayScreenView | undefined => {
     if (context === undefined) return undefined;
     const currentContext = context;
     const state = currentContext.transport.state();
     const current = currentContext.result.tick;
-    const memory = readGhostBossMemory(currentContext.capsule.manifest.provenance);
     return Object.freeze({
       id: "replay",
-      ...(currentContext.finaleAvailable ? { finaleNavigation: "FINALE CONTINUATION" as const } : {}),
-      title: memory?.title ?? "SAVED REPLAY",
-      detail: memory
-        ? "BOSS ENCOUNTER · UNRANKED"
-        : `RECORDED RUN${currentContext.capsule.manifest.provenance?.ghostAssistance === undefined ? "" : " · ASSISTED · UNRANKED"}`,
+      title: "SAVED REPLAY",
+      detail: `RECORDED RUN${currentContext.capsule.manifest.provenance?.ghostAssistance === undefined ? "" : " · ASSISTED · UNRANKED"}`,
       paused: !state.playing,
       speed: state.speed,
       // Players read time, not simulation ticks (120 per second).
@@ -181,53 +142,13 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
         { label: "STORED", value: "ON THIS DEVICE" },
       ]),
       ...(currentContext.message === undefined ? {} : { notice: currentContext.message }),
-      bossMemory: {
-        available:
-          services.bossMemory !== undefined &&
-          currentContext.checkpoints.includes(current) &&
-          challengeChoices().some((c) => c.rule === "boss-defeat") &&
-          currentContext.capsule.manifest.provenance?.bossMemory === undefined,
-        ...(readGhostBossMemory(currentContext.capsule.manifest.provenance)
-          ? {
-              title: memory?.title ?? "",
-              notes: readGhostBossMemory(currentContext.capsule.manifest.provenance)?.notes ?? "",
-              result: readGhostBossMemory(currentContext.capsule.manifest.provenance)?.endpoint.kind ?? "",
-            }
-          : {}),
-      },
       theater: true,
       worldVisible: currentContext.frame !== undefined,
-      coachReturnAvailable: currentContext.coachScene,
-      practiceAvailable:
-        currentContext.challengeResult === undefined &&
-        (currentContext.capsule.manifest.provenance?.bossMemory !== undefined ||
-          currentContext.checkpoints.includes(current)),
-      ...(currentContext.challengeOpen
+      practiceAvailable: currentContext.checkpoints.includes(current),
+      ...(currentContext.editorOpen
         ? {
-            challenge: {
-              choices:
-                currentContext.challengeResult === undefined
-                  ? currentContext.challengeChoices.map((choice) => ({
-                      id: choice.rule + ":" + choice.target,
-                      label: choice.label,
-                    }))
-                  : [],
-              tick: current,
-              ...(currentContext.challengeResult === undefined
-                ? {}
-                : {
-                    result: currentContext.challengeResult.status,
-                    elapsedTicks: currentContext.challengeResult.elapsedTicks,
-                  }),
-            },
-          }
-        : {}),
-      ...(currentContext.coachOpen ? { coach: history.snapshot() } : {}),
-      ...(currentContext.runDnaOpen ? { runDna: projectGhostRunDnaTheater(currentContext.capsule) } : {}),
-      ...(currentContext.studioOpen
-        ? {
-            studioCutList:
-              currentContext.studioCutList === undefined
+            cutList:
+              currentContext.cutList === undefined
                 ? Object.freeze({
                     available: context.checkpoints.includes(current),
                     ...(context.checkpoints.includes(current)
@@ -236,23 +157,23 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
                   })
                 : Object.freeze({
                     available: true,
-                    sourceGhostId: currentContext.studioCutList.sourceGhostId,
-                    sourceRootHash: currentContext.studioCutList.sourceRootHash,
-                    fromTick: currentContext.studioCutList.clips[0]?.sourceFromTick ?? 0,
-                    toTick: currentContext.studioCutList.clips.at(-1)?.sourceToTick ?? 0,
-                    edlHash: currentContext.studioCutList.edlHash,
-                    clipCount: currentContext.studioCutList.clips.length,
+                    sourceGhostId: currentContext.cutList.sourceGhostId,
+                    sourceRootHash: currentContext.cutList.sourceRootHash,
+                    fromTick: currentContext.cutList.clips[0]?.sourceFromTick ?? 0,
+                    toTick: currentContext.cutList.clips.at(-1)?.sourceToTick ?? 0,
+                    cutListHash: currentContext.cutList.cutListHash,
+                    clipCount: currentContext.cutList.clips.length,
                   }),
           }
         : {}),
-      ...(currentContext.studioOpen
+      ...(currentContext.editorOpen
         ? {
-            studioMedia: {
-              available: services.studioMedia?.available() === true,
-              status: currentContext.studioStatus,
-              markIn: currentContext.studioMark,
-              thumbnail: currentContext.studioArtifact?.thumbnail,
-              duration: currentContext.studioArtifact?.durationSeconds,
+            clipExport: {
+              available: services.clipExport?.available() === true,
+              status: currentContext.exportStatus,
+              markIn: currentContext.clipMark,
+              thumbnail: currentContext.exportedClip?.thumbnail,
+              duration: currentContext.exportedClip?.durationSeconds,
             },
           }
         : {}),
@@ -273,17 +194,15 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
   };
 
   return Object.freeze({
-    finaleLink(available: boolean) {
-      if (context !== undefined) context.finaleAvailable = available;
-    },
     sourceId: () => context?.capsule.manifest.id,
-    open(
-      capsule: GhostReadCapsule,
-      from: AppScreen,
-      evidence?: Readonly<{ permit: GhostForkPermit; result: RecordedGhostChallengeResult }>,
-    ): GhostTheaterOpenResult {
-      invalidateStudio();
-      history.close();
+    open(capsule: GhostReadCapsule, from: AppScreen): GhostTheaterOpenResult {
+      invalidateExport();
+      const recorded = readGhostReplayRunContext(capsule.manifest.provenance);
+      const retired = rulesetRefusal(recorded?.build.rulesetVersion);
+      if (retired !== null) {
+        context = undefined;
+        return refuseGhostTheater("ruleset-retired", capsule.manifest.rootIntegrity, 0, retired);
+      }
       let mapped: ReturnType<typeof mapGhostCapsuleToReplayEnvelope>;
       try {
         mapped = mapGhostCapsuleToReplayEnvelope(capsule);
@@ -299,8 +218,8 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
         return refuseGhostTheater("codec-preflight", capsule.manifest.rootIntegrity, codecFailure.tick);
       }
       try {
-        const session = createGhostProductionReplaySession(capsule, services.presentation, evidence?.permit);
-        const transport = new GhostTheaterTransport(mapped.ghost.events, services.width());
+        const session = createGhostProductionReplaySession(capsule, services.presentation);
+        const transport = new ReplayTransport();
         const firstTick = session.firstTick ?? 0;
         const result = session.seek(firstTick);
         transport.seek(firstTick);
@@ -315,20 +234,13 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
           fractionalTicks: 0,
           firstTick,
           lastTick: session.lastTick ?? capsule.maxTick,
-          challengeOpen: evidence !== undefined,
-          challengeResult: evidence?.result,
-          challengeChoices: [],
-          choiceCache: new Map(),
-          coachOpen: false,
-          runDnaOpen: false,
-          studioOpen: false,
-          studioCutList: undefined,
+          editorOpen: false,
+          cutList: undefined,
           frame: session.renderFrame?.(firstTick),
-          coachScene: false,
-          studioMark: undefined,
-          studioAbort: undefined,
-          studioArtifact: undefined,
-          studioStatus: "idle",
+          clipMark: undefined,
+          exportAbort: undefined,
+          exportedClip: undefined,
+          exportStatus: "idle",
         };
         return Object.freeze({ kind: "opened", root: capsule.manifest.rootIntegrity, tick: firstTick });
       } catch {
@@ -338,13 +250,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
     },
     render(): void {
       advance();
-      if (
-        context !== undefined &&
-        !context.coachOpen &&
-        !context.challengeOpen &&
-        !context.runDnaOpen &&
-        !context.studioOpen
-      ) {
+      if (context !== undefined && !context.editorOpen) {
         const native = services.nativeTransport?.(),
           current = context;
         if (native !== undefined)
@@ -367,9 +273,8 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
     },
     exit(): AppScreen | undefined {
       const from = context?.from;
-      invalidateStudio();
+      invalidateExport();
       context = undefined;
-      history.close();
       return from;
     },
     togglePause(): void {
@@ -400,7 +305,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
     },
     practice(): void {
       if (context === undefined) return;
-      const tick = readGhostBossMemory(context.capsule.manifest.provenance)?.origin.tick ?? context.result.tick;
+      const tick = context.result.tick;
       if (!context.checkpoints.includes(tick)) {
         context.message = "Practice requires a verified recorded checkpoint.";
         return;
@@ -408,7 +313,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
       try {
         const child = context.session.forkPractice(tick, "exact-practice");
         context.transport.pause();
-        invalidateStudio();
+        invalidateExport();
         const launched = services.launchPractice(child);
         context.message = launched.ok
           ? "Practice child launched. This run is unranked and non-persistent."
@@ -417,253 +322,87 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
         context.message = `Practice unavailable: ${error instanceof Error ? error.message : String(error)}`;
       }
     },
-    openChallenges(): void {
-      if (context === undefined) return;
-      context.challengeOpen = !context.challengeOpen;
-      context.coachOpen = context.runDnaOpen = context.studioOpen = false;
-      if (context.challengeOpen) context.challengeChoices = challengeChoices();
-      context.transport.pause();
-      history.close();
+    toggleReplayEditor(): void {
+      if (context !== undefined) context.editorOpen = !context.editorOpen;
     },
-    startChallenge(id: string): void {
-      if (id === "boss-memory-watch") {
-        if (context) {
-          seek(context.firstTick);
-          context.transport.play();
-        }
-        return;
-      }
-      if (id === "boss-memory-download") {
-        if (context)
-          void services.bossMemory
-            ?.download(context.capsule.manifest.id)
-            .then(() => {
-              if (context) context.message = "Memory download requested; browser save not confirmed.";
-            })
-            .catch((error: unknown) => {
-              if (context) context.message = String(error);
-            });
-        return;
-      }
-      if (id === "boss-memory-save") {
-        const captured = context;
-        if (!captured || !services.bossMemory || !challengeChoices().some((c) => c.rule === "boss-defeat")) return;
-        captured.transport.pause();
-        invalidateStudio();
-        const owner = new AbortController();
-        memoryOwner = owner;
-        services.bossMemory.edit((title, notes) => {
-          if (context !== captured || owner.signal.aborted) return;
-          captured.message = "Preparing recording-free encounter…";
-          void services.bossMemory
-            ?.save(captured.capsule, captured.result.tick, title, notes, owner.signal)
-            .then((saved) => {
-              if (context !== captured || owner.signal.aborted) return;
-              this.open(saved, captured.from);
-              context.message =
-                "Saved encounter. Source references do not prove original membership; notes are player-authored. Necessary accumulated entry state remains.";
-            })
-            .catch((error: unknown) => {
-              if (context === captured && !owner.signal.aborted)
-                captured.message = `Boss Memory unavailable: ${String(error)}`;
-            });
-        });
-        return;
-      }
-
-      const captured = context,
-        choice = challengeChoices().find((entry) => entry.rule + ":" + entry.target === id);
-      if (captured === undefined || choice === undefined) return;
-      try {
-        const child = captured.session.forkPractice(captured.result.tick, "race-practice");
-        const launched = services.launchPractice({ ...child, challenge: choice });
-        captured.message = launched.ok ? "Local challenge launched · no rewards or rankings." : launched.message;
-        if (!launched.ok && launched.completion !== undefined)
-          void launched.completion.then((result) => {
-            if (context === captured)
-              captured.message = result.ok ? "Local challenge launched · MAIN MENU → QUIT to stop." : result.message;
-          });
-      } catch (error) {
-        captured.message = `Challenge unavailable: ${error instanceof Error ? error.message : String(error)}`;
-      }
-    },
-    openCoach(): void {
-      if (context === undefined) return;
-      delete context.message;
-      context.coachOpen = !context.coachOpen;
-      context.challengeOpen = false;
-      context.runDnaOpen = context.studioOpen = false;
-      context.transport.pause();
-      if (context.coachOpen) void history.open(ghostCoachCandidate(context.capsule.manifest));
-      else history.close();
-    },
-    selectCoachBaseline(id: string): void {
-      if (context?.coachOpen) {
-        delete context.message;
-        void history.toggle(id);
-      }
-    },
-    controlCoach(
-      command: "close" | "scene" | "page" | "metric" | "moment" | "details" | "sources" | "rows" | "section",
-      delta: number,
-    ): void {
-      if (context?.coachScene && command === "scene") {
-        context.coachScene = false;
-        context.coachOpen = true;
-        return;
-      }
-      if (!context?.coachOpen) return;
-      if (command === "scene") {
-        context.coachOpen = false;
-        context.coachScene = true;
-        return;
-      }
-      if (command === "close") {
-        context.coachOpen = false;
-        history.close();
-      } else if (command === "details") history.details();
-      else if (command === "sources") history.sources();
-      else history[command](delta);
-    },
-    viewCoachMoment(id: string): void {
-      const captured = context;
-      if (!captured?.coachOpen) return;
-      void history.action(id, (moment) => {
-        if (context !== captured) return;
-        captured.transport.pause();
-        if (seek(moment.tick) && captured.result.tick === moment.tick) {
-          captured.coachOpen = false;
-          captured.coachScene = true;
-          captured.message = `Reconstructed source scene · TICK ${String(moment.tick)} · return to Coach for practice.`;
-        }
-      });
-    },
-    practiceCoachFinding(id: string): void {
-      const captured = context;
-      if (!captured?.coachOpen) return;
-      void history.action(id, (moment) => {
-        if (context !== captured || moment.priorTick === undefined || !captured.checkpoints.includes(moment.priorTick))
-          return;
-        try {
-          const child = captured.session.forkPractice(moment.priorTick, "coach-assisted");
-          captured.transport.pause();
-          invalidateStudio();
-          const launched = services.launchPractice(child);
-          captured.message = launched.ok
-            ? "Practice launched before the cited moment · unranked and non-persistent."
-            : launched.message;
-          if (launched.ok) {
-            history.close();
-            captured.coachOpen = false;
-          }
-        } catch (error) {
-          captured.message = `Practice unavailable: ${error instanceof Error ? error.message : String(error)}`;
-        }
-      });
-    },
-    toggleRunDna(): void {
-      if (context !== undefined) {
-        context.runDnaOpen = !context.runDnaOpen;
-        context.coachOpen = context.studioOpen = false;
-        history.close();
-      }
-    },
-    toggleStudio(): void {
-      if (context !== undefined) {
-        context.studioOpen = !context.studioOpen;
-        context.coachOpen = context.runDnaOpen = false;
-        history.close();
-      }
-    },
-    markStudioIn(): void {
+    markClipIn(): void {
       if (!context?.checkpoints.includes(context.result.tick)) return;
-      invalidateStudio();
-      context.studioMark = context.result.tick;
-      context.message = `IN marked at verified TICK ${String(context.studioMark)}. Seek an OUT checkpoint and append.`;
+      invalidateExport();
+      context.clipMark = context.result.tick;
+      context.message = `IN marked at verified TICK ${String(context.clipMark)}. Seek an OUT checkpoint and append.`;
     },
-    clearStudioCuts(): void {
+    clearClips(): void {
       if (context !== undefined) {
-        invalidateStudio();
-        context.studioCutList = undefined;
-        context.studioMark = undefined;
+        invalidateExport();
+        context.cutList = undefined;
+        context.clipMark = undefined;
       }
     },
-    createStudioCutList(): void {
+    appendClip(): void {
       if (context === undefined) return;
-      const projected = createGhostStudioCutListFromTheater(
+      const appended = appendTheaterClip(
+        context.cutList,
         context.capsule,
         context.session,
         context.result.tick,
-        context.studioMark,
+        context.clipMark,
         context.transport.state().speed,
       );
-      if (projected.edl === undefined) {
-        context.message = projected.unavailable ?? "Replay Editor Cut List is unavailable.";
+      if (appended.cutList === undefined) {
+        context.message = appended.unavailable;
         return;
       }
-      invalidateStudio();
-      const prior = context.studioCutList?.clips ?? [];
-      context.studioCutList = createStudioEdl({
-        ...projected.edl,
-        id: `studio-${context.session.sourceId}`,
-        clips: [
-          ...prior,
-          ...projected.edl.clips.map((clip) => ({
-            ...clip,
-            id: `clip-${String(prior.length)}`,
-            outputOrder: prior.length,
-          })),
-        ],
-      });
+      invalidateExport();
+      context.cutList = appended.cutList;
       context.message = "Cut appended in chosen order · reconstructed player-follow · simulation time.";
     },
-    exportStudio(): void {
+    exportClips(): void {
       const captured = context,
-        media = services.studioMedia;
-      if (captured?.studioCutList === undefined || media?.available() !== true) return;
-      invalidateStudio();
+        media = services.clipExport;
+      if (captured?.cutList === undefined || media?.available() !== true) return;
+      invalidateExport();
       captured.transport.pause();
       const operation = new AbortController();
-      captured.studioAbort = operation;
-      captured.studioStatus = "rendering";
+      captured.exportAbort = operation;
+      captured.exportStatus = "rendering";
       captured.message = "Encoding local replay canvas; the live game canvas is not recorded.";
       void media
-        .render(captured.capsule, captured.session, captured.studioCutList, operation.signal)
+        .render(captured.capsule, captured.session, captured.cutList, operation.signal)
         .then((artifact) => {
-          if (context !== captured || captured.studioAbort !== operation || operation.signal.aborted) return;
-          captured.studioArtifact = artifact;
-          captured.studioStatus = "ready";
+          if (context !== captured || captured.exportAbort !== operation || operation.signal.aborted) return;
+          captured.exportedClip = artifact;
+          captured.exportStatus = "ready";
           captured.message = "WebM decoded locally. Click DOWNLOAD WEBM to request a browser save.";
         })
         .catch((error: unknown) => {
-          if (context !== captured || captured.studioAbort !== operation || operation.signal.aborted) return;
-          captured.studioStatus = "failed";
-          captured.message = `Studio export refused: ${error instanceof Error ? error.message : String(error)}`;
+          if (context !== captured || captured.exportAbort !== operation || operation.signal.aborted) return;
+          captured.exportStatus = "failed";
+          captured.message = `Clip export refused: ${error instanceof Error ? error.message : String(error)}`;
         });
     },
-    cancelStudio(): void {
+    cancelClipExport(): void {
       if (context !== undefined) {
-        invalidateStudio();
-        context.studioStatus = "cancelled";
-        context.message = "Studio export cancelled; source retained.";
+        invalidateExport();
+        context.exportStatus = "cancelled";
+        context.message = "Clip export cancelled; source retained.";
       }
     },
-    downloadStudio(): void {
+    downloadClip(): void {
       const captured = context,
-        artifact = captured?.studioArtifact,
-        operation = captured?.studioAbort;
+        artifact = captured?.exportedClip,
+        operation = captured?.exportAbort;
       if (
         captured === undefined ||
         artifact === undefined ||
         operation === undefined ||
-        services.studioMedia === undefined
+        services.clipExport === undefined
       )
         return;
-      void services.studioMedia
+      void services.clipExport
         .download(artifact, operation.signal)
         .then(() => {
-          if (context === captured && captured.studioAbort === operation && !operation.signal.aborted) {
-            captured.studioStatus = "download-requested";
+          if (context === captured && captured.exportAbort === operation && !operation.signal.aborted) {
+            captured.exportStatus = "download-requested";
             captured.message = "WebM download requested; browser save is not confirmed.";
           }
         })
@@ -680,7 +419,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
     },
     status(): GhostTheaterScreenStatus | null {
       if (context === undefined) return null;
-      const state: GhostTheaterState = context.transport.state();
+      const state = context.transport.state();
       return Object.freeze({
         paused: !state.playing,
         speed: state.speed,

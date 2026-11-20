@@ -10,16 +10,30 @@ import {
 } from "../../src/domain/prompt-vocabulary";
 
 const padLabel = (binding: PadBinding): string =>
-  ({ jump: "A", dash: "RB", throw: "RT", tether: "LT", confirm: "A", back: "B", pause: "MENU" })[binding];
+  ({
+    jump: "A",
+    dash: "RB",
+    throw: "RT",
+    tether: "LT",
+    confirm: "A",
+    back: "B",
+    pause: "MENU",
+    "tab-prev": "LB",
+    "tab-next": "RB",
+  })[binding];
+
+/** Tabbed-menu controls: a pad has them, a touch player taps the tab strip and RESUME instead. */
+const MENU_CONTROLS: readonly PromptAction[] = ["tab-prev", "tab-next", "close-menu"];
 
 const PLAYGROUND_HOTKEYS: readonly PromptAction[] = [
-  "build-menu",
-  "ability-lab",
+  "playground-menu",
+  "abilities",
   "quick-spawn",
   "spawn-dummy",
   "summon-boss",
   "clear-enemies",
   "heal",
+  "fullscreen",
 ];
 
 describe("prompt vocabulary", () => {
@@ -35,7 +49,7 @@ describe("prompt vocabulary", () => {
       expect(promptLabel(action, "keyboard"), action).toMatch(/\S/u);
       for (const device of ["touch", "gamepad"] as const) {
         const label = promptLabel(action, device, padLabel);
-        if (PLAYGROUND_HOTKEYS.includes(action)) {
+        if (PLAYGROUND_HOTKEYS.includes(action) || (device === "touch" && MENU_CONTROLS.includes(action))) {
           expect(label, `${action} on ${device}`).toBeNull();
           expect(promptAvailable(action, device)).toBe(false);
         } else {
@@ -57,7 +71,8 @@ describe("prompt vocabulary", () => {
   it("keeps keyboard prompts short and in the arrow form (no MOUSE UP)", () => {
     for (const action of PROMPT_ACTIONS) {
       const label = promptLabel(action, "keyboard") ?? "";
-      expect(label.length, action).toBeLessThanOrEqual(12);
+      // "E / RIGHT CLICK" is the longest: a key and its mouse twin.
+      expect(label.length, action).toBeLessThanOrEqual(15);
       expect(label).not.toMatch(/MOUSE (UP|DOWN)/u);
     }
   });
@@ -69,8 +84,14 @@ describe("prompt vocabulary", () => {
     expect(promptLabel("jump", "gamepad")).toBe("JUMP");
   });
 
+  it("names the pad's bumpers and back button for tabbed menus", () => {
+    expect(promptLabels(["tab-prev", "tab-next"], "gamepad", padLabel)).toEqual(["LB", "RB"]);
+    expect(promptLabel("close-menu", "gamepad", padLabel)).toBe("B");
+    expect(promptLabels(["tab-prev", "tab-next", "close-menu"], "keyboard")).toEqual(["Q", "E", "TAB / ESC"]);
+  });
+
   it("drops actions a device cannot trigger and merges duplicates", () => {
-    expect(promptLabels(["throw", "recall", "build-menu"], "touch")).toEqual(["THROW"]);
-    expect(promptLabels(["build-menu", "ability-lab"], "keyboard")).toEqual(["E", "U"]);
+    expect(promptLabels(["throw", "recall", "playground-menu"], "touch")).toEqual(["THROW"]);
+    expect(promptLabels(["playground-menu", "abilities"], "keyboard")).toEqual(["TAB", "U"]);
   });
 });

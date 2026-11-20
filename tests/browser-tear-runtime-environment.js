@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const { chromium } = require("@playwright/test");
 const { withJourney } = require("./browser-journey-harness");
-const { STATE_WAIT_MS } = require("./browser-waits");
+const { STATE_WAIT_MS, launchJourney } = require("./browser-waits");
 
 const scenario = {
   format: "tear-contract",
@@ -35,7 +35,7 @@ function actionsAt(tick) {
   return [];
 }
 
-withJourney({ name: "C22 live Tear runtime", port: 8137 }, async ({ page }) => {
+withJourney({ name: "C22 live Tear runtime" }, async ({ page }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: STATE_WAIT_MS });
   const actionSchedule = Object.fromEntries(
     Array.from({ length: scenario.maxTicks }, (_, index) => {
@@ -299,7 +299,8 @@ withJourney({ name: "C22 live Tear runtime", port: 8137 }, async ({ page }) => {
     ads: false,
     achievements: false,
     analytics: false,
-    fullscreen: false,
+    // The page's own fullscreen: it keeps nothing outside the page, so a disposable run has it.
+    fullscreen: true,
     overlay: false,
   });
   for (const stream of Object.values(result.rng)) {
@@ -318,7 +319,7 @@ withJourney({ name: "C22 live Tear runtime", port: 8137 }, async ({ page }) => {
     uncapped: [1 / 1000, 1 / 777, 1 / 1440, 1 / 500],
   };
   for (const [profile, deltas] of Object.entries(cleanProfiles)) {
-    const profileBrowser = await chromium.launch({
+    const profileBrowser = await launchJourney(chromium, {
       headless: true,
       ...(fs.existsSync(chromePath) ? { executablePath: chromePath } : {}),
     });

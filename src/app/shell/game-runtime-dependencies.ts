@@ -26,7 +26,6 @@ import type { CloudFactory } from "../../platform/cloud-factory";
 import type { createLegacyPlatformCompatibility } from "../../platform/legacy-compat";
 import type { createRunSeed } from "../../platform/run-seed";
 import type { PwaUpdateCapability } from "../../platform/pwa-update";
-import type { GhostPublicationRuntime } from "../../platform/ghost-publication-runtime";
 import type { createAttract } from "../../presentation/attract";
 import type { BackdropController } from "../../presentation/backdrop";
 import type { SceneLibrary } from "../../presentation/scenes/scene-library";
@@ -49,6 +48,9 @@ import type { StyleAchievementPersistence } from "../progress/style-achievement-
 import type { PlatformBootstrapPersistence } from "../progress/platform-bootstrap-persistence";
 import type { VictoryProfileProgressPersistence } from "../progress/victory-profile-progress-persistence";
 import type { TutorialCompletionPersistence } from "../progress/tutorial-completion-persistence";
+import type { BuildIdentity } from "../../platform/build-identity";
+import type { PrivacyStance } from "../../platform/privacy-stance";
+import type { StatisticsChoice } from "../../platform/statistics-consent";
 
 type EnemyTypes = ReturnType<typeof createEnemyTypes>;
 type MirrorTypes = ReturnType<typeof createMirrorTypes>;
@@ -71,7 +73,7 @@ export interface GameRuntimeDependencies {
   readonly Attract: ReturnType<typeof createAttract>;
   readonly BOSSFX: EnemyTypes["BOSSFX"];
   readonly Backdrop: BackdropController;
-  /** Painted stage scene packages (lazy, app-owned); stages without one keep procedural art. */
+  /** Stages the game paints from a recipe (lazy, app-owned); stages without one keep procedural art. */
   readonly Scenes: SceneLibrary;
   readonly Blade: ReturnType<typeof createBlade>;
   readonly Bomber: EnemyTypes["Bomber"];
@@ -82,8 +84,14 @@ export interface GameRuntimeDependencies {
   readonly browserIndexedDb: IDBFactory | undefined;
   readonly browserStorage: Pick<Storage, "setItem">;
   readonly browserWindow: Window;
+  /** What this build tells the player about their data, and the player's choice about anonymous run statistics. */
+  readonly privacy: Readonly<{ stance: PrivacyStance; statistics: StatisticsChoice }>;
+  /** Which build is running; the frame loop's error screen shows it. */
+  readonly build: BuildIdentity;
   readonly browserNavigator: Pick<Navigator, "getGamepads" | "hardwareConcurrency">;
   readonly CG: PlatformCompatibility["CG"];
+  /** The platform's fullscreen owner, read per use: CrazyGames services arrive after start. */
+  readonly fullscreen: () => PlatformCompatibility["services"]["fullscreen"];
   readonly CLOCK: TearWorldClock;
   readonly CONFIG: typeof CONFIG;
   readonly Charger: EnemyTypes["Charger"];
@@ -92,7 +100,6 @@ export interface GameRuntimeDependencies {
   readonly Clipper: Readonly<{ start(): void; stop(): void }> | undefined;
   readonly Cloud: Cloud["Cloud"];
   readonly Colossus: EnemyTypes["Colossus"];
-  readonly ghostPublication: GhostPublicationRuntime;
   readonly DAILY: ReturnType<typeof createDailyChallenges>;
   readonly DIAG: PerformanceMonitor;
   readonly Echo: EnemyTypes["Echo"];

@@ -16,7 +16,7 @@ import {
 import { environmentHash, environmentSnapshotToObservation } from "../../src/tearbench/environment-codec";
 import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "../../src/tearbench/authored-environment-codec-validation";
 import { buildTearIdentityGraph, createDefaultStateCodecRegistry, type TearCodecWorld } from "../../src/tearbench";
-import { forgeEnvironmentFieldState, forgeEnvironmentRouteState } from "../../src/tearbench/state-forge-factories";
+import { buildEnvironmentFieldState, buildEnvironmentRouteState } from "../../src/tearbench/state-setup-factories";
 
 const field = createAuroraTrackFieldState({
   id: "track:stage:left",
@@ -115,10 +115,10 @@ describe("Pale Aurora environment definitions", () => {
       seed: "pale-track",
       start: { mode: "campaign", difficulty: "normal", weapon: "sword" },
     };
-    expect(forgeEnvironmentFieldState(base, field).state?.environment).toMatchObject({
+    expect(buildEnvironmentFieldState(base, field).state?.environment).toMatchObject({
       fields: [{ kind: "aurora-track" }],
     });
-    expect(forgeEnvironmentRouteState(base, route).state?.environment).toMatchObject({
+    expect(buildEnvironmentRouteState(base, route).state?.environment).toMatchObject({
       routes: [{ kind: "ghost-track" }],
     });
   });

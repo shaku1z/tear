@@ -1,16 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
 import { createGhostVaultLibraryController } from "../../src/app/library/ghost-vault-library-controller";
-import type { GhostVaultBackend, TearGhostManifest } from "../../src/ghost/capsule-vault";
+import type { TearGhostManifest } from "../../src/ghost/capsule-vault";
 import { refuseGhostTheater } from "../../src/ghost/theater-open-result";
-import { createMemoryGhostVaultBackend, GhostLocalVault, GhostStreamingRecorder } from "../../src/ghost/capsule-vault";
+import { createMemoryGhostVaultBackend, GhostLocalVault } from "../../src/ghost/capsule-vault";
+import { GhostStreamingRecorder } from "../../src/ghost/streaming-recorder";
 import { createGhostColdRestoreBrowserPort } from "../../src/ghost/browser-cold-restore";
 import type { GhostArchiveFile } from "../../src/app/library/browser-ghost-archive-files";
 import { NORMAL_GHOST_ARCHIVE_LIMITS } from "../../src/ghost/capsule-archive";
 import { createIndexedDbGhostVaultBackend } from "../../src/ghost/indexeddb-vault-backend";
-import { inspectBrowserGhostVaultReadOnly, repairBrowserGhostCapsule } from "../../src/ghost/browser-capsule-vault";
+import { inspectBrowserGhostVaultReadOnly } from "../../src/ghost/browser-capsule-vault";
 vi.mock("../../src/ghost/indexeddb-vault-backend", () => ({ createIndexedDbGhostVaultBackend: vi.fn() }));
 
-async function damagedRepairSource(backend = createMemoryGhostVaultBackend()) {
+async function damagedSource(backend = createMemoryGhostVaultBackend()) {
   const vault = new GhostLocalVault(backend),
     recorder = new GhostStreamingRecorder({
       sessionId: "selected-damaged-source",
@@ -24,7 +25,7 @@ async function damagedRepairSource(backend = createMemoryGhostVaultBackend()) {
   await recorder.finalize("2026-10-19T00:00:01Z");
   const manifest = await vault.getManifest("selected-damaged-source"),
     chunk = manifest?.chunks[0];
-  if (manifest === undefined || chunk === undefined) throw new Error("repair fixture missing");
+  if (manifest === undefined || chunk === undefined) throw new Error("damaged fixture missing");
   await backend.put("chunks", chunk.id, "retained-corrupt-bytes");
   await backend.remove("indexes", `manifest:${manifest.id}`);
   vi.mocked(createIndexedDbGhostVaultBackend).mockResolvedValue(backend);
@@ -63,7 +64,6 @@ function archiveController(backend = createMemoryGhostVaultBackend()) {
       },
       download,
     },
-    repair: () => Promise.reject(new Error("not requested")),
     inspect: () =>
       Promise.resolve({
         manifests: [],
@@ -74,7 +74,6 @@ function archiveController(backend = createMemoryGhostVaultBackend()) {
           evictedCapsuleIds: [],
           integrity: [],
           rebuiltIndexes: 0,
-          libraries: { schemaVersion: 1, entries: [], rejectedEntryKeys: [] },
         },
       }),
   });
@@ -112,64 +111,25 @@ function manifest(id: string, createdAt: string): TearGhostManifest {
 }
 
 describe("Ghost Vault library controller", () => {
-  it("explicit selected-source repair preserves bytes and records only its source index and Graveyard custody", async () => {
-    const f = await damagedRepairSource(),
+  it("shows a damaged capsule as unhealthy and writes nothing on a read-only inspection", async () => {
+    const f = await damagedSource(),
       parent = await f.backend.get("manifests", f.manifest.id);
-    const result = await repairBrowserGhostCapsule(f.factory, f.manifest.id);
-    expect(await f.backend.get("manifests", f.manifest.id)).toBe(parent);
-    expect(await f.backend.get("chunks", f.chunk.id)).toBe("retained-corrupt-bytes");
-    expect(await f.backend.get("indexes", `manifest:${f.manifest.id}`)).toEqual(expect.any(String));
-    expect(
-      JSON.parse((await f.backend.get("libraries", `entry:graveyard:graveyard:${f.manifest.id}`)) ?? "null"),
-    ).toMatchObject({ entry: { library: "graveyard", ghostId: f.manifest.id, rootHash: f.manifest.rootIntegrity } });
-    expect(await f.backend.get("lineage", `repair:${result.childId}`)).toContain(f.manifest.id);
-    expect(await f.backend.get("quarantine", `repair:${result.childId}:${f.chunk.id}`)).toContain(
-      "retained-corrupt-bytes",
-    );
-    expect(await f.backend.get("analysis", "vault-maintenance:v1")).toBeUndefined();
-  });
-
-  it("refuses selected metadata drift and keeps an already committed repair child retryable after reload", async () => {
-    const base = createMemoryGhostVaultBackend();
-    let armed = true;
-    const backend: GhostVaultBackend = {
-      ...base,
-      async commitIfMatches(guards, writes) {
-        if (armed && writes.some((write) => write.store === "libraries")) {
-          armed = false;
-          await base.put("indexes", "manifest:selected-damaged-source", "concurrent-index-evidence");
-        }
-        return base.commitIfMatches(guards, writes);
-      },
-    };
-    const f = await damagedRepairSource(backend);
-    await expect(repairBrowserGhostCapsule(f.factory, f.manifest.id)).rejects.toThrow();
-    expect(await backend.get("indexes", `manifest:${f.manifest.id}`)).toBe("concurrent-index-evidence");
-    expect(await backend.get("libraries", `entry:graveyard:graveyard:${f.manifest.id}`)).toBeUndefined();
-    const childIds = (await backend.keys("manifests")).filter((id) => id !== f.manifest.id);
-    expect(childIds).toHaveLength(1);
     const controller = createGhostVaultLibraryController({
       inspect: () => inspectBrowserGhostVaultReadOnly(f.factory),
-      repair: (id) => repairBrowserGhostCapsule(f.factory, id),
     });
     controller.refresh();
     await vi.waitFor(() => {
       expect(controller.snapshot().status).toBe("ready");
     });
-    expect(controller.snapshot().capsules.find((entry) => entry.id === f.manifest.id)).toMatchObject({
-      repairable: true,
-    });
-    controller.repair(f.manifest.id);
-    await vi.waitFor(() => {
-      expect(controller.snapshot().message).toBe("A verified repair child is already available.");
-    });
-    expect(controller.snapshot().capsules.find((entry) => entry.id === f.manifest.id)).toMatchObject({
-      repairable: false,
-      libraries: ["graveyard"],
-    });
-    expect((await backend.keys("manifests")).filter((id) => id !== f.manifest.id)).toEqual(childIds);
-    expect(await backend.get("chunks", f.chunk.id)).toBe("retained-corrupt-bytes");
+    expect(controller.snapshot().capsules).toEqual([expect.objectContaining({ id: f.manifest.id, healthy: false })]);
+    expect(await f.backend.get("manifests", f.manifest.id)).toBe(parent);
+    expect(await f.backend.get("chunks", f.chunk.id)).toBe("retained-corrupt-bytes");
+    expect(await f.backend.get("indexes", `manifest:${f.manifest.id}`)).toBeUndefined();
+    expect(await f.backend.keys("lineage")).toEqual([]);
+    expect(await f.backend.keys("quarantine")).toEqual([]);
+    expect(await f.backend.get("analysis", "vault-maintenance:v1")).toBeUndefined();
   });
+
   it("previews only, requires exact reselection after reload, then explicitly restores and labels current custody", async () => {
     const f = archiveController(),
       bytes = await archiveBytes();
@@ -310,7 +270,6 @@ describe("Ghost Vault library controller", () => {
   });
   it("publishes immutable, newest-first custody metadata after a real catalog refresh", async () => {
     const controller = createGhostVaultLibraryController({
-      repair: () => Promise.resolve({ sourceId: "older", childId: "older:repaired:1", reused: false }),
       inspect: () =>
         Promise.resolve({
           manifests: [manifest("older", "2026-08-01T00:00:00.000Z"), manifest("newer", "2026-08-02T00:00:00.000Z")],
@@ -324,20 +283,6 @@ describe("Ghost Vault library controller", () => {
               { id: "newer", healthy: true },
             ],
             rebuiltIndexes: 2,
-            libraries: {
-              schemaVersion: 1,
-              entries: [
-                {
-                  id: "graveyard:newer",
-                  library: "graveyard",
-                  ghostId: "newer",
-                  rootHash: "root-newer",
-                  createdAt: "2026-08-02T00:00:00.000Z",
-                  provenance: { source: "ghost-doctor" },
-                },
-              ],
-              rejectedEntryKeys: [],
-            },
           },
         }),
     });
@@ -358,7 +303,6 @@ describe("Ghost Vault library controller", () => {
           recordingProfile: "coaching",
           chunkCount: 0,
           healthy: true,
-          libraries: ["graveyard"],
         },
         { id: "older", status: "complete", recordingProfile: "coaching", chunkCount: 0, healthy: true },
       ],
@@ -370,7 +314,6 @@ describe("Ghost Vault library controller", () => {
   it("contains failed catalog access without erasing the previous durable listing", async () => {
     let attempt = 0;
     const controller = createGhostVaultLibraryController({
-      repair: () => Promise.resolve({ sourceId: "kept", childId: "kept:repaired:1", reused: false }),
       inspect: () => {
         attempt += 1;
         if (attempt === 1)
@@ -383,7 +326,6 @@ describe("Ghost Vault library controller", () => {
               evictedCapsuleIds: [],
               integrity: [{ id: "kept", healthy: true }],
               rebuiltIndexes: 1,
-              libraries: { schemaVersion: 1, entries: [], rejectedEntryKeys: [] },
             },
           });
         return Promise.reject(new Error("IndexedDB blocked"));
@@ -414,12 +356,10 @@ describe("Ghost Vault library controller", () => {
         evictedCapsuleIds: [],
         integrity: [{ id: "hostile", healthy: true }],
         rebuiltIndexes: 1,
-        libraries: { schemaVersion: 1 as const, entries: [], rejectedEntryKeys: [] },
       },
     };
     const controller = createGhostVaultLibraryController({
       inspect: () => Promise.resolve(catalog),
-      repair: () => Promise.resolve({ sourceId: "hostile", childId: "unused", reused: true }),
     });
     controller.refresh();
     await Promise.resolve();
@@ -436,7 +376,6 @@ describe("Ghost Vault library controller", () => {
     expect(after).toMatchObject({
       createdAt: before?.createdAt,
       chunkCount: before?.chunkCount,
-      libraries: before?.libraries,
     });
   });
 });

@@ -1,7 +1,5 @@
-import { readGhostBossMemory } from "./boss-memory-origin";
+import { isRecord } from "../domain/records";
 import { ghostRecordingFirstTick } from "./fork-origin";
-import { readGhostFinaleCompanion } from "./finale-companion";
-import { stableVerificationHash } from "../domain/hash";
 import type { TearCausalEventV1 } from "../tearbench/contracts";
 import type { GhostReadCapsule } from "./capsule-reader";
 
@@ -50,9 +48,6 @@ export type GhostApplicationClockValue =
       }>);
 export type GhostApplicationClockEvent = TearCausalEventV1 & Readonly<{ payload: GhostApplicationClockValue }>;
 
-function record(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 function integer(value: unknown, minimum = 0): value is number {
   return Number.isSafeInteger(value) && Number(value) >= minimum;
 }
@@ -64,7 +59,7 @@ function keys(value: Record<string, unknown>, allowed: readonly string[]): boole
 }
 export function parseGhostApplicationFrameCursor(value: unknown): GhostApplicationFrameCursor {
   if (
-    !record(value) ||
+    !isRecord(value) ||
     value.version !== 1 ||
     !integer(value.ordinal) ||
     !integer(value.sequence) ||
@@ -73,7 +68,7 @@ export function parseGhostApplicationFrameCursor(value: unknown): GhostApplicati
     throw new TypeError("invalid application-frame cursor");
   if (
     value.open !== undefined &&
-    (!record(value.open) ||
+    (!isRecord(value.open) ||
       !keys(value.open, ["ordinal", "beginSequence", "preludeApplied"]) ||
       value.open.ordinal !== value.ordinal ||
       !integer(value.open.beginSequence, 1) ||
@@ -89,12 +84,12 @@ export function parseGhostApplicationFrameCursor(value: unknown): GhostApplicati
   }) as GhostApplicationFrameCursor;
 }
 export function parseGhostApplicationFrameReceipt(value: unknown): GhostApplicationFrameReceipt {
-  if (!record(value) || value.version !== 1 || !keys(value, ["version", "cursor", "keyframe"]))
+  if (!isRecord(value) || value.version !== 1 || !keys(value, ["version", "cursor", "keyframe"]))
     throw new TypeError("invalid application-frame receipt");
   const cursor = parseGhostApplicationFrameCursor(value.cursor);
   if (
     value.keyframe !== undefined &&
-    (!record(value.keyframe) ||
+    (!isRecord(value.keyframe) ||
       !keys(value.keyframe, ["id", "exactHash"]) ||
       !text(value.keyframe.id) ||
       typeof value.keyframe.exactHash !== "string" ||
@@ -113,8 +108,8 @@ export function parseGhostApplicationFrameReceipt(value: unknown): GhostApplicat
 }
 export function parseGhostApplicationClockEvent(value: unknown): GhostApplicationClockEvent | undefined {
   if (
-    !record(value) ||
-    !record(value.payload) ||
+    !isRecord(value) ||
+    !isRecord(value.payload) ||
     !["tearghost-application-frame", "tearghost-intro-install"].includes(String(value.payload.format))
   )
     return undefined;
@@ -157,7 +152,7 @@ export function parseGhostApplicationClockEvent(value: unknown): GhostApplicatio
       !Number.isFinite(payload.seconds) ||
       payload.seconds < 0 ||
       payload.seconds > 0.1 ||
-      !record(payload.confirm) ||
+      !isRecord(payload.confirm) ||
       !keys(payload.confirm, ["key", "touch", "pad", "click"]) ||
       ["key", "touch", "pad", "click"].some(
         (key) => typeof (payload.confirm as Record<string, unknown>)[key] !== "boolean",
@@ -298,8 +293,6 @@ export function readGhostApplicationClockSchedule(
   runId: string,
   declared: boolean,
 ): GhostApplicationClockSchedule | undefined {
-  const finale =
-    readGhostFinaleCompanion(capsule.manifest.provenance) ?? readGhostBossMemory(capsule.manifest.provenance);
   const events = capsule.tracks.events.flatMap((entry) => {
     const event = parseGhostApplicationClockEvent(entry.value);
     if (event !== undefined && event.tick !== entry.tick) throw new TypeError("application clock entry tick mismatch");
@@ -308,47 +301,38 @@ export function readGhostApplicationClockSchedule(
   if (!declared) {
     if (
       events.length !== 0 ||
-      capsule.tracks.results.some((entry) => record(entry.value) && entry.value.applicationFrames !== undefined)
+      capsule.tracks.results.some((entry) => isRecord(entry.value) && entry.value.applicationFrames !== undefined)
     )
       throw new TypeError("application frames lack immutable bootstrap declaration");
     return undefined;
   }
   const firstTick = ghostRecordingFirstTick(capsule);
-  if (
-    events.some(
-      (event) =>
-        event.tick < firstTick &&
-        !finale?.origin.inherited.some(
-          (inherited) => stableVerificationHash(inherited) === stableVerificationHash(event),
-        ),
-    ) ||
-    capsule.tracks.results.some((entry) => entry.tick < firstTick)
-  )
+  if (events.some((event) => event.tick < firstTick) || capsule.tracks.results.some((entry) => entry.tick < firstTick))
     throw new TypeError("Application clock precedes recording origin.");
   const clockSequences = new Set(events.map((event) => event.sequence)),
     seenSequences = new Set<number>();
   for (const entry of capsule.tracks.events) {
     const value = entry.value;
-    if (!record(value) || value.source !== "engine" || !integer(value.sequence) || !clockSequences.has(value.sequence))
+    if (
+      !isRecord(value) ||
+      value.source !== "engine" ||
+      !integer(value.sequence) ||
+      !clockSequences.has(value.sequence)
+    )
       continue;
     if (seenSequences.has(value.sequence))
       throw new TypeError("application-clock sequence collides with another engine event");
     seenSequences.add(value.sequence);
   }
-  let ordinal = finale === undefined ? 0 : finale.origin.cursor.ordinal - (finale.origin.inherited.length > 0 ? 1 : 0),
+  let ordinal = 0,
     sequence = 0;
   let open: GhostApplicationClockEvent | undefined;
   const cursors = new Map<number, GhostApplicationFrameCursor>([
     [0, Object.freeze({ version: 1, ordinal: 0, sequence: 0 })],
   ]);
-  if (finale !== undefined) cursors.set(finale.origin.cursor.sequence, finale.origin.cursor);
   for (const event of events) {
     const value = event.payload;
-    if (
-      value.runId !== runId ||
-      value.sessionId !== (finale?.sourceSessionId ?? capsule.manifest.id) ||
-      event.sequence <= sequence
-    )
+    if (value.runId !== runId || value.sessionId !== capsule.manifest.id || event.sequence <= sequence)
       throw new TypeError("application clock run/session/causal sequence mismatch");
     sequence = event.sequence;
     if (value.format === "tearghost-application-frame") {
@@ -387,7 +371,7 @@ export function readGhostApplicationClockSchedule(
   if (open !== undefined) throw new TypeError("fresh recording has incomplete application-frame terminal witness");
   const receipts = new Map<number, GhostApplicationFrameReceipt>();
   for (const entry of capsule.tracks.results) {
-    if (!record(entry.value) || entry.value.format !== "tearghost-authoritative-receipt") continue;
+    if (!isRecord(entry.value) || entry.value.format !== "tearghost-authoritative-receipt") continue;
     const value = parseGhostApplicationFrameReceipt(entry.value.applicationFrames),
       cursor = value.cursor;
     const expected = cursors.get(cursor.sequence);
@@ -408,8 +392,8 @@ export function readGhostApplicationClockSchedule(
       const snapshot = snapshots[0]?.value;
       if (
         snapshots.length !== 1 ||
-        !record(snapshot) ||
-        !record(snapshot.hashes) ||
+        !isRecord(snapshot) ||
+        !isRecord(snapshot.hashes) ||
         value.keyframe?.id !== snapshot.id ||
         value.keyframe?.exactHash !== snapshot.hashes.exact
       )

@@ -63,22 +63,64 @@ export function resolveHeldEnvironmentWeaponContacts(
   const capability = input.blade.weapon?.environmentCounterplay?.held;
   const damage = input.blade.damageAt();
   if (input.blade.state !== "held" || capability === undefined || !(damage > 0)) return emptyResult();
+  const attackId = `${input.blade.weapon?.id ?? "unknown"}:held:swing:${String(input.blade.swingId)}`;
+  return cutAlong(input.environment, input.segment, { capability, damage, attackId, tick: input.tick });
+}
+
+/** One blade segment against every standing object: each object the blade may cut takes the attack once. */
+function cutAlong(
+  environment: EnvironmentWeaponContactPort,
+  segment: HeldEnvironmentWeaponContactInput["segment"],
+  cut: Readonly<{ capability: EnvironmentCounterplayTag; damage: number; attackId: string; tick: number | undefined }>,
+): EnvironmentWeaponContactResult {
   let considered = 0,
     accepted = 0,
     damaged = 0,
     destroyed = 0;
-  const attackId = `${input.blade.weapon?.id ?? "unknown"}:held:swing:${String(input.blade.swingId)}`;
-  for (const object of input.environment.combatObjects()) {
-    if (object.state === "destroyed" || object.state === "expired" || !intersects(input.segment, object.geometry))
-      continue;
+  for (const object of environment.combatObjects()) {
+    if (object.state === "destroyed" || object.state === "expired" || !intersects(segment, object.geometry)) continue;
     considered += 1;
-    if (!input.environment.resolveCombatObjectCounterplay(object.id, capability).accepted) continue;
+    if (!environment.resolveCombatObjectCounterplay(object.id, cut.capability).accepted) continue;
     accepted += 1;
-    const result = input.environment.damageCombatObject(object.id, damage, attackId, input.tick);
+    const result = environment.damageCombatObject(object.id, cut.damage, cut.attackId, cut.tick);
     if (result.accepted) damaged += 1;
     if (result.destroyed) destroyed += 1;
   }
   return Object.freeze({ considered, accepted, damaged, destroyed });
+}
+
+export interface ThrownEnvironmentWeaponContactInput {
+  readonly environment: EnvironmentWeaponContactPort;
+  readonly blade: Readonly<{
+    thrown: boolean;
+    state: string;
+    throwId: number;
+    throwDmg: number;
+    weapon?: Readonly<{
+      id: string;
+      environmentCounterplay?: Readonly<{ held?: EnvironmentCounterplayTag }>;
+    }> | null;
+  }>;
+  readonly segment: Readonly<{ x1: number; y1: number; x2: number; y2: number }>;
+  readonly pad: number;
+  readonly tick?: number;
+}
+
+/**
+ * A thrown blade cuts whatever the same blade cuts when held: the flying blade's segment against
+ * environment-owned combat objects, once on the way out and once on the way back. As with the held blade,
+ * enemy hit hooks are absent.
+ */
+export function resolveThrownEnvironmentWeaponContacts(
+  input: ThrownEnvironmentWeaponContactInput,
+): EnvironmentWeaponContactResult {
+  const { blade } = input;
+  const capability = blade.weapon?.environmentCounterplay?.held;
+  if (!blade.thrown || (blade.state !== "flying" && blade.state !== "returning")) return emptyResult();
+  if (capability === undefined || !(blade.throwDmg > 0)) return emptyResult();
+  const attackId = `${blade.weapon?.id ?? "unknown"}:throw:${String(blade.throwId)}:${blade.state}`;
+  const segment = { ...input.segment, pad: input.pad };
+  return cutAlong(input.environment, segment, { capability, damage: blade.throwDmg, attackId, tick: input.tick });
 }
 
 /** Resolves player-owned cutting projectiles without invoking enemy throw-hit mechanics. */

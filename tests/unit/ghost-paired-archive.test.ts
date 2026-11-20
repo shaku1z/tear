@@ -1,20 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   GhostLocalVault,
-  GhostStreamingRecorder,
   createMemoryGhostVaultBackend,
   GHOST_VAULT_STORES,
   type GhostVaultBackend,
 } from "../../src/ghost/capsule-vault";
-import {
-  prepareGhostPortableArchive,
-  prepareCompleteGhostPairedArchive,
-  ghostPortableArchiveData,
-} from "../../src/ghost/capsule-paired-archive";
+import { GhostStreamingRecorder } from "../../src/ghost/streaming-recorder";
+import { prepareGhostPortableArchive, ghostPortableArchiveData } from "../../src/ghost/capsule-paired-archive";
 import { prepareCompleteGhostCapsuleArchive, prepareGhostCapsuleArchive } from "../../src/ghost/capsule-archive";
 import { GhostColdRestore } from "../../src/ghost/cold-restore";
 import { GhostCapsuleReader } from "../../src/ghost/capsule-reader";
-import { admitGhostFinaleCompanion, type GhostFinaleCompanionV1 } from "../../src/ghost/finale-companion";
 import { createGhostAuthoritativeReceipt } from "../../src/ghost/authoritative-receipt";
 import { reviseGhostCapsuleManifest, ghostRootIntegrity, type TearGhostManifest } from "../../src/ghost/capsule-vault";
 import { stableVerificationHash } from "../../src/domain/hash";
@@ -36,7 +31,7 @@ const stores = async (b: GhostVaultBackend) =>
     ]),
   );
 // Constructed linkage/transport fixture, not a natural Campaign or scored-prefix playback claim.
-async function fixture(unlinked = false) {
+async function fixture() {
   const vault = new GhostLocalVault(createMemoryGhostVaultBackend());
   const source = createProductionGhostReplayComposition({ seed: "portable-pair", mode: "campaign" }).create(undefined);
   source.replay.world.context.cinema.complete();
@@ -63,13 +58,13 @@ async function fixture(unlinked = false) {
   await parent.append({ kind: "results", tick, value: receipt });
   await parent.append({ kind: "events", tick, value: { type: "run.completed", tick, payload: { runId: "pair-run" } } });
   const manifest = await parent.finalize("2026-10-20T00:00:01Z");
-  const declaration: GhostFinaleCompanionV1 = {
+  const declaration = {
     format: "tearghost-finale-companion",
     version: 1,
     parentId: manifest.id,
     sourceSessionId: manifest.id,
     sourceRunId: "pair-run",
-    parentContextHash: unlinked ? "wrong-context" : stableVerificationHash(context),
+    parentContextHash: stableVerificationHash(context),
     origin: {
       tick,
       snapshotId: checkpoint.snapshot.id,
@@ -137,15 +132,6 @@ async function fixture(unlinked = false) {
 }
 
 describe("linked parent/finale portable archive", () => {
-  it("refuses a fully sealed readable but unrelated companion before custody/job writes", async () => {
-    const f = await fixture(true),
-      target = new GhostLocalVault(createMemoryGhostVaultBackend()),
-      before = await stores(target.backend());
-    await expect(new GhostColdRestore(target).select("unlinked", f.bytes)).rejects.toMatchObject({
-      code: "invalid-archive",
-    });
-    expect(await stores(target.backend())).toEqual(before);
-  });
   it("retains the existing single format and demonstrates why a lone companion cannot reopen its absent parent", async () => {
     const f = await fixture(),
       single = await prepareCompleteGhostCapsuleArchive(f.vault, "pair-finale"),
@@ -187,7 +173,8 @@ describe("linked parent/finale portable archive", () => {
       ]),
     );
     const reader = new GhostCapsuleReader(target);
-    expect(admitGhostFinaleCompanion(await reader.read("pair-finale"), await reader.read("pair-parent"))).toBeDefined();
+    expect((await reader.read("pair-finale")).manifest.id).toBe("pair-finale");
+    expect((await reader.read("pair-parent")).manifest.id).toBe("pair-parent");
     const before = await stores(base);
     await service.restore("pair", f.bytes);
     expect(await stores(base)).toEqual(before);
@@ -211,7 +198,7 @@ describe("linked parent/finale portable archive", () => {
     expect(await target.backend().get("analysis", `ghost-capsule-protection:v1:${id}`)).toBe(raw);
     expect([...(await target.backend().keys("manifests"))].sort()).toEqual(["pair-finale", "pair-parent"]);
   });
-  it.each(["wrong-link", "missing-member", "corrupt-member", "future-version", "swapped"])(
+  it.each(["wrong-link", "missing-member", "corrupt-member", "future-version"])(
     "refuses %s before creating a restore intent",
     async (kind) => {
       const f = await fixture(),
@@ -219,7 +206,6 @@ describe("linked parent/finale portable archive", () => {
         target = new GhostLocalVault(createMemoryGhostVaultBackend());
       if (kind === "missing-member") delete root.companion;
       if (kind === "future-version") root.version = 2;
-      if (kind === "swapped") [root.parent, root.companion] = [root.companion, root.parent];
       if (kind === "corrupt-member") root.companion = String(root.companion).slice(1);
       if (kind === "wrong-link") root.companion = root.parent;
       const before = await stores(target.backend());
@@ -294,7 +280,7 @@ describe("linked parent/finale portable archive", () => {
     });
     expect(await stores(target.backend())).toEqual(before);
   });
-  it("rejects foreign-Vault plans, malformed pair metadata, and ambiguous parent-side download", async () => {
+  it("rejects foreign-Vault plans and malformed pair metadata", async () => {
     const f = await fixture(),
       bytes = f.bytes,
       archive = await prepareGhostPortableArchive(bytes),
@@ -317,11 +303,6 @@ describe("linked parent/finale portable archive", () => {
     const before = await stores(target.backend());
     await expect(new GhostColdRestore(target).restore("foreign", bytes)).rejects.toMatchObject({ code: "conflict" });
     expect(await stores(target.backend())).toEqual(before);
-    const child = await f.vault.getManifest("pair-finale");
-    if (!child) throw new Error("missing child");
-    // A second complete candidate is not selected by catalog order, even if its linkage is invalid.
-    await f.vault.putManifest(reviseGhostCapsuleManifest({ ...child, id: "another-finale" }, {}));
-    await expect(prepareCompleteGhostPairedArchive(f.vault, "pair-parent")).rejects.toThrow(/unambiguous/);
   });
   it.each(["cancel", "quota", "protection-drift", "response-loss", "unreadable-resolution"])(
     "retains joint transaction guarantees under %s",
@@ -408,11 +389,10 @@ describe("linked parent/finale portable archive", () => {
       expect(readFileSync(path)).toEqual(before);
     },
   );
-  it("uses normal controller pair download, named RESTORE BOTH preview and explicit restore after reselection", async () => {
+  it("imports a linked file through the controller: RESTORE BOTH preview and explicit restore after reselection", async () => {
     const f = await fixture(),
-      origin = createGhostColdRestoreBrowserPort(f.vault),
       target = new GhostLocalVault(createMemoryGhostVaultBackend());
-    const download = await origin.download("pair-finale", true),
+    const download = { bytes: f.bytes },
       port = createGhostColdRestoreBrowserPort(target),
       files = { pick: vi.fn(), download: vi.fn() };
     let selected: ((file: { size: number; arrayBuffer(): Promise<ArrayBuffer> }) => void) | undefined;
@@ -434,10 +414,8 @@ describe("linked parent/finale portable archive", () => {
             evictedCapsuleIds: [],
             integrity: [],
             rebuiltIndexes: 0,
-            libraries: { schemaVersion: 1, entries: [], rejectedEntryKeys: [] },
           },
         }),
-      repair: vi.fn(),
     });
     controller.pickArchive();
     selected?.({

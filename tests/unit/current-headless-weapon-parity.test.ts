@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import type { CommandEnvelope } from "../../src/domain/envelopes";
-import { GhostProductionReplayWorld, createGhostV3, type GhostReplayTrident } from "../../src/ghost";
+import { GhostProductionReplayWorld } from "../../src/ghost/replay-world";
+import { createGhostV3, type GhostReplayTrident } from "../../src/ghost/truth-kernel";
 import type { GameAction } from "../../src/input/game-action";
 import { TearGameplayEventBus, type TearGameplayEvent } from "../../src/gameplay/runtime/gameplay-events";
 import { WEAPON_IDS, type WeaponId } from "../../src/gameplay/weapon-selection";
@@ -9,11 +10,11 @@ import { projectGameplayEventForParity } from "../../src/tearbench/gameplay-caus
 import {
   CANONICAL_ENGINEERING_SCENARIOS,
   createProductionGhostReplayComposition,
-  createProductionHeadlessEnvironment,
-  forgeExitLaunchSnapshot,
+  buildExitLaunchSnapshot,
   type TearCausalEventV1,
   type TearObservationV1,
 } from "../../src/tearbench";
+import { createProductionHeadlessEnvironment } from "../../src/playtest/headless/production-headless-environment";
 
 const REPLAY_TRIDENT: GhostReplayTrident = {
   command: {
@@ -30,7 +31,7 @@ const REPLAY_TRIDENT: GhostReplayTrident = {
     available: true,
     resumable: true,
     seekable: true,
-    reason: "source-owned lawful State Forge checkpoint",
+    reason: "source-owned lawful State Setup checkpoint",
   },
   visual: {
     kind: "visual",
@@ -66,14 +67,14 @@ function exerciseCurrentHeadlessWeapon(weaponId: WeaponId) {
     }
 
     const source = environment.captureCheckpoint();
-    const forgedSnapshot = forgeExitLaunchSnapshot(source.snapshot, {
+    const builtSnapshot = buildExitLaunchSnapshot(source.snapshot, {
       id: `current-headless-${weaponId}-overlap`,
       kind: "one-frame-boundary",
       boundary: "overlap",
       position: "at",
       ticks: 0,
     });
-    environment.restoreStateForgeEvaluation({ source, forgedSnapshot });
+    environment.restoreStateSetupEvaluation({ source, builtSnapshot });
     const opening = environment.policyObservation();
     const target = opening.entities.find((entity) => entity.kind !== "projectile");
     if (target === undefined) throw new Error(`current ${weaponId} headless overlap lost its production actor`);
@@ -83,7 +84,7 @@ function exerciseCurrentHeadlessWeapon(weaponId: WeaponId) {
     const events: TearCausalEventV1[] = [];
     const commands: CommandEnvelope<GameAction>[] = [];
     let nextCommandId = source.checkpoint.nextCommandId;
-    let terminal = environment.restoreStateForgeEvaluation({ source, forgedSnapshot });
+    let terminal = environment.restoreStateSetupEvaluation({ source, builtSnapshot });
     for (let tick = 0; tick < 120; tick += 1) {
       const actions: GameAction[] =
         tick === 0
@@ -103,7 +104,7 @@ function exerciseCurrentHeadlessWeapon(weaponId: WeaponId) {
           Object.freeze({
             kind: "command" as const,
             id: ++nextCommandId,
-            tick: forgedSnapshot.tick + tick + 1,
+            tick: builtSnapshot.tick + tick + 1,
             command,
           }),
         ),
@@ -127,32 +128,32 @@ function exerciseCurrentHeadlessWeapon(weaponId: WeaponId) {
       } else if (events.some((event) => event.type === "blade.caught")) break;
     }
     const replayEvents: TearGameplayEvent[] = [];
-    const replayClock: { current: () => number } = { current: () => forgedSnapshot.tick };
+    const replayClock: { current: () => number } = { current: () => builtSnapshot.tick };
     const gameplayEvents = new TearGameplayEventBus(() => replayClock.current());
     gameplayEvents.subscribe((event) => {
       replayEvents.push(event);
     });
     const ghost = createGhostV3({
       id: `current-headless-${weaponId}-independent-ghost`,
-      rulesetVersion: forgedSnapshot.provenance.build.rulesetVersion,
+      rulesetVersion: builtSnapshot.provenance.build.rulesetVersion,
       sourceClassification: "native-v3",
       trident: REPLAY_TRIDENT,
       actions: commands,
-      snapshots: [forgedSnapshot],
+      snapshots: [builtSnapshot],
       events: [],
     });
     const replay = new GhostProductionReplayWorld(
       ghost,
       createProductionGhostReplayComposition({
-        seed: forgedSnapshot.seed,
+        seed: builtSnapshot.seed,
         weaponId,
-        inputSnapshots: new Map([[forgedSnapshot.tick, source.input]]),
+        inputSnapshots: new Map([[builtSnapshot.tick, source.input]]),
         gameplayEvents,
       }),
     );
-    replayClock.current = () => replay.simulation()?.scheduler.tick ?? forgedSnapshot.tick;
+    replayClock.current = () => replay.simulation()?.scheduler.tick ?? builtSnapshot.tick;
     const replayResult = replay.seek(terminal.tick);
-    // A State Forge suffix continues the source run's global causal sequence
+    // A State Setup suffix continues the source run's global causal sequence
     // (6dfd99c7): its first fact is numbered after every source-delivered fact.
     return {
       opening,
@@ -183,7 +184,7 @@ describe("source-owned ordinary headless current-weapon parity", () => {
     expect(result.replayEvents, `${weaponId} independently replayed native gameplay facts`).toEqual(
       result.nativeEvents,
     );
-    expect(result.sequenceBase, `${weaponId} State Forge suffix continues after the delivered startup facts`).toBe(
+    expect(result.sequenceBase, `${weaponId} State Setup suffix continues after the delivered startup facts`).toBe(
       result.startupEvents.length,
     );
     expect(

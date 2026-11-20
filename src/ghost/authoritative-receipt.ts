@@ -1,3 +1,4 @@
+import { asRecord, isObject } from "../domain/records";
 import { AIM_MAGNITUDE_SCALE } from "../input/game-action";
 import type { AuthoritativeInputSnapshot } from "../gameplay/runtime/authoritative-input";
 import { parseGhostApplicationFrameReceipt, type GhostApplicationFrameReceipt } from "./application-frame-events";
@@ -35,7 +36,7 @@ function validateReceipt(tick: number, stateHash: string, value: unknown): Ghost
   if (!/^[a-f0-9]{16}$/iu.test(stateHash)) {
     throw new TypeError("authoritative receipt requires a canonical 64-bit verification hash");
   }
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+  if (!isObject(value) || Array.isArray(value)) {
     throw new TypeError("authoritative receipt requires its same-tick held-input snapshot");
   }
   const input = value as AuthoritativeInputSnapshot;
@@ -62,16 +63,15 @@ function validateReceipt(tick: number, stateHash: string, value: unknown): Ghost
 
 /** Returns undefined for generic terminal results and untrusted/malformed bytes. */
 export function readGhostAuthoritativeReceipt(value: unknown): GhostAuthoritativeReceiptV1 | undefined {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
-  const candidate = value as Readonly<Record<string, unknown>>;
+  const candidate = asRecord(value);
+  if (candidate === undefined) return undefined;
   if (
     candidate.format !== "tearghost-authoritative-receipt" ||
     candidate.schemaVersion !== 1 ||
     candidate.kind !== "authoritative-hash" ||
     typeof candidate.tick !== "number" ||
     typeof candidate.stateHash !== "string" ||
-    typeof candidate.input !== "object" ||
-    candidate.input === null
+    !isObject(candidate.input)
   )
     return undefined;
   try {

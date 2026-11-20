@@ -53,7 +53,7 @@ CI validates every pull request with `pnpm check:functional`. The complete relea
 - Add legal application/run transitions to their state models; do not coordinate them with screen-name strings or render functions.
 - Route sound through Master/Music/SFX/Interface and the internal effect buses.
 - Version and migrate saved data and replay changes.
-- Keep authored modules focused. `pnpm check:architecture` rejects `src/` modules over 700 lines, counted in formatting-independent line equivalents (25,300 non-whitespace characters) unless the code budget records their size debt; only the static data tables `src/config/game-config.ts` and `src/gameplay/upgrades.ts` are exempt.
+- Keep authored modules focused. The module size rule counts characters, not lines, and is stated once in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#code-budget-and-refactor-safety-nets). Do not split a file only to satisfy it.
 - Add characterization before refactoring behavior and update `docs/FEATURE_INVENTORY.md` with the evidence.
 
 See `docs/ARCHITECTURE.md`, `docs/DESIGN_SYSTEM.md`, `docs/PERFORMANCE_BUDGETS.md`, `docs/RELEASE_MATRIX.md`, and `DEPLOYMENT.md` for subsystem and release guidance.
@@ -61,8 +61,6 @@ See `docs/ARCHITECTURE.md`, `docs/DESIGN_SYSTEM.md`, `docs/PERFORMANCE_BUDGETS.m
 ## Evidence and generated output
 
 Keep source and package roots free of logs, screenshots, traces, reports, and
-compiler caches. Follow `docs/ARTIFACTS.md`, use the checkpoint-scoped paths in
-`config/artifact-layout.json`, and run `pnpm check:artifacts` after changing an
-artifact generator or evidence reference. Raw output under `artifacts/` is
-ignored; only deliberately promoted checkpoint manifests and preservation
-records are committed.
+compiler caches. Follow `docs/ARTIFACTS.md` and use its checkpoint-scoped
+paths. Raw output under `artifacts/` is ignored, and `pnpm check:docs` fails if
+it is committed; only deliberately promoted checkpoint manifests are committed.

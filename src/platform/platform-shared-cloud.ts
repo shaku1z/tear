@@ -1,12 +1,9 @@
+import { isRecord } from "../domain/records";
 import type { ScoreEntry, SharedCloudService } from "./cloud";
 import type { PlatformServices } from "./contracts";
 
 function board(mode: string, difficulty: string): string {
   return `${mode}_${difficulty}`;
-}
-
-function isDataRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function scoreEntry(entry: ScoreEntry, rank: number, replayId?: string): Record<string, unknown> {
@@ -71,7 +68,7 @@ export function createPlatformSharedCloud(getPlatform: () => PlatformServices): 
       const serialized = await service.loadReplay(shareId);
       if (serialized === null) return null;
       const parsed: unknown = JSON.parse(serialized);
-      return isDataRecord(parsed) ? { ...parsed } : null;
+      return isRecord(parsed) ? { ...parsed } : null;
     },
     replayFeed() {
       return Promise.resolve(null);

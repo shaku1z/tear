@@ -1,3 +1,13 @@
+import {
+  promptDevice,
+  promptLabel,
+  promptLabels,
+  type PadBindingLabel,
+  type PromptInputMode,
+} from "../../domain/prompt-vocabulary";
+import { keyCodeLabel, keyCodes, keyboardLabel, type KeyboardAction } from "../../domain/keyboard-bindings";
+import { PLAYGROUND_TABS } from "./runtime-bridge";
+
 export interface PlaygroundChoice {
   readonly id: string;
   readonly label: string;
@@ -16,6 +26,8 @@ export interface PlaygroundScreenModel {
   readonly id: "pgmenu" | "pglab";
   readonly title: string;
   readonly subtitle: string;
+  /** The menu's tabs; the selected one is the page on screen. */
+  readonly tabs: readonly Readonly<{ id: string; label: string; selected: boolean }>[];
   readonly sections: readonly PlaygroundSection[];
   readonly canScrollUp?: boolean;
   readonly canScrollDown?: boolean;
@@ -35,21 +47,52 @@ export interface PlaygroundPresentationUpgrade {
   readonly tiers?: readonly unknown[];
 }
 /** The device that owns input; the build-menu subtitle only names controls that work on it. */
-export type PlaygroundPromptDevice = "mouse" | "keyboard" | "gamepad" | "touch";
+export type PlaygroundPromptDevice = PromptInputMode;
 
 /**
- * Tab and Escape close the build menu only from a keyboard; touch and controller
- * players leave through the RESUME button, so their subtitle points there instead.
+ * One line under the title: how to switch tabs and how to leave, worded by the prompt vocabulary
+ * for the device in use (Q / E and Tab / Esc on a keyboard, the bumpers and back on a pad). Touch
+ * players tap the tab strip and RESUME, which need no line, so touch gets an empty one.
  */
-export function playgroundMenuSubtitle(device: PlaygroundPromptDevice): string {
-  return device === "mouse" || device === "keyboard"
-    ? "build the scene — Tab / Esc resumes"
-    : "build the scene — RESUME returns to the arena";
+export function playgroundMenuSubtitle(mode: PlaygroundPromptDevice, padLabel?: PadBindingLabel): string {
+  const device = promptDevice(mode),
+    tabs = promptLabels(["tab-prev", "tab-next"], device, padLabel),
+    close = promptLabel("close-menu", device, padLabel);
+  return [
+    ...(tabs.length === 2 ? [`${tabs.join(" / ")} switch tabs`] : []),
+    ...(close === null ? [] : [`${close} returns to the arena`]),
+  ].join(" · ");
+}
+
+/** Keyboard shortcuts in the arena, shown on the choice they repeat (keyboard only). */
+export const PLAYGROUND_SHORTCUTS: Readonly<Record<string, KeyboardAction>> = Object.freeze({
+  dummy: "spawn-dummy",
+  "boss:next": "summon-boss",
+  "boss:echo": "summon-echo",
+  clear: "clear-enemies",
+  heal: "heal",
+  "tab:abilities": "abilities",
+});
+
+/** The key label for a choice's shortcut: its bound action, or the nth quick-spawn key. */
+function shortcutLabel(id: string, spawnIndex?: number): string | undefined {
+  if (spawnIndex !== undefined) {
+    const code = keyCodes("quick-spawn")[spawnIndex];
+    return code === undefined ? undefined : keyCodeLabel(code);
+  }
+  const action = PLAYGROUND_SHORTCUTS[id];
+  return action === undefined ? undefined : keyboardLabel(action);
+}
+
+function menuTabs(selected: string): PlaygroundScreenModel["tabs"] {
+  return PLAYGROUND_TABS.map(([id, label]) => ({ id: `tab:${id}`, label, selected: id === selected }));
 }
 
 export interface LivePlaygroundPresentationOptions {
   readonly run: () => PlaygroundPresentationRun;
   readonly inputDevice: () => PlaygroundPromptDevice;
+  /** Pad glyphs for the device-worded help line (the player's controller style). */
+  readonly padLabel?: PadBindingLabel;
   readonly oneHit: () => boolean;
   readonly kinds: readonly string[];
   readonly difficulties: () => readonly Readonly<{ id: string; label: string }>[];
@@ -59,6 +102,11 @@ export interface LivePlaygroundPresentationOptions {
   readonly uiAccent: () => string;
   readonly stageAccent: () => string;
   readonly arenaName: () => string;
+  /** Every arena the Playground can use, in stage order. */
+  readonly arenas: () => readonly string[];
+  readonly tab: () => string;
+  /** The enemy kinds bound to the number keys, in key order. */
+  readonly hotkeyKinds: readonly string[];
   readonly selectedWeapon: () => string;
   readonly upgrades: () => readonly PlaygroundPresentationUpgrade[];
   readonly abilityColors: () => Readonly<Record<string, Readonly<{ color: string }>>>;
@@ -78,27 +126,34 @@ export function createLivePlaygroundPresentation(options: LivePlaygroundPresenta
     renderMenu() {
       const run = options.run(),
         pg = run.pg,
-        colors = options.colors();
-      options.renderMenu({
-        id: "pgmenu",
-        title: "PLAYGROUND",
-        subtitle: playgroundMenuSubtitle(options.inputDevice()),
-        sections: [
+        colors = options.colors(),
+        device = options.inputDevice(),
+        // Arena shortcuts are keys: shown only while the keyboard owns input.
+        keyboard = promptDevice(device) === "keyboard",
+        tab = options.tab();
+      const key = (id: string, spawnIndex?: number) => {
+        const hotkey = keyboard ? shortcutLabel(id, spawnIndex) : undefined;
+        return hotkey === undefined ? {} : { sub: `KEY ${hotkey}` };
+      };
+      const pages: Readonly<Record<string, readonly PlaygroundSection[]>> = {
+        spawn: [
           {
-            label: "SPAWN ENEMIES",
+            label: "ENEMIES",
             choices: [
-              ...options.kinds.map((kind) => ({
-                id: `spawn:${kind}`,
-                label: kind.toUpperCase(),
-                accent: colors[kind] ?? "#888",
-              })),
-              { id: "dummy", label: "TARGET DUMMY  (passive)", accent: "#888" },
+              ...options.kinds.map((kind) => {
+                const index = options.hotkeyKinds.indexOf(kind);
+                return {
+                  id: `spawn:${kind}`,
+                  label: kind.toUpperCase(),
+                  accent: colors[kind] ?? "#888",
+                  ...(index < 0 ? {} : key(kind, index)),
+                };
+              }),
+              { id: "dummy", label: "TARGET DUMMY", accent: "#888", ...key("dummy") },
             ],
           },
-          // Source keeps HP and COUNT as separately labelled rows under one
-          // SPAWN MODIFIERS heading (ee5e931 js/game.js renderPgMenu).
           {
-            label: "HP",
+            label: "HEALTH",
             choices: [1, 3, 10].map((value) => ({
               id: `hp:${String(value)}`,
               label: `×${String(value)}`,
@@ -106,7 +161,7 @@ export function createLivePlaygroundPresentation(options: LivePlaygroundPresenta
             })),
           },
           {
-            label: "COUNT",
+            label: "HOW MANY",
             choices: [1, 5].map((value) => ({
               id: `count:${String(value)}`,
               label: `×${String(value)}`,
@@ -121,56 +176,74 @@ export function createLivePlaygroundPresentation(options: LivePlaygroundPresenta
               selected: run.diff === difficulty.id,
             })),
           },
+        ],
+        bosses: [
           {
             label: "SUMMON A BOSS",
-            choices: options.bosses.map((boss) => ({
-              id: `boss:${boss.id}`,
-              label: boss.name.toUpperCase(),
-              accent: colors.boss ?? options.uiAccent(),
-            })),
-          },
-          {
-            label: "ARENA",
             choices: [
-              {
-                id: "arena",
-                label: `NEXT ARENA  ›  now: ${options.arenaName()}`,
-                accent: run.pgArena === -1 || run.pgArena == null ? options.uiAccent() : options.stageAccent(),
-              },
+              // One row per roster boss; an arena shortcut (M for the Echo) shows on that boss's row.
+              ...options.bosses.map((boss) => ({
+                id: `boss:${boss.id}`,
+                label: boss.name.toUpperCase(),
+                accent: colors.boss ?? options.uiAccent(),
+                ...key(`boss:${boss.id}`),
+              })),
             ],
           },
+        ],
+        arena: [
           {
-            label: "WEAPON",
+            label: "ARENA",
+            choices: options.arenas().map((name, index) => ({
+              id: `arena:${String(index)}`,
+              label: name.toUpperCase(),
+              selected: Math.max(0, run.pgArena ?? 0) === index,
+              accent: options.stageAccent(),
+            })),
+          },
+        ],
+        weapon: [
+          {
+            label: "WEAPON · CHANGING IT RESTARTS THE ARENA",
             choices: options.weapons().map((weapon) => ({
               id: `weapon:${weapon.id}`,
               label: weapon.name.toUpperCase(),
               selected: options.selectedWeapon() === weapon.id,
             })),
           },
+        ],
+        rules: [
           {
-            label: "MODIFIERS",
+            label: "RULES",
             choices: [
-              { id: "toggle:god", label: "GOD MODE", selected: Boolean(pg.god) },
+              { id: "toggle:god", label: "NO DAMAGE", selected: Boolean(pg.god) },
               { id: "toggle:freeze", label: "FREEZE ENEMIES", selected: Boolean(pg.freeze) },
               { id: "toggle:slow", label: "SLOW MOTION", selected: Boolean(pg.slow) },
               { id: "toggle:onehit", label: "ONE-HIT MODE", selected: options.oneHit() },
             ],
           },
           {
-            label: "ACTIONS",
+            label: "ARENA ACTIONS",
             choices: [
-              { id: "lab", label: "ABILITY LAB ›" },
-              { id: "clear", label: "CLEAR ENEMIES" },
-              { id: "heal", label: "FULL HEAL" },
-              { id: "reset", label: "RESET PLAYGROUND" },
+              { id: "clear", label: "CLEAR ENEMIES", ...key("clear") },
+              { id: "heal", label: "FULL HEAL", ...key("heal") },
+              { id: "reset", label: "RESET ALL" },
             ],
           },
         ],
+      };
+      options.renderMenu({
+        id: "pgmenu",
+        title: "PLAYGROUND",
+        subtitle: playgroundMenuSubtitle(device, options.padLabel),
+        tabs: menuTabs(tab),
+        sections: pages[tab] ?? pages.spawn ?? [],
       });
     },
     renderLab() {
       const categories = ["all", "offense", "parry", "throw", "mobility", "resilience", "utility"],
         filter = options.labFilter();
+      options.tab();
       const upgrades = options.upgrades().filter((upgrade) => filter === "all" || upgrade.cat === filter);
       const maxScroll = Math.max(0, Math.ceil(upgrades.length / 2) * 92 - (options.viewportHeight - 350));
       const scroll = Math.min(maxScroll, Math.max(0, options.scroll()));
@@ -179,8 +252,11 @@ export function createLivePlaygroundPresentation(options: LivePlaygroundPresenta
         colors = options.abilityColors();
       options.renderLab({
         id: "pglab",
-        title: "ABILITY LAB",
-        subtitle: "take anything · evolve anything · no waves, just you",
+        title: "PLAYGROUND",
+        subtitle: ["Take or evolve any ability", playgroundMenuSubtitle(options.inputDevice(), options.padLabel)]
+          .filter((part) => part !== "")
+          .join(" · "),
+        tabs: menuTabs("abilities"),
         sections: [
           {
             label: "FILTERS",

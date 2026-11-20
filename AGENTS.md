@@ -8,6 +8,11 @@ rules briefly and never relaxes them; where it disagrees with them, they win.
 
 Read [README.md](README.md) first for the commands and the map of `src/`.
 
+**Binding for every change:** [docs/ENGINEERING_STANDARD.md](docs/ENGINEERING_STANDARD.md), the owner's
+engineering standard (build for the next instance, one source of truth, no one-off fixes, measured, no
+slop). Every plan and pull request answers its design check; a pull request that does not meet it is not
+merged.
+
 ## Repository map
 
 - Game code is in `src/`. Dependencies point inward: entrypoints, then app,
@@ -16,9 +21,9 @@ Read [README.md](README.md) first for the commands and the map of `src/`.
   `pnpm check:architecture` enforces it: rules over module roles
   (`config/architecture-roles.json`), allowed directory edges
   (`config/architecture-layers.json`), a ratcheted allowlist of today's
-  violating edges and import cycles (`config/architecture-baseline.json`) and a
-  700-line limit per module (two data tables are exempt), counted in
-  formatting-independent line equivalents (the code budget's character measure).
+  violating edges and import cycles (`config/architecture-baseline.json`) and the
+  module size rule, which counts characters, not lines, and is stated once in
+  [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#code-budget-and-refactor-safety-nets).
 - `src/agents/` (the scripted test player) and `src/tearbench/` (TearBench, the
   verification system) are tooling, not game features. `src/ghost/` mixes the
   player's replay system with unfinished replay features.
@@ -53,7 +58,8 @@ Read [README.md](README.md) first for the commands and the map of `src/`.
    `pnpm test:related <changed src files>`; add `pnpm test:weapons` for weapon
    or ability changes.
 4. Add the smallest permanent test or scenario that fails without your change.
-   A new file under `src/` needs a TearBench evidence route in
+   Vitest runs only test files in git's index, so `git add -N` a new test
+   file before running it. A new file under `src/` needs a TearBench evidence route in
    `src/tearbench/evidence-routes.json` or a line in
    `config/change-impact-defaults.json`; `tests/unit/change-impact.test.mjs`
    fails otherwise ([docs/CHANGE_IMPACT.md](docs/CHANGE_IMPACT.md)).
@@ -114,7 +120,11 @@ its `references/gate-routing.md` instead of guessing. In short: targeted tests
 while iterating; `pnpm check:quick` for cheap static confidence;
 `pnpm check:functional` is what CI requires on every pull request;
 `pnpm check` is the full release gate and runs once for a release candidate
-([docs/RELEASE_AUTHORITY.md](docs/RELEASE_AUTHORITY.md)). Never weaken a gate to
+([docs/RELEASE_AUTHORITY.md](docs/RELEASE_AUTHORITY.md)). Locally, run any other heavy
+command (a whole suite, a build, a browser test) through `pnpm queue -- <command>`:
+every worktree shares one queue, served in arrival order, and the check groups
+other than `fast` join it themselves. Formatting, `pnpm lint --changed`, one test
+file and `pnpm check:quick` start at once. Never weaken a gate to
 make it pass. Prettier owns formatting: run `pnpm format` before handing off;
 `pnpm format:check` is in `check:quick` and CI (`static.format-check`). Settings
 are in `.prettierrc.json`, targets in `scripts/format.mjs` and exclusions (JSON
@@ -128,6 +138,13 @@ allowlist and cycle baseline may only shrink (`--update` lowers them; growth nee
 a reviewed `--allow-increase <file>`). `--explain <file>` lists the rules, roles
 and allowlisted edges that apply to a file; `pnpm test:architecture` covers the gate.
 `pnpm test:determinism` must stay green for any refactor that claims no behaviour change.
+A test or check runs once and that run is its verdict. No retries: none in test
+configurations, test options, runner flags, the check list or workflows
+(`tests/unit/pitfall-guards.test.mjs` fails on one), and no re-running an
+unchanged run hoping it passes. Fix a flaky test at its cause, usually by waiting
+on a game state instead of a time, or delete it and write the reason and the gap
+it leaves in docs/PITFALLS.md. After three failed rounds of fixing one flaky
+test, stop and bring in the lead.
 Docs-only changes: `pnpm check:docs`, `pnpm test:docs`,
 `pnpm check:terminology`. Use the product names in
 `config/terminology-registry.json` in anything players or docs see.
@@ -216,4 +233,8 @@ run, checks that could not run, risks, and any position change. Remove your work
 archived it, and after checking the worktree for uncommitted work and junctions.
 `pnpm who` lists every worktree with its branch, dirty files, pull request and
 flags such as `dirty`, `node_modules-link` and `merged-or-empty`; it never
-changes anything.
+changes anything. `pnpm leftovers` adds what it does not show: local branches
+already on `main` (squash merges included), ignored tracked files, leftover
+files in the worktree folders and cache sizes; it never deletes anything. It
+lists other repositories and the folders in its `KNOWN_FOLDERS` (Tear-oracle,
+the archive) by name only, as never to be removed.

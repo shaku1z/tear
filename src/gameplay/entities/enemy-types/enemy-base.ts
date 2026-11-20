@@ -7,6 +7,7 @@ import type {
   EnemyPlayerPort,
   EnemyProjectile,
 } from "../enemy-contracts";
+import { bossBodyHurts, type BossBodyContactRow } from "../boss-body-contact";
 import type { BossRuntime } from "./boss-runtime";
 
 export function createEnemyBase(dependencies: EnemyDependencies, bossRuntime: BossRuntime) {
@@ -77,6 +78,12 @@ export function createEnemyBase(dependencies: EnemyDependencies, bossRuntime: Bo
     auraHaste: number;
     tetherDR: number;
     anchored: boolean;
+    /** A root holds it: it cannot be flung or lifted until the root is cut. Set only by `setRooted`. */
+    rooted = false;
+    /** False for an enemy that is never rooted. */
+    rootable = true;
+    /** Keeps its own height in the air: a lift leaves it alone. */
+    flies = false;
     buffs: string[];
     immuneToBlade: boolean;
     bleedStacks: number;
@@ -99,6 +106,8 @@ export function createEnemyBase(dependencies: EnemyDependencies, bossRuntime: Bo
     phaseDamageMult: number;
     isBoss?: boolean;
     isMiniBoss?: boolean;
+    /** A boss's row in boss-body-contact.ts; null for every other enemy, whose body always hurts. */
+    bodyContact: BossBodyContactRow | null = null;
     _noBar?: boolean;
     declare bossName: string;
     declare bossId: string;
@@ -236,6 +245,12 @@ export function createEnemyBase(dependencies: EnemyDependencies, bossRuntime: Bo
     }
     applyMark() {
       this.markT = Math.max(this.markT, CONFIG.status.markDur);
+    }
+    /** A root takes or lets go of this enemy. A rooted enemy is held the way an anchored one is. */
+    setRooted(rooted: boolean) {
+      if (this.rooted === rooted) return;
+      this.rooted = rooted;
+      this.anchored = rooted;
     }
     applySeam(duration: number, throwId: number) {
       this.seamT = Math.max(this.seamT, duration || 0);
@@ -381,10 +396,17 @@ export function createEnemyBase(dependencies: EnemyDependencies, bossRuntime: Bo
       void context;
       return dmg;
     } // authored bosses may protect a phase boundary
-    // Optional authored contact gate. Most actors always deal body contact; stateful
-    // bosses can close the gate without mutating their difficulty-scaled contactDmg.
+    /** What the body is doing, as its boss-body-contact.ts row names it. Null: the row is "any" or "never". */
+    bodyContactLabel(): string | null {
+      return null;
+    }
+    // Most actors always deal body contact. A boss deals it only where its row in boss-body-contact.ts says.
     contactDamageEnabled() {
-      return true;
+      return this.bodyContact === null || bossBodyHurts(this.bodyContact, this.bodyContactLabel());
+    }
+    /** True while the body pushes the player out of itself instead of letting them walk through. */
+    bodyBlocks(): boolean {
+      return this.bodyContact?.blocks === true;
     }
     contactDamageAmount() {
       return this.contactDmg;
@@ -555,8 +577,19 @@ export function createEnemyBase(dependencies: EnemyDependencies, bossRuntime: Bo
       return p;
     }
 
+    /** Seconds left in which this enemy may move but not attack or hurt by touch; set where it spawns. */
+    attackHold = 0;
+    /** Keeps every clock that starts an attack at least `seconds` away. A class with its own clock adds it. */
+    holdAttacks(seconds: number) {
+      this.atkCd = Math.max(this.atkCd, seconds);
+    }
+
     tickTimers(dt: number) {
       this.aliveT += dt;
+      if (this.attackHold > 0) {
+        this.holdAttacks(this.attackHold);
+        this.attackHold = Math.max(0, this.attackHold - dt);
+      }
       if (this.hitCd > 0) this.hitCd -= dt;
       if (this.flash > 0) this.flash -= dt;
       if (this.stun > 0) this.stun -= dt;

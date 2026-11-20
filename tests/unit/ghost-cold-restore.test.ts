@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   GhostLocalVault,
-  GhostStreamingRecorder,
   createMemoryGhostVaultBackend,
   GHOST_VAULT_STORES,
   reviseGhostCapsuleManifest,
@@ -9,6 +8,7 @@ import {
   type GhostVaultWrite,
   type TearGhostManifest,
 } from "../../src/ghost/capsule-vault";
+import { GhostStreamingRecorder } from "../../src/ghost/streaming-recorder";
 import { GhostCapsuleReader } from "../../src/ghost/capsule-reader";
 import { GhostColdRestore, GhostColdRestoreError } from "../../src/ghost/cold-restore";
 import {

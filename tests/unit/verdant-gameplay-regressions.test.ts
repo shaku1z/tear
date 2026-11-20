@@ -1,19 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { CONFIG } from "../../src/config/game-config";
 import { createEnemyHarness } from "./enemy-test-harness";
-import { bindVerdantEnvironmentActors } from "./environment-feature-fixture";
-import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 import { ROOTBOUND_REGROWTH_TIMING } from "../../src/gameplay/environment/regrowth-link";
 import { BLOOM_WELL_TIMING, createBloomWellState } from "../../src/gameplay/environment/bloom-well";
-import { ROOTBOUND_ENCOUNTER } from "../../src/gameplay/entities/enemy-types/rootbound";
+import { ROOTBOUND_HEALING } from "../../src/gameplay/entities/enemy-types/rootbound";
 import { ROOTBOUND_MOVES } from "../../src/gameplay/entities/enemy-types/rootbound-moves";
-import { createRootbinderState, severRootLink } from "../../src/gameplay/entities/rootbinder-runtime";
 import {
   captureProductionReplayCheckpoint,
   createProductionGhostReplayComposition,
 } from "../../src/tearbench/production-replay-composition";
-import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-forge-live-compiler";
-import { forgeBloomWellCycleState } from "../../src/tearbench/state-forge-factories";
+import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-setup-live-compiler";
+import { buildBloomWellCycleState } from "../../src/tearbench/state-setup-factories";
 import { resolveTearSdl, type TearSdlDocumentV1 } from "../../src/tearbench/tearsdl";
 
 type Harness = ReturnType<typeof createEnemyHarness>;
@@ -21,8 +18,8 @@ type Boss = InstanceType<Harness["types"]["Rootbound"]> & {
   phaseMarker: number;
   state: "intro" | "idle" | "recover";
   stateT: number;
-  lastSpringStage: string | null;
   lastSpringUseCount: number;
+  regrowthCalled: boolean;
   regrowthState: Readonly<{ phase: string }>;
   beginRegrowth(startTick: number, connectionIds: readonly string[]): boolean;
   advanceRegrowth(tick: number, ids: ReadonlySet<string>, broken?: boolean): unknown;
@@ -47,6 +44,7 @@ function resolvedPhaseThree(harness: Harness): Boss {
   actor.hp = actor.maxHp * 0.2;
   actor.update(dt, harness.platforms, harness.player);
   skipBeat(actor);
+  actor.regrowthCalled = true;
   actor.beginRegrowth(0, connections);
   actor.advanceRegrowth(ROOTBOUND_REGROWTH_TIMING.channelTicks, new Set(), false);
   actor.state = "idle";
@@ -56,7 +54,8 @@ function resolvedPhaseThree(harness: Harness): Boss {
 
 describe("Verdant gameplay regressions", () => {
   it("keeps attacking through Phase III and repeats Last Spring instead of idling forever", () => {
-    const harness = createEnemyHarness();
+    // Varied draws, so every move gets its turn rather than whichever one a fixed draw always lands on.
+    const harness = createEnemyHarness([0.15, 0.85, 0.5, 0.35, 0.65, 0.95, 0.05]);
     const actor = resolvedPhaseThree(harness);
     const started = new Set<string>();
     let idleRun = 0,
@@ -66,12 +65,15 @@ describe("Verdant gameplay regressions", () => {
       if (tick % 480 === 0) harness.player.x = actor.x < CONFIG.view.w / 2 ? CONFIG.view.w - 200 : 200;
       actor.update(dt, harness.platforms, harness.player);
       const verb = actor.atk.split(":")[0] ?? "";
-      if (verb !== "unavailable" && !verb.startsWith("regrowth")) started.add(verb);
+      if (verb !== "unavailable" && verb !== "exposed" && !verb.startsWith("regrowth")) started.add(verb);
       idleRun = actor.atk === "unavailable" ? idleRun + 1 : 0;
       longestIdle = Math.max(longestIdle, idleRun);
     }
-    const phaseThreeMoves = ROOTBOUND_MOVES.attacks.filter((move) => move.phases.includes(3)).map((move) => move.id);
-    expect([...started].sort()).toEqual([...phaseThreeMoves, "last-spring"].sort());
+    // Every Phase III move but Regrowth, which is played once and is already over here.
+    const phaseThreeMoves = ROOTBOUND_MOVES.attacks
+      .filter((move) => move.phases.includes(3) && move.id !== "regrowth")
+      .map((move) => move.id);
+    expect([...started].sort()).toEqual([...phaseThreeMoves].sort());
     expect(actor.lastSpringUseCount).toBeGreaterThanOrEqual(3);
     expect(longestIdle / 120).toBeLessThan(2);
   });
@@ -100,9 +102,10 @@ describe("Verdant gameplay regressions", () => {
     actor.hp = actor.maxHp * 0.2;
     actor.update(dt, harness.platforms, harness.player);
     skipBeat(actor);
+    actor.regrowthCalled = true;
     expect(actor.beginRegrowth(0, connections)).toBe(true);
     expect(actor.regrowthChannelBroken()).toBe(false);
-    actor.hit(actor.maxHp * (ROOTBOUND_ENCOUNTER.regrowthBreakFraction / 2), 1, 0);
+    actor.hit(actor.maxHp * (ROOTBOUND_HEALING.regrowthBreak / 2), 1, 0);
     expect(actor.regrowthChannelBroken()).toBe(false);
     actor.hitCd = 0;
     actor.hit(actor.maxHp * 10, 1, 0);
@@ -115,84 +118,20 @@ describe("Verdant gameplay regressions", () => {
     expect(actor.dying).toBe(true);
   });
 
-  it("does not deal contact damage during the opening beat after the intro", () => {
+  it("never deals contact damage: its body blocks, and not while it is burrowed", () => {
     const harness = createEnemyHarness();
     const actor = boss(harness);
-    actor.introT = dt;
-    actor.update(dt, harness.platforms, harness.player);
     actor.introT = 0;
-    actor.update(dt, harness.platforms, harness.player);
-    let firstContact = -1;
-    for (let tick = 0; tick < 240 && firstContact < 0; tick += 1) {
-      if (actor.contactDamageEnabled()) firstContact = tick;
+    let blocked = 0;
+    let burrowedBlocks = 0;
+    for (let tick = 0; tick < 120 * 30; tick += 1) {
       actor.update(dt, harness.platforms, harness.player);
+      expect(actor.contactDamageEnabled()).toBe(false);
+      if (actor.bodyBlocks()) blocked += 1;
+      if (actor.hidden && actor.bodyBlocks()) burrowedBlocks += 1;
     }
-    expect(firstContact === -1 || firstContact / 120 >= ROOTBOUND_ENCOUNTER.openingContactGrace - dt * 2).toBe(true);
-  });
-
-  it("staggers a Rootbinder whose network is cut and does not relink it the next tick", () => {
-    const runtime = createEnvironmentRuntime({ worldId: "world-a", stageId: "stage-1" });
-    let state: "linked" | "broken" = "linked";
-    let severs = 0;
-    const root = createRootbinderState({ id: "enemy:binder", worldId: "world-a", stageId: "stage-1", x: 0, y: 0 });
-    const ally = (id: string, x: number) => ({
-      id,
-      worldId: "world-a",
-      stageId: "stage-1",
-      kind: "ordinary" as const,
-      x,
-      y: 40,
-      dead: false,
-      dying: false,
-    });
-    bindVerdantEnvironmentActors(runtime, "rootbinder", () => [
-      {
-        id: root.id,
-        state: { ...root, state, transitionTick: 1_000 },
-        candidates: [ally("enemy:a", 40), ally("enemy:b", 60)],
-        sever: () => {
-          severs += 1;
-          state = "broken";
-        },
-      },
-    ]);
-    runtime.step(1, dt, () => undefined);
-    const links = runtime.combatObjects().filter((object) => object.kind === "root-link");
-    expect(links).toHaveLength(2);
-    for (const [index, link] of links.entries()) severRootLink(runtime, link.id, `cut-${String(index)}`, 2);
-    runtime.step(2, dt, () => undefined);
-    runtime.step(3, dt, () => undefined);
-    expect(severs).toBe(1);
-    expect(
-      runtime.combatObjects().filter((object) => object.kind === "root-link" && object.state === "active"),
-    ).toHaveLength(0);
-  });
-
-  it("never lets two Rootbinders link the same ally", () => {
-    const runtime = createEnvironmentRuntime({ worldId: "world-a", stageId: "stage-1" });
-    const shared = {
-      id: "enemy:shared",
-      worldId: "world-a",
-      stageId: "stage-1",
-      kind: "ordinary" as const,
-      x: 50,
-      y: 40,
-      dead: false,
-      dying: false,
-    };
-    const binder = (id: string, x: number) => {
-      const root = createRootbinderState({ id, worldId: "world-a", stageId: "stage-1", x, y: 0 });
-      const own = [`${id}:ally-1`, `${id}:ally-2`].map((allyId) => ({ ...shared, id: allyId, x: x + 30 }));
-      return { id, state: { ...root, state: "linked" as const, transitionTick: 1_000 }, candidates: [shared, ...own] };
-    };
-    bindVerdantEnvironmentActors(runtime, "rootbinder", () => [binder("enemy:one", 0), binder("enemy:two", 100)]);
-    runtime.step(1, dt, () => undefined);
-    const targets = runtime
-      .combatObjects()
-      .filter((object) => object.kind === "root-link")
-      .map((object) => (object as { targetId?: string }).targetId);
-    expect(targets.length).toBeGreaterThanOrEqual(4);
-    expect(targets.filter((target) => target === "enemy:shared")).toHaveLength(1);
+    expect(blocked).toBeGreaterThan(0);
+    expect(burrowedBlocks).toBe(0);
   });
 
   it("applies Bloom lift in the production replay world, as live play does", () => {
@@ -221,7 +160,7 @@ describe("Verdant gameplay regressions", () => {
     );
     const snapshot = compileResolvedTearSdlSnapshot(
       checkpoint.snapshot,
-      resolveTearSdl(forgeBloomWellCycleState(base, well)),
+      resolveTearSdl(buildBloomWellCycleState(base, well)),
     );
     const detached = createProductionGhostReplayComposition({ seed: "verdant-replay-lift", mode: "campaign" }).create(
       snapshot,

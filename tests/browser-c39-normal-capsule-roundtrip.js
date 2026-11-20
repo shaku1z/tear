@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { createHash } = require("node:crypto");
 const { withJourney } = require("./browser-journey-harness");
-const { SLOW_STATE_WAIT_MS, STATE_WAIT_MS, holdFor } = require("./browser-waits");
+const { STATE_WAIT_MS, holdFor, pollEvery } = require("./browser-waits");
 
 // This consumer is deliberately separate from unit fixtures. Every producer and
 // consumer below owns a fresh browser process; only the normal download survives.
@@ -44,30 +44,6 @@ async function installObservation(page) {
     CanvasRenderingContext2D.prototype.fillText = function c39FileText(value, ...args) {
       const text = String(value),
         observation = window.__C39_FILE_TEXT__;
-      if (text.startsWith("FINALE CONTINUATION   ·")) {
-        observation.replay = null;
-        observation.frame = null;
-        observation.stateHash = null;
-        observation.expectStateHash = false;
-        observation.paused = null;
-      }
-      const frame = /^FRAME ([0-9]+)$/u.exec(text);
-      if (frame) observation.frame = Number(frame[1]);
-      const position = /^([0-9.]+)s · TICK ([0-9]+) \/ ([0-9.]+)s$/u.exec(text);
-      if (position)
-        observation.replay = {
-          elapsed: Number(position[1]),
-          tick: Number(position[2]),
-          duration: Number(position[3]),
-          frame: observation.frame,
-        };
-      if (text === "▶") observation.paused = true;
-      if (text === "❚❚") observation.paused = false;
-      if (observation.expectStateHash) {
-        observation.stateHash = text;
-        observation.expectStateHash = false;
-      }
-      if (text === "CONTINUATION STATE") observation.expectStateHash = true;
       // The Vault draws one sentence per file status; map it back to the status name.
       const status = [
         ["UNAVAILABLE", "Importing replay files isn't available in this browser."],
@@ -203,8 +179,8 @@ async function phase(id, run) {
   await withJourney(
     {
       name: "C39 normal capsule files " + id,
-      port: 8181,
       deferBoot: true,
+      tutorialSkipped: true,
       query: { "ghost-v3-profile": "forensic-qa" },
     },
     async (journey) => {
@@ -237,11 +213,52 @@ async function phase(id, run) {
   ); // withJourney closes this entire producer/consumer browser before returning.
 }
 
+/**
+ * Ends the one-hit run the way a player can: with the movement keys, walk into the nearest enemy until the game
+ * reports the run over. Standing still and waiting to be found took from 2 seconds to more than 180 across nightly
+ * runs, because it depends on where the enemies of that run's seed go; contact with any enemy ends a one-hit run.
+ */
+async function walkIntoDefeat(page) {
+  const deadline = Date.now() + STATE_WAIT_MS;
+  let held = null;
+  const hold = async (key) => {
+    if (held === key) return;
+    if (held !== null) await page.keyboard.up(held);
+    if (key !== null) await page.keyboard.down(key);
+    held = key;
+  };
+  try {
+    for (;;) {
+      const view = await page.evaluate(() => {
+        const state = window.__PANTHEON_TEST.state();
+        return {
+          game: state.game,
+          tick: state.simulationTick,
+          player: state.playerTrace === null ? null : { x: state.playerTrace.x, y: state.playerTrace.y },
+          enemies: state.enemyTrace.map((enemy) => ({ kind: enemy.kind, x: enemy.x, y: enemy.y })),
+        };
+      });
+      if (view.game === "gameover") return;
+      assert.ok(Date.now() < deadline, "the player did not reach an enemy: " + JSON.stringify(view));
+      const { player } = view;
+      const distance = (enemy) => Math.hypot(enemy.x - player.x, enemy.y - player.y);
+      const nearest =
+        player === null ? undefined : [...view.enemies].sort((left, right) => distance(left) - distance(right))[0];
+      await hold(nearest === undefined ? null : nearest.x > player.x ? "d" : "a");
+      // An enemy standing on a platform above: jump at it.
+      if (nearest !== undefined && nearest.y < player.y - 60 && Math.abs(nearest.x - player.x) < 160)
+        await page.keyboard.press("Space");
+      await page.waitForTimeout(pollEvery(50));
+    }
+  } finally {
+    await hold(null);
+  }
+}
+
 async function main() {
   save("execution-start", {
     classification: report.classification,
     scriptSha256: sha256(fs.readFileSync(__filename)),
-    requestedPort: process.env.TEAR_JOURNEY_PORT || "8181",
   });
   await phase("A-producer", async (journey) => {
     const { page, boot, waitScreen, clickAndWait, buildInfo } = journey;
@@ -264,7 +281,7 @@ async function main() {
       buildInfo,
       actualSetup: await page.evaluate(() => window.__PANTHEON_TEST.state().setup),
       profile: "forensic-qa",
-      lifecycle: "ordinary physical input, natural defeat; deadline failure is not completion",
+      lifecycle: "ordinary physical input; the player walks into the nearest enemy; deadline failure is not completion",
     });
     await page.keyboard.down("d");
     await page.mouse.click(800, 758);
@@ -276,9 +293,7 @@ async function main() {
     await page.waitForTimeout(holdFor(220));
     await page.keyboard.up("d");
     // No terminate, forced outcome, semantic stepping, actor patch, or timer-to-success fallback.
-    await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "gameover", undefined, {
-      timeout: SLOW_STATE_WAIT_MS,
-    });
+    await walkIntoDefeat(page);
     await page.waitForFunction(
       () => window.__TEAR_GHOST_V3__.manifest()?.status === "complete" || window.__TEAR_GHOST_V3__.failure() !== null,
       undefined,
@@ -465,7 +480,7 @@ async function pairedMain(input) {
     }
     return observation;
   };
-  await phase("pair-A-normal-source-download", async (journey) => {
+  await phase("pair-A-normal-source-restore", async (journey) => {
     const { page, buildInfo } = journey;
     producerBuild = buildInfo;
     await openVault(journey);
@@ -475,28 +490,13 @@ async function pairedMain(input) {
     await clickLabel(page, "RESTORE BOTH");
     await waitStatus(page, "COMPLETE");
     await assertPair("pair-A-source-custody", journey);
-    await page.waitForFunction(() => window.__C39_FILE_TEXT__.recent.includes("DOWNLOAD RUN + FINALE"));
-    const [download] = await Promise.all([
-      page.waitForEvent("download", { timeout: STATE_WAIT_MS }),
-      clickLabel(page, "DOWNLOAD RUN + FINALE"),
-    ]);
-    await download.saveAs(archivePath);
-    assert.equal(await download.failure(), null);
-    downloaded = JSON.parse(fs.readFileSync(archivePath, "utf8"));
-    assert.deepEqual(JSON.parse(downloaded.parent), members[0]);
-    assert.deepEqual(JSON.parse(downloaded.companion), members[1]);
-    save("pair-downloaded-file", {
-      byteLength: fs.statSync(archivePath).size,
-      sha256: sha256(fs.readFileSync(archivePath)),
-      members: members.map((m) => ({ id: m.manifest.id, root: m.manifest.rootIntegrity })),
-    });
-    await page.screenshot({ path: path.join(directory, "pair-A-download.png") });
+    await page.screenshot({ path: path.join(directory, "pair-A-restore.png") });
   });
   await phase("pair-B-fresh-normal-restore", async (journey) => {
     const { page } = journey;
     await openVault(journey);
     assert.equal(((await stores(page)).stores.manifests || []).length, 0);
-    await chooseFile(page, archivePath);
+    await chooseFile(page, input);
     await waitStatus(page, "READY");
     const ready = await observe("pair-B-preview", page, journey.buildInfo);
     assert.equal((ready.vault.stores.manifests || []).length, 0);
@@ -505,89 +505,8 @@ async function pairedMain(input) {
     await page.screenshot({ path: path.join(directory, "pair-B-preview.png") });
     await clickLabel(page, "RESTORE BOTH");
     await waitStatus(page, "COMPLETE");
-    const custodyBefore = await assertPair("pair-B-complete", journey);
-    const profileBefore = await page.evaluate(() => ({
-      meta: localStorage.getItem("tear_meta"),
-      profile: localStorage.getItem("tear_profile_v2"),
-    }));
-    // Newer companion is first in the normal Vault catalog. The existing exact
-    // parent permit and runtime restoration remain authoritative on open.
-    // The durable restore completes before the asynchronous catalog refresh.
-    await page.waitForFunction(() => window.__C39_FILE_TEXT__.recent.includes("◆ THEATER"), undefined, {
-      timeout: STATE_WAIT_MS,
-    });
-    await settle(page);
-    await clickLabel(page, "◆ THEATER");
-    await journey.waitScreen("replay");
-    await page.waitForFunction(() => window.__C39_FILE_TEXT__.recent.includes("BACK TO SCORED RUN"));
-    await page.screenshot({ path: path.join(directory, "pair-B-linked-theater.png") });
-    const recorded = await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), members[1].manifest.id);
-    const frames = recorded.tracks.results
-      .filter((entry) => entry.value?.format === "tearghost-finale-frame")
-      .map((entry) => entry.value);
-    const last = frames.at(-1);
-    assert.ok(last?.completed, "portable companion lacks actual final-frame witness");
-    const restoration = recorded.tracks.keyframes.find(
-      (entry) =>
-        entry.value.state["tear.run.v1"].stage === 0 &&
-        entry.value.state["tear.world.v1"].runtime.finaleBinding?.state.restoring,
-    );
-    assert.ok(restoration, "source has no captured stage-zero restoration checkpoint");
-    await page.waitForFunction(
-      () => window.__C39_FILE_TEXT__.replay !== null && window.__C39_FILE_TEXT__.paused === true,
-    );
-    const start = await page.evaluate(() => window.__C39_FILE_TEXT__.replay);
-    await page.keyboard.press("Space");
-    await page.waitForFunction(
-      (elapsed) => window.__C39_FILE_TEXT__.paused === false && window.__C39_FILE_TEXT__.replay?.elapsed > elapsed,
-      start.elapsed,
-    );
-    await page.keyboard.press("Space");
-    await settle(page);
-    assert.equal(
-      await page.evaluate(() => window.__C39_FILE_TEXT__.paused),
-      true,
-      "native Space must pause without activating another UI control",
-    );
-    await page.mouse.click(1280, 810); // 91% of the actual1600×900 SAFE timeline.
-    await page.waitForFunction(() => {
-      const p = window.__C39_FILE_TEXT__.replay;
-      return p && p.elapsed / p.duration >= 0.9;
-    });
-    const sought = await page.evaluate(() => window.__C39_FILE_TEXT__.replay);
-    assert.ok(sought.tick >= restoration.tick, "scrub did not reach the recorded restoration interval");
-    assert.ok(
-      frames.some((frame) => frame.cursor.ordinal === sought.frame && frame.tick === sought.tick),
-      "rendered position lacks its original frame witness",
-    );
-    await page.screenshot({ path: path.join(directory, "pair-B-restoration-seek.png") });
-    await page.keyboard.press("ArrowRight");
-    await page.waitForFunction(
-      ({ tick, ordinal }) =>
-        window.__C39_FILE_TEXT__.replay?.tick === tick && window.__C39_FILE_TEXT__.replay?.frame === ordinal,
-      { tick: last.tick, ordinal: last.cursor.ordinal },
-    );
-    await page.mouse.click(1225, 856); // Existing normal INFO button.
-    await page.waitForFunction((hash) => window.__C39_FILE_TEXT__.stateHash === hash, last.stateHash);
-    const ended = await page.evaluate(() => window.__C39_FILE_TEXT__);
-    save("pair-B-actual-transport", {
-      start,
-      sought,
-      ended,
-      originalFinalFrame: last,
-      restorationTick: restoration.tick,
-    });
-    await page.screenshot({ path: path.join(directory, "pair-B-final-frame.png") });
-    const custodyAfter = await assertPair("pair-B-after-linked-theater", journey);
-    assert.deepEqual(custodyAfter.vault, custodyBefore.vault, "playback/transport changed source bytes or metadata");
-    assert.deepEqual(
-      await page.evaluate(() => ({
-        meta: localStorage.getItem("tear_meta"),
-        profile: localStorage.getItem("tear_profile_v2"),
-      })),
-      profileBefore,
-      "playback/transport changed progression",
-    );
+    // A linked file still imports both members; the Theater no longer opens a finale companion.
+    await assertPair("pair-B-complete", journey);
   });
   assert.deepEqual(fs.readFileSync(input), original);
   report.status = "passed";
@@ -603,6 +522,20 @@ const linkedInput = process.env.TEAR_C39_LINKED_PAIR_FILE;
   .finally(() => {
     report.finishedAt = new Date().toISOString();
     save("summary", report);
+    // The evidence folder is temporary on CI and is not uploaded, so the reason must reach the log.
+    if (report.status === "failed")
+      console.error(
+        JSON.stringify(
+          {
+            error: report.error?.message,
+            failedPhases: report.phases
+              .filter(({ status }) => status === "failed")
+              .map(({ id, error, pageErrors }) => ({ id, error, pageErrors })),
+          },
+          null,
+          2,
+        ),
+      );
     console.log(
       JSON.stringify({
         status: report.status,

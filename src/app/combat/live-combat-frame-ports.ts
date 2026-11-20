@@ -4,14 +4,13 @@ import type { LiveScreenNavigation } from "../interface/live-screen-navigation";
 import { isMenuScreen } from "../../domain/screen-catalog";
 import type { LiveGhostCapture } from "../replay/live-ghost-capture";
 import type { LiveGhostChaseRuntime } from "../replay/live-ghost-chase";
-import type { LiveGhostPracticeChallenge } from "../replay/live-ghost-practice-challenge";
 import type { LiveGhostPracticeSessionState } from "../replay/ghost-practice-session-state";
 import type { LiveGhostRecording } from "../replay/live-ghost-recording";
 import type { LiveRunOrchestration } from "../run/run-orchestration-composition";
 import { commitBossIntroSnapshot } from "../shell/frame-runtime";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameBlade, GamePlayer, GameRun } from "../shell/game-runtime-state";
-import type { LiveAuthoritativeInputAdapter } from "../world/authoritative-input-adapter";
+import type { GameBlade, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
+import type { LiveAuthoritativeInputAdapter } from "../../gameplay/runtime/authoritative-input-adapter";
 import type { LiveInputAuthorityState } from "../world/input-authority-state";
 import type { LiveWorldComposition } from "../world/world-composition";
 import type { LiveCombatFrameContext } from "./combat-frame-context";
@@ -36,8 +35,7 @@ export interface LiveCombatFramePortsOptions {
   readonly player: () => GamePlayer;
   readonly blade: () => GameBlade;
   /** Collaborators constructed after the combat host. */
-  readonly challenge: () => Pick<LiveGhostPracticeChallenge["challenge"], "afterStep">;
-  readonly ghostCapture: () => Pick<LiveGhostCapture, "recordKeyframe" | "finale">;
+  readonly ghostCapture: () => Pick<LiveGhostCapture, "recordKeyframe">;
 }
 
 /**
@@ -178,7 +176,6 @@ export function createLiveCombatFramePorts(options: LiveCombatFramePortsOptions)
         canonicalTickStartedAt = null;
       }
       ghostDna.afterTick(tick);
-      options.challenge().afterStep(tick);
       options.chase.observe();
       void dependencies.practiceEncounterPersistence
         ?.observe({
@@ -197,7 +194,6 @@ export function createLiveCombatFramePorts(options: LiveCombatFramePortsOptions)
             addFloater(livePlayer().x, livePlayer().y - 70, "ENCOUNTER SAVE NOT CONFIRMED", true, "#e0a326");
         });
       options.ghostCapture().recordKeyframe(tick);
-      options.ghostCapture().finale.afterTick();
       if (__TEAR_TEST_BUILD__) {
         const hook = (browserWindow as BrowserParityTickWindow).__TEAR_PARITY_TICK__;
         hook?.after?.(tick);

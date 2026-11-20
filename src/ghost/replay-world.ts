@@ -1,4 +1,3 @@
-import type { RecordedGhostChallenge } from "./recorded-challenge";
 import type { ReplayActionEnvelope } from "../replay/envelope";
 import { stableVerificationHash } from "../domain/hash";
 import type {
@@ -60,7 +59,7 @@ export interface GhostProductionReplaySession<State> {
   readonly replayLifecycle?: TearSimulationAdvanceLifecycle;
   renderView?(): GhostReplayRenderView;
   semanticProjection(): unknown;
-  /** Optional State Forge semantic hash, only when its codec projection is available. */
+  /** Optional State Setup semantic hash, only when its codec projection is available. */
   snapshotSemanticHash?(): string;
   /** Complete an admitted post-capture start transaction before its first simulation tick. */
   completeRecordedOpening?(): void;
@@ -301,11 +300,9 @@ export class GhostProductionReplayWorld<State> {
   }
 }
 
-export type GhostPracticeMode =
-  "exact-practice" | "repetition-drill" | "counterfactual-sandbox" | "race-practice" | "coach-assisted";
+export type GhostPracticeMode = "exact-practice" | "repetition-drill" | "counterfactual-sandbox" | "race-practice";
 
 export interface GhostPracticeChild {
-  readonly challenge?: RecordedGhostChallenge;
   readonly id: string;
   readonly sourceGhostId: string;
   readonly sourceRootHash: string;

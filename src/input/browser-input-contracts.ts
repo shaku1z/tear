@@ -123,6 +123,7 @@ export interface BrowserInput {
   rmb: boolean;
   lmb: boolean;
   padTether: boolean;
+  keyTether: boolean;
   clicked: boolean;
   clickX: number;
   clickY: number;
@@ -137,6 +138,8 @@ export interface BrowserInput {
   padBack: boolean;
   /** Controller confirm (south face button) is physically down; written by the gamepad poll. */
   padConfirmHeld: boolean;
+  /** Any controller button is down or the left stick or d-pad points; written by the gamepad poll. */
+  padMenuHeld: boolean;
   /** The mouse is over the canvas; false while it rests on DOM chrome or outside the page. */
   pointerInside: boolean;
   _uiTabPrev: boolean;
@@ -180,11 +183,14 @@ export interface BrowserInput {
   startSemanticRecording(): void;
   stopSemanticRecording(): void;
   discardSemanticInput(): void;
+  /** Play resumes: drops unsealed input like discardSemanticInput and seals a resume action, so the held blade re-seats along the aim on the first tick. */
+  returnControl(): void;
   /** Drops every press still waiting when a scene hands control back (src/input/scene-release.ts). */
   discardScenePresses(): void;
   drainSemanticActions(tick: number, aimTurn?: number): readonly CommandEnvelope<GameAction>[];
   syncSemanticMovement(): void;
   setPadTether(held: boolean): void;
+  setKeyTether(held: boolean): void;
   updateUI(): void;
   takeUIScroll(): UiScroll;
   touchActive(): boolean;
@@ -208,6 +214,7 @@ export interface BrowserInput {
   menuNext(): boolean;
   confirmPressed(): boolean;
   confirmHeld(): boolean;
+  menuInputHeld(): boolean;
   backPressed(): boolean;
   consumeThrow(): boolean;
   takeClick(): Point | null;

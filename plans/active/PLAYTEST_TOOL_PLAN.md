@@ -228,8 +228,13 @@ there is no nightly job, because Actions minutes are metered.
 - Every playtest run is a scenario, a seed and an action list, and replaying that list
   reproduces the final state hash. The tool checks this on every run, so a replay defect
   shows up as a failed playtest with a seed.
-- This plan does not restructure the replay world or the codecs. They move out of
-  `src/tearbench` in stage 5 only in step with the replay overhaul's own plan.
+- This plan does not restructure the replay world or the codecs. The replay overhaul moves
+  them out of `src/tearbench`: the detached world to `src/app/world/detached/` and the
+  snapshot codecs to `src/gameplay/snapshot/` (agreed between the two sessions on
+  2026-11-20). `src/playtest` imports both; neither ever imports `src/playtest`.
+  `playtest -> gameplay` is an allowed edge today. `playtest -> app` is not: it becomes a
+  rule in `config/architecture-layers.json` in the pull request that first needs it, and
+  until stage 5 moves the headless environment the same edge starts in `src/tearbench`.
 
 ## Reused, moved, deleted
 
@@ -237,16 +242,18 @@ Nothing that works is rebuilt.
 
 | Part (today's path) | Disposition |
 | --- | --- |
-| `tearbench/production-headless-environment.ts`, `headless.ts`, `production-world-factory.ts`, `production-combat-phases.ts`, `production-wave-reward-runtime.ts` | Reused as is from stage 1; moved to `src/playtest/headless/` in stage 5 |
+| `tearbench/production-headless-environment.ts`, `production-headless-scenario.ts`, `production-policy-observation.ts`, `production-boss-practice-start.ts` | Reused as is from stage 1; moved to `src/playtest/headless/` on 2026-11-20, ahead of the replay overhaul's world move |
+| `tearbench/headless.ts` | Reused as is; moved to `src/playtest/headless/` in stage 5 |
+| `tearbench/production-world-factory.ts`, `production-combat-phases.ts`, `production-wave-reward-runtime.ts` | Reused as is from stage 1. Moved by the replay overhaul (its fourth pull request) to `src/app/world/detached/`, not by this plan: players' replays reach them, and release code cannot import `src/playtest` |
 | `agents/scripted-policy*.ts`, `hierarchical-policy-adapter.ts`, `watch-build-choice.ts`, `tearbench/scripted-agent-hierarchy.ts` | Reused from stage 1; become `src/playtest/players/scripted*.ts` in stage 5 |
 | `tearbench/canonical-scenarios.json` (35 scenarios, 8 headless today) | Become rows in `situations.json` in stage 4; the browser-only ones run headless where stage 2's starts allow, and stay browser tests where a browser is the point |
 | `tearbench/invariants.ts` | Becomes the never-happen half of `checks.ts` in stage 4 |
 | Weapon parity (`current-headless-weapon-parity.test.ts`) | Becomes the replay check in stage 4 |
-| State Forge codecs and factories | Reused in stage 2 for phase, wave and stage starts; renamed "snapshots" in stage 5 |
+| State Forge codecs and factories | Reused in stage 2 for phase, wave and stage starts. The codecs are moved by the replay overhaul (its third pull request) to `src/gameplay/snapshot/`; the factories that only the tool uses are renamed "snapshots" in stage 5 |
 | Browser bridge (`tearbench/browser/`, `live-runtime-*`) | Reused for `watch` in stage 6; 43 browser tests keep using it |
 | Change-to-test routes (`evidence-routes.json`) | Reduced to a path-to-situations map for `check --changed` in stage 4 |
 | Tutorial driver (`tutorial-course-driver.ts`, `tutorial-gold-generation.ts`) | Stays; moves beside the tutorial code in stage 5. Every build depends on it |
-| Replay world and codecs used by shipped ghosts (`production-replay-composition.ts`, state and environment codecs, hydrators) | Not touched here; move with the replay overhaul |
+| Replay world and codecs used by shipped ghosts (`production-replay-composition.ts`, state and environment codecs, hydrators) | Not touched here; move with the replay overhaul, to the two homes above |
 | `tests/unit/canonical-hash-stream.test.ts` (`pnpm test:determinism`) | Stays as it is |
 | `tests/unit/boss-pressure-report.test.ts` | Stays with the Verdant gameplay work; its measures become report columns |
 | Trained AI, training screens, certificates, receipts, canary, leases, Graveyard, bisection, minimisation, requirements, checkpoint commands | Deleted by the removal work (pull request 138, then its next one), not by this plan |
@@ -305,16 +312,98 @@ Requirements from the verification runs:
 - Every player takes upgrade choices by the same scored rule (`buildWatchChoiceScore`), so a
   difference between players is never a difference between builds.
 
+Built first (2026-11-17, the lead's cut of this stage to one small pull request): a chosen boss in a
+headless boss-only run; `src/playtest/` with the boss view, the `scripted` and `avoids-tells` players,
+the fight measurement and the report; `pnpm playtest bosses`. A phase is reached by play. The fight
+loop advances application frames while a phase-change cinematic holds the simulation; without that a
+headless fight stops for ever at the first phase change.
+
+Built second (2026-11-17): `--phase 2,3` starts a fight at a chosen phase through the game's own
+Playground boss practice. The tutorial's boss selection and the phase-practice runtime bring the boss
+there by its own transitions; nothing edits health. The game offers this with Sword on Normal only and
+for the campaign roster, which leaves out the White Hart. The Playground restores a defeated player;
+the fight counts that as the defeat and stops. The scripted player now counts damage to an enemy as
+progress, because in a fight that scores nothing its watchdog took the fight for a softlock and paused.
+
+Built third (2026-11-19): the `cuts-objects` player and the "to cut" lines. The headless observation now
+carries what the stage holds (the same projection the browser's scripted player gets), so a fight counts,
+per phase and by name, what was planted for a weapon to cut, how long it stood and what the player cut:
+Grafts, Root Cage walls, Regrowth roots, and any later kind with no edit. The `cuts-objects` player is the
+tell-avoiding player with one addition: it picks the nearest standing object, walks under it, jumps and
+swings, and leaves one it has not damaged in 6 seconds. A fight at a chosen phase now gets its whole time
+limit; the time the game takes to bring the boss there used to be taken out of it.
+
+Built fourth (2026-11-19): the `no-dodge` player (the scripted player without its dash and its jump) and the
+`still` player (no input during play). Both measure what a boss does to them, so a fight of theirs stops, as
+a time limit with the reason, once a phase has been played for 60 seconds.
+
+Built fifth (2026-11-19): the `walker` player (keeps walking, turns round at whatever stops it, jumps every
+four seconds, never attacks; it stops after 60 seconds of a phase like the other two pressure players) and
+the "boss px/s" column: how far the boss moved sideways each second of the phase.
+
+Built sixth (2026-11-19): the sweep and the summary. `pnpm playtest sweep` plays every boss with every weapon
+on Easy and Normal with all six players and prints one summary table per boss and difficulty; a row is a phase
+and a player, pooled over weapons and seeds: fights that cleared the phase of those that reached it, the middle
+clear time, damage and hits taken and hits landed per fight, the share of damage nothing warned of, boss
+movement and the share of time the boss was open. `--difficulty` takes a list, and "hits landed" is a new
+per-phase measure. Many fights are shared between worker processes of the same command (`--jobs`, up to 6);
+the result is the same fights in the same order as on one process, which a test holds.
+
+Measured on 2026-11-19 on 6 jobs, on a machine other sessions were also using: four seeds are 1,680 fights and
+took 498 s, over the budget. By the budget rule the default sweep plays seeds 1 and 2 (840 fights, 251 s)
+and says in its first line that seeds 3 and 4 were left out; `--seed 1,2,3,4` plays them. The fights play at
+about 15 times real time a process, and 1,680 fights are 12.6 hours of game time, so four seeds do not fit
+5 minutes on 6 jobs at this speed. What would fit them: Colossus, Aldric and the White Hart give the same fight
+on every seed with these players, and `cuts-objects` plays the same fight as `avoids-tells` wherever the stage
+holds nothing to cut; a sweep that played each distinct fight once would be about a third shorter. Not built.
+
+Built seventh (2026-11-20): the tests of the failure modes, which close the stage.
+
+- Failure mode 1 (wrong numbers): `tests/unit/playtest-hand-count.test.ts` plays three short fights, gives the
+  game the same actions again, writes down every tick from the game's own actors and counts ticks, damage and
+  hits taken, damage dealt, hits landed and boss movement from that list; the table must agree. It fails on a
+  planted error in the movement and in the damage dealt.
+- Failure mode 2 (not reproducible): `tests/unit/playtest-sweep.test.ts` plays a set whole and in three shares
+  and requires the same fights in the same order, and `playtest-bosses` requires the same table for the same
+  seed. The command on one job and on four gave byte-identical JSON twice by hand (24 fights, then 4). That
+  comparison is not a unit test: it costs about 80 s, nearly all of it five loads of the game. It belongs in
+  stage 4's `playtest check`, which loads the game once for the fixed set.
+- Failure mode 6 (changes the game): `pnpm test:determinism` passes (16 tests) and no playtest pull request
+  touched a fixture or the tutorial reference output.
+
 Done when:
-- [ ] `pnpm playtest bosses` prints, for all five campaign bosses, per phase and per player: clear rate, time to kill, damage and hits taken, hits landed, boss movement, share of time open; 5 weapons, 4 seeds, Easy and Normal, in under 5 minutes on 6 jobs.
-- [ ] The three tests of failure modes 1, 2 and 6 pass.
-- [ ] The Rootbound's rows are sent to the Verdant gameplay work and the lead, beside Aldric's and the White Hart's.
-- [ ] Catalogue, change-impact, repository-map and layer entries exist; `pnpm check:quick` passes.
+- [x] `pnpm playtest sweep` prints, for every boss, per phase and per player: clear rate, time to kill, damage and hits taken, hits landed, boss movement, share of time open; 5 weapons, Easy and Normal, in under 5 minutes on 6 jobs. Seeds were cut from 4 to 2 to hold the 5 minutes (see "Built sixth").
+- [x] The three tests of failure modes 1, 2 and 6 pass. For mode 2 the one-job against four-jobs comparison of the command was made by hand and waits for stage 4 to become a check (see "Built seventh").
+- [x] The Rootbound's rows are sent to the Verdant gameplay work and the lead, beside Aldric's and the White Hart's (2026-11-20, `playtest-sweep-rootbound-rows.md` in the sessions' shared notes).
+- [x] Catalogue, change-impact, repository-map and layer entries exist; `pnpm check:quick` passes.
 
 ### Stage 2: situations as data, comparison, enemies and full runs
 
 `situations.json`; phase, wave and stage starts through the snapshot factories; `enemies`
 and `runs` reports; coverage; `--compare`.
+
+Built first (2026-11-20, brought forward for `pnpm playtest waves`): a headless start on a chosen wave.
+A scenario's `start.wave` (with `start.stage` to name the Adventure stage it belongs to) places the run
+just before that wave and lets the game's own wave planner start it, so the stage, its story chapter and
+the wave's enemies are the game's, for every stage from one path. It is marked `surgical-valid` and gives
+no checkpoint; a later wave is refused in modes whose waves the planner does not number (boss-only, the
+Gauntlet). `src/playtest/headless/chapter.ts` skips the chapter the way a player does. The player
+arrives with no upgrades unless the environment is given a build: then the game's draft is rolled once for
+each wave before and the build picks one upgrade from each, applied as a pick in a run is. Limit, stated in
+every report that uses it: tier-ups and anything bought are not part of a build. Test:
+`tests/unit/playtest-wave-start.test.ts`.
+
+Built second (2026-11-20): `pnpm playtest waves --stage <id>`, the measures the Verdant gameplay work asked for.
+Each wave of the stage before its boss is opened directly and played on fixed seeds; a row per wave gives how
+many runs cleared it, the game's own clear time (its wave log), the opening grace, the enemies as they arrived
+and how many had affixes, damage taken by source, snares marked, caught and cut and the time held, ally roots
+grown and cut, uproots, and each Rootbinder's time to kill and whether it died planted. `--show runs` adds a
+line for every run with where the player fell and the arrival order; `--json` writes everything. Roots and
+snares are read by the shared names of the parts (`root-link`, `root-snare`, `rootPhase`), so another enemy or
+stage that uses them is counted with no edit. Damage by source is attributed, as for bosses: the game does not
+record what hit the player, so it goes to the owner of a shot on the player, else an enemy touching the
+player, else "unmarked". Verdant, sword, Normal, three seeds, two players: 54 waves in 71 s on five
+jobs. Tests: `tests/unit/playtest-waves.test.ts`.
 
 Done when:
 - [ ] Every boss phase, every wave of each biome and every enemy kind is a row that starts directly, in under 1 s each.

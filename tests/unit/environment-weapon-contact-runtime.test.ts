@@ -5,6 +5,7 @@ import { clamp, len, lerp, lerpAngle } from "../../src/domain/geometry";
 import {
   resolveEnvironmentWeaponProjectileContacts,
   resolveHeldEnvironmentWeaponContacts,
+  resolveThrownEnvironmentWeaponContacts,
 } from "../../src/gameplay/combat/environment-weapon-contact-runtime";
 import { createBlade } from "../../src/gameplay/entities/blade";
 import { EnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
@@ -433,5 +434,77 @@ describe("environment weapon contact runtime", () => {
     blade.y = 0;
     blade._updateLooseCannon(1 / 120, player, []);
     expect(blade.state).toBe("held");
+  });
+
+  it("lets a thrown blade cut what the held blade cuts, once on the way out and once on the way back", () => {
+    const environment = new EnvironmentRuntime("verdant-sanctum", "thrown-contact");
+    environment.addCombatObject(object("graft", "graft-anchor", { x: 180, y: -45, w: 54, h: 90 }, 100));
+    const sword = getWeapon("sword");
+    const thrown = (state: string, x1: number, throwDmg = 30) =>
+      resolveThrownEnvironmentWeaponContacts({
+        environment,
+        blade: { thrown: state !== "held", state, throwId: 7, throwDmg, weapon: sword },
+        segment: { x1, y1: 0, x2: x1 + 30, y2: 0 },
+        pad: 4,
+        tick: 12,
+      });
+    const integrity = () => environment.combatObjects()[0]?.integrity;
+    // Short of the Graft, held in hand, or with no throw damage: nothing.
+    expect(thrown("flying", 20)).toMatchObject({ considered: 0, damaged: 0 });
+    expect(thrown("held", 170)).toMatchObject({ considered: 0, damaged: 0 });
+    expect(thrown("flying", 170, 0)).toMatchObject({ considered: 0, damaged: 0 });
+    expect(integrity()).toBe(100);
+    // Passing through it: one cut per pass, however many ticks the blade overlaps it.
+    expect(thrown("flying", 170)).toMatchObject({ considered: 1, accepted: 1, damaged: 1, destroyed: 0 });
+    expect(thrown("flying", 190)).toMatchObject({ considered: 1, damaged: 0 });
+    expect(integrity()).toBe(70);
+    expect(thrown("returning", 190)).toMatchObject({ damaged: 1 });
+    expect(integrity()).toBe(40);
+    // A weapon whose held blade cannot cut the object cannot cut it thrown either.
+    const blunt = { id: "blunt", environmentCounterplay: {} };
+    expect(
+      resolveThrownEnvironmentWeaponContacts({
+        environment,
+        blade: { thrown: true, state: "flying", throwId: 8, throwDmg: 30, weapon: blunt },
+        segment: { x1: 170, y1: 0, x2: 200, y2: 0 },
+        pad: 4,
+      }),
+    ).toMatchObject({ considered: 0, damaged: 0 });
+  });
+
+  it("a throw overlapping an object hits it once per pass across a snapshot restore and a state change", () => {
+    const sword = getWeapon("sword");
+    const run = (between: (environment: EnvironmentRuntime) => void): readonly (number | undefined)[] => {
+      const environment = new EnvironmentRuntime("verdant-sanctum", "thrown-restore");
+      environment.addCombatObject(object("graft", "graft-anchor", { x: 180, y: -45, w: 54, h: 90 }, 100));
+      const integrity: (number | undefined)[] = [];
+      for (let tick = 1; tick <= 4; tick += 1) {
+        resolveThrownEnvironmentWeaponContacts({
+          environment,
+          blade: { thrown: true, state: "flying", throwId: 7, throwDmg: 30, weapon: sword },
+          segment: { x1: 170 + tick, y1: 0, x2: 200 + tick, y2: 0 },
+          pad: 4,
+          tick,
+        });
+        integrity.push(environment.combatObjects()[0]?.integrity);
+        if (tick === 2) between(environment);
+      }
+      return integrity;
+    };
+    const continuous = run(() => undefined);
+    expect(continuous).toEqual([70, 70, 70, 70]);
+    // Restored from a snapshot in the middle of the overlap.
+    expect(
+      run((environment) => {
+        environment.replace(structuredClone(environment.snapshot()));
+      }),
+    ).toEqual(continuous);
+    // The object changes state in the middle of the overlap, as a Graft does when it finishes growing in.
+    expect(
+      run((environment) => {
+        const [graft] = environment.combatObjects();
+        if (graft !== undefined) environment.updateCombatObject(graft.id, { ...graft, state: "warning", stateTick: 2 });
+      }),
+    ).toEqual(continuous);
   });
 });

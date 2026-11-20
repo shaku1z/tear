@@ -2,6 +2,7 @@ import { createLiveCollisionGameplayBindings } from "../../gameplay/combat/live-
 import { bindRunDnaShot, runDnaObserver } from "../../gameplay/runtime/run-dna-observer";
 import { updateMirrorCombat } from "../../gameplay/combat/mirror-combat-feedback";
 import { overrunMovementMultiplier } from "../../gameplay/combat/overrun";
+import { isObject } from "../../domain/records";
 import { applyCombatFeedback, type CombatFeedbackEvent } from "../../gameplay/combat/combat-feedback-runtime";
 import type { CombatEntityRuntimeHooks } from "../../gameplay/combat/combat-entity-runtime";
 import type { LiveOpeningPhaseHost } from "../../gameplay/combat/live-opening-phase";
@@ -500,7 +501,7 @@ function createCollision(
       vx: shot.vx,
       vy: shot.vy,
       owner: shot.deflected || Reflect.get(shot, "playerOwned") === true ? "player" : "enemy",
-      ...(source && typeof source === "object" ? { sourceEnemyId: runtime.id(source, "enemy") } : {}),
+      ...(source && isObject(source) ? { sourceEnemyId: runtime.id(source, "enemy") } : {}),
       ...(target ? { targetEnemyId: runtime.id(target, "enemy") } : {}),
       ...(shot.deflected ? { perfect: !!Reflect.get(shot, "perfect") } : {}),
     });
@@ -694,7 +695,6 @@ function createKill(context: LiveCombatActionContext): LiveKillHost {
     stageAccent: () => ports.stage.current.accent ?? "#ffffff",
     stageChapterBossOutro: () => ports.stage.current.chapter?.bossOutro ?? null,
     hasStageChapter: () => !!ports.stage.current.chapter,
-    bossRosterSize: context.bossRosterSize,
     achievementsEnabled: f.achievementsEnabled,
     addKillScore: f.addKillScore,
     addStat: profileStats.add,

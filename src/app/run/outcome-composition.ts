@@ -8,7 +8,7 @@ import {
 import type { RunDifficulty, RunMode } from "../../gameplay/run/session";
 import type { RunLifecycleController } from "../../gameplay/run/lifecycle";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GamePlayer, GameRun } from "../shell/game-runtime-state";
+import type { GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveRunControllerRegistry } from "./run-controller-api";
 import { createLiveRunOutcomeHost } from "./run-outcome-host";
 import type { RecordingSummary } from "../../gameplay/run/outcome-planner";
@@ -133,6 +133,12 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
         ? false
         : options.saveBest(run.mode, run.diff, run.wave, run.score, run.runTime),
     best: (run) => options.getBest(run.mode, run.diff),
+    // A cleared Gauntlet's time joins the profile best unless the run is practice or assisted.
+    recordGauntletClear: (run) =>
+      run.gauntlet === undefined || practicing() || run.ghostAssistance !== undefined
+        ? false
+        : d.PROFILE.recordGauntletClear(run.diff, { ticks: run.gauntlet.ticks, hits: run.gauntlet.hits }),
+    gauntletBest: (run) => d.PROFILE.gauntletBest(run.diff),
     awardCoins: (score) => (practicing() ? 0 : options.awardCoins(score)),
     coins: () => d.META.coins(),
     achievementTracking: () => !practicing() && options.achievementTracking(),
