@@ -13,7 +13,7 @@ import {
   createProductionGhostReplayComposition,
 } from "../../src/tearbench/production-replay-composition";
 import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-setup-live-compiler";
-import { forgeBloomWellCycleState } from "../../src/tearbench/state-setup-factories";
+import { buildBloomWellCycleState } from "../../src/tearbench/state-setup-factories";
 import { resolveTearSdl, type TearSdlDocumentV1 } from "../../src/tearbench/tearsdl";
 
 type Harness = ReturnType<typeof createEnemyHarness>;
@@ -228,7 +228,7 @@ describe("Verdant gameplay regressions", () => {
     );
     const snapshot = compileResolvedTearSdlSnapshot(
       checkpoint.snapshot,
-      resolveTearSdl(forgeBloomWellCycleState(base, well)),
+      resolveTearSdl(buildBloomWellCycleState(base, well)),
     );
     const detached = createProductionGhostReplayComposition({ seed: "verdant-replay-lift", mode: "campaign" }).create(
       snapshot,

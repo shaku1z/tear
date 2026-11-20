@@ -149,13 +149,13 @@
       "largestFunctionStatements": 93
     },
     "src/tearbench/live-runtime-environment.ts": {
-      "chars": 29599
+      "chars": 29591
     },
     "src/tearbench/production-combat-phases.ts": {
       "chars": 30100
     },
     "src/tearbench/production-headless-environment.ts": {
-      "chars": 28010
+      "chars": 27992
     },
     "src/tearbench/production-replay-composition.ts": {
       "chars": 34925

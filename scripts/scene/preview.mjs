@@ -1,6 +1,6 @@
 // `pnpm scene preview <stage> --out <dir>`: captures the package in the real
 // game. Serves an existing dist/test-standalone (run pnpm build:test:standalone
-// first), forges a State Setup scenario on the package's stage, screenshots the
+// first), sets up a State Setup scenario on the package's stage, screenshots the
 // required viewports and records a looping animated WebP at 1600x900.
 //
 // Options: --wave N (default 1), --frames N (default 48, 0 skips the loop),
@@ -94,12 +94,12 @@ async function launchBrowser(chromium) {
   return chromium.launch({ headless: true, ...(existsSync(chrome) ? { executablePath: chrome } : {}) });
 }
 
-async function forge(page, resolved) {
+async function setUp(page, resolved) {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: 20000 });
   const launched = await page.evaluate((input) => {
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
     window.__SCENE_PREVIEW__ = environment;
-    const result = environment.forgeResolvedScenario(input);
+    const result = environment.buildResolvedScenario(input);
     for (let index = 0; index < 90; index += 1) environment.renderFrame(1 / 60);
     return result;
   }, resolved);
@@ -167,7 +167,7 @@ export async function preview(directory, out, options = {}) {
       `http://127.0.0.1:${server.address().port}/index.html?test=1${options.low === true ? "&bossdebug=1" : ""}`,
       { waitUntil: "domcontentloaded" },
     );
-    await forge(page, scenario(scene.stageId, Number(options.wave ?? 1)));
+    await setUp(page, scenario(scene.stageId, Number(options.wave ?? 1)));
     if (options.low === true) await page.evaluate(() => window.__PANTHEON_TEST.setOptions({ gfx: "low" }));
     for (const viewport of wanted) {
       const [width, height] = viewport.split("x").map(Number);

@@ -127,10 +127,10 @@ export function createLiveStateEditorHost(factory: TearRuntimeBridgeFactory): St
       if (!result.ok) throw new Error(`checkpoint restore failed during ${result.phase}`);
     },
     launch(resolved: TearSdlResolved) {
-      const result = environment.forgeResolvedScenario(resolved);
+      const result = environment.buildResolvedScenario(resolved);
       if (!result.ok) {
         throw new Error(
-          `scenario forge failed during ${result.phase}: ${result.issues.map((issue) => issue.message).join("; ")}`,
+          `scenario setup failed during ${result.phase}: ${result.issues.map((issue) => issue.message).join("; ")}`,
         );
       }
       library.set(resolved.document.id, resolved.document);

@@ -349,41 +349,41 @@ function patchBoundary(snapshot: TearSnapshotV1, launch: StateSetupBoundaryLaunc
 }
 
 /** Creates a detached, restore-ready snapshot; the captured input is untouched. */
-export function forgeExitLaunchSnapshot(source: TearSnapshotV1, launch: StateSetupExitLaunch): TearSnapshotV1 {
-  const forged = structuredClone(source);
-  (forged as { id: string }).id = launch.id;
-  (forged as { stateClass: TearSnapshotV1["stateClass"] }).stateClass = "surgical-valid";
-  (forged as { provenance: TearSnapshotV1["provenance"] }).provenance = Object.freeze({
+export function buildExitLaunchSnapshot(source: TearSnapshotV1, launch: StateSetupExitLaunch): TearSnapshotV1 {
+  const built = structuredClone(source);
+  (built as { id: string }).id = launch.id;
+  (built as { stateClass: TearSnapshotV1["stateClass"] }).stateClass = "surgical-valid";
+  (built as { provenance: TearSnapshotV1["provenance"] }).provenance = Object.freeze({
     ...source.provenance,
     actor: "state-forge",
     producer: "forgeExitLaunchSnapshot",
     sourceId: source.id,
   });
-  (forged as { lineage: NonNullable<TearSnapshotV1["lineage"]> }).lineage = Object.freeze({
+  (built as { lineage: NonNullable<TearSnapshotV1["lineage"]> }).lineage = Object.freeze({
     parentId: source.id,
     relation: "forked-at",
     parentRootHash: source.hashes.exact,
     forkTick: source.tick,
   });
-  if (launch.kind === "boss-phase") patchBoss(forged, launch);
-  else if (launch.kind === "boss-finisher") patchBossFinisher(forged, launch);
-  else patchBoundary(forged, launch);
-  const mutableHashes = forged.hashes as unknown as MutableRecord;
-  mutableHashes.exact = stableVerificationHash(forged.state);
-  return Object.freeze(forged);
+  if (launch.kind === "boss-phase") patchBoss(built, launch);
+  else if (launch.kind === "boss-finisher") patchBossFinisher(built, launch);
+  else patchBoundary(built, launch);
+  const mutableHashes = built.hashes as unknown as MutableRecord;
+  mutableHashes.exact = stableVerificationHash(built.state);
+  return Object.freeze(built);
 }
 
 /** Applies the certified long-run truth to a freshly captured live Hammer run. */
-export function forgeWave99HammerSnapshot(
+export function buildWave99HammerSnapshot(
   source: TearSnapshotV1,
   certificate: Wave99HammerExitCertificate,
   liveReplay?: TearProgressionReplayResult,
 ): TearSnapshotV1 {
-  const forged = structuredClone(source);
-  (forged as { id: string }).id = certificate.snapshotId;
-  (forged as { stateClass: TearSnapshotV1["stateClass"] }).stateClass = "reconstructed-reachable";
-  const run = mutableRecord(forged.state["tear.run.v1"], "run codec");
-  const player = mutableRecord(forged.state["tear.player.v1"], "player codec");
+  const built = structuredClone(source);
+  (built as { id: string }).id = certificate.snapshotId;
+  (built as { stateClass: TearSnapshotV1["stateClass"] }).stateClass = "reconstructed-reachable";
+  const run = mutableRecord(built.state["tear.run.v1"], "run codec");
+  const player = mutableRecord(built.state["tear.player.v1"], "player codec");
   run.wave = 99;
   run.score = certificate.metrics.score;
   run.kills = certificate.metrics.kills;
@@ -395,8 +395,8 @@ export function forgeWave99HammerSnapshot(
     ...certificate,
     ...(liveReplay === undefined ? {} : { liveReplay }),
   });
-  const mutableHashes = forged.hashes as unknown as MutableRecord;
-  mutableHashes.exact = stableVerificationHash(forged.state);
+  const mutableHashes = built.hashes as unknown as MutableRecord;
+  mutableHashes.exact = stableVerificationHash(built.state);
   mutableHashes.progression = certificate.progressionHash;
-  return Object.freeze(forged);
+  return Object.freeze(built);
 }

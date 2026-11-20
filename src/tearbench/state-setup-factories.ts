@@ -25,7 +25,7 @@ export const ENVIRONMENT_STATE_SETUP_FACTORY_REGISTRY = createStableRegistry(
   ENVIRONMENT_STATE_SETUP_FACTORY_IDS,
 );
 
-export function forgeEnvironmentFieldState(
+export function buildEnvironmentFieldState(
   base: TearSdlDocumentV1,
   field: Omit<EnvironmentFieldState, "id"> & { readonly id: string },
 ): TearSdlDocumentV1 {
@@ -39,12 +39,12 @@ export function forgeEnvironmentFieldState(
   });
 }
 
-/** Surgical C5 journey: a Bloom Well is restored as a forged field, never inserted into a stage roster. */
-export function forgeBloomWellCycleState(base: TearSdlDocumentV1, field: BloomWellState): TearSdlDocumentV1 {
-  return forgeEnvironmentFieldState(base, field);
+/** Surgical C5 journey: a Bloom Well is restored as a built field, never inserted into a stage roster. */
+export function buildBloomWellCycleState(base: TearSdlDocumentV1, field: BloomWellState): TearSdlDocumentV1 {
+  return buildEnvironmentFieldState(base, field);
 }
 
-export function forgeEnvironmentCombatObjectState(
+export function buildEnvironmentCombatObjectState(
   base: TearSdlDocumentV1,
   object: Omit<EnvironmentCombatObjectState, "id"> & { readonly id: string },
 ): TearSdlDocumentV1 {
@@ -60,7 +60,7 @@ export function forgeEnvironmentCombatObjectState(
 
 /** C6 relationship fixture: State Setup restores one Rootbinder and two ordinary allies,
  * then restores their source-owned severable root-link segments using stable actor IDs. */
-export function forgeRootbinderNetworkState(base: TearSdlDocumentV1): TearSdlDocumentV1 {
+export function buildRootbinderNetworkState(base: TearSdlDocumentV1): TearSdlDocumentV1 {
   const links = ["enemy:2", "enemy:3"].map((targetId, index) => ({
     id: `root-network:${String(index + 1)}`,
     factoryId: "environment-combat-object",
@@ -97,7 +97,7 @@ export function forgeRootbinderNetworkState(base: TearSdlDocumentV1): TearSdlDoc
 }
 
 /** C12/TC-4 surgical fixture: one active Mercy Graft retains the live Rootbound owner/target identity. */
-export function forgeRootboundGraftAnchorState(base: TearSdlDocumentV1): TearSdlDocumentV1 {
+export function buildRootboundGraftAnchorState(base: TearSdlDocumentV1): TearSdlDocumentV1 {
   const warning = createGraftAnchorState({
     ownerId: "enemy:1",
     graftType: "mercy",
@@ -105,18 +105,18 @@ export function forgeRootboundGraftAnchorState(base: TearSdlDocumentV1): TearSdl
     createdTick: 0,
   });
   const active = Object.freeze({ ...warning, state: "active" as const, stateTick: warning.activationTick });
-  const forged = forgeEnvironmentCombatObjectState(base, active);
+  const built = buildEnvironmentCombatObjectState(base, active);
   return Object.freeze({
-    ...forged,
+    ...built,
     state: Object.freeze({
-      ...forged.state,
+      ...built.state,
       boss: Object.freeze({ phaseMarker: 2, state: "idle", stateT: 0, atk: "unavailable" }),
     }),
     id: `${base.id}-graft-mercy`,
   });
 }
 
-export function forgeEnvironmentRouteState(
+export function buildEnvironmentRouteState(
   base: TearSdlDocumentV1,
   route: Omit<EnvironmentRouteState, "id"> & { readonly id: string },
 ): TearSdlDocumentV1 {
@@ -138,7 +138,7 @@ function patch(base: TearSdlDocumentV1, id: string, state: Patch): TearSdlDocume
   });
 }
 
-export function forgeWaveState(
+export function buildWaveState(
   base: TearSdlDocumentV1,
   wave: number,
   enemies: readonly Readonly<{ kind: string; count: number; hpScale?: number; variantId?: string }>[],
@@ -154,7 +154,7 @@ export function forgeWaveState(
   });
 }
 
-export function forgeBossFrameState(
+export function buildBossFrameState(
   base: TearSdlDocumentV1,
   boss: string,
   phase: string,
@@ -170,7 +170,7 @@ export function forgeBossFrameState(
   });
 }
 
-export function forgeBladeAbilityState(
+export function buildBladeAbilityState(
   base: TearSdlDocumentV1,
   blade: Readonly<{ state: string; x?: number; y?: number; vx?: number; vy?: number }>,
   abilities: Readonly<Record<string, Readonly<{ active: boolean; cooldownTicks: number }>>>,
@@ -181,7 +181,7 @@ export function forgeBladeAbilityState(
   });
 }
 
-export function forgeUiDeviceState(
+export function buildUiDeviceState(
   base: TearSdlDocumentV1,
   ui: Readonly<{ screen: string; focusedId?: string; scroll?: number }>,
   device: Readonly<{ kind: "keyboard-mouse" | "gamepad" | "touch"; width: number; height: number }>,
@@ -201,7 +201,7 @@ export interface TearOneFrameBoundaryDefinition {
   readonly after: number;
 }
 
-export function forgeOneFrameBoundaryStates(
+export function buildOneFrameBoundaryStates(
   base: TearSdlDocumentV1,
   definition: TearOneFrameBoundaryDefinition,
 ): readonly TearSdlDocumentV1[] {
