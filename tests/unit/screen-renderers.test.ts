@@ -122,6 +122,9 @@ class TestUi implements ScreenUiPort {
   tag(): void {
     return;
   }
+  keyLegend(...values: Parameters<ScreenUiPort["keyLegend"]>): number {
+    return values[0].measureText(values[1]).width;
+  }
   header(): void {
     return;
   }
