@@ -323,6 +323,60 @@ function status(branch) {
 
 const pause = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 
+/** What one read of a batch run said: which run, its status and conclusion, and its batch note. */
+export function describeRead(read) {
+  if (read.latest === undefined) return "no Validate run";
+  const { id, status, conclusion } = read.latest;
+  const note = read.note ? "a batch note" : "no batch note";
+  return `run ${String(id)}: ${String(status)}, conclusion ${String(conclusion ?? "none")}, ${note}`;
+}
+
+/**
+ * Whether one read of a batch run lets the members merge: "ready" with the run's `main` and
+ * `members`, "wait" when the run is still going or has not reported everything yet, or "refuse".
+ * GitHub can serve a finished run as still running for a moment, or its `check` job without the
+ * batch annotation, so a run that has not yet reported success with a note is waited on, never
+ * refused. A run that finished any other way is refused at once.
+ */
+export function batchReadVerdict(read) {
+  const said = describeRead(read);
+  if (read.latest === undefined) return { verdict: "refuse", said };
+  const { status, conclusion } = read.latest;
+  if (status === "completed" && conclusion !== null && conclusion !== undefined && conclusion !== "success")
+    return { verdict: "refuse", said };
+  const main = /main=([0-9a-f]{40})/u.exec(read.note)?.[1];
+  const members = /members=(\S+)/u.exec(read.note)?.[1];
+  if (status !== "completed" || conclusion !== "success" || main === undefined || members === undefined)
+    return { verdict: "wait", said };
+  return { verdict: "ready", said, main, members };
+}
+
+/** How long --merge and --verify wait for a batch run to report its result and note. */
+export const BATCH_READ_WAIT_MS = 180_000;
+
+/**
+ * Reads the batch run until `batchReadVerdict` says ready or refuse, waiting `everyMs` between
+ * reads for at most `waitMs`. Each wait names what was read. Throws, naming the last read, when the
+ * run is refused or the wait ends.
+ */
+export function awaitBatchRun(
+  branch,
+  { read, now = Date.now, sleep = pause, log = console.log, waitMs = BATCH_READ_WAIT_MS, everyMs = 15_000 },
+) {
+  const until = now() + waitMs;
+  for (;;) {
+    const result = batchReadVerdict(read(branch));
+    if (result.verdict === "ready") return result;
+    if (result.verdict === "refuse") throw new Error(`the batch run on ${branch} did not pass: ${result.said}`);
+    if (now() + everyMs > until)
+      throw new Error(
+        `the batch run on ${branch} did not report a pass with its members within ${String(waitMs / 1000)} s; last read ${result.said}`,
+      );
+    log(`waiting for the batch run on ${branch}: ${result.said}`);
+    sleep(everyMs);
+  }
+}
+
 /**
  * Merges each member through the owner merge helper, in batch order, then runs --verify. A network
  * failure is tried again (after checking that the merge did not in fact go through); a refusal
@@ -330,11 +384,7 @@ const pause = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 
  */
 function mergeAll(branch, authorized) {
   if (!authorized) throw new Error("--merge needs --authorize-owner-merge, which the merge helper requires");
-  const { latest, note } = batchRun(branch);
-  const members = /members=(\S+)/u.exec(note)?.[1];
-  if (latest?.conclusion !== "success" || members === undefined) {
-    throw new Error(`the batch run on ${branch} did not pass with recorded members`);
-  }
+  const { members } = awaitBatchRun(branch, { read: batchRun });
   const helper = join(CANONICAL.root, "scripts", "governance", "owner-safe-pr-merge.mjs");
   const view = (number) =>
     JSON.parse(gh(["pr", "view", String(number), "--json", "number,state,headRefOid,title,body"]));
@@ -375,13 +425,7 @@ function mergeAll(branch, authorized) {
 }
 
 function verify(branch) {
-  const { latest, note } = batchRun(branch);
-  const main = /main=([0-9a-f]{40})/u.exec(note)?.[1];
-  const members = /members=(\S+)/u.exec(note)?.[1];
-  if (latest?.conclusion !== "success" || main === undefined || members === undefined) {
-    console.error(`the batch run on ${branch} did not pass with recorded members; nothing to verify`);
-    return 1;
-  }
+  const { main, members } = awaitBatchRun(branch, { read: batchRun });
   git(["fetch", "--quiet", "origin", "main", branch]);
   const checkedTree = git(["merge-tree", "--write-tree", main, `origin/${branch}`]).out.split("\n")[0];
   const mainTree = git(["rev-parse", "origin/main^{tree}"]).out;
