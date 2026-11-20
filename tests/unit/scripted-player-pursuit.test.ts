@@ -9,8 +9,8 @@ import { TearLiveHierarchicalPolicy } from "../../src/agents/hierarchical-policy
 import { CONFIG } from "../../src/config/game-config";
 import { WEAPON_IDS } from "../../src/gameplay/weapon-selection";
 import type { TearScenarioV1 } from "../../src/tearbench/contracts";
-import { createProductionHeadlessEnvironment } from "../../src/tearbench/production-headless-environment";
-import { requireProductionHeadlessScenario } from "../../src/tearbench/production-headless-scenario";
+import { createProductionHeadlessEnvironment } from "../../src/playtest/headless/production-headless-environment";
+import { requireProductionHeadlessScenario } from "../../src/playtest/headless/production-headless-scenario";
 import { TEAR_SIMULATION_TICKS_PER_SECOND } from "../../src/tearbench/simulation-profile";
 
 /** The herald must fall within this long of being left alone. With the stall it stood for minutes. */

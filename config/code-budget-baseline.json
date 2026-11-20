@@ -154,7 +154,7 @@
     "src/tearbench/production-combat-phases.ts": {
       "chars": 30070
     },
-    "src/tearbench/production-headless-environment.ts": {
+    "src/playtest/headless/production-headless-environment.ts": {
       "chars": 27889
     },
     "src/tearbench/production-replay-composition.ts": {

@@ -6,11 +6,11 @@ import {
   TearBenchRunner,
   createFailureArtifact,
   createCanonicalScenarioRegistry,
-  createProductionHeadlessEnvironment,
   type TearObservationV1,
   type TearScenarioRuntime,
   type TearScenarioV1,
 } from "../../src/tearbench";
+import { createProductionHeadlessEnvironment } from "../../src/playtest/headless/production-headless-environment";
 import type { TearScenarioTransition } from "../../src/tearbench/runner";
 import { createGameplayCausalEvent } from "../../src/tearbench/gameplay-causal-events";
 

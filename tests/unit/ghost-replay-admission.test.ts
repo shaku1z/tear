@@ -23,10 +23,10 @@ import {
   type TearCausalEventV1,
   type TearCodecWorld,
   type TearSnapshotV1,
-  createProductionHeadlessEnvironment,
   type TearScenarioV1,
   validateTearContract,
 } from "../../src/tearbench";
+import { createProductionHeadlessEnvironment } from "../../src/playtest/headless/production-headless-environment";
 import {
   GHOST_REPLAY_CONTEXT_FORMAT,
   GHOST_REPLAY_CONTEXT_PROVENANCE_KEY,
