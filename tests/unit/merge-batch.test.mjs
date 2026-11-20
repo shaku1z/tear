@@ -25,6 +25,7 @@ afterEach(() => {
   for (const directory of made.splice(0)) fs.rmSync(directory, { recursive: true, force: true });
 });
 
+const green = [{ name: "check", conclusion: "SUCCESS" }];
 const open = [
   {
     number: 7,
@@ -33,6 +34,7 @@ const open = [
     headRefName: "codex/a",
     baseRefName: "main",
     isCrossRepository: false,
+    statusCheckRollup: green,
   },
   {
     number: 3,
@@ -41,6 +43,7 @@ const open = [
     headRefName: "codex/b",
     baseRefName: "main",
     isCrossRepository: false,
+    statusCheckRollup: green,
   },
   {
     number: 5,
@@ -49,6 +52,7 @@ const open = [
     headRefName: "codex/c",
     baseRefName: "main",
     isCrossRepository: false,
+    statusCheckRollup: green,
   },
   {
     number: 9,
@@ -57,6 +61,7 @@ const open = [
     headRefName: "x",
     baseRefName: "main",
     isCrossRepository: true,
+    statusCheckRollup: green,
   },
   {
     number: 4,
@@ -65,6 +70,7 @@ const open = [
     headRefName: "codex/d",
     baseRefName: "release",
     isCrossRepository: false,
+    statusCheckRollup: green,
   },
 ];
 
@@ -85,6 +91,31 @@ describe("pnpm merge:batch", () => {
       { pr: 5, reason: "a draft" },
       { pr: 3, reason: "left out with --without" },
       { pr: 42, reason: "not an open pull request" },
+    ]);
+  });
+
+  it("leaves out a member whose own checks were skipped, never reported or failed, and keeps one still running", () => {
+    const member = (number, statusCheckRollup) => ({ ...open[0], number, statusCheckRollup });
+    // #296: every check on its head ran while it was a draft and was skipped.
+    const skipped = ["scope", "docs", "static", "unit", "build", "check"].map((name) => ({
+      name,
+      conclusion: "SKIPPED",
+    }));
+    const { chosen, refused } = chooseMembers(
+      [
+        member(296, skipped),
+        member(297, []),
+        member(298, [{ name: "check", conclusion: "FAILURE" }]),
+        member(299, [{ name: "check", status: "IN_PROGRESS", conclusion: "" }]),
+        member(300, green),
+      ],
+      { numbers: [296, 297, 298, 299, 300] },
+    );
+    expect(chosen.map((entry) => entry.pr)).toEqual([299, 300]);
+    expect(refused).toEqual([
+      { pr: 296, reason: "its own checks did not run (skipped, likely a draft); push to start them" },
+      { pr: 297, reason: "its own checks did not run (skipped, likely a draft); push to start them" },
+      { pr: 298, reason: "its own required check failed; fix it and push" },
     ]);
   });
 

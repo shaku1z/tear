@@ -7,6 +7,7 @@ import {
   assertMergePreconditions,
   buildMergeArgs,
   hasSuccessfulRequiredCheck,
+  requiredCheckState,
   isOwnerAuthoredPullRequest,
   isWikiSyncException,
   main,
@@ -131,6 +132,18 @@ describe("owner-safe merge helper", () => {
   it("refuses when the pull request head moved since review", () => {
     expect(() => assertHeadMatches({ headRefOid: "c".repeat(40) }, HEAD)).toThrow(/PR head changed/u);
     expect(() => assertHeadMatches({ headRefOid: HEAD.toUpperCase() }, HEAD)).not.toThrow();
+  });
+
+  it("reads where the required check stands, so the batch and the merge judge it the same way", () => {
+    expect(requiredCheckState([{ name: "check", conclusion: "SUCCESS" }])).toBe("success");
+    expect(requiredCheckState([{ context: "check", state: "SUCCESS" }])).toBe("success");
+    expect(requiredCheckState([{ name: "check", conclusion: "SKIPPED" }])).toBe("skipped");
+    expect(requiredCheckState([{ name: "unit", conclusion: "SUCCESS" }])).toBe("missing");
+    expect(requiredCheckState(undefined)).toBe("missing");
+    expect(requiredCheckState([{ name: "check", status: "QUEUED", conclusion: "" }])).toBe("pending");
+    expect(requiredCheckState([{ context: "check", state: "PENDING" }])).toBe("pending");
+    expect(requiredCheckState([{ name: "check", conclusion: "FAILURE" }])).toBe("failed");
+    expect(requiredCheckState([{ name: "check", conclusion: "CANCELLED" }])).toBe("failed");
   });
 
   it("refuses unless the required check is green", () => {
