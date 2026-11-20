@@ -1,23 +1,14 @@
-import {
-  layerTransform,
-  type Rect,
-  type SceneCamera,
-  type SceneLayer,
-  type SceneLayout,
-  type SceneShade,
-} from "./scene-contract";
+import { layerTransform, type Rect, type SceneCamera, type SceneLayer, type SceneLayout } from "./scene-contract";
 
-/** A decoded image the renderer can draw; ImageBitmap and canvases qualify. */
+/** An image the renderer can draw; canvases and ImageBitmap qualify. */
 export type SceneBitmap = CanvasImageSource & { readonly width: number; readonly height: number };
 
 export interface LoadedScene {
   readonly scene: SceneLayout;
   readonly images: ReadonlyMap<string, SceneBitmap>;
-  /** Shades still drawn each frame; the rest were baked into their layer at load. */
-  readonly shading: readonly SceneShade[];
 }
 
-/** A canvas to bake into; HTMLCanvasElement and OffscreenCanvas qualify. */
+/** A canvas a stage paints into; HTMLCanvasElement and OffscreenCanvas qualify. */
 export interface SceneCanvas {
   readonly width: number;
   readonly height: number;
@@ -38,7 +29,7 @@ export interface SceneFrame {
   readonly timeSeconds: number;
   readonly lowGraphics: boolean;
   readonly reducedMotion: boolean;
-  /** 0..1 fade-in after the package became ready (1 = fully shown). */
+  /** 0..1 fade-in after the stage became ready (1 = fully shown). */
   readonly opacity: number;
 }
 
@@ -51,7 +42,7 @@ function layerSpaceView(frame: SceneFrame, k: number, tx: number, ty: number): S
   };
 }
 
-/** Soft transition from the art into the package edge colour where a camera outruns the art. */
+/** Soft transition from the art into the scene's edge colour where a camera outruns the art. */
 function featherEdges(context: CanvasRenderingContext2D, scene: SceneLayout, rect: Rect, view: SceneView): void {
   const [x, y, w, h] = rect;
   const feather = Math.min(scene.edge.feather, w / 4, h / 4);
@@ -87,88 +78,6 @@ function drawLayer(context: CanvasRenderingContext2D, loaded: LoadedScene, layer
   context.restore();
 }
 
-type Context2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
-
-/** Paints one shade in world units; the caller has set the transform and alpha base. */
-function paintShade(context: Context2D, shade: SceneShade): void {
-  const [x, y, w, h] = shade.rect;
-  if (shade.kind === "band") {
-    const gradient = context.createLinearGradient(0, y, 0, y + h);
-    gradient.addColorStop(0, shade.color);
-    gradient.addColorStop(Math.max(0, 1 - shade.feather / h), shade.color);
-    gradient.addColorStop(1, `${shade.color}00`);
-    context.fillStyle = gradient;
-    context.fillRect(x, y, w, h);
-    return;
-  }
-  // Unit circle scaled to the ellipse; the solid core ends `feather` px before the edge.
-  context.translate(x + w / 2, y + h / 2);
-  context.scale(w / 2, h / 2);
-  const gradient = context.createRadialGradient(0, 0, 0, 0, 0, 1);
-  gradient.addColorStop(0, shade.color);
-  gradient.addColorStop(Math.max(0, 1 - shade.feather / (Math.min(w, h) / 2)), shade.color);
-  gradient.addColorStop(1, `${shade.color}00`);
-  context.fillStyle = gradient;
-  context.fillRect(-1, -1, 2, 2);
-}
-
-function drawShade(
-  context: CanvasRenderingContext2D,
-  shade: SceneShade,
-  camera: SceneCamera,
-  playerShift: number,
-  opacity: number,
-): void {
-  const [k, tx, ty] = layerTransform(camera, shade.depth, playerShift);
-  context.save();
-  context.translate(tx, ty);
-  context.scale(k, k);
-  context.globalAlpha = shade.opacity * opacity;
-  paintShade(context, shade);
-  context.restore();
-}
-
-/**
- * Bakes every shade into the covering back layer at its depth, once at load,
- * so shading costs nothing per frame. The painting file is untouched; only the
- * decoded copy in memory is shaded. Shades with no such layer stay per frame.
- */
-export function bakeShading(
-  scene: SceneLayout,
-  images: ReadonlyMap<string, SceneBitmap>,
-  createCanvas: (width: number, height: number) => SceneCanvas & SceneBitmap,
-): LoadedScene {
-  const baked = new Map(images);
-  const remaining: SceneShade[] = [];
-  const hosts = new Map<SceneLayer, SceneShade[]>();
-  for (const shade of scene.shading) {
-    const host = scene.layers.find((layer) => layer.plane === "back" && layer.covers && layer.depth === shade.depth);
-    if (host === undefined) remaining.push(shade);
-    else hosts.set(host, [...(hosts.get(host) ?? []), shade]);
-  }
-  for (const [layer, shades] of hosts) {
-    const source = images.get(layer.image);
-    const canvas = source === undefined ? undefined : createCanvas(source.width, source.height);
-    const context = canvas?.getContext("2d");
-    if (source === undefined || canvas === undefined || context == null) {
-      remaining.push(...shades);
-      continue;
-    }
-    const [x, y, w, h] = layer.rect;
-    context.drawImage(source, 0, 0);
-    for (const shade of shades) {
-      context.save();
-      context.scale(source.width / w, source.height / h);
-      context.translate(-x, -y);
-      context.globalAlpha = shade.opacity;
-      paintShade(context, shade);
-      context.restore();
-    }
-    baked.set(layer.image, canvas);
-  }
-  return Object.freeze({ scene, images: baked, shading: remaining });
-}
-
 /** Back plane: everything behind platforms and actors. Fills the whole view. */
 export function drawSceneBack(context: CanvasRenderingContext2D, loaded: LoadedScene, frame: SceneFrame): void {
   context.save();
@@ -185,12 +94,10 @@ export function drawSceneBack(context: CanvasRenderingContext2D, loaded: LoadedS
     );
   }
   for (const layer of loaded.scene.layers) if (layer.plane === "back") drawLayer(context, loaded, layer, frame);
-  for (const shade of loaded.shading)
-    drawShade(context, shade, frame.camera, loaded.scene.camera.playerShift, frame.opacity);
   context.restore();
 }
 
-/** Front plane: drawn over platforms; the contract keeps it below the floor surface. */
+/** Front plane: drawn over platforms; the painter keeps it below the floor surface. */
 export function drawSceneFront(context: CanvasRenderingContext2D, loaded: LoadedScene, frame: SceneFrame): void {
   context.save();
   context.imageSmoothingEnabled = true;
@@ -216,7 +123,7 @@ function stripPattern(context: CanvasRenderingContext2D, bitmap: SceneBitmap): C
 }
 
 /**
- * Fills a platform or the floor with the package's surface strip: anchored to
+ * Fills a platform or the floor with the stage's surface strip: anchored to
  * the surface top, repeated horizontally from world x = 0, solid fill below.
  * Returns false (the material keeps its own fill) until the texture is ready.
  */

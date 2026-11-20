@@ -1,5 +1,5 @@
-// A stage's painted background is fetched one wave before the run reaches the
-// stage, and never for a stage the mode does not lead to next.
+// A stage's background is painted one wave before the run reaches the stage,
+// and never for a stage the mode does not lead to next.
 import { describe, expect, it } from "vitest";
 import { stageIdAfterWave, startingStageId } from "../../src/app/run/wave-composition";
 import { STAGES } from "../../src/gameplay/stages";

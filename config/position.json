@@ -44,7 +44,7 @@
       "evidence": [
         "docs/BACKGROUND_WORKFLOW.md",
         "tests/unit/stage-art.test.ts",
-        "tests/unit/scene-packages.test.ts",
+        "tests/unit/scene-library.test.ts",
         "tests/unit/boss-tell-skin.test.ts",
         "plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md"
       ]
