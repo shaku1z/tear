@@ -137,6 +137,7 @@ start: phase ${ROMAN[fight.phase] ?? String(fight.phase)} through the game's bos
       "no tell",
       "hits",
       "exposed s",
+      "boss px/s",
       "moves that hit the player (attributed)",
     ],
     ...fight.phases.map((phase, index) => [
@@ -149,6 +150,7 @@ start: phase ${ROMAN[fight.phase] ?? String(fight.phase)} through the game's bos
       noTellDamage(phase).toFixed(0),
       String(phase.hitsTaken),
       secondsOf(phase.exposedTicks).toFixed(1),
+      (phase.ticks === 0 ? 0 : phase.bossTravel / secondsOf(phase.ticks)).toFixed(0),
       hitsText(phase),
     ]),
   ];
@@ -192,7 +194,8 @@ export function formatBossReport(fights: readonly BossFightResult[]): string {
     'roots) and cuts it before it returns to the boss. "To cut" lines count those: a thing that left without ' +
     "being cut (the boss took it back, the phase ended) counts as placed only. " +
     'The "no-dodge" player is the scripted player without its dash and its jump, and the "still" player gives no ' +
-    "input; both measure what the boss does to them, not the kill, and stop after " +
-    `${String(secondsOf(PRESSURE_PHASE_TICKS))} s of a phase. Every player is weaker than a person.`;
+    'input, and the "walker" keeps walking across the arena, turns at whatever stops it, jumps every four seconds ' +
+    "and never attacks; all three measure what the boss does to them, not the kill, and stop after " +
+    `${String(secondsOf(PRESSURE_PHASE_TICKS))} s of a phase. The "boss px/s" column is how far the boss moved sideways each second of the phase. Every player is weaker than a person.`;
   return `${sections.join("\n\n")}\n\n${notes}\n`;
 }

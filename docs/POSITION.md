@@ -22,7 +22,7 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 | [Pale Traverse rework](#pale-traverse) | Not started | Start once the Verdant gameplay rework has landed. | — |
 | [Player wiki](#wiki) | In progress | Review the move pull request, then confirm the Cloudflare secret question and run the first wiki deploy. | Archive shaku1z/tear-wiki after the first deploy from this repository. |
 | [Repository structure and workflow](#repository-structure) | In progress | After the hooks pull request merges, run pnpm setup:hooks in the canonical checkout on main (scripts/governance/README.md). | — |
-| [Playtest tool](#playtest-tool) | Stage 1 in part: pnpm playtest bosses prints a table per boss fight and phase, from Phase I or a chosen phase | Rest of stage 1: the walker player, boss movement, and the sweep over weapons and seeds. | — |
+| [Playtest tool](#playtest-tool) | Stage 1 in part: pnpm playtest bosses prints a table per boss fight and phase, from Phase I or a chosen phase | Rest of stage 1: the sweep over weapons, seeds and difficulties in under 5 minutes. | — |
 | [TearBench C21 to C40 program](#tearbench-program) | Paused at the 2026-08-30 state | Land or close pull request 84. | — |
 | [Mobile, touch and phone layouts](#mobile) | Paused by the owner 2026-11-19; out of the release builds | Nothing until the owner resumes mobile; plans/MOBILE_LATER.md says how to turn it back on. | Mark the CrazyGames listing desktop only. Say when mobile resumes. |
 
@@ -112,7 +112,7 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 **Stage 1 in part: pnpm playtest bosses prints a table per boss fight and phase, from Phase I or a chosen phase.** One command, pnpm playtest, that plays the game headless with scripted players on fixed seeds and reports clear rates, time to kill, damage taken and differences between builds. It is built from the working parts of TearBench and the scripted player and replaces both names. Verified on 2026-11-16: the scripted player runs headless at 13 to 15 times real time and the same seed reproduces exactly.
 
-- Next: Rest of stage 1: the walker player, boss movement, and the sweep over weapons and seeds.
+- Next: Rest of stage 1: the sweep over weapons, seeds and difficulties in under 5 minutes.
 - Owner action: none
 - Evidence: [plans/active/PLAYTEST_TOOL_PLAN.md](../plans/active/PLAYTEST_TOOL_PLAN.md)
 
