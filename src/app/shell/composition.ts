@@ -377,7 +377,9 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   const DAILY = createDailyChallenges({ achievements: ACH, profile: PROFILE, clock: localCalendarClock() });
   const APP = new AppStateController(surfaces);
   // A notice never covers a screen with controls: it shows over the main menu only.
-  APP.subscribe((screen) => setNoticesVisible(document, screen === "menu"));
+  APP.subscribe((screen) => {
+    setNoticesVisible(document, screen === "menu");
+  });
   // One rule for "plain main menu": the menu screen with no phone rotate gate drawn over it.
   const plainMainMenu = (): boolean => {
     const canvas = document.querySelector<HTMLCanvasElement>("#game");
