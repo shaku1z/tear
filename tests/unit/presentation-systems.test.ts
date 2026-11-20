@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { CONFIG, GFX } from "../../src/config/game-config";
+import { DEFAULT_COSMETIC_LOOKS } from "../../src/presentation/cosmetic-defaults";
 import { createCinematics, type CinematicScript, type CinematicUiPort } from "../../src/presentation/cinematics";
 import { createParticleSystem, type ParticleSystemPolicy } from "../../src/presentation/particles";
 
@@ -10,6 +11,7 @@ function particlePolicy(): ParticleSystemPolicy {
     lowGraphics: () => GFX.low,
     reducedMotion: () => false,
     random: () => 0.5,
+    looks: DEFAULT_COSMETIC_LOOKS,
   };
 }
 
@@ -121,6 +123,7 @@ describe("presentation system boundaries", () => {
 
   it("admits combat silhouettes over cosmetic saturation without evicting combat peers", () => {
     const effects = createParticleSystem({
+      looks: DEFAULT_COSMETIC_LOOKS,
       effects: { highBudget: 2, lowBudget: 2, cullMargin: 0 },
       lowGraphics: () => false,
       reducedMotion: () => false,
@@ -222,12 +225,14 @@ describe("presentation system boundaries", () => {
   it("keeps effect admission policy and reduced motion isolated per world", () => {
     let firstLowGraphics = false;
     const first = createParticleSystem({
+      looks: DEFAULT_COSMETIC_LOOKS,
       effects: { highBudget: 3, lowBudget: 1, cullMargin: 0 },
       lowGraphics: () => firstLowGraphics,
       reducedMotion: () => false,
       random: () => 0.5,
     });
     const second = createParticleSystem({
+      looks: DEFAULT_COSMETIC_LOOKS,
       effects: { highBudget: 3, lowBudget: 1, cullMargin: 0 },
       lowGraphics: () => false,
       reducedMotion: () => true,
@@ -260,12 +265,14 @@ describe("presentation system boundaries", () => {
     });
 
     const firstRing = createParticleSystem({
+      looks: DEFAULT_COSMETIC_LOOKS,
       effects: { highBudget: 2, lowBudget: 2, cullMargin: 0 },
       lowGraphics: () => false,
       reducedMotion: () => false,
       random: () => 0.5,
     });
     const secondRing = createParticleSystem({
+      looks: DEFAULT_COSMETIC_LOOKS,
       effects: { highBudget: 2, lowBudget: 2, cullMargin: 0 },
       lowGraphics: () => false,
       reducedMotion: () => true,

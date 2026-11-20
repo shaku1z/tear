@@ -1,8 +1,9 @@
 import type { BladePlayerPort, BladePresentationPort, BladeRenderSnapshot } from "../../gameplay/entities/blade";
+import type { CosmeticLooks, CosmeticStyles } from "../cosmetic-styles";
 import { isCanvasSurface } from "./canvas-surface";
 
 export interface BladeRendererPolicy {
-  readonly colors: Readonly<{ bladeGlow: string; bladeTrail: string; perfect: string }>;
+  readonly colors: Readonly<{ bladeTrail: string; perfect: string }>;
   readonly juice: Readonly<{ trailAlpha: number }>;
   readonly chainSegments?: number;
   readonly chamberCount?: number;
@@ -16,7 +17,12 @@ export interface BladeRendererDependencies {
   readonly clamp: (value: number, min: number, max: number) => number;
   readonly len: (x: number, y: number) => number;
   readonly lerp: (from: number, to: number, amount: number) => number;
+  /** Every blade is drawn with a style: the wearer's cosmetics for the local player's blade, the default for others. */
+  readonly looks: CosmeticLooks;
 }
+
+/** The finale's restored trail: one colour per trail segment, in turn. */
+const RESTORED_TRAIL = ["#13c4d6", "#e0a326", "#b06cff", "#2f9e6b", "#eafcff"] as const;
 
 type Point = Readonly<{ x: number; y: number }>;
 
@@ -52,6 +58,7 @@ export function createBladeRenderer({
   clamp,
   len,
   lerp,
+  looks,
 }: BladeRendererDependencies): BladePresentationPort {
   const colors = policy.colors;
   const trailAlpha = policy.juice.trailAlpha;
@@ -93,7 +100,7 @@ export function createBladeRenderer({
     context.stroke();
     context.shadowBlur = 0;
   }
-  function drawBody(context: CanvasRenderingContext2D, blade: BladeRenderSnapshot): void {
+  function drawBody(context: CanvasRenderingContext2D, blade: BladeRenderSnapshot, style: CosmeticStyles): void {
     const scale = blade.state === "held" ? 1 : blade.throwSizeMult;
     if (!graphics.low) {
       context.shadowColor = theme.rim;
@@ -332,7 +339,7 @@ export function createBladeRenderer({
 
       const chambers = clamp(Math.floor(blade.riftChambers), 0, chamberCount);
       for (let index = 0; index < chamberCount; index++) {
-        context.fillStyle = index < chambers ? colors.bladeGlow : theme.dark ? "#1b2130" : "#747983";
+        context.fillStyle = index < chambers ? style.blade.glow : theme.dark ? "#1b2130" : "#747983";
         context.fillRect(length * (0.13 + index * 0.085), -8 * scale, 4 * scale, 6 * scale);
       }
       context.fillStyle = theme.ink;
@@ -369,31 +376,47 @@ export function createBladeRenderer({
     context.stroke();
   }
 
-  function drawTrail(context: CanvasRenderingContext2D, blade: BladeRenderSnapshot): void {
+  /**
+   * The trail's colour for each segment. A worn trail draws its own colours; otherwise the blade's own look
+   * shows (the restored trail, a Mirror's colour, or the game's trail colour).
+   */
+  function trailColors(blade: BladeRenderSnapshot, style: CosmeticStyles): readonly string[] {
+    if (style.trail.worn) return style.trail.colors;
+    if (blade.restoredTrail) return RESTORED_TRAIL;
+    return [blade.trailColor ?? colors.bladeTrail];
+  }
+
+  /**
+   * The swept band between hilt and tip, one quad per segment. `widthScale` moves the inner edge only, along
+   * the hilt-to-tip line, so the tip edge (the blade's reach) never moves.
+   */
+  function drawTrail(context: CanvasRenderingContext2D, blade: BladeRenderSnapshot, style: CosmeticStyles): void {
     if (graphics.low) return;
     const trail = blade.trail;
+    const look = style.trail;
+    const palette = trailColors(blade, style);
     const glow = theme.dark;
     if (glow) {
       context.save();
       context.globalCompositeOperation = "lighter";
     }
-    context.fillStyle = blade.trailColor ?? colors.bladeTrail;
-    const restored = ["#13c4d6", "#e0a326", "#b06cff", "#2f9e6b", "#eafcff"];
+    const inner = 1 - look.widthScale;
     for (let index = 1; index < trail.length; index++) {
       const previous = trail[index - 1];
       const current = trail[index];
       if (!previous || !current) continue;
       const segment = len(current.tx - previous.tx, current.ty - previous.ty);
       const speedAlpha = clamp((segment - 1) / 22, 0, 1);
-      const alpha = (index / trail.length) * (trailAlpha + 0.3) * speedAlpha;
+      const along = index / trail.length;
+      const alpha = (look.fade === "hold" ? Math.sqrt(along) : along) * (trailAlpha + 0.3) * speedAlpha;
       if (alpha <= 0.002) continue;
-      if (blade.restoredTrail) context.fillStyle = restored[index % restored.length] ?? restored[0] ?? "#13c4d6";
+      context.fillStyle = palette[index % palette.length] ?? colors.bladeTrail;
       context.globalAlpha = alpha;
       context.beginPath();
-      context.moveTo(previous.hx, previous.hy);
+      context.moveTo(lerp(previous.hx, previous.tx, inner), lerp(previous.hy, previous.ty, inner));
       context.lineTo(previous.tx, previous.ty);
       context.lineTo(current.tx, current.ty);
-      context.lineTo(current.hx, current.hy);
+      context.lineTo(lerp(current.hx, current.tx, inner), lerp(current.hy, current.ty, inner));
       context.closePath();
       context.fill();
     }
@@ -401,7 +424,7 @@ export function createBladeRenderer({
     if (glow) context.restore();
   }
 
-  function drawTipGlow(context: CanvasRenderingContext2D, blade: BladeRenderSnapshot): void {
+  function drawTipGlow(context: CanvasRenderingContext2D, blade: BladeRenderSnapshot, style: CosmeticStyles): void {
     if (blade.state !== "held" || blade.glowV <= 0.04) return;
     const glow = theme.dark;
     if (glow) {
@@ -409,7 +432,7 @@ export function createBladeRenderer({
       context.globalCompositeOperation = "lighter";
     }
     context.globalAlpha = 0.2 + blade.glowV * 0.5;
-    context.fillStyle = blade.glowColor ?? colors.bladeGlow;
+    context.fillStyle = style.blade.worn ? style.blade.glow : (blade.glowColor ?? style.blade.glow);
     context.beginPath();
     context.arc(blade.tipX, blade.tipY, 4 + blade.glowV * 13, 0, Math.PI * 2);
     context.fill();
@@ -439,7 +462,8 @@ export function createBladeRenderer({
       if (!isCanvasSurface(surface)) return;
       const context = surface;
       const hand = blade.handPos(player);
-      drawTrail(context, blade);
+      const style = looks.of(blade);
+      drawTrail(context, blade, style);
       drawReversalMarks(context, blade);
 
       if (blade.state === "held") {
@@ -451,8 +475,8 @@ export function createBladeRenderer({
           context.lineTo(blade.x, blade.y);
           context.stroke();
         }
-        drawTipGlow(context, blade);
-        drawBody(context, blade);
+        drawTipGlow(context, blade, style);
+        drawBody(context, blade, style);
         return;
       }
 
@@ -478,7 +502,7 @@ export function createBladeRenderer({
         }
         context.setLineDash([]);
       }
-      drawBody(context, blade);
+      drawBody(context, blade, style);
       if (["embedded", "hooked"].includes(blade.state) && inRange) {
         context.strokeStyle = theme.ink;
         context.lineWidth = 2;

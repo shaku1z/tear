@@ -1,5 +1,6 @@
 import type { LegacySynthFacade } from "../../audio/legacy-synth";
 import type { PracticeEncounterPersistence } from "../progress/practice-encounter-persistence";
+import type { CosmeticWardrobe } from "../../presentation/cosmetic-styles";
 import type { A11Y, CONFIG, GFX, OVERSCAN, REMOTE, SAFE, THEME } from "../../config/game-config";
 import type { TearWorldClock } from "../../gameplay/runtime/tear-world-clock";
 import type * as Geometry from "../../domain/geometry";
@@ -77,7 +78,6 @@ export interface GameRuntimeDependencies {
   readonly Scenes: SceneLibrary;
   readonly Blade: ReturnType<typeof createBlade>;
   readonly Bomber: EnemyTypes["Bomber"];
-  readonly Boss: EnemyTypes["Boss"];
   /** Release/engineering surface policy and its admitted engineering query (empty in release). */
   readonly surfaces: SurfaceAvailability;
   readonly engineeringQuery: EngineeringQuery;
@@ -98,6 +98,8 @@ export interface GameRuntimeDependencies {
   readonly Charger: EnemyTypes["Charger"];
   readonly Chimera: EnemyTypes["Chimera"];
   readonly Cinematics: CinematicPresentationRuntime;
+  /** Puts the profile's loadout on the player's blade at run start; cinematics mark their authored beats. */
+  readonly COSMETICS: CosmeticWardrobe;
   readonly Clipper: Readonly<{ start(): void; stop(): void }> | undefined;
   readonly Cloud: Cloud["Cloud"];
   readonly Colossus: EnemyTypes["Colossus"];

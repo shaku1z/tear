@@ -4,6 +4,7 @@ import { createMirrorRenderer } from "../../src/presentation/entities/mirror-ren
 import { createProjectileRenderer } from "../../src/presentation/entities/projectile-renderer";
 import { createEnemyRendererRuntime } from "../../src/presentation/enemies/renderers/enemy-renderer-runtime";
 import type { EnemyPresentationPolicy } from "../../src/presentation/enemies/renderers/enemy-renderer-types";
+import { DEFAULT_COSMETIC_LOOKS } from "../../src/presentation/cosmetic-defaults";
 
 function canvas(styles: string[]): CanvasRenderingContext2D {
   const target = {
@@ -44,6 +45,7 @@ function renderers(prefix: string) {
   };
   return {
     blade: createBladeRenderer({
+      looks: DEFAULT_COSMETIC_LOOKS,
       clock,
       policy: { colors, juice: { trailAlpha: 0.4 } },
       graphics,

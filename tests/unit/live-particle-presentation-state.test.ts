@@ -2,12 +2,14 @@ import { describe, expect, it, vi } from "vitest";
 import { createParticleSystem } from "../../src/presentation/particles";
 import { createLiveParticlePresentationState } from "../../src/tearbench/particle-presentation-state";
 import { createCosmeticEmissionRandom } from "../../src/domain/cosmetic-emission-random";
+import { DEFAULT_COSMETIC_LOOKS } from "../../src/presentation/cosmetic-defaults";
 
 describe("live particle presentation owner", () => {
   it("prepares legacy v1/absence only from staged seed/tick, without changing outgoing entropy", () => {
     const entropy = createCosmeticEmissionRandom(),
       effects = { highBudget: 4, lowBudget: 1, cullMargin: 180 };
     const fx = createParticleSystem({
+      looks: DEFAULT_COSMETIC_LOOKS,
       effects,
       lowGraphics: () => false,
       reducedMotion: () => false,
@@ -47,7 +49,13 @@ describe("live particle presentation owner", () => {
     const entropy = createCosmeticEmissionRandom(),
       random = vi.fn(entropy.next),
       effects = { highBudget: 10, lowBudget: 1, cullMargin: 180 };
-    const fx = createParticleSystem({ effects, lowGraphics: () => false, reducedMotion: () => false, random });
+    const fx = createParticleSystem({
+      looks: DEFAULT_COSMETIC_LOOKS,
+      effects,
+      lowGraphics: () => false,
+      reducedMotion: () => false,
+      random,
+    });
     const owner = createLiveParticlePresentationState(
       fx,
       () => ({ effects, lowGraphics: false, reducedMotion: false }),
@@ -89,6 +97,7 @@ describe("live particle presentation owner", () => {
       reducedMotion = false;
     const effects = { highBudget: 4, lowBudget: 1, cullMargin: 180 };
     const fx = createParticleSystem({
+      looks: DEFAULT_COSMETIC_LOOKS,
       effects,
       lowGraphics: () => lowGraphics,
       reducedMotion: () => reducedMotion,

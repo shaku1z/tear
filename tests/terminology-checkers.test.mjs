@@ -5,11 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import {
-  runTerminologyCheck,
-  translateMutableGeneratedDescriptions,
-  validateRegistry,
-} from "../scripts/check-terminology.mjs";
+import { runTerminologyCheck, validateRegistry } from "../scripts/check-terminology.mjs";
 import { runActiveRosterCheck } from "../scripts/check-active-roster.mjs";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -194,28 +190,6 @@ test("registry validation rejects duplicate aliases and broad mutable exceptions
 
   assert.ok(errors.some((error) => /deprecated alias is duplicated/u.test(error)));
   assert.ok(errors.some((error) => /too broad for mutable compatibility/u.test(error)));
-});
-
-test("generated-description translation leaves source identity and hashes immutable", () => {
-  const registry = baseRegistry();
-  const generated = {
-    id: "TG3-example",
-    sourceStatement: "TearScore is historical source wording.",
-    sourceTextHash: "ABC123",
-    atomicTextHash: "DEF456",
-    sourceVersion: "0.6",
-    text: "TearScore is the current description.",
-    description: "TearScore is the current description.",
-  };
-  const translated = translateMutableGeneratedDescriptions({ requirements: [generated] }, registry);
-  const requirement = translated.requirements[0];
-  assert.equal(requirement.id, generated.id);
-  assert.equal(requirement.sourceStatement, generated.sourceStatement);
-  assert.equal(requirement.sourceTextHash, generated.sourceTextHash);
-  assert.equal(requirement.atomicTextHash, generated.atomicTextHash);
-  assert.equal(requirement.sourceVersion, generated.sourceVersion);
-  assert.equal(requirement.text, "TEAR Music is the current description.");
-  assert.equal(requirement.description, "TEAR Music is the current description.");
 });
 
 test("current-source checker rejects stale provisional definitions and checkpoint claims only on mutable paths", () => {

@@ -146,7 +146,7 @@ export function createProductionWaveRewardRuntime(
     const placement = planBossPlacement(id, config.view.w, config);
     return world.entities.createEnemy(placement.factoryId, placement.x, placement.y, run());
   };
-  const content = createLiveContentRuntime({
+  const content = createLiveContentRuntime<ReturnType<typeof makeBoss>>({
     width: config.view.w,
     random: random.streams.stream("spawn"),
     run: () => {
@@ -168,10 +168,9 @@ export function createProductionWaveRewardRuntime(
     groundY: () => config.world.groundY,
     construction: {
       sideSpawn: () => 0,
-      createGround: (kind) => world.entities.createEnemy(kind, 0, 0, run() as never) as never,
-      createAir: (kind, x, y) => world.entities.createEnemy(kind, x, y, run() as never) as never,
-      createSupport: (kind) => world.entities.createEnemy(kind, 0, 0, run() as never) as never,
-      createBoss: (id) => makeBoss(id ?? ""),
+      createGround: (kind) => world.entities.createEnemy(kind, 0, 0, run()),
+      createAir: (kind, x, y) => world.entities.createEnemy(kind, x, y, run()),
+      createSupport: (kind) => world.entities.createEnemy(kind, 0, 0, run()),
       beginBossPresentation: (enemy) => {
         beginBossEncounter(run(), enemy, config.bossTheater.introDur, {
           platforms: () => stage.platforms as never[],
@@ -198,7 +197,7 @@ export function createProductionWaveRewardRuntime(
     },
     spawning: {
       random: random.streams.stream("spawn"),
-      run: () => run() as never,
+      run: () => run(),
       campaignStage: () => stage.index,
       stageId: () => stageAt(stage.index).id,
       contentWave: () => 0,
@@ -207,9 +206,7 @@ export function createProductionWaveRewardRuntime(
         applyPreset(enemy, preset);
       },
       rollVariant: (kind, wave, context) =>
-        context === undefined
-          ? rollVariant(kind as never, wave, random.streams.stream("spawn"))
-          : rollVariant(kind as never, context),
+        context === undefined ? rollVariant(kind, wave, random.streams.stream("spawn")) : rollVariant(kind, context),
       applyVariant: (enemy, variant) => {
         applyVariant(enemy, variant);
       },
