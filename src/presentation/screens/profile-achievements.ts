@@ -93,31 +93,20 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
               size: ui.t.type.micro,
               action: { type: "profile.downloadGhostArchive", id: replay.id },
             });
-          if (view.tab === "vault" && replay.repairable) {
-            enqueueRow({
-              x: actionsX,
-              y: y + 18,
-              w: 110,
-              h: 40,
-              label: "REPAIR",
-              action: { type: "profile.repairGhostCapsule", id: replay.id },
-            });
-          } else {
-            enqueueRow({
-              x: actionsX,
-              y: y + 18,
-              w: 110,
-              h: 40,
-              size: ui.t.type.label,
-              label: view.tab === "vault" ? "◆ THEATER" : "▶  WATCH",
-              enabled: replay.available,
-              ...(view.tab === "vault" && replay.theaterUnavailable ? { label: "CAN'T PLAY" } : {}),
-              action:
-                view.tab === "vault"
-                  ? { type: "profile.watchGhostCapsule", id: replay.id }
-                  : { type: "profile.watchReplay", id: replay.id },
-            });
-          }
+          enqueueRow({
+            x: actionsX,
+            y: y + 18,
+            w: 110,
+            h: 40,
+            size: ui.t.type.label,
+            label: view.tab === "vault" ? "◆ THEATER" : "▶  WATCH",
+            enabled: replay.available,
+            ...(view.tab === "vault" && replay.theaterUnavailable ? { label: "CAN'T PLAY" } : {}),
+            action:
+              view.tab === "vault"
+                ? { type: "profile.watchGhostCapsule", id: replay.id }
+                : { type: "profile.watchReplay", id: replay.id },
+          });
           if (replay.local) {
             enqueueRow({
               x: actionsX + 118,
