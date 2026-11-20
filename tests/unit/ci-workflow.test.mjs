@@ -303,6 +303,34 @@ describe("Validate workflow", () => {
       );
   });
 
+  it("lets no diagnostics upload decide a verdict, keeps every upload a later step reads fatal, and reports a failed one", () => {
+    // Run 44740825411 failed only because the static job's check-results upload hit ECONNRESET.
+    // Those artifacts are read by scripts/ci-check-times.mjs by hand, never by a job or workflow.
+    const consumed = /^(tear-release-targets|validate-builds|tear-preview-dev)-/u;
+    let diagnostics = 0;
+    for (const [id, block] of Object.entries(jobBlocks)) {
+      const steps = block.split(/\n(?= {6}- )/u);
+      steps.forEach((step, index) => {
+        if (!step.includes("uses: actions/upload-artifact@")) return;
+        const name = / {10}name: (.+)/u.exec(step)?.[1] ?? "";
+        const where = `${id}: ${name}`;
+        if (name.startsWith("check-results-")) {
+          diagnostics += 1;
+          expect(step, where).toContain("continue-on-error: true");
+          expect(step, where).toMatch(/^ {6}- id: check-results-upload\n/u);
+          const report = steps[index + 1] ?? "";
+          expect(report, where).toContain("if: always() && steps.check-results-upload.outcome == 'failure'");
+          expect(report, where).toContain("::warning");
+          expect(report, where).toContain('>> "$GITHUB_STEP_SUMMARY"');
+        } else {
+          expect(name, `${where} is read by a later step, or is new and needs a decision here`).toMatch(consumed);
+          expect(step, where).not.toContain("continue-on-error");
+        }
+      });
+    }
+    expect(diagnostics).toBe(4);
+  });
+
   it("has every browser shard test the release artifact's bytes, checked by hash before any test", () => {
     const shard = jobBlocks.browser;
     const download = shard.indexOf("name: tear-release-targets-${{ needs.scope.outputs.commit }}");
