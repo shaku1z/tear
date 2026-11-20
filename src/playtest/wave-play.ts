@@ -1,3 +1,4 @@
+import { buildWatchChoiceScore } from "../agents/watch-build-choice";
 import type { RunDifficulty } from "../gameplay/run/session";
 import { stageIdsAvailableOn } from "../gameplay/stages";
 import type { WeaponId } from "../gameplay/weapon-selection";
@@ -22,9 +23,17 @@ export interface WaveRequest {
   readonly weapon: WeaponId;
   readonly seed: string;
   readonly player: BossPlayerId;
+  /**
+   * "drafted": the player arrives with one upgrade for each wave before, picked from the game's own draft by the
+   * scoring the game's watch player uses. "none": with no upgrades. Tier-ups and anything bought are in neither.
+   */
+  readonly build: WaveBuild;
   /** The wave is stopped and reported as a time limit after this many simulation ticks. */
   readonly maxTicks: number;
 }
+
+export const WAVE_BUILDS = Object.freeze(["drafted", "none"] as const);
+export type WaveBuild = (typeof WAVE_BUILDS)[number];
 
 export type WaveEnd = "cleared" | "player defeated" | "time limit" | "broken";
 
@@ -43,6 +52,8 @@ export interface WaveResult extends WaveRequest {
   readonly clearTicks?: number;
   /** Ticks of opening grace the game gave the wave. */
   readonly graceTicks: number;
+  /** Upgrades the player arrived with. */
+  readonly upgrades: number;
   /** Where the player stood when defeated. */
   readonly diedAt?: Readonly<{ tick: number; x: number; y: number }>;
   /** Every enemy of the wave in the order it arrived. */
@@ -89,6 +100,7 @@ interface ProjectileActor {
 interface RunView {
   readonly wave: number;
   readonly waveGrace?: number;
+  readonly mods?: Readonly<{ owned?: Readonly<Record<string, number>> }>;
   readonly waveLog: readonly Readonly<{ wave: number | string; time: number; kills: number }>[];
 }
 
@@ -113,6 +125,8 @@ export function stageWaves(stage: string): readonly number[] {
 export function waveScenario(request: WaveRequest): TearScenarioV1 {
   if (!BOSS_PLAYER_IDS.includes(request.player))
     throw new RangeError(`no player "${request.player}"; the players are ${BOSS_PLAYER_IDS.join(", ")}`);
+  if (!WAVE_BUILDS.includes(request.build))
+    throw new RangeError(`no build "${request.build}"; the builds are ${WAVE_BUILDS.join(", ")}`);
   return requireProductionHeadlessScenario({
     format: TEAR_CONTRACT_FORMAT,
     kind: "scenario",
@@ -184,7 +198,9 @@ function start(environment: ProductionHeadlessEnvironment, request: WaveRequest)
   if (chapterState(environment) !== CHAPTER_WAVE_LIVE && !skipChapter(environment))
     return "the stage's story chapter did not end";
   const run = environment.world().run() as unknown as RunView;
-  return run.wave === request.wave ? undefined : `asked for wave ${String(request.wave)}, the game started ${run.wave}`;
+  return run.wave === request.wave
+    ? undefined
+    : `asked for wave ${String(request.wave)}, the game started ${String(run.wave)}`;
 }
 
 /**
@@ -192,11 +208,21 @@ function start(environment: ProductionHeadlessEnvironment, request: WaveRequest)
  * so the player has no upgrades from earlier waves.
  */
 export function playWave(request: WaveRequest, player: BossPlayer = createBossPlayer(request.player)): WaveResult {
-  const environment = createProductionHeadlessEnvironment();
+  const environment = createProductionHeadlessEnvironment(
+    request.build === "none"
+      ? {}
+      : {
+          build: (choices) => {
+            const scores = choices.map((choice) => buildWatchChoiceScore(choice.id, request.weapon));
+            return scores.indexOf(Math.max(...scores));
+          },
+        },
+  );
   try {
     const refused = start(environment, request);
     const world = environment.world() as unknown as WaveWorld;
-    const run = (): RunView => world.run() as unknown as RunView;
+    const run = (): RunView => world.run() as RunView;
+    const upgrades = Object.values(run().mods?.owned ?? {}).reduce((total, count) => total + count, 0);
     const graceTicks = Math.round((run().waveGrace ?? 0) * TEAR_SIMULATION_TICKS_PER_SECOND);
     const seen = new Set<unknown>();
     const spawned: SpawnedEnemy[] = [];
@@ -262,6 +288,7 @@ export function playWave(request: WaveRequest, player: BossPlayer = createBossPl
         ? { clearTicks: Math.round(logged.time * TEAR_SIMULATION_TICKS_PER_SECOND) }
         : {}),
       graceTicks,
+      upgrades,
       ...(diedAt === undefined ? {} : { diedAt }),
       spawned,
       elites: spawned.filter((enemy) => enemy.affixes.length > 0).length,

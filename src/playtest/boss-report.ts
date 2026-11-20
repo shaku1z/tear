@@ -11,6 +11,7 @@ import {
   type BossFightResult,
   type BossPhaseResult,
 } from "./boss-fight";
+import { table } from "./report-text";
 
 export interface BossReportRequest {
   readonly bosses: readonly BossFightRequest["boss"][];
@@ -97,18 +98,6 @@ export function playBossReport(
   const requests = admitBossReport(request);
   const own = share === undefined ? requests : sliceOf(requests, share.index, share.of);
   return own.map((fight) => playBossFight(fight));
-}
-
-function table(rows: readonly (readonly string[])[]): string {
-  const widths = rows[0]?.map((_, column) => Math.max(...rows.map((row) => row[column]?.length ?? 0))) ?? [];
-  return rows
-    .map((row) =>
-      row
-        .map((cell, column) => cell.padEnd(widths[column] ?? 0))
-        .join("  ")
-        .trimEnd(),
-    )
-    .join("\n");
 }
 
 function hitsText(phase: BossPhaseResult): string {

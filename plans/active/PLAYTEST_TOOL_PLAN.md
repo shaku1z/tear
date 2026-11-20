@@ -378,6 +378,18 @@ each wave before and the build picks one upgrade from each, applied as a pick in
 every report that uses it: tier-ups and anything bought are not part of a build. Test:
 `tests/unit/playtest-wave-start.test.ts`.
 
+Built second (2026-11-20): `pnpm playtest waves --stage <id>`, the measures the Verdant gameplay work asked for.
+Each wave of the stage before its boss is opened directly and played on fixed seeds; a row per wave gives how
+many runs cleared it, the game's own clear time (its wave log), the opening grace, the enemies as they arrived
+and how many had affixes, damage taken by source, snares marked, caught and cut and the time held, ally roots
+grown and cut, uproots, and each Rootbinder's time to kill and whether it died planted. `--show runs` adds a
+line for every run with where the player fell and the arrival order; `--json` writes everything. Roots and
+snares are read by the shared names of the parts (`root-link`, `root-snare`, `rootPhase`), so another enemy or
+stage that uses them is counted with no edit. Damage by source is attributed, as for bosses: the game does not
+record what hit the player, so it goes to the owner of a shot on the player, else an enemy touching the
+player, else "unmarked". Verdant, sword, Normal, three seeds, two players: 54 waves in 53 s on five
+jobs. Tests: `tests/unit/playtest-waves.test.ts`.
+
 Done when:
 - [ ] Every boss phase, every wave of each biome and every enemy kind is a row that starts directly, in under 1 s each.
 - [ ] `pnpm playtest runs` reports where runs end and per-wave time and health cost for 3 modes, 3 difficulties and 5 weapons.
