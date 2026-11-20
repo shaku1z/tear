@@ -10,7 +10,7 @@ import { projectProductionReplayCanonicalState } from "../../src/tearbench/produ
 import { createLiveTutorialSessionActions } from "../../src/app/training/tutorial-session-actions";
 import { loadShippingTutorialGold } from "../../src/gameplay/training/tutorial-gold-shipping";
 
-// The shipped corpus is an on-demand asset; training preflight loads it before any lesson.
+// These tests need the coach's demonstrations, so they load the on-demand corpus first; the game asks for it once a lesson is played.
 beforeAll(async () => {
   await loadShippingTutorialGold();
 });

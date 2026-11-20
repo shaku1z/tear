@@ -5,6 +5,8 @@ import {
   type PracticeBossState,
 } from "./practice-boss-catalog";
 import type { TutorialArenaId } from "./tutorial-arenas";
+import { resumedTutorialCourse, TUTORIAL_LESSON_IDS, type TutorialLessonId } from "./tutorial-lesson-ids";
+import type { TutorialMark } from "./tutorial-marks";
 import { practiceTabFlags, practiceTabFromFlags, type PracticeTab } from "./practice-tabs";
 import { productionGhostTraces, type TutorialGhostFrame, type TutorialGhostScript } from "./tutorial-production-ghost";
 import type { CONFIG as GameConfiguration } from "../../config/game-config";
@@ -29,62 +31,6 @@ import type { EnemyKind } from "../run/content-director";
 import type { TutorialCoachView, TutorialGoldDisplay } from "./tutorial-ghost-coach";
 import { isRecord, requireRecord } from "../../domain/records";
 
-export type TutorialMark =
-  | "airHit"
-  | "dash"
-  | "deflect"
-  | "jump"
-  | "launch"
-  | "moveL"
-  | "moveR"
-  | "evade"
-  | "parry"
-  | "punish"
-  | "recall"
-  | "slam"
-  | "strike"
-  | "superslam"
-  | "throwHit"
-  | "updraft";
-
-/** Style events accepted by the live tutorial host; encounter marks have their own controller owner. */
-export const TUTORIAL_MARKS: ReadonlySet<string> = new Set([
-  "airHit",
-  "dash",
-  "deflect",
-  "jump",
-  "launch",
-  "moveL",
-  "moveR",
-  "parry",
-  "recall",
-  "slam",
-  "strike",
-  "superslam",
-  "throwHit",
-  "updraft",
-]);
-export function isTutorialMark(value: string): value is TutorialMark {
-  return TUTORIAL_MARKS.has(value);
-}
-
-export const TUTORIAL_LESSON_IDS = [
-  "move",
-  "jump",
-  "dash",
-  "cut",
-  "launch",
-  "juggle",
-  "slam",
-  "power-slam",
-  "updraft",
-  "throw",
-  "parry",
-  "read-the-charge",
-  "field-test",
-  "ready",
-] as const;
-export type TutorialLessonId = (typeof TUTORIAL_LESSON_IDS)[number];
 export type TutorialSessionPhase = "inactive" | "course" | "lesson-practice" | "free-practice";
 type FieldEncounter = "charger" | "breath" | "mixed";
 /** The few session facts the gold coach selects by (see `TutorialController.coachSelection`). */
@@ -429,6 +375,8 @@ export type TutorialIntent =
   | Readonly<{ type: "navigate"; screen: "menu" }>
   | Readonly<{ type: "release-pointer" }>
   | Readonly<{ type: "complete-course"; courseSessionId: string }>
+  /** A course lesson was finished; the profile keeps it, so the next course starts after it. */
+  | Readonly<{ type: "lesson-complete"; lessonId: TutorialLessonId }>
   | Readonly<{ type: "achievement-check" }>;
 
 export interface TutorialGhostSnapshot {
@@ -1071,7 +1019,8 @@ export class TutorialController {
     this.configuration = config;
   }
 
-  start(viewportWidth: number, courseSessionId = "tutorial"): void {
+  /** Starts the course after the lessons the profile kept (see `resumedTutorialCourse`). */
+  start(viewportWidth: number, courseSessionId = "tutorial", finished: readonly string[] = []): void {
     this.practiceOrigin = undefined;
     this.annex = undefined;
     this.practiceTab = "lessons";
@@ -1084,6 +1033,8 @@ export class TutorialController {
     this.phase = "course";
     this.reached = new Set(["move"]);
     this.completed.clear();
+    const resumed = resumedTutorialCourse(finished);
+    for (const id of resumed.done) this.completed.add(id);
     this.skipped.clear();
     this.completionAwarded = false;
     this.helpVisible = false;
@@ -1109,6 +1060,10 @@ export class TutorialController {
     this.chargeRecoveryWindow = 0;
     this.chargeCommitAwayX = 0;
     this.bladeAwayTime = 0;
+    if (resumed.opening > 0) {
+      for (const id of resumed.done) this.reached.add(id);
+      this.enterLesson(resumed.opening);
+    }
   }
 
   /** Eligibility is a saved profile fact, never a fabricated historical course. */
@@ -1436,12 +1391,19 @@ export class TutorialController {
         this.evidencePulse = false;
         return [...intents, { type: "sound", cue: "rankup" }, { type: "reset-training-space" }];
       }
-      this.completed.add(TUTORIAL_LESSON_IDS[this.lessonIndex] ?? "move");
-      this.skipped.delete(TUTORIAL_LESSON_IDS[this.lessonIndex] ?? "move");
+      this.finishLesson(intents);
       this.completionDelay = 1.1;
       intents.push({ type: "sound", cue: "rankup" });
     }
     return intents;
+  }
+
+  /** Counts the current lesson done; a course reports it too, for the profile to keep. */
+  private finishLesson(intents: TutorialIntent[]): void {
+    const id = TUTORIAL_LESSON_IDS[this.lessonIndex] ?? "move";
+    this.completed.add(id);
+    this.skipped.delete(id);
+    if (this.phase === "course") intents.push({ type: "lesson-complete", lessonId: id });
   }
 
   ghostSnapshot(groundY: number): TutorialGhostSnapshot {

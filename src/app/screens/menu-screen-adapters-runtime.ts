@@ -1,5 +1,6 @@
 import { buildMenuSnapshot } from "../../presentation/menu-setup-snapshots";
-import { firstRunProfileFacts, isFirstRunProfile } from "../../gameplay/progression/first-run-guidance";
+import { firstRunProfileFacts, isTutorialFirst } from "../../gameplay/progression/first-run-guidance";
+import { nextTutorialLesson } from "../../gameplay/training/tutorial-lesson-ids";
 import type { createLiveSetupShopRenderers } from "../run/setup-shop-renderers";
 import type { LiveMenuScreenAdapters, MenuScreenServices, MenuScreenState } from "./menu-screen-adapters";
 
@@ -23,7 +24,9 @@ export function createLiveMenuScreenAdaptersRuntime(
         buildMenuSnapshot({
           username: d.PROFILE.username(),
           tutorialDone: d.PROFILE.stat("tutorialDone"),
-          firstRun: isFirstRunProfile(firstRunProfileFacts(d.PROFILE)),
+          ...(isTutorialFirst(firstRunProfileFacts(d.PROFILE))
+            ? { tutorialFirst: nextTutorialLesson(d.PROFILE.tutorialProgress().lessons) }
+            : {}),
           campaignEmblem: d.PROFILE.data.rewards?.campaignEmblem === true,
           signedIn: d.Cloud.loggedIn(),
           coins: d.META.coins(),

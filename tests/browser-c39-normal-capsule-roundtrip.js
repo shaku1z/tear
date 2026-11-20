@@ -204,6 +204,7 @@ async function phase(id, run) {
     {
       name: "C39 normal capsule files " + id,
       deferBoot: true,
+      tutorialSkipped: true,
       query: { "ghost-v3-profile": "forensic-qa" },
     },
     async (journey) => {
