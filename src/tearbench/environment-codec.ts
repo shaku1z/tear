@@ -4,7 +4,7 @@ import { MAX_ATTACK_IDS } from "../gameplay/environment/combat-object-runtime";
 import { ENVIRONMENT_OBJECT_KIND_IDS } from "../gameplay/environment/environment-object-kinds";
 import { environmentObjectDefinition, isEnvironmentObjectKind } from "../gameplay/environment/environment-definitions";
 import type { TearEnvironmentObservationV1 } from "./contracts";
-import { ENVIRONMENT_STATE_FORGE_FACTORY_REGISTRY } from "./state-forge-factories";
+import { ENVIRONMENT_STATE_SETUP_FACTORY_REGISTRY } from "./state-setup-factories";
 import {
   COMBAT_OBJECT_KEYS,
   FIELD_KEYS,
@@ -89,7 +89,7 @@ function common(
     environmentObjectDefinition(value.kind).category === category;
   if (
     value.factoryId !== undefined &&
-    (!text(value.factoryId) || (!ENVIRONMENT_STATE_FORGE_FACTORY_REGISTRY.has(value.factoryId) && !sourceOwnedFactory))
+    (!text(value.factoryId) || (!ENVIRONMENT_STATE_SETUP_FACTORY_REGISTRY.has(value.factoryId) && !sourceOwnedFactory))
   )
     issues.push(issue(`${path}.factoryId`, "environment factory is not approved"));
   if (category === "route") {

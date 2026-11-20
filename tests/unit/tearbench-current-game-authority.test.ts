@@ -357,7 +357,7 @@ describe("TearBench current-game catalog authority", () => {
       const surgical = { ...entry, start: { ...entry.start, [field]: value } } as typeof entry;
       expect(() => {
         materializeCanonicalScenario(surgical);
-      }, field).toThrow(/exact .* state; use State Forge/u);
+      }, field).toThrow(/exact .* state; use State Setup/u);
     }
     const unknown = { ...entry, start: { ...entry.start, retiredStartField: true } } as unknown as typeof entry;
     expect(() => {

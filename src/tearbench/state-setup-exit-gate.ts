@@ -7,14 +7,14 @@ import type { TearProgressionReplayResult } from "./progression-replay";
 import { BOSS_FACTORY_IDS, type TearBossId } from "./registries";
 import { bossPhaseAttackAvailable } from "../gameplay/run/boss-definitions";
 import { STAGES } from "../gameplay/stages";
-import { DECLARED_ONE_FRAME_BOUNDARIES, type TearOneFrameBoundaryDefinition } from "./state-forge-factories";
+import { DECLARED_ONE_FRAME_BOUNDARIES, type TearOneFrameBoundaryDefinition } from "./state-setup-factories";
 
 type MutableRecord = Record<string, unknown>;
 
 export const TEAR_BOSS_PHASES = Object.freeze([1, 2, 3] as const);
 export type TearBossPhase = (typeof TEAR_BOSS_PHASES)[number];
 
-export interface StateForgeBossPhaseLaunch {
+export interface StateSetupBossPhaseLaunch {
   readonly id: string;
   readonly kind: "boss-phase";
   readonly boss: TearBossId;
@@ -24,16 +24,16 @@ export interface StateForgeBossPhaseLaunch {
 }
 
 /** The only HP value admitted by the surgical boss-finisher exit. */
-export const STATE_FORGE_BOSS_FINISHER_HP = 1 as const;
+export const STATE_SETUP_BOSS_FINISHER_HP = 1 as const;
 
-export interface StateForgeBossFinisherLaunch {
+export interface StateSetupBossFinisherLaunch {
   readonly id: string;
   readonly kind: "boss-finisher";
   readonly boss: TearBossId;
-  readonly remainingHp: typeof STATE_FORGE_BOSS_FINISHER_HP;
+  readonly remainingHp: typeof STATE_SETUP_BOSS_FINISHER_HP;
 }
 
-export interface StateForgeBoundaryLaunch {
+export interface StateSetupBoundaryLaunch {
   readonly id: string;
   readonly kind: "one-frame-boundary";
   readonly boundary: TearOneFrameBoundaryDefinition["id"];
@@ -41,7 +41,7 @@ export interface StateForgeBoundaryLaunch {
   readonly ticks: number;
 }
 
-export type StateForgeExitLaunch = StateForgeBossPhaseLaunch | StateForgeBossFinisherLaunch | StateForgeBoundaryLaunch;
+export type StateSetupExitLaunch = StateSetupBossPhaseLaunch | StateSetupBossFinisherLaunch | StateSetupBoundaryLaunch;
 
 export interface Wave99HammerExitCertificate {
   readonly id: "hard-endless-wave-99-hammer";
@@ -75,7 +75,7 @@ function eventsOfType<TType extends TearProgressionEvent["type"]>(
 
 /**
  * Produces the auditable exit-gate certificate for the canonical long-run
- * State Forge target. A certificate is issued only when every completed wave
+ * State Setup target. A certificate is issued only when every completed wave
  * earned, selected, mutated, and rewarded exactly once.
  */
 export function certifyWave99HammerProgression(
@@ -164,7 +164,7 @@ export function createWave99HistoricalRunState(certificate: Wave99HammerExitCert
   });
 }
 
-export function createBossPhaseLaunchMatrix(): readonly StateForgeBossPhaseLaunch[] {
+export function createBossPhaseLaunchMatrix(): readonly StateSetupBossPhaseLaunch[] {
   return Object.freeze(
     BOSS_FACTORY_IDS.flatMap((boss) =>
       TEAR_BOSS_PHASES.map((phase) =>
@@ -181,7 +181,7 @@ export function createBossPhaseLaunchMatrix(): readonly StateForgeBossPhaseLaunc
   );
 }
 
-export function createOneFrameBoundaryLaunchMatrix(): readonly StateForgeBoundaryLaunch[] {
+export function createOneFrameBoundaryLaunchMatrix(): readonly StateSetupBoundaryLaunch[] {
   return Object.freeze(
     DECLARED_ONE_FRAME_BOUNDARIES.flatMap((boundary) =>
       (["before", "at", "after"] as const).map((position) =>
@@ -197,7 +197,7 @@ export function createOneFrameBoundaryLaunchMatrix(): readonly StateForgeBoundar
   );
 }
 
-function patchBoss(snapshot: TearSnapshotV1, launch: StateForgeBossPhaseLaunch): void {
+function patchBoss(snapshot: TearSnapshotV1, launch: StateSetupBossPhaseLaunch): void {
   const bosses = snapshot.state["tear.boss.v1"];
   if (!Array.isArray(bosses) || bosses.length !== 1) {
     throw new TypeError(`${launch.id} requires one live boss in the source snapshot`);
@@ -214,10 +214,10 @@ function patchBoss(snapshot: TearSnapshotV1, launch: StateForgeBossPhaseLaunch):
   boss.hp = maxHp * ({ 1: 0.9, 2: 0.5, 3: 0.15 } as const)[launch.phase];
 }
 
-function patchBossFinisher(snapshot: TearSnapshotV1, launch: StateForgeBossFinisherLaunch): void {
+function patchBossFinisher(snapshot: TearSnapshotV1, launch: StateSetupBossFinisherLaunch): void {
   const remainingHp: unknown = launch.remainingHp;
-  if (remainingHp !== STATE_FORGE_BOSS_FINISHER_HP) {
-    throw new TypeError(`${launch.id} remaining HP must be exactly ${String(STATE_FORGE_BOSS_FINISHER_HP)}`);
+  if (remainingHp !== STATE_SETUP_BOSS_FINISHER_HP) {
+    throw new TypeError(`${launch.id} remaining HP must be exactly ${String(STATE_SETUP_BOSS_FINISHER_HP)}`);
   }
   const bosses = snapshot.state["tear.boss.v1"];
   if (!Array.isArray(bosses) || bosses.length !== 1) {
@@ -236,7 +236,7 @@ function patchBossFinisher(snapshot: TearSnapshotV1, launch: StateForgeBossFinis
   ) {
     throw new TypeError(`${launch.id} requires ${launch.boss} to be live`);
   }
-  if (typeof boss.maxHp !== "number" || !Number.isFinite(boss.maxHp) || boss.maxHp < STATE_FORGE_BOSS_FINISHER_HP) {
+  if (typeof boss.maxHp !== "number" || !Number.isFinite(boss.maxHp) || boss.maxHp < STATE_SETUP_BOSS_FINISHER_HP) {
     throw new TypeError(`${launch.id} source boss maximum HP is invalid`);
   }
   const run = mutableRecord(snapshot.state["tear.run.v1"], "run codec");
@@ -277,7 +277,7 @@ function patchBossFinisher(snapshot: TearSnapshotV1, launch: StateForgeBossFinis
   boss.hpDisplay = launch.remainingHp;
 }
 
-function patchBoundary(snapshot: TearSnapshotV1, launch: StateForgeBoundaryLaunch): void {
+function patchBoundary(snapshot: TearSnapshotV1, launch: StateSetupBoundaryLaunch): void {
   const seconds = launch.ticks / 120;
   const player = mutableRecord(snapshot.state["tear.player.v1"], "player codec");
   const blade = mutableRecord(snapshot.state["tear.blade.v1"], "blade codec");
@@ -347,7 +347,7 @@ function patchBoundary(snapshot: TearSnapshotV1, launch: StateForgeBoundaryLaunc
 }
 
 /** Creates a detached, restore-ready snapshot; the captured input is untouched. */
-export function forgeExitLaunchSnapshot(source: TearSnapshotV1, launch: StateForgeExitLaunch): TearSnapshotV1 {
+export function forgeExitLaunchSnapshot(source: TearSnapshotV1, launch: StateSetupExitLaunch): TearSnapshotV1 {
   const forged = structuredClone(source);
   (forged as { id: string }).id = launch.id;
   (forged as { stateClass: TearSnapshotV1["stateClass"] }).stateClass = "surgical-valid";

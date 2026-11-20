@@ -1,11 +1,11 @@
-import { launchResolvedLiveState } from "./live-state-forge-scenario-launch";
-import { forgeRootbinderNetworkState } from "./state-forge-factories";
+import { launchResolvedLiveState } from "./live-state-setup-scenario-launch";
+import { forgeRootbinderNetworkState } from "./state-setup-factories";
 import { resolveTearSdl, type TearSdlDocumentV1 } from "./tearsdl";
 import type { TearLiveRestoreResult } from "./live-state-snapshot";
 import type { LiveRuntimeSnapshotController } from "./live-runtime-snapshots";
 import type { LiveTearRuntimeEnvironmentContext, TearStructuredRuntimeEnvironment } from "./live-runtime-contracts";
 
-/** Restores the C6 relationship fixture through the same live State Forge path as other surgical states. */
+/** Restores the C6 relationship fixture through the same live State Setup path as other surgical states. */
 export function forgeRootbinderNetworkEnvironment(
   environment: TearStructuredRuntimeEnvironment,
   snapshots: LiveRuntimeSnapshotController,

@@ -2,34 +2,34 @@ import { isRecord } from "../domain/records";
 import type { TearSdlDocumentV1, TearSdlIssue, TearSdlResolved } from "./tearsdl";
 import { parseTearSdl, resolveTearSdl } from "./tearsdl";
 
-export type StateForgeReportStatus =
+export type StateSetupReportStatus =
   "valid" | "invalid" | "reachable" | "unreachable" | "plausible" | "provisional" | "implausible" | "not-evaluated";
 
-export interface StateForgeReport {
-  readonly status: StateForgeReportStatus;
+export interface StateSetupReport {
+  readonly status: StateSetupReportStatus;
   readonly messages: readonly string[];
 }
 
-export interface StateForgeValidationReports {
-  readonly structural: StateForgeReport;
-  readonly reachability: StateForgeReport;
-  readonly populationPlausibility: StateForgeReport;
+export interface StateSetupValidationReports {
+  readonly structural: StateSetupReport;
+  readonly reachability: StateSetupReport;
+  readonly populationPlausibility: StateSetupReport;
 }
 
-export interface StateForgeEvaluation {
+export interface StateSetupEvaluation {
   readonly source: string;
   readonly document?: TearSdlDocumentV1;
   readonly resolved?: TearSdlResolved;
-  readonly reports: StateForgeValidationReports;
+  readonly reports: StateSetupValidationReports;
 }
 
-export interface StateForgeValueDiff {
+export interface StateSetupValueDiff {
   readonly path: string;
   readonly before?: unknown;
   readonly after?: unknown;
 }
 
-const notEvaluated = (reason: string): StateForgeReport =>
+const notEvaluated = (reason: string): StateSetupReport =>
   Object.freeze({ status: "not-evaluated", messages: Object.freeze([reason]) });
 
 function issueMessage(issue: TearSdlIssue): string {
@@ -40,10 +40,10 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "unknown validation failure";
 }
 
-export function evaluateStateForgeSource(
+export function evaluateStateSetupSource(
   source: string,
   library: ReadonlyMap<string, TearSdlDocumentV1> = new Map(),
-): StateForgeEvaluation {
+): StateSetupEvaluation {
   try {
     const document = parseTearSdl(source);
     const resolved = resolveTearSdl(document, library);
@@ -92,7 +92,7 @@ export function evaluateStateForgeSource(
   }
 }
 
-function collectDiff(before: unknown, after: unknown, path: string, differences: StateForgeValueDiff[]): void {
+function collectDiff(before: unknown, after: unknown, path: string, differences: StateSetupValueDiff[]): void {
   if (Object.is(before, after)) return;
   if (isRecord(before) && isRecord(after)) {
     const keys = [...new Set([...Object.keys(before), ...Object.keys(after)])].sort();
@@ -109,13 +109,13 @@ function collectDiff(before: unknown, after: unknown, path: string, differences:
   );
 }
 
-export function diffStateForgeValues(before: unknown, after: unknown): readonly StateForgeValueDiff[] {
-  const differences: StateForgeValueDiff[] = [];
+export function diffStateSetupValues(before: unknown, after: unknown): readonly StateSetupValueDiff[] {
+  const differences: StateSetupValueDiff[] = [];
   collectDiff(before, after, "$", differences);
   return Object.freeze(differences);
 }
 
-export function createStateForgeForkSource(
+export function createStateSetupForkSource(
   source: string,
   id: string,
   patch: Readonly<Record<string, unknown>>,

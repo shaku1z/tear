@@ -171,7 +171,7 @@ function numberField(value: TearCodecValue, key: string): number {
 }
 
 /**
- * Constructs a fresh production-shaped object graph from State Forge codecs.
+ * Constructs a fresh production-shaped object graph from State Setup codecs.
  * It intentionally has no commit operation: live/browser mutation belongs to
  * an outward adapter, while replay/headless hosts can keep the staged world.
  */

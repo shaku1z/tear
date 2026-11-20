@@ -12,10 +12,10 @@ import type { LiveSessionServices } from "../shell/session-services-composition"
 import type { LiveAuthoritativeInputAdapter } from "../../gameplay/runtime/authoritative-input-adapter";
 import { createLiveParticlePresentationState } from "../../tearbench/particle-presentation-state";
 import type { LiveWorldComposition } from "../world/world-composition";
-import { createLiveStateForgeAdapter } from "./state-forge-adapter";
-import { createLiveStateForgeRuntimeBridge } from "./state-forge-runtime-bridge";
+import { createLiveStateSetupAdapter } from "./state-setup-adapter";
+import { createLiveStateSetupRuntimeBridge } from "./state-setup-runtime-bridge";
 
-export interface LiveStateForgeAssemblyOptions {
+export interface LiveStateSetupAssemblyOptions {
   readonly dependencies: GameRuntimeDependencies;
   readonly world: LiveWorldComposition;
   readonly campaignTraining: Pick<LiveCampaignTraining, "campaign" | "training" | "cinematic">;
@@ -29,8 +29,8 @@ export interface LiveStateForgeAssemblyOptions {
   readonly run: () => GameRun;
 }
 
-/** The live State Forge adapter: world capture, staging and restore over the live runtime owners. */
-export function assembleLiveStateForge(options: LiveStateForgeAssemblyOptions) {
+/** The live State Setup adapter: world capture, staging and restore over the live runtime owners. */
+export function assembleLiveStateSetup(options: LiveStateSetupAssemblyOptions) {
   const { dependencies, world, navigation, interaction, run: liveRun } = options;
   const { A11Y, CONFIG, FX, GFX, GHOST } = dependencies;
   const { state: hostState, entities: worldEntities, lifecycle: RUN_LIFECYCLE, environment } = world;
@@ -40,7 +40,7 @@ export function assembleLiveStateForge(options: LiveStateForgeAssemblyOptions) {
   const { stage: stageRuntime, story, runtime: campaignRuntime } = options.campaignTraining.campaign;
   const TUT = options.campaignTraining.training.tutorial;
   const { combatEntityRuntime: combatRuntime, simulation, simulationRuntime } = options.combat;
-  const stateForgeRuntime = createLiveStateForgeRuntimeBridge({
+  const stateSetupRuntime = createLiveStateSetupRuntimeBridge({
     tutorial: TUT,
     practiceCinema: options.campaignTraining.cinematic.runtime,
     practiceWorld: () => ({ run: liveRun(), actors: hostState.enemies(), platforms: stageRuntime.platforms }),
@@ -110,7 +110,7 @@ export function assembleLiveStateForge(options: LiveStateForgeAssemblyOptions) {
       environment.clear("restore");
     },
   });
-  return createLiveStateForgeAdapter({
+  return createLiveStateSetupAdapter({
     dependencies,
     entities: worldEntities,
     worldServices: world.context.services,
@@ -162,8 +162,8 @@ export function assembleLiveStateForge(options: LiveStateForgeAssemblyOptions) {
     restoreIdentityState: (snapshot) => {
       combatRuntime.restoreIdentityState(snapshot);
     },
-    runtimeState: stateForgeRuntime.capture,
-    restoreRuntimeState: stateForgeRuntime.restore,
+    runtimeState: stateSetupRuntime.capture,
+    restoreRuntimeState: stateSetupRuntime.restore,
     hudPresentation: options.hudFeedback,
     tutorialPresentation: {
       capture: () => TUT.capturePresentation(),
@@ -177,8 +177,8 @@ export function assembleLiveStateForge(options: LiveStateForgeAssemblyOptions) {
       dependencies.cosmeticEmissionRandom,
     ),
     captureCinema: () => CINEMA.captureState(),
-    validateCinema: stateForgeRuntime.validate,
+    validateCinema: stateSetupRuntime.validate,
   });
 }
 
-export type LiveStateForge = ReturnType<typeof assembleLiveStateForge>;
+export type LiveStateSetup = ReturnType<typeof assembleLiveStateSetup>;

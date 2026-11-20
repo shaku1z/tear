@@ -1,6 +1,6 @@
 // `pnpm scene preview <stage> --out <dir>`: captures the package in the real
 // game. Serves an existing dist/test-standalone (run pnpm build:test:standalone
-// first), forges a State Forge scenario on the package's stage, screenshots the
+// first), forges a State Setup scenario on the package's stage, screenshots the
 // required viewports and records a looping animated WebP at 1600x900.
 //
 // Options: --wave N (default 1), --frames N (default 48, 0 skips the loop),
@@ -43,7 +43,7 @@ function serve(root) {
   return new Promise((done) => server.listen(0, "127.0.0.1", () => done(server)));
 }
 
-/** A State Forge scenario that starts a campaign run on `stage` at `wave`. */
+/** A State Setup scenario that starts a campaign run on `stage` at `wave`. */
 function scenario(stage, wave) {
   const id = `scene-preview-${stage}-wave-${wave}`;
   const start = { mode: "campaign", difficulty: "normal", weapon: "sword", stage, wave };
@@ -103,7 +103,7 @@ async function forge(page, resolved) {
     for (let index = 0; index < 90; index += 1) environment.renderFrame(1 / 60);
     return result;
   }, resolved);
-  if (!launched.ok) throw new Error(`State Forge refused the scenario: ${JSON.stringify(launched)}`);
+  if (!launched.ok) throw new Error(`State Setup refused the scenario: ${JSON.stringify(launched)}`);
 }
 
 /** Renders frames while lazy scene art decodes, then waits for paint. */

@@ -30,7 +30,7 @@ const REPLAY_TRIDENT: GhostReplayTrident = {
     available: true,
     resumable: true,
     seekable: true,
-    reason: "source-owned lawful State Forge checkpoint",
+    reason: "source-owned lawful State Setup checkpoint",
   },
   visual: {
     kind: "visual",
@@ -73,7 +73,7 @@ function exerciseCurrentHeadlessWeapon(weaponId: WeaponId) {
       position: "at",
       ticks: 0,
     });
-    environment.restoreStateForgeEvaluation({ source, forgedSnapshot });
+    environment.restoreStateSetupEvaluation({ source, forgedSnapshot });
     const opening = environment.policyObservation();
     const target = opening.entities.find((entity) => entity.kind !== "projectile");
     if (target === undefined) throw new Error(`current ${weaponId} headless overlap lost its production actor`);
@@ -83,7 +83,7 @@ function exerciseCurrentHeadlessWeapon(weaponId: WeaponId) {
     const events: TearCausalEventV1[] = [];
     const commands: CommandEnvelope<GameAction>[] = [];
     let nextCommandId = source.checkpoint.nextCommandId;
-    let terminal = environment.restoreStateForgeEvaluation({ source, forgedSnapshot });
+    let terminal = environment.restoreStateSetupEvaluation({ source, forgedSnapshot });
     for (let tick = 0; tick < 120; tick += 1) {
       const actions: GameAction[] =
         tick === 0
@@ -152,7 +152,7 @@ function exerciseCurrentHeadlessWeapon(weaponId: WeaponId) {
     );
     replayClock.current = () => replay.simulation()?.scheduler.tick ?? forgedSnapshot.tick;
     const replayResult = replay.seek(terminal.tick);
-    // A State Forge suffix continues the source run's global causal sequence
+    // A State Setup suffix continues the source run's global causal sequence
     // (6dfd99c7): its first fact is numbered after every source-delivered fact.
     return {
       opening,
@@ -183,7 +183,7 @@ describe("source-owned ordinary headless current-weapon parity", () => {
     expect(result.replayEvents, `${weaponId} independently replayed native gameplay facts`).toEqual(
       result.nativeEvents,
     );
-    expect(result.sequenceBase, `${weaponId} State Forge suffix continues after the delivered startup facts`).toBe(
+    expect(result.sequenceBase, `${weaponId} State Setup suffix continues after the delivered startup facts`).toBe(
       result.startupEvents.length,
     );
     expect(

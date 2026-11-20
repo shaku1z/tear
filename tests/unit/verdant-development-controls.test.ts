@@ -5,7 +5,7 @@ import {
   forgeBloomWellCycleState,
   forgeBossFrameState,
   forgeRootbinderNetworkState,
-} from "../../src/tearbench/state-forge-factories";
+} from "../../src/tearbench/state-setup-factories";
 import type { TearSdlDocumentV1 } from "../../src/tearbench/tearsdl";
 
 const base: TearSdlDocumentV1 = {
@@ -27,7 +27,7 @@ const base: TearSdlDocumentV1 = {
 };
 
 describe("Verdant development controls", () => {
-  it("authors Rootbound through the generic boss-frame State Forge boundary", () => {
+  it("authors Rootbound through the generic boss-frame State Setup boundary", () => {
     const rootbound = forgeBossFrameState(base, "rootbound", "2", "regrowth", 42);
     expect(rootbound).toMatchObject({
       start: { mode: "sandbox", stage: "verdant-sanctum", boss: "rootbound", bossPhase: "2" },
@@ -35,7 +35,7 @@ describe("Verdant development controls", () => {
     });
   });
 
-  it("authors Rootbinder and Bloom through their existing specialized State Forge projections", () => {
+  it("authors Rootbinder and Bloom through their existing specialized State Setup projections", () => {
     const rootbinder = forgeRootbinderNetworkState(base);
     expect(rootbinder.state).toMatchObject({
       enemyComposition: [

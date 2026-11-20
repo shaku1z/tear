@@ -7,8 +7,8 @@ import {
   createBossPhaseLaunchMatrix,
   createOneFrameBoundaryLaunchMatrix,
   forgeExitLaunchSnapshot,
-  STATE_FORGE_BOSS_FINISHER_HP,
-} from "../../src/tearbench/state-forge-exit-gate";
+  STATE_SETUP_BOSS_FINISHER_HP,
+} from "../../src/tearbench/state-setup-exit-gate";
 
 function bossSnapshot(bosses: readonly Record<string, unknown>[]): TearSnapshotV1 {
   const state = {
@@ -63,7 +63,7 @@ function bossSnapshot(bosses: readonly Record<string, unknown>[]): TearSnapshotV
   };
 }
 
-describe("C23 State Forge exit matrix", () => {
+describe("C23 State Setup exit matrix", () => {
   it("certifies the canonical Hard Endless wave-99 Hammer ledger exactly", () => {
     const progression = synthesizeProgression({
       mode: "endless",
@@ -146,7 +146,7 @@ describe("C23 State Forge exit matrix", () => {
       id: "source-finisher",
       kind: "boss-finisher",
       boss: "source",
-      remainingHp: STATE_FORGE_BOSS_FINISHER_HP,
+      remainingHp: STATE_SETUP_BOSS_FINISHER_HP,
     });
     const originalBoss = (source.state["tear.boss.v1"] as readonly Record<string, unknown>[])[0];
     const forgedBoss = (forged.state["tear.boss.v1"] as readonly Record<string, unknown>[])[0];

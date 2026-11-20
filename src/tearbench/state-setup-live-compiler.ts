@@ -34,7 +34,7 @@ function enemyPayload(
 ): Readonly<Record<string, unknown>> {
   const variant = variantId === undefined ? undefined : findVariant(kind, variantId);
   if (variantId !== undefined && variant === null)
-    throw new RangeError(`unknown ${kind} variant in State Forge: ${variantId}`);
+    throw new RangeError(`unknown ${kind} variant in State Setup: ${variantId}`);
   const variantProbe =
     variant === undefined ? undefined : { behavior: "", contactReach: 0, speedMult: 1, hp: 1, maxHp: 1 };
   if (variant !== undefined && variant !== null && variantProbe !== undefined) variant.apply(variantProbe);
@@ -83,7 +83,7 @@ function patchEnemyComposition(snapshot: TearSnapshotV1, composition: unknown): 
     const position = compositionPosition(spec, count);
     for (let index = 0; index < count; index += 1) {
       // The live combat identity owner accepts its canonical numeric namespace
-      // only.  State Forge must stage real actors through that same namespace,
+      // only.  State Setup must stage real actors through that same namespace,
       // rather than smuggling descriptive test IDs into production restore.
       const variantId = typeof spec.variantId === "string" && spec.variantId.trim() !== "" ? spec.variantId : undefined;
       payloads.push(enemyPayload(kind, `enemy:${String(payloads.length + 1)}`, payloads.length, position, variantId));

@@ -8,7 +8,7 @@ import type {
   TearRuntimeEnvironment,
 } from "../live-runtime-contracts";
 import { createLiveTearRuntimeEnvironment } from "../live-runtime-environment";
-import { installLiveStateForgeStudio } from "./live-state-forge-studio-host";
+import { installLiveStateEditor } from "./live-state-editor-host";
 import { isWatchAgentRequested } from "./watch-agent-route";
 import type { TearGhostManifest } from "../../ghost/capsule-vault";
 import type { GhostReadCapsule } from "../../ghost/capsule-reader";
@@ -199,7 +199,7 @@ export function installLiveTearRuntimeBridge(
     writable: false,
     value: factory,
   });
-  installLiveStateForgeStudio(factory);
+  installLiveStateEditor(factory);
   if (isWatchAgentRequested(target.location.search)) {
     void import("../../agents/live-watch-agent-host").then(({ installLiveWatchAgentHost }) => {
       installLiveWatchAgentHost(context, target);

@@ -2,8 +2,8 @@ import { stableVerificationHash } from "../../domain/hash";
 import type { TearSnapshotV1 } from "../../tearbench/contracts";
 import type { AuthoritativeInputSnapshot } from "../../gameplay/runtime/authoritative-input";
 import {
-  captureLiveStateForgeSnapshot,
-  type LiveStateForgeSnapshotCapture,
+  captureLiveStateSetupSnapshot,
+  type LiveStateSetupSnapshotCapture,
 } from "../../tearbench/live-runtime-snapshots";
 import type { TearLiveWorldAdapter } from "../../tearbench/live-state-snapshot";
 import type { TearStateCodecRegistry } from "../../tearbench/state-codecs";
@@ -25,7 +25,7 @@ export interface LiveGhostChallengeCompositionPorts {
   readonly factory: IDBFactory | undefined;
   readonly recording: LiveGhostRecordingSessionState;
   readonly frames: ReturnType<typeof createLiveGhostFrameRecording>;
-  readonly stateForge: TearLiveWorldAdapter<unknown>;
+  readonly stateSetup: TearLiveWorldAdapter<unknown>;
   readonly registry: TearStateCodecRegistry;
   launch(child: GhostPracticeChild): GhostPracticeLaunchResult;
   input(): AuthoritativeInputSnapshot;
@@ -38,7 +38,7 @@ export interface LiveGhostChallengeCompositionPorts {
   abandon(reason: string): void;
   notice(message: string): void;
   captureReceipt(tick: number): void;
-  rng(): LiveStateForgeSnapshotCapture["rng"];
+  rng(): LiveStateSetupSnapshotCapture["rng"];
 }
 
 export function createLiveGhostChallengeComposition(ports: LiveGhostChallengeCompositionPorts) {
@@ -94,12 +94,12 @@ export function createLiveGhostChallengeComposition(ports: LiveGhostChallengeCom
       attemptId = `ghost-challenge-${crypto.randomUUID()}`;
       originTick = child.forkTick;
       const capture = (): TearSnapshotV1 =>
-        captureLiveStateForgeSnapshot({
+        captureLiveStateSetupSnapshot({
           id: `${String(attemptId)}-origin-${String(originTick)}`,
           tick: originTick,
           stateClass: "recorded-canonical",
           seed: context.run.seed,
-          stateForge: ports.stateForge,
+          stateSetup: ports.stateSetup,
           registry: ports.registry,
           observationClass: "structured-state",
           producer: "local-recorded-challenge",

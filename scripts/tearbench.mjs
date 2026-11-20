@@ -374,26 +374,26 @@ function validateScenarioMetadata(scenario) {
   const surgicalFields = ["stage", "wave", "bossPhase"].filter(
     (field) => scenario.start !== null && typeof scenario.start === "object" && Object.hasOwn(scenario.start, field),
   );
-  const stateForge = scenario.stateForge;
-  if (surgicalFields.length > 0 && stateForge === undefined) {
-    throw new RangeError(`scenario ${scenario.id} requests exact ${surgicalFields.join(", ")} state; use State Forge`);
+  const stateSetup = scenario.stateSetup;
+  if (surgicalFields.length > 0 && stateSetup === undefined) {
+    throw new RangeError(`scenario ${scenario.id} requests exact ${surgicalFields.join(", ")} state; use State Setup`);
   }
-  if (stateForge !== undefined) {
+  if (stateSetup !== undefined) {
     if (
-      stateForge === null ||
-      typeof stateForge !== "object" ||
-      Array.isArray(stateForge) ||
-      stateForge.documentId !== scenario.id ||
+      stateSetup === null ||
+      typeof stateSetup !== "object" ||
+      Array.isArray(stateSetup) ||
+      stateSetup.documentId !== scenario.id ||
       typeof scenario.seed !== "string" ||
       !Array.isArray(scenario.backends) ||
       scenario.backends.length !== 1 ||
       scenario.backends[0] !== "live"
     ) {
-      throw new TypeError(`scenario ${scenario.id} has an invalid State Forge descriptor`);
+      throw new TypeError(`scenario ${scenario.id} has an invalid State Setup descriptor`);
     }
     if (scenario.start?.stage !== "pale-traverse" || !Number.isSafeInteger(scenario.start?.wave)) {
       throw new RangeError(
-        `scenario ${scenario.id} State Forge start must retain its exact Pale stage and wave coordinates`,
+        `scenario ${scenario.id} State Setup start must retain its exact Pale stage and wave coordinates`,
       );
     }
     if (
@@ -401,7 +401,7 @@ function validateScenarioMetadata(scenario) {
       (scenario.start?.boss !== "white-hart" || !["1", "2", "3"].includes(scenario.start?.bossPhase))
     ) {
       throw new RangeError(
-        `scenario ${scenario.id} State Forge start must retain its exact White Hart phase coordinates`,
+        `scenario ${scenario.id} State Setup start must retain its exact White Hart phase coordinates`,
       );
     }
     const tags = new Set(scenario.tags ?? []);
@@ -410,7 +410,7 @@ function validateScenarioMetadata(scenario) {
       !tags.has("unpublished-preview") ||
       ["published", "headless", "replay", "seek"].some((tag) => tags.has(tag))
     ) {
-      throw new RangeError(`scenario ${scenario.id} has an invalid State Forge publication/backend claim`);
+      throw new RangeError(`scenario ${scenario.id} has an invalid State Setup publication/backend claim`);
     }
     if (
       !Array.isArray(scenario.structuredAssertions) ||
@@ -440,8 +440,8 @@ function validateScenarioMetadata(scenario) {
   ) {
     throw new TypeError(`scenario ${scenario.id} has malformed evidence subject`);
   }
-  if (stateForge === undefined && subject.kind === "gameplay" && subject.id.startsWith("pale-")) {
-    throw new RangeError(`source-owned Pale scenario ${scenario.id} requires its State Forge descriptor`);
+  if (stateSetup === undefined && subject.kind === "gameplay" && subject.id.startsWith("pale-")) {
+    throw new RangeError(`source-owned Pale scenario ${scenario.id} requires its State Setup descriptor`);
   }
   const isRootboundGraft =
     subject.kind === "environment-combat-object" &&
@@ -535,10 +535,10 @@ function validateScenarioMetadata(scenario) {
   if (typeof command !== "string") return;
   const proof = parseApprovedEvidenceCommand(command).find((entry) => entry.kind === "node");
   if (proof === undefined) return;
-  // Surgical State Forge scenarios are materialized by the typed live bridge;
+  // Surgical State Setup scenarios are materialized by the typed live bridge;
   // their complementary browser journeys intentionally begin from a natural
   // UI setup and cannot prove the forged coordinates through source text.
-  if (stateForge !== undefined) return;
+  if (stateSetup !== undefined) return;
   const source = readFileSync(proof.file, "utf8");
   if (
     subject.kind === "gameplay" &&
@@ -1635,9 +1635,9 @@ export function validateServedBuildIdentity(build, source = readSourceIdentity()
 
 async function executeRun(scenario, seed, repeat, artifactPath, actionTracePath, replayContextPath) {
   const spawnTask = spawnSync;
-  if (scenario.stateForge !== undefined && seed !== scenario.seed) {
+  if (scenario.stateSetup !== undefined && seed !== scenario.seed) {
     throw new RangeError(
-      `canonical State Forge scenario ${scenario.id} requires its authoritative catalog seed ${scenario.seed}`,
+      `canonical State Setup scenario ${scenario.id} requires its authoritative catalog seed ${scenario.seed}`,
     );
   }
   const invocations = runLiveMaterializer(
@@ -1710,7 +1710,7 @@ try {
         "usage: pnpm tearbench run <scenario-id> [--seed value] [--repeat count] [--actions path] [--artifact path]",
       );
     const scenario = scenarioById(id);
-    const seed = option("--seed", scenario.stateForge === undefined ? "1001" : scenario.seed);
+    const seed = option("--seed", scenario.stateSetup === undefined ? "1001" : scenario.seed);
     const repeat = Number.parseInt(option("--repeat", "1"), 10);
     if (!Number.isSafeInteger(repeat) || repeat < 1 || repeat > 100)
       throw new RangeError("--repeat must be an integer from 1 through 100");

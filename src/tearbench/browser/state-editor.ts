@@ -1,11 +1,11 @@
 import { isRecord } from "../../domain/records";
 import type { TearProvenanceV1 } from "../contracts";
-import type { StateForgeEvaluation, StateForgeReport, StateForgeValueDiff } from "../state-forge-studio-model";
-import { diffStateForgeValues, evaluateStateForgeSource } from "../state-forge-studio-model";
+import type { StateSetupEvaluation, StateSetupReport, StateSetupValueDiff } from "../state-editor-model";
+import { diffStateSetupValues, evaluateStateSetupSource } from "../state-editor-model";
 import type { TearSdlDocumentV1, TearSdlResolved } from "../tearsdl";
 import { isSnapshotEditorRequested } from "./snapshot-editor-route";
 
-export interface StateForgeCheckpointItem {
+export interface StateSetupCheckpointItem {
   readonly id: string;
   readonly label: string;
   readonly tick: number;
@@ -14,19 +14,19 @@ export interface StateForgeCheckpointItem {
   readonly provenance: TearProvenanceV1;
 }
 
-export interface StateForgeForkRequest {
+export interface StateSetupForkRequest {
   readonly parentId: string;
   readonly id: string;
   readonly patch: Readonly<Record<string, unknown>>;
 }
 
-export interface StateForgeStudioHost {
+export interface StateEditorHost {
   readonly initialSource: string;
   tearSdlLibrary(): ReadonlyMap<string, TearSdlDocumentV1>;
-  checkpoints(): readonly StateForgeCheckpointItem[];
-  fork(request: StateForgeForkRequest): StateForgeCheckpointItem;
+  checkpoints(): readonly StateSetupCheckpointItem[];
+  fork(request: StateSetupForkRequest): StateSetupCheckpointItem;
   watch(checkpointId: string): void;
-  launch(resolved: TearSdlResolved): StateForgeCheckpointItem;
+  launch(resolved: TearSdlResolved): StateSetupCheckpointItem;
   exportScenario(fileName: string, source: string): void;
 }
 
@@ -67,7 +67,7 @@ function button(label: string, action: () => void): HTMLButtonElement {
   return value;
 }
 
-function renderReport(target: HTMLElement, title: string, report: StateForgeReport): void {
+function renderReport(target: HTMLElement, title: string, report: StateSetupReport): void {
   target.replaceChildren();
   target.dataset.status = report.status;
   target.append(element("strong", `${title}: ${report.status}`));
@@ -76,7 +76,7 @@ function renderReport(target: HTMLElement, title: string, report: StateForgeRepo
   target.append(list);
 }
 
-function renderProvenance(target: HTMLElement, checkpoint?: StateForgeCheckpointItem): void {
+function renderProvenance(target: HTMLElement, checkpoint?: StateSetupCheckpointItem): void {
   target.replaceChildren(element("strong", "Provenance"));
   if (checkpoint === undefined) {
     target.append(element("p", "Select a checkpoint to inspect its provenance."));
@@ -103,7 +103,7 @@ function displayValue(value: unknown): string {
   return value === undefined ? "∅" : JSON.stringify(value);
 }
 
-function renderDiff(target: HTMLElement, differences: readonly StateForgeValueDiff[]): void {
+function renderDiff(target: HTMLElement, differences: readonly StateSetupValueDiff[]): void {
   target.replaceChildren(element("strong", "Checkpoint diff"));
   if (differences.length === 0) {
     target.append(element("p", "No state differences."));
@@ -117,14 +117,14 @@ function renderDiff(target: HTMLElement, differences: readonly StateForgeValueDi
 }
 
 function defaultDiff(
-  checkpoints: readonly StateForgeCheckpointItem[],
+  checkpoints: readonly StateSetupCheckpointItem[],
   fromId: string,
   toId: string,
-): readonly StateForgeValueDiff[] {
+): readonly StateSetupValueDiff[] {
   const from = checkpoints.find((entry) => entry.id === fromId);
   const to = checkpoints.find((entry) => entry.id === toId);
   if (from === undefined || to === undefined) return Object.freeze([]);
-  return diffStateForgeValues(from.state, to.state);
+  return diffStateSetupValues(from.state, to.state);
 }
 
 function createPanel(): HTMLElement {
@@ -145,7 +145,7 @@ function createPanel(): HTMLElement {
   return panel;
 }
 
-function createElements(panel: HTMLElement, host: StateForgeStudioHost): StudioElements {
+function createElements(panel: HTMLElement, host: StateEditorHost): StudioElements {
   const editor = element("textarea");
   editor.id = "tear-snapshot-editor-source";
   editor.value = host.initialSource;
@@ -200,7 +200,7 @@ function createElements(panel: HTMLElement, host: StateForgeStudioHost): StudioE
   };
 }
 
-export function installStateForgeStudio(host: StateForgeStudioHost): HTMLElement | null {
+export function installStateEditor(host: StateEditorHost): HTMLElement | null {
   if (!isSnapshotEditorRequested(window.location.search)) return null;
   const existing = document.getElementById("tear-snapshot-editor");
   if (existing !== null) return existing;
@@ -219,9 +219,9 @@ export function installStateForgeStudio(host: StateForgeStudioHost): HTMLElement
     background: "rgba(5, 10, 18, .98)",
   });
   const parts = createElements(panel, host);
-  let evaluation: StateForgeEvaluation = evaluateStateForgeSource(parts.editor.value, host.tearSdlLibrary());
+  let evaluation: StateSetupEvaluation = evaluateStateSetupSource(parts.editor.value, host.tearSdlLibrary());
 
-  const selectedCheckpoint = (): StateForgeCheckpointItem | undefined =>
+  const selectedCheckpoint = (): StateSetupCheckpointItem | undefined =>
     host.checkpoints().find((entry) => entry.id === parts.timeline.value);
   const refreshCheckpoints = (): void => {
     const previous = parts.timeline.value;
@@ -244,7 +244,7 @@ export function installStateForgeStudio(host: StateForgeStudioHost): HTMLElement
     renderDiff(parts.diff, defaultDiff(checkpoints, parts.comparison.value, parts.timeline.value));
   };
   const validate = (): void => {
-    evaluation = evaluateStateForgeSource(parts.editor.value, host.tearSdlLibrary());
+    evaluation = evaluateStateSetupSource(parts.editor.value, host.tearSdlLibrary());
     renderReport(parts.structural, "Structural", evaluation.reports.structural);
     renderReport(parts.reachability, "Reachability", evaluation.reports.reachability);
     renderReport(parts.plausibility, "Population plausibility", evaluation.reports.populationPlausibility);

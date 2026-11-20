@@ -175,7 +175,7 @@
       "src/tearbench/canonical-scenarios.json",
       "src/tearbench/evidence-routes.json",
       "tests/browser-c40-source-void-ghost-seek.js",
-      "tests/browser-c40-state-forge-source-void.js",
+      "tests/browser-c40-state-setup-source-void.js",
       "tests/unit/c40-source-void-evidence-registry.test.ts"
     ],
     "scenarios": [
@@ -323,8 +323,8 @@
       "src/tearbench/state-codecs.ts",
       "src/tearbench/contracts.ts",
       "src/tearbench/invariants.ts",
-      "src/tearbench/state-forge-factories.ts",
-      "src/tearbench/state-forge-live-compiler.ts",
+      "src/tearbench/state-setup-factories.ts",
+      "src/tearbench/state-setup-live-compiler.ts",
       "src/tearbench/live-runtime-environment.ts",
       "src/tearbench/live-runtime-snapshots.ts",
       "src/tearbench/production-replay-composition.ts",
@@ -366,7 +366,7 @@
       "src/gameplay/runtime/gameplay-events.ts",
       "src/tearbench/gameplay-causal-events.ts",
       "src/tearbench/registries.ts",
-      "src/tearbench/state-forge-factories.ts",
+      "src/tearbench/state-setup-factories.ts",
       "src/tearbench/canonical-scenarios.json",
       "src/tearbench/canonical-scenarios.ts",
       "src/tearbench/validation.ts",
@@ -413,7 +413,7 @@
       "src/gameplay/environment/bloom-well.ts",
       "src/gameplay/environment/environment-runtime.ts",
       "src/presentation/environment/",
-      "src/tearbench/state-forge-factories.ts",
+      "src/tearbench/state-setup-factories.ts",
       "src/tearbench/live-runtime-environment.ts",
       "src/tearbench/canonical-scenarios.json",
       "tests/browser-current-gameplay-scenarios.js",
@@ -454,7 +454,7 @@
       "src/gameplay/entities/rootbinder-runtime.ts",
       "src/gameplay/entities/enemy-types/special-enemies.ts",
       "src/gameplay/environment/",
-      "src/tearbench/state-forge-factories.ts",
+      "src/tearbench/state-setup-factories.ts",
       "src/tearbench/live-runtime-environment.ts",
       "src/tearbench/live-runtime-contracts.ts",
       "src/tearbench/registries.ts",
@@ -630,7 +630,7 @@
       "src/presentation/enemies/figures/",
       "src/presentation/environment/verdant-environment-presentation.ts",
       "src/tearbench/rootbound-graft-anchor-forge.ts",
-      "src/tearbench/state-forge-factories.ts",
+      "src/tearbench/state-setup-factories.ts",
       "src/tearbench/live-runtime-environment.ts",
       "src/tearbench/live-runtime-contracts.ts",
       "src/tearbench/registries.ts",
@@ -691,7 +691,7 @@
       "src/tearbench/progression-ledger.ts",
       "src/tearbench/verdant-stage-engineering-scenario.ts",
       "tests/unit/campaign-stage-curve.test.ts",
-      "tests/unit/verdant-stage-state-forge.test.ts",
+      "tests/unit/verdant-stage-state-setup.test.ts",
       "tests/unit/verdant-wave-composition.test.ts",
       "tests/unit/verdant-wave-economy.test.ts",
       "tests/browser-progression-journeys.js"
@@ -715,7 +715,7 @@
       "test-standalone"
     ],
     "authorityCommands": [
-      "pnpm exec vitest run tests/unit/campaign-stage-curve.test.ts tests/unit/verdant-stage-state-forge.test.ts tests/unit/verdant-wave-composition.test.ts tests/unit/verdant-wave-economy.test.ts"
+      "pnpm exec vitest run tests/unit/campaign-stage-curve.test.ts tests/unit/verdant-stage-state-setup.test.ts tests/unit/verdant-wave-composition.test.ts tests/unit/verdant-wave-economy.test.ts"
     ],
     "journeyCommands": [
       "node tests/browser-progression-journeys.js"
@@ -743,16 +743,16 @@
       "src/tearbench/canonical-structured-assertions.ts",
       "src/tearbench/canonical-scenarios.ts",
       "src/tearbench/canonical-scenarios.json",
-      "src/tearbench/state-forge-live-compiler.ts",
-      "src/tearbench/live-state-forge-scenario-launch.ts",
-      "src/app/engineering/state-forge-adapter.ts",
+      "src/tearbench/state-setup-live-compiler.ts",
+      "src/tearbench/live-state-setup-scenario-launch.ts",
+      "src/app/engineering/state-setup-adapter.ts",
       "src/app/world/world-entity-factory.ts",
       "src/gameplay/runtime/tear-world-legacy-entity-construction.ts",
-      "src/tearbench/pale-state-forge-scenarios.ts",
+      "src/tearbench/pale-state-setup-scenarios.ts",
       "tests/unit/pale-aurora-definitions.test.ts",
       "tests/unit/pale-aurora-runtime.test.ts",
       "tests/unit/rimehound.test.ts",
-      "tests/unit/pale-state-forge-scenarios.test.ts"
+      "tests/unit/pale-state-setup-scenarios.test.ts"
     ],
     "requiredScenarios": [
       "pale-aurora-track-behavior",
@@ -778,7 +778,7 @@
       "test-standalone"
     ],
     "authorityCommands": [
-      "pnpm exec vitest run tests/unit/pale-aurora-definitions.test.ts tests/unit/pale-aurora-runtime.test.ts tests/unit/rimehound.test.ts tests/unit/pale-state-forge-scenarios.test.ts"
+      "pnpm exec vitest run tests/unit/pale-aurora-definitions.test.ts tests/unit/pale-aurora-runtime.test.ts tests/unit/rimehound.test.ts tests/unit/pale-state-setup-scenarios.test.ts"
     ],
     "journeyCommands": [
       "node tests/browser-pale-rimehound.js",
@@ -805,12 +805,12 @@
       "src/tearbench/canonical-structured-assertions.ts",
       "src/tearbench/canonical-scenarios.ts",
       "src/tearbench/canonical-scenarios.json",
-      "src/tearbench/state-forge-live-compiler.ts",
-      "src/tearbench/live-state-forge-scenario-launch.ts",
-      "src/app/engineering/state-forge-adapter.ts",
+      "src/tearbench/state-setup-live-compiler.ts",
+      "src/tearbench/live-state-setup-scenario-launch.ts",
+      "src/app/engineering/state-setup-adapter.ts",
       "src/app/world/world-entity-factory.ts",
       "src/gameplay/runtime/tear-world-legacy-entity-construction.ts",
-      "src/tearbench/pale-state-forge-scenarios.ts",
+      "src/tearbench/pale-state-setup-scenarios.ts",
       "tests/unit/pale-variant-selection.test.ts",
       "tests/browser-pale-variants.js"
     ],
@@ -843,7 +843,7 @@
       "test-standalone"
     ],
     "authorityCommands": [
-      "pnpm exec vitest run tests/unit/pale-variant-selection.test.ts tests/unit/pale-state-forge-scenarios.test.ts tests/unit/live-codec-validation.test.ts tests/unit/game-reference.test.ts"
+      "pnpm exec vitest run tests/unit/pale-variant-selection.test.ts tests/unit/pale-state-setup-scenarios.test.ts tests/unit/live-codec-validation.test.ts tests/unit/game-reference.test.ts"
     ],
     "journeyCommands": [
       "node tests/browser-pale-variants.js"
@@ -874,16 +874,16 @@
       "src/tearbench/canonical-structured-assertions.ts",
       "src/tearbench/canonical-scenarios.ts",
       "src/tearbench/canonical-scenarios.json",
-      "src/tearbench/state-forge-live-compiler.ts",
-      "src/tearbench/live-state-forge-scenario-launch.ts",
-      "src/app/engineering/state-forge-adapter.ts",
+      "src/tearbench/state-setup-live-compiler.ts",
+      "src/tearbench/live-state-setup-scenario-launch.ts",
+      "src/app/engineering/state-setup-adapter.ts",
       "src/app/world/world-entity-factory.ts",
       "src/gameplay/runtime/tear-world-legacy-entity-construction.ts",
-      "src/tearbench/pale-state-forge-scenarios.ts",
+      "src/tearbench/pale-state-setup-scenarios.ts",
       "tests/unit/white-hart-foundation.test.ts",
       "tests/unit/white-hart-phases.test.ts",
       "tests/unit/white-hart-route-runtime.test.ts",
-      "tests/unit/white-hart-state-forge.test.ts",
+      "tests/unit/white-hart-state-setup.test.ts",
       "tests/browser-pale-white-hart-phases.js"
     ],
     "scenarios": [
@@ -909,7 +909,7 @@
       "test-standalone"
     ],
     "authorityCommands": [
-      "pnpm exec vitest run tests/unit/white-hart-foundation.test.ts tests/unit/white-hart-phases.test.ts tests/unit/white-hart-route-runtime.test.ts tests/unit/white-hart-state-forge.test.ts tests/unit/pale-state-forge-scenarios.test.ts"
+      "pnpm exec vitest run tests/unit/white-hart-foundation.test.ts tests/unit/white-hart-phases.test.ts tests/unit/white-hart-route-runtime.test.ts tests/unit/white-hart-state-setup.test.ts tests/unit/pale-state-setup-scenarios.test.ts"
     ],
     "journeyCommands": [
       "node tests/browser-pale-white-hart-phases.js"
@@ -948,15 +948,15 @@
       "src/tearbench/canonical-structured-assertions.ts",
       "src/tearbench/canonical-scenarios.ts",
       "src/tearbench/canonical-scenarios.json",
-      "src/tearbench/state-forge-live-compiler.ts",
-      "src/tearbench/live-state-forge-scenario-launch.ts",
-      "src/app/engineering/state-forge-adapter.ts",
+      "src/tearbench/state-setup-live-compiler.ts",
+      "src/tearbench/live-state-setup-scenario-launch.ts",
+      "src/app/engineering/state-setup-adapter.ts",
       "src/app/world/world-entity-factory.ts",
       "src/gameplay/runtime/tear-world-legacy-entity-construction.ts",
       "src/tearbench/pale-stage-engineering-scenario.ts",
       "src/game-reference/",
       "tests/unit/pale-wave-composition.test.ts",
-      "tests/unit/pale-stage-state-forge.test.ts",
+      "tests/unit/pale-stage-state-setup.test.ts",
       "tests/unit/game-reference.test.ts"
     ],
     "scenarios": [
@@ -990,7 +990,7 @@
       "test-standalone"
     ],
     "authorityCommands": [
-      "pnpm exec vitest run tests/unit/game-reference.test.ts tests/unit/enemy-reference.test.ts tests/unit/boss-reference.test.ts tests/unit/pale-wave-composition.test.ts tests/unit/pale-stage-state-forge.test.ts tests/unit/tearbench-current-game-authority.test.ts"
+      "pnpm exec vitest run tests/unit/game-reference.test.ts tests/unit/enemy-reference.test.ts tests/unit/boss-reference.test.ts tests/unit/pale-wave-composition.test.ts tests/unit/pale-stage-state-setup.test.ts tests/unit/tearbench-current-game-authority.test.ts"
     ],
     "journeyCommands": [
       "node tests/browser-pale-presentation.js",
@@ -1189,7 +1189,7 @@
       "src/app/shell/game-runtime.ts",
       "src/app/combat/live-combat-action-ports.ts",
       "src/tearbench/gameplay-causal-events.ts",
-      "src/tearbench/state-forge-live-compiler.ts",
+      "src/tearbench/state-setup-live-compiler.ts",
       "src/tearbench/canonical-scenarios.json",
       "src/tearbench/evidence-routes.json",
       "tests/browser-c40-chainblade-bind-yank-ghost-seek.js",
@@ -1220,7 +1220,7 @@
       "src/app/shell/game-runtime.ts",
       "src/app/combat/live-combat-action-ports.ts",
       "src/tearbench/gameplay-causal-events.ts",
-      "src/tearbench/state-forge-live-compiler.ts",
+      "src/tearbench/state-setup-live-compiler.ts",
       "src/tearbench/canonical-scenarios.json",
       "src/tearbench/evidence-routes.json",
       "tests/browser-c40-hammer-meteor-ghost-seek.js",
@@ -1251,7 +1251,7 @@
       "src/app/shell/game-runtime.ts",
       "src/app/combat/live-combat-action-ports.ts",
       "src/tearbench/gameplay-causal-events.ts",
-      "src/tearbench/state-forge-live-compiler.ts",
+      "src/tearbench/state-setup-live-compiler.ts",
       "src/tearbench/canonical-scenarios.json",
       "src/tearbench/evidence-routes.json",
       "tests/browser-c40-greatsword-wheelcut-ghost-seek.js",
@@ -1283,7 +1283,7 @@
       "src/app/shell/game-runtime.ts",
       "src/app/combat/live-combat-action-ports.ts",
       "src/tearbench/gameplay-causal-events.ts",
-      "src/tearbench/state-forge-live-compiler.ts",
+      "src/tearbench/state-setup-live-compiler.ts",
       "src/tearbench/canonical-scenarios.json",
       "src/tearbench/evidence-routes.json",
       "tests/browser-c40-sword-crosscut-ghost-seek.js",
@@ -1314,7 +1314,7 @@
       "src/app/shell/game-runtime.ts",
       "src/app/combat/live-combat-action-ports.ts",
       "src/tearbench/gameplay-causal-events.ts",
-      "src/tearbench/state-forge-live-compiler.ts",
+      "src/tearbench/state-setup-live-compiler.ts",
       "src/tearbench/canonical-scenarios.json",
       "src/tearbench/evidence-routes.json",
       "tests/browser-c40-riftlock-loose-cannon-ghost-seek.js",

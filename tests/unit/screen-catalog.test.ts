@@ -20,7 +20,7 @@ const listed = (predicate: (screen: string) => boolean): AppScreen[] => APP_SCRE
 
 describe("screen catalog", () => {
   it("the restore and frame-coordinator screen guard accepts every application screen", () => {
-    // State Forge restore (src/app/engineering/live-state-forge-assembly.ts)
+    // State Setup restore (src/app/engineering/live-state-setup-assembly.ts)
     // rejected a screen this guard did not accept with "invalid restored
     // screen", and the frame coordinator dropped it. The guard used to omit
     // the six engineering screens.

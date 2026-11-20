@@ -203,7 +203,7 @@ function portableUpgradeChoice(id: string): Readonly<Record<string, unknown>> {
 }
 
 /**
- * Builds the synchronous post-selection/pre-`start-next-wave` State Forge
+ * Builds the synchronous post-selection/pre-`start-next-wave` State Setup
  * position. It never executes wave 60 and never mutates the captured source.
  */
 export function createCampaignWave59RewardFrontier(

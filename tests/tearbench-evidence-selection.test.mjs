@@ -391,51 +391,51 @@ test("canonical selection rejects exact start metadata instead of silently dropp
     });
     const result = rejected(["src/gameplay/stages.ts"], { catalog: surgical });
     assert.notEqual(result.status, 0);
-    assert.match(`${result.stderr}\n${result.stdout}`, /exact .* state; use State Forge/u);
+    assert.match(`${result.stderr}\n${result.stdout}`, /exact .* state; use State Setup/u);
   }
 });
 
-test("Pale State Forge selection rejects detached descriptors, false claims, and ad hoc route proof", () => {
+test("Pale State Setup selection rejects detached descriptors, false claims, and ad hoc route proof", () => {
   const mutations = [
     [
       "pale-missing-descriptor",
       (entries) => {
-        delete entries.find((entry) => entry.id === "pale-aurora-track-behavior").stateForge;
+        delete entries.find((entry) => entry.id === "pale-aurora-track-behavior").stateSetup;
       },
-      /exact .* state; use State Forge/u,
+      /exact .* state; use State Setup/u,
     ],
     [
       "pale-plain-live-substitute",
       (entries) => {
         const entry = entries.find((candidate) => candidate.id === "pale-rime-runner-behavior");
-        delete entry.stateForge;
+        delete entry.stateSetup;
         entry.start.stage = undefined;
         entry.start.wave = undefined;
         entry.evidence.command = "node tests/browser-pale-variants.js";
       },
-      /source-owned gameplay subject|unknown current gameplay subject|State Forge/u,
+      /source-owned gameplay subject|unknown current gameplay subject|State Setup/u,
     ],
     [
       "pale-false-backend",
       (entries) => {
         entries.find((entry) => entry.id === "pale-prism-seer-behavior").backends = ["headless"];
       },
-      /invalid State Forge descriptor|live-only/u,
+      /invalid State Setup descriptor|live-only/u,
     ],
     [
       "pale-false-publication",
       (entries) => {
         entries.find((entry) => entry.id === "pale-snowfall-kite-behavior").tags.push("published");
       },
-      /invalid State Forge publication/u,
+      /invalid State Setup publication/u,
     ],
     [
       "pale-wrong-descriptor",
       (entries) => {
-        entries.find((entry) => entry.id === "pale-white-hart-phase-2").stateForge.documentId =
+        entries.find((entry) => entry.id === "pale-white-hart-phase-2").stateSetup.documentId =
           "pale-white-hart-phase-3";
       },
-      /invalid State Forge descriptor/u,
+      /invalid State Setup descriptor/u,
     ],
     [
       "pale-unknown-subject",
@@ -553,7 +553,7 @@ test("published stages select exactly six live boss encounters without preview l
 test("Pale authorities select natural White Hart plus surgical and browser evidence", () => {
   const aurora = select(["src/gameplay/environment/aurora-track-runtime.ts"]);
   assert.ok(aurora.routes.includes("pale-aurora-rimehound"));
-  assert.ok(aurora.authorityCommands.some((command) => command.includes("pale-state-forge-scenarios.test.ts")));
+  assert.ok(aurora.authorityCommands.some((command) => command.includes("pale-state-setup-scenarios.test.ts")));
   assert.ok(aurora.journeyCommands.includes("node tests/browser-pale-presentation.js"));
 
   const rimehound = select(["src/gameplay/entities/enemy-types/rimehound.ts"]);

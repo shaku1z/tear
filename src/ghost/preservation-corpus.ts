@@ -2,13 +2,13 @@ import { stableVerificationHash } from "../domain/hash";
 import { GhostCapsuleReader } from "./capsule-reader";
 import {
   GhostLocalVault,
-  GhostStreamingRecorder,
   createMemoryGhostVaultBackend,
   ghostRootIntegrity,
   migrateGhostCapsuleManifestV1,
   parseGhostCapsuleManifest,
 } from "./capsule-vault";
 import { mapGhostCapsuleToReplayEnvelope } from "./capsule-replay-envelope";
+import { GhostStreamingRecorder } from "./streaming-recorder";
 import { assessGhostReplayAdmission } from "./replay-admission";
 
 export type GhostPreservationOutcome = "exact" | "migrated" | "visual-only" | "unsupported" | "rejected";
