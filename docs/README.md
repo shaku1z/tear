@@ -14,6 +14,7 @@ owning test/script references in one reviewable transaction.
 | Pitfalls and the guard behind each rule | [PITFALLS.md](PITFALLS.md) | `tests/unit/pitfall-guards.test.mjs`; [AGENTS.md](../AGENTS.md) "Known traps" |
 | Repository layout, generated files and size caps | [REPOSITORY_MAP.md](REPOSITORY_MAP.md) | `config/size-caps.json`; `scripts/check-repository.mjs` (run by `check:docs`) |
 | What a build promises about earlier releases' saves and replays | [RELEASE_COMPATIBILITY.md](RELEASE_COMPATIBILITY.md) | `tests/contract/release-compatibility.test.ts`; `tests/fixtures/releases/` |
+| TearBench, the scenario runner: what a scenario is, how to run and add one | [TEARBENCH.md](TEARBENCH.md) | `src/tearbench/canonical-scenarios.json` |
 | How changed files select evidence, and unrouted paths | [CHANGE_IMPACT.md](CHANGE_IMPACT.md) | `config/change-impact-defaults.json`; `tests/unit/change-impact.test.mjs` |
 | Developer orientation and routine commands | [README.md](../README.md) | [CONTRIBUTING.md](../CONTRIBUTING.md); `package.json` scripts |
 | AI agent working guide | [AGENTS.md](../AGENTS.md) | [CLAUDE.md](../CLAUDE.md); `.agents/skills/`; the parent-directory `AGENTS.md` and the governance skill remain authoritative |

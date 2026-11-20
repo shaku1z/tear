@@ -112,9 +112,9 @@
     {
       "id": "playtest-tool",
       "name": "Playtest tool",
-      "state": "Stage 2 under way: stage 1 is done (pnpm playtest bosses and sweep); pnpm playtest waves opens any Adventure wave directly and prints a row per wave of a stage",
+      "state": "Stage 2 under way: stage 1 is done (pnpm playtest bosses and sweep); pnpm playtest waves opens any Adventure wave directly, runs plays whole runs from wave 1, and enemies meets each enemy kind alone",
       "summary": "One command, pnpm playtest, that plays the game headless with scripted players on fixed seeds and reports clear rates, time to kill, damage taken and differences between builds. It is built from the working parts of TearBench and the scripted player and replaces both names. Verified on 2026-11-16: the scripted player runs headless at 13 to 15 times real time and the same seed reproduces exactly.",
-      "next": "pnpm playtest runs (full runs: where they end, time and health cost per wave), then the enemies report, the coverage list and --compare.",
+      "next": "The coverage list (content that never appeared in any report), then --compare.",
       "owner_action": "",
       "evidence": [
         "plans/active/PLAYTEST_TOOL_PLAN.md"

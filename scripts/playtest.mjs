@@ -4,6 +4,7 @@
 // `pnpm playtest waves --stage <id>` plays the waves of an Adventure stage, each opened directly, and prints a
 // row per wave.
 // `pnpm playtest runs` plays whole runs from wave 1 in each mode and prints where they end and what each wave costs.
+// `pnpm playtest enemies` puts each enemy kind alone against the player and prints a row per kind.
 import { spawn } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
@@ -20,10 +21,13 @@ const FIGHTS_PER_JOB = 10;
 const TABLES_UP_TO = 30;
 /** Game seconds a run may take before it is stopped: 30 minutes, longer than the scripted player lasts. */
 const RUN_SECONDS = 1800;
+/** Game seconds a meeting with one kind of enemy may take before it is stopped. */
+const ENEMY_SECONDS = 60;
 const USAGE = `Usage: pnpm playtest bosses [options]
        pnpm playtest sweep [options]
        pnpm playtest waves --stage <ids> [options]
        pnpm playtest runs [options]
+       pnpm playtest enemies [options]
 
 Plays boss fights on the real game, headless, and prints a table per fight and a summary.
 "sweep" plays every weapon, seeds 1 and 2 and Easy and Normal, and prints the summary.
@@ -56,6 +60,13 @@ health each wave costs.
   --mode <ids>         comma list of campaign, endless, gauntlet; default all three
   --difficulty defaults to easy,normal,hard; --weapon to all five; --seed to 1,2,3; --player to scripted;
   --seconds to ${String(RUN_SECONDS)} (queue the default set: pnpm queue -- pnpm playtest runs)
+
+"enemies" puts enemies of one kind in the game's empty arena against the player, at wave 1 strength with no
+upgrades, and prints a row per kind: how the meetings end, time to clear, health lost and what it is lost to.
+  --enemy <ids>        comma list of enemy kinds; default every enemy the published game has
+  --count <n>          comma list of how many of the kind at once; default 1,3
+  --difficulty, --weapon, --jobs, --json as above; --seed defaults to 1,2,3; --player to scripted;
+  --seconds to ${String(ENEMY_SECONDS)}
 `;
 /**
  * The plan asks a sweep for four seeds in under 5 minutes on 6 jobs. Four took 498 s (1,680 fights, 2026-11-19), so
@@ -110,7 +121,7 @@ function playShare(command, given, index, of, file) {
 }
 
 const [command, ...rest] = process.argv.slice(2);
-if (!["bosses", "sweep", "waves", "runs"].includes(command)) {
+if (!["bosses", "sweep", "waves", "runs", "enemies"].includes(command)) {
   process.stdout.write(USAGE);
   process.exit(command === undefined || command === "help" ? 0 : 1);
 }
@@ -215,6 +226,27 @@ try {
         admit: report.admitRunReport,
         play: report.playRunReport,
         print: (results) => process.stdout.write(report.formatRunReport(results)),
+      };
+    },
+    enemies: async () => {
+      const report = await load("enemy-report");
+      const play = await load("enemy-play");
+      return {
+        noun: "meetings",
+        shows: ["summary"],
+        shown: () => "summary",
+        request: {
+          enemies: list(given.get("enemy"), play.REPORT_ENEMIES),
+          counts: given.has("count") ? wholeNumbers("count") : [1, 3],
+          difficulties: list(given.get("difficulty"), ["normal"]),
+          weapons: list(given.get("weapon"), ["sword"]),
+          seeds: list(given.get("seed"), ["1", "2", "3"]),
+          players: list(given.get("player"), ["scripted"]),
+          maxTicks: given.has("seconds") ? maxTicks : ENEMY_SECONDS * 120,
+        },
+        admit: report.admitEnemyReport,
+        play: report.playEnemyReport,
+        print: (results) => process.stdout.write(report.formatEnemyReport(results)),
       };
     },
   };
