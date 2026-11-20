@@ -131,6 +131,7 @@ export function createSpecialEnemyTypes(dependencies: EnemyDependencies, Enemy: 
     constructor(x: number, y: number) {
       super(x, y, CONFIG.wraith);
       this.kind = "wraith";
+      this.flies = true;
       this.color = CONFIG.colors.wraith;
       this.immuneToBlade = true;
       this.phase = GAME_RANDOM.next() * 6;
@@ -170,6 +171,10 @@ export function createSpecialEnemyTypes(dependencies: EnemyDependencies, Enemy: 
       this.copyT = 1.4 + GAME_RANDOM.next();
       this.moves = ["charger"]; // overwritten at spawn from the wave roster
       this.curMove = "charger";
+    }
+    override holdAttacks(seconds: number) {
+      super.holdAttacks(seconds);
+      this.copyT = Math.max(this.copyT, seconds);
     }
     update(dt: number, platforms: readonly EnemyPlatform[], player: EnemyPlayerPort, projectiles: EnemyProjectile[]) {
       this.tickTimers(dt);

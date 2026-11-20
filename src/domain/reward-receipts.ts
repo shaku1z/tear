@@ -1,4 +1,6 @@
 /** Data-only, versioned receipt projections shared by profile and currency owners. */
+import { requireRecord } from "./records";
+
 /** A backing-store acknowledgement; memory fallback is never a durable commit. */
 export type StorageAcknowledgement<T> =
   Readonly<{ status: "committed"; value: T }> | Readonly<{ status: "unavailable" | "unknown"; reason: string }>;
@@ -39,11 +41,7 @@ export interface CurrencyGrantLedger {
   floor: number;
   receipts: Record<string, number>;
 }
-const object = (value: unknown): Record<string, unknown> => {
-  if (typeof value !== "object" || value === null || Array.isArray(value))
-    throw new TypeError("Invalid reward ledger object");
-  return value as Record<string, unknown>;
-};
+const object = (value: unknown): Record<string, unknown> => requireRecord(value, "Invalid reward ledger object");
 const isAmount = (value: unknown): value is number =>
   typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 const amount = (value: unknown): number => {

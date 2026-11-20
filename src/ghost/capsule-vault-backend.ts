@@ -1,3 +1,4 @@
+import { isRecord } from "../domain/records";
 import { stableVerificationHash } from "../domain/hash";
 import { encodeGhostChunkPayload, type GhostChunkEncoding } from "./capsule-codec";
 
@@ -184,14 +185,10 @@ export interface GhostVaultWrite {
   readonly value?: string;
 }
 
-function dataRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 export function ghostVaultJournalLease(value: string | undefined): string | undefined {
   try {
     const parsed: unknown = value === undefined ? undefined : JSON.parse(value);
-    return dataRecord(parsed) && typeof parsed.leaseId === "string" ? parsed.leaseId : undefined;
+    return isRecord(parsed) && typeof parsed.leaseId === "string" ? parsed.leaseId : undefined;
   } catch {
     return undefined;
   }

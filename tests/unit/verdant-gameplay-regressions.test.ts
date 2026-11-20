@@ -12,8 +12,8 @@ import {
   captureProductionReplayCheckpoint,
   createProductionGhostReplayComposition,
 } from "../../src/tearbench/production-replay-composition";
-import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-forge-live-compiler";
-import { forgeBloomWellCycleState } from "../../src/tearbench/state-forge-factories";
+import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-setup-live-compiler";
+import { forgeBloomWellCycleState } from "../../src/tearbench/state-setup-factories";
 import { resolveTearSdl, type TearSdlDocumentV1 } from "../../src/tearbench/tearsdl";
 
 type Harness = ReturnType<typeof createEnemyHarness>;

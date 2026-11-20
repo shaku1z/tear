@@ -1,3 +1,4 @@
+import { requireRecord } from "../domain/records";
 import { stableVerificationHash } from "../domain/hash";
 import { RunLifecycleController } from "../gameplay/run/lifecycle";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../gameplay/runtime/cinematic-director";
@@ -121,10 +122,7 @@ export function createCampaignVictoryOrigin(): CampaignVictoryOriginCertificate 
 type MutableRecord = Record<string, unknown>;
 
 function record(value: unknown, label: string): MutableRecord {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new TypeError(`${label} must be an object`);
-  }
-  return value as MutableRecord;
+  return requireRecord(value, `${label} must be an object`);
 }
 
 function certifyFrontierInput(certificate: CampaignVictoryOriginCertificate): void {
@@ -205,7 +203,7 @@ function portableUpgradeChoice(id: string): Readonly<Record<string, unknown>> {
 }
 
 /**
- * Builds the synchronous post-selection/pre-`start-next-wave` State Forge
+ * Builds the synchronous post-selection/pre-`start-next-wave` State Setup
  * position. It never executes wave 60 and never mutates the captured source.
  */
 export function createCampaignWave59RewardFrontier(

@@ -78,6 +78,8 @@ export function createEnemyBase(dependencies: EnemyDependencies, bossRuntime: Bo
     auraHaste: number;
     tetherDR: number;
     anchored: boolean;
+    /** Keeps its own height in the air: a lift leaves it alone. */
+    flies = false;
     buffs: string[];
     immuneToBlade: boolean;
     bleedStacks: number;
@@ -565,8 +567,19 @@ export function createEnemyBase(dependencies: EnemyDependencies, bossRuntime: Bo
       return p;
     }
 
+    /** Seconds left in which this enemy may move but not attack or hurt by touch; set where it spawns. */
+    attackHold = 0;
+    /** Keeps every clock that starts an attack at least `seconds` away. A class with its own clock adds it. */
+    holdAttacks(seconds: number) {
+      this.atkCd = Math.max(this.atkCd, seconds);
+    }
+
     tickTimers(dt: number) {
       this.aliveT += dt;
+      if (this.attackHold > 0) {
+        this.holdAttacks(this.attackHold);
+        this.attackHold = Math.max(0, this.attackHold - dt);
+      }
       if (this.hitCd > 0) this.hitCd -= dt;
       if (this.flash > 0) this.flash -= dt;
       if (this.stun > 0) this.stun -= dt;

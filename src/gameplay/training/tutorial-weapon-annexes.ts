@@ -1,5 +1,8 @@
-import type { WeaponId } from "../weapon-selection";
+import type { PromptAction } from "../../domain/prompt-vocabulary";
+import { WEAPON_IDS, type WeaponId } from "../weapon-selection";
+import { getWeapon, type WeaponDrillMove } from "../weapons";
 import type { TutorialIntent, TutorialLesson, TutorialUpdateSnapshot } from "./tutorial-controller";
+import { requireRecord } from "../../domain/records";
 
 export interface TutorialWeaponAnnexState {
   readonly id: WeaponId;
@@ -8,65 +11,97 @@ export interface TutorialWeaponAnnexState {
   pendingEvidence: boolean;
 }
 
-/** Each step names an applied production effect, never an input or a visual flag. */
-export const TUTORIAL_WEAPON_ANNEXES = [
-  {
-    id: "sword",
-    title: "SWORD",
+/**
+ * Where and how each weapon is drilled. Its steps are the weapon's own `drillMoves` (one step per
+ * move, matched on the effects the weapon reports, never an input or a visual flag), with one
+ * instruction per step here and the controls the drill prompts. A new weapon does not compile
+ * until it has its row.
+ */
+const ANNEX_ROWS = {
+  sword: {
     arena: "launch-bay",
-    effects: [["reversal"], ["launch", "updraft"]],
+    controls: ["swing", "swing-up"],
     instructions: [
       "Cut through the target, leave its line, then reverse through it with a new swing to earn REVERSAL.",
       "Now make a fresh upward launch through the target. Precision opens the next route.",
     ],
   },
-  {
-    id: "hammer",
-    title: "HAMMER",
+  hammer: {
     arena: "drop-well",
-    effects: [["slam", "superslam", "spike"], ["break"]],
+    controls: ["jump", "swing-down"],
     instructions: [
       "Take height and drive the Hammer down through the target for a real airborne slam.",
       "Commit another heavy strike. Build the target's Break meter until BREAK actually triggers.",
     ],
   },
-  {
-    id: "greatsword",
-    title: "GREATSWORD",
+  greatsword: {
     arena: "throw-lane",
-    effects: [["cleave"], ["wheelCut", "wheelReturn"]],
+    controls: ["swing", "throw"],
     instructions: [
       "Carry a fast, clean Greatsword edge through the target to trigger CLEAVE.",
       "Throw the spinning Wheel Cut through the target, or hit it on the return. Recall within link range.",
     ],
   },
-  {
-    id: "chainblade",
-    title: "CHAINBLADE",
+  chainblade: {
     arena: "throw-lane",
-    effects: [["hook"], ["slingRelease"]],
+    controls: ["throw", "swing", "recall"],
     instructions: [
       "Throw into the living target to establish a real Hook. An empty throw does not count.",
       "Steer the hooked target around you, then recall to release its tangential Sling. Stay within link range.",
     ],
   },
-  {
-    id: "riftlock",
-    title: "RIFTLOCK",
+  riftlock: {
     arena: "throw-lane",
-    effects: [["capture"], ["razorRoundHit", "backblastRoundHit"]],
+    controls: ["throw", "tether"],
     instructions: [
       "Throw the Loose Cannon into the living target to establish Capture.",
       "Land a real Razor Round on a target. Fire remotely, or recall and fire from the hand; empty shots give no progress.",
     ],
   },
-] as const satisfies readonly {
-  id: WeaponId;
-  title: string;
-  arena: TutorialLesson["arena"];
-  effects: readonly (readonly string[])[];
-  instructions: readonly string[];
-}[];
+} as const satisfies Record<
+  WeaponId,
+  {
+    arena: NonNullable<TutorialLesson["arena"]>;
+    controls: readonly PromptAction[];
+    instructions: readonly string[];
+  }
+>;
+
+export interface TutorialWeaponAnnex {
+  readonly id: WeaponId;
+  /** The weapon's name (`WeaponDefinition.name`). */
+  readonly name: string;
+  /** The name in capitals, as the Drills list shows it. */
+  readonly title: string;
+  readonly arena: NonNullable<TutorialLesson["arena"]>;
+  readonly controls: readonly PromptAction[];
+  /** The weapon's drill moves, one step each. */
+  readonly moves: readonly WeaponDrillMove[];
+  readonly instructions: readonly string[];
+}
+
+export const TUTORIAL_WEAPON_ANNEXES: readonly TutorialWeaponAnnex[] = Object.freeze(
+  WEAPON_IDS.map((id) => {
+    const weapon = getWeapon(id);
+    return { id, ...ANNEX_ROWS[id], name: weapon.name, title: weapon.name.toUpperCase(), moves: weapon.drillMoves };
+  }),
+);
+
+/**
+ * One line naming a weapon's drill moves from its definition: "Sword: Reversal and Launch." for a
+ * list, "Sword: Reversal, then Launch." for the order a drill takes them in.
+ */
+export function drillMovesLine(annex: TutorialWeaponAnnex, order: "list" | "sequence"): string {
+  const names = annex.moves.map((move) => move.name),
+    last = names.at(-1) ?? "";
+  const text =
+    order === "sequence"
+      ? names.join(", then ")
+      : names.length < 2
+        ? last
+        : `${names.slice(0, -1).join(", ")} and ${last}`;
+  return `${annex.name}: ${text}.`;
+}
 
 export function weaponAnnex(id: string) {
   return TUTORIAL_WEAPON_ANNEXES.find((annex) => annex.id === id);
@@ -78,9 +113,7 @@ export function createWeaponAnnex(id: string): TutorialWeaponAnnexState | undefi
     : { id: definition.id, weaponId: definition.id, progress: 0, pendingEvidence: false };
 }
 export function validateWeaponAnnex(value: unknown): TutorialWeaponAnnexState {
-  if (typeof value !== "object" || value === null || Array.isArray(value))
-    throw new TypeError("Invalid tutorial weapon annex");
-  const state = value as Record<string, unknown>,
+  const state = requireRecord(value, "Invalid tutorial weapon annex"),
     definition = weaponAnnex(String(state.id));
   if (
     Object.keys(state).some((key) => !["id", "weaponId", "progress", "pendingEvidence"].includes(key)) ||
@@ -89,9 +122,9 @@ export function validateWeaponAnnex(value: unknown): TutorialWeaponAnnexState {
     state.weaponId !== definition.id ||
     !Number.isInteger(state.progress) ||
     Number(state.progress) < 0 ||
-    Number(state.progress) > definition.effects.length ||
+    Number(state.progress) > definition.moves.length ||
     typeof state.pendingEvidence !== "boolean" ||
-    (state.progress === definition.effects.length && state.pendingEvidence)
+    (state.progress === definition.moves.length && state.pendingEvidence)
   )
     throw new RangeError("Invalid tutorial weapon annex progress");
   return {
@@ -103,7 +136,7 @@ export function validateWeaponAnnex(value: unknown): TutorialWeaponAnnexState {
 }
 export function recordWeaponAnnexEffect(state: TutorialWeaponAnnexState, weaponId: string, effect: string): boolean {
   const definition = weaponAnnex(state.id),
-    expected: readonly string[] = definition?.effects[state.progress] ?? [];
+    expected: readonly string[] = definition?.moves[state.progress]?.effects ?? [];
   if (weaponId !== state.weaponId || !expected.includes(effect)) return false;
   state.pendingEvidence = true;
   return true;
@@ -117,8 +150,8 @@ export function weaponAnnexLesson(state: TutorialWeaponAnnexState): TutorialLess
     arena: definition.arena,
     teachingFocus: "blade",
     dummyCount: 1,
-    progress: () => [state.progress, definition.effects.length],
-    complete: () => state.progress === definition.effects.length,
+    progress: () => [state.progress, definition.moves.length],
+    complete: () => state.progress === definition.moves.length,
   };
 }
 

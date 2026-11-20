@@ -1,7 +1,8 @@
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { GhostLocalVault, GhostStreamingRecorder } from "../../src/ghost/capsule-vault";
+import { GhostLocalVault } from "../../src/ghost/capsule-vault";
+import { GhostStreamingRecorder } from "../../src/ghost/streaming-recorder";
 import {
   GHOST_VAULT_RETIRED_KEY_PREFIXES,
   GHOST_VAULT_STORES,

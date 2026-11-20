@@ -24,12 +24,17 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
       super(x, y, CONFIG.flyer);
       this.color = CONFIG.colors.flyer;
       this.kind = "flyer";
+      this.flies = true;
       this.behavior = "swoop";
       this.state = "hover";
       this.aimTimer = this.cfg.swoopInterval * (0.5 + GAME_RANDOM.next() * 0.6);
       this.swoopT = 0;
       this.warnT = 0;
       this.diveX = null;
+    }
+    override holdAttacks(seconds: number) {
+      super.holdAttacks(seconds);
+      this.aimTimer = Math.max(this.aimTimer, seconds);
     }
 
     update(dt: number, _platforms: readonly EnemyPlatform[], player: EnemyPlayerPort) {
@@ -264,11 +269,17 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
       super(x, y, CONFIG.bomber);
       this.color = CONFIG.colors.bomber;
       this.kind = "bomber";
+      this.flies = true;
       this.behavior = "lob";
       this.lobTimer = CONFIG.bomber.lobInterval * (0.5 + GAME_RANDOM.next() * 0.7);
       this.mineTimer = CONFIG.bomber.mineInterval * (0.6 + GAME_RANDOM.next() * 0.6);
       this.bombsLeft = 0;
       this.burstT = 0;
+    }
+    override holdAttacks(seconds: number) {
+      super.holdAttacks(seconds);
+      this.lobTimer = Math.max(this.lobTimer, seconds);
+      this.mineTimer = Math.max(this.mineTimer, seconds);
     }
 
     update(dt: number, platforms: readonly EnemyPlatform[], player: EnemyPlayerPort, projectiles: EnemyProjectile[]) {
@@ -438,6 +449,10 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
       this.color = CONFIG.colors.armored;
       this.kind = "armored";
       this.stompCd = CONFIG.armored.stompCd * 0.6;
+    }
+    override holdAttacks(seconds: number) {
+      super.holdAttacks(seconds);
+      this.stompCd = Math.max(this.stompCd, seconds);
     }
     update(dt: number, platforms: readonly EnemyPlatform[], player: EnemyPlayerPort, projectiles: EnemyProjectile[]) {
       this.tickTimers(dt);

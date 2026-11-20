@@ -13,6 +13,7 @@ import {
   type LiveInterfaceCompositionOptions,
 } from "../../src/app/interface/interface-composition";
 import * as pipelineModule from "../../src/presentation/render-pipeline";
+import * as rotateGateModule from "../../src/presentation/rotate-gate";
 import * as buttonLayerModule from "../../src/presentation/screens/button-layer";
 import * as uiRuntimeModule from "../../src/app/interface/ui-runtime-controller";
 
@@ -123,7 +124,7 @@ describe("live presentation host", () => {
     const screen = vi.fn(),
       buttons = vi.fn(),
       badge = vi.fn(),
-      rotation = vi.fn();
+      rotation = vi.spyOn(rotateGateModule, "drawRotateGate").mockImplementation(() => undefined);
     vi.spyOn(hostModule, "createLivePresentationHost").mockImplementation((options) => {
       const host = { screenRectangle: () => ({ x: 0, y: 0, w: 1600, h: 900 }), drawButtons: buttons };
       ports = options.framePorts(host as never);
@@ -131,10 +132,10 @@ describe("live presentation host", () => {
     });
     try {
       compositionModule.createLivePresentationFrameHost(
-        { timeSeconds: () => 1 } as never,
+        { timeSeconds: () => 1, screen: () => "mainmenu", controls: () => [] } as never,
         {
           context: { save: vi.fn(), restore: vi.fn() },
-          ui: { badge, rotateGate: rotation, t: { color: { accent: "#abc" } } },
+          ui: { badge, t: { color: { accent: "#abc" } } },
           capturePolicy: () => ({ ui }),
           controller: () => ({ active: true, toastSeconds: 1, toastText: "Connected" }),
           width: 1600,
@@ -189,6 +190,7 @@ describe("live presentation host", () => {
       menuNext: () => false,
       confirmPressed: () => false,
       confirmHeld: () => false,
+      menuInputHeld: () => false,
       backPressed: () => false,
       takeClick: () => null,
     };
@@ -212,6 +214,7 @@ describe("live presentation host", () => {
         setTheme: vi.fn(),
         renderWorldLayers: screenDraw,
         renderReticle: vi.fn(),
+        renderOverlayBackdrop: vi.fn(),
         isMenuScreen: () => false,
         enterSeconds: () => 1,
         setEnterSeconds: vi.fn(),
@@ -219,6 +222,8 @@ describe("live presentation host", () => {
         setEnterAmount: vi.fn(),
         ease: (value) => value,
         resetScroll: vi.fn(),
+        setScroll: vi.fn(),
+        arrival: () => undefined,
         renderMenuBackdrop: vi.fn(),
         renderScreen: vi.fn(),
         drawButtons: vi.fn(),
@@ -227,7 +232,7 @@ describe("live presentation host", () => {
         showCanvasCursor: () => false,
         drawControllerToast: vi.fn(),
         drawRotationGate: vi.fn(),
-        firstEnabledButton: () => 0,
+        entryFocus: () => 0,
         setFocus: vi.fn(),
         updateDomHints: vi.fn(),
       }),
@@ -262,7 +267,7 @@ describe("live presentation host", () => {
     });
 
     expect(host.screenRectangle()).toEqual({ x: -10, y: -20, w: 100, h: 100 });
-    expect(host.firstEnabledButton()).toBe(0);
+    expect(host.entryFocus(undefined)).toBe(0);
     host.render();
     host.handleUi();
     host.drawButtons();
@@ -286,7 +291,7 @@ describe("live presentation host", () => {
         host.render();
         host.handleUi();
         host.drawButtons();
-        host.firstEnabledButton();
+        host.entryFocus(undefined);
       }
       expect(framePorts).toHaveBeenCalledOnce();
       expect(uiPorts).toHaveBeenCalledOnce();

@@ -5,8 +5,9 @@ import { readSourceIdentitySync } from "./scripts/release-artifact.mjs";
 import { applicationChunk } from "./scripts/application-chunks.mjs";
 import {
   DEVELOPER_ONLY_ROLE,
-  developerModulesInBundle,
-  loadDeveloperOnlyMatcher,
+  MOBILE_ONLY_ROLE,
+  roleModulesInBundle,
+  loadRoleMatcher,
 } from "./scripts/release-developer-code.mjs";
 import {
   buildTarget,
@@ -123,26 +124,46 @@ function targetDependencyBoundary(name: TargetName, target: TargetDefinition): P
   };
 }
 
-/** A release build fails when developer-only code contributes to one of its bundles. */
-function developerCodeBoundary(name: TargetName): Plugin {
-  const isDeveloperOnly = loadDeveloperOnlyMatcher();
+/** A release build fails when a module of `role` contributes code to one of its bundles. */
+function roleBoundary(name: TargetName, role: string, what: string, remedy: string): Plugin {
+  const inRole = loadRoleMatcher(role);
   return {
-    name: "tear-developer-code-boundary",
+    name: `tear-${role.slice(1).replaceAll(".", "-")}-boundary`,
     generateBundle(_options, bundle) {
       const modules = Object.values(bundle).flatMap((item) =>
         item.type === "chunk"
           ? Object.entries(item.modules).map(([id, module]) => [id, module.renderedLength] as const)
           : [],
       );
-      const found = developerModulesInBundle(modules, isDeveloperOnly);
+      const found = roleModulesInBundle(modules, inRole);
       if (found.length > 0)
         this.error(
-          `${name} release bundle contains developer-only code (${DEVELOPER_ONLY_ROLE} in config/architecture-roles.json).\n` +
-            `Load it through a dynamic import guarded by __TEAR_TEST_BUILD__ or __TEAR_ENGINEERING_SURFACES__:\n` +
+          `${name} release bundle contains ${what} (${role} in config/architecture-roles.json).\n${remedy}:\n` +
             found.join("\n"),
         );
     },
   };
+}
+
+/** A release build fails when developer-only code contributes to one of its bundles. */
+function developerCodeBoundary(name: TargetName): Plugin {
+  return roleBoundary(
+    name,
+    DEVELOPER_ONLY_ROLE,
+    "developer-only code",
+    "Load it through a dynamic import guarded by __TEAR_TEST_BUILD__ or __TEAR_ENGINEERING_SURFACES__",
+  );
+}
+
+/** A release build of a target without mobile fails when mobile-only code contributes to a bundle. */
+function mobileCodeBoundary(name: TargetName): Plugin {
+  return roleBoundary(
+    name,
+    MOBILE_ONLY_ROLE,
+    "mobile-only code",
+    "Reach it only behind __TEAR_MOBILE__ (mobile is paused, plans/MOBILE_LATER.md). A top-level call " +
+      "in the module, such as Object.freeze, keeps it in the bundle: mark the call /* @__PURE__ */",
+  );
 }
 
 export default defineConfig(({ mode, command }) => {
@@ -154,6 +175,8 @@ export default defineConfig(({ mode, command }) => {
   // The preview dev build is a target's second output (config/build-targets.json "previewDev").
   const previewDev = definition.previewDev !== null && process.env[definition.previewDev.env] === "1";
   if (previewDev && !testBuild) throw new Error("the preview dev build is a test build");
+  // Test builds and `vite dev` keep the mobile modules so they stay buildable while mobile is paused.
+  const mobile = definition.mobile || testBuild || command === "serve";
   const source = readSourceIdentitySync(process.cwd());
   // A build refuses tutorial gold that no longer matches the code; the dev server does not check.
   if (command === "build") assertTutorialGoldFresh();
@@ -166,6 +189,7 @@ export default defineConfig(({ mode, command }) => {
       cloudflareHeaders(definition, previewDev),
       targetDependencyBoundary(target, definition),
       ...(testBuild ? [] : [developerCodeBoundary(target)]),
+      ...(mobile ? [] : [mobileCodeBoundary(target)]),
       ...(previewDev ? [previewDevMarking(source.revision)] : []),
       ...(definition.serviceWorker
         ? [
@@ -243,6 +267,7 @@ export default defineConfig(({ mode, command }) => {
       // Engineering surfaces (research screens, Boss/Enemy Test, engineering
       // query routes and debug globals) exist only in test builds and `vite dev`.
       __TEAR_ENGINEERING_SURFACES__: JSON.stringify(testBuild || command === "serve"),
+      __TEAR_MOBILE__: JSON.stringify(mobile),
       __TEAR_BUILD_REVISION__: JSON.stringify(source.revision),
       __TEAR_BUILD_SOURCE_STATE__: JSON.stringify(source.state),
       __TEAR_BUILD_SOURCE_FINGERPRINT__: JSON.stringify(source.fingerprint),
@@ -256,7 +281,10 @@ export default defineConfig(({ mode, command }) => {
     // Workers never run a tutorial, so they never request that lazy chunk.
     worker: {
       format: "es",
-      plugins: () => (testBuild ? [] : [developerCodeBoundary(target)]),
+      plugins: () => [
+        ...(testBuild ? [] : [developerCodeBoundary(target)]),
+        ...(mobile ? [] : [mobileCodeBoundary(target)]),
+      ],
       rolldownOptions: {
         output: {
           codeSplitting: {

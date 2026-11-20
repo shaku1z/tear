@@ -26,9 +26,9 @@ function bossId(value: string): BossId {
 
 /**
  * The stage the wave after `wave` plays on, when the run's mode fixes that in
- * advance. Its painted background is fetched during `wave`, so a stage change
- * (after the boss, in the campaign) never waits on a download. Modes that pick
- * stages another way return undefined and load when the stage is first shown.
+ * advance. Its background is painted during `wave`, so a stage change (after
+ * the boss, in the campaign) never waits on it. Modes that pick stages another
+ * way return undefined and paint when the stage is first shown.
  */
 export function stageIdAfterWave(
   mode: RunMode,
@@ -45,6 +45,22 @@ export function stageIdAfterWave(
   // The campaign ends with its last stage; endless-like modes cycle through the stages.
   if (next.campaignStage !== null) return stages[next.campaignStage]?.id;
   return next.endlessBiome === null ? undefined : stages[next.endlessBiome % stages.length]?.id;
+}
+
+/**
+ * The stage a run opens on, when the setup screen can know it: the mode fixes
+ * it, or a boss run has a chosen boss and opens on that boss's stage. The setup
+ * screen prepares that stage before the run starts. A shuffled boss run and a
+ * Gauntlet (its trial order is drawn at the start) are not known until the run
+ * starts, so they return undefined and load when first shown.
+ */
+export function startingStageId(
+  mode: RunMode,
+  selectedBoss: string,
+  stages: readonly Readonly<{ id: string; boss?: string }>[],
+): string | undefined {
+  if (mode === "bossonly") return stages.find((stage) => stage.boss === selectedBoss)?.id;
+  return stageIdAfterWave(mode, 0, stages);
 }
 
 export interface LiveWaveCompositionOptions {

@@ -1,3 +1,4 @@
+import { isObject } from "../domain/records";
 import { readGhostBossMemory } from "./boss-memory-origin";
 import { bossMemoryReplay, verifyBossMemory } from "./boss-memory";
 import { readSeedRaceDecisions } from "./seed-race-decisions";
@@ -134,8 +135,7 @@ export function createGhostProductionReplaySession(
       capsule.tracks.events.some(
         (entry) =>
           entry.tick === snapshot.tick &&
-          typeof entry.value === "object" &&
-          entry.value !== null &&
+          isObject(entry.value) &&
           "type" in entry.value &&
           entry.value.type === "run.completed",
       )

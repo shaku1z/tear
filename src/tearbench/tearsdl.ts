@@ -1,3 +1,4 @@
+import { isRecord } from "../domain/records";
 import { stableVerificationHash } from "../domain/hash";
 import { BOSS_REGISTRY, DIFFICULTY_REGISTRY, RUN_MODE_REGISTRY, WEAPON_REGISTRY } from "./registries";
 import { bossDefinition } from "../gameplay/run/boss-definitions";
@@ -42,10 +43,6 @@ export interface TearSdlResolved {
   readonly reachability: Readonly<{ reachable: boolean; reasons: readonly string[] }>;
   readonly plausibility: Readonly<{ plausible: boolean; provisional: boolean; reasons: readonly string[] }>;
   readonly resolvedHash: string;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function assertDeclarative(value: unknown, path = "$", depth = 0): void {

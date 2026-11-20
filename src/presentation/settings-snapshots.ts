@@ -1,5 +1,60 @@
 import type { SettingRowView, SettingsScreenView } from "./screens/contracts";
 import { normalizeMusicSettingsTab } from "../audio/music/settings";
+import {
+  keyCodeLabel,
+  keyboardBindings,
+  keyboardLabel,
+  type KeyboardAction,
+  type KeyboardContext,
+} from "../domain/keyboard-bindings";
+import { REBINDABLE_ACTIONS, type RebindOutcome, type RebindableAction } from "../domain/keyboard-remap";
+
+/** The Controls tab's keyboard rows, one per rebindable action. */
+export const REBIND_ROW_LABELS: Readonly<Record<RebindableAction, string>> = Object.freeze({
+  "move-left": "Move left",
+  "move-right": "Move right",
+  "move-up": "Up / aim dash up",
+  "move-down": "Down / drop",
+  jump: "Jump",
+  dash: "Dash",
+  throw: "Throw / recall",
+  tether: "Tether",
+});
+
+/** The settings row key of an action's keyboard row. */
+export const rebindRowKey = (action: RebindableAction): string => `rebind:${action}`;
+
+const actionName = (action: KeyboardAction): string =>
+  (REBIND_ROW_LABELS as Readonly<Record<string, string>>)[action] ?? action.replaceAll("-", " ");
+
+/**
+ * Places whose keys stay reserved for them, by binding context. A refused key bound in one
+ * of these contexts is named by its place ("T is used by the Playground"), read from the
+ * binding table the place itself reads.
+ */
+const RESERVED_BY: Readonly<Partial<Record<KeyboardContext, string>>> = Object.freeze({
+  playground: "the Playground",
+  tutorial: "the Tutorial",
+  engineering: "engineering tools",
+});
+
+/** What the keyboard row says after a rebind: nothing when the key simply took. */
+export function rebindNote(action: RebindableAction, outcome: RebindOutcome, code: string): string | null {
+  const key = keyCodeLabel(code);
+  if (outcome.kind === "swapped") return `Swapped: ${actionName(outcome.with)} now uses the old key.`;
+  if (outcome.kind !== "refused") return null;
+  if (outcome.by === action) return `${key} can't be bound. Pick another key.`;
+  const place = RESERVED_BY[keyboardBindings()[outcome.by].context];
+  if (place !== undefined)
+    return `${key} is used by ${place} (${actionName(outcome.by).toLowerCase()}). Pick another key.`;
+  return `${key} already means ${actionName(outcome.by).toLowerCase()}. Pick another key.`;
+}
+
+/** The keyboard rows' live state: the row waiting for a key, and the last rebind's note. */
+export interface KeyboardRowsState {
+  readonly listening: RebindableAction | null;
+  readonly note: Readonly<{ row: string; text: string }> | null;
+}
 
 export interface ControllerPresetView {
   readonly name: string;
@@ -40,11 +95,28 @@ export interface SettingsEnvironmentSnapshot {
   readonly touch: boolean;
   readonly installAvailable: boolean;
   readonly update: Readonly<{ ready: boolean; applying: boolean }>;
+  /** The running build as the player reads it (version and short revision). */
+  readonly buildLabel: string;
   readonly presets: Readonly<Record<string, ControllerPresetView>>;
   readonly controllerGlyphs?: readonly string[];
+  /** Desktop only: the keyboard rows' state. Absent, the Controls tab has no keyboard section. */
+  readonly keyboard?: KeyboardRowsState;
 }
 export type SettingsSections = SettingsScreenView["sections"];
 const percent = (value: number): string => String(Math.round(value * 100)) + "%";
+function keyboardRows(state: KeyboardRowsState): SettingRowView[] {
+  const note = (row: string): { note?: string } => (state.note?.row === row ? { note: state.note.text } : {});
+  const rows: SettingRowView[] = REBINDABLE_ACTIONS.map((action) => ({
+    key: rebindRowKey(action),
+    label: REBIND_ROW_LABELS[action],
+    value: state.listening === action ? "PRESS A KEY" : keyboardLabel(action),
+    kind: "cycle",
+    ...(state.listening === action ? { note: "Press the new key. Esc cancels." } : note(rebindRowKey(action))),
+  }));
+  rows.push({ key: "resetKeys", label: "Reset keys", value: "DEFAULTS", kind: "cycle", ...note("resetKeys") });
+  return rows;
+}
+
 export function buildSettingsSections(
   tab: string,
   settings: SettingsSnapshotSource,
@@ -181,7 +253,10 @@ export function buildSettingsSections(
         kind: "cycle",
       },
       { key: "sens", label: "Blade / mouse sensitivity", value: settings.sens.toFixed(2), kind: "stepper" },
-      {
+    ];
+    // Touch or desktop controls is a choice only where the build has touch (mobile is paused).
+    if (__TEAR_MOBILE__)
+      rows.push({
         key: "controls",
         label: "Control mode",
         value:
@@ -189,8 +264,7 @@ export function buildSettingsSections(
             ? "AUTO (" + (environment.touch ? "TOUCH" : "DESKTOP") + ")"
             : settings.controls.toUpperCase(),
         kind: "cycle",
-      },
-    ];
+      });
     if (environment.touch)
       rows.push({
         key: "touchAim",
@@ -199,7 +273,13 @@ export function buildSettingsSections(
         kind: "cycle",
       });
     rows.push({ key: "guide", label: "Full controls", value: "VIEW GUIDE  ›", kind: "cycle" });
-    return [{ label: "CONTROLS", rows }];
+    const keyboard = environment.touch ? undefined : environment.keyboard;
+    return keyboard === undefined
+      ? [{ label: "CONTROLS", rows }]
+      : [
+          { label: "CONTROLS", rows },
+          { label: "KEYBOARD", rows: keyboardRows(keyboard) },
+        ];
   }
   const rows: SettingRowView[] = [
     {
@@ -223,5 +303,7 @@ export function buildSettingsSections(
       kind: "cycle",
       enabled: !environment.update.applying,
     });
+  // Last, so it reads as the footer of the list: what a player quotes when they report a problem.
+  rows.push({ key: "version", label: "Version", value: environment.buildLabel, kind: "info" });
   return [{ label: "GENERAL", rows }];
 }

@@ -48,6 +48,7 @@ import type { StyleAchievementPersistence } from "../progress/style-achievement-
 import type { PlatformBootstrapPersistence } from "../progress/platform-bootstrap-persistence";
 import type { VictoryProfileProgressPersistence } from "../progress/victory-profile-progress-persistence";
 import type { TutorialCompletionPersistence } from "../progress/tutorial-completion-persistence";
+import type { BuildIdentity } from "../../platform/build-identity";
 
 type EnemyTypes = ReturnType<typeof createEnemyTypes>;
 type MirrorTypes = ReturnType<typeof createMirrorTypes>;
@@ -70,7 +71,7 @@ export interface GameRuntimeDependencies {
   readonly Attract: ReturnType<typeof createAttract>;
   readonly BOSSFX: EnemyTypes["BOSSFX"];
   readonly Backdrop: BackdropController;
-  /** Painted stage scene packages (lazy, app-owned); stages without one keep procedural art. */
+  /** Stages the game paints from a recipe (lazy, app-owned); stages without one keep procedural art. */
   readonly Scenes: SceneLibrary;
   readonly Blade: ReturnType<typeof createBlade>;
   readonly Bomber: EnemyTypes["Bomber"];
@@ -82,6 +83,8 @@ export interface GameRuntimeDependencies {
   readonly browserIndexedDb: IDBFactory | undefined;
   readonly browserStorage: Pick<Storage, "setItem">;
   readonly browserWindow: Window;
+  /** Which build is running; the frame loop's error screen shows it. */
+  readonly build: BuildIdentity;
   readonly browserNavigator: Pick<Navigator, "getGamepads" | "hardwareConcurrency">;
   readonly CG: PlatformCompatibility["CG"];
   /** The platform's fullscreen owner, read per use: CrazyGames services arrive after start. */

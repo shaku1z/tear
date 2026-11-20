@@ -6,6 +6,7 @@ import { isDrawableEnemy, projectPresentationEnemy, projectSceneBoss } from "../
 import { A11Y, GFX, THEME } from "../../config/game-config";
 import { STAGES, stageAt } from "../../gameplay/stages";
 import { clamp, len, lerp } from "../../domain/geometry";
+import { isObject } from "../../domain/records";
 import { createBackdrop } from "../../presentation/backdrop";
 import { createProductionReplayFrame } from "../../presentation/world/production-replay-frame";
 import type { WorldBounds, WorldCamera } from "../../presentation/world/world-frame";
@@ -106,7 +107,7 @@ export function createBrowserGhostReplayPresentation(
         timeSeconds: replay.clock.sim,
       };
       const platforms = replay.stage.platforms.map((value) => {
-        if (value === null || typeof value !== "object") throw new TypeError("replay platform is malformed");
+        if (!isObject(value)) throw new TypeError("replay platform is malformed");
         const number = (key: string) => {
           const field: unknown = Reflect.get(value, key);
           if (typeof field !== "number" || !Number.isFinite(field))

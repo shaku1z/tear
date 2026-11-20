@@ -37,8 +37,8 @@ const REWARD_SCREENS: Readonly<Record<string, "draft-choice" | "reserve-choice" 
 });
 
 const PLANS = Object.freeze({
-  melee: Object.freeze({ mode: "endless", ticks: 1_800, throws: false }),
-  throw: Object.freeze({ mode: "endless", ticks: 1_800, throws: true }),
+  melee: Object.freeze({ mode: "endless", ticks: 2_160, throws: false }),
+  throw: Object.freeze({ mode: "endless", ticks: 2_160, throws: true }),
   boss: Object.freeze({ mode: "bossonly", ticks: 2_160, throws: true }),
 });
 type PlanId = keyof typeof PLANS;
@@ -87,7 +87,9 @@ const SPECS: readonly StreamSpec[] = WEAPON_IDS.flatMap((weapon) =>
     id: `${weapon}/${plan}`,
     weapon,
     plan,
-    seed: `hash-stream:${weapon}:${plan}`,
+    // The wave streams were re-drawn when a first wave gained its opening grace (three seconds longer, so
+    // their horizon grew by the same); a boss wave has no grace, so the boss streams keep their first seed.
+    seed: plan === "boss" ? `hash-stream:${weapon}:${plan}` : `hash-stream:${weapon}:${plan}:grace`,
     mode: PLANS[plan].mode,
     difficulty: "easy" as const,
     ticks: PLANS[plan].ticks,

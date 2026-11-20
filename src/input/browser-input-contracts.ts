@@ -138,6 +138,8 @@ export interface BrowserInput {
   padBack: boolean;
   /** Controller confirm (south face button) is physically down; written by the gamepad poll. */
   padConfirmHeld: boolean;
+  /** Any controller button is down or the left stick or d-pad points; written by the gamepad poll. */
+  padMenuHeld: boolean;
   /** The mouse is over the canvas; false while it rests on DOM chrome or outside the page. */
   pointerInside: boolean;
   _uiTabPrev: boolean;
@@ -212,6 +214,7 @@ export interface BrowserInput {
   menuNext(): boolean;
   confirmPressed(): boolean;
   confirmHeld(): boolean;
+  menuInputHeld(): boolean;
   backPressed(): boolean;
   consumeThrow(): boolean;
   takeClick(): Point | null;

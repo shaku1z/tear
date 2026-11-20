@@ -717,25 +717,25 @@ describe("C30 production headless environment", () => {
     rejected.dispose();
   });
 
-  it("restores only a lineage-bound State Forge recovery frontier through the shared production composition", () => {
+  it("restores only a lineage-bound State Setup recovery frontier through the shared production composition", () => {
     const original = createProductionHeadlessEnvironment();
     original.reset(scenario);
     for (let tick = 1; tick <= 60; tick += 1) original.step(actionsAt(tick));
     const source = original.captureCheckpoint();
     const launch = createOneFrameBoundaryLaunchMatrix()[0];
-    if (launch === undefined) throw new Error("State Forge fixture launch missing");
+    if (launch === undefined) throw new Error("State Setup fixture launch missing");
     const forgedSnapshot = forgeExitLaunchSnapshot(source.snapshot, launch);
     const restored = createProductionHeadlessEnvironment();
-    expect(restored.restoreStateForgeEvaluation({ source, forgedSnapshot })).toMatchObject({
+    expect(restored.restoreStateSetupEvaluation({ source, forgedSnapshot })).toMatchObject({
       tick: source.checkpoint.tick,
     });
     const lineage = forgedSnapshot.lineage;
-    if (lineage === undefined) throw new Error("State Forge fixture lineage missing");
+    if (lineage === undefined) throw new Error("State Setup fixture lineage missing");
     const forgedWrongParent = Object.freeze({
       ...forgedSnapshot,
       lineage: Object.freeze({ ...lineage, parentId: "foreign" }),
     });
-    expect(() => restored.restoreStateForgeEvaluation({ source, forgedSnapshot: forgedWrongParent })).toThrow(
+    expect(() => restored.restoreStateSetupEvaluation({ source, forgedSnapshot: forgedWrongParent })).toThrow(
       /lineage-bound/u,
     );
     original.dispose();
@@ -929,8 +929,8 @@ describe("C30 production headless environment", () => {
     );
     expectLegacyTerminalFixture(fixture, terminal);
     expect(terminal?.terminal).toEqual({
-      tick: 222,
-      semanticHash: "f981b3bb62116114",
+      tick: 403,
+      semanticHash: "e47ed517d44103f0",
       terminated: true,
       truncated: false,
     });
@@ -944,7 +944,7 @@ describe("C30 production headless environment", () => {
       id: "movement-jump",
       description: "C30 natural one-hit horizon failure candidate",
       seed: "c30-onehit-natural-failure",
-      maxTicks: 222,
+      maxTicks: 403,
       start: Object.freeze({ mode: "endless", difficulty: "onehit", weapon: "sword" }),
     }) satisfies TearScenarioV1;
     let terminal: ProductionHeadlessTerminalArtifact | undefined;
@@ -958,7 +958,7 @@ describe("C30 production headless environment", () => {
     }
     environment.dispose();
 
-    expect(terminal?.terminal.tick).toBe(222);
+    expect(terminal?.terminal.tick).toBe(403);
     expect(terminal?.terminal.terminated).toBe(true);
     expect(terminal?.terminal.truncated).toBe(false);
     expect(terminal?.terminal.terminated && terminal.terminal.truncated).toBe(false);

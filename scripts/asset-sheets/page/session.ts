@@ -8,9 +8,9 @@ import {
 } from "../../../src/app/replay/browser-ghost-replay-presentation";
 import { CONFIG } from "../../../src/config/game-config";
 import { clamp } from "../../../src/domain/geometry";
-import { createSceneCanvas, loadSceneBitmap, releaseSceneBitmap } from "../../../src/presentation/scenes/scene-bitmap";
+import { createSceneCanvas, releaseSceneBitmap } from "../../../src/presentation/scenes/scene-bitmap";
 import { createSceneLibrary } from "../../../src/presentation/scenes/scene-library";
-import { SCENE_PACKAGES } from "../../../src/presentation/scenes/scene-registry";
+import { PAINTED_STAGES } from "../../../src/presentation/scenes/scene-registry";
 import { createUi } from "../../../src/presentation/ui";
 import { createProductionGhostReplayComposition } from "../../../src/tearbench/production-replay-composition";
 import type { SheetScene } from "../manifest";
@@ -68,8 +68,10 @@ export interface Actor {
 let hidden: ReadonlySet<ReplayFrameLayer> = new Set();
 let sceneClock = 0;
 const paintedScenes = createSceneLibrary({
-  packages: SCENE_PACKAGES,
-  loadImage: loadSceneBitmap,
+  stages: PAINTED_STAGES,
+  world: { width: CONFIG.view.w, height: CONFIG.view.h, groundY: CONFIG.world.groundY },
+  // The page's clock stands still while a stage paints, so a drawn stage paints in one go and never waits here.
+  nextSlice: () => Promise.resolve(),
   createCanvas: createSceneCanvas,
   releaseImage: releaseSceneBitmap,
   // A clock the page owns: painted backgrounds fade in over real time in the game, never here.
@@ -78,7 +80,7 @@ const paintedScenes = createSceneLibrary({
   reducedMotion: () => false,
 });
 
-/** Loads the stage's painted scene: platform shading and surface materials come from it. */
+/** Paints the stage: platform shadows and surface materials come from it. */
 export async function paintedSceneReady(stageId: string): Promise<void> {
   paintedScenes.show(stageId);
   for (let waited = 0; paintedScenes.status(stageId) === "loading"; waited += 1) {

@@ -15,24 +15,26 @@ import { checkProperty, fc } from "./property-harness";
 
 type EnvelopeMigration = (input: unknown, nowMs?: number) => MigrationResult<Record<string, unknown>>;
 
-const MIGRATIONS = Object.entries(persistence)
-  .filter((entry): entry is [string, EnvelopeMigration] => /^migrate\w+Envelope$/u.test(entry[0]))
-  .map(([name, migrate]) => {
-    const empty = migrate({ schema: "probe" }, 0);
-    if (!empty.ok) throw new Error(`${name} must accept an empty legacy record`);
-    // The envelope's own fields, the legacy alias `data` and the legacy replay version `v`.
-    const fields = [...Object.keys(empty.value), "data", "v"];
-    const current = Number(empty.value.schemaVersion);
-    // Versions from 0 to one past the current one, so every version path (and the refusal of a newer one) is met.
-    const envelope = fc
-      .tuple(
-        recordLike(fields),
-        fc.oneof(fc.constant(empty.value.schema), anyJson),
-        fc.oneof(fc.integer({ min: 0, max: current + 1 }), anyJson),
-      )
-      .map(([fieldsOf, schema, schemaVersion]) => ({ ...fieldsOf, schema, schemaVersion }));
-    return { name, migrate, envelope };
-  });
+// Read as `unknown` values: the predicate names the migrations, and no other export's type has to fit one.
+const EXPORTS: [string, unknown][] = Object.entries(persistence);
+const MIGRATIONS = EXPORTS.filter((entry): entry is [string, EnvelopeMigration] =>
+  /^migrate\w+Envelope$/u.test(entry[0]),
+).map(([name, migrate]) => {
+  const empty = migrate({ schema: "probe" }, 0);
+  if (!empty.ok) throw new Error(`${name} must accept an empty legacy record`);
+  // The envelope's own fields, the legacy alias `data` and the legacy replay version `v`.
+  const fields = [...Object.keys(empty.value), "data", "v"];
+  const current = Number(empty.value.schemaVersion);
+  // Versions from 0 to one past the current one, so every version path (and the refusal of a newer one) is met.
+  const envelope = fc
+    .tuple(
+      recordLike(fields),
+      fc.oneof(fc.constant(empty.value.schema), anyJson),
+      fc.oneof(fc.integer({ min: 0, max: current + 1 }), anyJson),
+    )
+    .map(([fieldsOf, schema, schemaVersion]) => ({ ...fieldsOf, schema, schemaVersion }));
+  return { name, migrate, envelope };
+});
 
 describe("stored-data envelope migrations", () => {
   it("finds the migrations it checks", () => {

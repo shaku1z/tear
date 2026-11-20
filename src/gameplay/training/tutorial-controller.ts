@@ -27,6 +27,7 @@ import {
 } from "./practice-enemy-catalog";
 import type { EnemyKind } from "../run/content-director";
 import type { TutorialCoachView, TutorialGoldDisplay } from "./tutorial-ghost-coach";
+import { isRecord, requireRecord } from "../../domain/records";
 
 export type TutorialMark =
   | "airHit"
@@ -132,9 +133,7 @@ export interface TutorialSessionView {
 export type TutorialSessionCheckpoint = ReturnType<TutorialController["captureSession"]>;
 export function parseTutorialSessionCheckpoint(value: unknown): TutorialSessionCheckpoint | undefined {
   if (value === undefined) return undefined;
-  if (typeof value !== "object" || value === null || Array.isArray(value))
-    throw new TypeError("Invalid tutorial session");
-  const data = value as Record<string, unknown>;
+  const data = requireRecord(value, "Invalid tutorial session");
   const ids = (entry: unknown): entry is TutorialLessonId[] =>
     Array.isArray(entry) &&
     new Set(entry as unknown[]).size === entry.length &&
@@ -197,9 +196,7 @@ export function parseTutorialSessionCheckpoint(value: unknown): TutorialSessionC
     "updraft",
   ];
   if (
-    typeof data.counters !== "object" ||
-    data.counters === null ||
-    Array.isArray(data.counters) ||
+    !isRecord(data.counters) ||
     Object.entries(data.counters).some(
       ([key, number]) => !marks.includes(key) || typeof number !== "number" || !Number.isFinite(number) || number < 0,
     )
@@ -254,12 +251,10 @@ export function parseTutorialSessionCheckpoint(value: unknown): TutorialSessionC
   if (data.version === 3 || data.version === 4 || data.version === 5 || data.version === 6) {
     const origin = data.practiceOrigin;
     if (
-      typeof origin !== "object" ||
-      origin === null ||
-      Array.isArray(origin) ||
-      (origin as Record<string, unknown>).kind !== "durable-profile-completion" ||
-      !Number.isSafeInteger((origin as Record<string, unknown>).tutorialDone) ||
-      Number((origin as Record<string, unknown>).tutorialDone) <= 0 ||
+      !isRecord(origin) ||
+      origin.kind !== "durable-profile-completion" ||
+      !Number.isSafeInteger(origin.tutorialDone) ||
+      Number(origin.tutorialDone) <= 0 ||
       data.courseSessionId !== "" ||
       data.completionAwarded ||
       data.phase === "course" ||
@@ -573,7 +568,7 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   },
   {
     title: "JUMP",
-    description: "Jump three times. Use the ledges to climb.",
+    description: "Jump three times. Height opens routes.",
     arena: "vertical-gate",
     entryMarks: ["jump"],
     teachingFocus: "movement",
@@ -582,7 +577,7 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   },
   {
     title: "DASH",
-    description: "Dash through the lane three times. Steer the burst; do not just spend it.",
+    description: "Dash three times. Steer the burst; do not just spend it.",
     arena: "dash-lane",
     entryMarks: ["dash"],
     teachingFocus: "movement",

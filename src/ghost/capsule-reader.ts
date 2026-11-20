@@ -1,3 +1,4 @@
+import { isObject, requireRecord } from "../domain/records";
 import type { GhostLocalVault, GhostChunkKind, TearGhostManifest } from "./capsule-vault";
 import { replayEngine } from "./replay-engine";
 
@@ -36,9 +37,7 @@ export interface GhostReadCapsule extends GhostCapsuleContents {
 }
 
 function record(value: unknown): Readonly<Record<string, unknown>> {
-  if (typeof value !== "object" || value === null || Array.isArray(value))
-    throw new TypeError("capsule entry must be an object");
-  return value as Readonly<Record<string, unknown>>;
+  return requireRecord(value, "capsule entry must be an object");
 }
 
 /** Shared pure readability check; normal import discards decoded values after this check. */
@@ -67,7 +66,7 @@ export function validateGhostCapsuleEntries(
 
 /** Freezes a value and everything it holds. A frozen parent can still hold an unfrozen child, so every object is visited. */
 function deepFreeze<T>(value: T, visited = new Set<object>()): T {
-  if (typeof value !== "object" || value === null || visited.has(value)) return value;
+  if (!isObject(value) || visited.has(value)) return value;
   visited.add(value);
   Object.freeze(value);
   for (const child of Object.values(value)) deepFreeze(child, visited);

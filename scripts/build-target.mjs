@@ -80,4 +80,3 @@ console.log(`PASS ${target} build attribution: ${metadata.sha} ${metadata.artifa
 console.log(
   `PASS ${target} content-addressed build: ${stored.record.buildIdentityDigest} ${stored.record.contentAddressedPath}`,
 );
-console.log((await import("./scene/package-files.mjs")).assertStorefrontArt(target, output));

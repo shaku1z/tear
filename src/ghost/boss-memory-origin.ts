@@ -1,3 +1,4 @@
+import { isObject, isRecord } from "../domain/records";
 import type { AuthoritativeInputSnapshot } from "../gameplay/runtime/authoritative-input";
 import type { TearCausalEventV1 } from "../tearbench/contracts";
 import {
@@ -40,20 +41,18 @@ export interface GhostBossMemoryV1 {
 }
 function fields(value: unknown, names: string): Record<string, unknown> {
   if (
-    !value ||
-    typeof value !== "object" ||
-    Array.isArray(value) ||
+    !isRecord(value) ||
     ![Object.prototype, null].includes(Object.getPrototypeOf(value) as object | null) ||
     Object.keys(value).sort().join() !== names.split(",").sort().join() ||
     Object.values(Object.getOwnPropertyDescriptors(value)).some((d) => !("value" in d))
   )
     throw new TypeError("Malformed Boss Memory descriptor");
-  return value as Record<string, unknown>;
+  return value;
 }
 const text = (v: unknown, max: number): v is string => typeof v === "string" && v.length > 0 && v.length <= max;
 const hash = (v: unknown) => typeof v === "string" && /^[a-f0-9]{16}$/u.test(v);
 export function readGhostBossMemory(provenance: unknown): GhostBossMemoryV1 | undefined {
-  if (!provenance || typeof provenance !== "object" || !Object.hasOwn(provenance, "bossMemory")) return undefined;
+  if (!isObject(provenance) || !Object.hasOwn(provenance, "bossMemory")) return undefined;
   const descriptor = Object.getOwnPropertyDescriptor(provenance, "bossMemory");
   if (!descriptor || !("value" in descriptor)) throw new TypeError("Boss Memory must be data");
   const v = fields(

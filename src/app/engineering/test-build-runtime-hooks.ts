@@ -32,12 +32,13 @@ import type { LiveInputAuthorityState } from "../world/input-authority-state";
 import { createLiveCanonicalWatchComposition } from "../world/canonical-watch-composition";
 import type { LiveWorldComposition } from "../world/world-composition";
 import type { LiveWorldSessionState } from "../world/world-session-state";
-import { createLiveStateForgeCinematicAdvance } from "./state-forge-cinematic-advance";
-import type { LiveStateForge } from "./live-state-forge-assembly";
-import { replayLiveStateForgeProgression } from "./state-forge-progression";
+import { createLiveStateSetupCinematicAdvance } from "./state-setup-cinematic-advance";
+import type { LiveStateSetup } from "./live-state-setup-assembly";
+import { replayLiveStateSetupProgression } from "./state-setup-progression";
 import type { LiveTestBuildJournals } from "./test-build-journals";
 import type * as LiveRuntimeBridge from "../../tearbench/browser/live-runtime-bridge";
 import type { installLiveGameDebug as LiveGameDebugInstaller } from "./debug-composition";
+import { createStageRestFrame } from "./stage-rest-frame";
 
 /** The runtime owners that test-build inspection hooks observe and drive. */
 export interface LiveTestBuildHookSources {
@@ -57,7 +58,7 @@ export interface LiveTestBuildHookSources {
   readonly inputAuthority: LiveInputAuthorityState;
   readonly recorder: GhostLiveRecorder | null;
   readonly ghostPractice: LiveGhostPracticeSessionState;
-  readonly stateForge: LiveStateForge;
+  readonly stateSetup: LiveStateSetup;
   readonly abandonment: LiveRunAbandonment;
   readonly journals: LiveTestBuildJournals;
   readonly canonicalState: LiveCanonicalStateCapture;
@@ -260,7 +261,7 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
       advanceApplicationFrame: (deltaSeconds) => {
         combatHost.frameCoordinator.run(deltaSeconds);
       },
-      advanceStateForgeCinematicBeat: createLiveStateForgeCinematicAdvance(CINEMA),
+      advanceStateSetupCinematicBeat: createLiveStateSetupCinematicAdvance(CINEMA),
       authoritative: () => authoritativeStep.lastResult,
       ...createLiveCanonicalWatchComposition({
         state: hostState,
@@ -292,9 +293,9 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
         if (effects.slowMotion !== undefined) impact.slowMotion = effects.slowMotion;
         if (effects.timeScale !== undefined) feel.timeScale = effects.timeScale;
       },
-      stateForge: sources.stateForge,
+      stateSetup: sources.stateSetup,
       replayProgression: (ledger) =>
-        replayLiveStateForgeProgression({ dependencies, state: hostState, configuration }, ledger),
+        replayLiveStateSetupProgression({ dependencies, state: hostState, configuration }, ledger),
       loadStage: orchestration.loadTransitionStage,
       startNextWave: runControllers.api.startNextWave,
       applyBossFinisher: (bossId, remainingHp) => {
@@ -432,5 +433,9 @@ function installBossDebug(
     authoritative: () => authoritativeStep.lastResult,
     startFinale: startAdventureFinale,
     severFinale: () => severFinaleAnchor(false),
+  });
+  Object.defineProperty(dependencies.browserWindow, "__TEAR_STAGE_REST_FRAME__", {
+    configurable: true,
+    value: createStageRestFrame({ dependencies, stage: stageRuntime, width: browser.width, height: browser.height }),
   });
 }

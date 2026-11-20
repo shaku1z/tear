@@ -10,7 +10,9 @@ import { shouldDrawCanvasCursor } from "../../presentation/cursor-contract";
 import { controlHintText, domChromeVisibility } from "../../presentation/dom-chrome-policy";
 import { cinematicPromptForDevice } from "../../presentation/cinematic-prompts";
 import { createLivePresentationHost, type LivePresentationHost } from "./presentation-host";
-import { screenDensity } from "../../domain/screen-catalog";
+import { isSheetScreen, screenDensity } from "../../domain/screen-catalog";
+import { controlsKeepOut, type KeepOutArea } from "../../presentation/demo-keep-out";
+import { drawRotateGate } from "../../presentation/rotate-gate";
 
 export interface LivePresentationSurface {
   readonly wipe: TearWipe;
@@ -63,7 +65,9 @@ interface PresentationUi extends ButtonLayerUiPort, CinematicUiPort {
   ink: string;
   /** Applies the phone density floors only to screens with a compact composition. */
   useCompactLayout(ready: boolean, phoneOnly?: boolean): void;
-  readonly t: CinematicUiPort["t"] & Readonly<{ color: Readonly<{ paper: string; accent: string }> }>;
+  readonly t: CinematicUiPort["t"] &
+    Readonly<{ color: Readonly<{ paper: string; accent: string }>; alpha: Readonly<{ overlay: number }> }>;
+  dim(context: CanvasRenderingContext2D, width: number, height: number, alpha?: number): void;
   font(size: number, bold?: boolean): string;
   sheetRect(): Readonly<{ x: number; y: number; w: number; h: number }>;
   sheet(context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, hue?: string): void;
@@ -81,7 +85,6 @@ interface PresentationUi extends ButtonLayerUiPort, CinematicUiPort {
     alignment: CanvasTextAlign,
     size: number,
   ): void;
-  rotateGate(context: CanvasRenderingContext2D, rectangle: ScreenRectangle, seconds: number): void;
 }
 
 export interface LiveCaptureLayerPolicy {
@@ -95,7 +98,7 @@ type PresentationControl = InteractiveUiButton & CanvasUiButton;
 
 export interface LivePresentationFrameState<Screen extends string> {
   readonly screen: () => Screen;
-  readonly previousScreen: () => Screen;
+  readonly previousScreen: () => Screen | undefined;
   readonly setPreviousScreen: (screen: Screen) => void;
   readonly deltaSeconds: () => number;
   readonly enterSeconds: () => number;
@@ -104,6 +107,8 @@ export interface LivePresentationFrameState<Screen extends string> {
   readonly setEnterAmount: (value: number) => void;
   readonly scroll: () => number;
   readonly setScroll: (value: number) => void;
+  /** Where the player was on the current screen, when the last screen change returned to it. */
+  readonly arrival: () => Readonly<{ focus: number; scroll: number }> | undefined;
   readonly focus: () => number;
   readonly setFocus: (value: number) => void;
   readonly controls: () => PresentationControl[];
@@ -151,7 +156,7 @@ export interface LivePresentationFrameServices<Screen extends string, Stage exte
   readonly setTheme: (background: string, playLike: boolean) => void;
   readonly themeInk: () => string;
   readonly backdropPost: (context: CanvasRenderingContext2D, stage: Stage, camera: WorldCamera) => void;
-  /** The colour the stage paints behind play: a ready scene package's paper, else the stage colour. */
+  /** The colour the stage paints behind play: a painted stage's paper, else the stage colour. */
   readonly stageBackground: (stage: Stage) => string;
   readonly renderWorld: () => WorldCamera;
   readonly drawHud: () => void;
@@ -161,7 +166,8 @@ export interface LivePresentationFrameServices<Screen extends string, Stage exte
   readonly drawStageBanner: () => void;
   readonly drawReticle: () => void;
   readonly drawAchievementToast: (deltaSeconds: number, held: boolean) => void;
-  readonly drawMenuAttract: (context: CanvasRenderingContext2D) => void;
+  /** Draws the live menu demo; its play layer stays out of `keepOut`. */
+  readonly drawMenuAttract: (context: CanvasRenderingContext2D, keepOut: KeepOutArea | undefined) => void;
   readonly screenHue: (screen: Screen) => string | undefined;
   readonly renderScreen: (screen: Screen) => void;
   readonly isMenuScreen: (screen: Screen) => boolean;
@@ -187,6 +193,8 @@ export function createLivePresentationFrameHost<Screen extends string, Stage ext
   const { context, ui } = services;
   const confirmArming = createUiConfirmArming();
   const handoff = createChapterHandoff();
+  // Where the last frame's controls were, so the next frame's menu demo keeps out of them.
+  let controlsArea: Readonly<{ screen: Screen; area: KeepOutArea | undefined }> | undefined;
   return createLivePresentationHost<Screen>({
     dimensions: { width: services.width, height: services.height, overscan: services.overscan },
     framePorts: (host) => ({
@@ -297,6 +305,9 @@ export function createLivePresentationFrameHost<Screen extends string, Stage ext
         }
         ui.ink = "#000";
       },
+      renderOverlayBackdrop: () => {
+        ui.dim(context, services.width, services.height, ui.t.alpha.overlay);
+      },
       renderReticle: () => {
         if (
           services.capturePolicy().ui === "include" &&
@@ -313,11 +324,15 @@ export function createLivePresentationFrameHost<Screen extends string, Stage ext
       enterAmount: state.enterAmount,
       setEnterAmount: state.setEnterAmount,
       ease: services.ease,
+      setScroll: state.setScroll,
+      arrival: state.arrival,
       resetScroll: () => {
         state.setScroll(0);
       },
       renderMenuBackdrop: (rectangle, screen) => {
-        services.drawMenuAttract(context);
+        // A sheet covers the demo; an open screen (the main menu, rename) keeps it out of its controls.
+        const open = !isSheetScreen(screen) && controlsArea?.screen === screen;
+        services.drawMenuAttract(context, open ? controlsArea?.area : undefined);
         if (screen === "menu") return;
         context.fillStyle = ui.t.color.paper;
         context.globalAlpha = 0.58;
@@ -344,7 +359,9 @@ export function createLivePresentationFrameHost<Screen extends string, Stage ext
         if (services.capturePolicy().ui === "include") services.renderScreen(screen);
       },
       drawButtons: () => {
-        if (services.capturePolicy().ui === "include") host.drawButtons();
+        const shown = services.capturePolicy().ui === "include";
+        controlsArea = shown ? { screen: state.screen(), area: controlsKeepOut(state.controls()) } : undefined;
+        if (shown) host.drawButtons();
       },
       drawPostLayers: () => {
         if (services.capturePolicy().ui === "include") {
@@ -379,10 +396,10 @@ export function createLivePresentationFrameHost<Screen extends string, Stage ext
         context.globalAlpha = 1;
       },
       drawRotationGate: () => {
-        if (services.capturePolicy().ui === "include")
-          ui.rotateGate(context, host.screenRectangle(), state.timeSeconds());
+        if (__TEAR_MOBILE__ && services.capturePolicy().ui === "include")
+          drawRotateGate(ui, context, host.screenRectangle(), state.timeSeconds());
       },
-      firstEnabledButton: host.firstEnabledButton,
+      entryFocus: host.entryFocus,
       setFocus: state.setFocus,
       updateDomHints: (screen) => {
         const capture = services.capturePolicy(),

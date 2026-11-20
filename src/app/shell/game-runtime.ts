@@ -1,6 +1,7 @@
 import type { TearWorldConfiguration } from "../../gameplay/runtime/tear-world-configuration";
 import { tracksAchievements } from "../../gameplay/progression/achievement-runtime";
 import { dismissBootScreen } from "../../platform/browser-boot-screen";
+import { createFrameFaultHandler } from "../../platform/browser-error-screen";
 import { createScreenPresence } from "../../platform/screen-presence";
 import { assembleLiveCampaignTraining } from "../campaign/live-campaign-training-assembly";
 import { createLiveBossPhasePractice } from "../campaign/boss-phase-practice";
@@ -11,7 +12,7 @@ import { createLiveCanonicalStateCapture, type LiveCanonicalCombatHost } from ".
 import { createLiveCombatActionPorts } from "../combat/live-combat-action-ports";
 import { createLiveCombatFramePorts } from "../combat/live-combat-frame-ports";
 import { createGhostV3BrowserTestOptions } from "../engineering/ghost-v3-browser-test-options";
-import { assembleLiveStateForge } from "../engineering/live-state-forge-assembly";
+import { assembleLiveStateSetup } from "../engineering/live-state-setup-assembly";
 import { createLiveTestBuildJournals } from "../engineering/test-build-journals";
 import {
   installLiveBossDebugWhenEnabled,
@@ -51,7 +52,7 @@ import { createLiveSessionServices } from "./session-services-composition";
 /**
  * Composes the live game: browser surface, Ghost V3 sidecar, session services,
  * the production world, campaign and training, run orchestration, the combat
- * host, State Forge, interface and the frame loop. Each owner is constructed
+ * host, State Setup, interface and the frame loop. Each owner is constructed
  * here in a fixed order; collaborators built later are reached through lazy
  * ports, so construction order and side effects stay exactly as listed.
  */
@@ -108,7 +109,7 @@ export function startLiveGame(
   observeLiveGhostRecordingBoundaries(ghostRecording, {
     ghost: GHOST,
     run: liveRun,
-    configurationProjection: () => liveStateForge.capture().components.get("tear.configuration.v1"),
+    configurationProjection: () => liveStateSetup.capture().components.get("tear.configuration.v1"),
     randomSnapshot: () => worldContext.services.random.snapshot(),
     chaseConfiguration: (configHash) => {
       chase.configuration(configHash);
@@ -157,7 +158,7 @@ export function startLiveGame(
         },
       },
       baseline: () => configuration.baseSnapshot(),
-      capture: () => liveStateForge.capture().components,
+      capture: () => liveStateSetup.capture().components,
       setup: () => ({
         mode: session.selectedMode() as "endless",
         difficulty: session.selectedDifficulty(),
@@ -195,8 +196,9 @@ export function startLiveGame(
     app: APP,
     input: Input,
     runScreenFact: createTearRunScreenFactPublisher(GAMEPLAY_EVENTS, () => RUN_LIFECYCLE.snapshot(), liveRun),
+    place: () => ({ focus: interfaceInteraction.focus(), scroll: interfaceInteraction.scroll() }),
   });
-  const interfaceFrame = createLiveInterfaceFrameState(navigation.screen());
+  const interfaceFrame = createLiveInterfaceFrameState();
   const currentOutcome = () => {
     const outcome = session.outcome();
     if (outcome === null) throw new Error("Outcome screen requires a completed run");
@@ -235,7 +237,7 @@ export function startLiveGame(
     input: Input,
     run: liveRun,
   });
-  // One world owns the transient records read by combat, State Forge, and diagnostics.
+  // One world owns the transient records read by combat, State Setup, and diagnostics.
   const { transient } = worldContext;
   const CINEMA = worldContext.cinema;
   const ghostPracticeSession = createLiveGhostPracticeSessionState();
@@ -359,7 +361,19 @@ export function startLiveGame(
       },
     }),
   );
-  const frameDriver = new RuntimeFrameDriver(browserWindow);
+  const frameDriver = new RuntimeFrameDriver(
+    browserWindow,
+    createFrameFaultHandler({
+      document: browserDocument,
+      build: dependencies.build,
+      reload: () => {
+        browserWindow.location.reload();
+      },
+      report: (error) => {
+        console.error("TEAR stopped: a frame threw.", error);
+      },
+    }),
+  );
   const combatAdapters = createLiveCombatActionPorts({
     dependencies,
     surface: browserRuntime,
@@ -515,7 +529,7 @@ export function startLiveGame(
       ...hostState.projectiles().map((projectile) => combatRuntime.id(projectile, "projectile")),
     ]);
   });
-  const liveStateForge = assembleLiveStateForge({
+  const liveStateSetup = assembleLiveStateSetup({
     dependencies,
     world,
     campaignTraining,
@@ -530,7 +544,7 @@ export function startLiveGame(
   });
   const ghostCapture = createLiveGhostCapture({
     recording: ghostRecording,
-    stateForge: liveStateForge,
+    stateSetup: liveStateSetup,
     world,
     combat: combatHost,
     canonicalState: captureLiveCanonicalState,
@@ -544,7 +558,7 @@ export function startLiveGame(
     indexedDb: browserIndexedDb,
     recording: ghostRecording,
     capture: ghostCapture,
-    stateForge: liveStateForge,
+    stateSetup: liveStateSetup,
     practice: ghostPracticeSession,
     world,
     combat: combatHost,
@@ -602,7 +616,7 @@ export function startLiveGame(
     inputAuthority,
     recorder: ghostV3,
     ghostPractice: ghostPracticeSession,
-    stateForge: liveStateForge,
+    stateSetup: liveStateSetup,
     abandonment: runAbandonment,
     journals,
     canonicalState: captureLiveCanonicalState,

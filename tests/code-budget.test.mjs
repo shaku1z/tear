@@ -15,6 +15,7 @@ import {
   overCeiling,
   parseArguments,
   serializeBaseline,
+  tightenHint,
   updateBaseline,
   updateScope,
 } from "../scripts/check-code-budget.mjs";
@@ -236,6 +237,28 @@ test("the update scope adds both ends of a move and entries whose file is gone",
   assert.deepEqual(result.files, { "src/kept.ts": { chars: 40_000 }, "src/new.ts": { chars: 30_000 } });
 });
 
+test("the passing hint says which improvements a plain --update locks in and which need --all", () => {
+  const tightenable = [
+    { file: "src/edited.ts", metric: "chars", from: 40_000, to: 39_000 },
+    { file: "src/other.ts", metric: "chars", from: 40_000, to: 39_000 },
+    { file: "src/other.ts", metric: "multiStatementLines", from: 3, to: 1 },
+  ];
+  assert.equal(tightenHint([], new Set()), "");
+  assert.equal(
+    tightenHint(tightenable, new Set(["src/edited.ts"])),
+    "; 1 improved metrics in files this branch changes can be locked in with --update" +
+      "; 2 improved metrics in other files can be locked in only with --update --all",
+  );
+  assert.equal(
+    tightenHint(tightenable.slice(0, 1), new Set(["src/edited.ts"])),
+    "; 1 improved metrics in files this branch changes can be locked in with --update",
+  );
+  assert.equal(
+    tightenHint(tightenable, undefined),
+    "; 3 improved metrics can be locked in with --update --all (no origin/main to compare)",
+  );
+});
+
 test("records only metrics over the ceilings and reports the worst offenders deterministically", () => {
   assert.deepEqual(overCeiling(metrics({ chars: 11, largestFunctionStatements: 1 }), small), {
     chars: 11,
@@ -311,7 +334,9 @@ test("the CLI fails a planted packed file, refuses to raise it, and accepts an e
     assert.equal(allowed.status, 0);
     assert.match(allowed.stderr, /!!! CODE BUDGET BASELINE RAISED for src\/packed\.ts/u);
     assert.deepEqual(entries()["src/untouched.ts"], untouchedEntry);
-    assert.equal(run().status, 0);
+    const passed = run();
+    assert.equal(passed.status, 0);
+    assert.match(passed.stdout, /1 improved metrics in other files can be locked in only with --update --all/u);
     assert.equal(run("--update", "--all").status, 0);
     assert.deepEqual(entries()["src/untouched.ts"], { multiStatementLines: 1 });
   } finally {

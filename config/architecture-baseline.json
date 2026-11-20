@@ -204,12 +204,12 @@
     },
     {
       "from": "src/tearbench/production-replay-composition.ts",
-      "to": "src/app/engineering/state-forge-adapter.ts",
+      "to": "src/app/engineering/state-setup-adapter.ts",
       "kind": "value"
     },
     {
       "from": "src/tearbench/production-replay-composition.ts",
-      "to": "src/app/engineering/state-forge-runtime-bridge.ts",
+      "to": "src/app/engineering/state-setup-runtime-bridge.ts",
       "kind": "value"
     },
     {

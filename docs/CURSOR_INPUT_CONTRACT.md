@@ -50,7 +50,11 @@ pause and quit confirmation) ignore keyboard confirm, controller confirm and num
 keys until the confirm input has been released since the screen opened and
 `UI_CONFIRM_SETTLE_SECONDS` (0.35 s) has passed. Mouse clicks and touch taps on the
 reward and results screens wait for the same settle window. Navigation (hover,
-arrows, stick) stays live. The decision is the pure `uiConfirmGate` in
+arrows, stick) stays live, except on the end screens (game over, victory, continue;
+`holdArming` in `src/domain/screen-catalog.ts`): there every keyboard menu key,
+controller button and stick held when the screen opened must be released, and the
+settle window must pass, before arrows, stick, back or confirm act. Mouse hover still
+moves focus. The decision is the pure `uiConfirmGate` in
 `src/app/interface/ui-action-coordinator.ts`; the pause toggle (P, Escape, controller Start)
 uses the same window so the Escape that released pointer lock cannot also resume.
 Escape, Backspace (outside text entry) and controller back activate a screen's

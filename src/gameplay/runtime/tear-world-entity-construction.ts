@@ -72,7 +72,7 @@ export function isTearWorldEntityFactoryId(value: string): value is TearWorldEnt
 /**
  * Creates an immutable factory selection boundary. It forwards caller-owned
  * coordinates and run state unchanged, so placement/order remains a concern
- * of the live content, State Forge, replay, or headless caller.
+ * of the live content, State Setup, replay, or headless caller.
  */
 export function createTearWorldEntityConstructionCatalog<
   Run,

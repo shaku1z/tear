@@ -82,7 +82,7 @@ function bands(sections: readonly Section[], m: MenuMetrics): Section[][] {
  * the footer row on every tab.
  */
 export function createPlaygroundRenderers(context: ScreenRenderContext) {
-  const { ui, width, height } = context,
+  const { ui, width } = context,
     pf = createPageFrame(context),
     card = createActionCard(context);
   const action = (id: string) => ({ type: "playground.action", id }) as const;
@@ -105,7 +105,6 @@ export function createPlaygroundRenderers(context: ScreenRenderContext) {
 
   function render(view: PlaygroundScreenView): void {
     // Source dim values (ee5e931): 0.88 over the frozen arena on the build menu, 0.9 in the lab.
-    ui.dim(context.canvas, width, height, view.id === "pgmenu" ? 0.88 : 0.9);
     const choices: Choices = (section) => view.sections.find((entry) => entry.label === section)?.choices ?? [];
     if (view.id === "pgmenu") menuTab(view);
     else abilityLab(view, choices);

@@ -161,7 +161,8 @@ export function createLiveInterfaceComposition(
     screenRectangle: frame.screenRectangle,
     world: surface.world,
     achievementToast: new AchievementToastController(options.worldServices.ease),
-    touchOnboarding: new TouchOnboardingController(),
+    // Mobile is paused: production builds leave the touch coaching out (plans/MOBILE_LATER.md).
+    touchOnboarding: __TEAR_MOBILE__ ? new TouchOnboardingController() : null,
   });
   return Object.freeze({
     capture,

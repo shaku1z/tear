@@ -111,7 +111,7 @@ function codec(snapshot: TearSnapshotV1, id: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-describe("campaign victory State Forge origin", () => {
+describe("campaign victory State Setup origin", () => {
   it("retains the six-stage wave-59 history and removes only the false terminal event", () => {
     const source = synthesizeProgression({
       mode: "campaign",

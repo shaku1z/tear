@@ -1,16 +1,15 @@
 import { discardScenePresses } from "./scene-release";
-import type { BrowserInput, BrowserInputDependencies, Point, TouchZoneName } from "./browser-input-contracts";
+import type { BrowserInput, BrowserInputDependencies, Point } from "./browser-input-contracts";
 import { mapClientPointerToLogical } from "./pointer-coordinate";
 import {
   aimFollowsDevices,
   accumulateRelativeTravel,
   MEANINGFUL_POINTER_TRAVEL,
   ownedPointer,
-  startsOnTouch,
   type RelativeTravel,
 } from "../domain/pointer-ownership";
-import { touchControlAt, touchControlLayout } from "./touch-control-layout";
-import { anyKeyIn, bindsKey, type KeyboardAction } from "../domain/keyboard-bindings";
+import { createBrowserTouch } from "./browser-touch";
+import { anyContextKeyIn, anyKeyIn, bindsKey, type KeyboardAction } from "../domain/keyboard-bindings";
 
 /** Keys the browser would otherwise use to scroll the page or move focus. */
 const PAGE_KEYS: readonly KeyboardAction[] = [
@@ -30,31 +29,13 @@ interface ClientPoint {
   readonly clientY: number;
 }
 
-interface TapTrack extends Point {
-  readonly cx: number;
-  readonly cy: number;
-  readonly t: number;
-  moved: boolean;
-}
-
 // Temporary ESM browser adapter for the classic game shell. All formerly ambient
 // dependencies are explicit so the adapter can be characterized independently.
 export function createBrowserInput(dependencies: BrowserInputDependencies): BrowserInput {
-  const {
-    config: CONFIG,
-    safeArea: SAFE,
-    overscan: OVERSCAN,
-    window,
-    document,
-    navigator,
-    performance,
-    semantic,
-  } = dependencies;
-  /** Applies a touch layout change that waited for its tap to be handled (bound by init). */
-  let settleTouchLayout: () => void = () => undefined;
-  // The canvas the layout is measured against (bound by init); its CSS size sets the
-  // physical scale of the on-screen controls.
-  let layoutCanvas: HTMLCanvasElement | null = null;
+  const { config: CONFIG, overscan: OVERSCAN, window, document, performance, semantic } = dependencies;
+  // Touch for phones and tablets (browser-touch.ts). Production builds leave it out while mobile
+  // is paused (plans/MOBILE_LATER.md); a touch there reaches the game as the browser's mouse emulation.
+  const touch = __TEAR_MOBILE__ ? createBrowserTouch(dependencies) : null;
 
   const Input: BrowserInput = {
     semantic,
@@ -88,6 +69,7 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
     padScrollY: 0, // controller right-stick scroll intent (px/frame), written by gamepad.js
     padBack: false,
     padConfirmHeld: false,
+    padMenuHeld: false,
     pointerInside: true, // the mouse is over the canvas (not over DOM chrome or outside the page)
     // one-frame UI edge flags the gamepad injects (consumed by updateUI):
     _uiTabPrev: false,
@@ -210,6 +192,7 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
     touchOn: false, // a real touch has happened (device capability)
     forceMode: "auto", // settings: "auto" | "touch" | "desktop" (2-in-1s can force either)
     touchActive() {
+      if (touch === null) return false;
       return this.forceMode === "touch" || (this.forceMode !== "desktop" && this.touchOn);
     },
     touchAim: false, // a finger is steering the blade
@@ -233,38 +216,19 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
     scrollFlick: 0,
     // haptic tap — the tactile arm of the juice system (no-op where unsupported, e.g. iOS)
     buzz(p) {
-      if (this.touchActive()) {
-        try {
-          navigator.vibrate(p);
-        } catch {
-          /* Haptics are optional. */
-        }
-      }
+      touch?.buzz(p);
     },
     // on-screen control layout: anchored to the real screen edges + safe area, sized in
     // physical pixels. touch-control-layout.ts owns the geometry; input hit-tests and the
     // renderer draws the same circles.
+    // Only touch draws these controls, so only a build with touch asks for them (behind touchActive).
     touchLayout() {
-      const span = CONFIG.view.h + OVERSCAN.y * 2;
-      const cssPerLogicalPixel = layoutCanvas && layoutCanvas.clientHeight > 0 ? layoutCanvas.clientHeight / span : 1;
-      return touchControlLayout({
-        width: CONFIG.view.w,
-        height: CONFIG.view.h,
-        overscanX: OVERSCAN.x,
-        overscanY: OVERSCAN.y,
-        safe: SAFE,
-        cssPerLogicalPixel,
-      });
+      if (touch === null) throw new Error("this build has no touch controls (mobile is paused)");
+      return touch.layout();
     },
     textEntryMode: false,
 
     init(canvas, requestPointerLock = () => undefined) {
-      layoutCanvas = canvas;
-      // A phone or tablet starts on touch: the first frame has the touch layout and no cursor.
-      if (startsOnTouch((query) => window.matchMedia(query))) {
-        this.touchOn = true;
-        this.setMode("touch");
-      }
       // Every key reads the binding table (src/domain/keyboard-bindings.ts). Auto-repeat of a
       // held key is not an edge, so holding the throw key throws once.
       window.addEventListener("keydown", (e) => {
@@ -402,194 +366,7 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
         { passive: false },
       );
 
-      // ---- touch: left zone = floating joystick, right zone = blade aim (drag deltas),
-      // on-screen buttons = jump/dash/throw/pause, menus = taps + vertical drag-scroll.
-      // preventDefault kills the browser's synthetic click, so TAPS ARE SYNTHESIZED here:
-      // a short, still touch becomes Input.clicked at its point — this is what makes every
-      // menu work on mobile. Hit zones are exactly the drawn controls (touch-control-layout.ts).
-      const touchesDown = new Set<number>();
-      let touchLayoutPending = false;
-      settleTouchLayout = () => {
-        if (!touchLayoutPending || touchesDown.size > 0) return;
-        touchLayoutPending = false;
-        this.touchOn = true;
-      };
-      const btnTouches: Record<number, TouchZoneName | undefined> = {}; // touch id -> zone key (fingers on buttons never aim)
-      const tapTrack: Record<number, TapTrack | undefined> = {}; // touch id -> { x, y, cx, cy, t, moved } for tap->click synthesis
-      canvas.addEventListener(
-        "touchstart",
-        (e) => {
-          e.preventDefault();
-          // The first touch on a mouse-first device changes the menus to their touch layout.
-          // In a menu that change waits until the finger has lifted and its tap has been
-          // handled (endFrame), so the tap lands on the controls the player saw.
-          if (this.uiMode && !this.touchOn) touchLayoutPending = true;
-          else this.touchOn = true;
-          this.setMode("touch");
-          const r = canvas.getBoundingClientRect();
-          for (const t of e.changedTouches) {
-            touchesDown.add(t.identifier);
-            const p = toLogical(t, r);
-            tapTrack[t.identifier] = {
-              x: p.x,
-              y: p.y,
-              cx: t.clientX,
-              cy: t.clientY,
-              t: performance.now(),
-              moved: false,
-            };
-            if (this.forceMode === "desktop") continue; // desktop mode: taps click, nothing else
-            if (this.uiMode) {
-              // menus: track for drag-scroll (tap->click synthesized on release)
-              if (this._scrollId === -1) {
-                this._scrollId = t.identifier;
-                this._scrollLY = t.clientY;
-                this._scrollV = 0;
-                this.scrollFlick = 0;
-              }
-              continue;
-            }
-            const layout = this.touchLayout();
-            const z = touchControlAt(layout, p.x, p.y);
-            if (z) {
-              btnTouches[t.identifier] = z;
-              this.btnHeld[z] = true;
-              this.buzz(8); // tactile press
-              if (z === "jump") this.tJump = true;
-              else if (z === "dash") {
-                this.tDash = true;
-                this.semantic.push({ type: "dash", x: 0, y: 0 });
-              } else if (z === "throwB") {
-                this.rmb = true;
-                this.semantic.push({ type: "weapon", intent: "throw", phase: "pressed" });
-              } else {
-                this.tPause = true;
-                this.semantic.push({ type: "pause" });
-              }
-              if (z === "jump") this.semantic.push({ type: "jump", phase: "pressed" });
-            } else if (p.x < layout.joystickZoneRight && this.joy.id === -1) {
-              this.joy = { active: true, id: t.identifier, ax: p.x, ay: p.y, dx: 0, dy: 0 };
-            } else if (this._aimId === -1) {
-              this._aimId = t.identifier;
-              this._aimLX = t.clientX;
-              this._aimLY = t.clientY;
-              this._aimAX = t.clientX;
-              this._aimAY = t.clientY; // stick anchor
-              this.steerAim("touch");
-              if (this.touchAimMode === "stick") this.stickAim = { x: 0, y: 0 };
-            } else {
-              // a SECOND finger in the aim zone = THROW, so the right thumb never has to stop
-              // sweeping (the throw inherits the blade's live momentum)
-              this.rmb = true;
-              this.semantic.push({ type: "weapon", intent: "throw", phase: "pressed" });
-            }
-          }
-        },
-        { passive: false },
-      );
-      canvas.addEventListener(
-        "touchmove",
-        (e) => {
-          e.preventDefault();
-          const r = canvas.getBoundingClientRect();
-          const boost = 1.6 * (CONFIG.touch?.aimBoost ?? 1.5);
-          for (const t of e.changedTouches) {
-            const tk = tapTrack[t.identifier];
-            // thumbs are sloppier than mice: 18px of wander still counts as a tap
-            if (tk && Math.hypot(t.clientX - tk.cx, t.clientY - tk.cy) > 18) tk.moved = true;
-            if (t.identifier === this._scrollId) {
-              const dyy = (this._scrollLY - t.clientY) * 2.2;
-              this.wheel += dyy;
-              this._scrollV = dyy; // remember velocity for flick momentum
-              this._scrollLY = t.clientY;
-            } else if (t.identifier === this.joy.id) {
-              const p = toLogical(t, r);
-              this.joy.dx = p.x - this.joy.ax;
-              this.joy.dy = p.y - this.joy.ay;
-              // DYNAMIC follow: past the max radius the anchor chases the thumb, so
-              // the neutral point is always one small motion away (no thumb drift)
-              const fm = CONFIG.touch?.joyFollow ?? 96;
-              const jm = Math.hypot(this.joy.dx, this.joy.dy);
-              if (jm > fm) {
-                const k = (jm - fm) / jm;
-                this.joy.ax += this.joy.dx * k;
-                this.joy.ay += this.joy.dy * k;
-                this.joy.dx = p.x - this.joy.ax;
-                this.joy.dy = p.y - this.joy.ay;
-              }
-              this.syncSemanticMovement();
-            } else if (t.identifier === this._aimId) {
-              if (this.touchAimMode === "stick") {
-                // RADIAL STICK: the blade reticle sits where the stick points — flicks
-                // teleport the aim across the arc, and the blade spring supplies the whip
-                const sr2 = CONFIG.touch?.stickRadius ?? 130;
-                const dead = CONFIG.touch?.stickDead ?? 10;
-                let vx = t.clientX - this._aimAX,
-                  vy = t.clientY - this._aimAY;
-                const m = Math.hypot(vx, vy);
-                if (m > sr2 * 1.3) {
-                  // follow past full deflection, like the joystick
-                  const k = (m - sr2 * 1.3) / m;
-                  this._aimAX += vx * k;
-                  this._aimAY += vy * k;
-                  vx = t.clientX - this._aimAX;
-                  vy = t.clientY - this._aimAY;
-                }
-                const m2 = Math.hypot(vx, vy);
-                const eff = m2 <= dead ? 0 : Math.min((m2 - dead) / (sr2 - dead), 1);
-                this.stickAim = m2 > 0.001 ? { x: (vx / m2) * eff, y: (vy / m2) * eff } : { x: 0, y: 0 };
-                if (m2 > 0.001) this.semantic.setAimVector(vx, vy);
-              } else {
-                this.dx += (t.clientX - this._aimLX) * boost; // thumb-drag steers the blade like a captured mouse
-                this.dy += (t.clientY - this._aimLY) * boost;
-                this._aimLX = t.clientX;
-                this._aimLY = t.clientY;
-              }
-            }
-          }
-        },
-        { passive: false },
-      );
-      /** Lets go of one finger: its stick, aim, button or scroll. */
-      const releaseTouch = (id: number): void => {
-        touchesDown.delete(id);
-        Reflect.deleteProperty(tapTrack, id);
-        if (id === this.joy.id) {
-          this.joy = { active: false, id: -1, ax: 0, ay: 0, dx: 0, dy: 0 };
-          this.syncSemanticMovement();
-        }
-        if (id === this._aimId) {
-          this._aimId = -1;
-          this.touchAim = false;
-          this.stickAim = null;
-        }
-        const button = btnTouches[id];
-        if (button === "jump") this.semantic.push({ type: "jump", phase: "released" });
-        if (button !== undefined) Reflect.deleteProperty(this.btnHeld, button);
-        if (id === this._scrollId) {
-          this._scrollId = -1;
-          // flick momentum: carry the last drag velocity into the wheel channel
-          if (Math.abs(this._scrollV || 0) > 6) this.scrollFlick = this._scrollV;
-          this._scrollV = 0;
-        }
-        Reflect.deleteProperty(btnTouches, id);
-      };
-      const touchEnd = (e: TouchEvent): void => {
-        e.preventDefault();
-        for (const t of e.changedTouches) {
-          const tk = tapTrack[t.identifier];
-          if (tk && !tk.moved && performance.now() - tk.t < 450 && !btnTouches[t.identifier]) {
-            // a clean tap -> a synthesized UI click (preventDefault suppressed the native one)
-            this.clickX = tk.x;
-            this.clickY = tk.y;
-            this.clicked = true;
-            this.clickSource = "touch";
-          }
-          releaseTouch(t.identifier);
-        }
-      };
-      canvas.addEventListener("touchend", touchEnd, { passive: false });
-      canvas.addEventListener("touchcancel", touchEnd, { passive: false });
+      touch?.attach(this, canvas, toLogical);
       document.addEventListener("pointerlockchange", () => {
         this.locked = document.pointerLockElement === canvas;
       });
@@ -599,7 +376,7 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
       // release any controller-held tether so the blade doesn't stay tightened after coming back
       const releaseAll = (): void => {
         this.held.clear();
-        for (const id of [...touchesDown]) releaseTouch(id);
+        touch?.releaseAll();
         this.setPadTether(false);
         this.setKeyTether(false);
         this.syncSemanticMovement();
@@ -693,6 +470,11 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
     confirmHeld() {
       return this.padConfirmHeld || anyKeyIn(this.held, "confirm") || anyKeyIn(this.held, "choose");
     },
+    // level state of every menu key, controller button and stick; an end screen ignores
+    // keyboard and controller input until all of these have been let go.
+    menuInputHeld() {
+      return this.padMenuHeld || anyContextKeyIn(this.held, "menu");
+    },
     // semantic back: controller back or the back keys. Keydown is ignored while a text
     // field owns input (textEntryMode), so Backspace never leaves the rename field.
     backPressed() {
@@ -732,7 +514,7 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
       }
       this.clicked = false;
       this.tPause = false;
-      settleTouchLayout();
+      touch?.settle();
     },
   };
   return Input;

@@ -1,3 +1,4 @@
+import { isRecord } from "../domain/records";
 import type { TearStateClass } from "./contracts";
 
 export interface TearStateValidationIssue {
@@ -44,10 +45,6 @@ export interface TearStateValidityInput {
   }>;
 }
 
-function record(value: unknown): value is Readonly<Record<string, unknown>> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function finiteIssues(value: unknown, path: string, depth = 0): TearStateValidationIssue[] {
   if (depth > 32) return [{ path, code: "depth", message: "state nesting exceeds 32 levels" }];
   if (typeof value === "number" && !Number.isFinite(value)) {
@@ -56,7 +53,7 @@ function finiteIssues(value: unknown, path: string, depth = 0): TearStateValidat
   if (Array.isArray(value)) {
     return value.flatMap((entry, index) => finiteIssues(entry, `${path}[${String(index)}]`, depth + 1));
   }
-  if (!record(value)) return [];
+  if (!isRecord(value)) return [];
   return Object.entries(value).flatMap(([key, entry]) => {
     if (key === "__proto__" || key === "prototype" || key === "constructor") {
       return [{ path: `${path}.${key}`, code: "dangerous-key", message: "constructor-selecting keys are forbidden" }];
@@ -101,7 +98,7 @@ export function evaluateTearStateValidity(input: TearStateValidityInput): Readon
     wave > 1 &&
     input.stateClass === "reconstructed-reachable" &&
     input.constraints?.legalProgression !== true &&
-    !record(state.progressionLedger)
+    !isRecord(state.progressionLedger)
   ) {
     reachabilityReasons.push("reconstructed waves after wave 1 require a legal progression ledger");
   }

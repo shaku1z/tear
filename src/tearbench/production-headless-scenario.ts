@@ -18,7 +18,7 @@ function requireNaturalScenario(value: TearScenarioV1): TearScenarioV1 {
     (value.start.boss !== undefined && value.start.mode !== "bossonly") ||
     value.start.bossPhase !== undefined
   ) {
-    throw new RangeError("production headless runs require a natural opening; use State Forge for surgical state");
+    throw new RangeError("production headless runs require a natural opening; use State Setup for surgical state");
   }
   return value;
 }

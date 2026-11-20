@@ -1,3 +1,4 @@
+import { asRecord } from "../domain/records";
 import { hasMonotonicEnvelopes } from "../domain/envelopes";
 import { normalizeGameAction } from "../input/game-action";
 import type { ReplayActionEnvelope } from "../replay/envelope";
@@ -34,19 +35,13 @@ function issue(
   issues.push(Object.freeze({ track, tick, reason }));
 }
 
-function object(value: unknown): Readonly<Record<string, unknown>> | undefined {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as Readonly<Record<string, unknown>>)
-    : undefined;
-}
-
 function commands(
   entries: readonly GhostCapsuleEntry[],
   issues: GhostCapsuleReplayIssue[],
 ): readonly ReplayActionEnvelope[] {
   const parsed: ReplayActionEnvelope[] = [];
   for (const entry of entries) {
-    const value = object(entry.value);
+    const value = asRecord(entry.value);
     if (
       value?.kind !== "command" ||
       !Number.isSafeInteger(value.id) ||
@@ -86,7 +81,7 @@ function recordedCanonicalSnapshot(value: unknown): TearSnapshotV1 | undefined {
 function isolatedCodecFactory(): TearWorldFactory {
   return Object.freeze({
     createEmpty: (): TearCodecWorld => ({ components: new Map(), references: new Map(), entityIds: new Set() }),
-    // This boundary intentionally validates only the versioned State Forge
+    // This boundary intentionally validates only the versioned State Setup
     // contract. Production hydration has host-owned constructors and must not
     // be used to decide whether untrusted capsule bytes are admissible.
     validate: () => [],

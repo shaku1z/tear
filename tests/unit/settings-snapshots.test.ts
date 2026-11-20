@@ -22,6 +22,7 @@ const environment = {
   touch: false,
   installAvailable: false,
   update: { ready: false, applying: false },
+  buildLabel: "v0.1.0 · 820e8e9",
   presets: { default: { name: "DEFAULT", tag: "", line: "familiar", map: "L1 tether" } },
   controllerGlyphs: ["✕", "◯", "▢", "△"],
 };
@@ -48,6 +49,25 @@ describe("settings snapshots", () => {
       buildSettingsSections("accessibility", settings, environment)[0]?.rows.find((row) => row.key === "cinematics")
         ?.value,
     ).toBe("FULL");
+  });
+  it("ends the general list with the build as a read-only row, even when install and update rows show", () => {
+    const rows = (env: typeof environment) => buildSettingsSections("general", settings, env)[0]?.rows ?? [];
+    expect(rows(environment).at(-1)).toEqual({
+      key: "version",
+      label: "Version",
+      value: "v0.1.0 · 820e8e9",
+      kind: "info",
+    });
+    const busy = { ...environment, installAvailable: true, update: { ready: true, applying: false } };
+    expect(
+      rows(busy)
+        .map((row) => row.key)
+        .slice(-3),
+    ).toEqual(["install", "update", "version"]);
+    for (const tab of ["audio", "video", "accessibility", "controls"])
+      expect(buildSettingsSections(tab, settings, environment).flatMap((section) => section.rows)).not.toContainEqual(
+        expect.objectContaining({ key: "version" }),
+      );
   });
   it("previews the active controller glyph family instead of hardcoding one console", () => {
     expect(

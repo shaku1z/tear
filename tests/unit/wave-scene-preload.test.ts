@@ -1,7 +1,7 @@
-// A stage's painted background is fetched one wave before the run reaches the
-// stage, and never for a stage the mode does not lead to next.
+// A stage's background is painted one wave before the run reaches the stage,
+// and never for a stage the mode does not lead to next.
 import { describe, expect, it } from "vitest";
-import { stageIdAfterWave } from "../../src/app/run/wave-composition";
+import { stageIdAfterWave, startingStageId } from "../../src/app/run/wave-composition";
 import { STAGES } from "../../src/gameplay/stages";
 
 describe("painted background preload", () => {
@@ -35,5 +35,20 @@ describe("painted background preload", () => {
     for (const mode of ["bossonly", "tutorial", "playground"] as const) {
       expect(stageIdAfterWave(mode, 1, STAGES)).toBeUndefined();
     }
+  });
+
+  it("names the stage a run opens on, for the setup screen to prepare", () => {
+    for (const mode of ["campaign", "endless"] as const) {
+      expect(startingStageId(mode, "shuffle", STAGES)).toBe(STAGES[0]?.id);
+    }
+    // A Gauntlet draws its trial order when the run starts, so its first stage is not known here.
+    expect(startingStageId("gauntlet", "shuffle", STAGES)).toBeUndefined();
+    // A boss run with a chosen boss opens on that boss's stage, whichever stage that is.
+    for (const stage of STAGES) {
+      expect(startingStageId("bossonly", stage.boss, STAGES)).toBe(stage.id);
+    }
+    // A shuffled boss run and the practice modes are not known before the run starts.
+    expect(startingStageId("bossonly", "shuffle", STAGES)).toBeUndefined();
+    expect(startingStageId("playground", "shuffle", STAGES)).toBeUndefined();
   });
 });

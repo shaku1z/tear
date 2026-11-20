@@ -1,9 +1,10 @@
+import { isRecord } from "../domain/records";
 import type { EnvironmentSnapshot } from "../gameplay/environment/environment-contracts";
 import { MAX_ATTACK_IDS } from "../gameplay/environment/combat-object-runtime";
 import { ENVIRONMENT_OBJECT_KIND_IDS } from "../gameplay/environment/environment-object-kinds";
 import { environmentObjectDefinition, isEnvironmentObjectKind } from "../gameplay/environment/environment-definitions";
 import type { TearEnvironmentObservationV1 } from "./contracts";
-import { ENVIRONMENT_STATE_FORGE_FACTORY_REGISTRY } from "./state-forge-factories";
+import { ENVIRONMENT_STATE_SETUP_FACTORY_REGISTRY } from "./state-setup-factories";
 import {
   COMBAT_OBJECT_KEYS,
   FIELD_KEYS,
@@ -37,10 +38,6 @@ const MAX_FIELDS = 64;
 const MAX_COMBAT_OBJECTS = 128;
 const MAX_ROUTES = 64;
 const MAX_POINTS = 256;
-function record(value: unknown): value is Readonly<Record<string, unknown>> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function finite(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
@@ -55,7 +52,8 @@ function issue(path: string, message: string): EnvironmentCodecIssue {
 }
 
 function geometry(value: unknown, path: string): EnvironmentCodecIssue[] {
-  if (!record(value) || !finite(value.x) || !finite(value.y)) return [issue(path, "geometry requires finite x and y")];
+  if (!isRecord(value) || !finite(value.x) || !finite(value.y))
+    return [issue(path, "geometry requires finite x and y")];
   const issues: EnvironmentCodecIssue[] = [];
   for (const key of ["w", "h", "radius"] as const) {
     if (value[key] !== undefined && !nonNegative(value[key]))
@@ -66,7 +64,7 @@ function geometry(value: unknown, path: string): EnvironmentCodecIssue[] {
       issues.push(issue(`${path}.points`, "points must be a bounded array"));
     else
       value.points.forEach((point, index) => {
-        if (!record(point) || !finite(point.x) || !finite(point.y))
+        if (!isRecord(point) || !finite(point.x) || !finite(point.y))
           issues.push(issue(`${path}.points[${String(index)}]`, "point must contain finite x and y"));
       });
   }
@@ -91,17 +89,17 @@ function common(
     environmentObjectDefinition(value.kind).category === category;
   if (
     value.factoryId !== undefined &&
-    (!text(value.factoryId) || (!ENVIRONMENT_STATE_FORGE_FACTORY_REGISTRY.has(value.factoryId) && !sourceOwnedFactory))
+    (!text(value.factoryId) || (!ENVIRONMENT_STATE_SETUP_FACTORY_REGISTRY.has(value.factoryId) && !sourceOwnedFactory))
   )
     issues.push(issue(`${path}.factoryId`, "environment factory is not approved"));
   if (category === "route") {
     if (!Array.isArray(value.points)) issues.push(issue(`${path}.points`, "route requires points"));
     else
       value.points.forEach((point, index) => {
-        if (!record(point) || !finite(point.x) || !finite(point.y))
+        if (!isRecord(point) || !finite(point.x) || !finite(point.y))
           issues.push(issue(`${path}.points[${String(index)}]`, "route point must contain finite x and y"));
       });
-  } else if (!record(value.geometry)) issues.push(issue(`${path}.geometry`, "environment object requires geometry"));
+  } else if (!isRecord(value.geometry)) issues.push(issue(`${path}.geometry`, "environment object requires geometry"));
   else issues.push(...geometry(value.geometry, `${path}.geometry`));
   if (!STATES.has(value.state as string))
     issues.push(issue(`${path}.state`, "environment object state is not approved"));
@@ -118,7 +116,7 @@ function duplicateIds(values: readonly unknown[], path: string): EnvironmentCode
   const seen = new Set<string>();
   const issues: EnvironmentCodecIssue[] = [];
   values.forEach((entry, index) => {
-    if (!record(entry) || typeof entry.id !== "string") return;
+    if (!isRecord(entry) || typeof entry.id !== "string") return;
     if (seen.has(entry.id))
       issues.push(issue(`${path}[${String(index)}].id`, `duplicate environment object id ${entry.id}`));
     seen.add(entry.id);
@@ -131,11 +129,11 @@ export function validateEnvironmentCodecPayload(
   payload: unknown,
   validators: readonly EnvironmentCodecValidationPort[] = [],
 ): readonly EnvironmentCodecIssue[] {
-  if (!record(payload)) return Object.freeze([issue("$", "hazard codec payload must be an object")]);
+  if (!isRecord(payload)) return Object.freeze([issue("$", "hazard codec payload must be an object")]);
   const issues: EnvironmentCodecIssue[] = [];
   if (
     payload.allocator !== undefined &&
-    (!record(payload.allocator) ||
+    (!isRecord(payload.allocator) ||
       Object.keys(payload.allocator).sort().join() !== "nextSequence,version" ||
       payload.allocator.version !== 1 ||
       !Number.isSafeInteger(payload.allocator.nextSequence) ||
@@ -160,7 +158,7 @@ export function validateEnvironmentCodecPayload(
     issues.push(...duplicateIds(values, `$.${key}`));
     values.forEach((entry, index) => {
       const path = `$.${key}[${String(index)}]`;
-      if (!record(entry)) {
+      if (!isRecord(entry)) {
         issues.push(issue(path, "environment collection entry must be an object"));
         return;
       }
@@ -188,13 +186,13 @@ export function validateEnvironmentCodecPayload(
           issues.push(issue(`${path}.timer`, "timer must be finite and non-negative"));
         const eligibility = entry.eligibility;
         if (
-          !record(eligibility) ||
+          !isRecord(eligibility) ||
           ["player", "enemies", "bosses"].some((name) => typeof eligibility[name] !== "boolean")
         )
           issues.push(issue(`${path}.eligibility`, "eligibility must declare player, enemies, and bosses booleans"));
-        if (entry.schedule !== null && entry.schedule !== undefined && !record(entry.schedule))
+        if (entry.schedule !== null && entry.schedule !== undefined && !isRecord(entry.schedule))
           issues.push(issue(`${path}.schedule`, "schedule must be null or an object"));
-        if (record(entry.schedule))
+        if (isRecord(entry.schedule))
           for (const name of ["startTick", "endTick", "intervalTicks"] as const) {
             const scheduleValue = entry.schedule[name];
             if (
@@ -206,7 +204,7 @@ export function validateEnvironmentCodecPayload(
         if (
           entry.force !== null &&
           entry.force !== undefined &&
-          (!record(entry.force) ||
+          (!isRecord(entry.force) ||
             !finite(entry.force.x) ||
             !finite(entry.force.y) ||
             !finite(entry.force.magnitude) ||
@@ -252,7 +250,7 @@ export function validateEnvironmentCodecPayload(
           issues.push(issue(`${path}.points`, "route points must be a bounded array with at least two points"));
         else
           entry.points.forEach((point, pointIndex) => {
-            if (!record(point) || !finite(point.x) || !finite(point.y))
+            if (!isRecord(point) || !finite(point.x) || !finite(point.y))
               issues.push(issue(`${path}.points[${String(pointIndex)}]`, "route point must contain finite x and y"));
           });
         for (const validator of validators) issues.push(...(validator.validateRoute?.(entry, path) ?? []));

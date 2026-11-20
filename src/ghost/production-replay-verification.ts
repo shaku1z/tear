@@ -1,3 +1,4 @@
+import { asRecord } from "../domain/records";
 import { readGhostBossMemory } from "./boss-memory-origin";
 import { verifyBossMemory } from "./boss-memory";
 import { readSeedRaceDecisions } from "./seed-race-decisions";
@@ -156,8 +157,8 @@ export function verifyGhostCapsuleOpeningContinuation(capsule: GhostReadCapsule)
           !event.payload.introActive,
       );
       const terminals = capsule.tracks.results.flatMap((entry) => {
-        if (typeof entry.value !== "object" || entry.value === null || Array.isArray(entry.value)) return [];
-        const value = entry.value as Readonly<Record<string, unknown>>;
+        const value = asRecord(entry.value);
+        if (value === undefined) return [];
         return entry.tick === capsule.maxTick &&
           value.mode === context.run.mode &&
           value.diff === context.run.difficulty &&
@@ -378,7 +379,7 @@ export function verifyGhostCapsuleProductionReplay(
           tick: receipt.tick,
           expectedHash: receipt.stateHash,
           equal: false,
-          reason: "receipt has no same-tick recorded-canonical State Forge snapshot",
+          reason: "receipt has no same-tick recorded-canonical State Setup snapshot",
         }),
       );
       continue;

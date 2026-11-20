@@ -97,14 +97,14 @@ withJourney({ name: "C27 Ghost V3 physical live capture" }, async ({ page, waitS
         entry.value.tick === entry.tick &&
         entry.value.stateClass === "recorded-canonical",
     ),
-    "physical live loop did not retain a restorable State Forge keyframe",
+    "physical live loop did not retain a restorable State Setup keyframe",
   );
   assert.ok(replay.accepted.commands > 0, "sealed device command did not map into V3 replay truth");
   assert.ok(
     replay.accepted.events > 0,
     `captured engine events did not map into V3 causal truth: ${JSON.stringify(replay.issues)}`,
   );
-  assert.ok(replay.accepted.snapshots > 0, "State Forge keyframe did not map into V3 replay truth");
+  assert.ok(replay.accepted.snapshots > 0, "State Setup keyframe did not map into V3 replay truth");
   assert.deepEqual(replay.ghost.trident.command, {
     kind: "command",
     status: "declared-unverified",
@@ -162,11 +162,11 @@ withJourney({ name: "C27 Ghost V3 physical live capture" }, async ({ page, waitS
     capsule.tracks.keyframes.find((entry) => entry.tick === 0)?.value?.state?.["tear.ui.v1"]?.screen,
     "setup",
   );
-  assert.equal(admission.context.build.rulesetVersion, "tear-rules-six-biome-verdant-r3-pale-preview-v7");
+  assert.equal(admission.context.build.rulesetVersion, "tear-rules-six-biome-verdant-r3-pale-preview-v9");
   assert.ok(admission.context.build.contentHash.length > 0);
   assert.ok(admission.context.build.configHash.length > 0);
   const stateKeyframes = capsule.tracks.keyframes.filter((entry) => entry.value?.kind === "snapshot");
-  assert.ok(stateKeyframes.length > 0, "physical capsule did not retain a State Forge keyframe to attest");
+  assert.ok(stateKeyframes.length > 0, "physical capsule did not retain a State Setup keyframe to attest");
   const bootstrap = capsule.tracks.events.find(
     (entry) =>
       entry.value?.id?.startsWith("ghost-live-bootstrap-") && entry.value?.payload?.boundary === "v3-sidecar-opened",
@@ -180,12 +180,12 @@ withJourney({ name: "C27 Ghost V3 physical live capture" }, async ({ page, waitS
     assert.deepEqual(
       staticBuild(keyframe.value.provenance?.build),
       staticBuild(admission.context.build),
-      "a State Forge keyframe diverged from the capsule's immutable replay build identity",
+      "a State Setup keyframe diverged from the capsule's immutable replay build identity",
     );
     assert.equal(
       keyframe.value.provenance?.sourceId,
       bootstrap.value.id,
-      "a State Forge keyframe did not cite the integrity-protected V3 bootstrap event",
+      "a State Setup keyframe did not cite the integrity-protected V3 bootstrap event",
     );
   }
   assert.ok(Object.keys(admission.context.rng).length > 0);
