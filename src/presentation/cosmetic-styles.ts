@@ -21,7 +21,6 @@ export interface RibbonStyle {
   readonly worn: boolean;
   readonly colors: readonly string[];
   readonly widthScale: number;
-  readonly glow: number;
   readonly fade: RibbonFade;
 }
 export interface BurstStyle {
@@ -42,7 +41,7 @@ export interface CosmeticStyles {
  */
 export const COSMETIC_DRAW_HOOKS = {
   blade: { family: "tint", draws: ["glow"] },
-  trail: { family: "ribbon", draws: ["colors", "widthScale", "glow", "fade"] },
+  trail: { family: "ribbon", draws: ["colors", "widthScale", "fade"] },
   spark: { family: "burst", draws: ["colors", "countScale"] },
 } as const satisfies Record<keyof CosmeticStyles, Readonly<{ family: string; draws: readonly string[] }>>;
 
@@ -99,7 +98,6 @@ export function resolveCosmeticStyles(catalog: CosmeticCatalog, loadout: Loadout
       worn: trail.worn,
       colors: colorList(trail.look, "trail", "colors"),
       widthScale: amount(trail.look, "trail", "widthScale"),
-      glow: amount(trail.look, "trail", "glow"),
       fade: fade(trail.look, "trail"),
     }),
     spark: Object.freeze({

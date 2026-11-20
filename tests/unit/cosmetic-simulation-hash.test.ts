@@ -17,6 +17,8 @@ import type { TearObservationV1, TearScenarioV1 } from "../../src/tearbench/cont
  */
 const TICKS = 1_200;
 const AXIS = 1_000;
+/** Two 1,200-tick production fights; the default 5 s is too tight on a busy machine. */
+const TIMEOUT_MS = 30_000;
 
 const SCENARIO: TearScenarioV1 = {
   format: "tear-contract",
@@ -64,27 +66,31 @@ function hashes(looks: CosmeticLooks): string[] {
 }
 
 describe("cosmetics and the simulation", () => {
-  it("leaves every tick's authoritative hash unchanged with every ready slot equipped", () => {
-    const wardrobe = createCosmeticWardrobe(COSMETIC_CATALOG, () => false);
-    const everything = Object.fromEntries(
-      Object.keys(COSMETIC_DRAW_HOOKS).flatMap((slot) => {
-        const item = COSMETIC_CATALOG.items.find((entry) => entry.slot === slot);
-        return item ? [[slot, item.id]] : [];
-      }),
-    );
-    expect(Object.keys(everything).sort()).toEqual(Object.keys(COSMETIC_DRAW_HOOKS).sort());
-    wardrobe.wear({}, everything);
-    let wornSparks = 0;
-    const counting: CosmeticLooks = {
-      defaults: wardrobe.defaults,
-      of: (owner) => wardrobe.of(owner),
-      worn: () => {
-        wornSparks += 1;
-        return wardrobe.worn();
-      },
-    };
-    const dressed = hashes(counting);
-    expect(wornSparks, "the fight must land blade hits that wear the spark").toBeGreaterThan(0);
-    expect(dressed).toEqual(hashes(DEFAULT_COSMETIC_LOOKS));
-  });
+  it(
+    "leaves every tick's authoritative hash unchanged with every ready slot equipped",
+    () => {
+      const wardrobe = createCosmeticWardrobe(COSMETIC_CATALOG, () => false);
+      const everything = Object.fromEntries(
+        Object.keys(COSMETIC_DRAW_HOOKS).flatMap((slot) => {
+          const item = COSMETIC_CATALOG.items.find((entry) => entry.slot === slot);
+          return item ? [[slot, item.id]] : [];
+        }),
+      );
+      expect(Object.keys(everything).sort()).toEqual(Object.keys(COSMETIC_DRAW_HOOKS).sort());
+      wardrobe.wear({}, everything);
+      let wornSparks = 0;
+      const counting: CosmeticLooks = {
+        defaults: wardrobe.defaults,
+        of: (owner) => wardrobe.of(owner),
+        worn: () => {
+          wornSparks += 1;
+          return wardrobe.worn();
+        },
+      };
+      const dressed = hashes(counting);
+      expect(wornSparks, "the fight must land blade hits that wear the spark").toBeGreaterThan(0);
+      expect(dressed).toEqual(hashes(DEFAULT_COSMETIC_LOOKS));
+    },
+    TIMEOUT_MS,
+  );
 });

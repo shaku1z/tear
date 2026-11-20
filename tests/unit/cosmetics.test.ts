@@ -114,7 +114,7 @@ describe("cosmetic data files", () => {
 
   it("rejects bad rows with a reason", () => {
     const trail = (colors: string[], extra: Record<string, unknown> = {}) => ({
-      look: { colors, widthScale: 1, glow: 0, fade: "linear", ...extra },
+      look: { colors, widthScale: 1, fade: "linear", ...extra },
     });
     expect(withItem({ tier: "mythic" })).toContain("unknown tier");
     expect(withItem({ collection: "nope" })).toContain("unknown collection");

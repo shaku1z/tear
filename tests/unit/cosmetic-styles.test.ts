@@ -87,15 +87,15 @@ describe("cosmetic wardrobe", () => {
     const wearer = {},
       other = {};
     expect(wardrobe.worn()).toBe(wardrobe.defaults);
-    wardrobe.wear(wearer, { trail: "trail_tidewater" });
+    wardrobe.wear(wearer, { spark: "spark_glacier" });
     expect(wardrobe.of(other)).toBe(wardrobe.defaults);
-    expect(wardrobe.of(wearer).trail.glow).toBe(0.5);
+    expect(wardrobe.of(wearer).spark.countScale).toBe(1.2);
     calm = true;
-    expect(wardrobe.of(wearer).trail.glow).toBe(0);
+    expect(wardrobe.of(wearer).spark.countScale).toBe(familyCalm("spark").countScale);
     wardrobe.authored(true);
     expect(wardrobe.of(wearer)).toBe(wardrobe.defaults);
     wardrobe.authored(false);
-    expect(wardrobe.of(wearer).trail.worn).toBe(true);
+    expect(wardrobe.of(wearer).spark.worn).toBe(true);
   });
 });
 

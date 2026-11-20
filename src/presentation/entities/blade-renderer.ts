@@ -23,8 +23,6 @@ export interface BladeRendererDependencies {
 
 /** The finale's restored trail: one colour per trail segment, in turn. */
 const RESTORED_TRAIL = ["#13c4d6", "#e0a326", "#b06cff", "#2f9e6b", "#eafcff"] as const;
-/** Blur, in logical pixels, of a trail whose look has full glow; drawn on dark stages only. */
-const TRAIL_GLOW_BLUR = 12;
 
 type Point = Readonly<{ x: number; y: number }>;
 
@@ -402,7 +400,6 @@ export function createBladeRenderer({
       context.save();
       context.globalCompositeOperation = "lighter";
     }
-    const blur = glow ? look.glow * TRAIL_GLOW_BLUR : 0;
     const inner = 1 - look.widthScale;
     for (let index = 1; index < trail.length; index++) {
       const previous = trail[index - 1];
@@ -413,12 +410,7 @@ export function createBladeRenderer({
       const along = index / trail.length;
       const alpha = (look.fade === "hold" ? Math.sqrt(along) : along) * (trailAlpha + 0.3) * speedAlpha;
       if (alpha <= 0.002) continue;
-      const fill = palette[index % palette.length] ?? colors.bladeTrail;
-      context.fillStyle = fill;
-      if (blur > 0) {
-        context.shadowColor = fill;
-        context.shadowBlur = blur;
-      }
+      context.fillStyle = palette[index % palette.length] ?? colors.bladeTrail;
       context.globalAlpha = alpha;
       context.beginPath();
       context.moveTo(lerp(previous.hx, previous.tx, inner), lerp(previous.hy, previous.ty, inner));
@@ -429,7 +421,6 @@ export function createBladeRenderer({
       context.fill();
     }
     context.globalAlpha = 1;
-    if (blur > 0) context.shadowBlur = 0;
     if (glow) context.restore();
   }
 

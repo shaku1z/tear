@@ -22,7 +22,6 @@
         "#13c4d6"
       ],
       "widthScale": 1,
-      "glow": 0,
       "fade": "linear"
     }
   },
@@ -37,7 +36,6 @@
         "#13c4d6"
       ],
       "widthScale": 1,
-      "glow": 0.4,
       "fade": "linear"
     }
   },
@@ -111,7 +109,6 @@
         "#13c4d6"
       ],
       "widthScale": 1,
-      "glow": 0.4,
       "fade": "linear"
     }
   },
@@ -126,7 +123,6 @@
         "#13c4d6"
       ],
       "widthScale": 1,
-      "glow": 0.4,
       "fade": "linear"
     }
   },

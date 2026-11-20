@@ -192,13 +192,14 @@ describe("blade draw path with cosmetics", () => {
     );
   });
 
-  it("blurs a glowing trail on dark stages only, and not at all when calm", () => {
+  it("never blurs a worn trail, so a cosmetic costs no more to draw than the default", () => {
     const dark: Scene = { name: "dark", blade: blade("sword"), dark: true, low: false };
-    const light: Scene = { ...dark, dark: false };
-    const blurred = (calls: readonly string[]): boolean => paints(calls).some((call) => / 6(\.\d+)? #/.test(call));
-    expect(blurred(wearing(dark, { trail: "trail_tidewater" }))).toBe(true);
-    expect(blurred(wearing(light, { trail: "trail_tidewater" }))).toBe(false);
-    expect(blurred(wearing(dark, { trail: "trail_tidewater" }, true))).toBe(false);
+    const blurs = (calls: readonly string[]): string[] => [
+      ...new Set(paints(calls).map((call) => call.split(" | ")[1]?.split(" ")[STATE_KEYS.indexOf("shadowBlur")])),
+    ];
+    expect(blurs(wearing(dark, { trail: "trail_heartwood", blade: "blade_moonsteel" }))).toEqual(
+      blurs(draw(dark, fresh())),
+    );
   });
 
   it("shows the authored look while an authored beat plays, and the cosmetic again after it", () => {
