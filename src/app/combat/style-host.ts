@@ -4,7 +4,7 @@ import type { LiveGameHostState } from "../world/game-host-state";
 import type { LiveWorldEntityConstructionPort } from "../world/world-entity-factory";
 import type { LiveTutorialRuntime } from "../../gameplay/training/live-tutorial-runtime";
 import { createLiveStyleAchievementRuntime } from "../../gameplay/scoring/live-style-achievement-runtime";
-import { isTutorialMark } from "../../gameplay/training/tutorial-controller";
+import { isTutorialMark } from "../../gameplay/training/tutorial-marks";
 
 export interface LiveStyleHostServices {
   readonly observeStyle?: LiveStyleAchievementOptions<never>["observeStyle"];

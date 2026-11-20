@@ -1,7 +1,7 @@
 /**
  * Load profile of the release builds: what a player downloads and waits for
  * before the first frame, before the menu accepts input, and from pressing
- * START to playing, on throttled network and CPU device profiles.
+ * PLAY (a new player's first press, into the tutorial) to playing, on throttled network and CPU device profiles.
  *
  * Each release build (`dist/standalone`, `dist/crazygames`) is
  * served the way its host serves it: text compressed (brotli, else gzip) and,
@@ -29,7 +29,7 @@ const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
 const zlib = require("node:zlib");
-const { SLOW_STATE_WAIT_MS, STATE_WAIT_MS, holdFor, pollEvery, settleFor, launchJourney } = require("./browser-waits");
+const { SLOW_STATE_WAIT_MS, STATE_WAIT_MS, holdFor, pollEvery, launchJourney } = require("./browser-waits");
 
 const projectRoot = path.resolve(__dirname, "..");
 const check = process.argv.includes("--check");
@@ -301,7 +301,11 @@ function marks(timeline) {
   };
 }
 
-/** PLAY -> ENDLESS -> START with real pointer or touch input on drawn labels; returns the page time of the START press. */
+/**
+ * A fresh player's first press into gameplay, with real pointer or touch input on the drawn label;
+ * returns the page time of the press. A fresh profile is tutorial-first, so that press is PLAY and the
+ * gameplay it starts is the tutorial's first lesson: the cold path a new player downloads and waits for.
+ */
 async function pressStart(page, frame, profile) {
   const offset =
     frame === page
@@ -333,13 +337,9 @@ async function pressStart(page, frame, profile) {
     await page.waitForTimeout(holdFor(60));
     await page.mouse.up();
   };
-  for (const label of [/^PLAY$/u, /^ENDLESS$/u]) {
-    await click(await find(label));
-    await page.waitForTimeout(settleFor(700));
-  }
-  const start = await find(/^START$/u);
+  const play = await find(/^PLAY$/u);
   const pressedMs = await frame.evaluate(() => performance.now());
-  await click(start);
+  await click(play);
   await frame.waitForFunction(() => performance.getEntriesByName("tear:gameplay-start").length > 0, undefined, {
     timeout: SLOW_STATE_WAIT_MS,
     polling: 50,

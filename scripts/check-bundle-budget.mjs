@@ -8,7 +8,7 @@ import { verifyReleaseArtifact } from "./release-artifact.mjs";
 const root = resolve(import.meta.dirname, "..");
 /** Worker bundles are fetched only when their feature starts a worker. */
 const WORKER_CHUNK = /-worker-[\w-]+\.js$/u;
-/** The tutorial demonstration corpus is fetched only by training preflight (and a lazy worker copy). */
+/** The tutorial demonstration corpus is fetched only once a lesson is played or practice opens (and a lazy worker copy). */
 const TUTORIAL_GOLD_CHUNK = /^(?:tutorial-gold-reference|worker-tutorial-gold)-[\w-]+\.js$/u;
 
 const localPath = (url) => url.replace(/^(?:\.\/|\/)/u, "");

@@ -1,6 +1,8 @@
 // Release Adventure journey: the PRODUCTION build (dist/standalone, clean URL, no
 // test storage or debug hooks), a fresh profile and real input only.
-// PLAY -> ADVENTURE -> EASY -> START, the chapter intro waits for input and advances,
+// A fresh profile is tutorial-first: PLAY starts the tutorial, and the player skips it on purpose
+// from its pause menu, which opens the run setup. Then ADVENTURE -> EASY -> START, the chapter
+// intro waits for input and advances,
 // wave 1 is fought and cleared by a small pixel-guided player loop, the draft opens,
 // a card is clicked and wave 2 begins. A defeat is retried within the time budget;
 // a retry must skip the already-seen chapter and still progress.
@@ -293,6 +295,11 @@ async function runTouchLeg(browser, origin, viewport, shot) {
     await waitForText(/^PLAY$/u, STATE_WAIT_MS, "main menu");
     await page.waitForTimeout(settleFor(800));
     await tapLabel(/^PLAY$/u, "PLAY");
+    await waitForText(/^LESSON 1 OF \d+$/u, STATE_WAIT_MS, "PLAY starts the tutorial");
+    await tapLabel(/^PAUSE$/u, "tutorial: PAUSE");
+    await tapLabel(/^MAIN MENU$/u, "tutorial: MAIN MENU");
+    await page.waitForTimeout(settleFor(700));
+    await tapLabel(/^SKIP TUTORIAL$/u, "tutorial: SKIP TUTORIAL");
     await page.waitForTimeout(settleFor(900));
     await tapLabel(/^ADVENTURE$/u, "Adventure mode");
     await page.waitForTimeout(settleFor(400));
@@ -490,10 +497,20 @@ async function main() {
     return hit;
   };
 
-  const startAdventure = async (leg) => {
+  const startAdventure = async (leg, { tutorialFirst = false } = {}) => {
     await waitForText(/^PLAY$/u, STATE_WAIT_MS, `${leg}: main menu`);
     await page.waitForTimeout(settleFor(800));
     await clickLabel(/^PLAY$/u, `${leg}: PLAY`);
+    if (tutorialFirst) {
+      // A fresh profile is tutorial-first: PLAY starts the tutorial. Skipping it on purpose, on
+      // the quit confirm that the pause's MAIN MENU opens, opens the run setup. Afterwards PLAY
+      // opens the setup directly.
+      await waitForText(/^LESSON 1 OF \d+$/u, STATE_WAIT_MS, `${leg}: PLAY starts the tutorial`);
+      await press("KeyP", 80);
+      await clickLabel(/^MAIN MENU$/u, `${leg}: MAIN MENU`);
+      await page.waitForTimeout(settleFor(700));
+      await clickLabel(/^SKIP TUTORIAL$/u, `${leg}: SKIP TUTORIAL`);
+    }
     await page.waitForTimeout(settleFor(900));
     await clickLabel(/^ADVENTURE$/u, `${leg}: Adventure mode`);
     await page.waitForTimeout(settleFor(400));
@@ -752,7 +769,7 @@ async function main() {
     let retries = 0;
     if (legs.has("mouse")) {
       // Leg 1, fresh profile: the chapter intro plays, wave 1 clears, a draft card is clicked, wave 2 begins.
-      await startAdventure("fresh");
+      await startAdventure("fresh", { tutorialFirst: true });
       await passChapterIntro("fresh");
       retries += await clearWaveOneAndPick("fresh");
 
