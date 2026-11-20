@@ -1,6 +1,7 @@
 import type { AuthoritativeInputSnapshot } from "../runtime/authoritative-input";
 import type { GameAction } from "../../input/game-action";
 import { stableVerificationHash } from "../../domain/hash";
+import { isObject } from "../../domain/records";
 
 export const TUTORIAL_GOLD_LESSONS = [
   "move",
@@ -131,7 +132,7 @@ export interface TutorialGoldCorpus {
 }
 export const TUTORIAL_GOLD_MAX_TICKS = 20000;
 function freeze<T>(value: T): T {
-  if (value !== null && typeof value === "object") {
+  if (isObject(value)) {
     for (const child of Object.values(value)) freeze(child);
     Object.freeze(value);
   }

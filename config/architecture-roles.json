@@ -40,7 +40,7 @@
       ]
     },
     "biome.verdant.implementation": {
-      "purpose": "Every module that implements Verdant-specific behaviour (gameplay, presentation, app wiring, TearBench forge); forbidden targets for Pale and neutral code.",
+      "purpose": "Every module that implements Verdant-specific behaviour (gameplay, presentation, app wiring, TearBench state setup); forbidden targets for Pale and neutral code.",
       "include": [
         "src/gameplay/environment/bloom-well.ts",
         "src/gameplay/environment/bloom-well-presentation-facts.ts",
@@ -54,7 +54,7 @@
         "src/gameplay/entities/enemy-types/rootbound-moves.ts",
         "src/presentation/environment/bloom-well-presentation.ts",
         "src/gameplay/environment/biome-actors/bloom-well-actors.ts",
-        "src/tearbench/rootbound-graft-anchor-forge.ts"
+        "src/tearbench/rootbound-graft-anchor-setup.ts"
       ]
     },
     "environment.neutral-foundation": {
@@ -237,6 +237,29 @@
       "purpose": "Developer and test code that no release build may contain: the scripted test player, the playtest tool, TearBench's browser and test-support modules and the debug harness. Other code may load it only through a dynamic import guarded by a build constant, and a release build fails when one of these modules contributes code to a bundle (scripts/release-developer-code.mjs).",
       "include": ["@tearbench.developer-surfaces", "src/agents/**", "src/playtest/**", "src/app/engineering/debug-*.ts"],
       "anticipate": ["src/app/engineering/*-channel-entry.ts"]
+    },
+    "release.mobile-only": {
+      "purpose": "Phone and tablet code that a production build leaves out while mobile is paused (owner, 2026-11-19; plans/MOBILE_LATER.md): the touch input layer and its control layout, the drawn touch controls and their coaching, the rotate gate and the phone profile layout. Other code reaches it only behind __TEAR_MOBILE__, and a build of a target whose mobile is false in config/build-targets.json fails when one of these modules contributes code to a bundle (scripts/release-developer-code.mjs).",
+      "include": [
+        "src/input/browser-touch.ts",
+        "src/input/touch-control-layout.ts",
+        "src/presentation/world/touch-controls.ts",
+        "src/presentation/rotate-gate.ts",
+        "src/presentation/screens/compact-profile.ts",
+        "src/app/training/touch-onboarding-controller.ts"
+      ]
+    },
+    "release.mobile-guarded-importers": {
+      "purpose": "Shared modules that value-import mobile-only code and reach it only behind __TEAR_MOBILE__, so a production build shakes it out. A new importer goes through one of these.",
+      "include": [
+        "src/input/browser-input.ts",
+        "src/presentation/world/index.ts",
+        "src/presentation/render-pipeline.ts",
+        "src/presentation/screens/profile-achievements.ts",
+        "src/app/interface/interface-composition.ts",
+        "src/app/interface/presentation-composition.ts",
+        "src/app/shell/composition.ts"
+      ]
     },
     "release.build-guarded-importers": {
       "purpose": "Release modules that still import developer-only code with a static import and rely on a build constant and tree-shaking to drop it. Ratchet target: empty.",

@@ -113,6 +113,16 @@ export interface ScreenUiPort {
     align?: CanvasTextAlign,
     size?: number,
   ): void;
+  /** A key legend ("A D / ← →") in the bold tag face, arrows drawn with the letters' weight; returns its width. */
+  keyLegend(
+    context: CanvasRenderingContext2D,
+    legend: string,
+    x: number,
+    y: number,
+    color?: string,
+    align?: CanvasTextAlign,
+    size?: number,
+  ): number;
   header(context: CanvasRenderingContext2D, title: string, subtitle?: string, animation?: number, hue?: string): void;
   sectionLabel(
     context: CanvasRenderingContext2D,

@@ -25,15 +25,16 @@ const ARCHIVE_STATUS: Readonly<Record<string, string>> = Object.freeze({
 export function createProfileAchievementRenderers(context: ScreenRenderContext) {
   const { ui } = context;
   const career = createCareerArchiveRenderer(context);
-  // Phone landscape (compact density) composes these screens as compact pages.
-  const compact = createCompactProfile(context);
+  // Phone landscape (compact density) composes these screens as compact pages. Only touch reaches
+  // compact density, so production builds (no touch while mobile is paused) leave the layout out.
+  const compact = __TEAR_MOBILE__ ? createCompactProfile(context) : null;
 
   function profile(view: ProfileScreenView): void {
     if (view.career) {
       career(view.career);
       return;
     }
-    if (ui.density.compact) {
+    if (compact !== null && ui.density.compact) {
       compact.profile(view);
       return;
     }
@@ -440,7 +441,7 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
   }
 
   function achievements(view: AchievementsScreenView): void {
-    if (ui.density.compact) {
+    if (compact !== null && ui.density.compact) {
       compact.achievements(view);
       return;
     }

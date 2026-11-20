@@ -75,7 +75,7 @@ withJourney({ name: "Verdant C9 presentation" }, async ({ page, buildInfo }) => 
   const state = await page.evaluate((scenario) => {
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
     window.__VERDANT_C9_ENVIRONMENT__ = environment;
-    const launched = environment.forgeResolvedScenario(scenario);
+    const launched = environment.buildResolvedScenario(scenario);
     for (let index = 0; index < 12; index += 1) environment.renderFrame(1 / 60);
     const snapshot = environment.captureSnapshot("verdant-c9-browser");
     return {

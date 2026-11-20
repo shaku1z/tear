@@ -78,6 +78,10 @@ export function createEnemyBase(dependencies: EnemyDependencies, bossRuntime: Bo
     auraHaste: number;
     tetherDR: number;
     anchored: boolean;
+    /** A root holds it: it cannot be flung or lifted until the root is cut. Set only by `setRooted`. */
+    rooted = false;
+    /** False for an enemy that is never rooted. */
+    rootable = true;
     /** Keeps its own height in the air: a lift leaves it alone. */
     flies = false;
     buffs: string[];
@@ -241,6 +245,12 @@ export function createEnemyBase(dependencies: EnemyDependencies, bossRuntime: Bo
     }
     applyMark() {
       this.markT = Math.max(this.markT, CONFIG.status.markDur);
+    }
+    /** A root takes or lets go of this enemy. A rooted enemy is held the way an anchored one is. */
+    setRooted(rooted: boolean) {
+      if (this.rooted === rooted) return;
+      this.rooted = rooted;
+      this.anchored = rooted;
     }
     applySeam(duration: number, throwId: number) {
       this.seamT = Math.max(this.seamT, duration || 0);
@@ -567,8 +577,19 @@ export function createEnemyBase(dependencies: EnemyDependencies, bossRuntime: Bo
       return p;
     }
 
+    /** Seconds left in which this enemy may move but not attack or hurt by touch; set where it spawns. */
+    attackHold = 0;
+    /** Keeps every clock that starts an attack at least `seconds` away. A class with its own clock adds it. */
+    holdAttacks(seconds: number) {
+      this.atkCd = Math.max(this.atkCd, seconds);
+    }
+
     tickTimers(dt: number) {
       this.aliveT += dt;
+      if (this.attackHold > 0) {
+        this.holdAttacks(this.attackHold);
+        this.attackHold = Math.max(0, this.attackHold - dt);
+      }
       if (this.hitCd > 0) this.hitCd -= dt;
       if (this.flash > 0) this.flash -= dt;
       if (this.stun > 0) this.stun -= dt;

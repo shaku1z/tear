@@ -7,6 +7,7 @@ import type {
   EnvironmentTrackLifecycle,
   EnvironmentObjectValidationPort,
 } from "./environment-contracts";
+import { isRecord } from "../../domain/records";
 
 export type AuroraTrackVariant = "stage" | "boss-wake";
 export type GhostTrackVariant = "ghost";
@@ -138,10 +139,6 @@ function isUnknownArray(value: unknown): value is readonly unknown[] {
   return Array.isArray(value);
 }
 
-function isUnknownRecord(value: unknown): value is Readonly<Record<string, unknown>> {
-  return typeof value === "object" && value !== null;
-}
-
 export function assertAuroraTrackFieldState(value: EnvironmentFieldState): asserts value is AuroraTrackFieldState {
   if (value.kind !== "aurora-track") return;
   const candidate = value as EnvironmentFieldState & Partial<AuroraTrackFieldState>;
@@ -158,7 +155,7 @@ export function assertAuroraTrackFieldState(value: EnvironmentFieldState): asser
   if (!isUnknownArray(carryStates)) throw new TypeError("Aurora Track carryStates must be an array");
   const carryIds = new Set<string>();
   for (const carry of carryStates) {
-    if (!isUnknownRecord(carry)) throw new TypeError("Aurora Track carry state must be an object");
+    if (!isRecord(carry)) throw new TypeError("Aurora Track carry state must be an object");
     const actorId = carry.actorId,
       direction = carry.direction,
       remainingTicks = carry.remainingTicks;

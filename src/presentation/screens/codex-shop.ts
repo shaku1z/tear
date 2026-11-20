@@ -520,7 +520,7 @@ export function createCodexShopRenderers(context: ScreenRenderContext) {
     let cursor = ui.sectionLabel(canvas, "CONTROLS", x, y + g.labelY, width) + g.after.rows;
     for (const row of view.controls) {
       const baseline = cursor + g.baseline;
-      ui.tag(canvas, row.keys.join(" + "), x, baseline, ui.readable(t.color.accent), "left", t.type.micro);
+      ui.keyLegend(canvas, row.keys.join(" + "), x, baseline, ui.readable(t.color.accent), "left", t.type.micro);
       ui.textBox(canvas, row.description, x + g.keyWidth, baseline, width - g.keyWidth, {
         ...rows,
         alpha: t.alpha.soft,

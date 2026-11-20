@@ -81,7 +81,7 @@ The following C27A foundation slices are complete:
 - A shared DOM-free `tear-world-entity-construction` catalog now selects every
   active-run player, blade, projectile, enemy, boss, and support construction
   route. Its narrow app adapter retains the production constructors while State
-  Forge, run start, content/boss spawning, reactive enemies, VoidWisp, and
+  Setup, run start, content/boss spawning, reactive enemies, VoidWisp, and
   generated projectiles converge on the same production factory IDs. Echo
   retains `MirrorHost(x, y, run.mods)` construction and post-hydration modifier
   relinking. This removes divergent outer object selection without claiming

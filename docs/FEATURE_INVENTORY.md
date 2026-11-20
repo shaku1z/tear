@@ -331,7 +331,7 @@ frozen evidence record.
   field, damageable combat-object, and data-only route definitions now share
   bounded deterministic lifecycle, geometry, integrity, attack-ID dedupe,
   proc exclusion, cleanup, native environment facts, causal mapping, State
-  Forge scenarios, and live/detached parity evidence. No stage content or
+  Setup scenarios, and live/detached parity evidence. No stage content or
   release certification is implied.
 - [x] Verdant C5 Bloom Wells V1 (engineering-only) — one authored 120 Hz Bloom
   definition owns warning, active lift, cooldown, stage/boss variants, bounded
@@ -781,7 +781,7 @@ frozen evidence record.
 - [x] Class-A semantic cinematic advancement — `live-runtime-application-frame.test.ts`
   exposes one test-build-only authored director beat through the typed live
   runtime, without a debug global, renderer clock, or synthetic fixed tick.
-  `browser-c40-state-setup-source-void.js` proves a resolved Source phase-two
+  `browser-state-setup-source-void.js` proves a resolved Source phase-two
   State Setup launch enters collapse, then reaches live void hazard/navigation
   state through bounded semantic beats and real authoritative application
   frames. This is a replay-seek foundation, not C40 certification.
@@ -821,7 +821,7 @@ frozen evidence record.
 
 - [x] Narrow Riftlock Loose Cannon forensic replay evidence —
   `browser-c40-riftlock-loose-cannon-ghost-seek.js` starts one normal Class-A State
-  Forge Riftlock state, captures a target through semantic aim and throw, then
+  Setup Riftlock state, captures a target through semantic aim and throw, then
   performs the real Backblast recall and catch. The sealed verified V3 capsule retains
   generic native `blade.thrown`/`blade.caught` transport facts and three fresh
   C29 seeks reproduce retained prethrow, Capture, Backblast, and postcatch
@@ -831,7 +831,7 @@ frozen evidence record.
 
 - [x] Narrow Sword Seam/Crosscut forensic replay evidence —
   `browser-c40-sword-crosscut-ghost-seek.js` begins one normal Class-A State
-  Forge Sword/charger encounter using bounded authored-arena placement, then
+  Setup Sword/charger encounter using bounded authored-arena placement, then
   issues only semantic aim, throw, and recall. It records a real outgoing Seam
   followed by the retraced native Crosscut; this normal charger is defeated by
   Crosscut, so the post-Crosscut receipt proves no live Seam remains before the

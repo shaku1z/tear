@@ -1,4 +1,5 @@
 import { BOSS_ROSTER } from "../run/content-director";
+import { isObject } from "../../domain/records";
 
 export type PracticeBossId = (typeof BOSS_ROSTER)[number]["id"];
 export type PracticeBossPhase = 1 | 2 | 3;
@@ -106,13 +107,8 @@ function matches(state: BossPhasePracticeState, world: BossPhasePracticeWorld): 
 const checkedStates = new WeakSet();
 
 function assertPracticeStateFields(value: unknown): asserts value is BossPhasePracticeState {
-  if (typeof value === "object" && value !== null && checkedStates.has(value)) return;
-  if (
-    value === null ||
-    typeof value !== "object" ||
-    Array.isArray(value) ||
-    Object.getPrototypeOf(value) !== Object.prototype
-  )
+  if (isObject(value) && checkedStates.has(value)) return;
+  if (!isObject(value) || Array.isArray(value) || Object.getPrototypeOf(value) !== Object.prototype)
     throw new Error("Invalid boss practice state");
   const descriptors = Object.getOwnPropertyDescriptors(value);
   const keys = [

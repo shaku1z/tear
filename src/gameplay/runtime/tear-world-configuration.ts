@@ -1,3 +1,5 @@
+import { isRecord } from "../../domain/records";
+
 /**
  * One isolated mutable tuning record for a gameplay world.
  *
@@ -26,7 +28,7 @@ function clone<Configuration>(value: Configuration): Configuration {
 }
 
 function isDataRecord(value: unknown): value is DataRecord {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  if (!isRecord(value)) return false;
   return Object.prototype.toString.call(value) === "[object Object]";
 }
 

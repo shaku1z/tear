@@ -9,7 +9,7 @@
       "maxLineLength": 171
     },
     "src/app/engineering/debug-harness.ts": {
-      "chars": 29248
+      "chars": 29185
     },
     "src/audio/stems/validate.ts": {
       "largestFunctionStatements": 83
@@ -63,7 +63,7 @@
       "chars": 26787
     },
     "src/gameplay/training/tutorial-controller.ts": {
-      "chars": 45807,
+      "chars": 45521,
       "largestFunctionStatements": 170
     },
     "src/gameplay/upgrades.ts": {
@@ -149,13 +149,13 @@
       "largestFunctionStatements": 93
     },
     "src/tearbench/live-runtime-environment.ts": {
-      "chars": 29599
+      "chars": 29591
     },
     "src/tearbench/production-combat-phases.ts": {
-      "chars": 30100
+      "chars": 30070
     },
     "src/tearbench/production-headless-environment.ts": {
-      "chars": 28010
+      "chars": 27871
     },
     "src/tearbench/production-replay-composition.ts": {
       "chars": 34925
