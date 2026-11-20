@@ -7,7 +7,7 @@ export function ruleApplies(rule, file, resolver) {
 }
 
 /** A module in an import rule's `to`, minus its `toExcept`. */
-function targetSelected(rule, file, resolver) {
+export function targetSelected(rule, file, resolver) {
   return resolver.matchesAny(rule.to, file) && !resolver.matchesAny(rule.toExcept ?? [], file);
 }
 
