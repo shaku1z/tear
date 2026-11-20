@@ -787,7 +787,7 @@
     ],
     "maxTicks": 24,
     "testFiles": [
-      "tests/unit/rootbinder-network.test.ts"
+      "tests/unit/rootbinder-roots.test.ts"
     ],
     "evidence": {
       "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
