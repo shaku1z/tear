@@ -40,8 +40,6 @@ describe("live screen action bindings", () => {
     expect(ghostFiles.cancelArchive).toHaveBeenLastCalledWith();
     dispatch({ type: "profile.downloadGhostArchive", id: "capsule" });
     expect(ghostFiles.downloadArchive).toHaveBeenCalledExactlyOnceWith("capsule");
-    dispatch({ type: "profile.downloadGhostArchive", id: "capsule", paired: true });
-    expect(ghostFiles.downloadArchive).toHaveBeenLastCalledWith("capsule", true);
   });
 
   it("maps the replay editor actions to the replay adapter", () => {

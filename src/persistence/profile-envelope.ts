@@ -1,5 +1,6 @@
 import { normalizeCosmeticState } from "../domain/cosmetics";
 import { normalizeGauntletBests } from "../domain/gauntlet-records";
+import { normalizeTutorialProgress, storedTutorialProgress } from "../domain/tutorial-progress";
 import { asRecord } from "../domain/records";
 import { achievementOutbox, addGrant, dailyReceiptId, tutorialLedger } from "../domain/reward-receipts";
 import {
@@ -105,6 +106,12 @@ export function migrateProfileEnvelope(input: unknown, nowMs = 0): MigrationResu
       ? validateJsonObject(normalizeGauntletBests(profile.value.gauntletBest))
       : null;
   if (gauntletBest && !gauntletBest.ok) return invalid(gauntletBest.error);
+  // Tutorial lesson progress is optional too, re-validated the same way.
+  const tutorialProgress =
+    profile.value.tutorialProgress !== undefined
+      ? validateJsonObject(storedTutorialProgress(normalizeTutorialProgress(profile.value.tutorialProgress)))
+      : null;
+  if (tutorialProgress && !tutorialProgress.ok) return invalid(tutorialProgress.error);
   const extensions = extensionFields(isEnvelope ? source : {}, KNOWN_FIELDS);
   if (!extensions.ok) return invalid(extensions.error);
   return {
@@ -120,6 +127,7 @@ export function migrateProfileEnvelope(input: unknown, nowMs = 0): MigrationResu
         ...withReceipts,
         ...(cosmetics ? { cosmetics: cosmetics.value } : {}),
         ...(gauntletBest ? { gauntletBest: gauntletBest.value } : {}),
+        ...(tutorialProgress ? { tutorialProgress: tutorialProgress.value } : {}),
       },
       extensions: extensions.value,
     }),

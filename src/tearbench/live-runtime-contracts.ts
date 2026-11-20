@@ -236,6 +236,8 @@ export interface LiveTearRuntimeEnvironmentContext {
   readonly pushAction: (action: GameAction) => void;
   readonly routeAction: (action: GameAction) => boolean;
   readonly activateControl: (action: ScreenAction) => boolean;
+  /** Records the profile as having skipped the tutorial, so PLAY opens run setup (scripted runs, not lessons). */
+  readonly skipTutorial: () => void;
   /** Whether the current screen has drawn any controls; false while its lazy renderer is still loading. */
   readonly controlsDrawn: () => boolean;
   readonly skipCinematic: () => void;

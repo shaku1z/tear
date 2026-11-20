@@ -166,7 +166,7 @@ function validateAllowlistEntries(entries, label, termIds, options = {}) {
         "docs/source/",
         "docs/TEARBENCH_GHOST3_",
         "docs/TEARBENCH_RUNTIME_ARCHITECTURE_ALIGNMENT.md",
-        "docs/TEARBENCH_C40_WEAPON_ROSTER_EVIDENCE_INDEX.md",
+        "docs/TEARBENCH_WEAPON_ROSTER_EVIDENCE_INDEX.md",
         "src/tearbench/evidence-routes.json",
       ];
       if (!allowedHistoryRoots.some((root) => pattern === root || pattern.startsWith(root))) {

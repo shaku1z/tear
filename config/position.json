@@ -53,8 +53,8 @@
       "id": "verdant-gameplay",
       "name": "Verdant Sanctum gameplay",
       "state": "In progress",
-      "summary": "The Rootbound boss is rebuilt in all three phases as data on a shared boss move layer that Pale and later bosses reuse: Phase I's moves, Phase II's Grafts, Root Cage and Bloom Wells, and Phase III's Regrowth and Last Spring. Its body no longer hurts on touch: it blocks, and it does not play a move the player could not walk out of. The stage's Bloom Wells stand on the floor and lift the player and light enemies; who a stage field moves is one data row. The Rootbinder is rebuilt as a support that backs away, plants and roots the allies near it, so they cannot be flung or lifted until the root is cut; cutting every root or one heavy hit uproots it, and it takes more damage while planted. Its old leash on the player is replaced by a warned snare: a ring marked on the ground that holds a player who stays in it, with a cut, a 2 second release and an immunity afterwards. Verdant waves are not rebuilt yet.",
-      "next": "Verdant waves.",
+      "summary": "The Rootbound boss is rebuilt in all three phases as data on a shared boss move layer that Pale and later bosses reuse: Phase I's moves, Phase II's Grafts, Root Cage and Bloom Wells, and Phase III's Regrowth and Last Spring. Its body no longer hurts on touch: it blocks, and it does not play a move the player could not walk out of. The stage's Bloom Wells stand on the floor and lift the player and light enemies; who a stage field moves is one data row. The Rootbinder is rebuilt as a support that backs away, plants and roots the allies near it, so they cannot be flung or lifted until the root is cut; cutting every root or one heavy hit uproots it, and it takes more damage while planted. Its old leash on the player is replaced by a warned snare: a ring marked on the ground that holds a player who stays in it, with a cut, a 2 second release and an immunity afterwards. Verdant's nine waves are written: each has listed enemies in spawn order (wave 32 two ground allies and then a Rootbinder, 33 a Mender, 36 a Chimera, 38 a second Rootbinder late) and the pool fills the rest; any stage can carry such a table. Their numbers are not tuned yet.",
+      "next": "Tune the waves against the playtest tool's wave measurements, then close Verdant.",
       "owner_action": "Playtest the Rootbound in all three phases.",
       "evidence": [
         "plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md"
@@ -116,6 +116,17 @@
       "owner_action": "",
       "evidence": [
         "plans/active/PLAYTEST_TOOL_PLAN.md"
+      ]
+    },
+    {
+      "id": "replays",
+      "name": "Replays",
+      "state": "Planning: draft plan up for the lead's review; no code yet",
+      "summary": "Players reach two replay systems today: Ghost 2 (position samples in localStorage, used by the REPLAYS tab, the feed and leaderboard links) and the Ghost V3 capsules (re-simulated, in IndexedDB, used by VAULT, CAREER and the Theater). The plan replaces both with one versioned record and five plain modules (record, store, watch, share, verify), moves the replay world and snapshot codecs out of TearBench, and deletes src/ghost (118 replay modules and about 800,000 characters today).",
+      "next": "The lead's answers to the plan's six questions, then PR 1 (remove the hidden replay features).",
+      "owner_action": "Product calls in the plan: one Replays tab, removing COMPARE, challenges, RUN DNA, the finale companion and REPAIR, deleting old local replays at the switch; the Firestore chunk-write rule.",
+      "evidence": [
+        "plans/active/REPLAY_OVERHAUL_PLAN.md"
       ]
     },
     {

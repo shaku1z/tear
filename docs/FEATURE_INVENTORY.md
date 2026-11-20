@@ -22,13 +22,7 @@ Race-derived local
 challenge/practice forks are explicitly unsupported; this is not full R16 closure.
 See the [current C37 contract](checkpoints/C37_COACH_PRACTICE_FOUNDATION.md#seed-locked-race-local-source-implementation-browser-acceptance-pending).
 
-Boss Memory now saves a named, annotated derived encounter from a verified
-living-boss checkpoint through native boss or player defeat. Recording history
-is removed; normal segment-only download/import, bounded Watch and independent
-entry Practice reuse existing owners. Source membership is explicitly unproven
-without original bytes; necessary entry gameplay state remains. Focused native
-construction controls are engineering evidence; fresh normal browser acceptance
-is pending. See the current C37 checkpoint for provenance and legacy limits.
+Boss Memory was removed in the replay overhaul (PR 1 of [the replay overhaul plan](../plans/active/REPLAY_OVERHAUL_PLAN.md)); it was never released.
 
 This is the migration checklist for the architectural redesign. A checked feature has characterization, contract, deterministic, or built-artifact browser coverage in the redesigned runtime and is included in `pnpm check`. Presence in a compatibility bundle alone does not count. A check records the existence of credible automated evidence; release readiness still requires that the complete gate pass from the final clean commit.
 
@@ -39,8 +33,8 @@ This is the migration checklist for the architectural redesign. A checked featur
   the release channel; test builds and `vite dev` use the engineering channel.
   Engineering-only (not drawn, not focusable, actions inert, screens refused):
   Boss Test and Enemy Test (still catalog modes) with the
-  boss picker, Seed-Locked Race, Boss Memory, Replay
-  Editor, linked-pair download, every engineering URL parameter (`test`, `stemcue`,
+  boss picker, Seed-Locked Race, Replay
+  Editor, every engineering URL parameter (`test`, `stemcue`,
   `stems`, `foundry*`, surface routes) and the weapon/audio-preview debug
   globals.
 - [x] The published Adventure is exactly six stages and 60 waves: Grounds,
@@ -781,7 +775,7 @@ frozen evidence record.
 - [x] Class-A semantic cinematic advancement — `live-runtime-application-frame.test.ts`
   exposes one test-build-only authored director beat through the typed live
   runtime, without a debug global, renderer clock, or synthetic fixed tick.
-  `browser-c40-state-setup-source-void.js` proves a resolved Source phase-two
+  `browser-state-setup-source-void.js` proves a resolved Source phase-two
   State Setup launch enters collapse, then reaches live void hazard/navigation
   state through bounded semantic beats and real authoritative application
   frames. This is a replay-seek foundation, not C40 certification.
@@ -1004,6 +998,7 @@ frozen evidence record.
 - [x] Master, music, sound-effects and interface volume/mute controls — audio settings/mixer tests, screen renderer parity, and the built-artifact feature/audio matrices.
 - [x] Independent saved audio sliders plus temporary ad/portal/system mute reasons — `audio-live-legacy.test.ts`, `audio-mixer.test.ts`, `audio-system.test.ts`, and CrazyGames adapter contracts.
 - [x] Cinematic preference and automatic pause behavior — `cinematic-preference.test.ts` and `settings-controller.test.ts` cover policy, sanitization and persistence; `browser-cinematic-preferences.js` proves full/brief/off campaign behavior and direct wave activation when scenes are off; the input matrix covers controller-disconnect auto-pause.
+- [x] Credits tab in Settings: the fonts and libraries each build contains, with the licence text opening from the row where it ships — `credits.test.ts` (a font file without an entry fails it, and each build lists only its own works), `settings-snapshots.test.ts` and `screen-renderers.test.ts` (no RESET DEFAULTS on the read-only tab).
 
 ## Audio
 

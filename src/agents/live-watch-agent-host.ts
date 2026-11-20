@@ -323,6 +323,9 @@ export function createLiveWatchAgentHost(context: LiveTearRuntimeEnvironmentCont
       policy: new TearLiveHierarchicalPolicy(resolved.profile),
       ...(director === undefined ? {} : { director }),
     };
+    // The agent plays runs, not lessons: it starts as a player who skipped the tutorial, so
+    // PLAY opens run setup instead of leading into the tutorial (tutorial-first PLAY).
+    context.skipTutorial();
     activateRequired(context, { type: "navigate", to: "setup" }, "PLAY");
     transition();
     return immutableSnapshot(context, state);

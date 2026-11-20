@@ -42,6 +42,7 @@ export const CANONICAL_ACTIVE_PLAN_PATHS = Object.freeze([
   "plans/active/RELEASE_READINESS_PLAN.md",
   "plans/active/PLAYTEST_TOOL_PLAN.md",
   "plans/active/DRILLED_MOVE_NAMES.md",
+  "plans/active/REPLAY_OVERHAUL_PLAN.md",
 ]);
 
 // Compatibility export for callers that need the canonical active-plan list.
@@ -76,8 +77,8 @@ const PATH_BOUND_TEARBENCH_ARTIFACTS = Object.freeze([
   "plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md",
   "docs/tearbench-ghost3-evidence-catalog.json",
   "docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md",
-  "docs/tearbench-c40-weapon-roster-evidence-index.json",
-  "docs/TEARBENCH_C40_WEAPON_ROSTER_EVIDENCE_INDEX.md",
+  "docs/tearbench-weapon-roster-evidence-index.json",
+  "docs/TEARBENCH_WEAPON_ROSTER_EVIDENCE_INDEX.md",
   "src/tearbench/canonical-scenarios.json",
   "src/tearbench/evidence-routes.json",
 ]);

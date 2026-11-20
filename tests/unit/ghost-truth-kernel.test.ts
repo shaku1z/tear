@@ -2,14 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   GhostTimeline,
-  GHOST_RECORDING_PROFILES,
   createGhostV3,
   migrateLegacyReplayToGhost,
   negotiateRecordingProfile,
   resolveTridentPrecedence,
   verifyGhostRoundTrips,
   type GhostReplayTrident,
-} from "../../src/ghost";
+} from "../../src/ghost/truth-kernel";
+import { GHOST_RECORDING_PROFILES } from "../../src/ghost/recording-profiles";
 import type { TearCausalEventV1 } from "../../src/tearbench";
 
 const trident: GhostReplayTrident = {
