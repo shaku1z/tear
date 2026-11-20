@@ -1,4 +1,4 @@
-import { loadSceneBitmap } from "./scenes/scene-bitmap";
+import { createSceneCanvas } from "./scenes/scene-bitmap";
 import type { SceneBitmap } from "./scenes/scene-renderer";
 import type { MusicCoverView } from "./screens/contracts";
 
@@ -10,7 +10,7 @@ import type { MusicCoverView } from "./screens/contracts";
  * The screen needs only the files, named `<stageId>-<size>.webp`, so the manifest itself never
  * ships. A painting is fetched the first time a cover asks for it, so nothing downloads until the
  * MUSIC screen draws; until it arrives (or if it never does) the cover keeps its hue bands. The
- * files are WebP outside the PWA precache, as scene art is.
+ * files are WebP outside the PWA precache.
  */
 const FILE = /\/([a-z][a-z-]*)-(\d+)\.webp$/u;
 
@@ -47,6 +47,23 @@ export function coverUrl(stageId: string, devicePixels: number): string | null {
   return (files.find(([size]) => size >= devicePixels) ?? files.at(-1))?.[1] ?? null;
 }
 
+/**
+ * Fetches and decodes one painting off the main thread where the browser allows it, then copies
+ * it into a canvas once. Chrome keeps a bitmap decoded from a file outside the GPU and uploads it
+ * again whenever the game's canvas draws it; a canvas source stays on the GPU.
+ */
+async function loadCoverBitmap(url: string): Promise<SceneBitmap> {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`cover painting ${url}: HTTP ${String(response.status)}`);
+  const decoded = await createImageBitmap(await response.blob());
+  const canvas = createSceneCanvas(decoded.width, decoded.height);
+  const context = canvas.getContext("2d");
+  if (context === null) return decoded;
+  context.drawImage(decoded, 0, 0);
+  decoded.close();
+  return canvas;
+}
+
 type Slot = SceneBitmap | "loading" | "failed";
 const slots = new Map<string, Slot>();
 const loaded = (slot: Slot | undefined): SceneBitmap | null =>
@@ -59,7 +76,7 @@ const loaded = (slot: Slot | undefined): SceneBitmap | null =>
 export function coverPainting(
   stageId: string,
   devicePixels: number,
-  load: (url: string) => Promise<SceneBitmap> = loadSceneBitmap,
+  load: (url: string) => Promise<SceneBitmap> = loadCoverBitmap,
 ): SceneBitmap | null {
   const url = coverUrl(stageId, devicePixels);
   if (url === null) return null;

@@ -254,13 +254,13 @@ export interface StageArtRecipe {
   readonly layers: readonly StageArtLayer[];
 }
 
-/** Hard bounds that keep any recipe's bake short and its memory small. */
 /** What the stage itself defines and the painted scene must keep: HUD paper and platform material. */
 export interface StageArtIdentity {
   readonly paper: string;
   readonly platformMaterial: string;
 }
 
+/** Hard bounds that keep any recipe's bake short and its memory small. */
 export const STAGE_ART_LIMITS = Object.freeze({
   layers: 8,
   strokesPerLayer: 48,

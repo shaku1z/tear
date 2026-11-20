@@ -6,6 +6,7 @@
  */
 import viewports from "../../../config/scene-viewports.json";
 import {
+  frontLayerIntrusion,
   requiredLayerRect,
   viewportWorldRect,
   type Rect,
@@ -16,7 +17,7 @@ import type { ScenePaintPorts } from "../scenes/scene-library";
 import type { LoadedScene, SceneBitmap, SceneCanvas } from "../scenes/scene-renderer";
 import { parseHex, valueNoise, type Context2D, type PaintKit, type Ramp } from "./paint-kit";
 import type { StageArtIdentity, StageArtLayer, StageArtRecipe, StageArtStroke } from "./stage-art-contract";
-import { validateStageArt } from "./stage-art-validate";
+import { StageArtError, validateStageArt } from "./stage-art-validate";
 import { paintArcade, paintSurface } from "./strokes-built";
 import { paintMass, paintScatter, paintStrands, paintTrunk } from "./strokes-growth";
 import { paintFalls, paintGlow, paintHaze, paintShafts, paintSky, paintVignette, paintWater } from "./strokes-light";
@@ -120,6 +121,16 @@ export async function paintStageArt(
   const painted: Painted[] = [];
   for (const layer of recipe.layers) {
     const rect = stageArtLayerRect(recipe, layer, ports.world);
+    // A front layer draws over platforms and actors, so it may only dress the floor body and below.
+    const intrusion =
+      layer.plane === "front"
+        ? frontLayerIntrusion({ camera: recipe.camera, world: ports.world }, { rect, depth: layer.depth })
+        : 0;
+    if (intrusion > 0) {
+      throw new StageArtError(
+        `layer ${layer.id}: front layer reaches ${intrusion.toFixed(1)} px into the gameplay region`,
+      );
+    }
     const scale = layer.scale * ports.detail;
     const canvas = ports.createCanvas(Math.ceil(rect[2] * scale), Math.ceil(rect[3] * scale));
     const context = context2d(canvas);
@@ -184,7 +195,6 @@ export async function paintStageArt(
     edge: Object.freeze({ color: recipe.edge, feather: EDGE_FEATHER }),
     theme: Object.freeze({ paper: identity.paper }),
     layers: Object.freeze(layers),
-    shading: Object.freeze([]),
     platforms: Object.freeze({
       material: identity.platformMaterial,
       texture: "surface",
@@ -193,5 +203,5 @@ export async function paintStageArt(
       shadow: surface.shadow,
     }),
   });
-  return Object.freeze({ scene, images, shading: scene.shading });
+  return Object.freeze({ scene, images });
 }
