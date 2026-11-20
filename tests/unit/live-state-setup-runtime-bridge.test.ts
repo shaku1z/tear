@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { GameEnemy, GameRun } from "../../src/gameplay/runtime/game-runtime-state";
-import { createLiveStateForgeRuntimeBridge } from "../../src/app/engineering/state-forge-runtime-bridge";
+import { createLiveStateSetupRuntimeBridge } from "../../src/app/engineering/state-setup-runtime-bridge";
 import type { BossIntroState } from "../../src/app/world/game-host-state";
 import {
   advanceFramePrelude,
@@ -43,7 +43,7 @@ const transient = Object.freeze({
   rankPopText: "",
 });
 
-describe("live State Forge runtime bridge", () => {
+describe("live State Setup runtime bridge", () => {
   it.each([30, 60, 120])("restores hydrated boss intro ownership and completes at %i render Hz", (renderHz) => {
     const bossData = { isBoss: true, introT: 1.4, hp: 100, maxHp: 100, dead: false, dying: false };
     const oldBoss = { ...bossData } as GameEnemy;
@@ -70,7 +70,7 @@ describe("live State Forge runtime bridge", () => {
         restoreState: vi.fn(),
       },
     };
-    const bridge = createLiveStateForgeRuntimeBridge(options);
+    const bridge = createLiveStateSetupRuntimeBridge(options);
     expect(bridge.capture().bossIntro).toEqual(intro);
     const hydratedIntro = decodeTearCodecValue(
       { delay: 0, t: 0, dur: 1.4, boss: { $ref: "boss-1" } },
@@ -143,7 +143,7 @@ describe("live State Forge runtime bridge", () => {
     const restoreStageBanner = vi.fn();
     const restoreCinemaProtection = vi.fn();
     const clearEnvironmentRestore = vi.fn();
-    const bridge = createLiveStateForgeRuntimeBridge({
+    const bridge = createLiveStateSetupRuntimeBridge({
       captureBossIntro: () => null,
       restoreBossIntro: vi.fn(),
       captureTransient: () => ({}),
@@ -173,7 +173,7 @@ describe("live State Forge runtime bridge", () => {
   it("validates reconstructed chapter position and lifecycle before commit", () => {
     const binding = { script: { id: "chapter-0", revision: "binding", beats: [{ id: "enter" }] }, context: {} };
     const validateState = vi.fn(() => INACTIVE_CINEMATIC_DIRECTOR_STATE_V1);
-    const bridge = createLiveStateForgeRuntimeBridge({
+    const bridge = createLiveStateSetupRuntimeBridge({
       captureBossIntro: () => null,
       restoreBossIntro: vi.fn(),
       captureTransient: () => ({}),
@@ -214,7 +214,7 @@ describe("live State Forge runtime bridge", () => {
   });
 
   it("rejects active legacy chapters without a reconstructible binding", () => {
-    const bridge = createLiveStateForgeRuntimeBridge({
+    const bridge = createLiveStateSetupRuntimeBridge({
       captureBossIntro: () => null,
       restoreBossIntro: vi.fn(),
       captureTransient: () => ({}),
@@ -248,7 +248,7 @@ describe("live State Forge runtime bridge", () => {
   });
 
   it("rejects non-finite transient runtime data before commit", () => {
-    const bridge = createLiveStateForgeRuntimeBridge({
+    const bridge = createLiveStateSetupRuntimeBridge({
       captureBossIntro: () => null,
       restoreBossIntro: vi.fn(),
       captureTransient: () => transient,

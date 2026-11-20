@@ -110,7 +110,7 @@ withJourney({ name: "Pale PT3-C5 presentation" }, async ({ page, buildInfo }) =>
       ["aurora-track", 1],
     ],
   );
-  // The detached State Forge renderer is not the active input owner, so it
+  // The detached State Setup renderer is not the active input owner, so it
   // cannot acquire browser pointer lock. Suppress only the unrelated DOM hint;
   // the captured canvas remains the exact rendered gameplay frame.
   await page.evaluate(() => {
@@ -192,7 +192,7 @@ withJourney({ name: "Pale PT3-C5 presentation" }, async ({ page, buildInfo }) =>
           flashScale: 0,
           audioEnabled: false,
         },
-        captureOverlayPolicy: "detached-state-forge-pointer-lock-hint-suppressed",
+        captureOverlayPolicy: "detached-state-setup-pointer-lock-hint-suppressed",
         screenshots: captures,
       },
       null,

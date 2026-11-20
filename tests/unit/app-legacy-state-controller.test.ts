@@ -50,12 +50,13 @@ describe("AppStateController transition matrix", () => {
     }
   });
 
-  it("rejects every undeclared edge", () => {
+  it("rejects every undeclared edge except the return to the screen this one was opened from", () => {
     for (const from of APP_SCREENS) {
       for (const to of APP_SCREENS) {
         if (to === from || LEGAL_TRANSITIONS[from].includes(to)) continue;
         const controller = from === "replay" ? controllerAt("menu") : controllerAt(from);
         if (from === "replay") controller.transition("replay", { returnTo: "menu" });
+        if (to === controller.snapshot().back) continue;
         expect(() => controller.transition(to), `${from} -/-> ${to}`).toThrow(IllegalLegacyAppTransitionError);
       }
     }
@@ -66,12 +67,29 @@ describe("AppStateController transition matrix", () => {
     controller.transition("setup");
     controller.transition("playing", { runId: "run-1" });
     controller.transition("paused");
-    controller.transition("settings");
-    expect(controller.settingsReturn).toBe("paused");
-    controller.transition(controller.settingsReturn);
-    expect(controller.settingsReturn).toBe("menu");
+    controller.transition("settings", { leaving: { focus: 3, scroll: 0 } });
+    expect(controller.snapshot().back).toBe("paused");
+    controller.transition("paused");
+    expect(controller.snapshot()).toMatchObject({ back: "playing", arrival: { screen: "paused", focus: 3 } });
     controller.transition("playing");
     expect(controller.snapshot()).toMatchObject({ screen: "playing", runId: "run-1" });
+  });
+
+  it("returns a page to the screen it was opened from, with the control the player left", () => {
+    const controller = new AppStateController(ENGINEERING);
+    controller.transition("settings", { leaving: { focus: 5, scroll: 0 } });
+    controller.transition("codex", { leaving: { focus: 2, scroll: 140 } });
+    expect(LEGAL_TRANSITIONS.codex).not.toContain("settings");
+    expect(controller.canTransition("settings")).toBe(true);
+    controller.transition("settings");
+    expect(controller.snapshot()).toMatchObject({
+      back: "menu",
+      arrival: { screen: "settings", focus: 2, scroll: 140 },
+    });
+    controller.transition("menu");
+    expect(controller.snapshot()).toMatchObject({ back: null, arrival: { screen: "menu", focus: 5 } });
+    controller.transition("codex");
+    expect(() => controller.transition("settings")).toThrow(IllegalLegacyAppTransitionError);
   });
 
   it("only exits replay to its captured viewer origin", () => {

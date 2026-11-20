@@ -653,7 +653,7 @@ describe("legacy screen renderer registry", () => {
       "◀◀",
       "▶▶",
     ]);
-    expect(types()).toContainEqual({ type: "navigate", to: "menu" });
+    expect(types()).toContainEqual({ type: "navigate.back" });
     for (const control of controls) expect(control.y + control.h).toBeLessThanOrEqual(900);
 
     // A stage's page: the crumb back, PLAY over the stage's songs, one row per song with that queue.
@@ -1014,7 +1014,6 @@ describe("legacy screen renderer registry", () => {
       tab: "controls",
       resettable: true,
       tabs: [{ id: "controls", label: "CONTROLS" }],
-      returnTo: "menu",
       sections: [
         {
           label: "CONTROLS",
@@ -1082,7 +1081,6 @@ describe("legacy screen renderer registry", () => {
       tab: "general",
       resettable: true,
       tabs: [{ id: "general", label: "GENERAL" }],
-      returnTo: "menu",
       sections: [
         {
           label: "GENERAL",

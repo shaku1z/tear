@@ -21,7 +21,7 @@ export interface GhostCapsuleFidelity {
 /**
  * Declares the durable V3 track grammar without promoting an individual entry
  * to verified simulation truth. Readers validate command, causal-event, and
- * State Forge payloads at their own boundary.
+ * State Setup payloads at their own boundary.
  */
 export interface GhostCapsuleContractV1 {
   readonly format: typeof GHOST_CAPSULE_CONTRACT_FORMAT;

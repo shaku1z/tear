@@ -172,6 +172,7 @@ describe("music covers", () => {
       app: new AppStateController(createSurfaceAvailability("release")),
       input: { allowLock: false, discardSemanticInput: () => undefined, returnControl: () => undefined },
       runScreenFact: () => undefined,
+      place: () => ({ focus: -1, scroll: 0 }),
     });
     navigation.setScreen("music");
     coverPainting(stageId, 1, load);

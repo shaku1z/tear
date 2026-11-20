@@ -53,8 +53,8 @@
       "id": "verdant-gameplay",
       "name": "Verdant Sanctum gameplay",
       "state": "In progress",
-      "summary": "The Rootbound boss is rebuilt in all three phases as data on a shared boss move layer that Pale and later bosses reuse: Phase I's moves, Phase II's Grafts, Root Cage and Bloom Wells, and Phase III's Regrowth and Last Spring. Its body no longer hurts on touch: it blocks, and it does not play a move the player could not walk out of. Bloom Wells, the Rootbinder and its links, and Verdant waves are not rebuilt yet.",
-      "next": "The Bloom Wells and Rootbinder design, then Verdant waves.",
+      "summary": "The Rootbound boss is rebuilt in all three phases as data on a shared boss move layer that Pale and later bosses reuse: Phase I's moves, Phase II's Grafts, Root Cage and Bloom Wells, and Phase III's Regrowth and Last Spring. Its body no longer hurts on touch: it blocks, and it does not play a move the player could not walk out of. The stage's Bloom Wells stand on the floor and lift the player and light enemies; who a stage field moves is one data row. The Rootbinder and its links, its snare, and Verdant waves are not rebuilt yet.",
+      "next": "The Rootbinder and its root links, then its snare, then Verdant waves.",
       "owner_action": "Playtest the Rootbound in all three phases.",
       "evidence": [
         "plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md"
@@ -112,7 +112,7 @@
       "name": "Playtest tool",
       "state": "Stage 1 in part: pnpm playtest bosses prints a table per boss fight and phase, from Phase I or a chosen phase",
       "summary": "One command, pnpm playtest, that plays the game headless with scripted players on fixed seeds and reports clear rates, time to kill, damage taken and differences between builds. It is built from the working parts of TearBench and the scripted player and replaces both names. Verified on 2026-11-16: the scripted player runs headless at 13 to 15 times real time and the same seed reproduces exactly.",
-      "next": "Rest of stage 1: the still, walker and no-dodge players, boss movement, and the sweep over weapons and seeds.",
+      "next": "Rest of stage 1: the walker player, boss movement, and the sweep over weapons and seeds.",
       "owner_action": "",
       "evidence": [
         "plans/active/PLAYTEST_TOOL_PLAN.md"

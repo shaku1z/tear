@@ -2,7 +2,7 @@ import type { TearScenarioV1 } from "./contracts";
 import type { LiveTearRuntimeEnvironmentContext, TearStructuredRuntimeEnvironment } from "./live-runtime-contracts";
 import type { LiveRuntimeSnapshotController } from "./live-runtime-snapshots";
 import { synthesizeProgression } from "./progression-ledger";
-import { compileResolvedTearSdlSnapshot } from "./state-forge-live-compiler";
+import { compileResolvedTearSdlSnapshot } from "./state-setup-live-compiler";
 import type { TearLiveRestoreResult } from "./live-state-snapshot";
 import type { TearSdlResolved } from "./tearsdl";
 import { CAMPAIGN_STAGE_IDS, stageRuntimeIndexForSurface, type StageId } from "../gameplay/stages";
@@ -30,10 +30,10 @@ function seekBoss(context: LiveTearRuntimeEnvironmentContext): void {
     // action-observation timeline. Advance the shared authoritative tick
     // directly; the forged snapshot rebases it to its deterministic origin.
     const steps = context.advanceFixedTick();
-    if (steps !== 1) throw new Error("State Forge boss source lookup did not advance exactly one fixed tick");
+    if (steps !== 1) throw new Error("State Setup boss source lookup did not advance exactly one fixed tick");
   }
   if (!context.state.enemies().some((enemy) => enemy.isBoss)) {
-    throw new Error("State Forge could not reach the requested boss source");
+    throw new Error("State Setup could not reach the requested boss source");
   }
 }
 
@@ -66,7 +66,7 @@ export function launchResolvedLiveState(
     const previewSurgical = stageId === "pale-traverse" && resolved.document.stateClass === "surgical-valid";
     const surface = resolved.scenario.start.mode === "playground" || previewSurgical ? "playground" : "adventure";
     const stageIndex = stageRuntimeIndexForSurface(stageId as StageId, surface);
-    if (stageIndex < 0) throw new RangeError(`State Forge stage does not exist: ${stageId}`);
+    if (stageIndex < 0) throw new RangeError(`State Setup stage does not exist: ${stageId}`);
     context.loadStage(stageIndex);
   }
   const source = snapshots.capture(`${resolved.document.id}.source`);

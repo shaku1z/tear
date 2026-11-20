@@ -17,7 +17,7 @@ interface StagedChapterBinding {
   }>;
 }
 
-export interface LiveStateForgeRuntimeBridgeOptions {
+export interface LiveStateSetupRuntimeBridgeOptions {
   readonly finale?: Readonly<{
     capture(): unknown;
     clear(): void;
@@ -58,7 +58,7 @@ export interface LiveStateForgeRuntimeBridgeOptions {
     Partial<Pick<CinematicDirectorPort, "captureRecordedInput" | "restoreRecordedInput" | "validateRecordedInput">>;
 }
 
-export interface LiveStateForgeRuntimeBridge {
+export interface LiveStateSetupRuntimeBridge {
   readonly capture: () => Readonly<Record<string, unknown>>;
   readonly restore: (snapshot: Readonly<Record<string, unknown>>) => void;
   readonly validate: (
@@ -98,7 +98,7 @@ function bossIntro(value: unknown, version: unknown): BossIntroState | null {
 }
 
 /** Resolve ownership against staged actors before either restore path mutates its world. */
-export function resolveStateForgeBossIntro(
+export function resolveStateSetupBossIntro(
   snapshot: Readonly<Record<string, unknown>>,
   candidateEnemies: readonly GameEnemy[],
 ): BossIntroState | null {
@@ -154,13 +154,13 @@ const transientBooleanFields = Object.freeze(["wasDashing", "wasSwinging", "wasO
 function validateTransient(snapshot: Readonly<Record<string, unknown>>): void {
   for (const field of transientNumberFields) {
     if (typeof snapshot[field] !== "number" || !Number.isFinite(snapshot[field])) {
-      throw new TypeError(`State Forge runtime ${field} must be finite`);
+      throw new TypeError(`State Setup runtime ${field} must be finite`);
     }
   }
   for (const field of transientBooleanFields) {
-    if (typeof snapshot[field] !== "boolean") throw new TypeError(`State Forge runtime ${field} must be boolean`);
+    if (typeof snapshot[field] !== "boolean") throw new TypeError(`State Setup runtime ${field} must be boolean`);
   }
-  if (typeof snapshot.rankPopText !== "string") throw new TypeError("State Forge runtime rankPopText must be a string");
+  if (typeof snapshot.rankPopText !== "string") throw new TypeError("State Setup runtime rankPopText must be a string");
 }
 
 function normalizeTransient(snapshot: Readonly<Record<string, unknown>>): Readonly<Record<string, unknown>> {
@@ -257,10 +257,10 @@ function canonicalPracticeBinding(value: unknown, run: GameRun, platforms: reado
   };
 }
 
-/** Owns the portable State Forge runtime payload and all pre-commit binding validation. */
-export function createLiveStateForgeRuntimeBridge(
-  options: LiveStateForgeRuntimeBridgeOptions,
-): LiveStateForgeRuntimeBridge {
+/** Owns the portable State Setup runtime payload and all pre-commit binding validation. */
+export function createLiveStateSetupRuntimeBridge(
+  options: LiveStateSetupRuntimeBridgeOptions,
+): LiveStateSetupRuntimeBridge {
   const capture = (): Readonly<Record<string, unknown>> => {
     const tutorialSession = options.tutorial?.captureSession();
     return Object.freeze({
@@ -320,7 +320,7 @@ export function createLiveStateForgeRuntimeBridge(
     candidatePlatforms: readonly object[] = [],
     configuration?: unknown,
   ): void => {
-    resolveStateForgeBossIntro(snapshot, candidateEnemies);
+    resolveStateSetupBossIntro(snapshot, candidateEnemies);
     validateTransient(normalizeTransient(snapshot));
     stageBanner(snapshot.stageBanner);
     cinemaProtection(snapshot.cinemaProtection);

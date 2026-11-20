@@ -92,7 +92,7 @@ export interface WeaponBladePort {
 
 // `config` is optional for the final-five runtime (which owns the canonical
 // CONFIG singleton), but retained as a compatibility input for the newer
-// production-world/State-Forge callers that pass their configuration value.
+// production-world and state-setup callers that pass their configuration value.
 export interface WeaponBladeContext {
   blade: WeaponBladePort;
   config?: WeaponConfiguration;
@@ -537,5 +537,16 @@ function applyWeapon(config: WeaponConfiguration, id: string): WeaponDefinition 
   return weapon;
 }
 
-export { WEAPONS, applyWeapon, getWeapon };
+/**
+ * What a weapon effect floats when it lands one of the weapon's drilled moves: the move's name in
+ * capitals ("REVERSAL"), from the weapon's `drillMoves`. Undefined for any other effect.
+ */
+function drillMoveCallout(weaponId: string | undefined, effect: string): string | undefined {
+  if (weaponId === undefined) return undefined;
+  return getWeapon(weaponId)
+    .drillMoves.find((move) => move.effects.includes(effect))
+    ?.name.toUpperCase();
+}
+
+export { WEAPONS, applyWeapon, drillMoveCallout, getWeapon };
 export { migrateWeaponSelection, WEAPON_SELECTION_MIGRATION } from "./weapon-selection";

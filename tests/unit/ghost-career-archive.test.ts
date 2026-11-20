@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { GhostLocalVault, GhostStreamingRecorder } from "../../src/ghost/capsule-vault";
+import { GhostLocalVault } from "../../src/ghost/capsule-vault";
+import { GhostStreamingRecorder } from "../../src/ghost/streaming-recorder";
 import { createMemoryGhostVaultBackend } from "../../src/ghost/capsule-vault-backend";
 import { GhostCapsuleReader } from "../../src/ghost/capsule-reader";
 import { createGhostReplayRunContext } from "../../src/ghost/replay-admission";

@@ -6,15 +6,15 @@ import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies
 import type { LiveGameHostState } from "../world/game-host-state";
 import type { TearWorldConfiguration } from "../../gameplay/runtime/tear-world-configuration";
 
-export interface LiveStateForgeProgressionOptions {
+export interface LiveStateSetupProgressionOptions {
   readonly dependencies: GameRuntimeDependencies;
   readonly state: LiveGameHostState;
   readonly configuration: TearWorldConfiguration<GameRuntimeDependencies["CONFIG"]>;
 }
 
 /** Applies a canonical ledger through the same production mutation functions used by live rewards. */
-export function replayLiveStateForgeProgression(
-  options: LiveStateForgeProgressionOptions,
+export function replayLiveStateSetupProgression(
+  options: LiveStateSetupProgressionOptions,
   ledger: TearProgressionLedger,
 ): TearProgressionReplayResult {
   const d = options.dependencies;
@@ -55,7 +55,7 @@ export function replayLiveStateForgeProgression(
       blade.model = weapon.model;
     },
     applyMeta(id, value) {
-      if (value !== 0) throw new TypeError(`live State Forge does not invent unsupported meta mutation ${id}`);
+      if (value !== 0) throw new TypeError(`live State Setup does not invent unsupported meta mutation ${id}`);
     },
     applyDraft(id, occurrence) {
       const upgrade = d.UPGRADES.find((entry) => entry.id === id);

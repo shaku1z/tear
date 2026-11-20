@@ -1,5 +1,5 @@
-import { launchResolvedLiveState } from "./live-state-forge-scenario-launch";
-import { forgeRootboundGraftAnchorState } from "./state-forge-factories";
+import { launchResolvedLiveState } from "./live-state-setup-scenario-launch";
+import { forgeRootboundGraftAnchorState } from "./state-setup-factories";
 import { resolveTearSdl, type TearSdlDocumentV1 } from "./tearsdl";
 import type { TearLiveRestoreResult } from "./live-state-snapshot";
 import type { LiveRuntimeSnapshotController } from "./live-runtime-snapshots";

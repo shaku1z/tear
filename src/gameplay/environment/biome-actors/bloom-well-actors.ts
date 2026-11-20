@@ -8,7 +8,7 @@ export interface BloomWellEntity {
   vy: number;
   weight?: number;
   isBoss?: boolean;
-  kind?: string;
+  flies?: boolean;
   anchored?: boolean;
 }
 
@@ -75,7 +75,7 @@ export function bindLiveBloomWellActors(
         },
         ...(enemy.weight === undefined ? {} : { mass: enemy.weight }),
         ...(enemy.isBoss === undefined ? {} : { isBoss: enemy.isBoss }),
-        isFlyer: enemy.kind === "flyer" || enemy.kind === "wraith",
+        isFlyer: enemy.flies === true,
         ...(enemy.anchored === undefined ? {} : { anchored: enemy.anchored }),
       });
     return actors;

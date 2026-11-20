@@ -14,7 +14,7 @@ import type {
 } from "../gameplay/environment/bloom-well-presentation-facts";
 import type { TearScenarioTransition } from "./runner";
 import type { TearLiveRestoreResult, TearLiveWorldAdapter } from "./live-state-snapshot";
-import type { StateForgeExitLaunch } from "./state-forge-exit-gate";
+import type { StateSetupExitLaunch } from "./state-setup-exit-gate";
 import type { TearProgressionLedger } from "./progression-ledger";
 import type { TearProgressionReplayResult } from "./progression-replay";
 import type { TearSdlResolved } from "./tearsdl";
@@ -134,7 +134,7 @@ export interface TearClassARuntimeEnvironment extends TearStructuredRuntimeEnvir
    * This Class-A test-build capability is deliberately semantic: it never
    * drives a renderer clock or substitutes a simulation tick.
    */
-  advanceStateForgeCinematicBeat(): Readonly<{ advanced: boolean; tick: number }>;
+  advanceStateSetupCinematicBeat(): Readonly<{ advanced: boolean; tick: number }>;
   /**
    * The authoritative canonical verification state of the last executed tick.
    * Class A is privileged diagnostics: this observes what the production step
@@ -155,7 +155,7 @@ export interface TearClassARuntimeEnvironment extends TearStructuredRuntimeEnvir
   setCameraEffectsForTest(effects: Readonly<{ zoom: number; shake: number }>): void;
   captureSnapshot(id: string, stateClass?: TearStateClass, seed?: string): TearSnapshotV1;
   restoreSnapshot(snapshot: TearSnapshotV1): TearLiveRestoreResult;
-  forgeExitLaunch(launch: StateForgeExitLaunch): TearLiveRestoreResult;
+  forgeExitLaunch(launch: StateSetupExitLaunch): TearLiveRestoreResult;
   forgeWave99Hammer(): TearLiveRestoreResult;
   /** Resumes the six-stage branch's certified wave-59 frontier through the production wave controller. */
   forgeCampaignFinalWave(): TearLiveRestoreResult;
@@ -163,7 +163,7 @@ export interface TearClassARuntimeEnvironment extends TearStructuredRuntimeEnvir
   forgeEnvironmentField(): TearLiveRestoreResult;
   forgeEnvironmentCombatObject(): TearLiveRestoreResult;
   forgeBloomWellCycle(): TearLiveRestoreResult;
-  /** Restores a source-owned Rootbinder relationship fixture through State Forge. */
+  /** Restores a source-owned Rootbinder relationship fixture through State Setup. */
   forgeRootbinderNetwork(): TearLiveRestoreResult;
   /** Restores one specialized active Graft against the real Rootbound owner. */
   forgeRootboundGraftAnchor(): TearLiveRestoreResult;
@@ -193,7 +193,7 @@ export interface LiveTearRuntimeEnvironmentContext {
   readonly platforms: () => readonly LiveObservationPlatform[];
   /** Optional structured environment source; never supplied to Class C. */
   readonly environment?: () => EnvironmentRuntimeState;
-  /** World-owned stage geometry used by the certified State Forge frontier. */
+  /** World-owned stage geometry used by the certified State Setup frontier. */
   readonly platformsForStage: (index: number) => readonly unknown[];
   readonly actorId: (enemy: TearSimulationEnemyView) => string;
   readonly stage: () => Readonly<{ name: string; index: number }>;
@@ -240,7 +240,7 @@ export interface LiveTearRuntimeEnvironmentContext {
   readonly controlsDrawn: () => boolean;
   readonly skipCinematic: () => void;
   /** Test-build/Class-A bridge to one real cinematic-director transition. */
-  readonly advanceStateForgeCinematicBeat: () => boolean;
+  readonly advanceStateSetupCinematicBeat: () => boolean;
   readonly resetSemanticInput: () => void;
   /** Restores test-host entity identity allocation before a disposable scenario begins. */
   readonly resetEntityIdentities: () => void;
@@ -272,9 +272,9 @@ export interface LiveTearRuntimeEnvironmentContext {
     effects: Readonly<{ hitStop?: number; slowMotion?: number; timeScale?: number }>,
   ) => void;
   readonly setCameraEffectsForTest: (effects: Readonly<{ zoom: number; shake: number }>) => void;
-  readonly stateForge: TearLiveWorldAdapter<unknown>;
+  readonly stateSetup: TearLiveWorldAdapter<unknown>;
   readonly replayProgression: (ledger: TearProgressionLedger) => TearProgressionReplayResult;
-  /** Narrow privileged bridge used to resume a certified State Forge wave frontier. */
+  /** Narrow privileged bridge used to resume a certified State Setup wave frontier. */
   readonly loadStage: (index: number) => void;
   /** Dispatches the production wave controller rather than restating wave planning in TearBench. */
   readonly startNextWave: () => void;

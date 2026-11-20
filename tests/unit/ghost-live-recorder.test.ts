@@ -421,3 +421,73 @@ describe("Ghost V3 live recorder sidecar", () => {
     expect(await memory.get("manifests", "browser-guard-failure")).toBe(beforeRaw);
   });
 });
+
+describe("Ghost V3 live recorder on slow storage", () => {
+  // Measured on Playwright's headless shell (nightly 44570058568): each IndexedDB write transaction took
+  // about 250 ms, and a player walking into enemies sealed about 8 chunks a second.
+  const WRITE_MS = 250,
+    TICKS_PER_SECOND = 60,
+    SECONDS = 15;
+
+  /** A fighting player's stream: a command every tick and a burst of 3 events every 15 ticks, about 8 chunks/s. */
+  function recordFight(recorder: GhostLiveRecorder, tick: number): void {
+    recorder.record("commands", tick, { command: { type: "move", tick } });
+    if (tick % 15 === 0) for (let hit = 0; hit < 3; hit += 1) recorder.record("events", tick, { hit, tick });
+  }
+
+  async function record(writeMs: number) {
+    const base = createMemoryGhostVaultBackend();
+    let writes = 0;
+    const slow = <T>(commit: () => Promise<T>): Promise<T> => {
+      writes += 1;
+      return new Promise<void>((resolve) => setTimeout(resolve, writeMs)).then(commit);
+    };
+    const vault = new GhostLocalVault({
+      ...base,
+      commitIfMatches: (...args) => slow(() => base.commitIfMatches(...args)),
+      commitWhileJournalMatches: (...args) => slow(() => base.commitWhileJournalMatches(...args)),
+    });
+    const recorder = new GhostLiveRecorder({
+      createVault: () => Promise.resolve(vault),
+      now: () => "2026-11-19T00:00:01.000Z",
+      recordingProfile: "forensic-qa",
+    });
+    recorder.start({ sessionId: "slow-storage", createdAt: "2026-11-19T00:00:00.000Z", provenance: {} });
+    for (let tick = 0; tick < SECONDS * TICKS_PER_SECOND; tick += 1) {
+      recordFight(recorder, tick);
+      await vi.advanceTimersByTimeAsync(1000 / TICKS_PER_SECOND);
+    }
+    const finishing = recorder.finish({ outcome: "defeat" });
+    await vi.runAllTimersAsync();
+    return { manifest: await finishing, failure: recorder.failure, writes };
+  }
+
+  it("keeps every chunk, in recording order, when each write takes 250 ms", async () => {
+    vi.useFakeTimers();
+    try {
+      const instant = await record(0);
+      const slow = await record(WRITE_MS);
+      expect(slow.failure).toBeNull();
+      expect(slow.manifest?.status).toBe("complete");
+      // The same chunks as on instant storage: same ids, order, ticks and bytes.
+      const chunks = (manifest: typeof slow.manifest) =>
+        manifest?.chunks.map(({ id, sequence, kind, fromTick, toTick, checksum }) => ({
+          id,
+          sequence,
+          kind,
+          fromTick,
+          toTick,
+          checksum,
+        }));
+      expect(chunks(slow.manifest)).toEqual(chunks(instant.manifest));
+      expect(slow.manifest?.chunks.map(({ sequence }) => sequence)).toEqual(
+        slow.manifest?.chunks.map((_, index) => index),
+      );
+      // About 8 chunks a second were sealed; far fewer writes carried them.
+      expect(slow.manifest?.chunks.length).toBeGreaterThan(7 * SECONDS);
+      expect(slow.writes).toBeLessThan(slow.manifest?.chunks.length ?? 0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

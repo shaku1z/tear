@@ -224,7 +224,7 @@ export const PRODUCTION_IDENTITY_COVERAGE = Object.freeze({
   environmentObjectKinds: ENVIRONMENT_OBJECT_KIND_IDS,
 });
 
-/** Complete authored coverage retained for explicit Playground/State Forge engineering. */
+/** Complete authored coverage retained for explicit Playground/State Setup engineering. */
 export const ENGINEERING_IDENTITY_COVERAGE = Object.freeze({
   stages: GAME_STAGE_IDS,
   bosses: BOSS_IDENTITY_IDS,
