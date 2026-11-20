@@ -12,7 +12,7 @@ import { bossDefinition } from "../../src/gameplay/run/boss-definitions";
 import { bossFightScenario, bossPhaseCount } from "../../src/playtest/boss-fight";
 import { REPORT_BOSSES } from "../../src/playtest/boss-report";
 import { readBoss } from "../../src/playtest/boss-view";
-import { createProductionHeadlessEnvironment } from "../../src/tearbench/production-headless-environment";
+import { createProductionHeadlessEnvironment } from "../../src/playtest/headless/production-headless-environment";
 
 /**
  * A boss phase change may hold the simulation in a cinematic that places the player. Wherever the player stands

@@ -1,11 +1,11 @@
-import { isRecord } from "../domain/records";
-import type { CommandEnvelope } from "../domain/envelopes";
-import { AIM_MAGNITUDE_SCALE, normalizeGameAction, type GameAction } from "../input/game-action";
-import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
-import type { AuthoritativeInputSnapshot } from "../gameplay/runtime/authoritative-input";
-import { TearGameplayEventBus, type TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
-import { stableVerificationHash } from "../domain/hash";
-import type { createProductionCombatSimulation } from "./production-combat-simulation";
+import { isRecord } from "../../domain/records";
+import type { CommandEnvelope } from "../../domain/envelopes";
+import { AIM_MAGNITUDE_SCALE, normalizeGameAction, type GameAction } from "../../input/game-action";
+import type { CanonicalGameplayState } from "../../gameplay/runtime/canonical-state";
+import type { AuthoritativeInputSnapshot } from "../../gameplay/runtime/authoritative-input";
+import { TearGameplayEventBus, type TearGameplayEvent } from "../../gameplay/runtime/gameplay-events";
+import { stableVerificationHash } from "../../domain/hash";
+import type { createProductionCombatSimulation } from "../../tearbench/production-combat-simulation";
 import {
   captureProductionReplayCheckpoint,
   captureProductionRewardSelection,
@@ -13,26 +13,26 @@ import {
   projectProductionReplayCanonicalState,
   type ProductionReplayBootstrap,
   type ProductionApplicationFrameConfirm,
-} from "./production-replay-composition";
-import { productionRunSeed, type ProductionReplayWorld } from "./production-world-factory";
-import type { ProductionWaveRewardRuntime } from "./production-wave-reward-runtime";
-import type { ProductionWaveRewardIntent } from "./production-wave-reward-runtime";
-import type { TearCausalEventV1, TearObservationV1, TearScenarioV1, TearSnapshotV1 } from "./contracts";
+} from "../../tearbench/production-replay-composition";
+import { productionRunSeed, type ProductionReplayWorld } from "../../tearbench/production-world-factory";
+import type { ProductionWaveRewardRuntime } from "../../tearbench/production-wave-reward-runtime";
+import type { ProductionWaveRewardIntent } from "../../tearbench/production-wave-reward-runtime";
+import type { TearCausalEventV1, TearObservationV1, TearScenarioV1, TearSnapshotV1 } from "../../tearbench/contracts";
 import {
   TearHeadlessEnvironmentPool,
   type TearHeadlessEnvironment,
   type TearHeadlessEpisode,
   type TearHeadlessJob,
   type TearHeadlessTransition,
-} from "./headless";
-import { validateTearContract } from "./validation";
+} from "../../tearbench/headless";
+import { validateTearContract } from "../../tearbench/validation";
 import { requireProductionHeadlessScenario } from "./production-headless-scenario";
 import { beginProductionBossPractice } from "./production-boss-practice-start";
-import { requireProductionReplayBootstrap as requireBootstrap } from "./production-replay-bootstrap-check";
-import type { PracticeBossId, PracticeBossPhase } from "../gameplay/training/boss-phase-practice-runtime";
+import { requireProductionReplayBootstrap as requireBootstrap } from "../../tearbench/production-replay-bootstrap-check";
+import type { PracticeBossId, PracticeBossPhase } from "../../gameplay/training/boss-phase-practice-runtime";
 import { projectProductionPolicyObservation } from "./production-policy-observation";
-import { createGameplayCausalEvent } from "./gameplay-causal-events";
-import { assertTearSimulationStepSeconds, TEAR_SIMULATION_TICKS_PER_SECOND } from "./simulation-profile";
+import { createGameplayCausalEvent } from "../../tearbench/gameplay-causal-events";
+import { assertTearSimulationStepSeconds, TEAR_SIMULATION_TICKS_PER_SECOND } from "../../tearbench/simulation-profile";
 
 type ProductionHeadlessCore = Readonly<{
   replay: ProductionReplayWorld;
