@@ -24,7 +24,6 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 | [Repository structure and workflow](#repository-structure) | In progress | After the hooks pull request merges, run pnpm setup:hooks in the canonical checkout on main (scripts/governance/README.md). | — |
 | [Playtest tool](#playtest-tool) | Stage 1 built: pnpm playtest bosses prints a table per boss fight and phase; pnpm playtest sweep plays every boss, weapon, Easy and Normal with six scripted players and prints a summary | Stage 2: every boss phase, wave and enemy kind as a row that starts directly, and pnpm playtest runs. | — |
 | [Replays](#replays) | Planning: draft plan up for the lead's review; no code yet | The lead's answers to the plan's six questions, then PR 1 (remove the hidden replay features). | Product calls in the plan: one Replays tab, removing COMPARE, challenges, RUN DNA, the finale companion and REPAIR, deleting old local replays at the switch; the Firestore chunk-write rule. |
-| [TearBench C21 to C40 program](#tearbench-program) | Paused at the 2026-08-30 state | Land or close pull request 84. | — |
 | [Mobile, touch and phone layouts](#mobile) | Paused by the owner 2026-11-19; out of the release builds | Nothing until the owner resumes mobile; plans/MOBILE_LATER.md says how to turn it back on. | Mark the CrazyGames listing desktop only. Say when mobile resumes. |
 
 <a id="release-readiness"></a>
@@ -126,16 +125,6 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 - Next: The lead's answers to the plan's six questions, then PR 1 (remove the hidden replay features).
 - Owner action: Product calls in the plan: one Replays tab, removing COMPARE, challenges, RUN DNA, the finale companion and REPAIR, deleting old local replays at the switch; the Firestore chunk-write rule.
 - Evidence: [plans/active/REPLAY_OVERHAUL_PLAN.md](../plans/active/REPLAY_OVERHAUL_PLAN.md)
-
-<a id="tearbench-program"></a>
-
-### TearBench C21 to C40 program
-
-**Paused at the 2026-08-30 state.** The TearBench certification program state is recorded for the production build and is still checked by check:docs. Pull request 84 (five-run canary qualification) is open; its commits are already in main.
-
-- Next: Land or close pull request 84.
-- Owner action: none
-- Evidence: [config/tearbench-current-program-state.json](../config/tearbench-current-program-state.json), [plans/TEARBENCH_MASTER_HANDOFF.md](../plans/TEARBENCH_MASTER_HANDOFF.md), [#84](https://github.com/shaku1z/tear/pull/84)
 
 <a id="mobile"></a>
 

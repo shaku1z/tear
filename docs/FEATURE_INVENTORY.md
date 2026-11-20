@@ -746,11 +746,8 @@ frozen evidence record.
   supplied with concrete constructor ports; the app adapter only binds legacy
   classes. This preserves Echo modifier rebinding but does not make entity
   classes or their outward services portable.
-  Real
-  full-world portability, durable
-  Ghost storage, complete visible experiences, and end-to-end
-  certification remain tracked by
-  `plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md`.
+  Real full-world portability, durable Ghost storage, complete visible
+  experiences, and end-to-end certification are not built.
 - [x] Test-build State Editor — `tearbench-state-editor.test.ts`
   keeps structural, reachability, and population-plausibility reports
   independent; `browser-state-editor.js` proves the `?snapshot-editor=1` live
