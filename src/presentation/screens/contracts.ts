@@ -350,13 +350,14 @@ export interface LeaderboardsScreenView {
   readonly id: "leaderboards";
   readonly tab: string;
   readonly tabs: readonly ChoiceView[];
-  readonly board?: string;
+  /** The board picker (each mode's score board, and one-mode boards such as the Gauntlet's fastest clear). */
   readonly boards?: readonly ChoiceView[];
+  /** The ranked table's column headings; the last column holds what the board ranks. */
+  readonly headings?: Readonly<{ count: string; time: string; score: string }>;
   readonly rows: readonly ReplayView[];
   readonly message?: string;
   readonly canScrollUp?: boolean;
   readonly canScrollDown?: boolean;
-  readonly modes?: readonly ChoiceView[];
   readonly difficulties?: readonly ChoiceView[];
   readonly podium?: readonly {
     readonly rank: number;

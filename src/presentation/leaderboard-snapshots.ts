@@ -1,10 +1,6 @@
+import { scoreSeconds, type LeaderboardKind } from "../domain/leaderboards";
 import type { LeaderboardsScreenView, ReplayView } from "./screens/contracts";
-import type {
-  BestScoreViewSource,
-  DifficultyViewSource,
-  LeaderboardRowSource,
-  ModeViewSource,
-} from "./profile-snapshots";
+import type { DifficultyViewSource, LeaderboardRowSource } from "./profile-snapshots";
 
 export interface LeaderboardSnapshotResult {
   readonly view: LeaderboardsScreenView;
@@ -75,40 +71,78 @@ export interface RankedLeaderboardRow extends LeaderboardRowSource {
   readonly name?: string;
 }
 
+/** A board in the picker. */
+export interface BoardViewSource {
+  readonly id: string;
+  readonly label: string;
+}
+
+/** The player's own best on the board, kept on this device; `count` is absent when the record has none. */
+export interface LocalBoardBest {
+  readonly count?: number;
+  readonly score: number;
+}
+
+/**
+ * How an entry reads on a board: "wave 12 · 3,400 pts" on a score board, "trials 6 · 14:02" on a
+ * clear-time board. The kind decides; no board is named here.
+ */
+function entryText(
+  kind: LeaderboardKind,
+  formatTime: (seconds: number) => string,
+  count: number | undefined,
+  score: number,
+): string {
+  const ranked = kind.unit === "ticks" ? formatTime(scoreSeconds(kind, score)) : `${score.toLocaleString("en-US")} pts`;
+  return count === undefined ? ranked : `${kind.countLabel.toLowerCase()} ${String(count)} · ${ranked}`;
+}
+
 export function buildRankedLeaderboardSnapshot(
   input: CommonInput & {
     readonly data: readonly RankedLeaderboardRow[];
-    readonly modes: readonly ModeViewSource[];
+    readonly boards: readonly BoardViewSource[];
     readonly difficulties: readonly DifficultyViewSource[];
-    readonly mode: string;
+    readonly board: string;
+    readonly kind: LeaderboardKind;
+    /** The legacy ghost a score board without linked replays falls back to; none on other boards. */
+    readonly legacyGhost?: string;
     readonly difficulty: string;
     readonly currentUserId?: string;
-    readonly localBest: BestScoreViewSource;
+    readonly localBest: LocalBoardBest | null;
+    readonly formatTime: (seconds: number) => string;
     readonly rowView: (row: RankedLeaderboardRow) => ReplayView;
   },
 ): LeaderboardSnapshotResult {
+  const { kind } = input;
+  const text = (count: number | undefined, score: number) => entryText(kind, input.formatTime, count, score);
   const linked = input.data.some((row) => row.replayId !== undefined);
-  const ghostId = !linked && input.data.length > 0 ? `ghost:${input.mode}:${input.difficulty}` : undefined;
+  const ghostId = !linked && input.data.length > 0 ? input.legacyGhost : undefined;
   const medals = ["#e0a326", "#c9ccd6", "#cd7f32"] as const;
   const podium = input.data.slice(0, 3).map((row, index) => ({
     rank: index + 1,
     name: (row.name ?? "Player").slice(0, 14),
-    detail: `wave ${String(row.wave ?? 0)} · ${(row.score ?? 0).toLocaleString("en-US")} pts`,
+    detail: text(row.wave ?? 0, row.score ?? 0),
     color: medals[index] ?? medals[2],
     mine: input.currentUserId !== undefined && row.uid === input.currentUserId,
     ...(row.replayId !== undefined ? { replayId: row.replayId } : {}),
   }));
-  const rows = input.data.slice(3).map((row, index) => ({ ...input.rowView(row), rank: index + 4 }));
+  // A clear-time board ranks the time itself: it goes in the last (ranked) column, the run time column stays empty.
+  const rows = input.data.slice(3).map((row, index) => ({
+    ...input.rowView(row),
+    ...(kind.unit === "ticks" ? { time: "", score: input.formatTime(scoreSeconds(kind, row.score ?? 0)) } : {}),
+    rank: index + 4,
+  }));
   const maximumScroll = Math.max(0, rows.length * 34 - (input.height - 634));
   const state = scrollState(maximumScroll, input.scroll);
   const myIndex =
     input.currentUserId === undefined ? -1 : input.data.findIndex((row) => row.uid === input.currentUserId);
+  const mine = input.data[myIndex];
   const ownRank =
     input.currentUserId !== undefined && myIndex >= 10
-      ? `#${String(myIndex + 1)} YOU · wave ${String(input.data[myIndex]?.wave ?? 0)} · ${(input.data[myIndex]?.score ?? 0).toLocaleString("en-US")} pts`
+      ? `#${String(myIndex + 1)} YOU · ${text(mine?.wave ?? 0, mine?.score ?? 0)}`
       : input.currentUserId !== undefined && myIndex === -1
-        ? input.localBest.wave || input.localBest.score
-          ? `unranked · local best wave ${String(input.localBest.wave)} · ${input.localBest.score.toLocaleString("en-US")} pts`
+        ? input.localBest !== null && (input.localBest.count || input.localBest.score)
+          ? `unranked · local best ${text(input.localBest.count, input.localBest.score)}`
           : "unranked · no local record yet"
         : undefined;
   return Object.freeze({
@@ -123,11 +157,12 @@ export function buildRankedLeaderboardSnapshot(
       ...(ghostId === undefined ? {} : { legacyGhostId: ghostId }),
       signInRequired: !input.cloudAvailable,
       status: leaderboardStatus(input, input.data.length),
-      modes: input.modes.map((mode) => ({
-        id: mode.id,
-        label: mode.label.toUpperCase(),
-        selected: mode.id === input.mode,
+      boards: input.boards.map((board) => ({
+        id: board.id,
+        label: board.label,
+        selected: board.id === input.board,
       })),
+      ...(kind.unit === "ticks" ? { headings: { count: kind.countLabel, time: "", score: "CLEAR" } } : {}),
       difficulties: input.difficulties.map((difficulty) => ({
         id: difficulty.id,
         label: difficulty.label.toUpperCase(),
