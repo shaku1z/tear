@@ -7,13 +7,10 @@ import {
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { GameBlade, GameEnemy, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import { createBrowserGhostCareer } from "./browser-ghost-career";
-import type { createLiveGhostFinaleCompanion } from "./ghost-finale-companion";
 import { createLiveGhostFrameRecording, declareGhostApplicationFrames } from "./ghost-frame-recording";
 import { createLiveGhostOpeningCapture } from "./ghost-opening-capture";
 import { createLiveGhostRecordingSessionState } from "./ghost-recording-session-state";
 import { createLiveGhostRunDnaRecording } from "./ghost-run-dna-recording";
-
-type LiveGhostFinaleCompanion = ReturnType<typeof createLiveGhostFinaleCompanion>;
 
 export interface LiveGhostRecordingOptions {
   readonly indexedDb: IDBFactory | undefined;
@@ -28,8 +25,6 @@ export interface LiveGhostRecordingOptions {
   readonly enemyId: (actor: object) => string;
   readonly practiceActive: () => boolean;
   readonly bossIntroActive: () => boolean;
-  /** The finale companion is built with the authoritative capture, after this sidecar. */
-  readonly finale: () => LiveGhostFinaleCompanion;
 }
 
 /**
@@ -63,10 +58,6 @@ export function createLiveGhostRecording(options: LiveGhostRecordingOptions) {
     afterFrame: () => {
       dna.frameEnded();
     },
-    closedFrame: () => {
-      options.finale().frameEnded();
-    },
-    interceptFinish: (result) => options.finale().interceptFinish(result),
   });
   const opening = createLiveGhostOpeningCapture({
     screen: () => options.screen(),
@@ -94,7 +85,6 @@ export interface LiveGhostRecordingBoundaryPorts {
   readonly chaseConfiguration: (configHash: string) => void;
   readonly sessionNonce: () => string;
   readonly captureReceipt: (tick: number) => void;
-  readonly finale: () => LiveGhostFinaleCompanion;
 }
 
 /** Starts and stops the sidecar at Ghost 2's recording boundaries. */
@@ -111,7 +101,6 @@ export function observeLiveGhostRecordingBoundaries(
       : {
           started(context) {
             opening.discard();
-            ports.finale().reset();
             frames.reset();
             session.reset();
             let provenance: Readonly<Record<string, unknown>>;

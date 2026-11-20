@@ -1,5 +1,4 @@
 import { readGhostForkOrigin } from "./fork-origin";
-import { readGhostFinaleCompanion } from "./finale-companion";
 import {
   createBrowserGhostEncoderWorker,
   GhostLocalVault,
@@ -136,7 +135,6 @@ export class GhostLiveRecorder {
   start(input: GhostLiveRecorderStart): void {
     if (this.active) throw new Error("Ghost V3 recorder session is already active");
     const origin = readGhostForkOrigin(input.provenance);
-    const finale = readGhostFinaleCompanion(input.provenance);
     const session: LiveGhostCaptureSession = {
       id: input.sessionId,
       sequence: ++this.#nextSequence,
@@ -145,28 +143,15 @@ export class GhostLiveRecorder {
       opening: null,
       flushing: null,
       pending: [],
-      lastRecordedTick: finale?.origin.tick ?? origin?.checkpoint.tick ?? 0,
+      lastRecordedTick: origin?.checkpoint.tick ?? 0,
       failure: null,
     };
     this.#activeSession = session;
     this.#failure = null;
     const bootstrap =
-      finale === undefined
-        ? origin === undefined
-          ? createLiveGhostBootstrapEvent(input.sessionId, input.provenance)
-          : createLiveGhostForkBootstrapEvent(input.sessionId, input.provenance)
-        : {
-            format: "tear-contract",
-            kind: "event",
-            schemaVersion: 1,
-            type: "system.checkpoint",
-            tick: finale.origin.tick,
-            sequence: 0,
-            source: "engine",
-            phase: "post-simulation-commit",
-            id: `finale-open-${input.sessionId}`,
-            payload: { boundary: "v3-finale-sidecar-opened", provenance: input.provenance },
-          };
+      origin === undefined
+        ? createLiveGhostBootstrapEvent(input.sessionId, input.provenance)
+        : createLiveGhostForkBootstrapEvent(input.sessionId, input.provenance);
     this.#enqueue(session, "events", session.lastRecordedTick, bootstrap);
     session.opening = this.#open(session);
   }
@@ -210,16 +195,13 @@ export class GhostLiveRecorder {
     }
   }
 
-  finish(
-    result: Readonly<Record<string, unknown>> = {},
-    tail?: Promise<readonly Readonly<{ kind: GhostChunkKind; tick: number; value: unknown }>[]>,
-  ): Promise<TearGhostManifest | null> {
+  finish(result: Readonly<Record<string, unknown>> = {}): Promise<TearGhostManifest | null> {
     const session = this.#activeSession;
     if (session === null) return Promise.resolve(null);
     // Relinquish live ownership synchronously; a replacement may start while
     // this original session's already-started finalization settles independently.
     this.#activeSession = null;
-    const finalizing = this.#finish(session, result, tail);
+    const finalizing = this.#finish(session, result);
     this.#finalizing.set(session, finalizing);
     void finalizing.then(
       () => {
@@ -235,10 +217,8 @@ export class GhostLiveRecorder {
   async #finish(
     session: LiveGhostCaptureSession,
     result: Readonly<Record<string, unknown>>,
-    tail?: Promise<readonly Readonly<{ kind: GhostChunkKind; tick: number; value: unknown }>[]>,
   ): Promise<TearGhostManifest | null> {
     try {
-      for (const entry of (await tail) ?? []) this.#enqueue(session, entry.kind, entry.tick, entry.value);
       this.#enqueue(session, "results", session.lastRecordedTick, result);
       await session.opening;
       if (this.#hasFailed(session)) return null;

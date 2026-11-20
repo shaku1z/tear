@@ -48,16 +48,6 @@
       "kind": "value"
     },
     {
-      "from": "src/ghost/finale-companion.ts",
-      "to": "src/tearbench/contracts.ts",
-      "kind": "type"
-    },
-    {
-      "from": "src/ghost/finale-playback.ts",
-      "to": "src/tearbench/production-replay-composition.ts",
-      "kind": "type"
-    },
-    {
       "from": "src/ghost/fork-origin.ts",
       "to": "src/tearbench/contracts.ts",
       "kind": "type"
@@ -93,29 +83,9 @@
       "kind": "value"
     },
     {
-      "from": "src/ghost/player-experiences.ts",
-      "to": "src/tearbench/contracts.ts",
-      "kind": "type"
-    },
-    {
-      "from": "src/ghost/production-replay-comparison.ts",
-      "to": "src/tearbench/contracts.ts",
-      "kind": "type"
-    },
-    {
       "from": "src/ghost/production-replay-session.ts",
       "to": "src/tearbench/production-replay-composition.ts",
       "kind": "type"
-    },
-    {
-      "from": "src/ghost/recorded-challenge.ts",
-      "to": "src/tearbench/contracts.ts",
-      "kind": "type"
-    },
-    {
-      "from": "src/ghost/recorded-challenge.ts",
-      "to": "src/tearbench/gameplay-causal-events.ts",
-      "kind": "value"
     },
     {
       "from": "src/ghost/replay-admission.ts",
@@ -139,11 +109,6 @@
     },
     {
       "from": "src/ghost/seed-race-decisions.ts",
-      "to": "src/tearbench/contracts.ts",
-      "kind": "type"
-    },
-    {
-      "from": "src/ghost/theater.ts",
       "to": "src/tearbench/contracts.ts",
       "kind": "type"
     },
@@ -227,9 +192,6 @@
     [
       "src/ghost/application-frame-events.ts",
       "src/ghost/authoritative-receipt.ts",
-      "src/ghost/capsule-paired-archive.ts",
-      "src/ghost/capsule-vault.ts",
-      "src/ghost/finale-companion.ts",
       "src/ghost/fork-origin.ts",
       "src/ghost/live-causal-events.ts",
       "src/ghost/production-replay-session.ts",

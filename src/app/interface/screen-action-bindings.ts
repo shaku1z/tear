@@ -204,12 +204,6 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "profile.watchGhostCapsule": (action) => {
       ports.library.watchGhostCapsule(action.id);
     },
-    "profile.compareGhostCapsule": (action) => {
-      ports.library.compareGhostCapsule(action.id);
-    },
-    "profile.openGhostComparison": () => {
-      ports.library.openGhostComparison();
-    },
     "profile.repairGhostCapsule": (action) => {
       ports.library.repairGhostCapsule(action.id);
     },
@@ -295,15 +289,6 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "replay.practice": () => {
       ports.replay.practice();
     },
-    "replay.challenge.open": () => {
-      ports.replay.openChallenges();
-    },
-    "replay.challenge.start": (action) => {
-      ports.replay.startChallenge(action.id);
-    },
-    "replay.runDna.toggle": () => {
-      ports.replay.toggleRunDna();
-    },
     "replay.editor.toggle": () => {
       ports.replay.toggleReplayEditor();
     },
@@ -325,9 +310,6 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     },
     "replay.speed": (action) => {
       ports.replay.setSpeed(action.value);
-    },
-    "replay.finale": () => {
-      ports.replay.openFinale?.();
     },
     "replay.exit": () => {
       ports.replay.exit();

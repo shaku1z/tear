@@ -51,7 +51,6 @@ describe("Ghost Theater open result", () => {
       render: (view: ReplayScreenView) => {
         rendered.push(view);
       },
-      width: () => 1600,
       deltaSeconds: () => 0,
       nativeTransport: () => ({
         controls,
@@ -117,7 +116,6 @@ describe("Ghost Theater open result", () => {
       render: (view) => {
         rendered.push(view);
       },
-      width: () => 1200,
       deltaSeconds: () => 0,
       launchPractice: () => ({ ok: false, message: "unused" }),
     });
@@ -158,7 +156,6 @@ describe("Theater local media ownership", () => {
       render: (view) => {
         rendered.push(view);
       },
-      width: () => 1600,
       deltaSeconds: () => 0,
       launchPractice: () => ({ ok: false, message: "unused" }),
       clipExport: {

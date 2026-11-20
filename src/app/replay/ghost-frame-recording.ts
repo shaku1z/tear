@@ -22,8 +22,6 @@ export function createLiveGhostFrameRecording(
     tick(): number;
     introActive(): boolean;
     afterFrame?(): void;
-    closedFrame?(): void;
-    interceptFinish?(result: Readonly<Record<string, unknown>>): boolean;
   }>,
 ) {
   let cursor: GhostApplicationFrameCursor = Object.freeze({ version: 1, ordinal: 0, sequence: 0 });
@@ -39,8 +37,6 @@ export function createLiveGhostFrameRecording(
       }>
     | undefined;
   let preludeApplied = false;
-  let tail:
-    ((entries: readonly { kind: "events"; tick: number; value: GhostApplicationClockEvent }[]) => void) | undefined;
   const identity = () => {
     const recorder = options.session.recorder(),
       context = options.session.replayContext();
@@ -48,7 +44,7 @@ export function createLiveGhostFrameRecording(
       ? {
           version: 1 as const,
           runId: context.run.id,
-          sessionId: options.session.clockSessionId?.() ?? recorder.activeSessionId,
+          sessionId: recorder.activeSessionId,
         }
       : undefined;
   };
@@ -56,13 +52,13 @@ export function createLiveGhostFrameRecording(
     const recorder = options.session.recorder();
     if (
       recorder?.active === true &&
-      (options.session.clockSessionId?.() ?? recorder.activeSessionId) === event.payload.sessionId &&
+      recorder.activeSessionId === event.payload.sessionId &&
       options.session.replayContext()?.run.id === event.payload.runId
     )
       recorder.record("events", event.tick, event);
   };
-  const activate = (handoff = false) => {
-    if (chosen === undefined || open !== undefined || (preludeApplied && !handoff)) return;
+  const activate = () => {
+    if (chosen === undefined || open !== undefined || preludeApplied) return;
     const ordinal = cursor.ordinal + 1;
     open = createGhostApplicationClockEvent(chosen.sequence, chosen.tick, {
       ...chosen.binding,
@@ -90,8 +86,6 @@ export function createLiveGhostFrameRecording(
       open = undefined;
       chosen = undefined;
       preludeApplied = false;
-      tail?.([]);
-      tail = undefined;
       cursor = Object.freeze({ version: 1, ordinal: 0, sequence: 0 });
     },
     begin(seconds: number, confirm: GhostFrameConfirm, cinemaActive = false) {
@@ -115,10 +109,7 @@ export function createLiveGhostFrameRecording(
       options.afterFrame?.();
       const before = open?.payload;
       chosen = undefined;
-      if (open === undefined || before?.format !== "tearghost-application-frame" || before.kind !== "begin") {
-        options.closedFrame?.();
-        return;
-      }
+      if (open === undefined || before?.format !== "tearghost-application-frame" || before.kind !== "begin") return;
       const sequence = options.session.nextEventSequence();
       const event = createGhostApplicationClockEvent(sequence, options.tick(), {
         version: 1,
@@ -136,12 +127,9 @@ export function createLiveGhostFrameRecording(
       record(event);
       cursor = Object.freeze({ version: 1, ordinal: before.ordinal, sequence });
       open = undefined;
-      tail?.([{ kind: "events", tick: event.tick, value: event }]);
-      tail = undefined;
       const finish = pendingFinish;
       pendingFinish = undefined;
       finish?.();
-      options.closedFrame?.();
     },
     installed(actorId: string, duration: number, delay: number) {
       const binding = identity();
@@ -169,26 +157,7 @@ export function createLiveGhostFrameRecording(
         ...(keyframe === undefined ? {} : { keyframe }),
       });
     },
-    prepareHandoff() {
-      activate(true);
-    },
-    handoff(result: Readonly<Record<string, unknown>>) {
-      activate(true);
-      const recorder = options.session.recorder();
-      if (recorder?.active !== true) throw new Error("Finale parent recorder unavailable");
-      const sessionId = recorder.activeSessionId;
-      const inherited = open === undefined ? [] : [structuredClone(open)];
-      const closing =
-        open === undefined
-          ? undefined
-          : new Promise<readonly { kind: "events"; tick: number; value: GhostApplicationClockEvent }[]>((resolve) => {
-              tail = resolve;
-            });
-      options.session.setClockSessionId?.(sessionId);
-      return { sessionId, inherited, cursor: structuredClone(cursor), parent: recorder.finish(result, closing) };
-    },
     finish(result: Readonly<Record<string, unknown>>) {
-      if (options.interceptFinish?.(result)) return;
       const recorder = options.session.recorder(),
         context = options.session.replayContext();
       const sessionId = recorder?.active === true ? recorder.activeSessionId : undefined;

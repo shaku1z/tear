@@ -1,7 +1,6 @@
 import type { ReplayScreenView, ScreenRenderContext } from "./contracts";
 import { ellipsize } from "./screen-primitives";
 import { createLeaderboardRenderers } from "./leaderboards";
-import { replayClock } from "../replay-snapshots";
 
 const REPLAY_CYAN = "#13c4d6";
 const REPLAY_DARK = "#0e1017";
@@ -30,26 +29,10 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     canvas.fillText(view.theater ? "◆ THEATER" : "▶ REPLAY", 40 + safe.l, 36 + safe.t);
     canvas.fillStyle = REPLAY_MUTED;
     canvas.font = ui.font(ui.t.type.body, false);
-    if (view.comparison) {
-      canvas.fillStyle = REPLAY_DARK;
-      canvas.fillRect(36 + safe.l, 4 + safe.t, 150, 42);
-      canvas.fillStyle = REPLAY_CYAN;
-      canvas.font = ui.font(ui.t.type.lead, true);
-      canvas.fillText("COMPARE", 40 + safe.l, 36 + safe.t);
-      canvas.fillStyle = REPLAY_MUTED;
-      canvas.font = ui.font(ui.t.type.body, false);
-    }
     const header = view.title + "   ·   " + view.detail;
     const headerWidth = Math.max(
       0,
-      width -
-        safe.l -
-        safe.r -
-        280 -
-        REPLAY_TOP_RESERVE -
-        canvas.measureText(view.score ?? "").width -
-        (view.theater ? 254 : 0) -
-        (view.finaleNavigation ? 272 : 0),
+      width - safe.l - safe.r - 280 - REPLAY_TOP_RESERVE - canvas.measureText(view.score ?? "").width,
     );
     canvas.fillText(ellipsize(canvas, header, headerWidth), 200 + safe.l, 36 + safe.t);
     canvas.textAlign = "right";
@@ -94,18 +77,13 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     const { canvas, safeInsets: safe } = context;
     replayTopBar(view);
 
-    if (view.comparison) comparisonState(view);
-    else if (view.theater) theaterState();
+    if (view.theater) theaterState();
 
     const barY = height - 96 - safe.b,
       barX = 220 + safe.l,
       barWidth = width - 440 - safe.l - safe.r;
     replayProgressBar(view, barX, barY, barWidth);
 
-    if (view.challenge) {
-      challengeState(view);
-      return;
-    }
     // The transport bar is a dark surface: its controls use the rail (ghost) style so they
     // read the same as every other dark-surface control, on any biome.
     const controlY = height - 66 - safe.b;
@@ -165,43 +143,6 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
         enabled: view.practiceAvailable === true,
         action: { type: "replay.practice" },
       });
-    // Theater extras live in the dark top bar, right-aligned, never over the world.
-    let topRight = width - REPLAY_TOP_RESERVE - safe.r;
-    if (view.theater) {
-      context.enqueue({
-        x: topRight - 230,
-        y: 8 + safe.t,
-        w: 230,
-        h: 38,
-        label: "LOCAL CHALLENGE",
-        ghost: true,
-        size: ui.t.type.label,
-        action: { type: "replay.challenge.open" },
-      });
-      topRight -= 242;
-    }
-    if (view.finaleNavigation) {
-      context.enqueue({
-        x: topRight - 260,
-        y: 8 + safe.t,
-        w: 260,
-        h: 38,
-        label: view.finaleNavigation,
-        ghost: true,
-        size: ui.t.type.label,
-        action: { type: "replay.finale" },
-      });
-    }
-    if (view.theater)
-      context.enqueue({
-        x: 960 + safe.l,
-        y: controlY,
-        w: 120,
-        h: 44,
-        label: "RUN DNA",
-        ghost: true,
-        action: { type: "replay.runDna.toggle" },
-      });
     context.enqueue({
       x: width - 420 - safe.r,
       y: controlY,
@@ -222,7 +163,6 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     });
     if (view.notice) ui.text(canvas, view.notice, width / 2, barY - 34, ui.t.type.caption, "center", ui.t.alpha.muted);
     if (view.infoVisible) replayInfo(view);
-    if (view.runDna) runDnaState(view);
     if (view.cutList) replayEditorPanel(view);
   }
 
@@ -353,194 +293,6 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
       "center",
       ui.t.alpha.muted,
     );
-  }
-
-  function comparisonState(view: ReplayScreenView): void {
-    const comparison = view.comparison;
-    if (comparison === undefined) return;
-    const { canvas, safeInsets: safe } = context;
-    const panelWidth = Math.min(760, width - 80 - safe.l - safe.r),
-      panelHeight = 170 + comparison.runs.length * 30;
-    const x = width / 2 - panelWidth / 2,
-      y = height / 2 - panelHeight / 2 - 20;
-    ui.panel(canvas, x, y, panelWidth, panelHeight);
-    ui.accentStrip(canvas, x, y, panelWidth, REPLAY_CYAN);
-    ui.title(canvas, "COMPARE RUNS", width / 2, y + 50, ui.t.type.h2);
-    ui.tag(
-      canvas,
-      `${comparison.eventType.replace(/[._-]+/g, " ").toUpperCase()} · #${String(comparison.occurrence)}`,
-      width / 2,
-      y + 78,
-      ui.readable(REPLAY_CYAN),
-      "center",
-      ui.t.type.label,
-    );
-    comparison.runs.forEach((run, index) => {
-      const rowY = y + 108 + index * 30;
-      ui.text(canvas, `RUN ${String(index + 1)}`, x + 34, rowY, ui.t.type.caption, "left", ui.t.alpha.soft);
-      ui.tag(
-        canvas,
-        run.tick === null ? "DID NOT HAPPEN" : replayClock(run.tick),
-        x + panelWidth - 34,
-        rowY,
-        run.tick === null ? ui.readable(ui.t.color.danger) : ui.readable(REPLAY_CYAN),
-        "right",
-        ui.t.type.label,
-      );
-    });
-    ui.textBox(
-      canvas,
-      "Each run is replayed from its own recording. This compares when things happened, not how they looked or sounded.",
-      x + 34,
-      y + panelHeight - 50,
-      panelWidth - 68,
-      { size: ui.t.type.micro, lineHeight: 17, alpha: ui.t.alpha.muted, maxLines: 2 },
-    );
-  }
-
-  function challengeState(view: ReplayScreenView): void {
-    const challenge = view.challenge;
-    if (challenge === undefined) return;
-    const { canvas } = context,
-      w = Math.min(820, width - 48),
-      x = width / 2 - w / 2;
-    const compact = height < 600,
-      top = compact ? 40 : 100,
-      choicesY = compact ? 174 : 263;
-    ui.panel(canvas, x, top, w, Math.min(510, height - top - 16));
-    ui.title(canvas, "REPLAY CHALLENGE", width / 2, top + 34, ui.t.type.title);
-    ui.text(
-      canvas,
-      `FROM ${replayClock(challenge.tick)} · UNRANKED · PROGRESS IS NOT SAVED`,
-      width / 2,
-      top + 60,
-      ui.t.type.micro,
-      "center",
-      ui.t.alpha.muted,
-    );
-    ui.textBox(
-      canvas,
-      compact && view.notice
-        ? view.notice
-        : "Play on from this exact moment of your run: same arena, same build, same luck. To stop, pause and quit to the main menu.",
-      x + 24,
-      top + 86,
-      w - 48,
-      { size: ui.t.type.caption, lineHeight: 19, maxLines: 3, alpha: ui.t.alpha.soft },
-    );
-    if (challenge.result !== undefined)
-      ui.text(
-        canvas,
-        `RECORDED RESULT · ${challenge.result.toUpperCase()} · ${replayClock(challenge.elapsedTicks ?? 0)}`,
-        width / 2,
-        choicesY + 15,
-        ui.t.type.label,
-        "center",
-      );
-    else if (challenge.choices.length === 0)
-      ui.text(
-        canvas,
-        "Pause the replay at a saved point (the marks on the timeline) to start a challenge.",
-        width / 2,
-        choicesY + 15,
-        ui.t.type.caption,
-        "center",
-        ui.t.alpha.soft,
-      );
-    challenge.choices.slice(0, 3).forEach((choice, index) => {
-      context.enqueue({
-        x: x + 24,
-        y: choicesY + index * 38,
-        w: w - 48,
-        h: 32,
-        label: choice.label,
-        action: { type: "replay.challenge.start", id: choice.id },
-      });
-    });
-    if (view.notice && !compact)
-      ui.textBox(canvas, view.notice, x + 24, 460, w - 48, { size: ui.t.type.micro, lineHeight: 18, maxLines: 3 });
-    context.enqueue({
-      x: width / 2 - 110,
-      y: Math.min(height - 44, 540),
-      w: 220,
-      h: 32,
-      label: "RETURN TO THEATER",
-      action: { type: "replay.challenge.open" },
-    });
-  }
-
-  function runDnaState(view: ReplayScreenView): void {
-    const dna = view.runDna;
-    if (dna === undefined) return;
-    const { canvas, safeInsets: safe } = context;
-    const panelWidth = Math.min(860, width - 80 - safe.l - safe.r),
-      panelHeight = 330;
-    const x = width / 2 - panelWidth / 2,
-      y = 90 + safe.t;
-    ui.panel(canvas, x, y, panelWidth, panelHeight);
-    ui.accentStrip(canvas, x, y, panelWidth, REPLAY_CYAN);
-    ui.title(canvas, "RUN DNA · RECORDED METRICS", width / 2, y + 38, ui.t.type.lead);
-    ui.text(
-      canvas,
-      "How this run played, measured from the recording.",
-      width / 2,
-      y + 62,
-      ui.t.type.caption,
-      "center",
-      ui.t.alpha.muted,
-    );
-    const metricLabel = (name: string): string =>
-      name
-        .replace(/([a-z])([A-Z])/g, "$1 $2")
-        .replace(/ ?Ticks$/i, " time")
-        .toUpperCase();
-    const metricValue = (name: string, value: number): string =>
-      /ticks$/i.test(name) ? replayClock(value) : Math.round(value).toLocaleString("en-US");
-    Object.entries(dna.sourceMetrics).forEach(([name, value], index) => {
-      ui.text(
-        canvas,
-        `${metricLabel(name)} · ${value === undefined ? "NOT RECORDED" : metricValue(name, value)}`,
-        x + 24 + (index % 2) * ((panelWidth - 48) / 2),
-        y + 94 + Math.floor(index / 2) * 22,
-        ui.t.type.caption,
-        "left",
-        value === undefined ? ui.t.alpha.muted : ui.t.alpha.soft,
-      );
-    });
-    if (dna.dimensions)
-      Object.entries(dna.dimensions).forEach(([name, value], index) => {
-        ui.text(
-          canvas,
-          `${name.toUpperCase()} ${String(Math.round(value * 100))}%`,
-          x + 24 + (index % 3) * ((panelWidth - 48) / 3),
-          y + 198 + Math.floor(index / 3) * 24,
-          ui.t.type.caption,
-          "left",
-          ui.t.alpha.soft,
-        );
-      });
-    if (!dna.available)
-      dna.unavailable.slice(0, 3).forEach((entry, index) => {
-        ui.text(
-          canvas,
-          `NOT RECORDED · ${entry}`,
-          x + 24,
-          y + 250 + index * 18,
-          ui.t.type.micro,
-          "left",
-          ui.t.alpha.muted,
-        );
-      });
-    else
-      ui.text(
-        canvas,
-        "Only this recording is used — nothing from your profile.",
-        x + 24,
-        y + 286,
-        ui.t.type.micro,
-        "left",
-        ui.t.alpha.muted,
-      );
   }
 
   function replayInfo(view: ReplayScreenView): void {

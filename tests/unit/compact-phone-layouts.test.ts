@@ -822,7 +822,7 @@ describe("phone compositions (compact density)", () => {
         `profile vault ${phone.name}`,
       );
       for (const replay of replays)
-        expect(vault.has(JSON.stringify({ type: "profile.compareGhostCapsule", id: replay.id }))).toBe(true);
+        expect(vault.has(JSON.stringify({ type: "profile.watchGhostCapsule", id: replay.id }))).toBe(true);
       sweep(
         phone,
         (r) => {
