@@ -131,7 +131,7 @@ describe("live presentation host", () => {
     });
     try {
       compositionModule.createLivePresentationFrameHost(
-        { timeSeconds: () => 1 } as never,
+        { timeSeconds: () => 1, screen: () => "mainmenu", controls: () => [] } as never,
         {
           context: { save: vi.fn(), restore: vi.fn() },
           ui: { badge, rotateGate: rotation, t: { color: { accent: "#abc" } } },
@@ -213,6 +213,7 @@ describe("live presentation host", () => {
         setTheme: vi.fn(),
         renderWorldLayers: screenDraw,
         renderReticle: vi.fn(),
+        renderOverlayBackdrop: vi.fn(),
         isMenuScreen: () => false,
         enterSeconds: () => 1,
         setEnterSeconds: vi.fn(),
@@ -220,6 +221,8 @@ describe("live presentation host", () => {
         setEnterAmount: vi.fn(),
         ease: (value) => value,
         resetScroll: vi.fn(),
+        setScroll: vi.fn(),
+        arrival: () => undefined,
         renderMenuBackdrop: vi.fn(),
         renderScreen: vi.fn(),
         drawButtons: vi.fn(),
@@ -228,7 +231,7 @@ describe("live presentation host", () => {
         showCanvasCursor: () => false,
         drawControllerToast: vi.fn(),
         drawRotationGate: vi.fn(),
-        firstEnabledButton: () => 0,
+        entryFocus: () => 0,
         setFocus: vi.fn(),
         updateDomHints: vi.fn(),
       }),
@@ -263,7 +266,7 @@ describe("live presentation host", () => {
     });
 
     expect(host.screenRectangle()).toEqual({ x: -10, y: -20, w: 100, h: 100 });
-    expect(host.firstEnabledButton()).toBe(0);
+    expect(host.entryFocus(undefined)).toBe(0);
     host.render();
     host.handleUi();
     host.drawButtons();
@@ -287,7 +290,7 @@ describe("live presentation host", () => {
         host.render();
         host.handleUi();
         host.drawButtons();
-        host.firstEnabledButton();
+        host.entryFocus(undefined);
       }
       expect(framePorts).toHaveBeenCalledOnce();
       expect(uiPorts).toHaveBeenCalledOnce();

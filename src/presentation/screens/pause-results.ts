@@ -53,7 +53,6 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
 
   function tutorialPaused(session: NonNullable<PausedScreenView["tutorial"]>): void {
     const { canvas } = context;
-    ui.dim(canvas, width, height, 0.9);
     const unfinished = session.unfinished === true && session.phase === "free-practice";
     const lab = session.practiceOnly === true,
       tab = lab ? practiceTabDefinition(session.practiceTab ?? "lessons") : undefined,
@@ -344,12 +343,10 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
   }
 
   function paused(view: PausedScreenView): void {
-    const { canvas } = context;
     if (view.tutorial !== undefined) {
       tutorialPaused(view.tutorial);
       return;
     }
-    ui.dim(canvas, width, height, 0.86);
     const layout = overlayHeader(context, { title: "PAUSED", subtitle: view.runSummary ? [view.runSummary] : [] });
     const actions = pauseActions(view),
       columns = bodyColumns(layout);
@@ -367,8 +364,6 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
   }
 
   function confirmquit(view: ConfirmQuitScreenView): void {
-    const { canvas } = context;
-    ui.dim(canvas, width, height, 0.85);
     const layout = overlayHeader(context, {
       title: "QUIT RUN?",
       subtitle: [
@@ -381,7 +376,8 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
       context,
       [
         { label: "QUIT", action: { type: "run.quit" } },
-        { label: "CANCEL", action: { type: "navigate", to: "paused" } },
+        // A confirm opens on its safe choice, so a stray confirm press never quits.
+        { label: "CANCEL", action: { type: "navigate", to: "paused" }, entryFocus: true },
       ],
       layout.bodyTop + ui.t.space.lg,
       layout.width,
@@ -389,8 +385,6 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
   }
 
   function continueRun(view: ContinueScreenView): void {
-    const { canvas } = context;
-    ui.dim(canvas, width, height, 0.85);
     const seconds = view.requesting ? 0 : Math.max(0, Math.ceil(view.seconds));
     const layout = overlayHeader(context, {
       title: "YOU FELL",
@@ -428,8 +422,6 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
   }
 
   function gameover(view: GameoverScreenView): void {
-    const { canvas } = context;
-    ui.dim(canvas, width, height, 0.9);
     const standing = view.isNew ? "★ NEW BEST" : view.best;
     const layout = overlayHeader(context, {
       title: "DEFEATED",
@@ -472,7 +464,6 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
       actionRow(context, actions, panel.actionsY, panel.w - ui.t.space.xl * 2);
       return;
     }
-    ui.dim(canvas, width, height, 0.92);
     const layout = overlayHeader(context, {
       title: view.title ?? "VICTORY",
       subtitle: [

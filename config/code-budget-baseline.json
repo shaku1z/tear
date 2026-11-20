@@ -9,7 +9,7 @@
       "maxLineLength": 171
     },
     "src/app/engineering/debug-harness.ts": {
-      "chars": 29203
+      "chars": 29185
     },
     "src/audio/stems/validate.ts": {
       "largestFunctionStatements": 83

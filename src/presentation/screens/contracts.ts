@@ -23,6 +23,8 @@ export interface ScreenControl {
   readonly sub?: string | undefined;
   readonly accent?: string | undefined;
   readonly confirm?: boolean | undefined;
+  /** The control the screen opens on, unless the player is returning to it. */
+  readonly entryFocus?: boolean | undefined;
   readonly hiddenBox?: boolean | undefined;
   readonly size?: number | undefined;
   readonly pips?: Readonly<{ readonly n: number; readonly filled: number; readonly color: string }> | undefined;
@@ -463,7 +465,6 @@ export interface SettingsScreenView {
   readonly tab: string;
   readonly tabs: readonly ChoiceView[];
   readonly sections: readonly { readonly label: string; readonly rows: readonly SettingRowView[] }[];
-  readonly returnTo: AppScreen;
   readonly canScrollUp?: boolean;
   readonly canScrollDown?: boolean;
 }
