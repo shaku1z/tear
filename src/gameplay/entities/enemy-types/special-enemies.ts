@@ -1,6 +1,21 @@
-import type { EnemyDependencies, EnemyPlatform, EnemyPlayerPort, EnemyProjectile } from "../enemy-contracts";
+import type {
+  EnemyDamageContext,
+  EnemyDependencies,
+  EnemyPlatform,
+  EnemyPlayerPort,
+  EnemyProjectile,
+} from "../enemy-contracts";
 import type { EnemyBaseConstructor, EnemyBaseInstance } from "./enemy-base";
-import { advanceRootbinder, createRootbinderState, type RootbinderState } from "../rootbinder-runtime";
+import {
+  advanceRootbinder,
+  createRootbinderState,
+  ROOTBINDER_RULES,
+  rootbinderIsOpen,
+  rootbinderStandsStill,
+  uprootRootbinder,
+  type RootbinderPhase,
+  type RootbinderState,
+} from "../rootbinder-runtime";
 
 export function createSpecialEnemyTypes(dependencies: EnemyDependencies, Enemy: EnemyBaseConstructor) {
   const { CONFIG, FX, GAME_RANDOM, Projectile, clamp, len, lerp } = dependencies;
@@ -85,39 +100,65 @@ export function createSpecialEnemyTypes(dependencies: EnemyDependencies, Enemy: 
     }
   }
 
-  // Rootbinder is intentionally not a Support subtype: it has no aura, healing,
-  // Anchor damage reduction, or hard-root capability. Its authored controller is
-  // a deterministic state machine; EnvironmentRuntime owns its severable links.
+  // ---- Rootbinder: walks away from the player, plants itself and roots the allies near it, so they cannot be
+  //      flung or lifted until the root is cut. Planted it is open: it takes more damage and its body does not
+  //      hurt. Its phases and numbers are in rootbinder-runtime.ts; the roots are stage objects. ----
   class Rootbinder extends Enemy {
     declare cfg: typeof CONFIG.rootbinder;
     rootbinderState: RootbinderState;
+    /** The roots it holds right now, as the stage-object layer reports them. */
+    rootLinkIds: readonly string[] = [];
     private rootbinderTickRemainder = 0;
 
-    constructor(x: number, y: number, worldId = "live", stageId = "unknown") {
+    constructor(x: number, y: number) {
       super(x, y, CONFIG.rootbinder);
       this.kind = "rootbinder";
       this.color = CONFIG.colors.rootbinder;
-      this.rootbinderState = createRootbinderState(
-        { id: `rootbinder-${String(Math.floor(x))}-${String(Math.floor(y))}`, worldId, stageId, x, y },
-        CONFIG.rootbinder,
+      this.rootable = false;
+      this.rootbinderState = createRootbinderState();
+    }
+
+    get rootPhase(): RootbinderPhase {
+      return this.rootbinderState.state;
+    }
+
+    /** Every root of this planting was cut, or one heavy hit landed. */
+    uproot() {
+      this.rootbinderState = uprootRootbinder(this.rootbinderState);
+    }
+
+    override contactDamageEnabled() {
+      return !rootbinderStandsStill(this.rootPhase);
+    }
+
+    override hit(dmg: number, knockX: number, knockY: number, context?: EnemyDamageContext) {
+      const dealt = super.hit(
+        rootbinderIsOpen(this.rootPhase) ? dmg * ROOTBINDER_RULES.plantedDamageTaken : dmg,
+        knockX,
+        knockY,
+        context,
       );
-      this.anchored = false;
-      this.tetherDR = 1;
+      if (dealt >= this.maxHp * ROOTBINDER_RULES.uprootHitShare) this.uproot();
+      return dealt;
     }
 
     update(dt: number, platforms: readonly EnemyPlatform[], player: EnemyPlayerPort) {
       this.tickTimers(dt);
       const dx = player.x - this.x;
-      // It walks only while repositioning; planting, linking and a sever stagger hold it in place.
-      const rooted = this.rootbinderState.state !== "reposition" && this.rootbinderState.state !== "recover";
-      const goal = rooted ? 0 : Math.sign(dx || 1) * this.speed;
-      this.vx = lerp(this.vx, goal, clamp((rooted ? 9 : 3) * dt, 0, 1));
+      const still = rootbinderStandsStill(this.rootPhase);
+      // It never walks at the player: it backs off until it has room to plant, and otherwise holds its ground.
+      const retreats = !still && Math.abs(dx) < ROOTBINDER_RULES.standoff;
+      const goal = retreats ? -Math.sign(dx || 1) * this.speed : 0;
+      this.vx = lerp(this.vx, goal, clamp((still ? 9 : 3) * dt, 0, 1));
       this.integrate(dt, platforms);
-      this.rootbinderTickRemainder += Math.max(0, dt) * this.rootbinderState.tuning.ticksPerSecond;
+      this.rootbinderTickRemainder += Math.max(0, dt) * ROOTBINDER_RULES.ticksPerSecond;
       const ticks = Math.floor(this.rootbinderTickRemainder);
       if (ticks > 0) {
         this.rootbinderTickRemainder -= ticks;
-        this.rootbinderState = advanceRootbinder(this.rootbinderState, ticks);
+        this.rootbinderState = advanceRootbinder(this.rootbinderState, ticks, {
+          playerDistance: len(dx, player.y - this.y),
+          links: this.rootLinkIds.length,
+        });
       }
     }
   }

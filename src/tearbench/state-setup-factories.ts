@@ -11,6 +11,7 @@ import {
 } from "../gameplay/environment/environment-definitions";
 import type { BloomWellState } from "../gameplay/environment/bloom-well";
 import { createGraftAnchorState } from "../gameplay/environment/graft-anchor";
+import { createRootLink } from "../gameplay/entities/rootbinder-runtime";
 
 type Patch = Readonly<Record<string, unknown>>;
 
@@ -58,31 +59,16 @@ export function forgeEnvironmentCombatObjectState(
   });
 }
 
-/** C6 relationship fixture: State Setup restores one Rootbinder and two ordinary allies,
- * then restores their source-owned severable root-link segments using stable actor IDs. */
+/** Root fixture: State Setup restores one Rootbinder and two ordinary allies, then the two roots that tie
+ * them, built as the game builds a root. */
 export function forgeRootbinderNetworkState(base: TearSdlDocumentV1): TearSdlDocumentV1 {
+  const source = { x: 260, y: 600 };
   const links = ["enemy:2", "enemy:3"].map((targetId, index) => ({
-    id: `root-network:${String(index + 1)}`,
+    ...createRootLink(
+      { id: `root-network:${String(index + 1)}`, ownerId: "enemy:1", tick: 0, source },
+      { id: targetId, x: 420 + index * 120, y: source.y, rootable: true },
+    ),
     factoryId: "environment-combat-object",
-    kind: "root-link" as const,
-    ownerId: "enemy:1",
-    targetId,
-    geometry: {
-      x: 260,
-      y: 600,
-      points: [
-        { x: 260, y: 600 },
-        { x: 420 + index * 120, y: 600 },
-      ],
-    },
-    integrity: 2,
-    maxIntegrity: 2,
-    counterplayTags: ["cut", "break"] as const,
-    procEligible: false,
-    damageDedupeId: `root-network:${String(index + 1)}:damage`,
-    state: "active" as const,
-    stateTick: 0,
-    cleanupReason: null,
   }));
   links.forEach((link) => {
     assertEnvironmentCombatCapabilities(link.kind, link.counterplayTags, link.procEligible);

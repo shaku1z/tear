@@ -43,6 +43,14 @@ A stage object is anything the stage or a boss places in the arena that has a li
   never reads a weight or an enemy kind itself. An enemy that keeps its own height sets `flies`, and one held
   in place sets `anchored`; a lift leaves both alone. A field that should catch whoever stands in it ends at
   the floor (`tests/unit/bloom-well-lift.test.ts` measures it on the real enemies and player).
+- **An enemy that holds its allies in place** (the Rootbinder is the example) does it through three shared
+  pieces, none of them keyed to a kind. The hold is `setRooted` on the enemy base: a rooted enemy is
+  `anchored`, so every knockback, launch and lift already leaves it alone, and it takes full damage. The tie
+  is a `root-link` stage object (`createRootLink`), which a held or thrown blade cuts. Who can be held is
+  the enemy's own data: one that flies, a boss, or one with `rootable = false` never is. The enemy's phases
+  and every number are one table beside its state machine (`ROOTBINDER_RULES` in `rootbinder-runtime.ts`);
+  the biome feature owns the ties, and `bindLiveRootbinderActors` binds any enemy that has a `rootPhase`.
+  `tests/unit/rootbinder-roots.test.ts` holds the rules on the real enemies.
 - **The biome feature** (`<biome>-environment-feature.ts`) advances its kinds each tick and is bound to the
   live entities in `src/gameplay/environment/biome-actors/` (one `bind-…-actors.ts` per biome, called from
   `bind-biome-actors.ts`). Bindings hand the runtime the player with `bindLiveContactTargets`.
