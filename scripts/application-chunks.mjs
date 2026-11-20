@@ -2,6 +2,8 @@
 // A module that returns undefined is left to the bundler's own splitting.
 
 const TUTORIAL_GOLD_DATA = "gameplay/training/tutorial-gold-reference-data.json";
+/** The module that checks the corpus; it ships in the corpus chunk so one fetch brings both. */
+const TUTORIAL_GOLD_CORPUS_READER = "gameplay/training/tutorial-gold-corpus.ts";
 
 /**
  * `src/app/<folder>/` -> chunk; other folders and the app root go to runtime-app-core.
@@ -80,12 +82,14 @@ export function applicationChunk(id, meta) {
   const source = normalized.indexOf("/src/");
   if (source < 0) return undefined;
   const relative = normalized.slice(source + "/src/".length);
+  // The ~1.5 MB tutorial demonstration corpus has its own chunk, named here because the bundle budget, the
+  // precache ignore list and the runtime cache all recognise it by that name. It is a leaf with no imports, so
+  // naming it cannot merge it with startup code; this comes first so that being reached only dynamically (the
+  // normal case) does not hand it the name of the module that imports it.
+  if (relative === TUTORIAL_GOLD_DATA || relative === TUTORIAL_GOLD_CORPUS_READER) return "tutorial-gold-reference";
   if (reachedOnlyDynamically(id, meta)) return sharedOnDemandChunk(id, meta);
   const topLevel = relative.split("/")[0] ?? "";
   if (topLevel === "app") return APPLICATION_FOLDER_CHUNKS[relative.split("/")[1] ?? ""] ?? "runtime-app-core";
-  // The ~1.5 MB tutorial demonstration corpus is imported only by training
-  // preflight; its own chunk keeps it out of the startup modulepreload set.
-  if (relative === TUTORIAL_GOLD_DATA) return "tutorial-gold-reference";
   if (topLevel === "gameplay") {
     const area = relative.split("/").slice(1, 2)[0] ?? "core";
     return `gameplay-${area}`;

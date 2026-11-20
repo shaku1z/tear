@@ -297,7 +297,9 @@ export default defineConfig(({ mode, command }) => {
               {
                 name: "worker-tutorial-gold",
                 test: (id) =>
-                  id.replaceAll("\\", "/").endsWith("/src/gameplay/training/tutorial-gold-reference-data.json"),
+                  ["tutorial-gold-reference-data.json", "tutorial-gold-corpus.ts"].some((file) =>
+                    id.replaceAll("\\", "/").endsWith(`/src/gameplay/training/${file}`),
+                  ),
               },
             ],
           },
