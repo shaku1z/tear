@@ -49,7 +49,7 @@ function bridge() {
       selectWeapon: () => undefined,
       restartWithWeapon: () => undefined,
       resetAtDifficulty: () => undefined,
-      openLab: () => {
+      openAbilities: () => {
         opened.push("abilities");
       },
       clearLabScroll: () => undefined,

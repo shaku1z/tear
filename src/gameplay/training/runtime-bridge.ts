@@ -75,7 +75,7 @@ export interface PlaygroundActionDependencies {
   selectWeapon(id: string): void;
   restartWithWeapon(): void;
   resetAtDifficulty(): void;
-  openLab(): void;
+  openAbilities(): void;
   clearLabScroll(): void;
   lookupUpgrade(id: string): PlaygroundUpgradeSnapshot | null;
   playUi(): void;
@@ -242,7 +242,7 @@ export function createPlaygroundRuntimeBridge(dependencies: PlaygroundRuntimeDep
       dependencies.navigate("pgmenu");
     } else if (kind === "tab" && isPlaygroundTab(value)) {
       tab = value;
-      if (value === "abilities") actions.openLab();
+      if (value === "abilities") actions.openAbilities();
       else dependencies.navigate("pgmenu");
     } else if (kind === "weapon") {
       actions.selectWeapon(value);
