@@ -22,6 +22,7 @@ import { createLiveCinematicHost } from "./cinematic-host";
 import { createLiveSourceVoidController } from "../run/source-void-controller";
 import { createLiveStyleHost } from "../combat/style-host";
 import { createLiveTrainingHost } from "../training/training-host";
+import { createTrainingCallouts } from "../training/training-coach";
 import type { PreparedVictory } from "../../gameplay/run/outcome-planner";
 import type { RunDifficulty } from "../../gameplay/run/session";
 import type { PlaygroundScreenModel } from "../../gameplay/training/live-playground-presentation";
@@ -223,7 +224,7 @@ export function createLiveCampaignTrainingComposition(options: LiveCampaignTrain
     selectWeapon: (weapon) => {
       options.state.setSelectedWeapon(weapon);
     },
-    addFloater,
+    callouts: createTrainingCallouts(),
     drawGhost: (snapshot) => {
       drawTutorialGhost(
         options.context,
