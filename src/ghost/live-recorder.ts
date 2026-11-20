@@ -214,7 +214,10 @@ export class GhostLiveRecorder {
     return finalizing;
   }
 
-  async #finish(session: LiveGhostCaptureSession, result: Readonly<Record<string, unknown>>): Promise<TearGhostManifest | null> {
+  async #finish(
+    session: LiveGhostCaptureSession,
+    result: Readonly<Record<string, unknown>>,
+  ): Promise<TearGhostManifest | null> {
     try {
       this.#enqueue(session, "results", session.lastRecordedTick, result);
       await session.opening;

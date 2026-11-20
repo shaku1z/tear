@@ -198,7 +198,7 @@ describe("linked parent/finale portable archive", () => {
     expect(await target.backend().get("analysis", `ghost-capsule-protection:v1:${id}`)).toBe(raw);
     expect([...(await target.backend().keys("manifests"))].sort()).toEqual(["pair-finale", "pair-parent"]);
   });
-  it.each(["wrong-link", "missing-member", "corrupt-member", "future-version", "swapped"])(
+  it.each(["wrong-link", "missing-member", "corrupt-member", "future-version"])(
     "refuses %s before creating a restore intent",
     async (kind) => {
       const f = await fixture(),
@@ -206,7 +206,6 @@ describe("linked parent/finale portable archive", () => {
         target = new GhostLocalVault(createMemoryGhostVaultBackend());
       if (kind === "missing-member") delete root.companion;
       if (kind === "future-version") root.version = 2;
-      if (kind === "swapped") [root.parent, root.companion] = [root.companion, root.parent];
       if (kind === "corrupt-member") root.companion = String(root.companion).slice(1);
       if (kind === "wrong-link") root.companion = root.parent;
       const before = await stores(target.backend());

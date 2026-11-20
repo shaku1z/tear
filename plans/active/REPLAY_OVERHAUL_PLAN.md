@@ -363,11 +363,11 @@ with the count of `src` importers and test files that import it. The target colu
 | `career-archive.ts` | players; 7, 3 | delete (PR 8) | 18 filters, views, notes, retention over a second index |
 | `cold-restore-job.ts` | players; 6, 4 | delete (PR 6) | Resumable restore jobs for a single-file import |
 | `cold-restore.ts` | players; 3, 3 | delete (PR 6) | Same |
-| `corrupt-capsule-records.ts` | players; 3, 0 | delete (PR 2) | Repair records; damaged records are shown, not repaired |
+| `corrupt-capsule-records.ts` | players; 3, 0 | delete (PR 2b) | Repair records; damaged records are shown, not repaired |
 | `finale-companion.ts` | players; 11, 2 | delete (PR 2) | See `browser-finale-companion.ts` |
 | `finale-playback.ts` | players; 2, 1 | delete (PR 2) | Same |
 | `fork-origin.ts` | players; 11, 1 | merge into `app/replay/practice-launch.ts` (PR 7) | Practice origin; the permits go |
-| `ghost-doctor.ts` | players; 4, 0 | delete (PR 2) | REPAIR (decision 2) |
+| `ghost-doctor.ts` | players; 4, 0 | delete (PR 2b) | REPAIR (decision 2) |
 | `index.ts` | tests only; 0, 16 | delete (PR 1) | Barrel that only tests import |
 | `indexeddb-vault-backend.ts` | players; 12, 3 | move to `persistence/indexeddb-chunk-storage.ts` (PR 6) | Generic keyed-chunk storage; the database name of the new store is new (see the switch) |
 | `live-causal-events.ts` | players; 6, 7 | merge into `recorder.ts` (PR 5) | Gameplay facts become marks |
@@ -385,7 +385,7 @@ with the count of `src` importers and test files that import it. The target colu
 | `replay-admission.ts` | players; 21, 11 | merge into `record.ts` (header) and `verify.ts` (ruleset and build check) (PR 5) | 26,698 characters of run context, fingerprints, random state and opening permits |
 | `replay-cut-list.ts` | hidden; 3, 1 | merge into clip export as one tick range (PR 7) | The Replay Editor's cut list |
 | `replay-world.ts` | players; 15, 4 | merge into `watch.ts` (world port) (PR 7) | World, session and practice types |
-| `run-dna-theater.ts` | players; 2, 3 | delete (PR 2) | RUN DNA panel (decision 2) |
+| `run-dna-theater.ts` | players; 2, 3 | delete (PR 8) | The RUN DNA panel went in PR 2; CAREER still reads the projection until it folds into the list |
 | `seed-race-contract.ts` | hidden (seed race); 9, 4 | merge into `record.ts` (race declaration in `run.start`) and `race.ts` (PR 9) | Seed race stays |
 | `seed-race-decisions.ts` | hidden; 5, 2 | merge into `race.ts` (PR 9) | Same |
 | `streaming-recorder.ts` | players; 4, 7 | merge into `recorder.ts` (PR 5) | Keep its chunk-commit order (#286) |
@@ -427,7 +427,7 @@ with the count of `src` importers and test files that import it. The target colu
 | `ghost-practice-session-state.ts` | players; 9, 1 | rename to `practice-session.ts` (PR 7) | Keeps practice runs unranked and unsaved |
 | `ghost-recording-session-state.ts` | players; 6, 3 | merge into `live-recording.ts` (PR 5) | One recording session owner |
 | `ghost-reference-controller.ts` | players; 1, 2 | merge into `race-composition.ts` (PR 9) | Same as chase |
-| `ghost-run-dna-recording.ts` | players; 1, 1 | delete (PR 2) | Run DNA |
+| `ghost-run-dna-recording.ts` | players; 1, 1 | delete (PR 8) | Run DNA; CAREER reads it until PR 8 |
 | `ghost-worker-urls.ts` | players; 1, 0 | rename to `replay-worker-url.ts` (PR 9) | One replay worker |
 | `live-ghost-capture.ts` | players; 3, 0 | merge into `live-recording.ts` (PR 5) | Checkpoint hashes and the own-run seek cache |
 | `live-ghost-chase.ts` | players; 5, 0 | merge into `race-composition.ts` (PR 9) | Same as chase |
@@ -524,9 +524,9 @@ unused barrels (`src/ghost/index.ts`, `src/replay/index.ts`) and their tests and
 
 ### PR 2: remove the replay extras (decision 2)
 
-COMPARE, recorded challenges, RUN DNA, the finale companion, REPAIR (Doctor, corrupt-capsule
-records, repair upkeep), `theater.ts` and `player-experiences.ts`. The Theater keeps play, pause,
-speed, seek, chapters and practice.
+COMPARE, recorded challenges, the Theater's RUN DNA panel, the finale companion, `theater.ts` and
+`player-experiences.ts`. The Theater keeps play, pause, speed, seek, chapters and practice. The Run
+DNA calculation and recording stay until PR 8, because CAREER reads them. REPAIR goes in PR 2b.
 
 - **General case:** Theater features beyond watching that the five goals do not need.
 - **One owner:** The Theater screen adapter keeps the remaining controls; nothing new.
@@ -534,6 +534,13 @@ speed, seek, chapters and practice.
 - **Cause:** Each C-checkpoint added a projection over the capsule instead of using watch.
 - **Measured:** Characters, files and tests deleted; replay chunk bytes before and after.
 - **Removed:** About 20 modules (about 150,000 characters) and their tests.
+
+### PR 2b: remove REPAIR (decision 2)
+
+The REPAIR action, the repair-copy writer in the vault, `ghost-doctor.ts` and
+`corrupt-capsule-records.ts`. A damaged record is shown as damaged and can be deleted; the health
+scan and index rebuild it still needs move into the vault's own read until PR 6's store replaces
+them. Split from PR 2 because it reaches into vault maintenance and custody, not the Theater.
 
 ### PR 3: move the snapshot codecs to `src/gameplay/snapshot/` (no behaviour change)
 
@@ -792,3 +799,4 @@ writes are closed. Deploying the rules is the owner's step.
 - 2026-11-19 The lead said go. Their six decisions are recorded, and the separate Firestore rules PR was added.
 - 2026-11-19 Added the owner's two defects (the stage at each moment; the real weapon and throws) with their causes, the parity table and the live-drawing rule.
 - 2026-11-20 PR 1 (`codex/replay-hidden-features`): Boss Memory, the linked-pair download, the preservation corpus and both barrels removed. Importing an existing linked file stays until PR 6. PR 4's layer shape agreed with the lead: playtest-tool's headless move lands first; the narrowest `playtest -> app/world/detached` edge; `tearbench -> app` never; the baseline only shrinks.
+- 2026-11-20 PR 2 (`codex/replay-extras`): COMPARE, recorded challenges (and CAREER's CHALLENGE), the Theater's RUN DNA panel and the finale companion removed; practice from a replay stays. The Run DNA calculation and recording stay until PR 8 because CAREER reads them. REPAIR split into PR 2b because it reaches into vault maintenance and custody. A linked file still imports both members, but its companion no longer opens. The architecture baseline went from 44 to 37 edges.

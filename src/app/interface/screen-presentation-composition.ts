@@ -33,10 +33,7 @@ import { isAppScreen, type AppScreen } from "../../domain/screen-catalog";
 
 type RendererBase = Omit<LiveScreenRendererOptions, "dispatch" | "renderPreview">;
 type ReplayBase = Omit<ReplayScreenServices, "renderers" | "categories" | "fallbackCategory" | "specialColor">;
-type LibraryBase = Omit<
-  LibraryScreenServices,
-  "renderers" | "enterReplay" | "enterGhostTheater"
->;
+type LibraryBase = Omit<LibraryScreenServices, "renderers" | "enterReplay" | "enterGhostTheater">;
 type SettingsBase = Omit<SettingsRenameServices, "renderers" | "setCodexGuide">;
 type RunServicesBase = Omit<
   RunScreenServices,

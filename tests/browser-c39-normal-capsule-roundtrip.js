@@ -44,30 +44,6 @@ async function installObservation(page) {
     CanvasRenderingContext2D.prototype.fillText = function c39FileText(value, ...args) {
       const text = String(value),
         observation = window.__C39_FILE_TEXT__;
-      if (text.startsWith("FINALE CONTINUATION   ·")) {
-        observation.replay = null;
-        observation.frame = null;
-        observation.stateHash = null;
-        observation.expectStateHash = false;
-        observation.paused = null;
-      }
-      const frame = /^FRAME ([0-9]+)$/u.exec(text);
-      if (frame) observation.frame = Number(frame[1]);
-      const position = /^([0-9.]+)s · TICK ([0-9]+) \/ ([0-9.]+)s$/u.exec(text);
-      if (position)
-        observation.replay = {
-          elapsed: Number(position[1]),
-          tick: Number(position[2]),
-          duration: Number(position[3]),
-          frame: observation.frame,
-        };
-      if (text === "▶") observation.paused = true;
-      if (text === "❚❚") observation.paused = false;
-      if (observation.expectStateHash) {
-        observation.stateHash = text;
-        observation.expectStateHash = false;
-      }
-      if (text === "CONTINUATION STATE") observation.expectStateHash = true;
       // The Vault draws one sentence per file status; map it back to the status name.
       const status = [
         ["UNAVAILABLE", "Importing replay files isn't available in this browser."],
@@ -529,89 +505,8 @@ async function pairedMain(input) {
     await page.screenshot({ path: path.join(directory, "pair-B-preview.png") });
     await clickLabel(page, "RESTORE BOTH");
     await waitStatus(page, "COMPLETE");
-    const custodyBefore = await assertPair("pair-B-complete", journey);
-    const profileBefore = await page.evaluate(() => ({
-      meta: localStorage.getItem("tear_meta"),
-      profile: localStorage.getItem("tear_profile_v2"),
-    }));
-    // Newer companion is first in the normal Vault catalog. The existing exact
-    // parent permit and runtime restoration remain authoritative on open.
-    // The durable restore completes before the asynchronous catalog refresh.
-    await page.waitForFunction(() => window.__C39_FILE_TEXT__.recent.includes("◆ THEATER"), undefined, {
-      timeout: STATE_WAIT_MS,
-    });
-    await settle(page);
-    await clickLabel(page, "◆ THEATER");
-    await journey.waitScreen("replay");
-    await page.waitForFunction(() => window.__C39_FILE_TEXT__.recent.includes("BACK TO SCORED RUN"));
-    await page.screenshot({ path: path.join(directory, "pair-B-linked-theater.png") });
-    const recorded = await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), members[1].manifest.id);
-    const frames = recorded.tracks.results
-      .filter((entry) => entry.value?.format === "tearghost-finale-frame")
-      .map((entry) => entry.value);
-    const last = frames.at(-1);
-    assert.ok(last?.completed, "portable companion lacks actual final-frame witness");
-    const restoration = recorded.tracks.keyframes.find(
-      (entry) =>
-        entry.value.state["tear.run.v1"].stage === 0 &&
-        entry.value.state["tear.world.v1"].runtime.finaleBinding?.state.restoring,
-    );
-    assert.ok(restoration, "source has no captured stage-zero restoration checkpoint");
-    await page.waitForFunction(
-      () => window.__C39_FILE_TEXT__.replay !== null && window.__C39_FILE_TEXT__.paused === true,
-    );
-    const start = await page.evaluate(() => window.__C39_FILE_TEXT__.replay);
-    await page.keyboard.press("Space");
-    await page.waitForFunction(
-      (elapsed) => window.__C39_FILE_TEXT__.paused === false && window.__C39_FILE_TEXT__.replay?.elapsed > elapsed,
-      start.elapsed,
-    );
-    await page.keyboard.press("Space");
-    await settle(page);
-    assert.equal(
-      await page.evaluate(() => window.__C39_FILE_TEXT__.paused),
-      true,
-      "native Space must pause without activating another UI control",
-    );
-    await page.mouse.click(1280, 810); // 91% of the actual1600×900 SAFE timeline.
-    await page.waitForFunction(() => {
-      const p = window.__C39_FILE_TEXT__.replay;
-      return p && p.elapsed / p.duration >= 0.9;
-    });
-    const sought = await page.evaluate(() => window.__C39_FILE_TEXT__.replay);
-    assert.ok(sought.tick >= restoration.tick, "scrub did not reach the recorded restoration interval");
-    assert.ok(
-      frames.some((frame) => frame.cursor.ordinal === sought.frame && frame.tick === sought.tick),
-      "rendered position lacks its original frame witness",
-    );
-    await page.screenshot({ path: path.join(directory, "pair-B-restoration-seek.png") });
-    await page.keyboard.press("ArrowRight");
-    await page.waitForFunction(
-      ({ tick, ordinal }) =>
-        window.__C39_FILE_TEXT__.replay?.tick === tick && window.__C39_FILE_TEXT__.replay?.frame === ordinal,
-      { tick: last.tick, ordinal: last.cursor.ordinal },
-    );
-    await page.mouse.click(1225, 856); // Existing normal INFO button.
-    await page.waitForFunction((hash) => window.__C39_FILE_TEXT__.stateHash === hash, last.stateHash);
-    const ended = await page.evaluate(() => window.__C39_FILE_TEXT__);
-    save("pair-B-actual-transport", {
-      start,
-      sought,
-      ended,
-      originalFinalFrame: last,
-      restorationTick: restoration.tick,
-    });
-    await page.screenshot({ path: path.join(directory, "pair-B-final-frame.png") });
-    const custodyAfter = await assertPair("pair-B-after-linked-theater", journey);
-    assert.deepEqual(custodyAfter.vault, custodyBefore.vault, "playback/transport changed source bytes or metadata");
-    assert.deepEqual(
-      await page.evaluate(() => ({
-        meta: localStorage.getItem("tear_meta"),
-        profile: localStorage.getItem("tear_profile_v2"),
-      })),
-      profileBefore,
-      "playback/transport changed progression",
-    );
+    // A linked file still imports both members; the Theater no longer opens a finale companion.
+    await assertPair("pair-B-complete", journey);
   });
   assert.deepEqual(fs.readFileSync(input), original);
   report.status = "passed";

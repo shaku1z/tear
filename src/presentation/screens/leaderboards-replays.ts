@@ -32,12 +32,7 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     const header = view.title + "   ·   " + view.detail;
     const headerWidth = Math.max(
       0,
-      width -
-        safe.l -
-        safe.r -
-        280 -
-        REPLAY_TOP_RESERVE -
-        canvas.measureText(view.score ?? "").width,
+      width - safe.l - safe.r - 280 - REPLAY_TOP_RESERVE - canvas.measureText(view.score ?? "").width,
     );
     canvas.fillText(ellipsize(canvas, header, headerWidth), 200 + safe.l, 36 + safe.t);
     canvas.textAlign = "right";

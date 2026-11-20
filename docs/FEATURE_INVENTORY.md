@@ -899,13 +899,9 @@ frozen evidence record.
   alone makes no continuation claim. Legacy completion inference needs a later
   playing anchor/receipt. Fresh normal-browser acceptance remains required for
   the new route; constructed win fixtures do not establish a full Campaign run.
-  Pixel/device output fidelity remains C25/C40 work. C29
-  also now exposes
-  player-visible semantic comparison: from Profile -> Vault, select two
-  through nine healthy completed V3 capsules and use `COMPARE N` to
-   reconstruct and inspect each repeated semantic event occurrence side by
-   side. It is intentionally a semantic source-simulation comparison, not a
-   pixel, PCM, haptic, or device output claim;
+  Pixel/device output fidelity remains C25/C40 work. The C29 semantic
+   comparison (`COMPARE N` in Profile -> Vault) was removed with the replay
+   overhaul (plans/active/REPLAY_OVERHAUL_PLAN.md, PR 2).
    C29/C30 source replay and headless composition now own the same portable live
    wave, spawn, clear, and reward runtime (including semantic draft routing)
    used by the C27A detached host, plus the portable terminal-outcome runtime.
@@ -1020,10 +1016,12 @@ frozen evidence record.
 
 No feature-preservation evidence gaps remain in this inventory. Release readiness still requires the full clean-commit gate described above.
 
-### C37 recorded Run DNA Theater projection
+### C37 recorded Run DNA projection
 
-The normal C29 Theater exposes a `RUN DNA` panel only as an immutable
-projection of its already-verified durable capsule. `run-dna-v1` is calculated
+The Theater's `RUN DNA` panel was removed with the replay overhaul
+(plans/active/REPLAY_OVERHAUL_PLAN.md, PR 2); CAREER still reads the same
+projection until PR 8. The projection is immutable and comes from an
+already-verified durable capsule. `run-dna-v1` is calculated
 only from exactly one complete declared `run-dna-metrics-v1` result; absent,
 incomplete, or ambiguous metrics render as unavailable. The visible panel
 names the formula, custody label, source metrics, and dimensions. It neither

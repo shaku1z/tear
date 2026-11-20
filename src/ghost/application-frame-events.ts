@@ -307,10 +307,7 @@ export function readGhostApplicationClockSchedule(
     return undefined;
   }
   const firstTick = ghostRecordingFirstTick(capsule);
-  if (
-    events.some((event) => event.tick < firstTick) ||
-    capsule.tracks.results.some((entry) => entry.tick < firstTick)
-  )
+  if (events.some((event) => event.tick < firstTick) || capsule.tracks.results.some((entry) => entry.tick < firstTick))
     throw new TypeError("Application clock precedes recording origin.");
   const clockSequences = new Set(events.map((event) => event.sequence)),
     seenSequences = new Set<number>();
@@ -335,11 +332,7 @@ export function readGhostApplicationClockSchedule(
   ]);
   for (const event of events) {
     const value = event.payload;
-    if (
-      value.runId !== runId ||
-      value.sessionId !== capsule.manifest.id ||
-      event.sequence <= sequence
-    )
+    if (value.runId !== runId || value.sessionId !== capsule.manifest.id || event.sequence <= sequence)
       throw new TypeError("application clock run/session/causal sequence mismatch");
     sequence = event.sequence;
     if (value.format === "tearghost-application-frame") {
