@@ -6,13 +6,8 @@
  */
 import { describe, expect, it } from "vitest";
 
-import {
-  DEFAULT_LOADOUT_ID,
-  MAX_LOADOUTS,
-  MAX_PRICE,
-  MAX_STATE_CHARS,
-  type CosmeticState,
-} from "../../src/domain/cosmetic-types";
+import { LOADOUT_IDS } from "../../src/domain/cosmetic-loadouts";
+import { MAX_PRICE, MAX_STATE_CHARS, type CosmeticState } from "../../src/domain/cosmetic-types";
 import { worstCaseStateSize } from "../../src/domain/cosmetic-validation";
 import { mergeCosmeticStates, normalizeCosmeticState } from "../../src/domain/cosmetics";
 import { MAX_ID_LENGTH } from "../../src/domain/identifiers";
@@ -25,11 +20,8 @@ const slotIds = COSMETIC_CATALOG.slots.map((slot) => slot.id);
 const unknownId = fc
   .stringMatching(new RegExp(`^[a-z0-9_]{1,${String(MAX_ID_LENGTH)}}$`, "u"))
   .filter((id) => !catalogIds.includes(id));
-/** Loadout ids from a fixed pool, so two records together never hold more than MAX_LOADOUTS loadouts. */
-const loadoutId = fc.constantFrom(
-  DEFAULT_LOADOUT_ID,
-  ...Array.from({ length: MAX_LOADOUTS - 1 }, (_, index) => `loadout_${String(index)}`),
-);
+/** Loadout ids from the game's fixed pool, so two records together never hold more than MAX_LOADOUTS loadouts. */
+const loadoutId = fc.constantFrom(...LOADOUT_IDS);
 const time = fc.nat({ max: 9_999_999_999_999 });
 
 /** A record as a save holds it, built from these item ids and passed through `normalizeCosmeticState`. */

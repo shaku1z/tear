@@ -408,14 +408,17 @@ describe("cosmetic state", () => {
 
   it("lets a delete win over an older edit and lose to a newer one", () => {
     const base = { name: "ALT", nameAt: 1, slots: { trail: { id: "x", at: 5 } } };
-    const deleted = normalizeCosmeticState({ v: 1, loadouts: { alt: { ...base, deletedAt: 8 } } });
-    const older = normalizeCosmeticState({ v: 1, loadouts: { alt: base } });
+    const deleted = normalizeCosmeticState({ v: 1, loadouts: { loadout_2: { ...base, deletedAt: 8 } } });
+    const older = normalizeCosmeticState({ v: 1, loadouts: { loadout_2: base } });
     const newerEdit = normalizeCosmeticState({
       v: 1,
-      loadouts: { alt: { ...base, slots: { trail: { id: "y", at: 12 } } } },
+      loadouts: { loadout_2: { ...base, slots: { trail: { id: "y", at: 12 } } } },
     });
-    const pointAtAlt = (state: ReturnType<typeof mergeCosmeticStates>) => ({ ...state, active: { id: "alt", at: 1 } });
-    expect(activeLoadout(pointAtAlt(mergeCosmeticStates(deleted, older)))).toBeUndefined();
-    expect(activeLoadout(pointAtAlt(mergeCosmeticStates(deleted, newerEdit)))?.slots.trail?.id).toBe("y");
+    const pointAtSecond = (state: ReturnType<typeof mergeCosmeticStates>) => ({
+      ...state,
+      active: { id: "loadout_2", at: 1 },
+    });
+    expect(activeLoadout(pointAtSecond(mergeCosmeticStates(deleted, older)))).toBeUndefined();
+    expect(activeLoadout(pointAtSecond(mergeCosmeticStates(deleted, newerEdit)))?.slots.trail?.id).toBe("y");
   });
 });

@@ -16,6 +16,12 @@ import {
 } from "../../src/presentation/shard-shelves-snapshot";
 import { TYPE_SCALE } from "../../src/presentation/ui-tokens";
 import { buildShopSnapshot, shopVisibleHeight } from "../../src/presentation/shop-snapshot";
+import { createLoadout } from "../../src/domain/cosmetic-loadouts";
+import { grantItems } from "../../src/domain/cosmetics";
+import { MAX_LOADOUTS } from "../../src/domain/cosmetic-types";
+import type { ScreenRenderContext } from "../../src/presentation/screens/contracts";
+import { createShardShelves } from "../../src/presentation/screens/shard-shelves";
+import { createPageFrame, type PageFrame } from "../../src/presentation/screens/page-frame";
 
 const nobody: ProgressFacts = {
   bossDefeated: () => false,
@@ -186,5 +192,61 @@ describe("shard shelves", () => {
     ]);
     const height = shardShelvesHeight(shards, SHARD_SHELF.columns.desktop);
     expect(result.maximumScroll).toBe(Math.max(0, height - shopVisibleHeight(400)));
+  });
+
+  it("leads with the loadout row: MAIN in use, room for more, nothing armed", () => {
+    expect(buildShardShelves(input())).toMatchObject({
+      loadouts: [{ id: "main", name: "MAIN", active: true }],
+      canAddLoadout: true,
+      deleteArmed: false,
+    });
+  });
+
+  it("arms DELETE only for the loadout in use, and offers no + NEW when every place is taken", () => {
+    let state = normalizeCosmeticState(undefined);
+    for (let index = 1; index < MAX_LOADOUTS; index += 1) state = createLoadout(state, index) ?? state;
+    const full = buildShardShelves(input({ state, deleteArmed: "loadout_8" }));
+    expect(full.loadouts.map((entry) => entry.active)).toEqual([...Array<boolean>(MAX_LOADOUTS - 1).fill(false), true]);
+    expect(full).toMatchObject({ canAddLoadout: false, deleteArmed: true });
+    expect(buildShardShelves(input({ state, deleteArmed: "loadout_2" })).deleteArmed).toBe(false);
+  });
+
+  it("shows each collection's count, reward and unlock, and tags its items", () => {
+    const view = buildShardShelves(input({ collectionName: (id) => `${id} set` }));
+    const rootbound = COSMETIC_CATALOG.collections.find((entry) => entry.id === "rootbound");
+    expect(view.collections).toEqual([
+      {
+        id: "rootbound",
+        name: rootbound?.name,
+        owned: 0,
+        total: 2,
+        complete: false,
+        reward: "Rootcutter",
+        note: rootbound ? conditionText(rootbound.unlock, CONDITION_NAMES) : "",
+      },
+    ]);
+    const tagged = view.shelves.flatMap((shelf) => shelf.cards).filter((card) => card.collection !== undefined);
+    expect(tagged.map((card) => [card.id, card.collection])).toEqual([
+      ["trail_heartwood", "rootbound set"],
+      ["title_rootcutter", "rootbound set"],
+      ["banner_canopy", "rootbound set"],
+    ]);
+    const complete = buildShardShelves(
+      input({ state: grantItems(normalizeCosmeticState(undefined), ["trail_heartwood", "banner_canopy"]) }),
+    );
+    expect(complete.collections[0]).toMatchObject({ owned: 2, total: 2, complete: true, note: "" });
+  });
+
+  it("gives the renderer exactly the height the scroll extent counts", () => {
+    const context = {
+      ui: { t: { type: TYPE_SCALE, metric: { minTarget: 0 }, space: { md: 16 } } },
+    } as unknown as ScreenRenderContext;
+    const frame = { left: 240, width: 1120, compact: false } as unknown as PageFrame;
+    for (const state of [normalizeCosmeticState(undefined), createLoadout(normalizeCosmeticState(undefined), 1)]) {
+      const view = buildShardShelves(input(state ? { state } : {}));
+      const blocks = createShardShelves(context, createPageFrame(context)).shelves(frame, view);
+      const drawn = blocks.reduce((sum, block) => sum + block.height, 0);
+      expect(drawn).toBe(shardShelvesHeight(view, SHARD_SHELF.columns.desktop));
+    }
   });
 });

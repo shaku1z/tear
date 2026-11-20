@@ -50,8 +50,12 @@ export function liveLoadout(state: CosmeticState, id: string): SavedLoadout | un
   return { ...loadout, slots };
 }
 
-/** The loadout in use, or undefined while nothing has been equipped yet. */
-export const activeLoadout = (state: CosmeticState): SavedLoadout | undefined => liveLoadout(state, state.active.id);
+/**
+ * The loadout in use, or undefined while nothing has been equipped yet. Only pool ids count, so a record with
+ * any other id (edited by hand) wears and shows MAIN rather than a loadout the player cannot pick.
+ */
+export const activeLoadout = (state: CosmeticState): SavedLoadout | undefined =>
+  LOADOUT_IDS.includes(state.active.id) ? liveLoadout(state, state.active.id) : undefined;
 
 export interface LoadoutSummary {
   readonly id: string;
