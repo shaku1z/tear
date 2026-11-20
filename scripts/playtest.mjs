@@ -5,6 +5,7 @@
 // row per wave.
 // `pnpm playtest runs` plays whole runs from wave 1 in each mode and prints where they end and what each wave costs.
 // `pnpm playtest enemies` puts each enemy kind alone against the player and prints a row per kind.
+// `pnpm playtest coverage` plays every report's set and lists what the game defines that never appeared.
 import { spawn } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
@@ -28,6 +29,7 @@ const USAGE = `Usage: pnpm playtest bosses [options]
        pnpm playtest waves --stage <ids> [options]
        pnpm playtest runs [options]
        pnpm playtest enemies [options]
+       pnpm playtest coverage [options]
 
 Plays boss fights on the real game, headless, and prints a table per fight and a summary.
 "sweep" plays every weapon, seeds 1 and 2 and Easy and Normal, and prints the summary.
@@ -67,6 +69,11 @@ upgrades, and prints a row per kind: how the meetings end, time to clear, health
   --count <n>          comma list of how many of the kind at once; default 1,3
   --difficulty, --weapon, --jobs, --json as above; --seed defaults to 1,2,3; --player to scripted;
   --seconds to ${String(ENEMY_SECONDS)}
+
+"coverage" plays the reports above, each on its default set (waves: every Adventure stage, seed 1, scripted),
+and lists the enemies, enemy affixes, bosses, boss phases and upgrades the game defines that never appeared.
+  --report <names>     comma list of bosses, waves, runs, enemies; default all four
+  --jobs as above; --json writes the list (queue it: pnpm queue -- pnpm playtest coverage)
 `;
 /**
  * The plan asks a sweep for four seeds in under 5 minutes on 6 jobs. Four took 498 s (1,680 fights, 2026-11-19), so
@@ -103,25 +110,73 @@ function wholeNumber(name, text, least, most) {
   return value;
 }
 
-/** One worker: this command again with one share of the fights, writing its fights to a file. */
-function playShare(command, given, index, of, file) {
-  const args = [script, command];
-  for (const [name, value] of given)
-    if (!["jobs", "json", "show", "share"].includes(name)) args.push(`--${name}`, value);
-  args.push("--share", `${String(index)}/${String(of)}`, "--json", file, "--show", "none");
+/** This command again as its own process, printing nothing and writing what it played to a file; gives the file's content. */
+function playApart(command, args, file, name) {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, args, { stdio: ["ignore", "ignore", "inherit"] });
+    const child = spawn(process.execPath, [script, command, ...args, "--json", file, "--show", "none"], {
+      stdio: ["ignore", "ignore", "inherit"],
+    });
     child.on("error", reject);
-    // A worker exits with 1 when one of its fights is broken; its file is still whole.
+    // It exits with 1 when something it played is broken; its file is still whole.
     child.on("exit", (code) => {
       if (code === 0 || code === 1) resolve(JSON.parse(readFileSync(file, "utf8")));
-      else reject(new Error(`playtest worker ${String(index)} of ${String(of)} stopped with code ${String(code)}`));
+      else reject(new Error(`playtest ${name} stopped with code ${String(code)}`));
     });
   });
 }
 
+/** One worker: this command again with one share of the fights. */
+function playShare(command, given, index, of, file) {
+  const args = [...given].flatMap(([name, value]) =>
+    ["jobs", "json", "show", "share"].includes(name) ? [] : [`--${name}`, value],
+  );
+  args.push("--share", `${String(index)}/${String(of)}`);
+  return playApart(command, args, file, `worker ${String(index)} of ${String(of)}`);
+}
+
+/** The coverage list: each report played apart on its coverage set, then what never appeared in any of them. */
+async function coverage(load, given) {
+  const cover = await load("coverage");
+  const reports = list(given.get("report"), cover.COVERAGE_REPORTS);
+  const unknown = reports.find((report) => !cover.COVERAGE_REPORTS.includes(report));
+  if (unknown !== undefined)
+    throw new RangeError(`no report "${unknown}"; coverage plays ${cover.COVERAGE_REPORTS.join(", ")}`);
+  const started = performance.now();
+  const folder = mkdtempSync(path.join(os.tmpdir(), "tear-playtest-"));
+  const played = {};
+  try {
+    // One report at a time: each starts its own workers.
+    for (const report of reports) {
+      played[report] = [];
+      for (const [index, set] of cover.COVERAGE_SETS[report].entries()) {
+        const args = Object.entries(set).flatMap(([name, value]) => [`--${name}`, value]);
+        if (given.has("jobs")) args.push("--jobs", given.get("jobs"));
+        const file = path.join(folder, `${report}-${String(index)}.json`);
+        played[report].push(...(await playApart(report, args, file, report)));
+      }
+      process.stderr.write(`coverage: played ${String(played[report].length)} ${report}\n`);
+    }
+  } finally {
+    rmSync(folder, { recursive: true, force: true });
+  }
+  const rows = cover.coverageRows(cover.appearedIn(played));
+  process.stdout.write(
+    `Played: ${reports.map((report) => `${report} (${String(played[report].length)})`).join(", ")}.\n` +
+      reports
+        .map((report) => [report, played[report].filter((result) => result.end === "broken").length])
+        .filter(([, broken]) => broken > 0)
+        .map(([report, broken]) => `BROKEN: ${String(broken)} of the ${report}; play that report for the reasons.\n`)
+        .join("") +
+      cover.formatCoverage(rows) +
+      `\n${((performance.now() - started) / 1000).toFixed(1)} s of real time.\n`,
+  );
+  const json = given.get("json");
+  if (json !== undefined) writeFileSync(path.resolve(json), `${JSON.stringify(rows, null, 2)}\n`);
+  if (Object.values(played).some((results) => results.some((result) => result.end === "broken"))) process.exitCode = 1;
+}
+
 const [command, ...rest] = process.argv.slice(2);
-if (!["bosses", "sweep", "waves", "runs", "enemies"].includes(command)) {
+if (!["bosses", "sweep", "waves", "runs", "enemies", "coverage"].includes(command)) {
   process.stdout.write(USAGE);
   process.exit(command === undefined || command === "help" ? 0 : 1);
 }
@@ -250,51 +305,61 @@ try {
       };
     },
   };
-  const played = command === "sweep" ? "bosses" : command;
-  const kind = await kinds[played]();
-  if (show !== undefined && ![...kind.shows, "none"].includes(show))
-    throw new Error(`--show takes ${kind.shows.join(", ")}`);
-  const started = performance.now();
-  let results;
-  let jobs = 1;
-  try {
-    // Everything is admitted here, before any worker starts, so a mistyped id costs no playing time.
-    const asked = kind.admit(kind.request);
-    const cores = Math.max(1, os.availableParallelism() - 2);
-    jobs = given.has("jobs")
-      ? wholeNumber("jobs", given.get("jobs"), 1, MAX_JOBS)
-      : Math.max(1, Math.min(MAX_JOBS, cores, Math.floor(asked.length / FIGHTS_PER_JOB)));
-    if (share !== undefined) results = kind.play(kind.request, { index: share[0], of: share[1] });
-    else if (jobs === 1) results = kind.play(kind.request);
-    else {
-      const folder = mkdtempSync(path.join(os.tmpdir(), "tear-playtest-"));
-      try {
-        const workers = Array.from({ length: jobs }, (_, index) =>
-          playShare(played, given, index, jobs, path.join(folder, `${String(index)}.json`)),
-        );
-        results = shares.mergeSlices(await Promise.all(workers));
-      } finally {
-        rmSync(folder, { recursive: true, force: true });
+  if (command === "coverage") {
+    try {
+      await coverage(load, given);
+    } catch (error) {
+      if (!(error instanceof RangeError)) throw error;
+      process.stderr.write(`playtest: ${error.message}\n`);
+      process.exitCode = 1;
+    }
+  } else {
+    const played = command === "sweep" ? "bosses" : command;
+    const kind = await kinds[played]();
+    if (show !== undefined && ![...kind.shows, "none"].includes(show))
+      throw new Error(`--show takes ${kind.shows.join(", ")}`);
+    const started = performance.now();
+    let results;
+    let jobs = 1;
+    try {
+      // Everything is admitted here, before any worker starts, so a mistyped id costs no playing time.
+      const asked = kind.admit(kind.request);
+      const cores = Math.max(1, os.availableParallelism() - 2);
+      jobs = given.has("jobs")
+        ? wholeNumber("jobs", given.get("jobs"), 1, MAX_JOBS)
+        : Math.max(1, Math.min(MAX_JOBS, cores, Math.floor(asked.length / FIGHTS_PER_JOB)));
+      if (share !== undefined) results = kind.play(kind.request, { index: share[0], of: share[1] });
+      else if (jobs === 1) results = kind.play(kind.request);
+      else {
+        const folder = mkdtempSync(path.join(os.tmpdir(), "tear-playtest-"));
+        try {
+          const workers = Array.from({ length: jobs }, (_, index) =>
+            playShare(played, given, index, jobs, path.join(folder, `${String(index)}.json`)),
+          );
+          results = shares.mergeSlices(await Promise.all(workers));
+        } finally {
+          rmSync(folder, { recursive: true, force: true });
+        }
       }
+    } catch (error) {
+      // A mistyped boss, weapon, difficulty or option is refused before anything is played; print the reason, not a stack.
+      if (!(error instanceof TypeError || error instanceof RangeError)) throw error;
+      process.stderr.write(`playtest: ${error.message}\n`);
+      process.exitCode = 1;
     }
-  } catch (error) {
-    // A mistyped boss, weapon, difficulty or option is refused before anything is played; print the reason, not a stack.
-    if (!(error instanceof TypeError || error instanceof RangeError)) throw error;
-    process.stderr.write(`playtest: ${error.message}\n`);
-    process.exitCode = 1;
-  }
-  if (results !== undefined) {
-    const shown = show ?? kind.shown(results.length);
-    if (shown !== "none") {
-      kind.print(results, shown);
-      process.stdout.write(
-        `\n${String(results.length)} ${kind.noun} in ${((performance.now() - started) / 1000).toFixed(1)} s of real time` +
-          ` on ${String(jobs)} ${jobs === 1 ? "job" : "jobs"}.\n`,
-      );
+    if (results !== undefined) {
+      const shown = show ?? kind.shown(results.length);
+      if (shown !== "none") {
+        kind.print(results, shown);
+        process.stdout.write(
+          `\n${String(results.length)} ${kind.noun} in ${((performance.now() - started) / 1000).toFixed(1)} s of real time` +
+            ` on ${String(jobs)} ${jobs === 1 ? "job" : "jobs"}.\n`,
+        );
+      }
+      const json = given.get("json");
+      if (json !== undefined) writeFileSync(path.resolve(json), `${JSON.stringify(results, null, 2)}\n`);
+      if (results.some((result) => result.end === "broken")) process.exitCode = 1;
     }
-    const json = given.get("json");
-    if (json !== undefined) writeFileSync(path.resolve(json), `${JSON.stringify(results, null, 2)}\n`);
-    if (results.some((result) => result.end === "broken")) process.exitCode = 1;
   }
 } finally {
   await server.close();
