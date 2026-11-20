@@ -555,16 +555,16 @@
       ],
       "duration": "under-a-minute"
     },
-    "test:browser:state-forge": {
-      "purpose": "Browser State Forge runtime, studio and exit-matrix journeys",
+    "test:browser:state-setup": {
+      "purpose": "Browser State Setup runtime, studio and exit-matrix journeys",
       "effects": [
         "writes-artifacts",
         "launches-browser"
       ],
       "duration": "minutes"
     },
-    "test:browser:state-forge-studio": {
-      "purpose": "Browser State Forge studio journey only",
+    "test:browser:state-editor": {
+      "purpose": "Browser State Setup studio journey only",
       "effects": [
         "writes-artifacts",
         "launches-browser"
@@ -1169,7 +1169,7 @@
       "duration": "long"
     },
     "check:nightly": {
-      "purpose": "Nightly group of config/checks.json: performance, State Forge and Pale scenarios",
+      "purpose": "Nightly group of config/checks.json: performance, State Setup and Pale scenarios",
       "effects": [
         "writes-artifacts",
         "launches-browser"
@@ -1879,6 +1879,10 @@
     "scripts/relative-imports.mjs": [
       "scripts/asset-sheets/fingerprint.mjs",
       "tests/unit/tool-catalogue.test.mjs"
+    ],
+    "scripts/eslint-rules/one-record-guard.mjs": [
+      "eslint.config.mjs",
+      "tests/unit/one-record-guard.test.mjs"
     ],
     "scripts/build-targets.mjs": [
       "scripts/build-target.mjs",

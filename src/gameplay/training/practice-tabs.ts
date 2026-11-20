@@ -1,4 +1,5 @@
 import { PRACTICE_TAB_IDS, type PracticeTab } from "../../domain/practice-tab";
+import { drillMovesLine, TUTORIAL_WEAPON_ANNEXES } from "./tutorial-weapon-annexes";
 
 /**
  * The Drills tabs, one row each: what the tab is called, the line under the title, the help under
@@ -20,8 +21,8 @@ const TAB_ROWS = {
   weapons: {
     label: "WEAPONS",
     subtitle: "Try each weapon's own moves · no rewards",
-    // Generic on purpose: the weapons' drilled moves have no display names to build a list from yet.
-    help: "Choose a weapon to try its own moves.",
+    // Each weapon and the moves its drill trains, named by the weapon's own definition.
+    help: `${TUTORIAL_WEAPON_ANNEXES.map((annex) => drillMovesLine(annex, "list")).join(" ")} Choose a weapon to try its moves.`,
     compactHelp: undefined,
     select: "select-annex",
     columns: 2,

@@ -1,5 +1,6 @@
 import { migrateAudioSettings, type PersistedAudioSettingsV2 } from "./audio-settings";
-import { asRecord, extensionFields, safeInteger, validateJsonObject, type JsonObject } from "./json";
+import { asRecord } from "../domain/records";
+import { extensionFields, safeInteger, validateJsonObject, type JsonObject } from "./json";
 import { invalid, unsupportedVersion, type MigrationResult } from "./result";
 
 export const SETTINGS_ENVELOPE_VERSION = 2;

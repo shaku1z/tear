@@ -23,6 +23,8 @@ export interface ScreenControl {
   readonly sub?: string | undefined;
   readonly accent?: string | undefined;
   readonly confirm?: boolean | undefined;
+  /** The control the screen opens on, unless the player is returning to it. */
+  readonly entryFocus?: boolean | undefined;
   readonly hiddenBox?: boolean | undefined;
   readonly size?: number | undefined;
   readonly pips?: Readonly<{ readonly n: number; readonly filled: number; readonly color: string }> | undefined;
@@ -449,7 +451,8 @@ export interface SettingRowView {
   readonly key: string;
   readonly label: string;
   readonly value: string;
-  readonly kind: "stepper" | "toggle" | "cycle";
+  /** `info` is a read-only fact (the build, for example): drawn as a label and a value, with no control. */
+  readonly kind: "stepper" | "toggle" | "cycle" | "info";
   readonly on?: boolean;
   readonly enabled?: boolean;
   readonly note?: string;
@@ -462,7 +465,6 @@ export interface SettingsScreenView {
   readonly tab: string;
   readonly tabs: readonly ChoiceView[];
   readonly sections: readonly { readonly label: string; readonly rows: readonly SettingRowView[] }[];
-  readonly returnTo: AppScreen;
   readonly canScrollUp?: boolean;
   readonly canScrollDown?: boolean;
 }

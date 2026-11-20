@@ -23,6 +23,7 @@ their own.
 | [TEARBENCH_GHOST3_ACTION_PLAN.md](TEARBENCH_GHOST3_ACTION_PLAN.md) | history | — | Historical | — | Superseded C0–C20 scaffold |
 | [TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md](TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md) | active plan | TearBench program owner | Active | C21–C40 checkpoint exit gates pass with completion-grade evidence or explicit authorized dispositions; foundation gates alone never close the program. | Current C21–C40 completion plan |
 | [TEARBENCH_MASTER_HANDOFF.md](TEARBENCH_MASTER_HANDOFF.md) | active plan | TearBench handoff owner | Active | A succeeding agent can follow the exact next-slice boundary and reproduce the last verified gate from protected `main` without relying on stale branch state. | Program continuation handoff and evidence boundary |
+| [MOBILE_LATER.md](MOBILE_LATER.md) | parked notes | Mobile owner (mobile-input) | Paused | The owner resumes mobile work; each item then becomes a task card or is dropped. | The one place for mobile follow-ups while mobile is paused (owner, 2026-11-19); any session may add a note |
 
 ## Active plans
 
@@ -36,6 +37,7 @@ their own.
 | [ECONOMY_REWORK_PLAN.md](active/ECONOMY_REWORK_PLAN.md) | Economy/balance owner | Active | Live-balance evidence and achievement-pool totals reconcile with the typed implementation and approved model; no balance claim closes from documentation alone. | Partially implemented balance plan; catalogue totals are reconciled; remaining scope is fresh-profile progression and live-balance validation. |
 | [RELEASE_READINESS_PLAN.md](active/RELEASE_READINESS_PLAN.md) | Release-readiness owner | Active | Every phase in the plan is done or explicitly dropped by the owner, `pnpm check` passes from the final commit, and the owner has authorised the merge and deployment. | Phased plan to make the game releasable to players: gate developer surfaces, green gates, input and first-run fixes, UI system and screen passes, payload, repository and workflow cleanup. |
 | [PLAYTEST_TOOL_PLAN.md](active/PLAYTEST_TOOL_PLAN.md) | Playtest tool owner | Active | Every "done when" line of stages 1 to 6 holds, `pnpm check` passes from the final commit, and no file, command or document is still named TearBench. | One command that plays Tear headless with scripted players and reports clear rates, time to kill, damage and comparisons between builds; replaces TearBench and the AI-player work. |
+| [DRILLED_MOVE_NAMES.md](active/DRILLED_MOVE_NAMES.md) | Training and Playground experience owner (training-ux) | Active | Every "done when" line below holds and `pnpm check:functional` passes from the final commit. | One source of display names for the moves the weapon drills train, used by the drill steps, the weapon teaching lines and the Drills WEAPONS help. |
 
 ## Completed plans
 
@@ -59,6 +61,8 @@ Where a plan lives:
   release evidence and `config/tearbench-current-program-state.json` bind
   their paths, so they move only in one change that also updates those tools.
   Their rows are in the classification table above.
+- `MOBILE_LATER.md` also stays directly under `plans/`: it is not a plan but the
+  notes file every session writes mobile follow-ups to while mobile is paused.
 - `archive/` remains a future G5 destination.
 
 New plans start from [TASK_CARD_TEMPLATE.md](TASK_CARD_TEMPLATE.md) and go in

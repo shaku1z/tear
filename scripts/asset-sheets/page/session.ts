@@ -69,6 +69,9 @@ let hidden: ReadonlySet<ReplayFrameLayer> = new Set();
 let sceneClock = 0;
 const paintedScenes = createSceneLibrary({
   packages: SCENE_PACKAGES,
+  world: { width: CONFIG.view.w, height: CONFIG.view.h, groundY: CONFIG.world.groundY },
+  // The page's clock stands still while a stage paints, so a drawn stage paints in one go and never waits here.
+  nextSlice: () => Promise.resolve(),
   loadImage: loadSceneBitmap,
   createCanvas: createSceneCanvas,
   releaseImage: releaseSceneBitmap,

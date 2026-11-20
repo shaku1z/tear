@@ -195,7 +195,7 @@ function fixture(
     drainConsumedActions: () => [],
     emitPhysicalInput: () => undefined,
     setTimeEffectsForTest: () => undefined,
-    stateForge: {
+    stateSetup: {
       capture: () => {
         const components = new Map<TearCodecId, TearCodecValue>();
         for (const [id, value] of active.components) {
@@ -294,7 +294,7 @@ function fixture(
   };
 }
 
-describe("live runtime campaign victory State Forge origin", () => {
+describe("live runtime campaign victory State Setup origin", () => {
   it("crosses the six-stage wave-59 reward frontier in the required production order", () => {
     const unit = fixture();
     const environment = createLiveTearRuntimeEnvironment(unit.context, "A");

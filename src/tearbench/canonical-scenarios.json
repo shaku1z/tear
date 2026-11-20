@@ -559,7 +559,7 @@
       "tests/unit/white-hart-foundation.test.ts",
       "tests/unit/white-hart-phases.test.ts",
       "tests/unit/white-hart-route-runtime.test.ts",
-      "tests/unit/white-hart-state-forge.test.ts"
+      "tests/unit/white-hart-state-setup.test.ts"
     ],
     "evidence": {
       "command": "pnpm build:test:standalone && node tests/browser-pale-white-hart-phases.js",
@@ -1178,7 +1178,7 @@
     },
     "seed": "pale-aurora-track-behavior-seed",
     "stateClass": "surgical-valid",
-    "stateForge": {
+    "stateSetup": {
       "documentId": "pale-aurora-track-behavior"
     },
     "backends": [
@@ -1208,7 +1208,7 @@
     "maxTicks": 180,
     "testFiles": [
       "tests/unit/pale-aurora-definitions.test.ts",
-      "tests/unit/pale-state-forge-scenarios.test.ts"
+      "tests/unit/pale-state-setup-scenarios.test.ts"
     ],
     "evidence": {
       "command": "pnpm tearbench run pale-aurora-track-behavior",
@@ -1242,7 +1242,7 @@
     },
     "seed": "pale-rimehound-aurora-interaction-seed",
     "stateClass": "surgical-valid",
-    "stateForge": {
+    "stateSetup": {
       "documentId": "pale-rimehound-aurora-interaction"
     },
     "backends": [
@@ -1277,7 +1277,7 @@
     "testFiles": [
       "tests/unit/pale-aurora-runtime.test.ts",
       "tests/unit/rimehound.test.ts",
-      "tests/unit/pale-state-forge-scenarios.test.ts"
+      "tests/unit/pale-state-setup-scenarios.test.ts"
     ],
     "evidence": {
       "command": "pnpm tearbench run pale-rimehound-aurora-interaction",
@@ -1311,7 +1311,7 @@
     },
     "seed": "pale-rime-runner-behavior-seed",
     "stateClass": "surgical-valid",
-    "stateForge": {
+    "stateSetup": {
       "documentId": "pale-rime-runner-behavior"
     },
     "backends": [
@@ -1372,7 +1372,7 @@
     },
     "seed": "pale-prism-seer-behavior-seed",
     "stateClass": "surgical-valid",
-    "stateForge": {
+    "stateSetup": {
       "documentId": "pale-prism-seer-behavior"
     },
     "backends": [
@@ -1433,7 +1433,7 @@
     },
     "seed": "pale-snowfall-kite-behavior-seed",
     "stateClass": "surgical-valid",
-    "stateForge": {
+    "stateSetup": {
       "documentId": "pale-snowfall-kite-behavior"
     },
     "backends": [
@@ -1494,7 +1494,7 @@
     },
     "seed": "pale-hailcaster-behavior-seed",
     "stateClass": "surgical-valid",
-    "stateForge": {
+    "stateSetup": {
       "documentId": "pale-hailcaster-behavior"
     },
     "backends": [
@@ -1555,7 +1555,7 @@
     },
     "seed": "pale-glacier-guard-behavior-seed",
     "stateClass": "surgical-valid",
-    "stateForge": {
+    "stateSetup": {
       "documentId": "pale-glacier-guard-behavior"
     },
     "backends": [
@@ -1618,7 +1618,7 @@
     },
     "seed": "pale-white-hart-phase-1-seed",
     "stateClass": "surgical-valid",
-    "stateForge": {
+    "stateSetup": {
       "documentId": "pale-white-hart-phase-1"
     },
     "backends": [
@@ -1646,7 +1646,7 @@
     ],
     "maxTicks": 240,
     "testFiles": [
-      "tests/unit/white-hart-state-forge.test.ts"
+      "tests/unit/white-hart-state-setup.test.ts"
     ],
     "evidence": {
       "command": "pnpm tearbench run pale-white-hart-phase-1",
@@ -1682,7 +1682,7 @@
     },
     "seed": "pale-white-hart-phase-2-seed",
     "stateClass": "surgical-valid",
-    "stateForge": {
+    "stateSetup": {
       "documentId": "pale-white-hart-phase-2"
     },
     "backends": [
@@ -1710,7 +1710,7 @@
     ],
     "maxTicks": 240,
     "testFiles": [
-      "tests/unit/white-hart-state-forge.test.ts"
+      "tests/unit/white-hart-state-setup.test.ts"
     ],
     "evidence": {
       "command": "pnpm tearbench run pale-white-hart-phase-2",
@@ -1746,7 +1746,7 @@
     },
     "seed": "pale-white-hart-phase-3-seed",
     "stateClass": "surgical-valid",
-    "stateForge": {
+    "stateSetup": {
       "documentId": "pale-white-hart-phase-3"
     },
     "backends": [
@@ -1774,7 +1774,7 @@
     ],
     "maxTicks": 240,
     "testFiles": [
-      "tests/unit/white-hart-state-forge.test.ts"
+      "tests/unit/white-hart-state-setup.test.ts"
     ],
     "evidence": {
       "command": "pnpm tearbench run pale-white-hart-phase-3",

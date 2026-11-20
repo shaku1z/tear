@@ -653,7 +653,7 @@ describe("legacy screen renderer registry", () => {
       "◀◀",
       "▶▶",
     ]);
-    expect(types()).toContainEqual({ type: "navigate", to: "menu" });
+    expect(types()).toContainEqual({ type: "navigate.back" });
     for (const control of controls) expect(control.y + control.h).toBeLessThanOrEqual(900);
 
     // A stage's page: the crumb back, PLAY over the stage's songs, one row per song with that queue.
@@ -1013,7 +1013,6 @@ describe("legacy screen renderer registry", () => {
       id: "settings",
       tab: "controls",
       tabs: [{ id: "controls", label: "CONTROLS" }],
-      returnTo: "menu",
       sections: [
         {
           label: "CONTROLS",
@@ -1072,6 +1071,27 @@ describe("legacy screen renderer registry", () => {
       h: 44,
       enabled: true,
     });
+  });
+
+  it("draws a read-only settings row without a control to press", () => {
+    const controls: ScreenControl[] = [];
+    createScreenRenderers(createRenderContext(controls)).settings({
+      id: "settings",
+      tab: "general",
+      tabs: [{ id: "general", label: "GENERAL" }],
+      sections: [
+        {
+          label: "GENERAL",
+          rows: [
+            { key: "terms", label: "Terms of Service", value: "OPEN", kind: "cycle" },
+            { key: "version", label: "Version", value: "v0.1.0 · 820e8e9", kind: "info" },
+          ],
+        },
+      ],
+    });
+    const keys = controls.flatMap((control) => ("key" in control.action ? [control.action.key] : []));
+    expect(keys).toContain("terms");
+    expect(keys).not.toContain("version");
   });
 
   it("uses the oracle replay-vault row geometry and a profile-specific watch intent", () => {

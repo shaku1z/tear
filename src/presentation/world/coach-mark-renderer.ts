@@ -24,7 +24,10 @@ export function hudAvoidRects(context: WorldRenderContext): readonly CoachRect[]
 /**
  * Coach marks: plate-less text in the live ink beside a short accent rule (no plates,
  * outlines, halos or shadows), keys as the shared key caps, placed by the pure solver
- * so they never sit on the player, the HUD, the touch controls or each other.
+ * so they never sit on the player, the HUD, the touch controls or each other. As on the
+ * HUD, the title is a value drawn in the ink at full opacity and the line under it is
+ * secondary at `alpha.soft`; the tone's colour is the rule beside them, never the text,
+ * because an accent over the stage's own props can fall below contrast.
  */
 /**
  * Mark type sizes: the HUD roles, raised on a touch screen to the touch text floor
@@ -75,15 +78,7 @@ export function createCoachMarkRenderer(context: WorldRenderContext) {
     let y = rect.y;
     if (mark.title) {
       y += type.label;
-      ui.tag(
-        canvas,
-        mark.title,
-        left,
-        y,
-        mark.tone === "info" ? ui.ink : ui.readable(t.color.accent),
-        "left",
-        type.label,
-      );
+      ui.tag(canvas, mark.title, left, y, ui.ink, "left", type.label);
       y += t.space.xs;
     }
     ui.textBox(canvas, mark.text, left, y + metrics.body.lineHeight * 0.8, rect.w - metrics.rule, {

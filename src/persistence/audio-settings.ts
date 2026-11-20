@@ -1,3 +1,4 @@
+import { asRecord } from "../domain/records";
 import { DEFAULT_AUDIO_MIXER_SETTINGS, type AudioMixerSettings } from "../domain/audio-mixer-settings";
 
 export const AUDIO_SETTINGS_SCHEMA_VERSION = 2;
@@ -7,7 +8,7 @@ export interface PersistedAudioSettingsV2 extends AudioMixerSettings {
 }
 
 function record(value: unknown): Record<string, unknown> {
-  return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
+  return asRecord(value) ?? {};
 }
 
 function volume(value: unknown, fallback: number): number {

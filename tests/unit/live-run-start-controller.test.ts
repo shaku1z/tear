@@ -1110,8 +1110,8 @@ describe("LiveRunStartController", () => {
   );
 
   it.each([
-    { legacy: false, screen: "invalid-state-forge-screen" },
-    { legacy: true, screen: "invalid-state-forge-screen" },
+    { legacy: false, screen: "invalid-state-setup-screen" },
+    { legacy: true, screen: "invalid-state-setup-screen" },
     { legacy: false, screen: "settings" },
     { legacy: true, screen: "settings" },
   ])(

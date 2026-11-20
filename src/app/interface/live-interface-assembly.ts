@@ -9,6 +9,7 @@ import type { LiveGhostRecording } from "../replay/live-ghost-recording";
 import type { RunResultInfo } from "../../gameplay/run/outcome-planner";
 import type { LiveReviveCountdownState } from "../run/revive-countdown-state";
 import type { LiveRunOrchestration } from "../run/run-orchestration-composition";
+import { startingStageId } from "../run/wave-composition";
 import { createLiveShopFeedbackState } from "../run/shop-feedback-state";
 import type { LiveBrowserRuntime } from "../shell/browser-runtime";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
@@ -323,6 +324,7 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
         setEnterAmount: interfaceFrame.setEnterAmount,
         scroll: interfaceInteraction.scroll,
         setScroll: interfaceInteraction.setScroll,
+        arrival: navigation.arrival,
         focus: interfaceInteraction.focus,
         setFocus: interfaceInteraction.setFocus,
         controls: interfaceInteraction.buttons,
@@ -373,14 +375,19 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
           UI.ink = THEME.ink;
           // On the main menu no run is showing a stage: painted backgrounds give their memory back.
           if (screen() === "menu") Scenes.leave();
+          // On the setup screen the run's first stage may be known: prepare it, whichever stage it is.
+          else if (screen() === "setup") {
+            const first = startingStageId(session.selectedMode(), session.selectedBoss(), dependencies.STAGES);
+            if (first !== undefined) Scenes.prefetch(first);
+          }
         },
         themeInk: () => THEME.ink,
         backdropPost: (context, stage, camera) => {
           Backdrop.post(context, stage, camera);
         },
         stageBackground: (stage) => Scenes.paper(stage.id) ?? stage.bg,
-        drawMenuAttract: () => {
-          Attract.draw(ctx);
+        drawMenuAttract: (_, keepOut) => {
+          Attract.draw(ctx, keepOut);
         },
         renderScreen: (next) => {
           renderRegisteredScreen(next, interfaceComposition.screens.renderers);

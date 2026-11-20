@@ -1,4 +1,5 @@
 import type { AttractDependencies, createAttract as createAttractRuntime } from "./attract-runtime";
+import type { KeepOutArea } from "./demo-keep-out";
 
 type AttractRuntime = ReturnType<typeof createAttractRuntime>;
 
@@ -52,8 +53,8 @@ export function createAttract(dependencies: AttractDependencies) {
       if (runtime) runtime.update(deltaSeconds);
       else ensureLoaded();
     },
-    draw(context: CanvasRenderingContext2D) {
-      runtime?.draw(context);
+    draw(context: CanvasRenderingContext2D, keepOut?: KeepOutArea) {
+      runtime?.draw(context, keepOut);
     },
   };
 }

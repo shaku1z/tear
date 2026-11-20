@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   GhostLocalVault,
-  GhostStreamingRecorder,
   createMemoryGhostVaultBackend,
   ghostRootIntegrity,
   reviseGhostCapsuleManifest,
   type TearGhostManifest,
 } from "../../src/ghost/capsule-vault";
+import { GhostStreamingRecorder } from "../../src/ghost/streaming-recorder";
 import { encodeGhostChunkPayload } from "../../src/ghost/capsule-codec";
 import { stableVerificationHash } from "../../src/domain/hash";
 import { createHash } from "node:crypto";

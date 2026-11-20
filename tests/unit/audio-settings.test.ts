@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { effectiveGain } from "../../src/audio/mixer";
-import { migrateAudioSettings } from "../../src/persistence/audio-settings";
+import { migrateAudioSettings, readStoredAudioSettings } from "../../src/persistence/audio-settings";
 
 describe("audio settings migration", () => {
   it("preserves legacy master volume and music choice", () => {
@@ -15,5 +15,13 @@ describe("audio settings migration", () => {
     expect(effectiveGain("music", settings)).toBeCloseTo(0.2);
     expect(effectiveGain("music", settings, new Set(["ad"]))).toBe(0);
     expect(settings.musicVolume).toBe(0.4);
+  });
+
+  it("reads a stored array, or an array in place of the audio record, as the default settings", () => {
+    const stored = (text: string) => readStoredAudioSettings({ getItem: () => text });
+    const defaults = stored("{}");
+    expect(stored(JSON.stringify([0.1, true]))).toEqual(defaults);
+    expect(stored(JSON.stringify({ audio: [0.1, true] }))).toEqual(defaults);
+    expect(migrateAudioSettings([0.1, true])).toEqual(defaults);
   });
 });

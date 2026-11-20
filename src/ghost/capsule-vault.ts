@@ -1,3 +1,4 @@
+import { isObject, isRecord } from "../domain/records";
 import { stableVerificationHash } from "../domain/hash";
 import { decodeGhostChunkPayload } from "./capsule-codec";
 import {
@@ -11,8 +12,7 @@ import {
 } from "./capsule-import-plan";
 import { ghostPortableArchiveData, type PreparedGhostPortableArchive } from "./capsule-paired-archive";
 import { readGhostColdRestoreCompletion, type GhostColdRestoreCompletion } from "./cold-restore-job";
-import { createGhostCapsuleManifestV2, reviseGhostCapsuleManifest, type TearGhostManifest } from "./capsule-contract";
-import type { GhostRecordingProfileId } from "./recording-profiles";
+import { reviseGhostCapsuleManifest, type TearGhostManifest } from "./capsule-contract";
 import {
   ghostCapsuleProtectionKey,
   parseGhostCapsuleProtection,
@@ -23,19 +23,12 @@ export * from "./capsule-contract";
 export * from "./capsule-protection";
 
 export * from "./capsule-vault-backend";
-import {
-  createInlineGhostEncoderWorker,
-  type GhostChunkKind,
-  type TearGhostChunkIndexEntry,
-  type GhostEncoderWorkerPort,
-  type GhostVaultBackend,
-  type GhostVaultWrite,
-  type GhostVaultGuard,
+import type {
+  TearGhostChunkIndexEntry,
+  GhostVaultBackend,
+  GhostVaultWrite,
+  GhostVaultGuard,
 } from "./capsule-vault-backend";
-
-function dataRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 export interface GhostVaultImportLimits {
   readonly maxEncodedBytes: number;
@@ -423,56 +416,71 @@ export class GhostLocalVault {
     throw lastConflict instanceof Error ? lastConflict : new Error("Ghost capsule removal remained contended");
   }
 
-  /** Atomically exposes one newly encoded recording chunk and its recovery state. */
-  async commitRecordingChunk(
+  /**
+   * Atomically exposes newly encoded recording chunks and their recovery state in one transaction.
+   * Chunks commit in recording order: `chunks` must continue the manifest's sequence with no gap, and the
+   * journal names the last of them. Either every chunk of the batch is durable or none is, so a failed batch
+   * fails the recording exactly as one failed chunk write does.
+   */
+  async commitRecordingChunks(
     manifest: TearGhostManifest,
-    entry: TearGhostChunkIndexEntry,
-    encoded: string,
+    chunks: readonly GhostSealedChunk[],
     leaseId: string,
-    thumbnail?: string,
   ): Promise<void> {
-    if (stableVerificationHash(encoded) !== entry.checksum)
-      throw new TypeError(`chunk checksum mismatch before commit: ${entry.id}`);
-    if (!manifest.chunks.some((chunk) => chunk.id === entry.id && chunk.checksum === entry.checksum)) {
-      throw new TypeError(`recording manifest does not include committed chunk: ${entry.id}`);
+    const last = chunks.at(-1);
+    if (last === undefined) throw new RangeError("a recording commit needs at least one chunk");
+    const first = chunks[0]?.entry.sequence ?? 0;
+    for (const [offset, { entry, encoded }] of chunks.entries()) {
+      if (stableVerificationHash(encoded) !== entry.checksum)
+        throw new TypeError(`chunk checksum mismatch before commit: ${entry.id}`);
+      if (
+        manifest.chunks[entry.sequence]?.id !== entry.id ||
+        manifest.chunks[entry.sequence]?.checksum !== entry.checksum
+      )
+        throw new TypeError(`recording manifest does not include committed chunk: ${entry.id}`);
+      if (entry.sequence !== first + offset)
+        throw new RangeError(`recording chunks must commit in recording order: ${entry.id}`);
     }
     await this.#commitRecordingMutation(manifest.id, leaseId, async () => {
       const previous = await this.#backend.get("manifests", manifest.id);
       if (previous === undefined) throw new RangeError(`manifest does not exist: ${manifest.id}`);
-      const previousChunk = await this.#backend.get("chunks", entry.id);
-      if (previousChunk !== undefined && previousChunk !== encoded)
-        throw new RangeError("recording chunk id conflicts with stored evidence");
+      const guards: GhostVaultGuard[] = [{ store: "manifests", key: manifest.id, expected: previous }];
+      for (const { entry, encoded } of chunks) {
+        const previousChunk = await this.#backend.get("chunks", entry.id);
+        if (previousChunk !== undefined && previousChunk !== encoded)
+          throw new RangeError("recording chunk id conflicts with stored evidence");
+        guards.push({
+          store: "chunks",
+          key: entry.id,
+          ...(previousChunk === undefined ? {} : { expected: previousChunk }),
+        });
+      }
       return Object.freeze({
-        guards: Object.freeze([
-          { store: "manifests" as const, key: manifest.id, expected: previous },
-          {
-            store: "chunks" as const,
-            key: entry.id,
-            ...(previousChunk === undefined ? {} : { expected: previousChunk }),
-          },
-        ]),
+        guards: Object.freeze(guards),
         writes: Object.freeze([
-          { store: "chunks" as const, key: entry.id, value: encoded },
+          ...chunks.map(({ entry, encoded }) => ({ store: "chunks" as const, key: entry.id, value: encoded })),
           {
             store: "journals" as const,
             key: manifest.id,
             value: JSON.stringify({
               sessionId: manifest.id,
               leaseId,
-              lastChunkId: entry.id,
-              committedSequence: entry.sequence,
+              lastChunkId: last.entry.id,
+              committedSequence: last.entry.sequence,
             }),
           },
           ...this.#manifestWrites(manifest),
-          ...(thumbnail === undefined
-            ? []
-            : [
-                {
-                  store: "assets" as const,
-                  key: `${manifest.id}:thumbnail:${String(entry.sequence)}`,
-                  value: thumbnail,
-                },
-              ]),
+          ...chunks.flatMap(({ entry, thumbnail }) =>
+            thumbnail === undefined
+              ? []
+              : [
+                  {
+                    store: "assets" as const,
+                    key: `${manifest.id}:thumbnail:${String(entry.sequence)}`,
+                    value: thumbnail,
+                  },
+                ],
+          ),
         ]),
       });
     });
@@ -605,12 +613,12 @@ export class GhostLocalVault {
     const bytes = new TextEncoder().encode(encodedCapsule).byteLength;
     if (bytes > limits.maxEncodedBytes) throw new RangeError("capsule exceeds encoded byte limit");
     const parsed: unknown = JSON.parse(encodedCapsule);
-    if (typeof parsed !== "object" || parsed === null || !("manifest" in parsed) || !("chunks" in parsed)) {
+    if (!isObject(parsed) || !("manifest" in parsed) || !("chunks" in parsed)) {
       throw new TypeError("capsule must contain manifest and chunks");
     }
     const root = parsed as Record<string, unknown>;
     const manifest = parseGhostCapsuleManifest(root.manifest);
-    if (!dataRecord(root.chunks)) throw new TypeError("capsule chunks must be an object");
+    if (!isRecord(root.chunks)) throw new TypeError("capsule chunks must be an object");
     const chunks = root.chunks;
     if (manifest.chunks.length > limits.maxChunks) throw new RangeError("capsule exceeds chunk-count limit");
     if (ghostRootIntegrity(manifest.chunks) !== manifest.rootIntegrity)
@@ -697,141 +705,11 @@ export class GhostLocalVault {
   }
 }
 
-export interface GhostRecorderEntry {
-  readonly kind: GhostChunkKind;
-  readonly tick: number;
-  readonly value: unknown;
-}
-
-export interface GhostRecorderOptions {
-  readonly sessionId: string;
-  readonly createdAt: string;
-  readonly chunkEntries: number;
-  readonly maxPendingWrites: number;
-  readonly vault: GhostLocalVault;
-  readonly worker?: GhostEncoderWorkerPort;
-  readonly recordingProfile?: GhostRecordingProfileId;
-  readonly provenance?: Readonly<Record<string, unknown>>;
-  readonly leaseId?: string;
-}
-
-export class GhostStreamingRecorder {
-  readonly #options: GhostRecorderOptions;
-  readonly #leaseId: string;
-  readonly #worker: GhostEncoderWorkerPort;
-  readonly #buffer: GhostRecorderEntry[] = [];
-  readonly #chunks: TearGhostChunkIndexEntry[] = [];
-  readonly #downgrades: string[] = [];
-  #pendingWrites = 0;
-  #maxBufferedEntries = 0;
-  #presentation: "full" | "reduced" | "dropped" = "full";
-
-  constructor(options: GhostRecorderOptions) {
-    if (!Number.isSafeInteger(options.chunkEntries) || options.chunkEntries < 1)
-      throw new RangeError("chunkEntries must be positive");
-    this.#options = options;
-    this.#leaseId =
-      options.leaseId ?? stableVerificationHash({ sessionId: options.sessionId, createdAt: options.createdAt });
-    this.#worker = options.worker ?? createInlineGhostEncoderWorker();
-  }
-
-  get maxBufferedEntries(): number {
-    return this.#maxBufferedEntries;
-  }
-  get pendingWrites(): number {
-    return this.#pendingWrites;
-  }
-
-  async start(): Promise<void> {
-    const manifest = this.#manifest("recording");
-    await this.#options.vault.beginSession(manifest, this.#leaseId);
-  }
-
-  async append(entry: GhostRecorderEntry): Promise<void> {
-    if (this.#pendingWrites >= this.#options.maxPendingWrites && entry.kind === "presentation") {
-      this.#presentation = "dropped";
-      if (!this.#downgrades.includes("presentation dropped under encoder backpressure")) {
-        this.#downgrades.push("presentation dropped under encoder backpressure");
-      }
-      return;
-    }
-    // Each chunk is one named replay track. Besides making random access
-    // explicit, this prevents a terminal result or keyframe from being hidden
-    // inside an undifferentiated events chunk.
-    if (this.#buffer.length > 0 && this.#buffer[0]?.kind !== entry.kind) await this.flush();
-    this.#buffer.push(Object.freeze(structuredClone(entry)));
-    this.#maxBufferedEntries = Math.max(this.#maxBufferedEntries, this.#buffer.length);
-    if (this.#buffer.length >= this.#options.chunkEntries) await this.flush();
-  }
-
-  async flush(): Promise<void> {
-    if (this.#buffer.length === 0) return;
-    const entries = this.#buffer.splice(0, this.#options.chunkEntries);
-    const sequence = this.#chunks.length;
-    this.#pendingWrites += 1;
-    try {
-      const encoded = await this.#worker.encode(
-        entries,
-        entries.some((entry) => entry.kind === "presentation"),
-      );
-      const kinds = new Set(entries.map((entry) => entry.kind));
-      const kind = kinds.size === 1 ? (entries[0]?.kind ?? "events") : "events";
-      const index: TearGhostChunkIndexEntry = Object.freeze({
-        id: `${this.#options.sessionId}:chunk:${String(sequence)}`,
-        kind,
-        sequence,
-        fromTick: Math.min(...entries.map((entry) => entry.tick)),
-        toTick: Math.max(...entries.map((entry) => entry.tick)),
-        encoding: encoded.encoding,
-        compressedBytes: encoded.compressedBytes,
-        uncompressedBytes: encoded.uncompressedBytes,
-        checksum: encoded.checksum,
-      });
-      const nextChunks = Object.freeze([...this.#chunks, index]);
-      await this.#options.vault.commitRecordingChunk(
-        this.#manifest("recording", undefined, nextChunks),
-        index,
-        encoded.encoded,
-        this.#leaseId,
-        encoded.thumbnail,
-      );
-      this.#chunks.push(index);
-    } finally {
-      this.#pendingWrites -= 1;
-    }
-    if (this.#buffer.length > 0) await this.flush();
-  }
-
-  async finalize(completedAt: string): Promise<TearGhostManifest> {
-    await this.flush();
-    const manifest = this.#manifest("complete", completedAt);
-    await this.#options.vault.completeSession(manifest, this.#leaseId);
-    return manifest;
-  }
-
-  #manifest(
-    status: TearGhostManifest["status"],
-    completedAt?: string,
-    chunkOverride?: readonly TearGhostChunkIndexEntry[],
-  ): TearGhostManifest {
-    const chunks = Object.freeze([...(chunkOverride ?? this.#chunks)]);
-    return createGhostCapsuleManifestV2({
-      id: this.#options.sessionId,
-      status,
-      createdAt: this.#options.createdAt,
-      recordingProfile: this.#options.recordingProfile ?? "forensic-qa",
-      ...(this.#options.provenance === undefined
-        ? {}
-        : { provenance: Object.freeze(structuredClone(this.#options.provenance)) }),
-      ...(completedAt === undefined ? {} : { completedAt }),
-      chunks,
-      rootIntegrity: ghostRootIntegrity(chunks),
-      fidelity: Object.freeze({
-        presentation: this.#presentation,
-        downgrades: Object.freeze([...this.#downgrades]),
-      }),
-    });
-  }
+/** One encoded chunk waiting to be committed: its index entry, its encoded bytes and an optional thumbnail. */
+export interface GhostSealedChunk {
+  readonly entry: TearGhostChunkIndexEntry;
+  readonly encoded: string;
+  readonly thumbnail?: string;
 }
 
 export function capsuleDebugJson(manifest: TearGhostManifest): string {

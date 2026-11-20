@@ -2,6 +2,9 @@ import type { LegacyAudioCompatibility } from "../../audio/legacy-live-audio";
 import { setMusicMode } from "../../audio/music-mode";
 import { musicSourceValue, parseMusicSource, setMusicSource } from "../../audio/music/music-source";
 import { sanitizeCinematicPreference, type CinematicPreference } from "../../gameplay/campaign/cinematic-preference";
+import { applyKeyboardRemap, rebindKey, type RebindOutcome, type RebindableAction } from "../../domain/keyboard-remap";
+import { keyboardSettings, readKeyboardSettings, type KeyboardSettingsRead } from "../../persistence/keyboard-settings";
+import { asRecord } from "../../domain/records";
 
 export type { CinematicPreference } from "../../gameplay/campaign/cinematic-preference";
 
@@ -55,6 +58,8 @@ export interface GameSettings extends Record<string, unknown> {
    * (see `music-source.ts`). The key keeps its old name so existing saves carry over.
    */
   menuMusic: string;
+  /** The keyboard remap, versioned (`persistence/keyboard-settings.ts`). */
+  keyboard: KeyboardSettingsRead["stored"];
 }
 
 /** Settings a past build saved and this one no longer has; dropped on load, so the next save omits them. */
@@ -146,6 +151,7 @@ function defaults(aimSensitivity: number): GameSettings {
     autoPauseDisconnect: true,
     musicMode: "adaptive",
     menuMusic: "default",
+    keyboard: keyboardSettings(),
   };
 }
 
@@ -153,7 +159,7 @@ function parseStoredSettings(serialized: string | null): Record<string, unknown>
   if (serialized === null) return {};
   try {
     const parsed: unknown = JSON.parse(serialized);
-    return typeof parsed === "object" && parsed !== null ? (parsed as Record<string, unknown>) : {};
+    return asRecord(parsed) ?? {};
   } catch {
     return {};
   }
@@ -239,6 +245,9 @@ export class SettingsController {
     // or channel from a later catalog) is kept and plays as the default until it can be heard.
     settings.menuMusic = musicSourceValue(parseMusicSource(settings.menuMusic));
     setMusicSource(settings.menuMusic);
+    const keyboard = readKeyboardSettings(settings.keyboard);
+    settings.keyboard = keyboard.stored;
+    applyKeyboardRemap(keyboard.remap);
     audio.applySettings(settings);
   }
 
@@ -259,6 +268,24 @@ export class SettingsController {
   reset(): void {
     for (const key of Object.keys(this.settings)) Reflect.deleteProperty(this.settings, key);
     Object.assign(this.settings, defaults(this.#defaultAimSensitivity));
+    this.apply();
+    this.save();
+  }
+
+  /** Makes `code` the action's key (see `rebindKey`); a refused key leaves the bindings as they were. */
+  rebindKey(action: RebindableAction, code: string): RebindOutcome {
+    const outcome = rebindKey(readKeyboardSettings(this.settings.keyboard).remap, action, code);
+    if (outcome.kind === "assigned" || outcome.kind === "swapped") {
+      this.settings.keyboard = keyboardSettings(outcome.remap);
+      this.apply();
+      this.save();
+    }
+    return outcome;
+  }
+
+  /** Every key back to its default; the other settings stay. */
+  resetKeys(): void {
+    this.settings.keyboard = keyboardSettings();
     this.apply();
     this.save();
   }

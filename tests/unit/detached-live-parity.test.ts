@@ -104,7 +104,7 @@ function replayDetached(trace: LiveTrace) {
   world.state.setTemporaryWalls(staged.walls as never);
   // Entity tuning reads configuration, so a world restored without the
   // captured values would simulate differently from the world it came from.
-  // Exactly the live State Forge commit order: reset configuration to base,
+  // Exactly the live State Setup commit order: reset configuration to base,
   // apply the weapon (which mutates tuning), then restore the captured
   // configuration over it, then install the weapon on the blade. Any other
   // order leaves the world tuned differently from the one it came from.
