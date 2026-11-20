@@ -1,6 +1,7 @@
 export * from "./truth-kernel";
 export * from "./recording-profiles";
 export * from "./capsule-vault";
+export * from "./streaming-recorder";
 export * from "./indexeddb-vault-backend";
 export * from "./browser-capsule-vault";
 export * from "./browser-cold-restore";
