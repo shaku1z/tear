@@ -1,4 +1,4 @@
-import { readSeedRaceRun } from "../../ghost/seed-race-contract";
+import { readSeedRaceRun } from "../../gameplay/run/seed-race-contract";
 import type { GhostRunAssistance } from "../../gameplay/run/ghost-assistance";
 import type { GhostLiveReference, GhostReferenceFrame, GhostChaseView } from "../../ghost/live-ghost-reference-data";
 

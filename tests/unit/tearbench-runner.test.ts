@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { WEAPON_IDS } from "../../src/gameplay/weapon-selection";
 import {
   CANONICAL_ENGINEERING_SCENARIOS,
-  TEAR_CONTRACT_FORMAT,
   TearBenchRunner,
   createFailureArtifact,
   createCanonicalScenarioRegistry,
@@ -10,6 +9,7 @@ import {
   type TearScenarioRuntime,
   type TearScenarioV1,
 } from "../../src/tearbench";
+import { TEAR_CONTRACT_FORMAT } from "../../src/gameplay/snapshot/snapshot-contract";
 import { createProductionHeadlessEnvironment } from "../../src/playtest/headless/production-headless-environment";
 import type { TearScenarioTransition } from "../../src/tearbench/runner";
 import { createGameplayCausalEvent } from "../../src/tearbench/gameplay-causal-events";

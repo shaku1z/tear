@@ -1,4 +1,4 @@
-import { parseUiHudPresentationCheckpoint } from "../../tearbench/ui-presentation-checkpoint";
+import { parseUiHudPresentationCheckpoint } from "../../gameplay/snapshot/ui-checkpoint";
 
 export interface LiveHudFeedbackSnapshot {
   readonly lagHp: number;

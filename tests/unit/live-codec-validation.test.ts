@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateLiveCodecPayload } from "../../src/tearbench/live-codec-validation";
+import { validateLiveCodecPayload } from "../../src/gameplay/snapshot/validation";
 import { createCosmeticEmissionRandom } from "../../src/domain/cosmetic-emission-random";
 
 describe("UI presentation checkpoint preflight", () => {

@@ -1,5 +1,5 @@
-import { isRecord } from "../domain/records";
-import type { TearCodecWorld } from "./state-codecs";
+import { isRecord } from "../../domain/records";
+import type { TearCodecWorld } from "./state-codec";
 
 /** Authored arena slots are aliases, never constructors for live actors. */
 export function isAuthoredArenaSlotReference(world: TearCodecWorld, source: string, target: string): boolean {

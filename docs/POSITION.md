@@ -23,7 +23,7 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 | [Player wiki](#wiki) | In progress | Review the move pull request, then confirm the Cloudflare secret question and run the first wiki deploy. | Archive shaku1z/tear-wiki after the first deploy from this repository. |
 | [Repository structure and workflow](#repository-structure) | In progress | After the hooks pull request merges, run pnpm setup:hooks in the canonical checkout on main (scripts/governance/README.md). | — |
 | [Playtest tool](#playtest-tool) | Stage 2 under way: stage 1 is done (pnpm playtest bosses and sweep); pnpm playtest waves opens any Adventure wave directly, runs plays whole runs from wave 1, enemies meets each enemy kind alone, coverage lists what the game defines that no report brought into play, and --compare prints what changed against another commit | Stage 2's last item (every boss phase, wave and enemy kind as a row that starts directly), then stage 3: a stronger player. | — |
-| [Replays](#replays) | In progress: PR 1 and PR 2 merged (hidden replay features and replay extras removed); PR 2b open (REPAIR) | Merge PR 2b, then PR 3 (the snapshot codecs move to src/gameplay/snapshot). | Deploy the Firestore chunk-write rules from the merged rules PR. |
+| [Replays](#replays) | In progress: PR 1, PR 2 and PR 2b merged (hidden replay features, replay extras and REPAIR removed); PR 3 open (snapshot codecs to src/gameplay/snapshot) | Merge PR 3, then PR 4 (the detached world moves to src/app/world/detached). | Deploy the Firestore chunk-write rules from the merged rules PR. |
 | [Mobile, touch and phone layouts](#mobile) | Paused by the owner 2026-11-19; out of the release builds | Nothing until the owner resumes mobile; plans/MOBILE_LATER.md says how to turn it back on. | Mark the CrazyGames listing desktop only. Say when mobile resumes. |
 
 <a id="release-readiness"></a>
@@ -120,9 +120,9 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 ### Replays
 
-**In progress: PR 1 and PR 2 merged (hidden replay features and replay extras removed); PR 2b open (REPAIR).** Players reach two replay systems today: Ghost 2 (position samples in localStorage, used by the REPLAYS tab, the feed and leaderboard links) and the Ghost V3 capsules (re-simulated, in IndexedDB, used by VAULT, CAREER and the Theater). The plan replaces both with one versioned record and five plain modules (record, store, watch, share, verify), moves the replay world and snapshot codecs out of TearBench, and deletes src/ghost (118 replay modules and about 800,000 characters today).
+**In progress: PR 1, PR 2 and PR 2b merged (hidden replay features, replay extras and REPAIR removed); PR 3 open (snapshot codecs to src/gameplay/snapshot).** Players reach two replay systems today: Ghost 2 (position samples in localStorage, used by the REPLAYS tab, the feed and leaderboard links) and the Ghost V3 capsules (re-simulated, in IndexedDB, used by VAULT, CAREER and the Theater). The plan replaces both with one versioned record and five plain modules (record, store, watch, share, verify), moves the replay world and snapshot codecs out of TearBench, and deletes src/ghost (118 replay modules and about 800,000 characters today).
 
-- Next: Merge PR 2b, then PR 3 (the snapshot codecs move to src/gameplay/snapshot).
+- Next: Merge PR 3, then PR 4 (the detached world moves to src/app/world/detached).
 - Owner action: Deploy the Firestore chunk-write rules from the merged rules PR.
 - Evidence: [plans/active/REPLAY_OVERHAUL_PLAN.md](../plans/active/REPLAY_OVERHAUL_PLAN.md)
 

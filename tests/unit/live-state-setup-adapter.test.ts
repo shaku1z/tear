@@ -1,5 +1,5 @@
 import { preflightGhostRecordedCanonicalSnapshot } from "../../src/ghost/capsule-replay-envelope";
-import { declareSeedRace, seedRaceInitialBuildHash } from "../../src/ghost/seed-race-contract";
+import { declareSeedRace, seedRaceInitialBuildHash } from "../../src/gameplay/run/seed-race-contract";
 import { seedRaceCatalogHash } from "../../src/gameplay/run/seed-locked-draft";
 import { describe, expect, it, vi } from "vitest";
 import { createLiveStateSetupAdapter } from "../../src/app/engineering/state-setup-adapter";
@@ -9,7 +9,7 @@ import {
   createLiveStateSetupRestoreFactory,
 } from "../../src/tearbench/live-runtime-snapshots";
 import { restoreSnapshotIntoLiveWorld } from "../../src/tearbench/live-state-snapshot";
-import { createDefaultStateCodecRegistry } from "../../src/tearbench/state-codecs";
+import { createDefaultStateCodecRegistry } from "../../src/gameplay/snapshot/state-codec";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
 import type { RootboundGraftEffects } from "../../src/gameplay/environment/graft-anchor";
 import { STAGES, PLAYGROUND_STAGES } from "../../src/gameplay/stages";

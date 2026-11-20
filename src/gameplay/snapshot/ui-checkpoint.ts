@@ -1,5 +1,5 @@
-import { requireRecord } from "../domain/records";
-import { parseTutorialCoachCheckpoint, type TutorialCoachCheckpoint } from "../gameplay/training/tutorial-ghost-coach";
+import { requireRecord } from "../../domain/records";
+import { parseTutorialCoachCheckpoint, type TutorialCoachCheckpoint } from "../training/tutorial-ghost-coach";
 /** Portable presentation-only data. Never part of gameplay semantic projection. */
 export type UiHudPresentationCheckpoint = Readonly<{
   version: 1;

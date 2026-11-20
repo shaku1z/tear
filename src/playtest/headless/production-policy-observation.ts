@@ -1,5 +1,6 @@
-import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION, type TearObservationV1 } from "../../tearbench/contracts";
-import { environmentSnapshotToObservation } from "../../tearbench/environment-codec";
+import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "../../gameplay/snapshot/snapshot-contract";
+import type { TearObservationV1 } from "../../tearbench/contracts";
+import { environmentSnapshotToObservation } from "../../gameplay/snapshot/environment-codec";
 import {
   projectLiveActorMechanics,
   projectLiveBladeMechanics,

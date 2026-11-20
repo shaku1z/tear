@@ -3,7 +3,7 @@ import { createEnvironmentRuntime } from "../../src/gameplay/environment/environ
 import type { EnvironmentFieldState } from "../../src/gameplay/environment/environment-contracts";
 import { TearSimulationRuntime } from "../../src/gameplay/runtime/tear-simulation-runtime";
 import { TearGameplayEventBus, type TearGameplayEvent } from "../../src/gameplay/runtime/gameplay-events";
-import { environmentHash } from "../../src/tearbench/environment-codec";
+import { environmentHash } from "../../src/gameplay/snapshot/environment-codec";
 
 const field = (state: EnvironmentFieldState["state"] = "scheduled") => ({
   kind: "bloom-well" as const,
