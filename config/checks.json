@@ -114,7 +114,7 @@
     "unit": [
       {
         "id": "vitest",
-        "run": "node node_modules/vitest/vitest.mjs run --no-file-parallelism",
+        "run": "node node_modules/vitest/vitest.mjs run",
         "seconds": 290,
         "shardable": true
       }
