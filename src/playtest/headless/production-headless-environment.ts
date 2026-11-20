@@ -117,6 +117,8 @@ export interface ProductionHeadlessStateSetupEvaluation {
   readonly builtSnapshot: TearSnapshotV1;
 }
 
+type SpawnableEnemyKind = Parameters<ProductionWaveRewardRuntime["spawnTutorial"]>[0];
+
 export interface ProductionHeadlessEnvironment extends TearHeadlessEnvironment<
   TearScenarioV1,
   CanonicalGameplayState,
@@ -143,6 +145,8 @@ export interface ProductionHeadlessEnvironment extends TearHeadlessEnvironment<
   practiceBoss(bossId: PracticeBossId, phase: PracticeBossPhase): ReturnType<typeof beginProductionBossPractice>;
   /** Replaces the enemies in play with these, made by the game's own factory, for a playtest of chosen enemies. */
   replaceEnemies(spawns: readonly Readonly<{ id: string; x: number; y: number }>[]): void;
+  /** Puts one enemy of this kind in play through the game's own spawner, which chooses where it arrives. */
+  spawnEnemy(kind: SpawnableEnemyKind): void;
   captureCheckpoint(): ProductionHeadlessCheckpoint;
   restoreCheckpoint(checkpoint: ProductionHeadlessCheckpoint): CanonicalGameplayState;
   restoreStateSetupEvaluation(evaluation: ProductionHeadlessStateSetupEvaluation): CanonicalGameplayState;
@@ -369,6 +373,7 @@ export function createProductionHeadlessEnvironment(
       const placed = spawns.map((spawn) => entities.createEnemy(spawn.id, spawn.x, spawn.y, state.run() as never));
       state.setEnemies(placed);
     },
+    spawnEnemy: (kind: SpawnableEnemyKind) => void requireCore().waveReward.spawnTutorial(kind, 1),
     continueTutorialPractice: (source: TearScenarioV1): CanonicalGameplayState => {
       const current = requireCore();
       if (current.replay.tutorialHandoff() === null)

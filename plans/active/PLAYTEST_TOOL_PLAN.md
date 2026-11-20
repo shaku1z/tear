@@ -417,6 +417,18 @@ or a clear rate for a wave that one or two runs reached. And every number is the
 how far that player gets, not how far a person gets, until stage 3's stronger player. Tests:
 `tests/unit/playtest-runs.test.ts`.
 
+Built fourth (2026-11-20): `pnpm playtest enemies`, each enemy kind alone against the player. A meeting is in
+the Playground, the game's own empty arena, and the enemies are put in play by the game's own spawner, so there
+is no copied spawn logic and a new enemy kind appears with no edit. It prints a row per kind: how the meetings
+end (cleared, player fell, stalled, time limit), time to clear, the enemies' health and the share left
+standing, health lost and what it is lost to. The default set is every enemy the published game has, 1 and 3
+of a kind, Sword on Normal, seeds 1 to 3: 72 meetings in 61 s on four jobs. Its limits: the enemies are at
+wave 1 strength and the player has no upgrades, so the rows compare the kinds with each other and are not
+what a kind costs late in a run; and "in authored groups" (question 5) is answered by `pnpm playtest waves`,
+which plays the groups the game's wave planner makes, not by this report. "Stalled" is a meeting the scripted
+player gave up after 15 seconds in which no health changed on either side. Tests:
+`tests/unit/playtest-enemies.test.ts`.
+
 Done when:
 - [ ] Every boss phase, every wave of each biome and every enemy kind is a row that starts directly, in under 1 s each.
 - [x] `pnpm playtest runs` reports where runs end and per-wave time and health cost for 3 modes, 3 difficulties and 5 weapons.
