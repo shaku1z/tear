@@ -193,6 +193,16 @@ describe("Controls tab keyboard rows", () => {
       "Swapped: Throw / recall now uses the old key.",
     );
     expect(rebindNote("throw", rebindKey({}, "throw", "KeyR"), "KeyR")).toBeNull();
+    // The Playground keys stay reserved, and the row says whose they are.
+    expect(rebindNote("jump", rebindKey({}, "jump", "KeyT"), "KeyT")).toBe(
+      "T is used by the Playground (spawn dummy). Pick another key.",
+    );
+    expect(rebindNote("jump", rebindKey({}, "jump", "Digit3"), "Digit3")).toBe(
+      "3 is used by the Playground (quick spawn). Pick another key.",
+    );
+    expect(rebindNote("jump", rebindKey({}, "jump", "KeyN"), "KeyN")).toBe(
+      "N is used by the Tutorial (skip lesson). Pick another key.",
+    );
   });
 });
 
