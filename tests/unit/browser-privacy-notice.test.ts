@@ -5,6 +5,7 @@ import {
   PRIVACY_NOTICE_KEY,
   PRIVACY_NOTICE_VERSION,
 } from "../../src/platform/browser-privacy-notice";
+import { NOTICE_STACK_ID } from "../../src/platform/browser-notice";
 
 /** The part of an element the notice uses, recorded so a test reads what the player would see. */
 class FakeElement {
@@ -70,6 +71,10 @@ function fakeStorage(initial: Record<string, string> = {}) {
   };
 }
 
+/** How many notices are showing: they are all stacked in one container in the corner. */
+const shown = (page: ReturnType<typeof fakePage>): number =>
+  page.body.find((element) => element.id === NOTICE_STACK_ID)?.children.length ?? 0;
+
 const pressOk = (page: ReturnType<typeof fakePage>): void =>
   page.body.find((element) => element.tag === "button")?.listeners.get("click")?.();
 
@@ -86,8 +91,7 @@ describe("first-run privacy notice", () => {
     const link = notice?.find((element) => element.tag === "a");
     expect(link?.href).toBe("/privacy");
     expect(link?.rel).toBe("noopener");
-    expect(notice?.attributes.get("role")).toBe("dialog");
-    expect(notice?.find((element) => element.tag === "button")?.focused).toBe(true);
+    expect(notice?.attributes.get("role")).toBe("region");
   });
 
   it("is not acknowledged until OK is pressed, then is remembered across visits", () => {
@@ -105,7 +109,25 @@ describe("first-run privacy notice", () => {
     const second = createPrivacyNotice({ document: later.document, storage, privacyUrl: "/privacy" });
     second.showIfDue();
     expect(second.acknowledged()).toBe(true);
-    expect(later.body.children).toHaveLength(0);
+    expect(shown(later)).toBe(0);
+  });
+
+  it("never blocks the first screen: a corner panel that takes no focus, no keys and no input but its own", () => {
+    const page = fakePage();
+    createPrivacyNotice({ document: page.document, storage: fakeStorage(), privacyUrl: "/privacy" }).showIfDue();
+    const stack = page.body.find((element) => element.id === NOTICE_STACK_ID);
+    const notice = page.body.find((element) => element.id === PRIVACY_NOTICE_ID);
+    // The container passes every pointer event through to the menu behind it; only the notice takes them.
+    expect(stack?.style.cssText).toContain("pointer-events:none");
+    expect(notice?.style.cssText).toContain("pointer-events:auto");
+    // Not full screen, and tucked into the corner the menus leave empty.
+    expect(stack?.style.cssText).not.toContain("inset:0");
+    expect(stack?.style.cssText).toMatch(/right:\d+px/u);
+    expect(stack?.style.cssText).toMatch(/bottom:\d+px/u);
+    // The game keeps the keyboard: nothing is focused and no key handler swallows a key.
+    expect(page.body.find((element) => element.focused)).toBeUndefined();
+    expect(page.body.find((element) => element.listeners.has("keydown"))).toBeUndefined();
+    expect(notice?.attributes.get("aria-modal")).toBeUndefined();
   });
 
   it("shows again when the notice text version changes", () => {
@@ -117,7 +139,7 @@ describe("first-run privacy notice", () => {
     });
     expect(notice.acknowledged()).toBe(false);
     notice.showIfDue();
-    expect(page.body.children).toHaveLength(1);
+    expect(shown(page)).toBe(1);
   });
 
   it("opens only once at a time", () => {
@@ -125,7 +147,7 @@ describe("first-run privacy notice", () => {
     const notice = createPrivacyNotice({ document: page.document, storage: fakeStorage(), privacyUrl: "/privacy" });
     notice.showIfDue();
     notice.showIfDue();
-    expect(page.body.children).toHaveLength(1);
+    expect(shown(page)).toBe(1);
   });
 
   it("counts as acknowledged for this visit when the browser refuses storage", () => {
@@ -143,6 +165,6 @@ describe("first-run privacy notice", () => {
     notice.showIfDue();
     pressOk(page);
     expect(notice.acknowledged()).toBe(true);
-    expect(page.body.children).toHaveLength(0);
+    expect(shown(page)).toBe(0);
   });
 });
