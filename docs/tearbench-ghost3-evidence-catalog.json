@@ -372,9 +372,9 @@
       "sourceSections": [68, 69, 73, 75, 79],
       "textRegex": "(Ghost Vault|capsule|chunk index|journal|quota|Ghost Doctor|quarantine)",
       "excludeTextRegex": "(IndexedDB|browser restart|real worker|cross-session|cloud)",
-      "implementationRefs": ["src/ghost/capsule-vault.ts", "src/ghost/ghost-doctor.ts"],
+      "implementationRefs": ["src/ghost/capsule-vault.ts", "src/ghost/vault-maintenance.ts"],
       "evidenceRefs": ["tests/unit/ghost-capsule-vault.test.ts"],
-      "notes": "Memory-backed capsule/Vault and Doctor helpers exist; durable IndexedDB and worker behavior do not."
+      "notes": "Memory-backed capsule/Vault and its health scan exist; durable IndexedDB and worker behavior do not."
     },
     {
       "id": "EVID-GHOST-THEATER-PROTOTYPE",

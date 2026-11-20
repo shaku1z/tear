@@ -110,7 +110,6 @@ export interface ReplayView {
   readonly title: string;
   readonly detail: string;
   readonly available?: boolean;
-  readonly repairable?: boolean;
   readonly canDownloadArchive?: boolean;
   readonly theaterUnavailable?: boolean;
   readonly badge?: string;

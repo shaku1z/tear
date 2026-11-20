@@ -1,7 +1,5 @@
 import { GhostCareerStore } from "./career-archive-store";
-import { GhostDoctor } from "./ghost-doctor";
-import { GhostCorruptCapsuleRecords } from "./corrupt-capsule-records";
-import type { GhostLocalVault, TearGhostManifest } from "./capsule-vault";
+import { ghostRootIntegrity, type GhostLocalVault, type TearGhostManifest } from "./capsule-vault";
 
 export type GhostVaultRetentionTier = "pinned" | "standard" | "temporary";
 
@@ -35,6 +33,34 @@ function sortedIds(ids: readonly string[]): readonly string[] {
   return Object.freeze([...ids].sort());
 }
 
+/** Whether every chunk of a capsule reads back and its root still matches. Damaged capsules are shown, never repaired. */
+export async function ghostCapsuleHealthy(vault: GhostLocalVault, id: string): Promise<boolean> {
+  const manifest = await vault.getManifest(id);
+  if (manifest === undefined) throw new RangeError(`manifest does not exist: ${id}`);
+  for (const entry of manifest.chunks) {
+    try {
+      await vault.readChunk(entry);
+    } catch {
+      return false;
+    }
+  }
+  return ghostRootIntegrity(manifest.chunks) === manifest.rootIntegrity;
+}
+
+/** Rewrites each capsule's manifest index entry from its manifest. */
+async function rebuildManifestIndexes(vault: GhostLocalVault, values: readonly TearGhostManifest[]): Promise<number> {
+  for (const manifest of values) {
+    await vault
+      .backend()
+      .put(
+        "indexes",
+        `manifest:${manifest.id}`,
+        JSON.stringify({ status: manifest.status, createdAt: manifest.createdAt, chunks: manifest.chunks.length }),
+      );
+  }
+  return values.length;
+}
+
 async function manifests(vault: GhostLocalVault): Promise<readonly TearGhostManifest[]> {
   const ids = await vault.backend().keys("manifests");
   const values = await Promise.all(ids.map((id) => vault.getManifest(id)));
@@ -59,29 +85,15 @@ export async function maintainGhostVault(
     ...options.retention,
   });
   const remaining = await manifests(vault);
-  const doctor = new GhostDoctor(vault);
   const checkedAt = (options.now ?? (() => new Date().toISOString()))();
-  const scans = await Promise.all(
-    remaining.map(async (manifest) =>
-      Object.freeze({
-        manifest,
-        report: await doctor.scan(manifest.id),
-      }),
-    ),
-  );
   const integrity = Object.freeze(
-    scans.map(({ manifest, report }) =>
-      Object.freeze({
-        id: manifest.id,
-        healthy: report.healthy,
-      }),
+    await Promise.all(
+      remaining.map(async (manifest) =>
+        Object.freeze({ id: manifest.id, healthy: await ghostCapsuleHealthy(vault, manifest.id) }),
+      ),
     ),
   );
-  const corruptRecords = new GhostCorruptCapsuleRecords(vault.backend());
-  for (const { manifest, report } of scans) {
-    if (!report.healthy) await corruptRecords.record(manifest, report, checkedAt);
-  }
-  const rebuiltIndexes = await doctor.rebuildIndex();
+  const rebuiltIndexes = await rebuildManifestIndexes(vault, remaining);
   const report = Object.freeze({
     schemaVersion: 1 as const,
     checkedAt,
