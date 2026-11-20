@@ -40,7 +40,7 @@ export type ScreenAction =
   | { readonly type: "profile.restoreGhostArchive"; readonly id: string; readonly revision: number }
   | { readonly type: "profile.cancelGhostRestore"; readonly id: string; readonly revision: number }
   | { readonly type: "profile.cancelGhostArchiveSelection" }
-  | { readonly type: "profile.downloadGhostArchive"; readonly id: string; readonly paired?: true }
+  | { readonly type: "profile.downloadGhostArchive"; readonly id: string }
   | { readonly type: "profile.signIn" }
   | { readonly type: "profile.signOut" }
   | { readonly type: "profile.rename" }

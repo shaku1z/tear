@@ -51,14 +51,7 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
         (view.theater ? 254 : 0) -
         (view.finaleNavigation ? 272 : 0),
     );
-    const disclosure = "   ·   " + view.detail;
-    const memoryHeader =
-      ellipsize(canvas, view.title, Math.max(0, headerWidth - canvas.measureText(disclosure).width)) + disclosure;
-    canvas.fillText(
-      ellipsize(canvas, view.bossMemory?.title === undefined ? header : memoryHeader, headerWidth),
-      200 + safe.l,
-      36 + safe.t,
-    );
+    canvas.fillText(ellipsize(canvas, header, headerWidth), 200 + safe.l, 36 + safe.t);
     canvas.textAlign = "right";
     canvas.fillStyle = REPLAY_CYAN;
     canvas.font = ui.font(ui.t.type.label, true);
@@ -171,42 +164,6 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
         ghost: true,
         enabled: view.practiceAvailable === true,
         action: { type: "replay.practice" },
-      });
-    if (view.bossMemory?.title !== undefined) {
-      context.enqueue({
-        x: 30 + safe.l,
-        y: 136 + safe.t,
-        w: 200,
-        h: 32,
-        label: "WATCH ENCOUNTER",
-        action: { type: "replay.challenge.start", id: "boss-memory-watch" },
-      });
-      context.enqueue({
-        x: 240 + safe.l,
-        y: 136 + safe.t,
-        w: 200,
-        h: 32,
-        label: "DOWNLOAD MEMORY",
-        action: { type: "replay.challenge.start", id: "boss-memory-download" },
-      });
-      const notes = view.bossMemory.notes ?? "";
-      ui.text(
-        canvas,
-        `RESULT: ${view.bossMemory.result ?? "unavailable"} · NOTES (PLAYER-AUTHORED): ${notes.slice(0, 100)}${notes.length > 100 ? "… [FULL NOTES IN DOWNLOAD MEMORY]" : ""}`,
-        30 + safe.l,
-        190 + safe.t,
-        ui.t.type.micro,
-        "left",
-        ui.t.alpha.soft,
-      );
-    } else if (view.bossMemory?.available)
-      context.enqueue({
-        x: 30 + safe.l,
-        y: 136 + safe.t,
-        w: 220,
-        h: 32,
-        label: "SAVE BOSS MEMORY",
-        action: { type: "replay.challenge.start", id: "boss-memory-save" },
       });
     // Theater extras live in the dark top bar, right-aligned, never over the world.
     let topRight = width - REPLAY_TOP_RESERVE - safe.r;

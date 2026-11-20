@@ -222,8 +222,7 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
       ports.ghostFiles.cancelArchive();
     },
     "profile.downloadGhostArchive": (action) => {
-      if (action.paired === true) ports.ghostFiles.downloadArchive(action.id, true);
-      else ports.ghostFiles.downloadArchive(action.id);
+      ports.ghostFiles.downloadArchive(action.id);
     },
     "profile.signIn": () => {
       ports.signIn();

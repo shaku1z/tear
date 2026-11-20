@@ -1,11 +1,7 @@
 import { describe, expect, it } from "vitest";
-import {
-  GHOST_VAULT_MAINTENANCE_KEY,
-  GhostLocalVault,
-  GhostStreamingRecorder,
-  createMemoryGhostVaultBackend,
-  maintainGhostVault,
-} from "../../src/ghost";
+import { GHOST_VAULT_MAINTENANCE_KEY, maintainGhostVault } from "../../src/ghost/vault-maintenance";
+import { GhostLocalVault, createMemoryGhostVaultBackend } from "../../src/ghost/capsule-vault";
+import { GhostStreamingRecorder } from "../../src/ghost/streaming-recorder";
 
 describe("Ghost Vault maintenance", () => {
   it("stops destructive upkeep and receipt writes when app-owned protection backfill fails", async () => {

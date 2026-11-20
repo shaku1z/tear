@@ -791,3 +791,4 @@ writes are closed. Deploying the rules is the owner's step.
 - 2026-11-19 Plan written from main `92eddb5c`; draft PR opened for the lead's review. No code until the lead says go.
 - 2026-11-19 The lead said go. Their six decisions are recorded, and the separate Firestore rules PR was added.
 - 2026-11-19 Added the owner's two defects (the stage at each moment; the real weapon and throws) with their causes, the parity table and the live-drawing rule.
+- 2026-11-20 PR 1 (`codex/replay-hidden-features`): Boss Memory, the linked-pair download, the preservation corpus and both barrels removed. Importing an existing linked file stays until PR 6. PR 4's layer shape agreed with the lead: playtest-tool's headless move lands first; the narrowest `playtest -> app/world/detached` edge; `tearbench -> app` never; the baseline only shrinks.

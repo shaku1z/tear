@@ -503,7 +503,7 @@ async function pairedMain(input) {
     }
     return observation;
   };
-  await phase("pair-A-normal-source-download", async (journey) => {
+  await phase("pair-A-normal-source-restore", async (journey) => {
     const { page, buildInfo } = journey;
     producerBuild = buildInfo;
     await openVault(journey);
@@ -513,28 +513,13 @@ async function pairedMain(input) {
     await clickLabel(page, "RESTORE BOTH");
     await waitStatus(page, "COMPLETE");
     await assertPair("pair-A-source-custody", journey);
-    await page.waitForFunction(() => window.__C39_FILE_TEXT__.recent.includes("DOWNLOAD RUN + FINALE"));
-    const [download] = await Promise.all([
-      page.waitForEvent("download", { timeout: STATE_WAIT_MS }),
-      clickLabel(page, "DOWNLOAD RUN + FINALE"),
-    ]);
-    await download.saveAs(archivePath);
-    assert.equal(await download.failure(), null);
-    downloaded = JSON.parse(fs.readFileSync(archivePath, "utf8"));
-    assert.deepEqual(JSON.parse(downloaded.parent), members[0]);
-    assert.deepEqual(JSON.parse(downloaded.companion), members[1]);
-    save("pair-downloaded-file", {
-      byteLength: fs.statSync(archivePath).size,
-      sha256: sha256(fs.readFileSync(archivePath)),
-      members: members.map((m) => ({ id: m.manifest.id, root: m.manifest.rootIntegrity })),
-    });
-    await page.screenshot({ path: path.join(directory, "pair-A-download.png") });
+    await page.screenshot({ path: path.join(directory, "pair-A-restore.png") });
   });
   await phase("pair-B-fresh-normal-restore", async (journey) => {
     const { page } = journey;
     await openVault(journey);
     assert.equal(((await stores(page)).stores.manifests || []).length, 0);
-    await chooseFile(page, archivePath);
+    await chooseFile(page, input);
     await waitStatus(page, "READY");
     const ready = await observe("pair-B-preview", page, journey.buildInfo);
     assert.equal((ready.vault.stores.manifests || []).length, 0);

@@ -1,5 +1,4 @@
 import { isRecord } from "../domain/records";
-import { readGhostBossMemory } from "./boss-memory-origin";
 import { ghostRecordingFirstTick } from "./fork-origin";
 import { readGhostFinaleCompanion } from "./finale-companion";
 import { stableVerificationHash } from "../domain/hash";
@@ -296,8 +295,7 @@ export function readGhostApplicationClockSchedule(
   runId: string,
   declared: boolean,
 ): GhostApplicationClockSchedule | undefined {
-  const finale =
-    readGhostFinaleCompanion(capsule.manifest.provenance) ?? readGhostBossMemory(capsule.manifest.provenance);
+  const finale = readGhostFinaleCompanion(capsule.manifest.provenance);
   const events = capsule.tracks.events.flatMap((entry) => {
     const event = parseGhostApplicationClockEvent(entry.value);
     if (event !== undefined && event.tick !== entry.tick) throw new TypeError("application clock entry tick mismatch");
