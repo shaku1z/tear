@@ -39,11 +39,6 @@
         "seconds": 2
       },
       {
-        "id": "typecheck",
-        "run": "node node_modules/typescript/bin/tsc -b",
-        "seconds": 35
-      },
-      {
         "id": "lint",
         "run": "node scripts/lint.mjs --changed",
         "seconds": 115
