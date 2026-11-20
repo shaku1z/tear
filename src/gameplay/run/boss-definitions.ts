@@ -14,40 +14,10 @@ export function isBossDefinitionId(value: string): value is BossDefinitionId {
   return BOSS_IDENTITY_IDS.some((id) => id === value);
 }
 
-export interface BossDefinition {
-  readonly id: BossDefinitionId;
-  readonly name: string;
-  readonly phaseMarks: readonly [number, number];
-}
-
-/** Canonical Rootbound identity and phase thresholds. */
-export const ROOTBOUND_DEFINITION = Object.freeze({
-  id: "rootbound",
-  name: "The Rootbound",
-  phaseMarks: Object.freeze([0.65, 0.28] as const),
-} as const satisfies BossDefinition);
-
-/** Canonical authored White Hart identity; publication remains policy-owned. */
-export const WHITE_HART_DEFINITION = Object.freeze({
-  id: "white-hart",
-  name: "The White Hart",
-  phaseMarks: Object.freeze([0.65, 0.28] as const),
-} as const satisfies BossDefinition);
-
-export const BOSS_DEFINITIONS = Object.freeze([
-  Object.freeze({ id: "warden", name: "The Warden", phaseMarks: Object.freeze([0.65, 0.3] as const) }),
-  Object.freeze({ id: "colossus", name: "Iron Colossus", phaseMarks: Object.freeze([0.6, 0.25] as const) }),
-  Object.freeze({ id: "aldric", name: "Berserker King", phaseMarks: Object.freeze([0.65, 0.2] as const) }),
-  ROOTBOUND_DEFINITION,
-  WHITE_HART_DEFINITION,
-  Object.freeze({ id: "echo", name: "The Echo", phaseMarks: Object.freeze([0.6, 0.25] as const) }),
-  Object.freeze({ id: "source", name: "The Source", phaseMarks: Object.freeze([0.58, 0.28] as const) }),
-] as const satisfies readonly BossDefinition[]);
-
 /** A body in the game config whose height sets a boss's spawn height. */
 export type BossSpawnBody = "boss" | "whiteHart" | "echo" | "aldric" | "colossus";
 
-/** Where a boss enters the arena. */
+/** Where a boss enters the arena (read by `planBossPlacement`). */
 export interface BossSpawn {
   /** The entity-construction factory id. */
   readonly factoryId: string;
@@ -55,20 +25,65 @@ export interface BossSpawn {
   readonly lift: number | BossSpawnBody;
 }
 
-/**
- * Spawn data for each authored boss. It sits beside the definitions rather than
- * on them because the game reference exports the definitions field for field.
- */
-export const BOSS_SPAWNS = Object.freeze({
-  warden: Object.freeze({ factoryId: "warden", lift: 140 }),
-  colossus: Object.freeze({ factoryId: "colossus", lift: "colossus" }),
-  aldric: Object.freeze({ factoryId: "aldric", lift: "aldric" }),
+export interface BossDefinition {
+  readonly id: BossDefinitionId;
+  readonly name: string;
+  readonly phaseMarks: readonly [number, number];
+  /** Engine placement data; the game reference leaves it out (src/game-reference/boss-reference.ts). */
+  readonly spawn: BossSpawn;
+}
+
+/** Canonical Rootbound identity and phase thresholds. */
+export const ROOTBOUND_DEFINITION = Object.freeze({
+  id: "rootbound",
+  name: "The Rootbound",
+  phaseMarks: Object.freeze([0.65, 0.28] as const),
   // Rootbound starts at the generic boss body's height, not its own.
-  rootbound: Object.freeze({ factoryId: "rootbound", lift: "boss" }),
-  "white-hart": Object.freeze({ factoryId: "white-hart", lift: "whiteHart" }),
-  echo: Object.freeze({ factoryId: "echo", lift: "echo" }),
-  source: Object.freeze({ factoryId: "source", lift: 300 }),
-} as const satisfies Readonly<Record<BossDefinitionId, BossSpawn>>);
+  spawn: Object.freeze({ factoryId: "rootbound", lift: "boss" }),
+} as const satisfies BossDefinition);
+
+/** Canonical authored White Hart identity; publication remains policy-owned. */
+export const WHITE_HART_DEFINITION = Object.freeze({
+  id: "white-hart",
+  name: "The White Hart",
+  phaseMarks: Object.freeze([0.65, 0.28] as const),
+  spawn: Object.freeze({ factoryId: "white-hart", lift: "whiteHart" }),
+} as const satisfies BossDefinition);
+
+export const BOSS_DEFINITIONS = Object.freeze([
+  Object.freeze({
+    id: "warden",
+    name: "The Warden",
+    phaseMarks: Object.freeze([0.65, 0.3] as const),
+    spawn: Object.freeze({ factoryId: "warden", lift: 140 }),
+  }),
+  Object.freeze({
+    id: "colossus",
+    name: "Iron Colossus",
+    phaseMarks: Object.freeze([0.6, 0.25] as const),
+    spawn: Object.freeze({ factoryId: "colossus", lift: "colossus" }),
+  }),
+  Object.freeze({
+    id: "aldric",
+    name: "Berserker King",
+    phaseMarks: Object.freeze([0.65, 0.2] as const),
+    spawn: Object.freeze({ factoryId: "aldric", lift: "aldric" }),
+  }),
+  ROOTBOUND_DEFINITION,
+  WHITE_HART_DEFINITION,
+  Object.freeze({
+    id: "echo",
+    name: "The Echo",
+    phaseMarks: Object.freeze([0.6, 0.25] as const),
+    spawn: Object.freeze({ factoryId: "echo", lift: "echo" }),
+  }),
+  Object.freeze({
+    id: "source",
+    name: "The Source",
+    phaseMarks: Object.freeze([0.58, 0.28] as const),
+    spawn: Object.freeze({ factoryId: "source", lift: 300 }),
+  }),
+] as const satisfies readonly BossDefinition[]);
 
 /** Source-derived display projection; boss IDs and names remain definition-owned. */
 export const BOSS_DISPLAY_NAMES = Object.freeze(

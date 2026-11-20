@@ -1,4 +1,4 @@
-import { BOSS_SPAWNS, isBossDefinitionId } from "./boss-definitions";
+import { bossDefinition, isBossDefinitionId } from "./boss-definitions";
 
 /**
  * Where each boss enters the arena.
@@ -26,7 +26,7 @@ export interface BossPlacement {
 
 export function planBossPlacement(id: string, width: number, config: BossPlacementConfig): BossPlacement {
   if (!isBossDefinitionId(id)) throw new RangeError(`no boss placement for ${id}`);
-  const { factoryId, lift } = BOSS_SPAWNS[id];
+  const { factoryId, lift } = bossDefinition(id).spawn;
   const rise = typeof lift === "number" ? lift : config[lift].h / 2;
   return Object.freeze({ factoryId, x: width / 2, y: config.world.groundY - rise });
 }
