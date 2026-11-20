@@ -10,6 +10,8 @@ import type { PracticeTab } from "./practice-tab";
 export type ScreenAction =
   | { readonly type: "chase.control"; readonly command: "toggle" | "stop" }
   | { readonly type: "navigate"; readonly to: AppScreen; readonly resetScroll?: boolean; readonly tab?: string }
+  /** Return to the screen this one was opened from, at the control the player left (the main menu if none). */
+  | { readonly type: "navigate.back" }
   | { readonly type: "menu.resumeFinale" }
   | { readonly type: "menu.claimFinale" }
   | { readonly type: "setup.selectMode"; readonly id: string }

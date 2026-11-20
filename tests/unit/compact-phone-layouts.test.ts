@@ -917,7 +917,7 @@ describe("phone compositions (compact density)", () => {
           home.some((action) => action.tab === `collection:${stage.id}`),
           stage.id,
         ).toBe(true);
-      expect(home.some((action) => action.type === "navigate" && action.to === "menu")).toBe(true);
+      expect(home.some((action) => action.type === "navigate.back")).toBe(true);
       const all = offered("songs");
       for (const song of view("songs").songs.filter((entry) => !entry.previewing))
         expect(

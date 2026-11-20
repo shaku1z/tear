@@ -4,7 +4,9 @@ import { createLiveInterfaceFrameState } from "../../src/app/interface/interface
 
 describe("live interface frame state", () => {
   it("owns screen navigation, timing, and entrance state", () => {
-    const state = createLiveInterfaceFrameState("menu");
+    const state = createLiveInterfaceFrameState();
+    // Nothing drawn yet, so the first screen the frame draws is entered like any other.
+    expect(state.previousScreen()).toBeUndefined();
 
     state.advance(0.25);
     state.setPreviousScreen("playing");

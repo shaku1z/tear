@@ -95,7 +95,7 @@ function detachedPresentationPorts(
   });
 }
 
-/** The minimal legal run shape used before a captured State Forge snapshot replaces it. */
+/** The minimal legal run shape used before a captured State Setup snapshot replaces it. */
 export function productionRunSeed(seed: string): number {
   let hash = 0x811c9dc5;
   for (let index = 0; index < seed.length; index += 1) {

@@ -1,4 +1,5 @@
 import type { AppStateController, AppTransitionContext } from "./app-state-controller";
+import type { ScreenPlace } from "./screen-history";
 import type { AppScreen } from "../../domain/screen-catalog";
 import type { BrowserInput } from "../../input/browser-input-contracts";
 import { setMusicPreview } from "../../audio/music/preview";
@@ -16,11 +17,17 @@ export interface LiveScreenNavigationOptions {
   readonly app: AppStateController;
   readonly input: Pick<BrowserInput, "allowLock" | "discardSemanticInput" | "returnControl">;
   readonly runScreenFact: (transition: "paused" | "resumed") => void;
+  /** Where the player is on the current screen, recorded when they leave it so a return lands there. */
+  readonly place: () => ScreenPlace;
 }
 
 export interface LiveScreenNavigation {
   readonly screen: () => AppScreen;
   readonly setScreen: (next: AppScreen, context?: AppTransitionContext) => AppScreen;
+  /** Returns to the screen the current one was opened from, or the main menu when it has none. */
+  readonly back: () => AppScreen;
+  /** Where the player was on the current screen, when the last change returned to it. */
+  readonly arrival: () => ScreenPlace | undefined;
   /** Installs hooks as their owners are constructed; unbound hooks do nothing. */
   readonly bind: (hooks: Partial<LiveScreenTransitionHooks>) => void;
 }
@@ -42,7 +49,7 @@ export function createLiveScreenNavigation(options: LiveScreenNavigationOptions)
   function setScreen(next: AppScreen, context?: AppTransitionContext): AppScreen {
     cancelChase(next);
     const prior = state;
-    state = app.transition(next, context);
+    state = app.transition(next, { ...context, leaving: options.place() });
     cancelPendingReplayOpen();
     if (prior === "profile" && state !== "profile") leaveCareer();
     // A song previewed on the MUSIC screen stops when the player leaves it (rename sits over it).
@@ -61,6 +68,8 @@ export function createLiveScreenNavigation(options: LiveScreenNavigationOptions)
   return Object.freeze({
     screen: () => state,
     setScreen,
+    back: () => setScreen(app.snapshot().back ?? "menu"),
+    arrival: () => app.snapshot().arrival ?? undefined,
     bind(hooks: Partial<LiveScreenTransitionHooks>): void {
       if (hooks.cancelChase !== undefined) cancelChase = hooks.cancelChase;
       if (hooks.cancelPendingReplayOpen !== undefined) cancelPendingReplayOpen = hooks.cancelPendingReplayOpen;

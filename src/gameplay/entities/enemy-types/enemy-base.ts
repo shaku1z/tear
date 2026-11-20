@@ -78,6 +78,8 @@ export function createEnemyBase(dependencies: EnemyDependencies, bossRuntime: Bo
     auraHaste: number;
     tetherDR: number;
     anchored: boolean;
+    /** Keeps its own height in the air: a lift leaves it alone. */
+    flies = false;
     buffs: string[];
     immuneToBlade: boolean;
     bleedStacks: number;

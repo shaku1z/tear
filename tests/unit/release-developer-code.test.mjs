@@ -25,7 +25,7 @@ describe("developer-only code in a release bundle", () => {
   it("reports each developer-only module that contributes code, once, sorted", () => {
     const found = developerModulesInBundle(
       [
-        ["/repo/src/tearbench/browser/state-forge-studio.ts", 900],
+        ["/repo/src/tearbench/browser/state-editor.ts", 900],
         ["/repo/src/agents/scripted-policy.ts", 1200],
         ["/repo/src/agents/scripted-policy.ts", 1200],
         ["/repo/src/app/engineering/debug-harness.ts", 10],
@@ -38,7 +38,7 @@ describe("developer-only code in a release bundle", () => {
       "src/agents/scripted-policy.ts",
       "src/app/engineering/debug-harness.ts",
       "src/playtest/boss-fight.ts",
-      "src/tearbench/browser/state-forge-studio.ts",
+      "src/tearbench/browser/state-editor.ts",
     ]);
   });
 
@@ -51,7 +51,7 @@ describe("developer-only code in a release bundle", () => {
       "src/tearbench/contracts.ts",
       "src/tearbench/state-codecs.ts",
       "src/tearbench/production-replay-composition.ts",
-      "src/app/engineering/state-forge-adapter.ts",
+      "src/app/engineering/state-setup-adapter.ts",
       "src/app/engineering/test-build-journals.ts",
     ];
     for (const file of release) expect(tracked, file).toContain(file);

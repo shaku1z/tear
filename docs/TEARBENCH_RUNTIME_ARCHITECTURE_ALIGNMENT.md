@@ -7,7 +7,7 @@ C31-C36 learning completion
 
 ## Decision
 
-TearBench, Ghost 3.0, State Forge, and TearBot must execute through the
+TearBench, Ghost 3.0, State Setup, and TearBot must execute through the
 redesigned typed Tear architecture. They must not make the transitional live
 runtime's closure-owned mutable world, concrete app model types, Ghost 2
 compatibility events, DOM, Canvas, or presentation state into their permanent
@@ -60,7 +60,7 @@ The following C27A foundation slices are complete:
 - The legacy live input field projection is confined to
   `src/app/live-authoritative-input-adapter.ts`; direct composition access is
   rejected by the architecture gate.
-- State Forge codec payloads now hydrate through the portable
+- State Setup codec payloads now hydrate through the portable
   `detached-world-hydrator` constructor port, rather than owning graph decode
   and object construction inside the live app adapter. It restores reference
   identity into fresh objects and keeps transient input projections out of
@@ -89,7 +89,7 @@ The following C27A foundation slices are complete:
 - A DOM-free generic `tear-world-context` now owns each world’s mutable state
   references and narrow configuration, named-RNG, clock, effects, Mirror, and
   boss-feedback services. `live-world-context` maps the existing live
-  implementations into that contract, and live run start, State Forge, content,
+  implementations into that contract, and live run start, State Setup, content,
   and waves use the single context seam. It deliberately remains an app-backed
   adapter: it is not a concurrent detached-world or portable-full-world claim.
 - The live combat action adapter now receives replaceable enemy, projectile,
@@ -103,14 +103,14 @@ The following C27A foundation slices are complete:
   protection, opening carry-over state, and non-collection collision impact
   fields. It is the world context’s fifth capability, created once per world by
   `live-world-context`. The live runtime no longer declares those transient
-  closure variables; combat, the frame prelude, run reset, State Forge runtime
+  closure variables; combat, the frame prelude, run reset, State Setup runtime
   capture/restore, and the interface world state read the same records. Stored
-  State Forge runtime keys are unchanged, and protection keeps its in-place
+  State Setup runtime keys are unchanged, and protection keeps its in-place
   mutation contract with `combat-step-prelude`.
 - That record set also owns the per-world frame-feel values (time dilation,
   zoom, flash, banner seconds, world zoom and target, rank popup). The live
   runtime declares none of them; the frame prelude, wave banners, void-run
-  camera release, State Forge runtime capture/restore, and the interface frame
+  camera release, State Setup runtime capture/restore, and the interface frame
   and world state read the one owned record, and `resetFeel()` reproduces the
   previous run-reset boundary exactly.
 - `live-world-simulation-factories` extracts one world's entity constructors
@@ -160,7 +160,7 @@ The following C27A foundation slices are complete:
   cinematics stay live-host-owned and no live trace has been compared, so
   parity is still unproven.
 - The live half of the comparison is now captured: a Class-A scenario on a
-  fixed seed yields a State Forge origin snapshot, a sealed action schedule,
+  fixed seed yields a State Setup origin snapshot, a sealed action schedule,
   180 authoritative state hashes, the event sequence, and the ending RNG
   state, with two live runs proven identical. The detached side has not been
   compared against it.
@@ -184,7 +184,7 @@ The following C27A foundation slices are complete:
   `beginBossEncounter` (intro freeze, fight clock, carried adds, arena
   swap). The live content host now calls both and retains only
   presentation. A terminal run (idle player, hard, dies at tick 903) then
-  joined the matrix and exposed a real State Forge defect: the codec had no
+  joined the matrix and exposed a real State Setup defect: the codec had no
   `Map` case, so Maps encoded as `{}` and restored as plain objects,
   breaking `blade._repeatHits` on the next hit for any restore. The codec
   now round-trips Maps. Six scenarios — endless normal/sword, endless
@@ -208,19 +208,19 @@ The following C27A foundation slices are complete:
   (`gameplay/runtime/cinematic-director`), leaving only the canvas
   renderer in presentation. Deciding whether combat may advance is
   simulation. At that slice, closing the campaign divergence still needed the
-  world to own a director, State Forge to capture its position, and campaign
+  world to own a director, State Setup to capture its position, and campaign
   scripts to be constructible without app callbacks.
 - Each world now owns one director instance. `createLiveWorldComposition`
   constructs the live renderer-capable director and places it on the generic
   world context; campaign composition consumes that same instance, so no
   second timeline or scheduler was introduced. Detached test worlds construct
-  the gameplay-only implementation. State Forge now captures and atomically
+  the gameplay-only implementation. State Setup now captures and atomically
   restores the active script revision, beat identity, and behavior-bearing
   timing/reveal/skip state through `tear.cinematic.v1`; its live browser proof
   covers exact serialized-position restoration, input re-arm, and
   active-to-idle rollback without callback replay.
 - Campaign chapter scripts now rebuild from a versioned data-only binding with
-  content-fingerprinted beats and explicit gameplay intent ports. State Forge
+  content-fingerprinted beats and explicit gameplay intent ports. State Setup
   validates the candidate stage, run, lifecycle, flow/page, banner, protection,
   and complete opening carry record before mutation. The browser proof restores
   into a fresh session and advances the reconstructed chapter; legacy active
@@ -239,10 +239,10 @@ The following C27A foundation slices are complete:
   pixel parity.
 - `tear-world-configuration` now gives a constructed simulation world its own
   stable mutable tuning record before constructors capture configuration.
-  Base reset and State Forge restoration reconcile the existing root and nested
+  Base reset and State Setup restoration reconcile the existing root and nested
   records in place after complete-shape validation, so an invalid snapshot
   cannot partially erase a live configuration. The composition root, world
-  context, State Forge, weapon/upgrade/stage rules, combat phases, cinematic
+  context, State Setup, weapon/upgrade/stage rules, combat phases, cinematic
   timeline, and tutorial ghost sampler use that explicit record. The source
   architecture gate rejects direct value imports of the process config in those
   world-owned modules. This is evidence for simulation tuning isolation only:
@@ -459,31 +459,31 @@ The following C27A foundation slices are complete:
   evidence pass. This is app-session ownership only: real production-world
   construction, durable storage, and full-world portability remain open.
 - Floaters, slow zones, and temporary walls are now read directly from the
-  world state by the live State Forge and presentation adapters. Source
+  world state by the live State Setup and presentation adapters. Source
   architecture rejects restoring their host mirrors, and focused plus rebuilt
   campaign evidence pass. The remaining actor, frame, and combat closure state
   still prevents a portable full production-world claim.
 - Boss-intro and boss-beat state are now read directly from world state by the
-  live music, frame, State Forge, and presentation paths. Source architecture
+  live music, frame, State Setup, and presentation paths. Source architecture
   rejects restoring their host mirrors, and focused plus rebuilt campaign
   evidence pass. Actor, frame, and combat state remain app-bound; this does
   not establish full-world or concurrent-live-world portability.
 - Enemy and projectile collections are now read directly from world state by
-  the live context, music, frame, State Forge, diagnostics, and TearBench
+  the live context, music, frame, State Setup, diagnostics, and TearBench
   bridge. Source architecture rejects restoring their host mirrors, and
   focused plus rebuilt campaign evidence pass. Player, blade, run, frame, and
   combat ownership remain app-bound.
 - The live run is now read directly from world state by session services,
-  campaign/training, combat, State Forge, and presentation adapters. Its
+  campaign/training, combat, State Setup, and presentation adapters. Its
   world-state getter preserves the existing absent-run menu behavior; source
   architecture rejects restoring a host run closure. Player, blade, frame, and
   combat ownership remain app-bound.
 - The live blade is now read directly from world state by session, combat,
-  input, State Forge, and TearBench bridge paths. Its getter preserves the
+  input, State Setup, and TearBench bridge paths. Its getter preserves the
   existing absent-blade menu behavior, and source architecture rejects restoring
   a host blade closure. Player, frame, and combat ownership remain app-bound.
 - The live player is now read directly from world state by session,
-  campaign/training, combat, input, replay, State Forge, and TearBench bridge
+  campaign/training, combat, input, replay, State Setup, and TearBench bridge
   paths. Its getter preserves existing absent-player menu behavior, and source
   architecture rejects restoring a host player closure. Frame and combat
   construction remain app-bound.
@@ -538,7 +538,7 @@ The following C27A foundation slices are complete:
   one `RunLifecycleController` and one transient record while supplied adapters
   retain their live state, entity, service, and cinema responsibilities. The
   detached combat host returns that same world-owned transient record, closing
-  the prior split between its combat record and State Forge restoration. This
+  the prior split between its combat record and State Setup restoration. This
   is not portable entity selection or app-service construction, headless/full
   production-world portability, concurrent complete-world evidence, or C27A
   completion.

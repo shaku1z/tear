@@ -2,11 +2,11 @@ import { stableVerificationHash } from "../../domain/hash";
 import type { TearSnapshotV1 } from "../contracts";
 import type { TearRuntimeBridgeFactory } from "../live-runtime-contracts";
 import {
-  installStateForgeStudio,
-  type StateForgeCheckpointItem,
-  type StateForgeForkRequest,
-  type StateForgeStudioHost,
-} from "./state-forge-studio";
+  installStateEditor,
+  type StateSetupCheckpointItem,
+  type StateSetupForkRequest,
+  type StateEditorHost,
+} from "./state-editor";
 import { isSnapshotEditorRequested } from "./snapshot-editor-route";
 import type { TearSdlDocumentV1, TearSdlResolved } from "../tearsdl";
 import { TearCheckpointBank } from "../tearsdl";
@@ -57,14 +57,14 @@ function downloadScenario(fileName: string, source: string): void {
   });
 }
 
-export function createLiveStateForgeStudioHost(factory: TearRuntimeBridgeFactory): StateForgeStudioHost {
+export function createLiveStateEditorHost(factory: TearRuntimeBridgeFactory): StateEditorHost {
   const environment = factory.create("A");
   const bank = new TearCheckpointBank();
   const snapshots = new Map<string, TearSnapshotV1>();
   const library = new Map<string, TearSdlDocumentV1>([[INITIAL_DOCUMENT.id, INITIAL_DOCUMENT]]);
   let sequence = 0;
 
-  const addLiveCheckpoint = (label: string): StateForgeCheckpointItem => {
+  const addLiveCheckpoint = (label: string): StateSetupCheckpointItem => {
     sequence += 1;
     const id = `state-forge-live-${String(sequence)}`;
     const snapshot = environment.captureSnapshot(id);
@@ -79,7 +79,7 @@ export function createLiveStateForgeStudioHost(factory: TearRuntimeBridgeFactory
     });
   };
 
-  const checkpointItem = (id: string): StateForgeCheckpointItem => {
+  const checkpointItem = (id: string): StateSetupCheckpointItem => {
     const entry = bank.list().find((candidate) => candidate.id === id);
     if (entry === undefined) throw new RangeError(`checkpoint does not exist: ${id}`);
     const snapshot = snapshots.get(id);
@@ -109,7 +109,7 @@ export function createLiveStateForgeStudioHost(factory: TearRuntimeBridgeFactory
     initialSource: `${JSON.stringify(INITIAL_DOCUMENT, null, 2)}\n`,
     tearSdlLibrary: () => new Map(library),
     checkpoints: () => Object.freeze(bank.list().map((entry) => checkpointItem(entry.id))),
-    fork(request: StateForgeForkRequest) {
+    fork(request: StateSetupForkRequest) {
       if (!/^[a-z0-9][a-z0-9._-]{0,127}$/u.test(request.id)) {
         throw new TypeError("fork id is invalid");
       }
@@ -140,7 +140,7 @@ export function createLiveStateForgeStudioHost(factory: TearRuntimeBridgeFactory
   });
 }
 
-export function installLiveStateForgeStudio(factory: TearRuntimeBridgeFactory): void {
+export function installLiveStateEditor(factory: TearRuntimeBridgeFactory): void {
   if (!isSnapshotEditorRequested(window.location.search)) return;
-  installStateForgeStudio(createLiveStateForgeStudioHost(factory));
+  installStateEditor(createLiveStateEditorHost(factory));
 }
