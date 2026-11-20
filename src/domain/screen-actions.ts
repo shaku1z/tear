@@ -35,7 +35,6 @@ export type ScreenAction =
   | { readonly type: "profile.selectTab"; readonly id: string }
   | { readonly type: "profile.watchReplay"; readonly id: string }
   | { readonly type: "profile.watchGhostCapsule"; readonly id: string }
-  | { readonly type: "profile.repairGhostCapsule"; readonly id: string }
   | { readonly type: "profile.pickGhostArchive" }
   | { readonly type: "profile.reselectGhostArchive"; readonly id: string }
   | { readonly type: "profile.restoreGhostArchive"; readonly id: string; readonly revision: number }

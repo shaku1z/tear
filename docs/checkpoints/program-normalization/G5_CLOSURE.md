@@ -70,7 +70,7 @@ evidence; this closure record does not authorize it.
 ## Legacy comparison bundle disposition
 
 The exact temporary-root file tear-crazygames-ee5.zip is tracked in
-[workspace-parent-layout-policy.json](../../../preservation/workspace-parent-layout-policy.json) as
+`preservation/workspace-parent-layout-policy.json` (removed with the G5 tooling on 2026-11-20; in git history) as
 legacy-comparison-only-retention:
 
 - Owner: G5 release governance.

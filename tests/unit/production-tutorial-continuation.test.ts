@@ -354,6 +354,15 @@ describe("production tutorial reconstructed-byte continuation", () => {
       ),
     ).toBe(false);
   });
+  /**
+   * The entry/cinematic cases step the whole production world through the boss's entry, then two
+   * worlds in lockstep for 900 ticks, and for Source its phase-3 fight to the kill. Stepping is the
+   * cost: comparing state hashes instead of whole states saved nothing. Measured alone on one machine
+   * (2026-11-20): Aldric 1.1 to 2.1 s, Source 2.3 to 3.3 s; Source took 5.4 s while other sessions'
+   * tests ran beside it, past the 5 s default. 20 s holds a three- to four-fold slowdown and still
+   * fails a hang well before the run's own limits.
+   */
+  const ENTRY_CONTINUATION_BUDGET_MS = 20_000;
   it.each(["source", "aldric"] as const)(
     "continues %s authored entry/cinematic against decoded owners without replaying launch",
     (bossId) => {
@@ -448,6 +457,7 @@ describe("production tutorial reconstructed-byte continuation", () => {
         expect(finished.replay.stage.platforms).toEqual(source.replay.stage.platforms);
       }
     },
+    ENTRY_CONTINUATION_BUDGET_MS,
   );
   it("captures actual boss defeat/removal as a finished portable attempt and restarts without course effects", () => {
     const source = bossAttempt("colossus", 3);

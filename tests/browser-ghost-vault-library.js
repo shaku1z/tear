@@ -1,5 +1,5 @@
 const assert = require("node:assert/strict");
-const { withJourney, waitForBrowserValue } = require("./browser-journey-harness");
+const { withJourney } = require("./browser-journey-harness");
 const { STATE_WAIT_MS } = require("./browser-waits");
 
 withJourney({ name: "C28 Ghost Vault player library" }, async ({ page, boot, waitScreen }) => {
@@ -111,7 +111,7 @@ withJourney({ name: "C28 Ghost Vault player library" }, async ({ page, boot, wai
   // The toolbar is drawn while the Vault is still reading its records, so it does not mean the list
   // is ready. The seeded capsule's row does: it is drawn only once the read has finished.
   await page.waitForFunction(
-    () => window.__TEAR_C28_VAULT_TEXT__?.some((text) => text.includes("needs repair")),
+    () => window.__TEAR_C28_VAULT_TEXT__?.some((text) => text.includes("damaged, can't play")),
     undefined,
     { timeout: STATE_WAIT_MS },
   );
@@ -133,150 +133,23 @@ withJourney({ name: "C28 Ghost Vault player library" }, async ({ page, boot, wai
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const renderedVaultText = await page.evaluate(() => window.__TEAR_C28_VAULT_TEXT__ ?? []);
   assert.ok(
-    renderedVaultText.some((text) => text.includes("needs repair")),
-    `Vault did not render the Doctor health state: ${renderedVaultText.slice(-80).join(" | ")}`,
+    renderedVaultText.some((text) => text.includes("damaged, can't play")),
+    `Vault did not render the damaged health state: ${renderedVaultText.slice(-80).join(" | ")}`,
   );
   assert.ok(
     !renderedVaultText.includes("Opening your saved replays…"),
     "ready nonempty Vault retained its loading message",
   );
   assert.ok(
-    renderedVaultText.includes("REPAIR"),
-    `Vault did not render the repair control: ${renderedVaultText.slice(-80).join(" | ")}`,
+    renderedVaultText.includes("CAN'T PLAY"),
+    `Vault did not mark the damaged capsule unplayable: ${renderedVaultText.slice(-80).join(" | ")}`,
   );
+  assert.ok(!renderedVaultText.includes("REPAIR"), "the removed REPAIR control must not be drawn");
   assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().game), "profile");
-  const repairPosition = await page.evaluate(() =>
-    window.__TEAR_C28_VAULT_TEXT_POSITIONS__.findLast((entry) => entry.text === "REPAIR"),
-  );
-  assert.ok(
-    repairPosition && Number.isFinite(repairPosition.x) && Number.isFinite(repairPosition.y),
-    "REPAIR must have an actual rendered position",
-  );
-  await page.mouse.click(repairPosition.x, repairPosition.y); // Actual rendered normal control, including the archive header offset.
-  const persistedManifests = await waitForBrowserValue(
-    page,
-    () =>
-      new Promise((resolve, reject) => {
-        const open = window.indexedDB.open("tear-ghost-v3");
-        open.onerror = () => reject(open.error ?? new Error("IndexedDB open failed"));
-        open.onsuccess = () => {
-          const database = open.result;
-          const transaction = database.transaction("manifests", "readonly");
-          const records = transaction.objectStore("manifests").getAll();
-          transaction.oncomplete = () => {
-            database.close();
-            const manifests = records.result.map((entry) => JSON.parse(entry));
-            resolve(manifests.some((item) => item.status === "repaired") ? manifests : undefined);
-          };
-          transaction.onerror = () => {
-            database.close();
-            reject(transaction.error ?? new Error("IndexedDB manifest read failed"));
-          };
-        };
-      }),
-  );
-  const repaired = persistedManifests.find(
-    (item) => item.lineage?.parentId === manifest.id && item.status === "repaired",
-  );
-  await page.waitForFunction(
-    () => window.__TEAR_C28_VAULT_TEXT__?.some((text) => text.includes("repaired copy available")),
-    undefined,
-    { timeout: STATE_WAIT_MS },
-  );
-  const repairTexts = await page.evaluate(() => window.__TEAR_C28_VAULT_TEXT__?.slice(-120) ?? []);
-  assert.ok(
-    repaired,
-    `player repair did not create a durable child capsule: ${JSON.stringify({ persistedManifests, repairTexts })}`,
-  );
-  assert.ok(
-    persistedManifests.some((item) => item.id === manifest.id),
-    "player repair removed the original capsule",
-  );
-  const maintenance = await page.evaluate(
-    (id) =>
-      new Promise((resolve, reject) => {
-        const open = window.indexedDB.open("tear-ghost-v3");
-        open.onerror = () => reject(open.error ?? new Error("IndexedDB open failed"));
-        open.onsuccess = () => {
-          const database = open.result;
-          const transaction = database.transaction(["indexes", "analysis", "libraries"], "readonly");
-          const index = transaction.objectStore("indexes").get(`manifest:${id}`);
-          const report = transaction.objectStore("analysis").get("vault-maintenance:v1");
-          const graveyard = transaction.objectStore("libraries").get(`entry:graveyard:graveyard:${id}`);
-          transaction.oncomplete = () => {
-            database.close();
-            resolve({ index: index.result, report: report.result, graveyard: graveyard.result });
-          };
-          transaction.onerror = () => {
-            database.close();
-            reject(transaction.error ?? new Error("IndexedDB maintenance read failed"));
-          };
-        };
-      }),
-    manifest.id,
-  );
-  assert.equal(typeof maintenance.index, "string", "explicit selected repair did not restore its source index");
-  const previousReport = beforeOwnerNavigation
-    .find(([store]) => store === "analysis")?.[1]
-    .find(([key]) => key === "vault-maintenance:v1")?.[1];
-  assert.equal(
-    maintenance.report,
-    previousReport,
-    "selected repair must not run global maintenance or rewrite its report",
-  );
-  assert.deepEqual(JSON.parse(maintenance.index), {
-    status: manifest.status,
-    createdAt: manifest.createdAt,
-    chunks: manifest.chunks.length,
-  });
-  const graveyard = JSON.parse(maintenance.graveyard).entry;
-  assert.equal(graveyard.library, "graveyard");
-  assert.equal(graveyard.ghostId, manifest.id);
-  assert.equal(graveyard.rootHash, manifest.rootIntegrity);
-  assert.equal(graveyard.provenance.corruptChunks, "1");
-  const repairEvidence = await page.evaluate(
-    ({ sourceId, childId, chunkId }) =>
-      new Promise((resolve, reject) => {
-        const open = window.indexedDB.open("tear-ghost-v3");
-        open.onerror = () => reject(open.error ?? new Error("IndexedDB open failed"));
-        open.onsuccess = () => {
-          const database = open.result;
-          const transaction = database.transaction(["chunks", "lineage", "manifests", "quarantine"], "readonly");
-          const sourceChunk = transaction.objectStore("chunks").get(chunkId);
-          const source = transaction.objectStore("manifests").get(sourceId);
-          const child = transaction.objectStore("manifests").get(childId);
-          const lineage = transaction.objectStore("lineage").get(`repair:${childId}`);
-          const quarantine = transaction.objectStore("quarantine").get(`repair:${childId}:${chunkId}`);
-          transaction.oncomplete = () => {
-            database.close();
-            resolve({
-              source: source.result,
-              sourceChunk: sourceChunk.result,
-              child: child.result,
-              lineage: lineage.result,
-              quarantine: quarantine.result,
-            });
-          };
-          transaction.onerror = () => {
-            database.close();
-            reject(transaction.error ?? new Error("IndexedDB repair read failed"));
-          };
-        };
-      }),
-    { sourceId: manifest.id, childId: repaired.id, chunkId: manifest.chunks[0].id },
-  );
-  assert.equal(
-    repairEvidence.source,
-    beforeOwnerNavigation.find(([store]) => store === "manifests")?.[1].find(([key]) => key === manifest.id)?.[1],
-    "repair changed original manifest bytes",
-  );
-  assert.equal(repairEvidence.sourceChunk, "corrupted-by-c28-doctor", "repair changed the original source bytes");
-  assert.equal(JSON.parse(repairEvidence.child).lineage.parentId, manifest.id);
-  assert.equal(JSON.parse(repairEvidence.lineage).childId, repaired.id);
-  assert.equal(JSON.parse(repairEvidence.quarantine).parentId, manifest.id);
-  assert.ok(
-    repairEvidence.quarantine.includes("corrupted-by-c28-doctor"),
-    "quarantine must preserve the original damaged bytes",
+  assert.deepEqual(
+    await vaultRecords(),
+    beforeOwnerNavigation,
+    "showing a damaged capsule must not rewrite, repair or quarantine it",
   );
 })
   .then(() => console.log("browser Ghost Vault player library passed"))

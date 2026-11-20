@@ -28,7 +28,7 @@ owning test/script references in one reviewable transaction.
 | Performance budgets | [PERFORMANCE_BUDGETS.md](PERFORMANCE_BUDGETS.md) | — |
 | itch.io package and upload steps | [ITCH_UPLOAD.md](ITCH_UPLOAD.md) | `config/build-targets.json` (`itch`); `scripts/package-target.mjs` |
 | Browser journey coverage | [BROWSER_JOURNEY_COVERAGE.md](BROWSER_JOURNEY_COVERAGE.md) | — |
-| Artifact and checkpoint-evidence organization | [ARTIFACTS.md](ARTIFACTS.md) | `config/artifact-layout.json`; G5 retention and disposition records |
+| Artifact and checkpoint-evidence organization | [ARTIFACTS.md](ARTIFACTS.md) | — |
 
 `docs/checkpoints/` and `docs/checkpoints/program-normalization/` are
 append-only checkpoint/history locations. `docs/source/` is the preserved
@@ -51,6 +51,7 @@ current paths and hashes until a separately authorized atomic migration.
 | [RELEASE_READINESS_PLAN.md](../plans/active/RELEASE_READINESS_PLAN.md) | Active phased plan to make the game releasable to players; records the 2026-11-11 audit baseline, phase states, and the decisions reserved for the owner. |
 | [PHASE_F_MIRROR_PLAN.md](../plans/completed/PHASE_F_MIRROR_PLAN.md) | Completed historical record; not an active plan or typed-code authority. |
 | [Verdant Sanctum Revision 3](../plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md) | Active Verdant biome, shared environment-runtime, TearBench, and engineering-freeze implementation authority; current publication follows the tracked six-stage boundary and does not publish Pale. |
+| [Pale gameplay rebuild](../plans/active/PALE_GAMEPLAY_REBUILD.md) | Active plan for rebuilding Pale's stage mechanic, enemies, boss and waves on the shared layers; replaces the gameplay checkpoints of Revision 3 below. |
 | [Pale Traverse Revision 3](../plans/active/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md) | Active Pale biome and engineering-freeze authority; current publication follows the tracked boundary and keeps Pale preview-only. |
 | [plans/README.md](../plans/README.md) | Index for direct, active, completed, and future archived plan locations. |
 

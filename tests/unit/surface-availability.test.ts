@@ -59,7 +59,6 @@ describe("surface availability policy", () => {
       { type: "profile.watchGhostCapsule", id: "c" },
       { type: "profile.downloadGhostArchive", id: "c" },
       { type: "profile.restoreGhostArchive", id: "j", revision: 1 },
-      { type: "profile.repairGhostCapsule", id: "c" },
       { type: "profile.publishReplay", id: "r" },
       { type: "leaderboards.watchReplay", id: "r" },
       { type: "chase.control", command: "toggle" },
