@@ -8,6 +8,7 @@ import type { RunDifficulty, RunMode } from "../../gameplay/run/session";
 import type { GhostVaultLibraryPort } from "../library/ghost-vault-library-controller";
 import { screenActionAvailable, type SurfaceAvailability } from "../../domain/surface-availability";
 import type { ScreenAction } from "../../presentation/screens/contracts";
+import type { RunExitScreen } from "../../domain/screen-actions";
 import { setMusicPreview, stepMusicPreview } from "../../audio/music/preview";
 import { requestNextSong } from "../../audio/music/music-source";
 
@@ -35,7 +36,8 @@ export interface ScreenActionBindingPorts {
   readonly chooseReserve: (index: number) => void;
   readonly chooseTier: (index: number) => void;
   readonly requestPointer: () => void;
-  readonly quitRun: () => void;
+  /** Ends the run as QUIT does and opens `next` (the main menu unless named); see the run adapter. */
+  readonly quitRun: (next?: RunExitScreen) => void;
   readonly revive: () => void;
   readonly endRun: () => void;
   readonly retryRun: () => void;
@@ -56,11 +58,10 @@ export interface ScreenActionBindingPorts {
 }
 
 export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) {
-  /** Ends the run from the quit confirm (the menu is the one screen that ends a run), then opens the run setup. */
-  const quitToSetup = (): void => {
-    ports.quitRun();
-    ports.setSetupSelection("mode", "campaign");
-    ports.setScreen("setup");
+  /** The one way out of a run: it ends as QUIT ends it, then `next` opens (the run setup with Adventure selected). */
+  const leaveRun = (next: RunExitScreen = "menu"): void => {
+    ports.quitRun(next);
+    if (next === "setup") ports.setSetupSelection("mode", "campaign");
   };
   return createScreenActionRouter({
     navigate: (action) => {
@@ -126,8 +127,7 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
       ports.startRun(run.mode, run.diff);
     },
     "run.quit": (action) => {
-      if (action.next === "setup") quitToSetup();
-      else ports.quitRun();
+      leaveRun(action.next);
     },
     "tutorial.continue": () => {
       ports.setSetupSelection("mode", "tutorial");
@@ -135,7 +135,7 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     },
     "tutorial.skip": () => {
       ports.skipTutorial();
-      quitToSetup();
+      leaveRun("setup");
     },
     "continue.revive": () => {
       ports.revive();

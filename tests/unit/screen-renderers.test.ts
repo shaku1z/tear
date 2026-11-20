@@ -12,7 +12,6 @@ import { buildMusicLibrary, publishMusicLibrary } from "../../src/audio/music/li
 import { setMusicProgressFacts } from "../../src/audio/music/music-source";
 import { progressFacts } from "../../src/domain/progress-facts";
 import { TEST_CHANNELS, index as musicIndex } from "./music-backend-harness";
-import { campaignDraftGuidance } from "../../src/app/run/run-screen-adapters";
 import { buildShopSnapshot, SHOP_LIST_TOP } from "../../src/presentation/shop-snapshot";
 import { DESKTOP } from "../../src/presentation/screens/codex-shop-metrics";
 import { CONFIG } from "../../src/config/game-config";
@@ -23,6 +22,13 @@ import {
   type ScreenActionBindingPorts,
 } from "../../src/app/interface/screen-action-bindings";
 import { createSurfaceAvailability } from "../../src/domain/surface-availability";
+import type { AppScreen } from "../../src/domain/screen-catalog";
+import {
+  campaignDraftGuidance,
+  createLiveRunScreenAdapters,
+  type RunScreenServices,
+  type RunScreenState,
+} from "../../src/app/run/run-screen-adapters";
 import { backControl, tabs, verticalMenu } from "../../src/presentation/screens/screen-primitives";
 import { keyboardLabel } from "../../src/domain/keyboard-bindings";
 
@@ -1601,17 +1607,34 @@ describe("release and engineering surface rendering", () => {
   });
 });
 
-describe("leaving the tutorial on purpose", () => {
-  it("walks SKIP TUTORIAL from the course pause to the run setup through allowed screens only", () => {
-    // The real screen rules: a screen change they do not allow throws, as it stops the live game.
+describe("leaving a run", () => {
+  /**
+   * A paused run with the real screen rules (a screen change they do not allow throws, as it stops
+   * the live game) and the real run adapter's way out of a run.
+   */
+  function pausedRun() {
     const app = new AppStateController(createSurfaceAvailability("engineering"));
     app.transition("playing");
     app.transition("paused");
+    const ended: string[] = [];
+    const run = createLiveRunScreenAdapters(
+      {
+        screen: () => app.screen,
+        setScreen: (screen: AppScreen) => void app.transition(screen),
+        run: () => ({ waveLog: [] }),
+      } as unknown as RunScreenState,
+      {
+        cinema: { active: false },
+        clearFinale: () => undefined,
+        terminateRun: (reason: string) => void ended.push(reason),
+      } as unknown as RunScreenServices,
+    );
     const kept = { skipped: false, mode: "" };
     const ports: Partial<ScreenActionBindingPorts> = {
       setScreen: (screen) => void app.transition(screen),
-      // Ending a run returns to the main menu, as the live run adapter does.
-      quitRun: () => void app.transition("menu"),
+      quitRun: (next) => {
+        run.quitRun(next);
+      },
       skipTutorial: () => {
         kept.skipped = true;
       },
@@ -1619,7 +1642,21 @@ describe("leaving the tutorial on purpose", () => {
         if (kind === "mode") kept.mode = id;
       },
     };
-    const dispatch = createLiveScreenActionBindings(ports as ScreenActionBindingPorts);
+    return { app, ended, kept, run, dispatch: createLiveScreenActionBindings(ports as ScreenActionBindingPorts) };
+  }
+
+  it("ends the run as QUIT does, from its pause or its confirm, then opens the named screen", () => {
+    for (const from of ["paused", "confirmquit"] as const)
+      for (const next of ["menu", "setup"] as const) {
+        const { app, ended, run } = pausedRun();
+        if (from === "confirmquit") app.transition("confirmquit");
+        run.quitRun(next);
+        expect({ from, next, screen: app.screen, ended }).toEqual({ from, next, screen: next, ended: ["quit"] });
+      }
+  });
+
+  it("walks SKIP TUTORIAL from the course pause to the run setup through allowed screens only", () => {
+    const { app, ended, kept, dispatch } = pausedRun();
     const controller = new TutorialController(CONFIG);
     controller.start(1600);
     const drawn = (): ScreenControl[] => {
@@ -1643,7 +1680,29 @@ describe("leaving the tutorial on purpose", () => {
     }
     expect(app.screen).toBe("setup");
     expect(kept).toEqual({ skipped: true, mode: "campaign" });
+    expect(ended).toEqual(["quit"]);
     // Skipping ends the run as MAIN MENU > QUIT does: through the confirm, never from the pause.
     expect(pressed).toEqual(["paused: MAIN MENU", "confirmquit: SKIP TUTORIAL"]);
+  });
+
+  it("starts a run from the finished course's pause, with no confirm, through allowed screens only", () => {
+    const { app, ended, kept, dispatch } = pausedRun();
+    const controller = new TutorialController(CONFIG);
+    controller.start(1600);
+    const controls: ScreenControl[] = [];
+    createScreenRenderers(createControlContext(controls)).paused({
+      id: "paused",
+      abilities: [],
+      progress: [],
+      tutorial: { ...controller.session(), phase: "free-practice", courseCompleted: true },
+    });
+    const start = controls.find((control) => control.label === "START A RUN");
+    expect(start?.action).toEqual({ type: "run.quit", next: "setup" });
+    if (start !== undefined) dispatch(start.action);
+    expect({ screen: app.screen, mode: kept.mode, ended }).toEqual({
+      screen: "setup",
+      mode: "campaign",
+      ended: ["quit"],
+    });
   });
 });
