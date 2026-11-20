@@ -70,8 +70,6 @@ export const FIRST_RUN_PLAY_LABEL = "START HERE · TUTORIAL";
  */
 export function tutorialPlayLabel(next: number, count: number): string {
   if (next <= 1) return FIRST_RUN_PLAY_LABEL;
-  return next > count
-    ? "CONTINUE TUTORIAL · LAST STEP"
-    : `CONTINUE TUTORIAL · LESSON ${String(next)} OF ${String(count)}`;
+  return next > count ? "TUTORIAL · LAST STEP" : `TUTORIAL · LESSON ${String(next)} OF ${String(count)}`;
 }
 export const FIRST_RUN_SETUP_GUIDANCE = "New here? The tutorial takes about three minutes.";

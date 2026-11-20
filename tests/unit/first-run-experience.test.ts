@@ -64,8 +64,10 @@ describe("first-run guidance from existing profile facts", () => {
 
   it("words PLAY by where the tutorial continues", () => {
     expect(tutorialPlayLabel(1, 13)).toBe(FIRST_RUN_PLAY_LABEL);
-    expect(tutorialPlayLabel(5, 13)).toBe("CONTINUE TUTORIAL · LESSON 5 OF 13");
-    expect(tutorialPlayLabel(14, 13)).toBe("CONTINUE TUTORIAL · LAST STEP");
+    expect(tutorialPlayLabel(5, 13)).toBe("TUTORIAL · LESSON 5 OF 13");
+    expect(tutorialPlayLabel(14, 13)).toBe("TUTORIAL · LAST STEP");
+    // The desktop PLAY button shows 26 characters of its spaced sub-line before fitting cuts it.
+    for (let next = 1; next <= 14; next += 1) expect(tutorialPlayLabel(next, 13).length).toBeLessThanOrEqual(26);
   });
 
   it("nudges a brand-new profile to the tutorial and stops once any history exists", () => {
@@ -121,7 +123,7 @@ describe("first-run guidance from existing profile facts", () => {
     expect(menu({ next: 1, count: 13 }, "tutorial").playSub).toBe(FIRST_RUN_PLAY_LABEL);
     expect(menu({ next: 1, count: 13 }, "tutorial").playTutorial).toBe(true);
     // Tutorial-first holds whatever mode setup last had selected.
-    expect(menu({ next: 6, count: 13 }, "endless").playSub).toBe("CONTINUE TUTORIAL · LESSON 6 OF 13");
+    expect(menu({ next: 6, count: 13 }, "endless").playSub).toBe("TUTORIAL · LESSON 6 OF 13");
     expect(menu(undefined, "tutorial").playSub).toBeUndefined();
     expect(menu(undefined, "tutorial").playTutorial).toBeUndefined();
 
