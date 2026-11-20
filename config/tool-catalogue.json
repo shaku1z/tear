@@ -188,7 +188,7 @@
       "duration": "long"
     },
     "playtest": {
-      "purpose": "Plays the real game headless: `bosses` a table per fight, `sweep` every weapon on Easy and Normal (queue it), `waves` a row per wave of a stage",
+      "purpose": "Plays the real game headless: `bosses` and `sweep` boss fights, `waves` a stage's waves, `runs` whole runs from wave 1 (queue sweep and runs)",
       "effects": [
         "read-only"
       ],
@@ -1763,7 +1763,7 @@
       ]
     },
     "scripts/playtest.mjs": {
-      "purpose": "Playtest command: loads src/playtest through Vite, plays boss fights or waves headless, in worker processes when many; --json writes them",
+      "purpose": "Playtest command: loads src/playtest through Vite, plays boss fights, waves or runs headless, in worker processes when many; --json writes them",
       "effects": [
         "read-only"
       ],
