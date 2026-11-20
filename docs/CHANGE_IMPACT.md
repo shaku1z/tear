@@ -15,9 +15,9 @@ names. This page reports today's behaviour; it does not change it.
 
 ## Evidence selection
 
-CI does not run it on a pull request. `pnpm tearbench ci --files-from <file>` runs it by hand,
-and the weekly endurance job in `.github/workflows/tearbench-program.yml` runs it on the week's
-changes. It matches each file against the prefixes in `src/tearbench/evidence-routes.json`
+No workflow runs it; `pnpm tearbench ci --files-from <file>` runs it by hand. Over the whole
+history it selects nothing that a group of `config/checks.json` does not already run, except the
+scripted-agent autonomy journey, which the weekly group runs. It matches each file against the prefixes in `src/tearbench/evidence-routes.json`
 (`evidenceForDiff` in `scripts/tearbench.mjs`). A prefix ending in `/` or `-` matches by start;
 anything else must equal the path. Every matched route contributes its scenarios, Graveyard
 cases, journey checkpoint, interaction matrices and build targets.
