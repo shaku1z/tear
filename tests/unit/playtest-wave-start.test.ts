@@ -9,7 +9,8 @@ import {
   type ProductionHeadlessEnvironment,
 } from "../../src/playtest/headless/production-headless-environment";
 import { requireProductionHeadlessScenario } from "../../src/playtest/headless/production-headless-scenario";
-import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION, type TearScenarioV1 } from "../../src/tearbench/contracts";
+import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "../../src/gameplay/snapshot/snapshot-contract";
+import type { TearScenarioV1 } from "../../src/tearbench/contracts";
 
 type Start = Readonly<{ mode: string; wave?: number; stage?: string }>;
 

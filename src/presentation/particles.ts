@@ -1,120 +1,12 @@
 // ------- lightweight FX: sparks + shockwave rings + shards (color-aware) -------
 import type { BurstKind } from "../domain/cosmetic-types";
 import { clamp } from "../domain/geometry";
+import type {
+  ParticleShape as Particle,
+  EffectPriority,
+  ParticleViewRect as ViewRect,
+} from "../gameplay/snapshot/particle-checkpoint";
 import type { CosmeticLooks } from "./cosmetic-styles";
-
-interface ViewRect {
-  left: number;
-  top: number;
-  right: number;
-  bottom: number;
-}
-export type EffectPriority = "cosmetic" | "combat" | "hazard";
-interface ParticleBase {
-  type: string;
-  x: number;
-  y: number;
-  life: number;
-  max: number;
-  col?: string | null;
-  priority?: EffectPriority;
-}
-interface SparkParticle extends ParticleBase {
-  type: "spark";
-  vx: number;
-  vy: number;
-}
-interface RingParticle extends ParticleBase {
-  type: "ring";
-  r: number;
-}
-interface RibbonParticle extends ParticleBase {
-  type: "ribbon";
-  x1: number;
-  y1: number;
-}
-interface EdgeTraceParticle extends ParticleBase {
-  type: "edgeTrace";
-  x1: number;
-  y1: number;
-  thickness: number;
-}
-interface ContactMarkParticle extends ParticleBase {
-  type: "contactMark";
-  tx: number;
-  ty: number;
-  length: number;
-  thickness: number;
-}
-interface GroundPulseParticle extends ParticleBase {
-  type: "groundPulse";
-  nx: number;
-  ny: number;
-  halfWidth: number;
-}
-interface MuzzleWedgeParticle extends ParticleBase {
-  type: "muzzleWedge";
-  dx: number;
-  dy: number;
-  length: number;
-  halfWidth: number;
-}
-interface ShardParticle extends ParticleBase {
-  type: "shard";
-  vx: number;
-  vy: number;
-  rot: number;
-  spin: number;
-  size: number;
-}
-interface FlashParticle extends ParticleBase {
-  type: "flash";
-  r: number;
-}
-interface ShockParticle extends ParticleBase {
-  type: "shock";
-  r: number;
-  vr: number;
-  thick: number;
-}
-interface SmokeParticle extends ParticleBase {
-  type: "smoke";
-  vx: number;
-  vy: number;
-  size: number;
-}
-interface GhostParticle extends ParticleBase {
-  type: "ghost";
-  hw: number;
-  hh: number;
-}
-interface EmberParticle extends ParticleBase {
-  type: "ember";
-  vx: number;
-  vy: number;
-  size: number;
-}
-interface DripParticle extends ParticleBase {
-  type: "drip";
-  vx: number;
-  vy: number;
-  size: number;
-}
-type Particle =
-  | SparkParticle
-  | RingParticle
-  | RibbonParticle
-  | EdgeTraceParticle
-  | ContactMarkParticle
-  | GroundPulseParticle
-  | MuzzleWedgeParticle
-  | ShardParticle
-  | FlashParticle
-  | ShockParticle
-  | SmokeParticle
-  | GhostParticle
-  | EmberParticle
-  | DripParticle;
 
 export type ParticleEmissionDisposition = "emitted" | "culled" | "budget";
 

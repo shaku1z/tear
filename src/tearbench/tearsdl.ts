@@ -3,8 +3,9 @@ import { stableVerificationHash } from "../domain/hash";
 import { BOSS_REGISTRY, DIFFICULTY_REGISTRY, RUN_MODE_REGISTRY, WEAPON_REGISTRY } from "./registries";
 import { bossDefinition } from "../gameplay/run/boss-definitions";
 import { STAGE_IDS } from "../gameplay/stages";
-import type { TearScenarioV1, TearSnapshotV1, TearStateClass } from "./contracts";
-import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "./contracts";
+import type { TearScenarioV1 } from "./contracts";
+import type { TearSnapshotV1, TearStateClass } from "../gameplay/snapshot/snapshot-contract";
+import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "../gameplay/snapshot/snapshot-contract";
 import { synthesizeProgression } from "./progression-ledger";
 import { evaluateTearStateValidity } from "./state-validity";
 

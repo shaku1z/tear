@@ -5,7 +5,8 @@ import type {
   TearAgentProfileId,
   TearBladeManeuver,
 } from "../agents/contracts";
-import type { TearObservedActorV1, TearObservationClass } from "./contracts";
+import type { TearObservedActorV1 } from "./contracts";
+import type { TearObservationClass } from "../gameplay/snapshot/snapshot-contract";
 
 export type TearAgentWatchdogKind =
   | "transition-stall"

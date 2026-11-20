@@ -2,14 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import { stableVerificationHash } from "../../src/domain/hash";
 import { captureLiveStateSetupSnapshot } from "../../src/tearbench/live-runtime-snapshots";
+import { CODEC_REGISTRY, type TearCodecId } from "../../src/gameplay/snapshot/codec-ids";
 import {
-  CODEC_REGISTRY,
   createDefaultStateCodecRegistry,
-  type TearBuildIdentityV1,
-  type TearCodecId,
   type TearCodecValue,
   type TearCodecWorld,
-} from "../../src/tearbench";
+} from "../../src/gameplay/snapshot/state-codec";
+import type { TearBuildIdentityV1 } from "../../src/gameplay/snapshot/snapshot-contract";
 
 type StaticBuild = Omit<TearBuildIdentityV1, "configHash">;
 type UnitConfiguration = Readonly<{ rulesetVersion: string; values: Readonly<{ gravity: number }> }>;

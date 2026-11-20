@@ -1,5 +1,5 @@
 import { isRecord } from "../../domain/records";
-import type { TearProvenanceV1 } from "../contracts";
+import type { TearProvenanceV1 } from "../../gameplay/snapshot/snapshot-contract";
 import type { StateSetupEvaluation, StateSetupReport, StateSetupValueDiff } from "../state-editor-model";
 import { diffStateSetupValues, evaluateStateSetupSource } from "../state-editor-model";
 import type { TearSdlDocumentV1, TearSdlResolved } from "../tearsdl";

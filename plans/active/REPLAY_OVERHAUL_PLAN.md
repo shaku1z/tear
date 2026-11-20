@@ -386,7 +386,7 @@ with the count of `src` importers and test files that import it. The target colu
 | `replay-cut-list.ts` | hidden; 3, 1 | merge into clip export as one tick range (PR 7) | The Replay Editor's cut list |
 | `replay-world.ts` | players; 15, 4 | merge into `watch.ts` (world port) (PR 7) | World, session and practice types |
 | `run-dna-theater.ts` | players; 2, 3 | delete (PR 8) | The RUN DNA panel went in PR 2; CAREER still reads the projection until it folds into the list |
-| `seed-race-contract.ts` | hidden (seed race); 9, 4 | merge into `record.ts` (race declaration in `run.start`) and `race.ts` (PR 9) | Seed race stays |
+| `seed-race-contract.ts` | hidden (seed race); 9, 4 | move to `gameplay/run/` (PR 3), because the codec validation reads it; merge into `record.ts` (race declaration in `run.start`) and `race.ts` (PR 9) | Seed race stays |
 | `seed-race-decisions.ts` | hidden; 5, 2 | merge into `race.ts` (PR 9) | Same |
 | `streaming-recorder.ts` | players; 4, 7 | merge into `recorder.ts` (PR 5) | Keep its chunk-commit order (#286) |
 | `theater-open-result.ts` | players; 5, 2 | merge into `watch.ts` (open result and refusal reasons) (PR 7) | Plain refusal reasons stay |
@@ -458,12 +458,16 @@ in step with the playtest plan (coordination 3).
 | --- | --- | --- | --- |
 | `production-replay-composition.ts` | players; 13, 24 | move to `app/world/detached/replay-composition.ts` (PR 4) | 34,925 characters, over the size rule; split along its real seams in the move PR only if the code budget needs it |
 | `production-world-factory.ts` | players; 11, 16 | move to `app/world/detached/world-factory.ts` (PR 4) | Already in the `app.world-construction-owners` role |
-| `production-combat-phases.ts`, `production-combat-simulation.ts`, `production-wave-reward-runtime.ts`, `production-run-outcome-runtime.ts`, `production-finale-runtime.ts`, `particle-presentation-checkpoint.ts`, `particle-presentation-state.ts`, `ui-presentation-checkpoint.ts`, `live-runtime-snapshots.ts` | players (through the replay world) | move to `app/world/detached/` (PR 4) | The runtimes the detached world builds; the PR lists the exact set from the import graph |
+| `production-combat-phases.ts`, `production-combat-simulation.ts`, `production-wave-reward-runtime.ts`, `production-run-outcome-runtime.ts`, `production-finale-runtime.ts`, `particle-presentation-state.ts`, `live-runtime-snapshots.ts` | players (through the replay world) | move to `app/world/detached/` (PR 4) | The runtimes the detached world builds; the PR lists the exact set from the import graph |
 | `state-codecs.ts` | players; 17, 6 | move to `gameplay/snapshot/state-codec.ts` (PR 3) | Snapshots for the seek cache, practice, State Setup and playtest |
 | `environment-codec.ts` | players; 8, 10 | move to `gameplay/snapshot/environment-codec.ts` (PR 3) | Same |
-| `detached-world-hydrator.ts` | players; 4, 1 | move to `gameplay/snapshot/world-hydrator.ts` (PR 3) | Same |
-| `reward-codec-hydrator.ts` | players; 2, 2 | move to `gameplay/snapshot/reward-hydrator.ts` (PR 3) | Same |
-| `live-codec-validation.ts` | players; 1, 1 | move to `gameplay/snapshot/validation.ts` (PR 3); its one `ghost` import (seed race state) is passed in | Same |
+| `detached-world-hydrator.ts` | players; 4, 1 | move to `app/world/detached/world-hydrator.ts` (PR 4) | It restores presentation state (particles, HUD, tutorial), which `gameplay` may not import |
+| `reward-codec-hydrator.ts` | players; 2, 2 | move to `app/world/detached/reward-hydrator.ts` (PR 4) | Same |
+| `live-codec-validation.ts` | players; 1, 1 | move to `gameplay/snapshot/validation.ts` (PR 3); its one `ghost` import (seed race state) moves to `gameplay/run/` with `seed-race-contract.ts` | Same |
+| `arena-slot-references.ts`, `source-void-history-references.ts` | players (through the codecs) | move to `gameplay/snapshot/` (PR 3) | Part of the codec import cycle |
+| `particle-presentation-checkpoint.ts`, `ui-presentation-checkpoint.ts` | players (through the codecs) | move to `gameplay/snapshot/particle-checkpoint.ts` and `ui-checkpoint.ts` (PR 3) | The codec validation parses them; the particle shapes move with them and `presentation/particles.ts` imports them, so there is one definition |
+| `contracts.ts` (the snapshot part) | players; 37 | `TearSnapshotV1`, its provenance, lineage and hash types and the environment observation move to `gameplay/snapshot/snapshot-contract.ts` (PR 3), with no re-export | The rest of `contracts.ts` is TearBench's own |
+| `registries.ts` (the codec ids and `createStableRegistry`) | players | the codec ids go to `gameplay/snapshot/codec-ids.ts` and `createStableRegistry` to `domain/stable-registry.ts` (PR 3); the environment State Setup factory ids go to `gameplay/snapshot/environment-codec.ts` | The other registries stay and build on `createStableRegistry` |
 | `authored-environment-codec-validation.ts` | players; 3, 3 | move to `gameplay/snapshot/authored-environment-validation.ts` (PR 3) | Same |
 | `production-replay-bootstrap-check.ts` | dev; 1, 0 | stays with the headless environment (playtest stage 5) | Checks headless checkpoints, not player replays |
 | `progression-replay.ts` | players (State Setup); 4, 0 | stays with State Setup (playtest-tool's rename) | Replays a progression ledger, not a run |
@@ -550,7 +554,7 @@ because it reaches into vault maintenance and custody, not the Theater.
 - **The next one:** A new stage object's state is one codec entry, as today.
 - **Cause:** The codecs grew inside TearBench although players need them.
 - **Measured:** `pnpm test:determinism` green; architecture baseline edge count before and after.
-- **Removed:** Six `src/tearbench` files leave; `tearbench` edges into them go.
+- **Removed:** Eight `src/tearbench` files leave (the four codec files, the two reference files and the two checkpoint parsers), with the snapshot part of `contracts.ts` and the codec ids; `seed-race-contract.ts` leaves `src/ghost`. The two hydrators wait for PR 4, because they restore presentation state.
 
 ### PR 4: move the detached world to `src/app/world/detached/` (no behaviour change)
 
@@ -802,3 +806,4 @@ writes are closed. Deploying the rules is the owner's step.
 - 2026-11-20 PR 1 (`codex/replay-hidden-features`): Boss Memory, the linked-pair download, the preservation corpus and both barrels removed. Importing an existing linked file stays until PR 6. PR 4's layer shape agreed with the lead: playtest-tool's headless move lands first; the narrowest `playtest -> app/world/detached` edge; `tearbench -> app` never; the baseline only shrinks.
 - 2026-11-20 PR 2 (`codex/replay-extras`): COMPARE, recorded challenges (and CAREER's CHALLENGE), the Theater's RUN DNA panel and the finale companion removed; practice from a replay stays. The Run DNA calculation and recording stay until PR 8 because CAREER reads them. REPAIR split into PR 2b because it reaches into vault maintenance and custody. A linked file still imports both members, but its companion no longer opens. The architecture baseline went from 44 to 37 edges.
 - 2026-11-20 PR 2b (`codex/replay-repair`): REPAIR removed, with the repair-copy writer, `ghost-doctor.ts` and `corrupt-capsule-records.ts`. The health scan and index rebuild moved into `vault-maintenance.ts`. A damaged capsule shows CAN'T PLAY; deleting it waits for PR 6, because the Vault has no delete today.
+- 2026-11-20 PR 3 (`codex/replay-snapshot`): the snapshot codecs, the snapshot contract, the codec and factory ids, the checkpoint parsers and `seed-race-contract.ts` moved to `src/gameplay/snapshot/` and `src/gameplay/run/`, as agreed with the lead and playtest-tool. The two hydrators move in PR 4. The layer allowlist went from 37 to 32 edges.

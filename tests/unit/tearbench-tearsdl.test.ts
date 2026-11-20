@@ -8,8 +8,8 @@ import {
   parseTearSdl,
   resolveTearSdl,
   type TearSdlDocumentV1,
-  type TearSnapshotV1,
 } from "../../src/tearbench";
+import type { TearSnapshotV1 } from "../../src/gameplay/snapshot/snapshot-contract";
 
 const base: TearSdlDocumentV1 = {
   format: "tearsdl",

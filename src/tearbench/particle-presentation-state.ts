@@ -5,7 +5,7 @@ import {
   type ParticlePresentationCheckpoint,
   type ParticlePresentationPolicy,
   type PreparedParticlePresentationRestore,
-} from "./particle-presentation-checkpoint";
+} from "../gameplay/snapshot/particle-checkpoint";
 import type { CosmeticEmissionRandom } from "../domain/cosmetic-emission-random";
 
 export interface LiveParticlePresentationState {

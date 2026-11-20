@@ -1,7 +1,8 @@
 import type { CommandEnvelope } from "../domain/envelopes";
 import type { GameAction } from "../input/game-action";
 import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
-import type { TearScenarioV1, TearSnapshotV1 } from "./contracts";
+import type { TearScenarioV1 } from "./contracts";
+import type { TearSnapshotV1 } from "../gameplay/snapshot/snapshot-contract";
 import type { ProductionC27ATrace } from "./production-c27a-matrix";
 
 export interface TutorialDriverObservation {
