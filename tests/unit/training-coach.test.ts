@@ -97,16 +97,16 @@ describe("training coach", () => {
     const coach = new TrainingCoach();
     const marks = coach.step(frame({ playground: { runKey: run } }));
     expect(marks[0]?.mark).toMatchObject({ id: "playground:help", tone: "info" });
-    expect(marks[0]?.mark.text).toBe("TAB menu  ·  U abilities  ·  1–8 spawn");
+    expect(marks[0]?.mark.text).toBe("TAB menu  ·  1 heal  ·  2 clear  ·  3 dummy  ·  4 repeat");
     let later = marks;
     for (let elapsed = 0; elapsed < COACH_HELP_SECONDS + 1; elapsed += 1)
       later = coach.step(frame({ deltaSeconds: 1, playground: { runKey: run } }));
     expect(ids(later)).toEqual([]);
     expect(ids(coach.step(frame({ playground: { runKey: run, arena: 2 } })))).toEqual(["playground:help"]);
-    // Touch and controller have no shortcuts: the help points at pause, which opens the menu.
-    for (const inputMode of ["touch", "gamepad"] as const) {
-      const help = new TrainingCoach().step(frame({ inputMode, playground: { runKey: run } }))[0]?.mark;
-      expect(help).toMatchObject({ id: "playground:help", text: "Pause for the Playground menu.", keys: ["PAUSE"] });
-    }
+    // A controller names its View layer; touch has no shortcuts, so the help points at pause.
+    const pad = new TrainingCoach().step(frame({ inputMode: "gamepad", playground: { runKey: run } }))[0]?.mark;
+    expect(pad?.text).toBe("VIEW menu  ·  VIEW + ↑ heal  ·  VIEW + ↓ clear  ·  VIEW + ← dummy  ·  VIEW + → repeat");
+    const touch = new TrainingCoach().step(frame({ inputMode: "touch", playground: { runKey: run } }))[0]?.mark;
+    expect(touch).toMatchObject({ id: "playground:help", text: "Pause for the Playground menu.", keys: ["PAUSE"] });
   });
 });
