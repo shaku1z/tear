@@ -5,6 +5,8 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  awaitBatchRun,
+  batchReadVerdict,
   BATCH_BRANCH,
   batchBranch,
   chooseMembers,
@@ -240,5 +242,71 @@ describe("pnpm merge:batch", () => {
       expect(record(directory, `7:${"7".repeat(40)}`).status).toBe(1);
       expect(record(directory, "7:nope").status).toBe(1);
     });
+  });
+});
+
+describe("reading the batch run before --merge", () => {
+  const main = "6814d997dbeafc0e69ddc8a54efec02573ae354b";
+  const note = `main=${main} members=296:${"5".repeat(40)},282:${"6".repeat(40)}`;
+  const run = (status, conclusion) => ({ id: 44694875420, status, conclusion });
+
+  it("merges only on a passed run with its note, and names what it read otherwise", () => {
+    expect(batchReadVerdict({ latest: run("completed", "success"), note })).toMatchObject({
+      verdict: "ready",
+      main,
+      members: `296:${"5".repeat(40)},282:${"6".repeat(40)}`,
+    });
+    // The partial reads GitHub can serve right after a run ends: still running, or no annotation yet.
+    expect(batchReadVerdict({ latest: run("in_progress", null), note: "" })).toEqual({
+      verdict: "wait",
+      said: "run 44694875420: in_progress, conclusion none, no batch note",
+    });
+    expect(batchReadVerdict({ latest: run("completed", "success"), note: "" })).toEqual({
+      verdict: "wait",
+      said: "run 44694875420: completed, conclusion success, no batch note",
+    });
+    expect(batchReadVerdict({ latest: run("completed", "failure"), note: "" })).toEqual({
+      verdict: "refuse",
+      said: "run 44694875420: completed, conclusion failure, no batch note",
+    });
+    expect(batchReadVerdict({ latest: undefined, note: "" })).toEqual({ verdict: "refuse", said: "no Validate run" });
+  });
+
+  it("waits through a partial read and merges on the next full one", () => {
+    const reads = [
+      { latest: run("completed", "success"), note: "" },
+      { latest: run("completed", "success"), note },
+    ];
+    let clock = 0;
+    const waits = [];
+    const result = awaitBatchRun("codex/batch-20261120t072326z", {
+      read: () => reads.shift(),
+      now: () => clock,
+      sleep: (ms) => (clock += ms),
+      log: (line) => waits.push(line),
+    });
+    expect(result.verdict).toBe("ready");
+    expect(reads).toEqual([]);
+    expect(waits).toEqual([
+      "waiting for the batch run on codex/batch-20261120t072326z: run 44694875420: completed, conclusion success, no batch note",
+    ]);
+  });
+
+  it("gives up after the wait, naming the last read, and refuses a failed run without waiting", () => {
+    let clock = 0;
+    const options = { now: () => clock, sleep: (ms) => (clock += ms), log: () => undefined };
+    expect(() =>
+      awaitBatchRun("codex/batch-x", { ...options, read: () => ({ latest: run("completed", "success"), note: "" }) }),
+    ).toThrow(
+      "the batch run on codex/batch-x did not report a pass with its members within 180 s; last read run 44694875420: completed, conclusion success, no batch note",
+    );
+    expect(clock).toBeLessThanOrEqual(180_000);
+    clock = 0;
+    expect(() =>
+      awaitBatchRun("codex/batch-x", { ...options, read: () => ({ latest: run("completed", "cancelled"), note }) }),
+    ).toThrow(
+      "the batch run on codex/batch-x did not pass: run 44694875420: completed, conclusion cancelled, a batch note",
+    );
+    expect(clock).toBe(0);
   });
 });
