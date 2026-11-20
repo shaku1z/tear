@@ -279,3 +279,15 @@ request 305 and the owner's reference illustration:
 ## Log
 
 - 2026-11-20 Audit and this plan.
+- 2026-11-20 Slice 1 built: an Aurora Track lies on a named surface and raises the top speed of whoever
+  travels its way. Measured on the production player: 413 px in one second off the road, 606 px along it
+  (1.47 times), 413 px against it. Where the slice left this plan, and why:
+  - The raise goes through a new `fieldSpeed` multiplier on the player and the enemy base, not
+    `moveBoost`: the combat step writes `moveBoost` every tick from upgrades, so a field writing it too
+    would be a second owner.
+  - A road carries the player and enemies only. A thrown blade and deflected shots are no longer
+    carried: a road changes how fast someone can run, and neither runs.
+  - The warning before a road wakes is the road's own light (a dashed, paler band), not the shared
+    tell layer. That layer marks a threat with a time to act; a road waking is not one.
+  - The audit's viewport item is closed without a change: `view.w` and `view.h` never change at run time.
+  - The drawing reads the environment presentation snapshot directly; no new facts module was needed.

@@ -19,7 +19,7 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 | [Verdant Sanctum visuals](#verdant-visuals) | In progress | The owner judges the moving stage; then Pale Traverse from a recipe, with its own live list. | Judge the drawn look against the reference illustration: the owner's taste decides visual work. |
 | [Verdant Sanctum gameplay](#verdant-gameplay) | In progress | Close Verdant: the owner plays the waves and the Rootbinder; then Pale. | Playtest the Rootbound in all three phases. |
 | [Tutorial and Playground experience](#training-ux) | In progress | One source of names for the drilled weapon moves (this pull request, then its floaters), then the release tutorial flow and menu fixes. | — |
-| [Pale Traverse rework](#pale-traverse) | In progress | Slice 1: rebuild the Aurora Tracks as roads on a surface that raise top speed. | — |
+| [Pale Traverse rework](#pale-traverse) | In progress | Slice 2: rebuild the Rimehound on the shared layers. | — |
 | [Player wiki](#wiki) | In progress | Review the move pull request, then confirm the Cloudflare secret question and run the first wiki deploy. | Archive shaku1z/tear-wiki after the first deploy from this repository. |
 | [Repository structure and workflow](#repository-structure) | In progress | After the hooks pull request merges, run pnpm setup:hooks in the canonical checkout on main (scripts/governance/README.md). | — |
 | [Playtest tool](#playtest-tool) | Stage 2 under way: stage 1 is done (pnpm playtest bosses and sweep); pnpm playtest waves opens any Adventure wave directly and prints a row per wave of a stage | pnpm playtest runs (full runs: where they end, time and health cost per wave), then the enemies report, the coverage list and --compare. | — |
@@ -80,9 +80,9 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 ### Pale Traverse rework
 
-**In progress.** Pale Traverse stays a Playground preview and is not published. Its gameplay is being rebuilt the way Verdant's was. The audit found that the Aurora Tracks touch nobody standing on a platform or the floor, the White Hart gives no warning the game can check and plays the same fight on every seed, and none of Pale uses the shared layers. The plan is eight pull requests: the tracks, the Rimehound, routes in the boss move layer, the White Hart one phase at a time, the waves, then leftovers. The earlier work on the unmerged branch codex/pale-traverse-r4 is reference only.
+**In progress.** Pale Traverse stays a Playground preview and is not published. Its gameplay is being rebuilt the way Verdant's was. The audit found that the Aurora Tracks touch nobody standing on a platform or the floor, the White Hart gives no warning the game can check and plays the same fight on every seed, and none of Pale uses the shared layers. The plan is eight pull requests: the tracks, the Rimehound, routes in the boss move layer, the White Hart one phase at a time, the waves, then leftovers. The first is built: an Aurora Track is a road of light lying on a platform or the floor that raises the top speed of whoever runs its way (measured 1.47 times the distance in a second) and changes nothing for anyone standing on it or going against it. The earlier work on the unmerged branch codex/pale-traverse-r4 is reference only.
 
-- Next: Slice 1: rebuild the Aurora Tracks as roads on a surface that raise top speed.
+- Next: Slice 2: rebuild the Rimehound on the shared layers.
 - Owner action: none
 - Evidence: [plans/active/PALE_GAMEPLAY_REBUILD.md](../plans/active/PALE_GAMEPLAY_REBUILD.md), [plans/active/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md)
 
