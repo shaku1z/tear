@@ -1,5 +1,5 @@
 import { isRecord } from "../domain/records";
-import type { TearStateClass } from "./contracts";
+import type { TearStateClass } from "../gameplay/snapshot/snapshot-contract";
 
 export interface TearStateValidationIssue {
   readonly path: string;

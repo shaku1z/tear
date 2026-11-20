@@ -68,7 +68,7 @@
         "src/gameplay/environment/field-runtime.ts",
         "src/gameplay/environment/environment-events.ts",
         "src/gameplay/environment/presentation-snapshot.ts",
-        "src/tearbench/environment-codec.ts"
+        "src/gameplay/snapshot/environment-codec.ts"
       ]
     },
     "environment.neutral-schema": {
@@ -81,9 +81,10 @@
         "src/gameplay/environment/environment-feature-ports.ts",
         "src/gameplay/environment/environment-events.ts",
         "src/gameplay/environment/presentation-snapshot.ts",
-        "src/tearbench/environment-codec.ts",
+        "src/gameplay/snapshot/environment-codec.ts",
         "src/tearbench/contracts.ts",
-        "src/tearbench/state-codecs.ts",
+        "src/gameplay/snapshot/snapshot-contract.ts",
+        "src/gameplay/snapshot/state-codec.ts",
         "src/gameplay/progression/environment-telemetry.ts"
       ]
     },

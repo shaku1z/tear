@@ -1,9 +1,5 @@
-import type {
-  TearNavigationObservationV1,
-  TearObservedBoundsV1,
-  TearObservedHazardV1,
-  TearObservedSurfaceV1,
-} from "./contracts";
+import type { TearNavigationObservationV1, TearObservedHazardV1, TearObservedSurfaceV1 } from "./contracts";
+import type { TearObservedBoundsV1 } from "../gameplay/snapshot/snapshot-contract";
 import type { LiveObservationPlatform } from "./live-runtime-contracts";
 
 function finite(value: number, label: string): number {

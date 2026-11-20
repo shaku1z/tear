@@ -1,7 +1,7 @@
-import { asRecord } from "../domain/records";
-import { stableVerificationHash } from "../domain/hash";
-import { parseFinaleBinding } from "../gameplay/campaign/finale-binding";
-import type { TearCodecWorld, TearCodecIssue } from "./state-codecs";
+import { asRecord } from "../../domain/records";
+import { stableVerificationHash } from "../../domain/hash";
+import { parseFinaleBinding } from "../campaign/finale-binding";
+import type { TearCodecWorld, TearCodecIssue } from "./state-codec";
 
 /** Retired Source geometry remains run-owned data, never additional collision actors. */
 export function sourceVoidHistoryReferences(

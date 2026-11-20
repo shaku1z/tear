@@ -13,37 +13,7 @@ import {
   type EnvironmentObjectKind,
 } from "../gameplay/environment/environment-object-kinds";
 import { WEAPON_IDS as GAME_WEAPON_IDS, type WeaponId } from "../gameplay/weapon-selection";
-
-const STABLE_ID_PATTERN = /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/;
-
-export interface StableRegistry<TId extends string> {
-  readonly ids: readonly TId[];
-  has(value: string): value is TId;
-  assert(value: string): TId;
-}
-
-export function createStableRegistry<const TIds extends readonly string[]>(
-  label: string,
-  ids: TIds,
-): StableRegistry<TIds[number]> {
-  const seen = new Set<string>();
-  for (const id of ids) {
-    if (!STABLE_ID_PATTERN.test(id)) throw new TypeError(`${label} contains invalid stable id: ${id}`);
-    if (seen.has(id)) throw new TypeError(`${label} contains duplicate stable id: ${id}`);
-    seen.add(id);
-  }
-  const frozen = Object.freeze([...ids]);
-  return Object.freeze({
-    ids: frozen,
-    has(value: string): value is TIds[number] {
-      return seen.has(value);
-    },
-    assert(value: string): TIds[number] {
-      if (!seen.has(value)) throw new RangeError(`unknown ${label} id: ${value}`);
-      return value;
-    },
-  });
-}
+import { createStableRegistry } from "../domain/stable-registry";
 
 /** Canonical scenario capabilities are owned here, not inferred from catalog prose. */
 export const GAMEPLAY_SCENARIO_SUBJECT_IDS = Object.freeze([
@@ -267,25 +237,6 @@ export type TearStageId = StageId;
 export const UPGRADE_IDS = GAME_UPGRADE_IDS;
 export const UPGRADE_REGISTRY = createStableRegistry("upgrade", UPGRADE_IDS);
 export type TearUpgradeId = (typeof UPGRADE_IDS)[number];
-
-export const CODEC_IDS = Object.freeze([
-  "tear.player.v1",
-  "tear.blade.v1",
-  "tear.run.v1",
-  "tear.world.v1",
-  "tear.enemy.v1",
-  "tear.boss.v1",
-  "tear.projectile.v1",
-  "tear.platform.v1",
-  "tear.hazard.v1",
-  "tear.ui.v1",
-  "tear.reward.v1",
-  "tear.configuration.v1",
-  "tear.rng.v1",
-  "tear.cinematic.v1",
-] as const);
-export const CODEC_REGISTRY = createStableRegistry("codec", CODEC_IDS);
-export type TearCodecId = (typeof CODEC_IDS)[number];
 
 export const INVARIANT_IDS = Object.freeze([
   "runtime.finite-state",

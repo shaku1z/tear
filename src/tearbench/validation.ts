@@ -4,20 +4,22 @@ import { normalizeGameAction } from "../input/game-action";
 import { bossDefinition } from "../gameplay/run/boss-definitions";
 import type {
   GhostRangeV1,
-  TearBuildIdentityV1,
   TearContractValidationIssue,
   TearContractValidationResult,
   TearFailureArtifactV1,
-  TearHashSetV1,
   TearObservationV1,
   TearPortableContractV1,
-  TearProvenanceV1,
   TearScenarioV1,
-  TearSnapshotV1,
   TearCausalEventV1,
   TearScenarioSubjectV1,
 } from "./contracts";
-import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "./contracts";
+import type {
+  TearBuildIdentityV1,
+  TearHashSetV1,
+  TearProvenanceV1,
+  TearSnapshotV1,
+} from "../gameplay/snapshot/snapshot-contract";
+import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "../gameplay/snapshot/snapshot-contract";
 import {
   BOSS_REGISTRY,
   DIFFICULTY_REGISTRY,

@@ -2,7 +2,8 @@ import { asRecord, isRecord } from "../domain/records";
 import type { ReplayActionEnvelope } from "../replay/envelope";
 import { normalizeGameAction } from "../input/game-action";
 import { stableVerificationHash } from "../domain/hash";
-import type { TearCausalEventV1, TearSnapshotV1 } from "../tearbench/contracts";
+import type { TearCausalEventV1 } from "../tearbench/contracts";
+import type { TearSnapshotV1 } from "../gameplay/snapshot/snapshot-contract";
 import { EVENT_REGISTRY, withinTickPhaseOrder } from "../tearbench/registries";
 import type { TearEventId } from "../tearbench/registries";
 

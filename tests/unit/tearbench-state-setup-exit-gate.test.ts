@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { stableVerificationHash } from "../../src/domain/hash";
-import type { TearSnapshotV1 } from "../../src/tearbench/contracts";
+import type { TearSnapshotV1 } from "../../src/gameplay/snapshot/snapshot-contract";
 import { synthesizeProgression } from "../../src/tearbench/progression-ledger";
 import {
   certifyWave99HammerProgression,

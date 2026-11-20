@@ -5,8 +5,9 @@ import { normalizeGameAction } from "../input/game-action";
 import { stableVerificationHash } from "../domain/hash";
 import type { RunRandomStreamsSnapshot } from "../simulation/run-random";
 import { STAGES } from "../gameplay/stages";
-import type { TearCausalEventV1, TearObservationV1, TearScenarioV1, TearSnapshotV1, TearStateClass } from "./contracts";
-import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "./contracts";
+import type { TearCausalEventV1, TearObservationV1, TearScenarioV1 } from "./contracts";
+import type { TearSnapshotV1, TearStateClass } from "../gameplay/snapshot/snapshot-contract";
+import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "../gameplay/snapshot/snapshot-contract";
 import { DIFFICULTY_REGISTRY, RUN_MODE_REGISTRY, WEAPON_REGISTRY } from "./registries";
 import {
   canonicalObservationActions,
@@ -36,7 +37,7 @@ import {
 } from "./state-setup-exit-gate";
 import { createCampaignVictoryOrigin, createCampaignWave59RewardFrontier } from "./campaign-victory-origin";
 import { createGameplayCausalEvent, projectGameplayEventForParity } from "./gameplay-causal-events";
-import { environmentSnapshotToObservation } from "./environment-codec";
+import { environmentSnapshotToObservation } from "../gameplay/snapshot/environment-codec";
 import {
   buildBloomWellCycleState,
   buildEnvironmentCombatObjectState,
