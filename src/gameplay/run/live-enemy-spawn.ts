@@ -167,7 +167,7 @@ export function completeEnemySpawn<TEnemy extends LiveSpawnEnemy>(
         throw new RangeError(`unknown variant ${spec.variantId} for ${enemy.kind}`);
       }
       port.applyVariant(enemy, restoredVariant ?? spec.variant ?? port.rollVariant(enemy.kind, globalWave, context));
-      port.rollAffixes(enemy, run.wave);
+      if (spec.plain !== true) port.rollAffixes(enemy, run.wave);
     }
     if (spec.type !== "flyer" && spec.type !== "wraith") {
       const position = port.groundSpawn(enemy.hh);
