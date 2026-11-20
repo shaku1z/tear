@@ -136,8 +136,10 @@ All seven chapter openings together run 200.8 s at Full (169.5 s for the six pub
     (ruleset v9) still applies.
   - The lore pages, the three-page prologue and the fallen boss's outro page leave play. They add
     reading time to the run, and the owner's verdict and the brief ("cut them hard") do not keep
-    them. The text stays in git history; a Codex lore page could bring it back later if the owner
-    asks (not in this plan).
+    them in play.
+  - Their text is not deleted (lead ruling, 2026-11-20). It moves into the Codex as lore entries,
+    written as data rows, in the same pull request that removes it from play. If the Codex has no
+    place for lore, that pull request adds the smallest one that fits and says so.
 - **Finale.** After the Source dies:
   - Silence, wound and relics merge into one 1.2 s beat. The relics fly to the blade while the player
     already moves.
@@ -249,7 +251,8 @@ never typed out letter by letter, and gone with the banner.
 - Can't be hit: never.
 - The legacy `Echo` class in `echo-enemies.ts` is drawn only by the bestiary preview
   (`bestiary-preview.ts:88`). Its `bossTransformation` call is removed with the ritual layer.
-  Deleting the class is a follow-up outside this plan.
+- **Follow-up outside this plan (lead ruling, 2026-11-20):** the bestiary preview draws the live
+  `MirrorHost`, and the legacy `Echo` class is deleted.
 
 ### Source (Phase II below 0.58, Phase III below 0.28)
 
@@ -269,9 +272,13 @@ never typed out letter by letter, and gone with the banner.
   - Can't be hit: never during the Unmake. The rear plane after it is Phase II's normal mechanic, not
     part of the change.
   - This removes the cause of the 2026-11-20 playtest finding, where the player fell below the arena
-    after the descent: footing now exists before the floor goes. A permanent test replays that fight
-    (Riftlock, seed 1, avoids-tells) and requires the player to stand on a void platform within 2 s
-    of the dissolve.
+    after the descent: footing now exists before the floor goes. The fall-forever case gets its own
+    permanent regression test: it replays that fight (Riftlock, seed 1, avoids-tells) and requires
+    a landing on a void platform within the cap after the dissolve, and never a position below the
+    stream.
+  - **The timings above are a starting point, not settled (lead ruling, 2026-11-20).** The Source
+    pull request first takes a fresh `pnpm playtest bosses --boss source` run, sets the channel,
+    crack tell and lift numbers from it, and puts those numbers in the pull request.
 - **Phase III, "IT REMEMBERS EVERY BLADE":** the live kneel and frozen void stay as they are. Only
   the 0.42 s slow motion goes.
 - **True form.**
@@ -400,25 +407,25 @@ to the catalog.
 
 - **Replays (coordinated with the replay owner).**
   - Each pull request that changes the simulation steps the ruleset in
-    `src/gameplay/run/ruleset-version.ts`, with a one-line reason: pull requests 1, 2, 3, 4, 6 and 7.
+    `src/gameplay/run/ruleset-version.ts`, with a one-line reason: pull requests 1, 2, 3, 4, 6, 7 and 8.
   - A replay recorded under an earlier ruleset shows the replay plan's retired-ruleset line in
     place of WATCH (`REPLAY_OVERHAUL_PLAN.md`, "Stored and published replays when the format or
     ruleset changes"). Nothing is deleted.
   - Players only ever record under deployed rulesets, so the intermediate steps between two
     production deploys cost nothing.
   - This plan also removes most of the replay plan's failure mode 2 ("story pauses, cinematic
-    confirms or the finale run on application frames"). After pull request 7 no scene waits for a
+    confirms or the finale run on application frames"). After pull request 8 no scene waits for a
     confirm, and every beat runs in simulation ticks. The application-frame confirm path
     (`runtime-frame-coordinator.ts:169-183`, `ghost-frame-recording.ts:91-101`) is deleted in pull
-    request 7 or in replay PR 5, whichever lands second.
+    request 8 or in replay PR 5, whichever lands second.
 - **Snapshots (codecs owned by the replay owner, in `src/gameplay/snapshot`).**
   - Pull request 5 removes these fields, with a version step on each changed codec:
     - player `cinematicProtected` and `cinematicGraceT` (`tear.player.v1`);
     - enemy and boss `cinematicRequest`, `cinematicT`, `cinematicPose`, `cinematicColor` and
       Source's `requestVoidCinematic` (`tear.enemy.v1`, `tear.boss.v1`);
     - the world runtime's `cinemaProtection`, `bossCinematicBinding` and `cinemaInput`.
-  - Pull request 1 adds the stage beat field to the world runtime.
-  - Pull request 7 removes `tear.cinematic.v1` and the world runtime's `chapterBinding` and
+  - Pull request 6 adds the stage beat field to the world runtime.
+  - Pull request 8 removes `tear.cinematic.v1` and the world runtime's `chapterBinding` and
     `finaleBinding`.
   - A State Setup state saved before a step is refused with a plain message naming the version.
   - The tutorial gold proof fixture (`tests/fixtures/tutorial-gold-reference-proof.json`) holds
@@ -427,7 +434,7 @@ to the catalog.
 - **The cinematic preference.**
   - It is stored as `cinematics` in the plain `tear_settings` blob (`settings-controller.ts:46, 147,
     210, 263`), which has no envelope version.
-  - Pull request 6 adds `"cinematics"` to `RETIRED_SETTINGS` (`settings-controller.ts:69`), the same
+  - Pull request 7 adds `"cinematics"` to `RETIRED_SETTINGS` (`settings-controller.ts:69`), the same
     path that dropped the retired station.
   - Its test loads an old blob with `cinematics: "brief"` and checks that the key is gone and every
     other setting is kept, like the existing station test (`settings-controller.test.ts:182`).
@@ -449,26 +456,26 @@ and Adventure plays from Chapter I to the finale.
 
 The plan, its row in `plans/README.md`, and a cinematics area in `config/position.json`.
 
-### PR 1: the stage beat, the banner and no slow motion
+**Order (lead ruling, 2026-11-20).** Pull requests 1-5 only take blocking and slow motion out.
+They draw nothing new: a phase change shows with today's `bossPhaseBeat` banner and the boss's
+existing body and arena tells. They start now. Pull requests 6-8 draw something new (the banner
+style, the chapter card, the epilogue card) and wait for the owner's verdict on the look board.
 
-Waits for the owner to approve the look board.
+### PR 1: the rule over every boss, and no slow motion
 
-- `src/gameplay/stage-beat.ts`, with the `banner` kind and one drawing function for it.
-- `bossPhaseBeat` and the boss arrival add a banner.
+- The rule test lands, with its allowlist of the 11 phase changes that still block.
 - Slow motion goes from:
   - every `phaseTransition` and `death` preset;
   - Echo's phase change;
-  - `resolveBossDeath`;
-  - the arrival (`introScale`).
-- The arrival letterbox and the hidden HUD go. The entrance moves to 120 simulation ticks.
-- The rule test lands, with its allowlist of the 11 phase changes that still block.
+  - `resolveBossDeath`.
+- The plan gains the list of combat slow motion outside beats (stagger, parry, move bursts), each
+  with its source and duration, marked out of scope.
 - Ruleset step.
-- Done when the rule's data check passes for every boss, the banner matches the approved board in
-  a built screenshot, and `pnpm test:determinism` passes.
+- Done when the rule's data check passes for every boss and `pnpm test:determinism` passes.
 
 ### PR 2: Warden and Colossus change phase in the fight
 
-- Their four rituals are replaced by the moves above.
+- Their four rituals are replaced by the moves above, shown with today's banner.
 - Colossus's saw throw becomes its first Phase II move.
 - Four entries leave the allowlist. Ruleset step.
 - Done when the rule passes for both bosses with no allowlist entry, and `pnpm playtest bosses
@@ -485,8 +492,10 @@ Waits for the owner to approve the look board.
 
 ### PR 4: the Source's Unmake and true form
 
+- A fresh `pnpm playtest bosses --boss source` run comes first. The Unmake timings are set from it,
+  and its numbers are in the pull request.
 - The void descent and the true-form ritual are replaced by the moves above.
-- The landing test for the 2026-11-20 finding is added.
+- The fall-forever regression test is added: a landing guaranteed within the cap.
 - Two entries leave the allowlist. Ruleset step.
 - Done when the rule passes for the Source, `pnpm playtest bosses --boss source --weapon riftlock
   --seed 1 --player avoids-tells` no longer reports a broken fight, and no player falls below the
@@ -509,11 +518,28 @@ empty.
 - Done when nothing in `src/` mentions `blocksCombat`, `cinematicRequest` or `ritual`, the rule
   passes for every boss, and `pnpm check:functional` passes.
 
-### PR 6: the chapter card
+### PR 6: the stage beat, the banner and the arrival
+
+Waits for the owner's verdict on the look board.
+
+- `src/gameplay/stage-beat.ts`, with the `banner` kind and one drawing function for it, in the
+  approved style. Its world field goes into the world codec, live capture and the detached world
+  hydrator (see "Coordination").
+- `bossPhaseBeat` and the boss arrival add a banner.
+- The arrival loses its slow motion (`introScale`), letterbox and hidden HUD. The entrance moves to
+  120 simulation ticks.
+- Ruleset step.
+- Done when the banner matches the approved board in a built screenshot, the detached parity tests
+  pass, and `pnpm test:determinism` passes.
+
+### PR 7: the chapter card
+
+Waits for the owner's verdict on the look board.
 
 - Chapter openings become `chapter` stage beats over the live arena.
 - The wave rule is "card ended or first attack".
-- The pages, prologue and boss outros leave play.
+- The pages, prologue and boss outros leave play, and their text moves into the Codex as lore data
+  rows in this pull request.
 - The cinematic preference is retired with its old-save test, and the Settings row goes.
 - The chapter tests listed as deleted are replaced by the chapter card test.
 - `DESIGN_SYSTEM.md` ("Adventure chapter presentation contract") and
@@ -524,7 +550,9 @@ empty.
   tick, the card matches the approved board in a built screenshot, and the browser progression
   journeys pass.
 
-### PR 7: the finale and the director go
+### PR 8: the finale and the director go
+
+Waits for the owner's verdict on the look board (the epilogue card).
 
 - The finale plays on the live combat step, with the epilogue card. The reward beat merges into
   the results screen.
@@ -543,7 +571,7 @@ empty.
 - The closest unit tests, the rule over every boss, and `pnpm test:determinism`.
 - `pnpm playtest bosses` before and after for every boss the pull request touches: fight length,
   cinematic ticks (must reach 0) and time in each phase.
-- **Visual slices (1, 6, 7):** screenshots from a built `dist/test-standalone`, beside the approved
+- **Visual slices (6, 7, 8):** screenshots from a built `dist/test-standalone`, beside the approved
   board frames.
 - If `combat-step-prelude.ts` or anything else in the tutorial gold closure changes, the build's
   tutorial gold check runs. The tutorial has no cinematics, so its output is expected to stay the
@@ -563,21 +591,23 @@ empty.
     `detached-world-hydrator.ts` becomes `world-hydrator.ts`. Live capture and restore move to
     `src/gameplay/snapshot/live-capture.ts` and `live-restore.ts`. Codec PRs here branch from
     main after that lands and use the new paths.
-  - The stage beat field (PR 1) goes in three places: the world codec, live capture and the
+  - The stage beat field (PR 6) goes in three places: the world codec, live capture and the
     detached world hydrator. `tests/unit/detached-live-parity.test.ts` and
     `detached-finale-live-parity.test.ts` check that they agree.
   - Replay PR 5 deletes `ghost-frame-recording.ts` and `application-frame-events.ts`. Whichever
-    of that and PR 7 lands second deletes the remaining application-frame confirm path.
+    of that and PR 8 lands second deletes the remaining application-frame confirm path.
   - The lead's Verdant and Pale rebuild plan may touch the same snapshot fields; agree the order
     with the lead before PR 5.
 - **Playtest tool:** `cinematicTicks` in `src/playtest/boss-fight.ts` stays as the measure (it reads
-  0 after PR 5). It is removed in PR 7 together with `cinematicActive()`.
+  0 after PR 5). It is removed in PR 8 together with `cinematicActive()`.
 
 ## Not in scope
 
 - Boss move sets beyond their phase-change beat.
 - Combat slow motion that is not a beat: stagger (0.30-0.35 s), parry, and move bursts such as
-  Colossus's smash (0.36 s) and Aldric's crownfire (0.38 s). Raised with the lead separately.
+  Colossus's smash (0.36 s) and Aldric's crownfire (0.38 s). The lead ruled it out of scope on
+  2026-11-20. PR 1 adds the full list, each one with its source and duration, so the owner can see
+  them.
 - Music, the wiki, mobile, and any outside service.
 - White Hart and Pale (covered by the rule only).
 - Deleting the legacy `Echo` class.
