@@ -16,6 +16,8 @@ export interface ContactEnemy {
   readonly dying: boolean;
   readonly spawnT: number;
   readonly introT?: number;
+  /** Seconds left in which the enemy may not hurt by touch (the opening grace). */
+  readonly attackHold?: number;
   readonly x: number;
   readonly y: number;
   readonly hw: number;
@@ -97,6 +99,7 @@ export function resolveEnemyContact(
 ): void {
   for (const enemy of enemies) {
     if (enemy.dead || enemy.dying || enemy.spawnT > 0 || (enemy.introT ?? 0) > 0) continue;
+    if ((enemy.attackHold ?? 0) > 0) continue;
     if (enemy.contactDamageEnabled && !enemy.contactDamageEnabled(player)) continue;
     if (
       !hooks.overlaps(
