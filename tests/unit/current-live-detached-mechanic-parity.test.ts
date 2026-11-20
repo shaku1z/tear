@@ -11,9 +11,9 @@ const artifactDirectory = resolve("artifacts/tearbench/checkpoints/core/C27A/liv
 const focusedArtifact = resolve(artifactDirectory, `focused-${SELECTED_SCENARIO_ID}.json`);
 const matrixArtifact = resolve(artifactDirectory, `${SELECTED_SCENARIO_ID}.json`);
 const defaultArtifact = existsSync(focusedArtifact) ? focusedArtifact : matrixArtifact;
-const requestedArtifact = process.env.TEAR_C27A_PARITY_ARTIFACT;
+const requestedArtifact = process.env.TEAR_LIVE_PARITY_ARTIFACT;
 const artifactPath = resolve(requestedArtifact ?? defaultArtifact);
-const parityRequired = requestedArtifact !== undefined || process.env.TEAR_C27A_PARITY_REQUIRED === "1";
+const parityRequired = requestedArtifact !== undefined || process.env.TEAR_LIVE_PARITY_REQUIRED === "1";
 
 interface TraceIdentity {
   readonly sourceIdentity?: Readonly<{ revision?: unknown; state?: unknown; fingerprint?: unknown }>;

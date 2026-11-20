@@ -30,7 +30,7 @@ export interface StateEditorHost {
   exportScenario(fileName: string, source: string): void;
 }
 
-interface StudioElements {
+interface EditorElements {
   readonly editor: HTMLTextAreaElement;
   readonly status: HTMLElement;
   readonly structural: HTMLElement;
@@ -145,7 +145,7 @@ function createPanel(): HTMLElement {
   return panel;
 }
 
-function createElements(panel: HTMLElement, host: StateEditorHost): StudioElements {
+function createElements(panel: HTMLElement, host: StateEditorHost): EditorElements {
   const editor = element("textarea");
   editor.id = "tear-snapshot-editor-source";
   editor.value = host.initialSource;
