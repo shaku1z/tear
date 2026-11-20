@@ -122,6 +122,9 @@ class TestUi implements ScreenUiPort {
   tag(): void {
     return;
   }
+  keyLegend(...values: Parameters<ScreenUiPort["keyLegend"]>): number {
+    return values[0].measureText(values[1]).width;
+  }
   header(): void {
     return;
   }
@@ -653,7 +656,7 @@ describe("legacy screen renderer registry", () => {
       "◀◀",
       "▶▶",
     ]);
-    expect(types()).toContainEqual({ type: "navigate", to: "menu" });
+    expect(types()).toContainEqual({ type: "navigate.back" });
     for (const control of controls) expect(control.y + control.h).toBeLessThanOrEqual(900);
 
     // A stage's page: the crumb back, PLAY over the stage's songs, one row per song with that queue.
@@ -1013,7 +1016,6 @@ describe("legacy screen renderer registry", () => {
       id: "settings",
       tab: "controls",
       tabs: [{ id: "controls", label: "CONTROLS" }],
-      returnTo: "menu",
       sections: [
         {
           label: "CONTROLS",
@@ -1080,7 +1082,6 @@ describe("legacy screen renderer registry", () => {
       id: "settings",
       tab: "general",
       tabs: [{ id: "general", label: "GENERAL" }],
-      returnTo: "menu",
       sections: [
         {
           label: "GENERAL",

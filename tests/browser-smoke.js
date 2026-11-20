@@ -188,7 +188,7 @@ const { STATE_WAIT_MS, clickTarget, pollEvery, settleFor, launchJourney } = requ
   await waitForScreen("paused");
   await clickTarget(page, "paused", "SETTINGS");
   await waitForScreen("settings");
-  assert.equal(await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.app.snapshot().settingsReturn), "paused");
+  assert.equal(await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.app.snapshot().back), "paused");
   await clickTarget(page, "settings", "BACK");
   await waitForScreen("paused");
   await clickTarget(page, "paused", "RESUME");

@@ -531,7 +531,6 @@ export function createDraftRenderers(context: ScreenRenderContext) {
 
   function draft(view: DraftScreenView): void {
     const t = ui.t;
-    ui.dim(context.canvas, width, height, 0.84);
     const subtitle = view.race
       ? `SHARED OFFERS · REROLL ${String(view.race.ordinal)} · CHOOSE ONE LEGAL UPGRADE`
       : chooseLine(view.cards.length, "TAKE");
@@ -570,7 +569,6 @@ export function createDraftRenderers(context: ScreenRenderContext) {
   }
 
   function reserve(view: ReserveScreenView): void {
-    ui.dim(context.canvas, width, height, 0.84);
     const lines = [
       view.race
         ? "PERSONAL CARRIED CARD · SHARED OFFERS STAY UNCHANGED · TIER-UPS ARE PERSONAL"
@@ -594,7 +592,6 @@ export function createDraftRenderers(context: ScreenRenderContext) {
   }
 
   function tierup(view: TierUpScreenView): void {
-    ui.dim(context.canvas, width, height, 0.86);
     const reveal = clamp(ez(context.enterSeconds / 0.3), 0, 1);
     const specs = view.cards.map((card, index): ChoiceCardSpec => {
       const next = card.nextTier ?? (card.tier ?? 1) + 1;

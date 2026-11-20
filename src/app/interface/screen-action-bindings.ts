@@ -18,6 +18,8 @@ export interface ScreenActionBindingPorts {
     "pickArchive" | "restoreArchive" | "cancelArchive" | "downloadArchive"
   >;
   readonly setScreen: (screen: AppScreen) => void;
+  /** Returns to the screen the current one was opened from. */
+  readonly back: () => void;
   readonly resetScroll: () => void;
   readonly setSetupSelection: (kind: "mode" | "difficulty" | "weapon" | "boss", id: string) => void;
   readonly startSelectedRace?: () => void;
@@ -63,6 +65,9 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
       }
       // MUSIC opens on Home from outside; inside it, the tab names the page.
       if (action.to === "music") ports.settings.selectMusicPage(action.tab ?? "home");
+    },
+    "navigate.back": () => {
+      ports.back();
     },
     "menu.resumeFinale": () => {
       ports.resumeFinale();

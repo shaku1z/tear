@@ -28,7 +28,7 @@ export interface LiveScreenActionsOptions {
     LiveCampaignTrainingAssembly,
     "training" | "startRunWithPreflight" | "dispatchPlaygroundAction" | "tutorialSessionActions"
   >;
-  readonly navigation: Pick<LiveScreenNavigation, "screen" | "setScreen">;
+  readonly navigation: Pick<LiveScreenNavigation, "screen" | "setScreen" | "back">;
   readonly interaction: Pick<LiveInterfaceInteractionState, "setScroll">;
   readonly chase: Pick<LiveGhostChaseRuntime, "toggle" | "stop">;
   readonly ghostLibrary: LiveGhostLibraryScreens;
@@ -60,6 +60,9 @@ export function createLiveScreenActions(
     },
     ghostFiles: ghostVault,
     setScreen,
+    back: () => {
+      navigation.back();
+    },
     resetScroll: () => {
       options.interaction.setScroll(0);
     },

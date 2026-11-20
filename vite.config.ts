@@ -169,9 +169,6 @@ function applicationChunk(id: string): string | undefined {
   // The ~1.5 MB tutorial demonstration corpus is imported only by training
   // preflight; its own chunk keeps it out of the startup modulepreload set.
   if (relative === TUTORIAL_GOLD_DATA) return "tutorial-gold-reference";
-  // A painted stage background (manifest and image URLs) is imported on demand
-  // when a run nears its stage; its own chunk keeps it out of the startup set.
-  if (relative.startsWith("presentation/assets/scenes/")) return undefined;
   if (topLevel === "gameplay") {
     const area = relative.split("/").slice(1, 2)[0] ?? "core";
     return `gameplay-${area}`;

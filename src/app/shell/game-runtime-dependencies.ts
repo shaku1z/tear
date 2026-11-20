@@ -71,7 +71,7 @@ export interface GameRuntimeDependencies {
   readonly Attract: ReturnType<typeof createAttract>;
   readonly BOSSFX: EnemyTypes["BOSSFX"];
   readonly Backdrop: BackdropController;
-  /** Painted stage scene packages (lazy, app-owned); stages without one keep procedural art. */
+  /** Stages the game paints from a recipe (lazy, app-owned); stages without one keep procedural art. */
   readonly Scenes: SceneLibrary;
   readonly Blade: ReturnType<typeof createBlade>;
   readonly Bomber: EnemyTypes["Bomber"];
