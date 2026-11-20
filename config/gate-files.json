@@ -1,0 +1,35 @@
+{
+  "about": "The files that decide a verdict. `fromMain` is the gate's definition: every Validate job runs main's copy of these against the change (.github/actions/main-gate), so a change is judged by main's checks plus the checks only it adds, matched by group and id (judgedChecks in scripts/run-checks.mjs). `files` are every gate file, as exact paths or prefixes ending in / or -: the scope job warns when a change touches one, and pnpm merge:ready refuses it until it carries the gate-reviewed label, which the merge desk adds only when the lead names the pull request and head. Tests are not gate files: a change may add and change its own tests.",
+  "fromMain": [
+    "config/checks.json",
+    "scripts/run-checks.mjs",
+    "scripts/queue.mjs",
+    "scripts/ci-verdict.mjs"
+  ],
+  "files": [
+    { "path": "config/gate-files.json", "why": "this list" },
+    { "path": "config/checks.json", "why": "what every gate runs" },
+    { "path": "scripts/run-checks.mjs", "why": "runs the checks and decides which of a change's list run" },
+    { "path": "scripts/queue.mjs", "why": "imported by the runner" },
+    { "path": "scripts/ci-", "why": "the verdict, the checked commit, build hashes and the browser image" },
+    { "path": "scripts/gate-files.mjs", "why": "matches this list" },
+    { "path": ".github/actions/", "why": "steps every Validate job runs, including the copy of main's gate" },
+    { "path": ".github/workflows/", "why": "GitHub runs a pull request's own workflow, so only review guards it" },
+    { "path": "scripts/merge-ready.mjs", "why": "decides whether a pull request may merge" },
+    { "path": "scripts/merge-batch.mjs", "why": "checks and merges batches" },
+    { "path": "scripts/governance/", "why": "the merge helper and the git hooks" },
+    { "path": "scripts/design-check.mjs", "why": "the design-check gate" },
+    { "path": "config/design-check.json", "why": "the design-check gate's mode" },
+    { "path": "config/architecture-", "why": "architecture rules, allowlists and baselines" },
+    { "path": "config/code-budget-baseline.json", "why": "the code budget's ratchet" },
+    { "path": "config/size-caps.json", "why": "document and evidence size caps" },
+    { "path": "config/bundle-budgets.json", "why": "bundle size budgets" },
+    { "path": "config/load-budgets.json", "why": "load time budgets" },
+    { "path": "config/browser-performance-budgets.json", "why": "browser performance budgets" },
+    { "path": "eslint.config.mjs", "why": "lint rules" },
+    { "path": "scripts/eslint-rules/", "why": "the repository's own lint rules" },
+    { "path": ".prettierrc.json", "why": "formatting rules" },
+    { "path": ".prettierignore", "why": "what formatting skips" },
+    { "path": "scripts/format.mjs", "why": "what formatting checks" }
+  ]
+}
