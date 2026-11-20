@@ -1,6 +1,6 @@
 import { buildMenuSnapshot } from "../../presentation/menu-setup-snapshots";
 import { firstRunProfileFacts, isTutorialFirst } from "../../gameplay/progression/first-run-guidance";
-import { nextTutorialLesson } from "../../gameplay/training/tutorial-controller";
+import { nextTutorialLesson } from "../../gameplay/training/tutorial-lesson-ids";
 import type { createLiveSetupShopRenderers } from "../run/setup-shop-renderers";
 import type { LiveMenuScreenAdapters, MenuScreenServices, MenuScreenState } from "./menu-screen-adapters";
 

@@ -15,11 +15,11 @@ import {
   TutorialController,
   type TutorialGhostSnapshot,
   type TutorialLesson,
-  type TutorialMark,
   type TutorialSessionView,
   parseTutorialSessionCheckpoint,
 } from "./tutorial-controller";
 import { tutorialArenaDefinition, type TutorialArenaId } from "./tutorial-arenas";
+import type { TutorialMark } from "./tutorial-marks";
 import type { CONFIG as GameConfiguration } from "../../config/game-config";
 import type { createPlayer } from "../entities/player";
 import type { createBlade } from "../entities/blade";

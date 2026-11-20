@@ -23,7 +23,7 @@ import { tracksAchievements } from "../gameplay/progression/achievement-runtime"
 import { createLiveStyleAchievementRuntime } from "../gameplay/scoring/live-style-achievement-runtime";
 import { BossArenaRules, type ArenaActor, type ArenaPlatform } from "../gameplay/training/arena-rules";
 import { createBossArenaRuntimeBridge } from "../gameplay/training/arena-runtime-bridge";
-import { isTutorialMark } from "../gameplay/training/tutorial-controller";
+import { isTutorialMark } from "../gameplay/training/tutorial-marks";
 import type { TearGameplayEventPort } from "../gameplay/runtime/gameplay-events";
 import type { BladeWeaponEvent } from "../gameplay/entities/blade-contracts";
 import { STAGES, stageAt } from "../gameplay/stages";

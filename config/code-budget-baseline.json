@@ -63,8 +63,8 @@
       "chars": 26787
     },
     "src/gameplay/training/tutorial-controller.ts": {
-      "chars": 45807,
-      "largestFunctionStatements": 170
+      "chars": 45665,
+      "largestFunctionStatements": 169
     },
     "src/gameplay/upgrades.ts": {
       "chars": 29224

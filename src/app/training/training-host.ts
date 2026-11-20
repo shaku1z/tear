@@ -6,7 +6,8 @@ import type {
   PlaygroundScreenModel,
 } from "../../gameplay/training/live-playground-presentation";
 import type { ArenaPlatform } from "../../gameplay/training/arena-rules";
-import type { TutorialGhostSnapshot, TutorialMark } from "../../gameplay/training/tutorial-controller";
+import type { TutorialGhostSnapshot } from "../../gameplay/training/tutorial-controller";
+import type { TutorialMark } from "../../gameplay/training/tutorial-marks";
 import type { LiveWaveSpawnSpec } from "../../gameplay/run/live-enemy-spawn";
 import type { RunDifficulty } from "../../gameplay/run/session";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";

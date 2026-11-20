@@ -6,11 +6,11 @@ import {
   storedTutorialProgress,
   withTutorialLesson,
 } from "../../src/domain/tutorial-progress";
+import { TutorialController } from "../../src/gameplay/training/tutorial-controller";
 import {
+  COUNTED_TUTORIAL_LESSON_IDS as COUNTED,
   nextTutorialLesson,
-  TUTORIAL_LESSON_IDS,
-  TutorialController,
-} from "../../src/gameplay/training/tutorial-controller";
+} from "../../src/gameplay/training/tutorial-lesson-ids";
 import { migrateProfileEnvelope, PROFILE_ENVELOPE_VERSION } from "../../src/persistence/profile-envelope";
 import { createProfileStore } from "../../src/persistence/profile-store";
 
@@ -24,7 +24,6 @@ const frame = {
   bladeState: "held",
   enemies: [],
 };
-const COUNTED = TUTORIAL_LESSON_IDS.filter((id) => id !== "ready");
 
 function memoryProfile() {
   const values = new Map<string, string>();

@@ -6,11 +6,8 @@ import type { PracticeBossState } from "../../src/gameplay/training/practice-bos
 import { beforeAll, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { CONFIG } from "../../src/config/game-config";
-import {
-  TutorialController,
-  TUTORIAL_LESSON_IDS,
-  type TutorialSessionCheckpoint,
-} from "../../src/gameplay/training/tutorial-controller";
+import { TUTORIAL_LESSON_IDS } from "../../src/gameplay/training/tutorial-lesson-ids";
+import { TutorialController, type TutorialSessionCheckpoint } from "../../src/gameplay/training/tutorial-controller";
 import { createTutorialArena } from "../../src/gameplay/training/tutorial-arenas";
 import { projectCanonicalGameplayState } from "../../src/gameplay/runtime/canonical-state";
 import { stableVerificationHash } from "../../src/domain/hash";

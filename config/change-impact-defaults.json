@@ -68,6 +68,8 @@
         "src/gameplay/training/tutorial-gold-reference-data.json",
         "src/gameplay/training/tutorial-gold-reference.ts",
         "src/gameplay/training/tutorial-gold-shipping.ts",
+        "src/gameplay/training/tutorial-lesson-ids.ts",
+        "src/gameplay/training/tutorial-marks.ts",
         "src/gameplay/training/tutorial-production-ghost.ts",
         "src/gameplay/training/tutorial-weapon-annexes.ts",
         "src/gameplay/upgrade-hooks.ts",
