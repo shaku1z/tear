@@ -459,7 +459,14 @@
       "duration": "under-a-minute"
     },
     "test:browser:replay-live-verify": {
-      "purpose": "Browser check that a live campaign run and a live Boss Rush run, recorded through the live replay tap, verify from their seeds alone",
+      "purpose": "Browser check that live runs are recorded, stored on the device and verify from their seeds, and that a run started before the recorder loads is counted",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "test:browser:replay-campaign-stages": {
+      "purpose": "Nightly browser check that a live campaign run is one replay record across a stage win, stored once and verified from its seed",
       "effects": [
         "launches-browser"
       ],
