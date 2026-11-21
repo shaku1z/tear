@@ -31,7 +31,7 @@
     "check:quick": "node scripts/run-checks.mjs fast",
     "test:unit:serial": "pnpm exec vitest run --no-file-parallelism",
     "test:endurance": "vitest run --config vitest.endurance.config.ts",
-    "test:rules": "node scripts/test-firestore-rules.mjs",
+    "test:rules": "node scripts/test-firestore-rules.mjs node_modules/vitest/vitest.mjs run --config vitest.rules.config.ts",
     "playtest": "node scripts/playtest.mjs",
     "tearbench": "node scripts/tearbench.mjs",
     "test:weapons": "pnpm exec vitest run tests/unit/final-five-weapon-roster.test.ts",
