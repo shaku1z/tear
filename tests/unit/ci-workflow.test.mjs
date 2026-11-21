@@ -237,21 +237,38 @@ describe("Validate workflow", () => {
   });
 
   it("runs every gate job and the verdict with main's copy of the gate, made from the scope job's main", () => {
-    // .github/actions/main-gate copies main's fromMain files and sets TEAR_GATE; see config/gate-files.json.
-    for (const id of [...loadChecks().gate, "check"]) {
+    // scripts/ci-main-gate.sh copies main's fromMain files and sets TEAR_GATE; see config/gate-files.json.
+    // Every job runs main's copy of that script, read with git show, so it needs nothing from the checkout.
+    const loader =
+      '          if git cat-file -e "$MAIN:scripts/ci-main-gate.sh" 2>/dev/null; then git show "$MAIN:scripts/ci-main-gate.sh" | bash -s -- "$MAIN"\n';
+    for (const id of [...loadChecks().gate, "check", "scope"]) {
       const block = jobBlocks[id];
-      const copy = block.indexOf(
-        "uses: ./.github/actions/main-gate\n        with:\n          main: ${{ needs.scope.outputs.main }}\n",
-      );
+      const copy = block.indexOf(loader);
       expect(copy, id).toBeGreaterThan(0);
       expect(copy, id).toBeGreaterThan(block.indexOf("actions/checkout@v4"));
-      const runner = block.search(/node "\$TEAR_GATE\/(?:run-checks|ci-verdict)\.mjs"/u);
+      const main = id === "scope" ? "${{ steps.main.outputs.main }}" : "${{ needs.scope.outputs.main }}";
+      expect(block.slice(0, copy), id).toMatch(
+        new RegExp(`MAIN: ${main.replace(/[$.{}]/gu, "\\$&")}\\n +run: \\|\\n$`, "u"),
+      );
+      const runner = block.search(/node "\$TEAR_GATE\/(?:run-checks|ci-verdict)\.mjs"|--flag "\$TEAR_GATE_LIST"/u);
       expect(runner, id).toBeGreaterThan(copy);
       expect(block, id).not.toMatch(/node scripts\/(?:run-checks|ci-verdict)\.mjs/u);
     }
-    const action = read(".github/actions/main-gate/action.yml");
-    expect(action).toContain('git show "$MAIN:config/gate-files.json"');
-    expect(action).toContain("TEAR_CHECKED_ROOT=$PWD");
+    expect(workflow).not.toContain("./.github/actions/main-gate");
+    const script = read("scripts/ci-main-gate.sh");
+    expect(script).toContain('git show "$MAIN:config/gate-files.json"');
+    expect(script).toContain("TEAR_CHECKED_ROOT=$PWD");
+  });
+
+  it("judges a head cut before the gate existed: the verdict job reads nothing of the head's own before main's gate", () => {
+    // The check job checks out the head unmerged; only a batch run merges main in first. A head from
+    // before #329 has no .github/actions/main-gate and no scripts/ci-main-gate.sh, so on a pull request
+    // no step before the loader may use a file of the head's own.
+    const block = jobBlocks.check;
+    const steps = block.slice(0, block.indexOf("Use main's copy of the gate")).split("\n      - ").slice(1);
+    const ownFiles = steps.filter((step) => /uses: \.\/|\bnode scripts\//u.test(step));
+    expect(ownFiles.length).toBeGreaterThan(0);
+    for (const step of ownFiles) expect(step, step.split("\n")[0]).toContain("inputs.batch != ''");
     // The scope job flags changed gate files with main's list.
     expect(jobBlocks.scope).toContain(
       'git diff --name-only origin/main HEAD | node scripts/gate-files.mjs --flag "$TEAR_GATE_LIST"',
