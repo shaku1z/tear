@@ -106,8 +106,9 @@ export interface RewardRuntime<TChoice extends RewardChoice> {
 }
 
 export interface RewardRuntimeOptions<TChoice extends RewardChoice> {
-  /** Sees each decision before it applies; a number fixes its sequence (a seed race), undefined keeps the next one. */
-  readonly beforeDecision?: (decision: RewardDecision, before: RewardSelectionSnapshot<TChoice>) => number | undefined;
+  readonly beforeDecision?: (decision: RewardDecision, before: RewardSelectionSnapshot<TChoice>) => number;
+  /** Sees every decision that changes the reward, before it applies (the live replay tap records it). */
+  readonly observeDecision?: (decision: RewardDecision, before: RewardSelectionSnapshot<TChoice>) => void;
   readonly run: () => RewardRuntimeRun<TChoice>;
   readonly roll: DraftRoller<TChoice>;
   readonly transitionPorts: RewardTransitionPorts<TChoice>;
@@ -155,6 +156,7 @@ export function createRewardRuntime<TChoice extends RewardChoice>(
             : { type: "select-tier-up" as const, index: decision.index };
     const result = transitionRewardSelection(before, event);
     if (result.snapshot === before) return;
+    options.observeDecision?.(decision, before);
     if (before.seedLocked !== undefined || options.run().beatThisRun !== undefined) {
       const next = recordedSequence ?? options.beforeDecision?.(decision, before) ?? decisionSequence + 1;
       if (!Number.isSafeInteger(next) || next <= decisionSequence)

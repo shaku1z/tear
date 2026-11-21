@@ -30,7 +30,7 @@ export interface LiveOpeningCaptureBoundary {
 
 interface RunStartHostContext extends Omit<RunStartWorldContext, "dependencies" | "hooks" | "race"> {
   readonly runInstalled?: (run: GameRun) => void;
-  /** A run started with these choices: the live replay tap records from here (src/app/replay/live-replay-tap.ts). */
+  /** A run's start is resolved, before its world initializes: the live replay tap opens its record here. */
   readonly runStarted?: (start: RunStartChoices) => void;
   readonly dependencies: GameRuntimeDependencies;
   readonly applySettings: () => void;
@@ -154,6 +154,9 @@ export function createLiveRunStartHost(
         cinematics: sanitizeCinematicPreference(context.cinematics.preference()),
         playedChapters: Object.freeze([...context.cinematics.playedChapters()]),
       });
+    },
+    openReplayRecord: (start) => {
+      context.runStarted?.(start);
     },
     exposeDebugState: () => {
       // The weapon inspector is an engineering global: never installed in release builds.
@@ -316,8 +319,7 @@ export function createLiveRunStartHost(
         context.achievementCheck();
       }
     },
-    startRecording: (runId, start) => {
-      const seed = start.runSeed;
+    startRecording: (runId, seed) => {
       // Canonical device input is the live simulation's normal route, not a
       // Ghost 2-only observation feature.  Start it before the optional visual
       // recorder so the very first live tick (and its V3 sidecar) sees the
@@ -325,7 +327,6 @@ export function createLiveRunStartHost(
       context.race?.finalize();
       Input.startSemanticRecording();
       Input.syncSemanticMovement();
-      context.runStarted?.(start);
       if (context.achievementTracking() || context.race?.active()) {
         const record = () => {
           GHOST.startRec({

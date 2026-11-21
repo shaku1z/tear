@@ -67,13 +67,15 @@ export function createLiveSessionServices(options: LiveSessionServicesOptions) {
     addProfileStat: d.profileStatsPersistence.add,
   });
   const reward = createRewardRuntime({
-    beforeDecision: (
-      decision: Parameters<ReturnType<typeof createLiveSeedRace>["recordDecision"]>[0],
-      before: Parameters<ReturnType<typeof createLiveSeedRace>["recordDecision"]>[1],
-    ) => {
-      options.replayTap.decision(decision, before);
-      return options.seedRace === undefined ? undefined : seedRace.recordDecision(decision, before);
-    },
+    ...(options.seedRace === undefined
+      ? {}
+      : {
+          beforeDecision: (
+            decision: Parameters<ReturnType<typeof createLiveSeedRace>["recordDecision"]>[0],
+            before: Parameters<ReturnType<typeof createLiveSeedRace>["recordDecision"]>[1],
+          ) => seedRace.recordDecision(decision, before),
+        }),
+    observeDecision: options.replayTap.decision,
     run: options.run,
     roll: (request) =>
       d.rollUpgrades(request.count, options.run().mods, {

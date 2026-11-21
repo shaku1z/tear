@@ -12,13 +12,19 @@
 //
 // Each record must hold its scene frames (campaign) and its draft pick as an action, and verify.
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
 const { withJourney } = require("./browser-journey-harness");
 const { STATE_WAIT_MS } = require("./browser-waits");
 
 const BATCH_TICKS = 60;
 const MAX_BATCHES = 1_500;
 
-async function recordLiveRun(page, options, done) {
+// Each leg starts from a fresh boot on the main menu, where the Watch Agent starts.
+async function recordLiveRun({ page, boot }, options, done) {
+  await boot();
+  await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__ && window.__TEAR_REPLAY_TAP__, undefined, {
+    timeout: STATE_WAIT_MS,
+  });
   await page.evaluate(() => {
     window.__TEAR_REPLAY_TAP__.arm();
   });
@@ -26,12 +32,13 @@ async function recordLiveRun(page, options, done) {
   let holding = false;
   let sceneBatches = 0;
   for (let batch = 0; batch < MAX_BATCHES && snapshot.status === "running" && !done(snapshot); batch += 1) {
-    // Hold confirm through the scene once it has shown for a batch (the hold arms on a released key).
-    if (snapshot.screen === "cinematic") sceneBatches += 1;
-    if (snapshot.screen === "cinematic" && sceneBatches > 1 && !holding) {
+    // Hold confirm through a scene once it has shown for a batch (the hold arms on a released key).
+    const scene = await page.evaluate(() => window.__TEAR_REPLAY_TAP__.scene());
+    sceneBatches = scene ? sceneBatches + 1 : 0;
+    if (scene && sceneBatches > 1 && !holding) {
       await page.keyboard.down("Enter");
       holding = true;
-    } else if (snapshot.screen !== "cinematic" && holding) {
+    } else if (!scene && holding) {
       await page.keyboard.up("Enter");
       holding = false;
     }
@@ -43,6 +50,9 @@ async function recordLiveRun(page, options, done) {
   const record = await page.evaluate(() => window.__TEAR_REPLAY_TAP__.finish());
   assert.ok(record, `${options.mode}: the tap recorded no run`);
   const verdict = await page.evaluate((value) => window.__TEAR_REPLAY_TAP__.verify(value), record);
+  // TEAR_REPLAY_DUMP=<folder outside the repository> keeps each record for a look at a difference.
+  if (process.env.TEAR_REPLAY_DUMP)
+    fs.writeFileSync(`${process.env.TEAR_REPLAY_DUMP}/${options.mode}.json`, JSON.stringify({ record, verdict }));
   return { record, verdict, snapshot };
 }
 
@@ -59,14 +69,15 @@ function summary(record) {
 }
 
 withJourney(
-  { name: "Replay 5b-3: a live run verifies from its seed", tutorialSkipped: true, query: { watchagent: "1" } },
-  async ({ page }) => {
-    await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__ && window.__TEAR_REPLAY_TAP__, undefined, {
-      timeout: STATE_WAIT_MS,
-    });
-
+  {
+    name: "Replay 5b-3: a live run verifies from its seed",
+    tutorialSkipped: true,
+    deferBoot: true,
+    query: { watchagent: "1" },
+  },
+  async (journey) => {
     const campaign = await recordLiveRun(
-      page,
+      journey,
       { mode: "campaign", difficulty: "easy", weapon: "sword", seed: 515_303, skipCinematics: false },
       (snapshot) =>
         snapshot.draftPicks.length > 0 &&
@@ -86,7 +97,7 @@ withJourney(
     assert.deepEqual(campaign.verdict, { status: "verified", tick: campaign.record.run.result.tick });
 
     const bossRush = await recordLiveRun(
-      page,
+      journey,
       { mode: "bossonly", difficulty: "easy", weapon: "sword", boss: "warden", seed: 515_304, skipCinematics: false },
       (snapshot) => snapshot.fixedTicks >= 1_800,
     );

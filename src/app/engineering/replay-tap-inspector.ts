@@ -14,6 +14,8 @@ export interface ReplayTapInspector {
   /** Records the next run that starts, until `finish`. */
   readonly arm: () => void;
   readonly recording: () => boolean;
+  /** True while a scene (a cinematic, a chapter page) holds the fight. */
+  readonly scene: () => boolean;
   /** Ends the record at the last simulated tick; null when no run was recorded. */
   readonly finish: () => ReplayRecord | null;
   readonly verify: (record: ReplayRecord) => ReplayVerdict;
@@ -22,12 +24,18 @@ export interface ReplayTapInspector {
 const BUILD = Object.freeze({ version: "test", revision: "test", target: "test-standalone" });
 const LOOK = Object.freeze({ playerName: "Player", cosmetics: {}, music: null, recordedAt: "1970-01-01T00:00:00Z" });
 
-export function installReplayTapInspector(target: Window, slot: LiveReplayTapSlot, run: () => RunTotals): void {
+export function installReplayTapInspector(
+  target: Window,
+  slot: LiveReplayTapSlot,
+  run: () => RunTotals,
+  scene: () => boolean,
+): void {
   const inspector: ReplayTapInspector = Object.freeze({
     arm: () => {
       slot.install(createLiveReplayTap({ build: BUILD, look: LOOK }));
     },
     recording: () => slot.current() !== null,
+    scene,
     finish: () => {
       const tap = slot.current();
       slot.install(null);

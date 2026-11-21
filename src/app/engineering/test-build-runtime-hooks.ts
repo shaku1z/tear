@@ -149,7 +149,12 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
     failure: () => ghostV3?.failure ?? null,
   });
   installGhostVaultConditionalCommitInspector(browserWindow);
-  installReplayTapInspector(browserWindow, sources.replayTap, () => authoritativeStep.lastResult?.state.run ?? null);
+  installReplayTapInspector(
+    browserWindow,
+    sources.replayTap,
+    () => authoritativeStep.lastResult?.state.run ?? null,
+    () => CINEMA.active,
+  );
   const consumedActions: CommandEnvelope<GameAction>[] = [];
   Input.semantic.subscribe((entry) => {
     consumedActions.push(entry);

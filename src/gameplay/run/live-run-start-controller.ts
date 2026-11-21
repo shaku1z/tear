@@ -19,6 +19,11 @@ export interface LiveRunStartPort<TMods extends { weaponId?: string }> {
    * session, profile and META; a replay reads its record. Every world step below reads only these.
    */
   readonly resolveStart: (mode: RunMode, difficulty: RunDifficulty) => RunStartChoices;
+  /**
+   * The resolved start, before any world step: a replay record opens here, so it sees the events the
+   * world emits while it initializes (the tick-0 stage and wave marks) as a replay of it does.
+   */
+  readonly openReplayRecord: (start: RunStartChoices) => void;
   readonly initializeWorld: (start: RunStartChoices) => RunSessionBlueprint<TMods>;
   readonly resetAuthoritativeClocks: () => void;
   readonly finishWorldReset: () => void;
@@ -27,8 +32,7 @@ export interface LiveRunStartPort<TMods extends { weaponId?: string }> {
   readonly startLifecycle: (sessionId: string) => void;
   readonly exposeDebugState: () => void;
   readonly updateProgressionTracking: (mode: RunMode) => void;
-  /** Recording starts with the run's start choices, the clocks at tick 0. */
-  readonly startRecording: (runId: string, start: RunStartChoices) => void;
+  readonly startRecording: (runId: string, runSeed: number) => void;
   readonly publishRunStarted: (session: RunSession<TMods>, runId: string) => void;
   readonly configureMode: (start: RunStartChoices) => void;
   readonly applyMetaProgression: (start: RunStartChoices) => void;
@@ -53,6 +57,7 @@ export class LiveRunStartController<TMods extends { weaponId?: string }> {
   start(mode: RunMode, difficulty: RunDifficulty): RunSession<TMods> {
     this.#port.replaceActiveRun();
     const start = this.#port.resolveStart(mode, difficulty);
+    this.#port.openReplayRecord(start);
     const blueprint = this.#port.initializeWorld(start);
     this.#port.resetAuthoritativeClocks();
     const { runSeed } = start;
@@ -79,7 +84,7 @@ export class LiveRunStartController<TMods extends { weaponId?: string }> {
     // chapter binding synchronously, so start recording only once that
     // initialization transaction has settled. No simulation frame can run in
     // between these calls, and input still begins before `playing` is exposed.
-    this.#port.startRecording(sessionId, start);
+    this.#port.startRecording(sessionId, runSeed);
     this.#port.publishRunStarted(session, sessionId);
     this.#port.enterPlayingState(sessionId);
     this.#port.beginMusic(sessionId, runSeed);
