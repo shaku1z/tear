@@ -40,8 +40,6 @@ const FIGHT_LIMIT_TICKS = 90 * TEAR_SIMULATION_TICKS_PER_SECOND;
  * Rootbound). Plan PR 5 deletes this table.
  */
 const STILL_BLOCKING: Readonly<Partial<Record<BossDefinitionId, number>>> = {
-  // Crownfall and the revive (Phase II already changes in the fight).
-  aldric: 2,
   // Phase II and Phase III rituals; the Verdant rebuild owns these.
   rootbound: 2,
   // The Phase II void descent and the true-form ritual (Phase III already changes in the fight).
