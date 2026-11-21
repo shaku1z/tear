@@ -43,7 +43,7 @@ const cloud = createFirebaseCloudCompatibility({
   now: () => Date.now() + clockOffset,
 });
 
-async function until<T>(read: () => Promise<T | undefined>, what: string): Promise<T> {
+async function until<T>(read: () => T | undefined | Promise<T | undefined>, what: string): Promise<T> {
   for (let attempt = 0; attempt < 100; attempt += 1) {
     const value = await read();
     if (value !== undefined) return value;
@@ -64,7 +64,7 @@ beforeAll(async () => {
   firebase.firestore().useEmulator(host, Number(port));
   await cloud.account.init(context);
   // init reports the local guest first, then the anonymous Firebase account once it is signed in.
-  await until(async () => (signedIn !== undefined && signedIn.user.id !== "local" ? signedIn : undefined), "the sign-in");
+  await until(() => (signedIn !== undefined && signedIn.user.id !== "local" ? signedIn : undefined), "the sign-in");
 });
 beforeEach(async () => {
   await env.clearFirestore();
@@ -111,13 +111,15 @@ describe("the game's Firebase adapter under firestore.rules", () => {
     clockOffset = 11_000;
     await expect(cloud.shared.submitScore("endless", "hard", entry(1700))).resolves.toBe(true);
     const board = await cloud.shared.topScores("endless", "hard", 25);
-    expect(board).toEqual([{ name: "Guest", score: 1700, wave: 5, time: 120, uid: uid(), ts: expect.any(Number) }]);
+    expect(board).toEqual([
+      { name: "Guest", score: 1700, wave: 5, time: 120, uid: uid(), ts: expect.any(Number) as number },
+    ]);
   });
 
   it("publishes a leaderboard replay in chunks, links it to the row and plays it back", async () => {
-    await expect(cloud.shared.submitScore("endless", "hard", { name: "Guest", score: 4200, wave: 7, time: 210 })).resolves.toBe(
-      true,
-    );
+    await expect(
+      cloud.shared.submitScore("endless", "hard", { name: "Guest", score: 4200, wave: 7, time: 210 }),
+    ).resolves.toBe(true);
     const published = recording(1_200_000);
     const shareId = await cloud.shared.publishReplay(published, null, "lb_endless_hard");
     expect(shareId).toBe(`lb_endless_hard_${uid()}`);
@@ -148,7 +150,17 @@ describe("the game's Firebase adapter under firestore.rules", () => {
       });
       return found;
     }, "the statistic");
-    expect(events).toEqual([{ event: "run_end", ts: expect.any(Number), mode: "endless", diff: "hard", wave: 7, score: 4200, died: true }]);
+    expect(events).toEqual([
+      {
+        event: "run_end",
+        ts: expect.any(Number) as number,
+        mode: "endless",
+        diff: "hard",
+        wave: 7,
+        score: 4200,
+        died: true,
+      },
+    ]);
   });
 
   it("finds no legacy ghost", async () => {

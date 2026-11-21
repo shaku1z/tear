@@ -162,7 +162,7 @@ jobs:
     needs: scope
     if: needs.scope.outputs.docs_only == 'false'
     runs-on: ubuntu-latest
-    timeout-minutes: 16
+    timeout-minutes: 18
     permissions:
       contents: read
       actions: read
@@ -178,6 +178,11 @@ jobs:
       - uses: ./.github/actions/check-results
         with:
           job: unit
+      # The firestore-rules check runs the Firebase emulators, which need Java 21 or later.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
       - name: Unit tests
         run: node scripts/run-checks.mjs unit
       # Read by .github/actions/check-results on a re-run of this job (to report flaky checks), which

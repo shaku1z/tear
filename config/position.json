@@ -132,6 +132,18 @@
       ]
     },
     {
+      "id": "firebase",
+      "name": "Firebase",
+      "state": "In progress: PR 1 (rules tests and hardened rules) open",
+      "summary": "Firestore rules for saves, leaderboards (score boards and Gauntlet clear boards), statistics and replays are tested under the local emulator, allowed and refused writes both, and the game's own adapter runs against them. The game still loads the 10.12.2 compat SDK from gstatic; App Check is not wired; Remote Config v1 is still read.",
+      "next": "Merge PR 1, then PR 2: the modular SDK bundled into the standalone build only.",
+      "owner_action": "Deploy the rules from PR 1 once it merges.",
+      "evidence": [
+        "plans/active/FIREBASE_REFRESH.md",
+        "tests/rules/firestore-rules.test.ts"
+      ]
+    },
+    {
       "id": "mobile",
       "name": "Mobile, touch and phone layouts",
       "state": "Paused by the owner 2026-11-19; out of the release builds",

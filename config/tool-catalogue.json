@@ -187,6 +187,14 @@
       ],
       "duration": "long"
     },
+    "test:rules": {
+      "purpose": "Firestore rules tests and the game's Firebase adapter under local emulators; the first run downloads the emulator",
+      "effects": [
+        "starts-server",
+        "network"
+      ],
+      "duration": "under-a-minute"
+    },
     "playtest": {
       "purpose": "Plays the real game headless: `bosses`, `sweep` boss fights, `waves` a stage's waves, `runs` whole runs, `enemies` each kind alone (queue sweep and runs)",
       "effects": [
@@ -1502,6 +1510,17 @@
         "tearbench"
       ]
     },
+    "scripts/test-firestore-rules.mjs": {
+      "purpose": "Runs tests/rules/ against local Firebase Auth and Firestore emulators (demo- project, no credentials); needs Java 21+",
+      "effects": [
+        "starts-server",
+        "network"
+      ],
+      "duration": "under-a-minute",
+      "via": [
+        "test:rules"
+      ]
+    },
     "scripts/verify-release-artifact.mjs": {
       "purpose": "Verifies a release artifact identity against the expected SHA",
       "effects": [
@@ -1670,7 +1689,8 @@
     "scripts/test-files.mjs": [
       "tests/unit/pitfall-guards.test.mjs",
       "vitest.config.ts",
-      "vitest.endurance.config.ts"
+      "vitest.endurance.config.ts",
+      "vitest.rules.config.ts"
     ],
     "scripts/wiki-data-export.mjs": [
       "scripts/export-game-reference.mjs"

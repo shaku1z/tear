@@ -24,6 +24,7 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 | [Repository structure and workflow](#repository-structure) | In progress | After the hooks pull request merges, run pnpm setup:hooks in the canonical checkout on main (scripts/governance/README.md). | — |
 | [Playtest tool](#playtest-tool) | Stage 2 under way: stage 1 is done (pnpm playtest bosses and sweep); pnpm playtest waves opens any Adventure wave directly, runs plays whole runs from wave 1, and enemies meets each enemy kind alone | The coverage list (content that never appeared in any report), then --compare. | — |
 | [Replays](#replays) | In progress: PR 1, PR 2 and PR 2b merged (hidden replay features, replay extras and REPAIR removed); PR 3 open (snapshot codecs to src/gameplay/snapshot) | Merge PR 3, then PR 4 (the detached world moves to src/app/world/detached). | Deploy the Firestore chunk-write rules from the merged rules PR. |
+| [Firebase](#firebase) | In progress: PR 1 (rules tests and hardened rules) open | Merge PR 1, then PR 2: the modular SDK bundled into the standalone build only. | Deploy the rules from PR 1 once it merges. |
 | [Mobile, touch and phone layouts](#mobile) | Paused by the owner 2026-11-19; out of the release builds | Nothing until the owner resumes mobile; plans/MOBILE_LATER.md says how to turn it back on. | Mark the CrazyGames listing desktop only. Say when mobile resumes. |
 
 <a id="release-readiness"></a>
@@ -125,6 +126,16 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 - Next: Merge PR 3, then PR 4 (the detached world moves to src/app/world/detached).
 - Owner action: Deploy the Firestore chunk-write rules from the merged rules PR.
 - Evidence: [plans/active/REPLAY_OVERHAUL_PLAN.md](../plans/active/REPLAY_OVERHAUL_PLAN.md)
+
+<a id="firebase"></a>
+
+### Firebase
+
+**In progress: PR 1 (rules tests and hardened rules) open.** Firestore rules for saves, leaderboards (score boards and Gauntlet clear boards), statistics and replays are tested under the local emulator, allowed and refused writes both, and the game's own adapter runs against them. The game still loads the 10.12.2 compat SDK from gstatic; App Check is not wired; Remote Config v1 is still read.
+
+- Next: Merge PR 1, then PR 2: the modular SDK bundled into the standalone build only.
+- Owner action: Deploy the rules from PR 1 once it merges.
+- Evidence: [plans/active/FIREBASE_REFRESH.md](../plans/active/FIREBASE_REFRESH.md), [tests/rules/firestore-rules.test.ts](../tests/rules/firestore-rules.test.ts)
 
 <a id="mobile"></a>
 

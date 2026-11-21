@@ -39,11 +39,13 @@ service cloud.firestore {
                             && incoming().meta is map;
     }
 
-    // Public leaderboards, one board per published mode and difficulty (the modes the LEADERBOARDS
-    // screen lists, times DIFFICULTY_IDS; the rules test fails when either list changes without this
-    // one). A player writes only their own row, and only two kinds of write:
-    //  - a new best: every score field, a higher score than the row holds, at least 10 s after the last;
-    //  - the replay link: only replayId, naming a replay this player owns.
+    // Public leaderboards. A player writes only their own row, and only two kinds of write:
+    //  - a new best: every row field, a better value than the row holds, at least 10 s after the last;
+    //  - the replay link: only replayId, naming a replay this player owns (so the value stays as it was).
+    // Score boards, one per mode the LEADERBOARDS screen lists times DIFFICULTY_IDS, keep the highest
+    // score. Gauntlet clear boards, one per difficulty, keep the fastest clear: score is the clear time in
+    // simulation ticks (120 a second), wave the trials cleared. The rules test fails when the game's
+    // lists change without these.
     function isBoard(board) {
       return board in [
         'campaign_easy', 'campaign_normal', 'campaign_hard', 'campaign_extreme', 'campaign_onehit',
@@ -51,19 +53,37 @@ service cloud.firestore {
         'gauntlet_easy', 'gauntlet_normal', 'gauntlet_hard', 'gauntlet_extreme', 'gauntlet_onehit'
       ];
     }
-    function isScoreRow(row, uid) {
+    function isClearBoard(board) {
+      return board in [
+        'gauntletclear_easy', 'gauntletclear_normal', 'gauntletclear_hard', 'gauntletclear_extreme',
+        'gauntletclear_onehit'
+      ];
+    }
+    function isRow(row, uid) {
       return stringIn(row.name, 1, 16) && row.name.matches('[A-Za-z0-9 _-]+')
-          && intIn(row.score, 1, 1000000000)
-          && intIn(row.wave, 0, 100000)
           && intIn(row.time, 0, 10000000)
           && row.uid == uid
           && nearNow(row.ts);
     }
-    function isNewBest(uid) {
+    function isRowWrite() {
       return changedKeys().hasOnly(['name', 'score', 'wave', 'time', 'uid', 'ts'])
-          && isScoreRow(incoming(), uid)
-          && (resource == null || (incoming().score > resource.data.get('score', 0)
-                                   && incoming().ts >= resource.data.get('ts', 0) + 10000));
+          && (resource != null || incoming().keys().hasAll(['name', 'score', 'wave', 'time', 'uid', 'ts']));
+    }
+    function afterLastWrite() {
+      return incoming().ts >= resource.data.get('ts', 0) + 10000;
+    }
+    function isNewBest(uid) {
+      return isRowWrite() && isRow(incoming(), uid)
+          && intIn(incoming().score, 1, 1000000000)
+          && intIn(incoming().wave, 0, 100000)
+          && (resource == null || (incoming().score > resource.data.get('score', 0) && afterLastWrite()));
+    }
+    // A clear takes at least a minute (7,200 ticks) and at most four hours (1,728,000 ticks).
+    function isNewFastest(uid) {
+      return isRowWrite() && isRow(incoming(), uid)
+          && intIn(incoming().score, 7200, 1728000)
+          && intIn(incoming().wave, 1, 32)
+          && (resource == null || (incoming().score < resource.data.get('score', 1728001) && afterLastWrite()));
     }
     function isReplayLink(uid) {
       return resource != null
@@ -73,10 +93,10 @@ service cloud.firestore {
     }
     match /leaderboards/{board}/scores/{uid} {
       allow read: if true;
-      allow create: if isUser(uid) && isBoard(board)
-                    && incoming().keys().hasAll(['name', 'score', 'wave', 'time', 'uid', 'ts'])
-                    && isNewBest(uid);
-      allow update: if isUser(uid) && isBoard(board) && (isNewBest(uid) || isReplayLink(uid));
+      allow create, update: if isUser(uid)
+                            && ((isBoard(board) && isNewBest(uid))
+                                || (isClearBoard(board) && isNewFastest(uid))
+                                || ((isBoard(board) || isClearBoard(board)) && isReplayLink(uid)));
       allow delete: if isUser(uid);
     }
 
@@ -96,10 +116,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Published replays: a summary document, with the recording in up to 8 chunks of at most 500,000
-    // characters underneath. Anyone can watch; only the owner (the Replay Passport uid) writes. A
-    // leaderboard replay has the fixed id lb_<mode>_<difficulty>_<uid>, so only that player can hold it;
-    // any other replay id is r followed by base-36 characters.
+    // Published replays: a summary document, with the recording in up to 6 chunks of at most 500,000
+    // characters underneath (publishReplay caps the recording at 3,000,000). Anyone can watch; only the
+    // owner (the Replay Passport uid) writes. A leaderboard replay has the fixed id
+    // lb_<board>_<difficulty>_<uid>, so only that player can hold it, and re-publishing replaces it with
+    // set(); chunks from a longer earlier copy stay at or above the new chunkCount, unread and unwritable.
+    // Any other replay id is r followed by base-36 characters.
     function isReplayId(id) {
       return id.matches('lb_[a-z]+_[a-z]+_' + request.auth.uid) || id.matches('r[0-9a-z]{1,32}');
     }
@@ -108,7 +130,7 @@ service cloud.firestore {
       return incoming().keys().hasOnly(['ownerUid', 'createdAt', 'chunkCount', 'mode', 'diff', 'wave', 'score',
                                         'time', 'won', 'kills', 'peak', 'name', 'thumb', 'lb'])
           && incoming().ownerUid == request.auth.uid
-          && intIn(incoming().chunkCount, 1, 8)
+          && intIn(incoming().chunkCount, 1, 6)
           && stringIn(incoming().name, 1, 32)
           && nearNow(incoming().createdAt);
     }
@@ -121,7 +143,7 @@ service cloud.firestore {
         allow read: if true;
         // Only the parent replay's owner writes its chunks (the parent is written first).
         allow create, update: if signedIn()
-                              && n.matches('[0-7]')
+                              && n.matches('[0-5]')
                               && get(/databases/$(database)/documents/replays/$(id)).data.ownerUid == request.auth.uid
                               && int(n) < get(/databases/$(database)/documents/replays/$(id)).data.chunkCount
                               && incoming().keys().hasOnly(['d'])
