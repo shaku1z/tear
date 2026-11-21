@@ -199,7 +199,7 @@ describe("entity rendering policies", () => {
     const firstStyles: string[] = [],
       secondStyles: string[] = [];
     const pose = {
-      cinematicPose: "colossusCore",
+      cinematicPose: "aldricFeral",
       cinematicT: 1,
       color: "#fff",
       x: 40,
@@ -212,7 +212,7 @@ describe("entity rendering policies", () => {
     enemyRuntime("first").drawBossTransformationWorld(canvas(firstStyles), pose as never);
     enemyRuntime("second").drawBossTransformationWorld(canvas(secondStyles), pose as never);
 
-    expect(firstStyles).toContain("first-slam");
-    expect(secondStyles).toContain("second-slam");
+    expect(firstStyles).toContain("first-bomber");
+    expect(secondStyles).toContain("second-bomber");
   });
 });
