@@ -8,10 +8,14 @@ import type { createProductionGhostReplayComposition } from "./replay-compositio
 export type DetachedWorldSession = ReturnType<ReturnType<typeof createProductionGhostReplayComposition>["create"]>;
 
 /**
- * One simulation tick of a detached world that has no recorded frame clock. While a boss intro or a
- * cinematic holds the fight, one application frame of one tick's length runs first, with no confirm
- * press. Then the reward and menu actions go to the screen router and the rest to the simulation.
- * The headless environment steps the same way (src/playtest/headless/production-headless-environment.ts).
+ * The one definition of a detached world's simulation tick; verify (src/app/replay/detached-replay-world.ts)
+ * and the headless environment (src/playtest/headless/production-headless-environment.ts) both call it.
+ *
+ * It carries one frame-clock exception: a detached world has no recorded frame clock, so while a boss
+ * intro or a cinematic holds the fight, one application frame of one tick's length runs first, with no
+ * confirm press. Live play runs those scenes on its own frame seconds and confirm presses, which is one
+ * of the gaps replay PR 5b closes. Then the reward and menu actions go to the screen router and the rest
+ * to the simulation.
  */
 export function stepDetachedWorld(
   session: DetachedWorldSession,

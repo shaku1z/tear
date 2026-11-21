@@ -7,6 +7,14 @@
  * A record is a seed, the run's start choices and its semantic actions at ticks, with a state hash
  * every REPLAY_CHECKPOINT_TICKS and at the end. It holds no keyframes, random tracks or frame clocks:
  * the detached world re-simulates the run, and keyframes for seeking are a cache kept beside a record.
+ *
+ * Until replay PR 5b, a record verifies only against the detached world that made it: a record from
+ * live play is not yet guaranteed to verify. Live play differs from a detached start in four places:
+ * its seed type (a uint32 run seed against the detached world's hashed seed text), its start choices
+ * (meta progression and opening content), its reward picks (UI calls, not actions) and the cinema
+ * frame clock. The detached world also carries one frame-clock exception (src/app/world/detached/
+ * detached-step.ts): while a boss intro or a cinematic holds the fight, each tick first runs one
+ * application frame of one tick's length with no confirm press.
  */
 import { isRecord } from "../domain/records";
 import { hasMonotonicEnvelopes, type CommandEnvelope } from "../domain/envelopes";

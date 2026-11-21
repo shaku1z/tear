@@ -3,9 +3,15 @@
  * tick that differs.
  *
  * What a "verified" verdict proves: the detached world, started from the record's seed and start
- * choices and given its actions at their ticks, reaches the same state hashes again. It does not prove
- * that a live run in the browser would replay: until the live start is the detached start (replay PR
- * 5b), only records made in a detached or headless world are known to verify.
+ * choices and given its actions at their ticks, reaches the same state hashes again.
+ *
+ * Until replay PR 5b, a record verifies only against the detached world that made it: a record from
+ * live play is not yet guaranteed to verify. Live play differs from a detached start in four places:
+ * its seed type (a uint32 run seed against the detached world's hashed seed text), its start choices
+ * (meta progression and opening content), its reward picks (UI calls, not actions) and the cinema
+ * frame clock. The detached world also carries one frame-clock exception (src/app/world/detached/
+ * detached-step.ts): while a boss intro or a cinematic holds the fight, each tick first runs one
+ * application frame of one tick's length with no confirm press.
  *
  * The world is a port: the app builds the detached production world behind it
  * (src/app/replay/detached-replay-world.ts), and verify sees only `ReplayRecord["run"]` through it, so
