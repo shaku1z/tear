@@ -78,3 +78,8 @@ The owner approved this refresh on 2026-11-20. It stays on the free tier. Consol
   - Its own chunk would have split the SDK core into a shared chunk that the precache took (47 entries, over the 46 budget). So it ships inside the SDK chunk: 66.3 → 71.9 KB gzip, precache still 46/46.
   - Past reCAPTCHA's free 10,000 monthly assessments, with no billing account, tokens stop and nothing is charged; enforcement off means nobody is refused.
   - `tests/unit/privacy-page.test.ts` fails until the change that sets the key also names reCAPTCHA on the privacy page.
+- 2026-11-21 PR 2 also spaces leaderboard bests by the server's clock (the lead's follow-up to PR 1's review).
+  - The adapter writes `at` as `serverTimestamp()`. The rules require `at` to equal `request.time`, and require 10 s of server time since the stored `at`.
+  - A row written before `at` existed is spaced by `ts` until its next best adds `at`, and it keeps it from then on.
+  - **Deploy order:** PR 1's rules refuse a row write that carries `at`. So the owner deploys PR 2's rules before the PR 2 build reaches players. Those rules accept writes from both builds.
+  - Once no build without `at` is in use, a later change can require `at` on every best.

@@ -168,6 +168,66 @@ describe("the scripts the checks reach (checkedScripts)", () => {
   });
 });
 
+describe("the config files the checks' tools read (TOOL_CONFIGS)", () => {
+  const reached = checkedScripts(loadChecks());
+
+  it("reaches the vitest configs, every tsconfig through references and extends, and what they import", () => {
+    expect(reached.get("vitest.config.ts")).toContain("read by default by the check");
+    expect(reached.get("vitest.endurance.config.ts")).toContain("--config vitest.endurance.config.ts");
+    expect(reached.get("tsconfig.json")).toContain("tsc -b");
+    for (const project of ["tsconfig.app.json", "tsconfig.node.json", "tsconfig.test.json"])
+      expect(reached.get(project), project).toBe("referenced by tsconfig.json");
+    expect(reached.get("scripts/test-files.mjs")).toBe("imported by vitest.config.ts");
+  });
+
+  it("makes every root config of vitest, vite, playwright or tsc a gate file", () => {
+    const configs = readdirSync(root).filter((name) =>
+      /^(?:(?:vitest|vite|playwright)(?:\.[\w-]+)?\.config\.[cm]?[jt]s|tsconfig[\w.-]*\.json)$/u.test(name),
+    );
+    expect(configs.length).toBeGreaterThan(5);
+    expect(configs.filter((name) => gateFilesIn(list, [name]).length === 0)).toEqual([]);
+  });
+
+  it("takes a named config over the default, follows extends and references, and finds playwright's default", () => {
+    const files = {
+      "vitest.config.ts": "export default {};",
+      "vitest.slow.config.mts": 'import { x } from "./scripts/x.mjs";',
+      "scripts/x.mjs": "export const x = 1;",
+      "tsconfig.json": '{ "references": [{ "path": "./tsconfig.a.json" }, { "path": "./packages/b" }] }',
+      "tsconfig.a.json": '{ "extends": "./tsconfig.base.json" }',
+      "tsconfig.base.json": "{}",
+      "packages/b/tsconfig.json": "{}",
+      "playwright.config.ts": "export default {};",
+    };
+    const checks = {
+      gate: ["fast"],
+      groups: {
+        fast: [
+          check("slow", "node node_modules/vitest/vitest.mjs run --config vitest.slow.config.mts"),
+          check("types", "node node_modules/typescript/bin/tsc -b"),
+          check("e2e", "pnpm exec playwright test"),
+        ],
+      },
+    };
+    const found = checkedScripts(checks, (file) => {
+      if (files[file] === undefined) throw new Error(`no ${file}`);
+      return files[file];
+    });
+    expect([...found.keys()].sort()).toEqual(
+      [
+        "packages/b/tsconfig.json",
+        "playwright.config.ts",
+        "scripts/x.mjs",
+        "tsconfig.a.json",
+        "tsconfig.base.json",
+        "tsconfig.json",
+        "vitest.slow.config.mts",
+      ].sort(),
+    );
+    expect(found.get("tsconfig.base.json")).toBe("extended by tsconfig.a.json");
+  });
+});
+
 describe("merge readiness for a change to gate files", () => {
   const answered = DESIGN_CHECK_LABELS.map((label) => `- **${label}:** n/a: a fixture answer`).join("\n");
   const head = "a".repeat(40);

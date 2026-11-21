@@ -86,9 +86,14 @@ jobs:
             docs_only=true
           fi
           echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
-      - uses: ./.github/actions/main-gate
-        with:
-          main: ${{ steps.main.outputs.main }}
+      # Main's copy of the loader, read from main, so a head cut before it is judged too.
+      - name: Use main's copy of the gate
+        shell: bash
+        env:
+          MAIN: ${{ steps.main.outputs.main }}
+        run: |
+          if git cat-file -e "$MAIN:scripts/ci-main-gate.sh" 2>/dev/null; then git show "$MAIN:scripts/ci-main-gate.sh" | bash -s -- "$MAIN"
+          else bash scripts/ci-main-gate.sh "$MAIN"; fi
       # Shown on the run and the pull request; pnpm merge:ready holds such a change for the lead.
       - name: Flag changed gate files
         if: github.event_name != 'push'
@@ -143,9 +148,14 @@ jobs:
         with:
           main: ${{ needs.scope.outputs.merge_main }}
           commit: ${{ needs.scope.outputs.commit }}
-      - uses: ./.github/actions/main-gate
-        with:
-          main: ${{ needs.scope.outputs.main }}
+      # Main's copy of the loader, read from main, so a head cut before it is judged too.
+      - name: Use main's copy of the gate
+        shell: bash
+        env:
+          MAIN: ${{ needs.scope.outputs.main }}
+        run: |
+          if git cat-file -e "$MAIN:scripts/ci-main-gate.sh" 2>/dev/null; then git show "$MAIN:scripts/ci-main-gate.sh" | bash -s -- "$MAIN"
+          else bash scripts/ci-main-gate.sh "$MAIN"; fi
       - uses: ./.github/actions/check-results
         with:
           job: static
@@ -186,9 +196,14 @@ jobs:
         with:
           main: ${{ needs.scope.outputs.merge_main }}
           commit: ${{ needs.scope.outputs.commit }}
-      - uses: ./.github/actions/main-gate
-        with:
-          main: ${{ needs.scope.outputs.main }}
+      # Main's copy of the loader, read from main, so a head cut before it is judged too.
+      - name: Use main's copy of the gate
+        shell: bash
+        env:
+          MAIN: ${{ needs.scope.outputs.main }}
+        run: |
+          if git cat-file -e "$MAIN:scripts/ci-main-gate.sh" 2>/dev/null; then git show "$MAIN:scripts/ci-main-gate.sh" | bash -s -- "$MAIN"
+          else bash scripts/ci-main-gate.sh "$MAIN"; fi
       - uses: ./.github/actions/check-results
         with:
           job: unit
@@ -247,9 +262,14 @@ jobs:
         with:
           main: ${{ needs.scope.outputs.merge_main }}
           commit: ${{ needs.scope.outputs.commit }}
-      - uses: ./.github/actions/main-gate
-        with:
-          main: ${{ needs.scope.outputs.main }}
+      # Main's copy of the loader, read from main, so a head cut before it is judged too.
+      - name: Use main's copy of the gate
+        shell: bash
+        env:
+          MAIN: ${{ needs.scope.outputs.main }}
+        run: |
+          if git cat-file -e "$MAIN:scripts/ci-main-gate.sh" 2>/dev/null; then git show "$MAIN:scripts/ci-main-gate.sh" | bash -s -- "$MAIN"
+          else bash scripts/ci-main-gate.sh "$MAIN"; fi
       - uses: ./.github/actions/check-results
         with:
           job: build
@@ -357,9 +377,14 @@ jobs:
         env:
           EXPECTED: ${{ needs.build.outputs.hashes }}
         run: node scripts/ci-build-hashes.mjs --expect "$EXPECTED"
-      - uses: ./.github/actions/main-gate
-        with:
-          main: ${{ needs.scope.outputs.main }}
+      # Main's copy of the loader, read from main, so a head cut before it is judged too.
+      - name: Use main's copy of the gate
+        shell: bash
+        env:
+          MAIN: ${{ needs.scope.outputs.main }}
+        run: |
+          if git cat-file -e "$MAIN:scripts/ci-main-gate.sh" 2>/dev/null; then git show "$MAIN:scripts/ci-main-gate.sh" | bash -s -- "$MAIN"
+          else bash scripts/ci-main-gate.sh "$MAIN"; fi
       - uses: ./.github/actions/check-results
         with:
           job: browser-${{ matrix.shard }}
@@ -421,9 +446,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .node-version
-      - uses: ./.github/actions/main-gate
-        with:
-          main: ${{ needs.scope.outputs.main }}
+      # Main's copy of the loader, read from main, so a head cut before it is judged too.
+      - name: Use main's copy of the gate
+        shell: bash
+        env:
+          MAIN: ${{ needs.scope.outputs.main }}
+        run: |
+          if git cat-file -e "$MAIN:scripts/ci-main-gate.sh" 2>/dev/null; then git show "$MAIN:scripts/ci-main-gate.sh" | bash -s -- "$MAIN"
+          else bash scripts/ci-main-gate.sh "$MAIN"; fi
       - name: Every needed job passed
         env:
           NEEDS: ${{ toJSON(needs) }}

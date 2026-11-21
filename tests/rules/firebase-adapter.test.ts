@@ -6,7 +6,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { initializeTestEnvironment, type RulesTestEnvironment } from "@firebase/rules-unit-testing";
-import { collection, getDocs } from "firebase/firestore";
+import { Timestamp, collection, doc, getDocs, setDoc, type Firestore } from "firebase/firestore";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { AccountContext, CloudStatus, CloudUser } from "../../src/platform/cloud";
 import { createFirebaseCloudCompatibility } from "../../src/platform/firebase-cloud";
@@ -77,14 +77,22 @@ describe("the game's Firebase adapter under firestore.rules", () => {
     const entry = (score: number) => ({ name: "Guest", score, wave: 5, time: 120.4 });
     await expect(cloud.shared.submitScore("endless", "hard", entry(1500))).resolves.toBe(true);
     await expect(cloud.shared.submitScore("endless", "hard", entry(900))).resolves.toBe(false);
-    // A higher score within 10 s of the last is refused by the rules' write-rate limit.
+    // A higher score within 10 s of the last is refused by the rules' write-rate limit, which goes by the
+    // server's clock: moving the client's clock on does not get past it.
     await expect(cloud.shared.submitScore("endless", "hard", entry(1600))).resolves.toBe(false);
     clockOffset = 11_000;
+    await expect(cloud.shared.submitScore("endless", "hard", entry(1600))).resolves.toBe(false);
+    // Eleven seconds of server time later (the stored write moved back instead of waiting).
+    await env.withSecurityRulesDisabled(async (admin) => {
+      const earlier = Date.now() - 11_000;
+      const row = doc(admin.firestore() as unknown as Firestore, `leaderboards/endless_hard/scores/${uid()}`);
+      await setDoc(row, { at: Timestamp.fromMillis(earlier), ts: earlier }, { merge: true });
+    });
+    clockOffset = 0;
     await expect(cloud.shared.submitScore("endless", "hard", entry(1700))).resolves.toBe(true);
     const board = await cloud.shared.topScores("endless", "hard", 25);
-    expect(board).toEqual([
-      { name: "Guest", score: 1700, wave: 5, time: 120, uid: uid(), ts: expect.any(Number) as number },
-    ]);
+    const any = expect.any(Number) as number;
+    expect(board).toEqual([{ name: "Guest", score: 1700, wave: 5, time: 120, uid: uid(), ts: any, at: any }]);
   });
 
   it("publishes a leaderboard replay in chunks, links it to the row and plays it back", async () => {

@@ -2,7 +2,6 @@ export interface CombatFeedbackEvent {
   readonly shake?: number;
   readonly flash?: number;
   readonly hitstop?: number;
-  readonly slowmo?: number;
   readonly zoom?: number;
   readonly banner?: string;
   readonly txt?: string;
@@ -16,7 +15,6 @@ export interface CombatFeedbackEvent {
 
 export interface CombatFeedbackState {
   hitStop: number;
-  slowMotion: number;
 }
 
 export interface CombatFeedbackPort {
@@ -40,7 +38,6 @@ export function applyCombatFeedback(
     if (event.shake) port.shake(event.shake);
     if (event.flash) port.flash(event.flash);
     if (event.hitstop) state.hitStop = Math.max(state.hitStop, event.hitstop);
-    if (event.slowmo) state.slowMotion = Math.max(state.slowMotion, event.slowmo);
     if (event.zoom) port.zoom(event.zoom);
     if (event.banner) port.banner(event.banner, event.color ?? fallback.color);
     if (event.txt)

@@ -737,7 +737,6 @@ function createKill(context: LiveCombatActionContext): LiveKillHost {
       d.FX.explode(enemy.x, enemy.y - 20, accent, 1.4);
       f.addShake(d.CONFIG.juice.shakeBig * 1.5);
       f.addZoom(d.CONFIG.juice.zoomBig);
-      f.triggerSlowMotion();
       d.Input.buzz([30, 40, 60]);
     },
     releaseStolenBlade: (enemy) => {
@@ -777,7 +776,6 @@ function updateRuntimeFeedback(context: LiveCombatActionContext, seconds: number
     ...(event.shake === undefined ? {} : { shake: event.shake }),
     ...(event.flash === undefined ? {} : { flash: event.flash }),
     ...(event.hitstop === undefined ? {} : { hitstop: event.hitstop }),
-    ...(event.slowmo === undefined ? {} : { slowmo: event.slowmo }),
     ...(event.zoom === undefined ? {} : { zoom: event.zoom }),
     ...(event.banner === undefined ? {} : { banner: event.banner }),
     ...(event.txt === undefined ? {} : { txt: event.txt }),
@@ -800,7 +798,7 @@ function applyFeedback(
   const { live, ports } = context,
     f = ports.functions;
   const current = live.collisionState(),
-    state = { hitStop: current.hitStop, slowMotion: current.slowMotion };
+    state = { hitStop: current.hitStop };
   applyCombatFeedback(
     events,
     state,
@@ -822,7 +820,7 @@ function applyFeedback(
     },
     slamOnImpact,
   );
-  live.setCollisionState({ ...current, hitStop: state.hitStop, slowMotion: state.slowMotion });
+  live.setCollisionState({ ...current, hitStop: state.hitStop });
 }
 
 function updateSupports(context: LiveCombatActionContext, seconds: number): void {

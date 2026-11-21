@@ -103,7 +103,6 @@ export function createSourceType(
         banner: perfect ? "MEMORY COLLAPSED" : "MEMORY FRACTURED",
         color: perfect ? "#ffffff" : "#6ef2ff",
         priority: perfect ? 9 : 7,
-        slowmo: perfect ? 0.38 : 0,
         zoom: perfect ? 0.08 : 0.035,
         quiet: !perfect,
       });
@@ -448,7 +447,6 @@ export function createSourceType(
         banner: "IT TOOK YOUR BLADE",
         color: CONFIG.colors.perfect,
         priority: 8,
-        slowmo: 0.35,
         zoom: 0.06,
       });
       return true;

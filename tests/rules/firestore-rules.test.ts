@@ -20,7 +20,9 @@ import {
   limit,
   orderBy,
   query,
+  serverTimestamp,
   setDoc,
+  Timestamp,
   type DocumentData,
   type Firestore,
 } from "firebase/firestore";
@@ -200,6 +202,32 @@ describe("leaderboards/{board}/scores/{uid}", () => {
     await assertSucceeds(best(1300, Date.now()));
   });
 
+  it("spaces a row by the server's clock once it has one, which the client cannot set", async () => {
+    const db = as("alice");
+    const earlier = Date.now() - 60_000;
+    const best = (score: number, extra: DocumentData = {}, merge = true) =>
+      setDoc(doc(db, path("alice")), row("alice", { score, ...extra }), { merge });
+    await seed(path("alice"), row("alice", { ts: earlier, at: Timestamp.fromMillis(earlier) }));
+    await assertFails(best(1300, { at: Timestamp.now() }));
+    await assertFails(best(1300, { at: Timestamp.fromMillis(earlier) }));
+    // Once a row has the server's clock, every best carries it: by merge (the stored one is stale) or replace.
+    await assertFails(best(1300));
+    await assertFails(best(1300, {}, false));
+    await assertSucceeds(best(1300, { at: serverTimestamp() }));
+    // A client clock set 11 s on does not get past the spacing; only the server's clock counts.
+    await assertFails(best(1400, { at: serverTimestamp(), ts: Date.now() + 11_000 }));
+  });
+
+  it("keeps a row written before the server's clock existed writable, by either kind of client", async () => {
+    const earlier = Date.now() - 60_000;
+    await seed(path("alice"), row("alice", { ts: earlier }));
+    await assertSucceeds(setDoc(doc(as("alice"), path("alice")), row("alice", { score: 1300 }), { merge: true }));
+    await seed(path("bob"), row("bob", { ts: earlier }));
+    await assertSucceeds(
+      setDoc(doc(as("bob"), path("bob")), row("bob", { score: 1300, at: serverTimestamp() }), { merge: true }),
+    );
+  });
+
   it("links a replay only to the owner's own row and the owner's own replay", async () => {
     const db = as("alice");
     await seed("replays/lb_endless_hard_alice", { ownerUid: "alice" });
@@ -240,7 +268,7 @@ describe("leaderboards/gauntletclear_<difficulty>: fastest Gauntlet clears", () 
       await assertSucceeds(setDoc(doc(db, path("alice", difficulty)), clear("alice")));
     await env.clearFirestore();
     const refused: DocumentData[] = [
-      clear("alice", { score: 7_199 }),
+      clear("alice", { score: 3_599 }),
       clear("alice", { score: 1_728_001 }),
       clear("alice", { score: 70_000.5 }),
       clear("alice", { wave: 0 }),
@@ -252,7 +280,7 @@ describe("leaderboards/gauntletclear_<difficulty>: fastest Gauntlet clears", () 
     for (const data of refused) await assertFails(setDoc(doc(db, path("alice")), data));
     await assertFails(setDoc(doc(as("bob"), path("alice")), clear("alice")));
     await assertFails(setDoc(doc(db, "leaderboards/gauntletclear_nightmare/scores/alice"), clear("alice")));
-    await assertSucceeds(setDoc(doc(db, path("alice")), clear("alice", { score: 7_200, wave: 1 })));
+    await assertSucceeds(setDoc(doc(db, path("alice")), clear("alice", { score: 3_600, wave: 1 })));
   });
 
   it("takes a new clear only when it is faster and at least 10 seconds after the last", async () => {
@@ -271,7 +299,7 @@ describe("leaderboards/gauntletclear_<difficulty>: fastest Gauntlet clears", () 
     await seed("replays/lb_gauntletclear_hard_alice", { ownerUid: "alice" });
     const db = as("alice");
     const link = { replayId: "lb_gauntletclear_hard_alice" };
-    await assertFails(setDoc(doc(db, path("alice")), { ...link, score: 7_200 }, { merge: true }));
+    await assertFails(setDoc(doc(db, path("alice")), { ...link, score: 3_600 }, { merge: true }));
     await assertSucceeds(setDoc(doc(db, path("alice")), link, { merge: true }));
   });
 });

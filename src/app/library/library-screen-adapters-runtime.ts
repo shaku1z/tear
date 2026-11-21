@@ -33,6 +33,9 @@ import type { GhostVaultLibraryPort } from "./ghost-vault-library-controller";
 import type { GhostTheaterOpenResult } from "../../ghost/theater-open-result";
 import { createLiveBestiaryPreview } from "./bestiary-preview";
 import { VAULT_OPENING_MESSAGE, vaultListState } from "../../presentation/screens/profile-list-empty-state";
+import { resolveCosmeticStyles } from "../../presentation/cosmetic-styles";
+import { COSMETIC_CATALOG } from "../../gameplay/progression/cosmetic-catalog";
+import { loadoutOf } from "../../domain/cosmetics";
 
 type Dependencies = Pick<
   GameRuntimeDependencies,
@@ -343,6 +346,8 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     // The vault toolbar (import) sits above the list: profile-achievements vaultToolbar.
     const archiveInset = profileTab === "vault" && ghostVault.archive !== undefined ? 84 : 0;
     const result = buildProfileSnapshot({
+      // The passport has no motion, so the calm looks (which only still motion) never apply to it.
+      cosmetics: resolveCosmeticStyles(COSMETIC_CATALOG, loadoutOf(COSMETIC_CATALOG, d.PROFILE.cosmetics()), false),
       tab: profileTab,
       tabs: profileTabs,
       signedIn,

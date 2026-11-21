@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { buildProfileSnapshot } from "../../src/presentation/profile-snapshots";
+import { COSMETIC_CATALOG } from "../../src/gameplay/progression/cosmetic-catalog";
+import { resolveCosmeticStyles } from "../../src/presentation/cosmetic-styles";
+import type { Loadout } from "../../src/domain/cosmetic-types";
 
-function snapshot(rows: number, scroll: number, inset: number, tab = "vault") {
+function snapshot(rows: number, scroll: number, inset: number, tab = "vault", wearing: Loadout = {}) {
   // Passing a fixture variable keeps the pre-fix behavioral run executable:
   // the old production function ignores the inset and returns its old clamp.
   const input: Parameters<typeof buildProfileSnapshot>[0] & { replayListInset: number } = {
+    cosmetics: resolveCosmeticStyles(COSMETIC_CATALOG, wearing, false),
     tab,
     tabs: [[tab, tab.toUpperCase()]],
     signedIn: false,
@@ -65,5 +69,18 @@ describe("Profile archive list viewport", () => {
     expect(result.maximumScroll).toBe(116);
     expect(result.view.canScrollUp).toBe(true);
     expect(result.view.canScrollDown).toBe(true);
+  });
+});
+
+describe("Profile passport look", () => {
+  it("carries no look while the player wears neither a title nor a banner", () => {
+    expect(snapshot(0, 0, 0, "stats").view.passport?.look).toBeUndefined();
+  });
+
+  it("carries only the worn parts: the title text and the banner colours and pattern", () => {
+    expect(snapshot(0, 0, 0, "stats", { title: "title_wanderer" }).view.passport?.look).toEqual({ title: "WANDERER" });
+    expect(snapshot(0, 0, 0, "stats", { banner: "banner_nightfall" }).view.passport?.look).toEqual({
+      banner: { colors: ["#1b2130", "#7a4ff0"], pattern: "split" },
+    });
   });
 });
