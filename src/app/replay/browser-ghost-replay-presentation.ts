@@ -214,9 +214,7 @@ export function createBrowserGhostReplayPresentation(
           drawBackdrop: (_stage, seconds, x, bounds, camera) => {
             scenes?.show(stage.id);
             if (scenes?.opaque(stage.id) !== true) backdrop.draw(replayCanvas(), stage, seconds, x, bounds);
-            if (scenes === undefined) return;
-            scenes.drawBack(replayCanvas(), sceneInput(seconds, x, bounds, camera));
-            if (!hidden.has("platforms")) scenes.drawShadows(replayCanvas(), stage.id, platforms);
+            scenes?.drawBack(replayCanvas(), sceneInput(seconds, x, bounds, camera));
           },
           ...(scenes === undefined
             ? {}
@@ -226,7 +224,7 @@ export function createBrowserGhostReplayPresentation(
                 },
               }),
           drawPlatform: (platform, _stage, floor, bounds) => {
-            backdrop.platform(replayCanvas(), platform, stage, floor, bounds, scenes?.surfaceMaterial(stage.id));
+            backdrop.platform(replayCanvas(), platform, stage, floor, bounds);
           },
           drawFinale: (layer) => {
             const finale = replay.finale.story.finale;

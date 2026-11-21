@@ -109,7 +109,7 @@ describe("live world capture layers", () => {
         UI: { font: () => "12px monospace", density: { textScale: 1 } },
         FX: { draw: drawEffects, setViewRect: vi.fn() },
         Backdrop: { draw: drawBackdrop },
-        Scenes: { show, opaque: () => false, drawBack: () => undefined, drawShadows: () => undefined },
+        Scenes: { show, opaque: () => false, drawBack: () => undefined },
         cosmeticRandom: () => 0.5,
       },
       canvas: {},
