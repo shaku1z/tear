@@ -4,13 +4,25 @@
       "coldBytesToFirstFrame": 650000,
       "coldRequestsToFirstFrame": 28,
       "coldBytesToPlayingWithoutStems": 670000,
-      "warmNetworkRequestsToFirstFrame": 3
+      "warmNetworkRequestsToFirstFrame": 3,
+      "coldCrossOriginScriptRequests": 4,
+      "coldCrossOriginScriptBytes": 170000,
+      "crossOriginOrigins": [
+        "https://firebaseinstallations.googleapis.com",
+        "https://firebaseremoteconfig.googleapis.com",
+        "https://firestore.googleapis.com",
+        "https://identitytoolkit.googleapis.com",
+        "https://www.gstatic.com"
+      ]
     },
     "crazygames": {
       "coldBytesToFirstFrame": 650000,
       "coldRequestsToFirstFrame": 26,
       "coldBytesToPlayingWithoutStems": 730000,
-      "warmNetworkRequestsToFirstFrame": 24
+      "warmNetworkRequestsToFirstFrame": 24,
+      "coldCrossOriginScriptRequests": 1,
+      "coldCrossOriginScriptBytes": 1500,
+      "crossOriginOrigins": ["https://sdk.crazygames.com"]
     }
   }
 }
