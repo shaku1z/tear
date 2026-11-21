@@ -26,9 +26,15 @@
  * (plans/active/VERDANT_PALE_REBUILD.md, 4.1). v21: a run starts the same way live and in its replay, from one
  * record of its start choices, and keeps the cinematics setting it started with
  * (plans/active/REPLAY_OVERHAUL_PLAN.md, PR 5b-1). v22: the new Rootbound fights its Phase II and changes into
- * Phase III with Last Bloom (plans/active/VERDANT_PALE_REBUILD.md, slice 3).
+ * Phase III with Last Bloom (plans/active/VERDANT_PALE_REBUILD.md, slice 3). v23: the Source's Unmake and true
+ * form happen in the fight: the floor goes 0.8 s into the Unmake, the void stream forms under the player, who
+ * keeps control, and the void run starts at 1.6 s; true form is a phase beat and its first move follows at once
+ * (plans/active/CINEMATICS_OVERHAUL.md, PR 4).
  */
-export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v22";
+export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v23";
+
+/** The identity while the Source stopped the fight for its void descent and true form; historical replays only. */
+export const SIX_BIOME_PALE_PREVIEW_V22_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v22";
 
 /** The identity before the new Rootbound fought its Phase II in Boss Test; historical replays only. */
 export const SIX_BIOME_PALE_PREVIEW_V21_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v21";
@@ -170,9 +176,10 @@ export const RULESET_STEPS: readonly RulesetStep[] = Object.freeze(
         "a run began starting the same way live and in its replay, keeping the cinematics setting it started with",
     },
     {
-      version: CURRENT_RULESET_VERSION,
+      version: SIX_BIOME_PALE_PREVIEW_V22_RULESET_VERSION,
       change: "the new Rootbound fought its Phase II",
     },
+    { version: CURRENT_RULESET_VERSION, change: "the Source began its Unmake and true form in the fight" },
   ].map((step) => Object.freeze(step)),
 );
 

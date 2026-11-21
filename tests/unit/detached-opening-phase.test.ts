@@ -105,7 +105,7 @@ function createDetachedOpeningWorld(seed: string) {
     updateBossArenaPlatforms: () => undefined,
     updateVoidScroll: () => undefined,
     unlockWitness: note("unlockWitness"),
-    startVoidDescent: () => false,
+    advanceSourceUnmake: () => false,
     spawnBossAdds: () => [],
     spawnBossClone: () => undefined,
     removeBossClone: () => undefined,

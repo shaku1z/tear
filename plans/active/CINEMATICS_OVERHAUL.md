@@ -262,33 +262,32 @@ never typed out letter by letter, and gone with the banner.
 ### Source (Phase II below 0.58, Phase III below 0.28)
 
 - **Phase II, "THE WORLD UNMAKES": the Unmake move.** This replaces the 11.5 s void descent.
-  1. Phase tick: the Source stays in the front plane and starts a 1.6 s channel. Its body rises and
-     draws in light, and it can be hit (at its normal damage).
-  2. Tick 0 to 0.8 s: the arena floor and platforms show their crack tell. At the same time the
-     first void platforms of the stream materialize, drawn as forming, at the heights the descent's
-     reveal places them today (`arena-rules.ts`, `ensureStream`). The player can see where to go
-     before anything gives way.
-  3. 0.8 s: the old arena dissolves. The player keeps ordinary control. If they were on the floor,
-     they get the descent's lift (`descentLiftVelocity`) once as an upward impulse, then normal
-     gravity, so they land on a void platform. Today the lift is a scripted float.
-  4. 1.6 s: the channel ends and the Source moves into the rear plane for its Phase II depth attacks,
-     as today.
-  - Banner: "II · THE WORLD UNMAKES", line "THERE IS NO BELOW."
-  - Can't be hit: never during the Unmake. The rear plane after it is Phase II's normal mechanic, not
-    part of the change.
-  - This removes the cause of the 2026-11-20 playtest finding, where the player fell below the arena
-    after the descent: footing now exists before the floor goes. The fall-forever case gets its own
-    permanent regression test: it replays that fight (Riftlock, seed 1, avoids-tells) and requires
-    a landing on a void platform within the cap after the dissolve, and never a position below the
-    stream.
-  - **The timings above are a starting point, not settled (lead ruling, 2026-11-20).** The Source
-    pull request first takes a fresh `pnpm playtest bosses --boss source` run, sets the channel,
-    crack tell and lift numbers from it, and puts those numbers in the pull request.
+  Built in PR 4 as follows. The owner's rule (no visual addition to the fight beyond the ask; a moment
+  that used to stop the fight happens in it with the released look kept) set the shape where it differs
+  from the first draft of this section, so the body does not rise or draw in light, and the stream is not
+  shown early as a new "forming" look.
+  1. Phase tick: the "THE WORLD UNMAKES" banner, unchanged, and a 1.6 s channel
+     (`unmakeChannel`). The Source holds still in collapse mode and can be hit at its normal
+     damage. The breach locks, projectiles clear and the arena's one-way platforms crack.
+  2. 0.8 s (`unmakeDissolve`): the floor goes and the void stream forms under the player
+     (`ensureStream`, its first platform 190 px below the player's feet, clamped to the lower band),
+     with the released flash, shake, ground-tear sound and reveal. A player below that platform gets
+     one upward impulse that clears it by 60 px (`unmakeLiftClearance`), then normal gravity and
+     ordinary control: no scripted float.
+  3. 1.6 s: the void run starts (mode `void`), and the stream's scroll ramps in over 0.85 s.
+  - While the stream forms, arrival rings are held and no fire, cage or crumble arms. The fall rescue
+    still applies.
+  - Measured (Riftlock, seed 1, avoids-tells): the void run starts 193 ticks after the phase tick
+    and the player stands on a void platform 161 ticks after it, without ever going below the
+    rescue line. The old descent took 11.3-11.6 s.
+  - The regression test (`tests/unit/source-unmake-landing.test.ts`) replays that fight and
+    requires the landing before the void run and no tick without a stream under the player.
 - **Phase III, "IT REMEMBERS EVERY BLADE":** the live kneel and frozen void stay as they are. Only
   the 0.42 s slow motion goes.
 - **True form.**
   - Phase tick: the void thaws at ×1.35 and the core turns `perfect`.
-  - The first true-form move follows at once.
+  - The first true-form move follows at once (PR 4: the ritual, its pose and its spoken line are
+    gone; the banner is the boss phase beat every boss uses).
   - Banner: "III · TRUE FORM", line "EVERY BLADE RETURNS TO ME."
 
 ### Rootbound
@@ -464,26 +463,25 @@ and Adventure plays from Chapter I to the finale.
 This section is the handoff. Whoever picks the overhaul up, with or without the earlier sessions'
 notes, starts here.
 
-- **Merged:** PR 0 (#340), PR 1 (#350), PR 2 (#357) and PR 3 (#367, Aldric, ruleset v18).
-- **In review:** the intro-clock slice (#374, ruleset v19), on branch `codex/cinematics-intro-clock`.
-  The lead approved it. It merges alone, after #373, which resumes preview deploys.
-  - Before it merges, run `git merge origin/main` on the branch.
-  - If #366 has landed, move the cinematics position edit into the cinematics area's file under
-    `config/position/` and run `pnpm position:render`.
-  - If main took a ruleset step in the meantime, #374 takes the next free number. #372 (replay)
-    plans to take v20 after it.
-  - If main changed the determinism corpus in the meantime, regenerate
-    `tests/fixtures/canonical-hash-stream.json`. Run it twice: the two runs must give the same
-    hashes. A pinned boss seed that no longer survives is re-picked by the rule in
-    `tests/support/hash-stream-corpus.ts` (the first surviving seed in the fixed list), and the
-    counts there are updated.
+- **Merged:** PR 0 (#340), PR 1 (#350), PR 2 (#357), PR 3 (#367, Aldric, ruleset v18) and the
+  intro-clock slice (#374, ruleset v19).
+- **Before a cinematics pull request merges:** run `git merge origin/main` on its branch. If main
+  took a ruleset step in the meantime, take the next free number. If main changed the determinism
+  corpus, regenerate `tests/fixtures/canonical-hash-stream.json` and run it twice: the two runs
+  must give the same hashes. A pinned boss seed that no longer survives is re-picked by the rule in
+  `tests/support/hash-stream-corpus.ts` (the first surviving seed in the fixed list), and the
+  counts there are updated.
 - **Preview card:** the in-game card for #367 is on the ledger as `visuals/cinematics-aldric-preview`, posted
   2026-11-21 against preview main b9c31197. It gives the preview link, the quickest route to Aldric (`/dev/`,
   PLAY, Boss Test, Aldric), what to watch in the crownfall and the revive, and two test-build frames.
   **Owed:** once #374 is on the preview, add it to that card: the boss arrival counts game ticks and
   should feel as before (1.4 s). This is a new picture or a note on the same document, never a new card.
-- **Next slice:** PR 4, the Source (below). Its first step is a fresh `pnpm playtest bosses --boss
-  source` run, whose numbers set the Unmake timings. The fall-forever regression test comes next.
+- **In review:** PR 4, the Source (below), ruleset v23, on branch `codex/cinematics-source`. The
+  Unmake and true form happen in the fight; the before and after pictures are on a new ledger card.
+  What it keeps for PR 5: the `SourceDescentBinding` type and the State Setup descent checks, the
+  cinematic float mode, `descentLiftV` (unused), and the saved names `voidDelayT` and
+  `requestVoidCinematic`, which now hold the Unmake's clock and its request. A world saved inside
+  the old descent no longer loads (`stageBinding` refuses it).
 - **After it:** PR 5 waits for Rootbound's pull request (see "Coordination"). PRs 6-8 draw new art
   on the owner-approved look board.
 
@@ -567,6 +565,10 @@ Approved by the lead on 2026-11-21, after PR 3. It narrows replay's frame-clock 
 - Done when the rule passes for the Source, `pnpm playtest bosses --boss source --weapon riftlock
   --seed 1 --player avoids-tells` no longer reports a broken fight, and no player falls below the
   void stream in `pnpm playtest sweep` for the Source.
+- Result: the rule passes for the Source with no allowlist entry. The Riftlock seed 1 fight reaches
+  Phase II and plays it for 26.5 s (main: 17.4 s, of which the descent was 11.5 s). The sweep's 120
+  Source fights have no broken fight, and every fall is rescued. The deepest point, 32 px past the
+  rescue line, is a second fall inside the released 0.8 s rescue cooldown, not a fall below the stream.
 
 ### PR 5: delete the blocking path
 

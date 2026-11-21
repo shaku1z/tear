@@ -8,7 +8,7 @@
       "target": "production-headless",
       "rulesetVersion": "live",
       "contentHash": "c823f6249ab3ef05",
-      "configHash": "c37e9c7bf9d825d0"
+      "configHash": "7eb665cc08228f0c"
     },
     "rng": {
       "legacy": { "algorithm": "mulberry32", "seed": 3418060622, "state": 3418060622, "cursor": 0 },

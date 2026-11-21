@@ -115,7 +115,7 @@ export interface LiveOpeningPhaseHost {
   updateBossArenaPlatforms: (dt: number) => void;
   updateVoidScroll: (dt: number) => void;
   unlockWitness: () => void;
-  startVoidDescent: (boss: LiveEnemy) => boolean;
+  advanceSourceUnmake: (boss: LiveEnemy, dt: number) => boolean;
   spawnBossAdds: (boss: LiveEnemy) => LiveEnemy[];
   spawnBossClone: (boss: LiveEnemy) => void;
   removeBossClone: (clone: LiveEnemy) => void;
@@ -399,7 +399,7 @@ function runBosses(host: LiveOpeningPhaseHost, dt: number): void {
     thawMultiplier: host.config.source.thawSpeedMult || 1.35,
     maximumScrollSpeed: host.config.source.scrollSpeedMax,
     unlockWitness: host.unlockWitness,
-    startVoidDescent: (boss) => host.startVoidDescent(boss as LiveEnemy),
+    advanceSourceUnmake: (boss, dt) => host.advanceSourceUnmake(boss as LiveEnemy, dt),
     spawnAdds: (boss) => host.spawnBossAdds(boss as LiveEnemy),
     spawnClone: (boss) => {
       host.spawnBossClone(boss as LiveEnemy);

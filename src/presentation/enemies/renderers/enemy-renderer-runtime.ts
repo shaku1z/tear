@@ -120,23 +120,6 @@ export function createEnemyRendererRuntime(dependencies: EnemyPresentationDepend
       ctx.moveTo(boss.x, boss.y);
       ctx.lineTo(mx, boss.y);
       ctx.stroke();
-    } else if (boss.cinematicPose === "sourceTrue") {
-      ctx.translate(boss.x, boss.y);
-      ctx.globalAlpha = 0.24 + pulse * 0.22;
-      ctx.lineWidth = 4;
-      for (let i = 0; i < 4; i++) {
-        ctx.beginPath();
-        ctx.ellipse(
-          0,
-          0,
-          boss.hw * (1.2 + i * 0.5 + p * 0.25),
-          boss.hh * (0.7 + i * 0.22),
-          i * 0.25 + CLOCK.sim * (i % 2 ? -0.4 : 0.4),
-          0,
-          Math.PI * 2,
-        );
-        ctx.stroke();
-      }
     }
     ctx.restore();
   }

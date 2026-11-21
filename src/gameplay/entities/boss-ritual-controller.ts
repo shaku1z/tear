@@ -88,7 +88,6 @@ export interface BossRitualOptions {
 const timings: Readonly<Record<string, Readonly<{ anticipation: number; reveal: number; resolve: number }>>> =
   Object.freeze({
     echoMirror: { anticipation: 0.28, reveal: 0.66, resolve: 0.55 },
-    sourceTrue: { anticipation: 0.36, reveal: 0.9, resolve: 0.72 },
     rootboundGraft: { anticipation: 0.32, reveal: 0.7, resolve: 0.66 },
     rootboundRegrowth: { anticipation: 0.36, reveal: 0.8, resolve: 0.72 },
   });

@@ -1,7 +1,11 @@
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { GameProjectile } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
-import type { ArenaPlatform, SourceVoidController } from "../../gameplay/training/arena-rules";
+import type {
+  ArenaPlatform,
+  SourceVoidController,
+  SourceVoidTransitionState,
+} from "../../gameplay/training/arena-rules";
 import { createSourceVoidRuntimeBridge } from "../../gameplay/campaign/source-void-runtime";
 import {
   createLiveCinematicRuntime,
@@ -71,6 +75,20 @@ export function createLiveCinematicHost(context: LiveCinematicHostContext) {
     get state() {
       return run().voidScroll ?? null;
     },
+    get descent() {
+      // The run's Unmake record is only ever set by this bridge's setDescent below.
+      return (run().voidDescent ?? null) as SourceVoidTransitionState | null;
+    },
+    get seed() {
+      return run().voidSeed;
+    },
+    setDescent: (value) => {
+      run().voidDescent = value;
+    },
+    setStream: (value) => {
+      run().voidScroll = value;
+      context.stage.platforms = value.platforms;
+    },
     replaceProjectiles: (value) => {
       state.setProjectiles(value);
     },
@@ -125,7 +143,6 @@ export function createLiveCinematicHost(context: LiveCinematicHostContext) {
 
   const runtime = createLiveCinematicRuntime({
     cinema: context.cinema,
-    sourceController: context.sourceController,
     ritualController: new BossRitualController(),
     sourceRuntime,
     player,
@@ -138,13 +155,6 @@ export function createLiveCinematicHost(context: LiveCinematicHostContext) {
     projectiles: () => state.projectiles(),
     replaceProjectiles: (value) => {
       state.setProjectiles(projectiles(value));
-    },
-    sourceSeed: () => run().voidSeed,
-    setDescent: (value) => {
-      run().voidDescent = value;
-    },
-    setStream: (value) => {
-      run().voidScroll = value;
     },
     hasVoidScroll: () => run().voidScroll != null,
     story: context.story,

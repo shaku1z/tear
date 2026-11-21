@@ -735,9 +735,9 @@ describe("arena rules", () => {
       voidWispCooldown: 4,
       arrivalFxStep: 0.07,
       crackWarn: 0.6,
-      descentDissolve: 1,
-      descentLift: 1,
-      descentReveal: 1,
+      unmakeDissolve: 0.5,
+      unmakeChannel: 1,
+      unmakeLiftClearance: 60,
       voidCrumbleStand: 0.5,
       voidFallDamage: 20,
       voidSlowDuration: 1,
@@ -746,7 +746,7 @@ describe("arena rules", () => {
       config,
       { width: 1600, height: 900, groundY: 800 },
       { jumpSpeed: 900, gravity: 2400, moveSpeed: 500, dashSpeed: 1100, dashDuration: 0.18 },
-      { dialogueDuck: 0.4, unmakeMix: 0.3, releaseMix: 0.5, revealMix: 0.8 },
+      { unmakeMix: 0.3, releaseMix: 0.5, revealMix: 0.8 },
     );
     const player = () => ({
       x: 800,
@@ -795,6 +795,47 @@ describe("arena rules", () => {
     const rescueIntents = controller.updateHazards(first, 0, hazardPlayer, 0);
     expect(rescueIntents.some((intent) => intent.type === "rescue-player" && intent.damage === 20)).toBe(true);
     expect(first.rescueCooldown).toBe(0.8);
+
+    // The Unmake, in the fight: the crack tell, then the floor goes and the stream forms under the player, who
+    // keeps control and gets the lift once; the void run starts when the clock runs out.
+    const owner = { id: "source", x: 900, y: 300, color: "purple" };
+    const floor = { x: 0, y: 800, w: 1600, h: 40, floor: true };
+    const ledge = { x: 600, y: 500, w: 300, h: 16, oneway: true };
+    const arena: Parameters<typeof controller.advanceUnmake>[3] = [floor, ledge];
+    const walker = { ...player(), y: 770 };
+    const begun = controller.beginUnmake(owner, arena);
+    expect(ledge).toMatchObject({ crackColor: "purple" });
+    expect(begun.intents).toContainEqual({ type: "source-breach-lock", ownerId: "source" });
+    let clock = 1;
+    const tick = (dt: number) => {
+      const step = controller.advanceUnmake(begun.transition, clock, dt, arena, "fixed-seed", walker);
+      clock = step.remaining;
+      return step;
+    };
+    expect(tick(0.4).done).toBe(false);
+    expect(begun.transition.stream).toBeNull();
+    expect(arena).toContain(floor);
+    const release = tick(0.2);
+    expect(arena).not.toContain(floor);
+    expect(release.intents).toContainEqual({ type: "sound", cue: "void-ground-tear" });
+    const stream = begun.transition.stream;
+    if (!stream) throw new Error("The Unmake formed no stream");
+    expect(stream).toMatchObject({ forming: true, frozen: true, active: false });
+    // The first platform is band-clamped above the floor, so the walker is lifted 60 px above it.
+    expect(stream.ingress.y).toBe(680);
+    expect(walker.vy).toBeCloseTo(-Math.sqrt(2 * 2400 * (800 - 680 + 60)), 6);
+    const formingPlayer = { ...walker, hazardT: 0, hazardDmgMult: 1 };
+    const ingress = stream.ingress;
+    ingress.voidType = "crumble";
+    formingPlayer.x = ingress.x + ingress.w / 2;
+    formingPlayer.y = ingress.y - formingPlayer.hh;
+    controller.updateHazards(stream, 0.02, formingPlayer, 0);
+    expect(ingress.touchT, "a forming stream arms no crumble").toBeLessThan(0);
+    expect(tick(0.2).done).toBe(false);
+    const end = tick(0.25);
+    expect(end.done).toBe(true);
+    expect(end.intents).toContainEqual({ type: "begin-void-run", ownerId: "source" });
+    expect(stream).toMatchObject({ forming: false, frozen: false, active: true, arrivalTime: 0.8 });
   });
 
   it("accepts a pending arena exactly when a lesson uses it: the checkpoint reader checks the arena table, not the lessons", () => {

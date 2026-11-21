@@ -193,10 +193,9 @@ export function createBossRuntime(dependencies: EnemyDependencies) {
       return;
     }
     // where the spoken line anchors, so world choreography owns the frame center
-    // (Pantheon VI P4). The Source speaks from depth-center; the rest sit in a lower corner.
+    // (Pantheon VI P4). Each sits in a lower corner.
     const anchorByPose = {
       echoMirror: "lower-right",
-      sourceTrue: "depth-center",
       rootboundGraft: "lower-left",
       rootboundRegrowth: "lower-left",
     };

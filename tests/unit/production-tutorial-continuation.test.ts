@@ -361,7 +361,7 @@ describe("production tutorial reconstructed-byte continuation", () => {
    * The entry/cinematic cases step the whole production world through the boss's entry, then two
    * worlds in lockstep for 900 ticks, and for Source its phase-3 fight to the kill. Stepping is the
    * cost: comparing state hashes instead of whole states saved nothing. Measured alone on one machine
-   * (2026-11-20): Aldric 1.1 to 2.1 s, Source 2.3 to 3.3 s (Aldric's case now saves mid-crownfall); Source took 5.4 s while other sessions'
+   * (2026-11-20): Aldric 1.1 to 2.1 s, Source 2.3 to 3.3 s (Aldric's case now saves mid-crownfall, and Source's mid-Unmake); Source took 5.4 s while other sessions'
    * tests ran beside it, past the 5 s default. 20 s holds a three- to four-fold slowdown and still
    * fails a hang well before the run's own limits.
    */
@@ -373,19 +373,28 @@ describe("production tutorial reconstructed-byte continuation", () => {
       for (let tick = 1; tick <= 10000; tick++) {
         bossStep(source, tick);
         const cinema = source.replay.world.context.cinema;
-        // Aldric's crownfall is a move in the fight: save while the thrown crown is in the air.
-        const crown = Reflect.get(source.replay.world.state.enemies().find((actor) => actor.isBoss) ?? {}, "crown") as
-          { state?: string } | null | undefined;
+        // Aldric's crownfall and the Source's Unmake are moves in the fight: save while the thrown crown
+        // is in the air, and while the Unmake's stream is forming under the player (after its dissolve,
+        // before the void run).
+        const boss = source.replay.world.state.enemies().find((actor) => actor.isBoss) ?? {};
+        const crown = Reflect.get(boss, "crown") as { state?: string } | null | undefined;
+        const unmake = Reflect.get(source.replay.world.state.run() ?? {}, "voidDescent") as
+          { stream?: unknown } | null | undefined;
         if (
           bossId === "aldric"
             ? crown?.state === "airborne"
-            : cinema.active &&
-              cinema.beatId === "reveal" &&
-              cinema.progress > 0.15 &&
-              (bossId === "source" || cinema.id === "rootbound-nothing-here-dies")
+            : bossId === "source"
+              ? Reflect.get(boss, "mode") === "collapse" &&
+                unmake?.stream !== undefined &&
+                unmake.stream !== null &&
+                Number(Reflect.get(boss, "voidDelayT")) > 0.2
+              : cinema.active &&
+                cinema.beatId === "reveal" &&
+                cinema.progress > 0.15 &&
+                cinema.id === "rootbound-nothing-here-dies"
         )
           break;
-        if (tick === 10000) throw new Error(`Actual ${bossId} entry did not reach its reveal`);
+        if (tick === 10000) throw new Error(`Actual ${bossId} entry did not reach its save point`);
       }
       const saved = capture(source),
         restored = composition().create(JSON.parse(JSON.stringify(saved.snapshot)) as TearSnapshotV1);
