@@ -128,7 +128,8 @@ describe("blade-hit sparks", () => {
     const effects = system(wardrobe);
     effects.burst(0, 0, 1, 0, 5, "#abcdef", "blade-hit");
     const item = catalog.items.find((entry) => entry.id === "spark_glacier");
-    const worn = Array.isArray(item?.look.colors) ? item.look.colors : [];
+    const look: unknown = item?.look.colors;
+    const worn = Array.isArray(look) ? look.filter((color): color is string => typeof color === "string") : [];
     const colours = effects.list.map((particle) => particle.col);
     expect(worn.length).toBe(2);
     expect(colours).toEqual(colours.map((_, index) => worn[index % worn.length]));
