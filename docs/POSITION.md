@@ -25,6 +25,7 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 | [Playtest tool](#playtest-tool) | Stage 2 under way: stage 1 is done (pnpm playtest bosses and sweep); pnpm playtest waves opens any Adventure wave directly, runs plays whole runs from wave 1, enemies meets each enemy kind alone, and coverage lists what the game defines that no report brought into play | --compare: the same situations and seeds on another commit, printing only what changed. | — |
 | [Replays](#replays) | In progress: PR 1, PR 2, PR 2b and PR 3 merged (hidden replay features, replay extras and REPAIR removed; snapshot codecs in src/gameplay/snapshot); PR 4 open (the detached world moves to src/app/world/detached) | Merge PR 4, then PR 5 (one replay record: record.ts, recorder.ts and verify.ts, with the round-trip check). | Deploy the Firestore chunk-write rules from the merged rules PR. |
 | [Firebase](#firebase) | In progress: PR 1 (rules tests and hardened rules) open | Merge PR 1, then PR 2: the modular SDK bundled into the standalone build only. | Deploy the rules from PR 1 once it merges. |
+| [Cinematics](#cinematics) | Plan approved by the lead; blocking-removal slices starting; look board waiting for the owner | PR 1: the rule over every boss and no slow motion; then the rituals come out boss by boss (PRs 2-4). The banner, chapter card and epilogue (PRs 6-8) wait for the owner’s verdict on the look board. | Approve or correct the look board on the ledger. |
 | [Mobile, touch and phone layouts](#mobile) | Paused by the owner 2026-11-19; out of the release builds | Nothing until the owner resumes mobile; plans/MOBILE_LATER.md says how to turn it back on. | Mark the CrazyGames listing desktop only. Say when mobile resumes. |
 
 <a id="release-readiness"></a>
@@ -136,6 +137,16 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 - Next: Merge PR 1, then PR 2: the modular SDK bundled into the standalone build only.
 - Owner action: Deploy the rules from PR 1 once it merges.
 - Evidence: [plans/active/FIREBASE_REFRESH.md](../plans/active/FIREBASE_REFRESH.md), [tests/rules/firestore-rules.test.ts](../tests/rules/firestore-rules.test.ts)
+
+<a id="cinematics"></a>
+
+### Cinematics
+
+**Plan approved by the lead; blocking-removal slices starting; look board waiting for the owner.** Boss phase changes stop the fight today: a ritual script freezes the combat step, locks the player and waits for a tap or a reading timeout (5.1-6.8 s each; the Source descent 11.5 s; Rootbound stands still for 12.9 s of a 32-37 s fight). Chapter openings take 25-39 s at Full. The plan makes every in-fight beat a boss move with at most a banner, cuts chapter openings and the finale to short cards that never wait, replaces the cinematic director and ritual layer with one stage beat, and adds a rule over every boss that no tick blocks input or the combat step.
+
+- Next: PR 1: the rule over every boss and no slow motion; then the rituals come out boss by boss (PRs 2-4). The banner, chapter card and epilogue (PRs 6-8) wait for the owner’s verdict on the look board.
+- Owner action: Approve or correct the look board on the ledger.
+- Evidence: [plans/active/CINEMATICS_OVERHAUL.md](../plans/active/CINEMATICS_OVERHAUL.md)
 
 <a id="mobile"></a>
 
