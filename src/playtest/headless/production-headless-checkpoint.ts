@@ -7,7 +7,7 @@ import type { TearCausalEventV1, TearScenarioV1 } from "../../tearbench/contract
 import type { TearSnapshotV1 } from "../../gameplay/snapshot/snapshot-contract";
 import { requireProductionReplayBootstrap as requireBootstrap } from "../../tearbench/production-replay-bootstrap-check";
 import type { ProductionReplayBootstrap } from "../../gameplay/snapshot/snapshot-contract";
-import { productionRunSeed } from "../../app/world/detached/world-factory";
+import { scenarioRunSeed } from "../../gameplay/run/run-start-choices";
 import { validateTearContract } from "../../tearbench/validation";
 import { requireProductionHeadlessScenario } from "./production-headless-scenario";
 
@@ -177,7 +177,7 @@ export function validateProductionHeadlessCheckpoint(value: unknown): Production
     run.difficulty !== scenario.start.difficulty ||
     blade.weaponId !== scenario.start.weapon ||
     String(run.runSeed) !== snapshot.value.seed ||
-    run.runSeed !== productionRunSeed(scenario.seed)
+    run.runSeed !== scenarioRunSeed(scenario.seed)
   ) {
     throw new RangeError("production headless checkpoint does not match its natural scenario");
   }

@@ -1,24 +1,15 @@
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameBlade, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
-import type { LiveGameHostState } from "../world/game-host-state";
+import type { GameBlade, GameRun } from "../../gameplay/runtime/game-runtime-state";
+import type { LiveWorldComposition } from "../world/world-composition";
+import type { MusicDirector } from "../../audio/music-director";
 import type { LiveRunStartPort } from "../../gameplay/run/live-run-start-controller";
 import { planRunStart, type RunStartPlan } from "../../gameplay/run/run-start-plan";
 import type { BossId } from "../../gameplay/run/content-director";
 import { isBossDefinitionId } from "../../gameplay/run/boss-definitions";
 import type { RunDifficulty } from "../../gameplay/run/session";
-import type { RunLifecycleSnapshot } from "../../gameplay/run/lifecycle";
 import { tutorialUsesBaselineLoadout } from "../../gameplay/training/tutorial-contract";
-import type { RandomSource } from "../../domain/random";
-import type { TearWorldServices } from "../../gameplay/runtime/tear-world-context";
-import type { RunRandomStreamName, RunRandomStreamsSnapshot } from "../../simulation/run-random";
-import type { EnvironmentRuntimeState } from "../../gameplay/environment/environment-contracts";
 import { cleanupBossEncounterActors } from "../../gameplay/run/boss-encounter";
 import { applyMetaRanks } from "../../gameplay/progression/meta";
-
-type WorldServices = Pick<
-  TearWorldServices<RunRandomStreamsSnapshot, RunRandomStreamName, RandomSource>,
-  "configuration" | "random" | "clock" | "effects" | "mirror" | "bossFeedback"
->;
 
 type Mods = ReturnType<GameRuntimeDependencies["newMods"]>;
 
@@ -37,52 +28,57 @@ export type RunStartWorldPort = Pick<
   | "activateOpeningContent"
 >;
 
+/** The world a run starts in: live play's, or a detached world built by the same constructor. */
+export type RunStartWorld = Pick<
+  LiveWorldComposition<MusicDirector | null>,
+  "state" | "context" | "entities" | "lifecycle" | "environment"
+>;
+
 /**
- * What a run start changes: one world. Live play passes its world; a detached world passes its own.
- * `hooks` are the live game's effects inside these steps (audio, cosmetics, practice state, settings);
- * a detached world has none, and none of them changes the simulation.
+ * What a run start changes: one world and the runtimes around it. Live play passes its own; a detached
+ * world passes its own, built from the same constructors. `hooks` are the live game's effects inside
+ * these steps (audio, cosmetics, practice state, settings, HUD); a detached world has none, and none of
+ * them changes the simulation.
  */
 export interface RunStartWorldContext {
-  readonly dependencies: Pick<GameRuntimeDependencies, "CONFIG" | "REMOTE" | "SHOP" | "GAMEPLAY_EVENTS" | "newMods">;
-  readonly state: LiveGameHostState;
+  readonly dependencies: Pick<
+    GameRuntimeDependencies,
+    "CONFIG" | "REMOTE" | "SHOP" | "GAMEPLAY_EVENTS" | "newMods" | "applyWeapon"
+  >;
+  readonly world: RunStartWorld;
   readonly width: number;
-  readonly prepareWorld: () => void;
-  readonly configureBlade: (blade: GameBlade, weaponId: string) => void;
-  readonly createPlayer: (x: number, y: number) => GamePlayer;
-  readonly createBlade: () => GameBlade;
-  readonly installRun: (run: GameRun) => void;
-  readonly runInstalled?: (run: GameRun) => void;
-  readonly world: Readonly<{ resetTransient(): void; finishReset(): void }>;
-  readonly services: WorldServices;
-  readonly environment: EnvironmentRuntimeState;
-  readonly resetAuthoritativeClocks: () => void;
-  readonly resetCombatIdentity: () => void;
+  /** The authoritative tick clock and entity identities of the world's combat simulation. */
+  readonly combat: Readonly<{ resetClock(): void; resetIdentity(): void }>;
   readonly race?: Readonly<{ apply(): boolean }>;
   /** Loads a stage at the start of a run, with its environment. */
   readonly loadStage: (index: number) => void;
   readonly stage: { platforms: unknown[]; resetBanner(): void };
-  readonly story: Readonly<{ resetChapter(): void }>;
-  readonly lifecycle: Readonly<{
-    reset(): RunLifecycleSnapshot;
-    start(sessionId: string): void;
-    activateTraining(): void;
+  readonly story: Readonly<{ resetFinale(): void; resetChapter(): void }>;
+  readonly content: Readonly<{
+    shuffledRoster(): BossId[];
+    gauntletTrials(): BossId[];
+    bossBiome(bossId: BossId): number;
   }>;
-  readonly shuffledRoster: () => BossId[];
-  readonly gauntletTrials: () => BossId[];
-  readonly bossBiome: (bossId: BossId) => number;
-  readonly trainingPlatforms: () => unknown[];
-  readonly playground: Readonly<{
-    readonly state: Readonly<{
-      hpMultiplier?: number;
-      count?: number;
-      god?: boolean;
-      freeze?: boolean;
-      slow?: boolean;
+  readonly training: Readonly<{
+    platforms(): unknown[];
+    readonly playground: Readonly<{
+      readonly state: Readonly<{
+        hpMultiplier?: number;
+        count?: number;
+        god?: boolean;
+        freeze?: boolean;
+        slow?: boolean;
+      }>;
+      reset(): void;
+      enterArena(): void;
     }>;
-    reset(): void;
-    enterArena(): void;
+    readonly tutorial: Readonly<{
+      restoreSession(value: undefined): void;
+      restorePresentation(value: undefined): void;
+      start(): void;
+    }>;
   }>;
-  readonly tutorial: Readonly<{ start(): void }>;
+  /** True while a tutorial practice run starts from the baseline loadout. */
   readonly baselinePractice?: () => boolean;
   readonly startNextWave: () => void;
   readonly resetRewards: () => void;
@@ -93,27 +89,41 @@ export interface RunStartWorldContext {
     configured?(weaponId: string): void;
     /** After the blade is built and before it is installed. */
     dressBlade?(blade: GameBlade): void;
+    /** With the transient feel reset. */
+    resetTransient?(): void;
     /** After the world reset. */
     reset?(): void;
+    /** After the run is installed in the world. */
+    runInstalled?(run: GameRun): void;
   }>;
 }
 
 /** The one implementation of a run start's world steps, for live play and for a detached world. */
 export function createRunStartWorldPort(context: RunStartWorldContext): RunStartWorldPort {
-  const { state } = context;
+  const { world } = context;
+  const { state } = world;
+  const { transient, cinema, services } = world.context;
   const { CONFIG, REMOTE, SHOP, GAMEPLAY_EVENTS, newMods } = context.dependencies;
+  const { tutorial } = context.training;
   let startingPlan: RunStartPlan | null = null;
   return Object.freeze({
     initializeWorld: (start) => {
       context.hooks?.beforeReset?.();
       cleanupBossEncounterActors(state.enemies(), "reset");
-      context.environment.clear("new-run");
-      context.prepareWorld();
-      context.resetCombatIdentity();
-      context.lifecycle.reset();
-      context.services.mirror.reset();
-      context.services.bossFeedback.clear();
-      context.services.configuration.resetToBase();
+      world.environment.clear("new-run");
+      if (context.baselinePractice?.() !== true) {
+        tutorial.restoreSession(undefined);
+        tutorial.restorePresentation(undefined);
+      }
+      if (cinema.active) cinema.cancel("new-run");
+      context.story.resetFinale();
+      state.setBossIntro(null);
+      state.setBossBeat(null);
+      context.combat.resetIdentity();
+      world.lifecycle.reset();
+      services.mirror.reset();
+      services.bossFeedback.clear();
+      services.configuration.resetToBase();
       context.hooks?.configured?.(start.weapon);
       const difficulties = CONFIG.difficulties.flatMap((definition) =>
         isRunDifficulty(definition.id)
@@ -122,10 +132,12 @@ export function createRunStartWorldPort(context: RunStartWorldContext): RunStart
       );
       startingPlan = planRunStart(start.difficulty, difficulties, REMOTE);
       CONFIG.player.dmgTakenMult *= startingPlan.playerDamageMultiplier;
-      const player = context.createPlayer(context.width * 0.5, CONFIG.world.groundY - 60);
+      const player = world.entities.createPlayer(context.width * 0.5, CONFIG.world.groundY - 60);
       player.oneHit = startingPlan.oneHit;
-      const blade = context.createBlade();
-      context.configureBlade(blade, start.weapon);
+      const blade = world.entities.createBlade();
+      const weapon = context.dependencies.applyWeapon(CONFIG, start.weapon);
+      blade.weapon = weapon;
+      blade.model = weapon.model;
       blade.restoredTrail = start.restoredTrail;
       context.hooks?.dressBlade?.(blade);
       state.setPlayer(player);
@@ -133,9 +145,11 @@ export function createRunStartWorldPort(context: RunStartWorldContext): RunStart
       state.setEnemies([]);
       state.setProjectiles([]);
       state.setFloaters([]);
-      context.world.resetTransient();
-      context.services.effects.resetWorld();
-      context.services.clock.reset();
+      transient.impact.hitStop = 0;
+      transient.impact.shake = 0;
+      context.hooks?.resetTransient?.();
+      services.effects.resetWorld();
+      services.clock.reset();
       context.hooks?.reset?.();
       return {
         weaponId: start.weapon,
@@ -143,17 +157,22 @@ export function createRunStartWorldPort(context: RunStartWorldContext): RunStart
         scaling: startingPlan.scaling,
         achievementSnapshot: [...start.achievementSnapshot],
         variantDiscovery: [...start.variantDiscovery],
+        cinematics: start.cinematics,
       };
     },
-    resetAuthoritativeClocks: context.resetAuthoritativeClocks,
+    resetAuthoritativeClocks: () => {
+      context.combat.resetClock();
+    },
     finishWorldReset: () => {
-      context.world.finishReset();
+      transient.resetFeel();
+      transient.impact.slowMotion = 0;
+      transient.resetOpening();
       context.loadStage(0);
       context.stage.resetBanner();
       context.story.resetChapter();
     },
     resetRunRandom: (seed) => {
-      context.services.random.resetRun(seed);
+      services.random.resetRun(seed);
     },
     installSession: (session) => {
       const run: GameRun = {
@@ -166,11 +185,11 @@ export function createRunStartWorldPort(context: RunStartWorldContext): RunStart
         pg: {},
         reservedUpgrade: null,
       };
-      context.installRun(run);
-      context.runInstalled?.(run);
+      state.setRun(run);
+      context.hooks?.runInstalled?.(run);
     },
     startLifecycle: (sessionId) => {
-      context.lifecycle.start(sessionId);
+      world.lifecycle.start(sessionId);
     },
     publishRunStarted: (session, runId) => {
       GAMEPLAY_EVENTS.emit({
@@ -188,7 +207,7 @@ export function createRunStartWorldPort(context: RunStartWorldContext): RunStart
     configureMode: ({ mode, boss: selected }) => {
       const run = requireRun(state);
       if (mode === "bossonly") {
-        const order = context.shuffledRoster();
+        const order = context.content.shuffledRoster();
         if (selected !== "shuffle" && isBossId(selected)) {
           // The production selector can only supply policy-published IDs. A
           // test-build engineering launch may explicitly supply an authored
@@ -205,10 +224,10 @@ export function createRunStartWorldPort(context: RunStartWorldContext): RunStart
         run.curBoss = first;
         // Remove the reset stage before activating the selected boss biome so
         // its authored environment fields survive the replacement boundary.
-        context.environment.clear("boss-encounter-replacement");
-        context.loadStage(context.bossBiome(first));
+        world.environment.clear("boss-encounter-replacement");
+        context.loadStage(context.content.bossBiome(first));
       } else if (mode === "gauntlet") {
-        run.bossOrder = context.gauntletTrials();
+        run.bossOrder = context.content.gauntletTrials();
         run.bossIdx = 0;
         run.bossesBeaten = 0;
       }
@@ -218,8 +237,8 @@ export function createRunStartWorldPort(context: RunStartWorldContext): RunStart
       if (!tutorialUsesBaselineLoadout(run.mode) && context.baselinePractice?.() !== true) {
         if (context.race?.apply() !== true)
           applyMetaRanks(SHOP, start.metaRanks, {
-            player: requirePlayer(state),
-            blade: requireBlade(state),
+            player: requireValue(state.player(), "player"),
+            blade: requireValue(state.blade(), "blade"),
             mods: run.mods,
           });
       }
@@ -231,42 +250,29 @@ export function createRunStartWorldPort(context: RunStartWorldContext): RunStart
         context.startNextWave();
         return;
       }
-      context.stage.platforms = context.trainingPlatforms();
+      context.stage.platforms = context.training.platforms();
       run.wave = 1;
-      context.lifecycle.activateTraining();
-      run.diffDmg = requirePlan(startingPlan).playerDamageMultiplier;
+      world.lifecycle.activateTraining();
+      run.diffDmg = requireValue(startingPlan, "run start plan").playerDamageMultiplier;
       if (mode === "playground") {
-        context.playground.reset();
-        run.bossOrder = context.shuffledRoster();
+        const { playground } = context.training;
+        playground.reset();
+        run.bossOrder = context.content.shuffledRoster();
         run.bossIdx = 0;
-        run.pg = context.playground.state;
-        context.playground.enterArena();
-      } else context.tutorial.start();
+        run.pg = playground.state;
+        playground.enterArena();
+      } else tutorial.start();
     },
   });
 }
 
-function requireRun(state: LiveGameHostState): GameRun {
-  const run = state.run();
-  if (run === null) throw new Error("Run start requires an active run");
-  return run;
+function requireRun(state: RunStartWorld["state"]): GameRun {
+  return requireValue(state.run(), "an active run");
 }
 
-function requirePlayer(state: LiveGameHostState): GamePlayer {
-  const player = state.player();
-  if (player === undefined) throw new Error("Run start requires a player");
-  return player;
-}
-
-function requireBlade(state: LiveGameHostState): GameBlade {
-  const blade = state.blade();
-  if (blade === undefined) throw new Error("Run start requires a blade");
-  return blade;
-}
-
-function requirePlan(plan: RunStartPlan | null): RunStartPlan {
-  if (plan === null) throw new Error("Run start plan was not initialized");
-  return plan;
+function requireValue<T>(value: T | null | undefined, name: string): T {
+  if (value === null || value === undefined) throw new Error(`Run start requires ${name}`);
+  return value;
 }
 
 function isRunDifficulty(value: string): value is RunDifficulty {

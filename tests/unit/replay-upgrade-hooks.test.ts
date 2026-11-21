@@ -3,15 +3,17 @@ import { CONFIG } from "../../src/config/game-config";
 import { UPGRADE_HOOK_BINDINGS, bindUpgradeHook, type UpgradeHookName } from "../../src/gameplay/upgrade-hooks";
 import type { UpgradeEvent, UpgradeMods } from "../../src/gameplay/upgrades";
 import { createProductionGhostReplayComposition } from "../../src/app/world/detached/replay-composition";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 // Rule over all upgrades: every upgrade hook must run in the production replay world when the
 // replay world's own code raises its event. A hook added later is covered without a new case;
 // a new hook list needs a trigger below, and the test says so.
 
 function replayWorld() {
-  const source = createProductionGhostReplayComposition({ seed: "replay-upgrade-hooks", mode: "campaign" }).create(
-    undefined,
-  );
+  const source = createProductionGhostReplayComposition({
+    runSeed: scenarioRunSeed("replay-upgrade-hooks"),
+    mode: "campaign",
+  }).create(undefined);
   const world = source.replay.world;
   const run = world.state.run();
   if (run === null) throw new Error("the replay world has no run");

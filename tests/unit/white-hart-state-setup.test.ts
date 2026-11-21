@@ -6,11 +6,12 @@ import {
   captureProductionReplayCheckpoint,
   createProductionGhostReplayComposition,
 } from "../../src/app/world/detached/replay-composition";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 describe("White Hart State Setup and canonical projection", () => {
   it("restores Phase I owned projectiles and their boss references", () => {
     const composition = createProductionGhostReplayComposition({
-      seed: "pale-white-hart-projectile-restore",
+      runSeed: scenarioRunSeed("pale-white-hart-projectile-restore"),
       mode: "bossonly",
     });
     const source = composition.create(undefined);
@@ -58,7 +59,7 @@ describe("White Hart State Setup and canonical projection", () => {
 
   it("round-trips an active phase-two route attack through the production transaction", () => {
     const composition = createProductionGhostReplayComposition({
-      seed: "pale-white-hart-route-restore",
+      runSeed: scenarioRunSeed("pale-white-hart-route-restore"),
       mode: "bossonly",
     });
     const source = composition.create(undefined);
@@ -192,7 +193,7 @@ describe("White Hart State Setup and canonical projection", () => {
 
   it("round-trips a committed Phase III multi-segment route", () => {
     const composition = createProductionGhostReplayComposition({
-      seed: "pale-white-hart-final-route-restore",
+      runSeed: scenarioRunSeed("pale-white-hart-final-route-restore"),
       mode: "bossonly",
     });
     const source = composition.create(undefined);

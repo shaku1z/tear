@@ -17,7 +17,9 @@ import { eligibleTierChoices } from "../../../gameplay/run/reward-selection";
 import { createBossArena } from "../../../gameplay/training/arena-rules";
 import { PRESETS, applyPreset, rollAffixes } from "../../../gameplay/affixes";
 import { applyVariant, rollVariant } from "../../../gameplay/variants";
-import { STAGES, stageAt, stagePlatforms } from "../../../gameplay/stages";
+import { PLAYGROUND_STAGES, STAGES, stageAt } from "../../../gameplay/stages";
+import { isBossDefinitionId } from "../../../gameplay/run/boss-definitions";
+import type { BossId } from "../../../gameplay/run/content-director";
 import { applyUpgrade, rollUpgrades, tierUp, UPGRADES, type UpgradeDefinition } from "../../../gameplay/upgrades";
 import type { GameAction } from "../../../input/game-action";
 import { routeLiveTearBenchAction } from "./action-routing";
@@ -35,6 +37,8 @@ export interface ProductionWaveRewardRuntimeOptions {
   readonly currentTick?: () => number;
   readonly beginCampaignChapter?: (index: number, priorOutro?: ChapterPage | null) => void;
   readonly chapterFlowActive?: () => boolean;
+  /** Whether a stage's chapter will play and hold its first wave; never, without one. */
+  readonly chapterGatesWave?: (index: number) => boolean;
   readonly bossIntroDelay?: (enemy: object, duration: number) => number;
 }
 
@@ -70,8 +74,14 @@ export interface ProductionWaveRewardRuntime {
   readonly restoreScreen: (screen: string) => void;
   readonly focus: () => number;
   readonly restoreUi: (screen: string, focus: number) => void;
-  /** Starts the run; `opening` is for a headless playtest that opens on a later wave. */
-  readonly startNaturalOpening: (opening?: ProductionRunOpening) => void;
+  /** The run start's opening wave; `opening` is for a headless playtest that opens on a later wave. */
+  readonly startOpeningWave: (opening?: ProductionRunOpening) => void;
+  /** The boss rosters and boss biomes the run start reads. */
+  readonly content: Readonly<{
+    shuffledRoster(): BossId[];
+    gauntletTrials(): BossId[];
+    bossBiome(bossId: BossId): number;
+  }>;
   readonly spawnTutorial: (
     kind: EnemyKind,
     hpScale: number,
@@ -164,6 +174,8 @@ export function createProductionWaveRewardRuntime(
     },
     modes: () => config.modes,
     stages: STAGES,
+    // As in live play: an explicit boss pick loads its authored biome.
+    bossBiomeStages: PLAYGROUND_STAGES,
     platforms: () => stage.platforms as never,
     groundY: () => config.world.groundY,
     construction: {
@@ -226,12 +238,13 @@ export function createProductionWaveRewardRuntime(
   const waves = new LiveWaveController({
     run,
     tuning: () => config.run,
-    stages: STAGES,
+    stages: STAGES.map((entry) => ({ ...entry, boss: bossId(entry.boss) })),
+    bossOnlyStages: PLAYGROUND_STAGES.map((entry) => ({ ...entry, boss: bossId(entry.boss) })),
     presets: PRESETS,
     random: random.streams.stream("world"),
     modeDefinition: (mode) => config.modes.find((candidate) => candidate.id === mode) ?? {},
     currentStage: () => ({ index: stage.index, accent: stageAt(stage.index).accent }),
-    stageHasChapter: () => true,
+    stageHasChapter: options.chapterGatesWave ?? (() => false),
     chapterFlowActive: options.chapterFlowActive ?? (() => false),
     lifecycle: {
       hasPreparedWave: () => world.lifecycle.hasPreparedWave,
@@ -243,10 +256,11 @@ export function createProductionWaveRewardRuntime(
       dispatchWavePlanIntents(intents, {
         beginWipe: note("beginWipe"),
         loadStage: (index) => {
-          stage.index = index;
-          stage.platforms = stagePlatforms(index, config);
+          replay.loadStage(index, "stage-transition");
         },
-        setStageBanner: note("setStageBanner"),
+        setStageBanner: (name, duration) => {
+          stage.setBanner(name, duration);
+        },
         beginCampaignChapter: options.beginCampaignChapter ?? (() => undefined),
         recordWave: publishWave,
         snapshotReplay: note("snapshotReplay"),
@@ -259,7 +273,9 @@ export function createProductionWaveRewardRuntime(
         activateWave: () => {
           world.lifecycle.activateWave();
         },
-        showWaveBanner: note("showWaveBanner"),
+        showWaveBanner: () => {
+          world.context.transient.feel.bannerSeconds = config.juice.bannerTime;
+        },
         playWaveSound: note("playWaveSound"),
       });
     },
@@ -384,37 +400,12 @@ export function createProductionWaveRewardRuntime(
     if (choice === undefined) throw new RangeError("the build picked an upgrade that was not on offer");
     applyUpgrade(choice, { config, player: world.state.player() as never, blade: world.state.blade() as never, mods });
   };
-  const startNaturalOpening = ({ firstWave = 1, build }: ProductionRunOpening = {}) => {
-    if (world.lifecycle.phase !== "idle") throw new Error("production wave runtime cannot restart an active lifecycle");
-    run().wave = firstWave - 1;
-    // As the live run start does, a Gauntlet opening draws its trial order.
-    const opening = run();
-    if (opening.mode === "gauntlet" && opening.bossOrder.length === 0) opening.bossOrder = content.gauntletTrials();
-    world.lifecycle.start(`run-${run().runSeed.toString(36)}`);
-    const session = world.lifecycle.snapshot();
-    if (session.sessionId === null)
-      throw new Error("production wave runtime started without an authoritative session identity");
-    const active = run();
-    options.gameplayEvents?.emit({
-      kind: "run",
-      transition: "started",
-      runId: session.sessionId,
-      mode: active.mode,
-      difficulty: active.diff,
-      weaponId: active.weaponId,
-      wave: active.wave,
-      score: active.score,
-      runTimeSeconds: active.runTime,
-    });
-    if (active.mode === "tutorial" || active.mode === "playground") {
-      active.wave = 1;
-      world.lifecycle.activateTraining();
-      replay.installTrainingHome();
-      if (active.mode === "tutorial") replay.tutorial.start("unissued");
-    } else {
+  const startOpeningWave = ({ firstWave = 1, build }: ProductionRunOpening = {}) => {
+    if (firstWave > 1) {
+      run().wave = firstWave - 1;
       if (build !== undefined) for (let wave = 1; wave < firstWave; wave += 1) draftForBuild(build);
-      waves.startNextWave();
     }
+    waves.startNextWave();
   };
   return Object.freeze({
     waves,
@@ -433,7 +424,12 @@ export function createProductionWaveRewardRuntime(
       screen = next;
       focus = nextFocus;
     },
-    startNaturalOpening,
+    startOpeningWave,
+    content: Object.freeze({
+      shuffledRoster: content.shuffledRoster,
+      gauntletTrials: content.gauntletTrials,
+      bossBiome: content.bossBiome,
+    }),
     spawnTutorial: (kind: EnemyKind, hpScale: number) => {
       content.spawn({ type: kind, hpScale });
       const enemy = world.state.enemies().at(-1);
@@ -444,4 +440,8 @@ export function createProductionWaveRewardRuntime(
       return Object.freeze([...outward]);
     },
   });
+}
+
+function bossId(value: string): BossId {
+  return isBossDefinitionId(value) ? value : "warden";
 }

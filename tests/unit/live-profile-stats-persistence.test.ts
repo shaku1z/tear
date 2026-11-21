@@ -6,6 +6,7 @@ import { createLivePracticeEncounterPersistence } from "../../src/app/progress/p
 import { createProfileStore } from "../../src/persistence/profile-store";
 import { createLegacyPlatformCompatibility } from "../../src/platform/legacy-compat";
 import { createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 function encounterBacking() {
   const values = new Map<string, string>();
@@ -40,7 +41,7 @@ function encounterBacking() {
   const profile = load(),
     authority = createLivePracticeEncounterPersistence(profile);
   const replay = createProductionReplayWorld({
-    seed: "ordinary-exposure",
+    runSeed: scenarioRunSeed("ordinary-exposure"),
     enemies: [{ id: "charger", x: 400, y: 700 }],
   });
   const run = replay.world.state.run();

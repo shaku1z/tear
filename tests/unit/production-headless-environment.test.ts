@@ -22,6 +22,7 @@ import {
   buildExitLaunchSnapshot,
   type TearScenarioV1,
 } from "../../src/tearbench";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 const scenario = Object.freeze({
   format: "tear-contract",
@@ -348,12 +349,15 @@ describe("C30 production headless environment", () => {
       rulesetVersion: "tear-rules-test",
       contentHash: "source-content-test",
     };
-    const bound = createProductionGhostReplayComposition({ seed: scenario.seed, buildIdentity: injected }).create(
-      undefined,
-    );
+    const bound = createProductionGhostReplayComposition({
+      runSeed: scenarioRunSeed(scenario.seed),
+      buildIdentity: injected,
+    }).create(undefined);
     expect(bound.bootstrap.build).toMatchObject(injected);
 
-    const unbound = createProductionGhostReplayComposition({ seed: scenario.seed }).create(undefined);
+    const unbound = createProductionGhostReplayComposition({ runSeed: scenarioRunSeed(scenario.seed) }).create(
+      undefined,
+    );
     expect(unbound.bootstrap.build.revision).toBe("unbound");
     expect(unbound.bootstrap.build.revision).not.toBe("working-tree");
   });
@@ -534,7 +538,10 @@ describe("C30 production headless environment", () => {
 
   it("checkpoint frontier admits a source-owned pending draft without rerolling it", () => {
     // Boundary fixture: clear the source queue, then use the real wave-clear/reward owner.
-    const source = createProductionGhostReplayComposition({ seed: scenario.seed, mode: "endless" }).create(undefined);
+    const source = createProductionGhostReplayComposition({
+      runSeed: scenarioRunSeed(scenario.seed),
+      mode: "endless",
+    }).create(undefined);
     Object.assign(source.replay.world.state.run() ?? {}, { spawnQueue: [] });
     source.replay.world.state.setEnemies([]);
     source.waveReward.update(1);
@@ -641,7 +648,7 @@ describe("C30 production headless environment", () => {
     });
     const replay = new GhostProductionReplayWorld(
       ghost,
-      createProductionGhostReplayComposition({ seed: scenario.seed, mode: scenario.start.mode }),
+      createProductionGhostReplayComposition({ runSeed: scenarioRunSeed(scenario.seed), mode: scenario.start.mode }),
     );
     expect(replay.seek(scenario.maxTicks).semanticHash).toBe(stableVerificationHash(final));
   });

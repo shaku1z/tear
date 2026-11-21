@@ -28,6 +28,7 @@ import { resolveTearSdl, type TearSdlDocumentV1 } from "../../src/tearbench/tear
 import { environmentHash } from "../../src/gameplay/snapshot/environment-codec";
 import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "../../src/gameplay/snapshot/authored-environment-validation";
 import { TearGameplayEventBus, type TearGameplayEvent } from "../../src/gameplay/runtime/gameplay-events";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 const definition = {
   id: "stage-well",
@@ -231,9 +232,10 @@ describe("Bloom Well V1", () => {
   });
 
   it("runs the same non-stage-inserted lifecycle on the supported detached production world", () => {
-    const source = createProductionGhostReplayComposition({ seed: "bloom-well-detached", mode: "campaign" }).create(
-      undefined,
-    );
+    const source = createProductionGhostReplayComposition({
+      runSeed: scenarioRunSeed("bloom-well-detached"),
+      mode: "campaign",
+    }).create(undefined);
     const checkpoint = captureProductionReplayCheckpoint(
       source.replay,
       source.combat,
@@ -252,9 +254,10 @@ describe("Bloom Well V1", () => {
       buildBloomWellCycleState(base, createBloomWellState({ ...definition, ownerId: "player" }, 0)),
     );
     const snapshot = compileResolvedTearSdlSnapshot(checkpoint.snapshot, built);
-    const detached = createProductionGhostReplayComposition({ seed: "bloom-well-detached", mode: "campaign" }).create(
-      snapshot,
-    );
+    const detached = createProductionGhostReplayComposition({
+      runSeed: scenarioRunSeed("bloom-well-detached"),
+      mode: "campaign",
+    }).create(snapshot);
     const environment = detached.replay.world.context.environment;
     const states: string[] = [environment.fields()[0]?.state ?? "missing"];
     for (const tick of [

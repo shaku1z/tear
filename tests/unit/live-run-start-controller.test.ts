@@ -55,6 +55,7 @@ import type { GameRun } from "../../src/gameplay/runtime/game-runtime-state";
 import { emptyCosmeticState } from "../../src/domain/cosmetics";
 import { COSMETIC_CATALOG } from "../../src/gameplay/progression/cosmetic-catalog";
 import { createCosmeticWardrobe } from "../../src/presentation/cosmetic-styles";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 /** Disclosed legacy-format model, authored before sealing. No historical archive is rewritten. */
 async function sealedLegacyAim(
@@ -288,7 +289,9 @@ function actualOpeningHost(
   baselinePractice = false,
   application?: AppStateController,
 ) {
-  const source = createProductionGhostReplayComposition({ seed: "actual-opening-source" }).create(undefined);
+  const source = createProductionGhostReplayComposition({ runSeed: scenarioRunSeed("actual-opening-source") }).create(
+    undefined,
+  );
   const { replay } = source,
     noop = () => undefined,
     order: string[] = [];
@@ -361,41 +364,27 @@ function actualOpeningHost(
     },
   };
   const context = {
-    dependencies,
-    state: { ...replay.world.state, selectedWeapon: () => "chainblade", setSelectedWeapon: noop },
-    width: replay.configuration.value.view.w,
-    services: replay.world.context.services,
-    environment: replay.world.context.environment,
-    prepareWorld: noop,
-    applySettings: noop,
-    configureBlade: (blade: { weapon: unknown; model: unknown }, id: string) => {
-      const weapon = applyWeapon(replay.configuration.value, id);
-      blade.weapon = weapon;
-      blade.model = weapon.model;
-    },
-    createPlayer: (x: number, y: number) => replay.world.entities.createPlayer(x, y),
-    createBlade: () => replay.world.entities.createBlade(),
-    installRun: (run: unknown) => {
-      replay.world.state.setRun(run as never);
-    },
-    runInstalled: observer?.installed,
+    dependencies: { ...dependencies, CONFIG: replay.configuration.value, applyWeapon },
     world: {
-      resetTransient: noop,
-      finishReset: () => {
-        replay.transient.resetOpening();
+      ...replay.world,
+      state: { ...replay.world.state, selectedWeapon: () => "chainblade", setSelectedWeapon: noop },
+    },
+    width: replay.configuration.value.view.w,
+    combat: {
+      resetClock: () => {
+        source.simulation.reset(0);
+      },
+      resetIdentity: () => {
+        source.combat.combatEntityRuntime.resetIdentity();
       },
     },
-    resetAuthoritativeClocks: () => {
-      source.simulation.reset(0);
-    },
-    resetCombatIdentity: () => {
-      source.combat.combatEntityRuntime.resetIdentity();
-    },
+    cinematics: { preference: () => "full", playedChapters: () => [] },
+    applySettings: noop,
+    runInstalled: observer?.installed,
     createRunSeed: () => 12345,
     loadStage: noop,
     stage: { platforms: [], resetBanner: noop },
     story: { resetChapter: noop, resetFinale: noop },
-    lifecycle: replay.world.lifecycle,
     install: noop,
     setScreen: (next: "playing", detail: { runId: string }) => {
       application?.transition(next, detail);
@@ -404,12 +393,12 @@ function actualOpeningHost(
       source.waveReward.restoreScreen(next);
     },
     selectedBoss: () => "shuffle",
-    shuffledRoster: () => [],
-    gauntletTrials: () => [],
-    bossBiome: () => 0,
-    trainingPlatforms: () => [],
-    playground: { state: {}, reset: noop, enterArena: noop },
-    tutorial: { start: noop },
+    content: { shuffledRoster: () => [], gauntletTrials: () => [], bossBiome: () => 0 },
+    training: {
+      platforms: () => [],
+      playground: { state: {}, reset: noop, enterArena: noop },
+      tutorial: { start: noop, restoreSession: noop, restorePresentation: noop },
+    },
     startNextWave: () => {
       order.push("opening");
       source.waveReward.waves.startNextWave();
@@ -1044,7 +1033,7 @@ describe("LiveRunStartController", () => {
     const { capsule, snapshot } = await sealedActualOpening("menu", true, true, undefined, {
       entries: [{ kind: "events", tick: 0, value: terminal.value }],
     });
-    const target = createProductionReplayWorld({ seed: "legacy-terminal-refusal" }),
+    const target = createProductionReplayWorld({ runSeed: scenarioRunSeed("legacy-terminal-refusal") }),
       unchanged = openingDestinationEvidence(target),
       set = vi.fn();
     const destination = { ...target, world: { ...target.world, state: { ...target.world.state, setRun: set } } };
@@ -1076,7 +1065,7 @@ describe("LiveRunStartController", () => {
       for (const options of cases) {
         const { capsule, snapshot } = await sealedTerminatedOpening(options),
           before = stableVerificationHash(capsule);
-        const target = createProductionReplayWorld({ seed: "terminal-order-refusal" }),
+        const target = createProductionReplayWorld({ runSeed: scenarioRunSeed("terminal-order-refusal") }),
           unchanged = openingDestinationEvidence(target),
           set = vi.fn();
         const destination = {
@@ -1122,7 +1111,7 @@ describe("LiveRunStartController", () => {
       const { capsule, snapshot } = await sealedActualOpening("menu", legacy, legacy, undefined, {
         sealedPredecessor: screen,
       });
-      const target = createProductionReplayWorld({ seed: "rejected-predecessor" }),
+      const target = createProductionReplayWorld({ runSeed: scenarioRunSeed("rejected-predecessor") }),
         unchanged = openingDestinationEvidence(target);
       let setters = 0,
         issued = false,
@@ -1263,7 +1252,7 @@ describe("LiveRunStartController", () => {
           };
         return source;
       });
-      const target = createProductionReplayWorld({ seed: "invalid-sealed-opening" }),
+      const target = createProductionReplayWorld({ runSeed: scenarioRunSeed("invalid-sealed-opening") }),
         unchanged = openingDestinationEvidence(target);
       const set = vi.fn(),
         destination = {
@@ -1356,7 +1345,7 @@ describe("LiveRunStartController", () => {
     expect(initialInput).toMatchObject({ tick: 0, moveX: 0.75, primaryHeld: true });
     const openingReceipt = createGhostAuthoritativeReceipt(0, capture.semanticHash, initialInput);
     const composition = createProductionGhostReplayComposition({
-      seed: "unused",
+      runSeed: scenarioRunSeed("unused"),
       openingPermit: permit,
       inputSnapshots: new Map([[0, openingReceipt.input]]),
     });
@@ -1436,7 +1425,11 @@ describe("LiveRunStartController", () => {
         openingPermit = issueGhostRecordedOpeningPermit(capsule);
       if (openingPermit === undefined) throw new Error("permit missing");
       const bus = new TearGameplayEventBus(),
-        composition = createProductionGhostReplayComposition({ seed: "unused", openingPermit, gameplayEvents: bus });
+        composition = createProductionGhostReplayComposition({
+          runSeed: scenarioRunSeed("unused"),
+          openingPermit,
+          gameplayEvents: bus,
+        });
       let session: ReturnType<typeof composition.create> | undefined,
         calls = 0;
       const world = new GhostProductionReplayWorld(mapped.ghost, {
@@ -1472,7 +1465,7 @@ describe("LiveRunStartController", () => {
       permit = issueGhostRecordedOpeningPermit(legacy.capsule);
     if (permit === undefined) throw new Error("permit missing");
     expect(readGhostRecordedOpeningPermit(permit, legacy.snapshot).kind).toBe("legacy-inferred");
-    const target = createProductionReplayWorld({ seed: "rejected-opening-target" }),
+    const target = createProductionReplayWorld({ runSeed: scenarioRunSeed("rejected-opening-target") }),
       before = target.world.state.run(),
       setter = vi.fn();
     const observed = { ...target, world: { ...target.world, state: { ...target.world.state, setRun: setter } } };
@@ -1524,7 +1517,7 @@ describe("LiveRunStartController", () => {
       events.push(event.kind);
     });
     const composition = createProductionGhostReplayComposition({
-        seed: "temporary",
+        runSeed: scenarioRunSeed("temporary"),
         openingPermit: permit,
         gameplayEvents: bus,
       }),
@@ -1570,6 +1563,8 @@ describe("LiveRunStartController", () => {
         variantDiscovery: [],
         achievementSnapshot: [],
         restoredTrail: false,
+        cinematics: "full",
+        playedChapters: [],
       }),
       resetRunRandom: () => events.push("random"),
       installSession: (session) => {

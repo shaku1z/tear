@@ -14,6 +14,7 @@ import { createCosmeticEmissionRandom } from "../../src/domain/cosmetic-emission
 import { createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
 import type { TearGameplayEventPort } from "../../src/gameplay/runtime/gameplay-events";
 import { DEFAULT_COSMETIC_LOOKS } from "../../src/presentation/cosmetic-defaults";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 function createWorldDependencies() {
   const random = createRunRandom();
@@ -301,7 +302,7 @@ describe("one world constructor for live and detached worlds", () => {
         emitted.push(event);
       },
     } as unknown as TearGameplayEventPort;
-    const replay = createProductionReplayWorld({ seed: "one-constructor", gameplayEvents });
+    const replay = createProductionReplayWorld({ runSeed: scenarioRunSeed("one-constructor"), gameplayEvents });
 
     expect(replay.world.music).toBeNull();
     expect(replay.world.environment.events).toBeUndefined();

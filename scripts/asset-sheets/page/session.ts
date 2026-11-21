@@ -15,6 +15,7 @@ import { createUi } from "../../../src/presentation/ui";
 import { createProductionGhostReplayComposition } from "../../../src/app/world/detached/replay-composition";
 import type { SheetScene } from "../manifest";
 import { createSvgContext } from "./svg-context";
+import { scenarioRunSeed } from "../../../src/gameplay/run/run-start-choices";
 
 export const VIEW = { w: CONFIG.view.w, h: CONFIG.view.h };
 export const TICKS_PER_SECOND = 120;
@@ -105,7 +106,7 @@ export function createSession(scene: SheetScene) {
     scenes: paintedScenes,
   });
   return createProductionGhostReplayComposition({
-    seed: `asset-sheets:${scene.id}`,
+    runSeed: scenarioRunSeed(`asset-sheets:${scene.id}`),
     mode: "tutorial",
     weaponId,
     difficulty: "normal",

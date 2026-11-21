@@ -32,6 +32,7 @@ import { runLiveCollisionPhase } from "../../src/gameplay/combat/live-collision-
 import { WEAPON_IDS } from "../../src/gameplay/weapon-selection";
 import type { createBlade } from "../../src/gameplay/entities/blade";
 import { loadShippingTutorialGold } from "../../src/gameplay/training/tutorial-gold-shipping";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 // These tests need the coach's demonstrations, so they load the on-demand corpus first; the game asks for it once a lesson is played.
 beforeAll(async () => {
@@ -55,7 +56,7 @@ const scenario: TearScenarioV1 = {
 };
 const composition = () =>
   createProductionGhostReplayComposition({
-    seed: scenario.seed,
+    runSeed: scenarioRunSeed(scenario.seed),
     mode: "tutorial",
     weaponId: "sword",
     difficulty: "normal",
@@ -592,7 +593,7 @@ describe("production tutorial reconstructed-byte continuation", () => {
     "advances the %s annex through actual baseline weapon effects and continues its v4 bytes",
     (weaponId) => {
       const owner = createProductionGhostReplayComposition({
-        seed: `annex-${weaponId}`,
+        runSeed: scenarioRunSeed(`annex-${weaponId}`),
         mode: "tutorial",
         weaponId,
         difficulty: "normal",
@@ -822,7 +823,9 @@ describe("production tutorial reconstructed-byte continuation", () => {
       createTutorialArena("vertical-gate", CONFIG.view.w, CONFIG.view.h, CONFIG.world.groundY),
     );
     expect(restored.replay.world.lifecycle.phase).toBe("training-active");
-    const ordinary = createProductionGhostReplayComposition({ seed: "ordinary-unchanged" }).create(undefined);
+    const ordinary = createProductionGhostReplayComposition({ runSeed: scenarioRunSeed("ordinary-unchanged") }).create(
+      undefined,
+    );
     const state = ordinary.semanticProjection();
     expect(state).not.toHaveProperty("tutorial");
     expect(

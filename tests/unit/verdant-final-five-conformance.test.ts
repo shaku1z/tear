@@ -7,6 +7,7 @@ import { bindVerdantEnvironmentActors } from "./environment-feature-fixture";
 import { createEnvironmentCombatObjectRuntime } from "../../src/gameplay/environment/combat-object-runtime";
 import { resolveHeldEnvironmentWeaponContacts } from "../../src/gameplay/combat/environment-weapon-contact-runtime";
 import { createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 interface ProductionBladeTransport {
   x: number;
@@ -67,7 +68,7 @@ describe("Verdant Final Five conformance", () => {
 
   it.each(WEAPON_IDS)("keeps %s transport outside Bloom Wells V1", (weaponId) => {
     const runProductionCrossing = (withBloomWell: boolean) => {
-      const replay = createProductionReplayWorld({ seed: `bloom-transport-${weaponId}`, weaponId });
+      const replay = createProductionReplayWorld({ runSeed: scenarioRunSeed(`bloom-transport-${weaponId}`), weaponId });
       const blade = replay.world.state.blade() as never as ProductionBladeTransport;
       blade.x = 100;
       blade.y = 100;

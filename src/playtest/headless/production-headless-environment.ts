@@ -15,7 +15,7 @@ import {
   type ProductionApplicationFrameConfirm,
 } from "../../app/world/detached/replay-composition";
 import type { ProductionReplayBootstrap } from "../../gameplay/snapshot/snapshot-contract";
-import { productionRunSeed, type ProductionReplayWorld } from "../../app/world/detached/world-factory";
+import type { ProductionReplayWorld } from "../../app/world/detached/world-factory";
 import type { ProductionRunOpening, ProductionWaveRewardRuntime } from "../../app/world/detached/wave-reward-runtime";
 import type { ProductionWaveRewardIntent } from "../../app/world/detached/wave-reward-runtime";
 import type { TearCausalEventV1, TearObservationV1, TearScenarioV1 } from "../../tearbench/contracts";
@@ -41,6 +41,7 @@ import { projectProductionPolicyObservation } from "./production-policy-observat
 import { createGameplayCausalEvent } from "../../tearbench/gameplay-causal-events";
 import { assertTearSimulationStepSeconds } from "../../tearbench/simulation-profile";
 import { stepDetachedWorld } from "../../app/world/detached/detached-step";
+import { scenarioRunSeed } from "../../gameplay/run/run-start-choices";
 
 type ProductionHeadlessCore = Readonly<{
   replay: ProductionReplayWorld;
@@ -266,7 +267,7 @@ export function createProductionHeadlessEnvironment(
       nativeEvents.push(event);
     });
     const composed = createProductionGhostReplayComposition({
-      seed: snapshot?.seed ?? scenario.seed,
+      runSeed: scenarioRunSeed(scenario.seed),
       mode: scenario.start.mode,
       weaponId: scenario.start.weapon,
       difficulty: scenario.start.difficulty,
@@ -393,7 +394,7 @@ export function createProductionHeadlessEnvironment(
         next.start.difficulty !== "normal" ||
         next.start.weapon !== "sword" ||
         next.seed === current.scenario.seed ||
-        productionRunSeed(next.seed) === current.replay.world.state.run()?.runSeed
+        scenarioRunSeed(next.seed) === current.replay.world.state.run()?.runSeed
       ) {
         throw new RangeError("tutorial practice requires a fresh supplied normal playground sword identity");
       }

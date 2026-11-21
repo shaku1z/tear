@@ -14,6 +14,7 @@ import {
 import { createProductionReplayWorld, type ProductionReplayWorld } from "../../src/app/world/detached/world-factory";
 import { UPGRADES, applyUpgrade, tierUp } from "../../src/gameplay/upgrades";
 import { upgradeHookIdentity } from "../../src/gameplay/upgrade-hooks";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 function upgradeContext(replay: ProductionReplayWorld) {
   const player = replay.world.state.player(),
@@ -26,7 +27,10 @@ function upgradeContext(replay: ProductionReplayWorld) {
 
 describe("runtime recovery reward checkpoints", () => {
   it("restores a declared Beat private draft frontier without inventing shared offers", () => {
-    const composition = createProductionGhostReplayComposition({ seed: "beat-private-frontier", mode: "endless" }),
+    const composition = createProductionGhostReplayComposition({
+        runSeed: scenarioRunSeed("beat-private-frontier"),
+        mode: "endless",
+      }),
       source = composition.create(undefined);
     const run = source.replay.world.state.run();
     if (!run) throw new Error("Missing run");
@@ -84,7 +88,10 @@ describe("runtime recovery reward checkpoints", () => {
       const sourceReward = snapshot.state["tear.reward.v1"] as Record<string, TearCodecValue>;
       const openingPermit = issueGhostRecordedOpeningPermit(capsule);
       if (!openingPermit) throw new Error("Native opening permit unavailable");
-      const restored = createProductionGhostReplayComposition({ seed: snapshot.seed, openingPermit }).create(snapshot);
+      const restored = createProductionGhostReplayComposition({
+        runSeed: scenarioRunSeed(snapshot.seed),
+        openingPermit,
+      }).create(snapshot);
       expect(restored.waveReward.reward.snapshot()?.decisionSequence).toBe(
         (sourceReward.selection as Record<string, TearCodecValue>).decisionSequence,
       );
@@ -108,7 +115,10 @@ describe("runtime recovery reward checkpoints", () => {
   );
 
   it("preserves interleaved acquisition and tier callback order without repeating numeric effects", () => {
-    const composition = createProductionGhostReplayComposition({ seed: "interleaved-tier-hooks", mode: "endless" });
+    const composition = createProductionGhostReplayComposition({
+      runSeed: scenarioRunSeed("interleaved-tier-hooks"),
+      mode: "endless",
+    });
     const source = composition.create(undefined);
     for (const id of ["riposte", "tempo"]) {
       const choice = UPGRADES.find((upgrade) => upgrade.id === id);
@@ -145,7 +155,10 @@ describe("runtime recovery reward checkpoints", () => {
     expect(order).toEqual(["tempo", "riposte"]);
   });
   it("restores production draft choices and resumes the same reward without rerolling", () => {
-    const composition = createProductionGhostReplayComposition({ seed: "runtime-recovery-draft", mode: "endless" });
+    const composition = createProductionGhostReplayComposition({
+      runSeed: scenarioRunSeed("runtime-recovery-draft"),
+      mode: "endless",
+    });
     const source = composition.create(undefined);
     const run = source.replay.world.state.run() as never as { spawnQueue: unknown[] };
     run.spawnQueue = [];
@@ -185,7 +198,10 @@ describe("runtime recovery reward checkpoints", () => {
   });
 
   it("rejects incompatible configuration before replacing any destination world state", () => {
-    const composition = createProductionGhostReplayComposition({ seed: "runtime-recovery-atomicity", mode: "endless" });
+    const composition = createProductionGhostReplayComposition({
+      runSeed: scenarioRunSeed("runtime-recovery-atomicity"),
+      mode: "endless",
+    });
     const source = composition.create(undefined);
     source.replay.world.state.setEnemies([
       source.replay.world.entities.createEnemy("reflection", 700, 500, source.replay.world.state.run() as never),
@@ -201,7 +217,10 @@ describe("runtime recovery reward checkpoints", () => {
       ...captured.snapshot,
       state: { ...captured.snapshot.state, "tear.configuration.v1": { ...config, values: { incompatible: true } } },
     };
-    const target = createProductionReplayWorld({ seed: "runtime-recovery-atomicity-target", mode: "endless" });
+    const target = createProductionReplayWorld({
+      runSeed: scenarioRunSeed("runtime-recovery-atomicity-target"),
+      mode: "endless",
+    });
     const before = target.world.state.run();
     const beforeConfig = target.configuration.snapshot();
     const beforePlayer = target.world.state.player();
@@ -226,7 +245,10 @@ describe("runtime recovery reward checkpoints", () => {
   });
 
   it("resumes reserve selection and rebinds a reserved upgrade in the following draft", () => {
-    const composition = createProductionGhostReplayComposition({ seed: "runtime-recovery-reserve", mode: "endless" });
+    const composition = createProductionGhostReplayComposition({
+      runSeed: scenarioRunSeed("runtime-recovery-reserve"),
+      mode: "endless",
+    });
     const source = composition.create(undefined);
     const run = source.replay.world.state.run() as never as { spawnQueue: unknown[]; mods: { reservePick: boolean } };
     run.mods.reservePick = true;
@@ -264,7 +286,10 @@ describe("runtime recovery reward checkpoints", () => {
   });
 
   it("resumes a tier-up with production upgrade functions and the same resulting state", () => {
-    const composition = createProductionGhostReplayComposition({ seed: "runtime-recovery-tierup", mode: "endless" });
+    const composition = createProductionGhostReplayComposition({
+      runSeed: scenarioRunSeed("runtime-recovery-tierup"),
+      mode: "endless",
+    });
     const source = composition.create(undefined);
     const upgrade = UPGRADES.find((choice) => choice.id === "bloodrite");
     if (upgrade === undefined) throw new Error("tier-up fixture needs an authored tiered upgrade");
@@ -318,7 +343,7 @@ describe("runtime recovery reward checkpoints", () => {
     "backlash",
   ])("preserves canonical callback identities for owned %s without applying its effects twice", (id) => {
     const composition = createProductionGhostReplayComposition({
-      seed: `runtime-recovery-hook-${id}`,
+      runSeed: scenarioRunSeed(`runtime-recovery-hook-${id}`),
       mode: "endless",
     });
     const source = composition.create(undefined);
@@ -352,7 +377,7 @@ describe("runtime recovery reward checkpoints", () => {
     },
   ])("rejects $label before mutating the destination", ({ callback, error }) => {
     const composition = createProductionGhostReplayComposition({
-      seed: "runtime-recovery-hostile-hook",
+      runSeed: scenarioRunSeed("runtime-recovery-hostile-hook"),
       mode: "endless",
     });
     const source = composition.create(undefined);
@@ -367,7 +392,7 @@ describe("runtime recovery reward checkpoints", () => {
       ...snapshot,
       state: { ...snapshot.state, "tear.run.v1": { ...run, mods: { ...(run.mods as object), onKill: [callback] } } },
     };
-    const target = createProductionReplayWorld({ seed: "runtime-recovery-hook-target" });
+    const target = createProductionReplayWorld({ runSeed: scenarioRunSeed("runtime-recovery-hook-target") });
     const before = target.world.state.run();
     const rng = target.world.context.services.random.snapshot();
     expect(() => restoreProductionReplaySnapshot(target, invalid)).toThrow(error);

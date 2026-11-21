@@ -8,59 +8,16 @@ import type { GameBlade, GamePlayer, GameRun } from "../../gameplay/runtime/game
 import type { LiveGameHostState } from "../world/game-host-state";
 import { LiveRunStartController } from "../../gameplay/run/live-run-start-controller";
 import { RunReplacementGuard } from "../../gameplay/run/run-replacement";
-import type { BossId } from "../../gameplay/run/content-director";
 import { admittedRunMode, tracksModeProgress } from "../../gameplay/run/mode-catalog";
 import type { RunDifficulty, RunMode } from "../../gameplay/run/session";
-import type { RunLifecycleSnapshot } from "../../gameplay/run/lifecycle";
 import { tutorialUsesBaselineLoadout } from "../../gameplay/training/tutorial-contract";
 import { FINAL_FIVE_WEAPON_SCHEMA_VERSION, migrateWeaponSelection } from "../../gameplay/weapon-selection";
-import type { RandomSource } from "../../domain/random";
-import type { TearWorldServices } from "../../gameplay/runtime/tear-world-context";
-import type { RunRandomStreamName, RunRandomStreamsSnapshot } from "../../simulation/run-random";
-import type { EnvironmentRuntimeState } from "../../gameplay/environment/environment-contracts";
 import { resolveDiscoveredVariantIds } from "../../gameplay/variants";
 import { CURRENT_RULESET_VERSION } from "../../gameplay/run/ruleset-version";
 import type { RunStartChoices } from "../../gameplay/run/run-start-choices";
-import { createRunStartWorldPort } from "./run-start-world";
+import { createRunStartWorldPort, type RunStartWorldContext } from "./run-start-world";
+import { sanitizeCinematicPreference, type CinematicPreference } from "../../gameplay/campaign/cinematic-preference";
 
-interface MutableWorldState {
-  resetTransient(): void;
-  finishReset(): void;
-}
-
-type WorldServices = Pick<
-  TearWorldServices<RunRandomStreamsSnapshot, RunRandomStreamName, RandomSource>,
-  "configuration" | "random" | "clock" | "effects" | "mirror" | "bossFeedback"
->;
-
-interface RunLifecyclePort {
-  reset(): RunLifecycleSnapshot;
-  start(sessionId: string): void;
-  activateTraining(): void;
-  terminate(outcome: "quit"): void;
-  snapshot(): RunLifecycleSnapshot;
-}
-
-interface StagePort {
-  platforms: unknown[];
-  resetBanner(): void;
-}
-
-interface CampaignPort {
-  resetFinale(): void;
-  resetChapter(): void;
-}
-
-interface PlaygroundPort {
-  readonly state: Readonly<{ hpMultiplier?: number; count?: number; god?: boolean; freeze?: boolean; slow?: boolean }>;
-  reset(): void;
-  /** Shows the Playground's first real arena (the Playground has no training ground). */
-  enterArena(): void;
-}
-
-interface TutorialPort {
-  start(): void;
-}
 interface InstalledRunStartController {
   start(mode: RunMode, difficulty: RunDifficulty): GameRun;
 }
@@ -71,22 +28,10 @@ export interface LiveOpeningCaptureBoundary {
   readonly seed: number;
 }
 
-interface RunStartHostContext {
+interface RunStartHostContext extends Omit<RunStartWorldContext, "dependencies" | "hooks" | "race"> {
   readonly runInstalled?: (run: GameRun) => void;
   readonly dependencies: GameRuntimeDependencies;
-  readonly state: LiveGameHostState;
-  readonly width: number;
-  readonly prepareWorld: () => void;
   readonly applySettings: () => void;
-  readonly configureBlade: (blade: GameBlade, weaponId: string) => void;
-  readonly createPlayer: (x: number, y: number) => GamePlayer;
-  readonly createBlade: () => GameBlade;
-  readonly installRun: (run: GameRun) => void;
-  readonly world: MutableWorldState;
-  readonly services: WorldServices;
-  readonly environment: EnvironmentRuntimeState;
-  readonly resetAuthoritativeClocks: () => void;
-  readonly resetCombatIdentity: () => void;
   readonly race?: Readonly<{
     active(): boolean;
     apply(): boolean;
@@ -94,21 +39,13 @@ interface RunStartHostContext {
     discovery(ordinary: readonly string[]): readonly string[];
   }>;
   readonly createRunSeed?: () => number;
-  readonly loadStage: (index: number) => void;
-  readonly stage: StagePort;
-  readonly story: CampaignPort;
-  readonly lifecycle: RunLifecyclePort;
+  /** The cinematics setting a new run starts with, and the chapters this session has played. */
+  readonly cinematics: Readonly<{ preference(): CinematicPreference; playedChapters(): readonly number[] }>;
+  /** The HUD feedback a new run clears; presentation only. */
+  readonly hud?: Readonly<{ restore(value: undefined): void }>;
   readonly install: (controller: InstalledRunStartController) => void;
   readonly setScreen: (screen: "playing", detail: { runId: string }) => void;
   readonly selectedBoss: () => string;
-  readonly shuffledRoster: () => BossId[];
-  readonly gauntletTrials: () => BossId[];
-  readonly bossBiome: (bossId: BossId) => number;
-  readonly trainingPlatforms: () => unknown[];
-  readonly playground: PlaygroundPort;
-  readonly tutorial: TutorialPort;
-  readonly baselinePractice?: () => boolean;
-  readonly startNextWave: () => void;
   readonly achievementTracking: () => boolean;
   readonly achievementCheck: () => void;
   /** Scoped around the existing synchronous recorder call; never a second start transaction. */
@@ -117,7 +54,6 @@ interface RunStartHostContext {
   readonly discardOpeningCapture?: () => void;
   /** A new ordinary run must never inherit Ghost practice's non-persistent disposition. */
   readonly clearPracticeSession?: () => void;
-  readonly resetRewards: () => void;
   readonly music: MusicDirector;
   readonly requestPointerLock: () => void;
   readonly testMode: boolean;
@@ -128,19 +64,20 @@ interface RunStartHostContext {
 export function createLiveRunStartHost(
   context: RunStartHostContext,
 ): LiveRunStartController<ReturnType<GameRuntimeDependencies["newMods"]>> {
-  const { dependencies, state } = context;
+  const { dependencies } = context;
+  const { state, lifecycle } = context.world;
   const { GHOST, PROFILE, META, SHOP, SFX, GAMEPLAY_EVENTS, Input, createRunSeed, COSMETICS } = dependencies;
   const replacement = new RunReplacementGuard({
     recording: () => GHOST.recording(),
     stopInterruptedRecording: () => {
       const activeRun = state.run();
-      const lifecycle = context.lifecycle.snapshot();
-      if (activeRun !== null && lifecycle.sessionId !== null && lifecycle.phase !== "terminated") {
-        context.lifecycle.terminate("quit");
+      const phase = lifecycle.snapshot();
+      if (activeRun !== null && phase.sessionId !== null && phase.phase !== "terminated") {
+        lifecycle.terminate("quit");
         GAMEPLAY_EVENTS.emit({
           kind: "run",
           transition: "abandoned",
-          runId: lifecycle.sessionId,
+          runId: phase.sessionId,
           mode: activeRun.mode,
           difficulty: activeRun.diff,
           weaponId: activeRun.weaponId,
@@ -178,9 +115,13 @@ export function createLiveRunStartHost(
       dressBlade: (blade) => {
         COSMETICS.wear(blade, loadoutOf(COSMETIC_CATALOG, PROFILE.cosmetics()));
       },
+      resetTransient: () => {
+        context.hud?.restore(undefined);
+      },
       reset: () => {
         musicProgress = snapshotProgress(PROFILE.data);
       },
+      ...(context.runInstalled === undefined ? {} : { runInstalled: context.runInstalled }),
     },
   });
 
@@ -208,6 +149,8 @@ export function createLiveRunStartHost(
         variantDiscovery: Object.freeze([...(context.race?.discovery(ordinary) ?? ordinary)]),
         achievementSnapshot: Object.freeze(Object.keys(PROFILE.data.ach)),
         restoredTrail: Boolean(PROFILE.data.rewards?.restoredBladeTrail),
+        cinematics: sanitizeCinematicPreference(context.cinematics.preference()),
+        playedChapters: Object.freeze([...context.cinematics.playedChapters()]),
       });
     },
     exposeDebugState: () => {
@@ -352,7 +295,7 @@ export function createLiveRunStartHost(
               perfect: projectile.perfect,
               counterplay: projectile.counterplay,
             })),
-          lifecycle: context.lifecycle.snapshot(),
+          lifecycle: lifecycle.snapshot(),
         };
       };
     },

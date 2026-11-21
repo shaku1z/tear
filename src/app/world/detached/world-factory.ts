@@ -36,6 +36,8 @@ import { createTutorialArena } from "../../../gameplay/training/tutorial-arenas"
 import { trainingPlatforms } from "../../../gameplay/training/playground-controller";
 import { DEFAULT_COSMETIC_LOOKS } from "../../../presentation/cosmetic-defaults";
 import type { CosmeticLooks } from "../../../presentation/cosmetic-styles";
+import { StageRuntimeState } from "../stage-runtime-state";
+import { createRunStageController, loadRunStage } from "../run-stage";
 
 type FactoryOptions = TearWorldSimulationFactoryOptions;
 
@@ -49,7 +51,8 @@ export interface ProductionReplayWorldOptions {
   readonly presentation?: (context: ProductionReplayPresentationContext) => TearWorldEntityPresentationPorts;
   readonly gameplayEvents?: TearGameplayEventPort;
   readonly worldId?: string;
-  readonly seed: string;
+  /** The run seed: a non-zero unsigned 32-bit integer (`scenarioRunSeed` names one from text). */
+  readonly runSeed: number;
   readonly enemies?: readonly Readonly<{ id: string; x: number; y: number }>[];
   readonly mode?: string;
   readonly weaponId?: string;
@@ -99,16 +102,6 @@ function detachedPresentationPorts(
   });
 }
 
-/** The minimal legal run shape used before a captured State Setup snapshot replaces it. */
-export function productionRunSeed(seed: string): number {
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < seed.length; index += 1) {
-    hash ^= seed.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return hash >>> 0 || 1;
-}
-
 function productionDifficultyPlan(difficulty: RunDifficulty) {
   return planRunStart(
     difficulty,
@@ -121,6 +114,7 @@ function productionDifficultyPlan(difficulty: RunDifficulty) {
   );
 }
 
+/** The minimal legal run shape used before a captured State Setup snapshot replaces it. */
 export function createProductionReplayRun(
   mode = "endless",
   weaponId = "sword",
@@ -196,7 +190,7 @@ export function createProductionReplayRun(
 export function createProductionReplayWorld(options: ProductionReplayWorldOptions) {
   const { configuration, clock, random } = createTearWorldBootstrap(CONFIG);
   const config = configuration.value;
-  const runSeed = productionRunSeed(options.seed);
+  const { runSeed } = options;
   const cosmeticEmissionRandom = createCosmeticEmissionRandom();
   const effects = createParticleSystem({
     looks: options.looks ?? DEFAULT_COSMETIC_LOOKS,
@@ -272,7 +266,7 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
     session,
     worldId:
       options.worldId ??
-      `production-replay:${options.seed}:${options.mode ?? "endless"}:${options.weaponId ?? "sword"}`,
+      `production-replay:${String(runSeed)}:${options.mode ?? "endless"}:${options.weaponId ?? "sword"}`,
     publishEnvironmentEvents: false,
     musicDirection: false,
   });
@@ -310,7 +304,24 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
     blade: () => world.state.blade() as never,
     aimRadius: () => config.blade.aimRadius,
   });
-  const stage: { index: number; platforms: unknown[] } = { index: 0, platforms: stagePlatforms(0, config) };
+  const stage = new StageRuntimeState<ReturnType<typeof stageAt>, unknown[]>(stageAt, (index) =>
+    stagePlatforms(index, config).map((platform) => ({ ...platform })),
+  );
+  const stageController = createRunStageController({
+    stage,
+    state,
+    cinema: world.context.cinema,
+    gameplayEvents: dependencies.GAMEPLAY_EVENTS,
+  });
+  let authoritativeTick = (): number => 0;
+  const stageLoad = {
+    load: (index: number) => {
+      stageController.load(index);
+    },
+    enemies: () => state.enemies(),
+    environment: world.environment,
+    tick: () => authoritativeTick(),
+  };
   const finale = createProductionFinaleRuntime({
     state,
     lifecycle: world.lifecycle,
@@ -475,6 +486,16 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
     input,
     run,
     stage,
+    /** Loads a stage as live play does: the stage controller, then the stage's environment. */
+    loadStage: (index: number, reason: "new-run" | "stage-transition") => {
+      loadRunStage(stageLoad, index, reason);
+    },
+    /** The combat simulation's tick, once it exists; a stage's environment fields start there. */
+    bindAuthoritativeTick: (tick: () => number) => {
+      authoritativeTick = tick;
+    },
+    trainingHome: () =>
+      trainingPlatforms(config.view.w, config.view.h, config.world.groundY).map((platform) => ({ ...platform })),
     tutorial,
     tutorialOutward,
     bindTutorialSpawn: (spawn: NonNullable<typeof tutorialSpawn>) => {
@@ -487,11 +508,6 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
       return courseSessionId === undefined
         ? null
         : Object.freeze({ status: "awaiting-next-run" as const, courseSessionId });
-    },
-    installTrainingHome: () => {
-      stage.platforms = trainingPlatforms(config.view.w, config.view.h, config.world.groundY).map((platform) => ({
-        ...platform,
-      }));
     },
   });
 }

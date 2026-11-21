@@ -13,12 +13,13 @@ import type {
   ProjectileState,
 } from "../../src/gameplay/combat/combat-entity-contracts";
 import { planProjectileCollisions } from "../../src/gameplay/combat/projectile-collision-resolver";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 describe("weapon projectile collision", () => {
   it("matches the upstream live remote hit body on resistant targets and preserves resolve/ramp/proc order", () => {
     const make = () => {
       const host = createProductionGhostReplayComposition({
-        seed: "native-projectile-binding",
+        runSeed: scenarioRunSeed("native-projectile-binding"),
         mode: "endless",
         weaponId: "riftlock",
       }).create(undefined);
