@@ -17,11 +17,19 @@ export type DetachedWorldSession = ReturnType<ReturnType<typeof createProduction
  * gaps replay PR 5b closes. The boss arrival is off it: the simulation tick advances the arrival
  * (`advanceBossIntro` in the opening phase), so a detached tick plays it like a live one. Then the
  * reward and menu actions go to the screen router and the rest to the simulation.
+ *
+ * Live play advances the simulation only on the playing screen (RuntimeFrameCoordinator), so a held
+ * screen (paused, a draft, a reserve or a tier-up) holds a detached world too: the step returns the last
+ * tick's result, and the actions the screen did not take are dropped, as live input is. A recorded pick
+ * or resume therefore carries the tick that follows the hold.
  */
 export function stepDetachedWorld(
   session: DetachedWorldSession,
   actions: readonly CommandEnvelope<GameAction>[],
 ): AuthoritativeStepResult<CanonicalGameplayState> {
   if (session.replay.world.context.cinema.active) session.advanceApplicationFrame(session.simulation.stepSeconds);
-  return session.simulation.advanceOne(actions.filter((action) => !session.routeAction(action.command)));
+  const simulated = actions.filter((action) => !session.routeAction(action.command));
+  const held = session.simulation.lastResult;
+  if (held !== null && !session.replayLifecycle.shouldStep()) return held;
+  return session.simulation.advanceOne(simulated);
 }

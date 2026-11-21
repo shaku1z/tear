@@ -11,6 +11,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createLiveRunStartHost } from "../../src/app/run/run-start-host";
+import { stepDetachedWorld } from "../../src/app/world/detached/detached-step";
 import { detachedRunStartWorld } from "../../src/app/world/detached/detached-run-start";
 import {
   captureProductionReplayCheckpoint,
@@ -25,6 +26,8 @@ import { scenarioRunSeed, type SavedRunStart } from "../../src/gameplay/run/run-
 import type { RunDifficulty, RunMode } from "../../src/gameplay/run/session";
 import { resolveDiscoveredVariantIds } from "../../src/gameplay/variants";
 import { createCosmeticWardrobe } from "../../src/presentation/cosmetic-styles";
+import type { CommandEnvelope } from "../../src/domain/envelopes";
+import type { GameAction } from "../../src/input/game-action";
 
 interface StartCase {
   readonly id: string;
@@ -196,5 +199,32 @@ describe("one run start for live play and detached worlds", () => {
       expect(liveState, `tick ${String(tick)}`).toBe(detachedState);
     }
     expect(capture(live).semanticHash).toBe(capture(detached).semanticHash);
+  });
+});
+
+describe("a held screen holds a detached world, as live play does", () => {
+  it("pausing for 600 steps and resuming plays the same run as never pausing", () => {
+    const start = CASES[0];
+    if (start === undefined) throw new Error("no start case");
+    const runSeed = scenarioRunSeed("run-start-parity:pause");
+    const paused = detachedStart(start, runSeed);
+    const straight = detachedStart(start, runSeed);
+    let id = 0;
+    const step = (world: typeof paused, commands: readonly GameAction[] = []) =>
+      stepDetachedWorld(
+        world,
+        commands.map((command): CommandEnvelope<GameAction> => ({ kind: "command", id: ++id, tick: 0, command })),
+      );
+    for (let tick = 1; tick <= 60; tick += 1) step(paused);
+    const before = step(paused, [{ type: "pause" }]);
+    expect(paused.waveReward.screen()).toBe("paused");
+    expect(before.tick).toBe(60);
+    for (let held = 0; held < 600; held += 1) expect(step(paused).stateHash).toBe(before.stateHash);
+    expect(step(paused, [{ type: "pause" }]).tick).toBe(61);
+    for (let tick = 62; tick <= TICKS; tick += 1) step(paused);
+    let last = step(straight);
+    for (let tick = 2; tick <= TICKS; tick += 1) last = step(straight);
+    expect(paused.simulation.lastResult?.tick).toBe(TICKS);
+    expect(paused.simulation.lastResult?.stateHash).toBe(last.stateHash);
   });
 });

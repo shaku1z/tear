@@ -141,6 +141,8 @@ export interface SettingsEnvironmentSnapshot {
   readonly buildLabel: string;
   readonly presets: Readonly<Record<string, ControllerPresetView>>;
   readonly controllerGlyphs?: readonly string[];
+  /** Settings opened from a paused run: a run keeps the story-scene setting it started with. */
+  readonly duringRun?: boolean;
   /** Desktop only: the keyboard rows' state. Absent, the Controls tab has no keyboard section. */
   readonly keyboard?: KeyboardRowsState;
 }
@@ -270,6 +272,7 @@ export function buildSettingsSections(
             label: "Story scenes",
             value: (settings.cinematics ?? "full").toUpperCase(),
             kind: "cycle",
+            ...(environment.duringRun === true ? { note: "A CHANGE APPLIES FROM THE NEXT RUN" } : {}),
           },
           {
             key: "reducedMotion",
