@@ -33,11 +33,55 @@ The owner approved this refresh on 2026-11-20. It stays on the free tier. Consol
 ## Done when
 
 - [x] `pnpm test:rules` passes and runs in the CI unit job; every collection the game uses has allowed and refused cases (PR 1).
-- [ ] The standalone build bundles the modular SDK in a lazy chunk. Nothing loads from gstatic, the CrazyGames build has no Firebase code, and the sizes before and after are in the pull request (PR 2).
+- [x] The standalone build bundles the modular SDK in a lazy chunk. Nothing loads from gstatic, the CrazyGames build has no Firebase code, and the sizes before and after are in the pull request (PR 2).
 - [ ] App Check with reCAPTCHA v3 is wired in monitor mode and fails open; the owner registers the site key (PR 3).
 - [ ] Remote Config v1 is removed, or kept with its readers named. `/ghosts` is listed as removed once the replay overhaul's PR 8 lands. The authorized-domain fixes are listed for the owner (PR 4).
 - [x] The owner has deployed the rules from PR 1 (released 2026-11-21 08:46 UTC; the deployed ruleset matches main's `firestore.rules`).
-- [ ] Leaderboard bests are spaced by the server's clock: the rules first (PR 2a, deployed by the owner), then the client that writes it (PR 2).
+- [x] Leaderboard bests are spaced by the server's clock: the rules first (PR 2a, deployed by the owner), then the client that writes it (PR 2).
+
+## Remaining slices (handover, 2026-11-21)
+
+Paused for the weekly budget. Another agent can pick these up from the repo alone. Steps marked **OWNER** are Firebase or Google console actions that only the owner does. Firestore rules deploys are the lead's: tell the lead when a change to `firestore.rules` merges.
+
+### PR 3: App Check in monitor mode (branch `codex/firebase-app-check`, pushed)
+
+The branch has the code. It is PR 2 plus:
+- `FIREBASE_APP_CHECK_SITE_KEY` in `src/platform/firebase-config.ts`, empty, so App Check stays off;
+- `createFirebaseServices(config, { appCheck })` in `src/platform/firebase-sdk.ts`, which calls `initializeAppCheck` with `ReCaptchaV3Provider` and refreshes the token automatically. A failure is caught, and requests go on without a token (fails open).
+- `tests/rules/firebase-app-check.test.ts`, which shows the adapter signing in, saving and submitting with a provider that never returns a token.
+- `tests/unit/privacy-page.test.ts`, which requires the privacy page to name reCAPTCHA exactly when the key is set.
+
+1. Take in main after PR 2's squash merge. A plain `git merge origin/main` conflicts on everything PR 2 touched. Instead:
+   - `git merge <squash>^` (main just before PR 2's squash);
+   - `git merge -s ours <squash>` (PR 2's content is already on the branch);
+   - `git merge origin/main`.
+2. Keep App Check inside the `firebase-sdk` chunk. A separate App Check chunk makes Rolldown split out a shared `index.esm-*.js`, which takes a 47th precache entry; the budget is 46.
+3. Checks: `pnpm test:rules` (42 tests), `pnpm check:quick`, then `pnpm build:standalone`, `pnpm build:crazygames`, `pnpm check:bundles` and `pnpm check:load-budgets`. The SDK chunk was 234,220 B raw / 71,850 B gzip with App Check.
+4. Open the PR. With the key empty it changes nothing at run time.
+5. **OWNER**: create a reCAPTCHA v3 key for `tearblade.com`, the preview site's host (the lead has it) and `localhost`.
+6. **OWNER**: in Firebase console, App Check, register the web app with that key and its secret. Leave enforcement OFF for Firestore and Authentication (metrics only), and set the token time to live to 1 day. Give the lead the site key; it is public.
+7. A follow-up PR sets `FIREBASE_APP_CHECK_SITE_KEY`. It must also:
+   - name reCAPTCHA on `public/privacy.html` (the privacy test fails otherwise);
+   - show Google's reCAPTCHA notice, or keep the badge.
+8. Cost: free tier only. reCAPTCHA gives 10,000 assessments a month; without billing it returns errors past that and charges nothing. With enforcement off nobody is blocked. Turning enforcement on is a later decision for the owner, after the metrics show real traffic passing.
+
+### PR 4: cleanup and domains (not started; branch from `origin/main`)
+
+1. Remove `REMOTE` (`src/config/game-config.ts`, all four multipliers fixed at 1) and its readers. Find them with `git grep -n "REMOTE" -- src`:
+   - `planRunStart(…, REMOTE)` in `src/app/run/run-start-host.ts` and `src/app/engineering/state-setup-progression.ts`;
+   - the multipliers in `src/app/replay/seed-race-composition.ts`;
+   - the wiring in `src/app/shell/composition.ts` and `src/app/shell/game-runtime-dependencies.ts`;
+   - the parameter in `src/gameplay/run/run-start-plan.ts`.
+   Multiplying by 1 changes nothing, so `pnpm test:determinism` must stay green; keep any replay or seed-race field that stores the multipliers readable.
+2. Delete `remoteconfig.template.json` and the `remoteconfig` entry in `firebase.json`.
+3. **OWNER** (optional): delete the Remote Config template in Firebase console (version 1, 2026-07-04, all four values at 1).
+4. `/ghosts`: once the replay overhaul's PR 8 has removed `loadGhost` and every `/ghosts` read, and after agreeing with the session that owns replay storage:
+   - remove `match /ghosts/{board}` from `firestore.rules`, and its tests in `tests/rules/`;
+   - tell the lead when it merges, so the lead can deploy.
+5. **OWNER**: in Firebase console, Authentication, Settings, Authorized domains, add the preview site's host (the lead has it) so Google sign-in works on preview, and remove `tear-psi.vercel.app`.
+6. Follow-ups, each its own small PR:
+   - Credit Firebase and Workbox on the credits screen, as for the other bundled dependencies; the bundle strips their licence comments.
+   - Once no build that writes bests without `at` is in use, require `at` on every best in `isRowWrite`. That is one line and a test; the lead deploys it.
 
 ## Scope
 
@@ -75,3 +119,11 @@ The owner approved this refresh on 2026-11-20. It stays on the free tier. Consol
   - Rows without `at` are spaced by `ts` as before.
   - Builds in use today write no `at`, and these rules accept their writes unchanged.
   - Once the owner has deployed these rules, PR 2's client can start writing `at`. The rules from PR 1 refuse that field.
+- 2026-11-21 PR 2: the modular SDK. The adapter moved onto two small ports (Auth, Firestore paths), and
+  `src/platform/firebase-sdk.ts` implements them with Auth and Firestore Lite.
+  - Sizes: the SDK chunk is 220,347 B raw / 66,553 B gzip, loaded on demand and not precached. Before, the four 10.12.2 compat scripts from gstatic were 539,470 / 158,763 B.
+  - `pnpm check:bundles` passes on both targets: standalone startup scripts 1,730,302 B, precache 46/46 entries. The CrazyGames build has no Firebase code.
+  - Remote Config is no longer fetched. Its only template (version 1, 2026-07-04) kept all four multipliers at 1, so nothing changes. PR 4 deletes `REMOTE` and its readers.
+  - The adapter writes `at` with `serverTimestamp()` on every best, including the full replace of a new best from #347. PR 2a's rules space bests by it.
+  - **Deploy order:** the owner deploys PR 2a's rules before PR 2 merges. Every merge to main goes to preview, which uses the same Firebase project, and PR 1's rules refuse a best that carries `at`.
+- 2026-11-21 PR 2a's rules deployed (14:37Z). PR 2's load check now counts bytes to playing from every origin: main about 803 KB (642,700 same-origin plus 160,421 of gstatic scripts), PR 2 705,325, cap 740,000 (about 5% above). Standalone has no cross-origin scripts (caps 0/0). App Check (PR 3) and the cleanup (PR 4) are paused for the weekly budget; the lead deploys rules from now on.
