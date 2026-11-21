@@ -1,4 +1,4 @@
-import type { LiveReplayTapSeams } from "../replay/live-replay-tap";
+import type { LiveReplayTapSeams } from "../replay/live-replay-tap-slot";
 import { createLiveSeedRace } from "../replay/seed-race-composition";
 import type { PreparedVictory } from "../../gameplay/run/outcome-planner";
 import { BestScoreRepository } from "../../gameplay/scoring/best-scores";

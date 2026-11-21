@@ -4,7 +4,8 @@
  * the page. Browser evidence for replay PR 5b-3 (tests/browser-replay-live-verify.js) uses it.
  */
 import { createDetachedReplayWorld } from "../replay/detached-replay-world";
-import { createLiveReplayTap, type LiveReplayTapSlot } from "../replay/live-replay-tap";
+import { createLiveReplayTap } from "../replay/live-replay-tap";
+import type { LiveReplayTapSlot } from "../replay/live-replay-tap-slot";
 import type { ReplayRecord } from "../../replay/record";
 import { verifyReplay, type ReplayVerdict } from "../../replay/verify";
 

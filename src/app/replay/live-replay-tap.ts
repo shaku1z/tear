@@ -14,9 +14,8 @@
  * The tap numbers the actions it records in the order they apply: a tick's reward actions first, then
  * its sealed actions.
  *
- * The live composition holds one slot (`createLiveReplayTapSlot`) and calls it at each seam; nothing
- * happens while the slot is empty. Test builds fill it on request (`replayTap` in the test-build hooks);
- * replay PR 5c fills it in production behind a lazily loaded slot.
+ * The live composition holds one slot (live-replay-tap-slot.ts) and calls it at each seam; a tap from
+ * here fills it. This module is not part of live startup: it carries the recorder and the record.
  */
 import type { CommandEnvelope } from "../../domain/envelopes";
 import type { RewardDecision } from "../../gameplay/run/reward-runtime";
@@ -34,78 +33,7 @@ import {
 } from "../../replay/record";
 import { createReplayRecorder, type ReplayRecorder, type ReplayRunEnd } from "../../replay/recorder";
 import { rewardDecisionAction } from "../world/detached/action-routing";
-
-type RewardChoices = Parameters<typeof rewardDecisionAction>[1];
-
-/** The live seams a tap listens to. */
-export interface LiveReplayTapSeams {
-  /** A run started with these choices, its clocks at tick 0. */
-  readonly runStarted: (choices: RunStartChoices) => void;
-  /** An application frame began on the playing screen after `tick`; `scene` is whether a scene was active. */
-  readonly frame: (tick: number, seconds: number, confirm: SceneConfirm, scene: boolean) => void;
-  /** A reward decision, before the reward runtime applies it to the reward shown. */
-  readonly decision: (decision: RewardDecision, before: RewardChoices) => void;
-  /** The actions sealed for `tick`, before it is simulated. */
-  readonly sealed: (tick: number, actions: readonly CommandEnvelope<GameAction>[]) => void;
-  /** `tick` was simulated; its state hash on demand. */
-  readonly stepped: (tick: number, hash: () => string) => void;
-  readonly observe: (event: TearGameplayEvent) => void;
-}
-
-export interface LiveReplayTap extends LiveReplayTapSeams {
-  /** The run being recorded ended at its last simulated tick; null when no recorded run is open. */
-  readonly finish: (run: ReplayRunEnd["run"]) => ReplayRecord | null;
-}
-
-export interface LiveReplayTapSlot extends LiveReplayTapSeams {
-  readonly install: (tap: LiveReplayTap | null) => void;
-  readonly current: () => LiveReplayTap | null;
-}
-
-/** The one slot the live composition calls at each seam. */
-export function createLiveReplayTapSlot(): LiveReplayTapSlot {
-  let tap: LiveReplayTap | null = null;
-  return Object.freeze({
-    install: (next: LiveReplayTap | null) => {
-      tap = next;
-    },
-    current: () => tap,
-    runStarted: (choices: RunStartChoices) => tap?.runStarted(choices),
-    frame: (tick: number, seconds: number, confirm: SceneConfirm, scene: boolean) =>
-      tap?.frame(tick, seconds, confirm, scene),
-    decision: (decision: RewardDecision, before: RewardChoices) => tap?.decision(decision, before),
-    sealed: (tick: number, actions: readonly CommandEnvelope<GameAction>[]) => tap?.sealed(tick, actions),
-    stepped: (tick: number, hash: () => string) => tap?.stepped(tick, hash),
-    observe: (event: TearGameplayEvent) => tap?.observe(event),
-  });
-}
-
-/** The coordinator's application-frame recording (RuntimeFrameCoordinator), which also tells the slot. */
-export interface LiveApplicationFrameRecording {
-  begin(seconds: number, confirm: SceneConfirm, cinemaActive: boolean): void;
-  preludeApplied(): void;
-  end(steps: number): void;
-}
-
-/** Adds the tap to the frame recording the coordinator already has; `tick` is the last simulated tick. */
-export function withReplayTapFrames(
-  inner: LiveApplicationFrameRecording,
-  slot: Pick<LiveReplayTapSeams, "frame">,
-  tick: () => number,
-): LiveApplicationFrameRecording {
-  return Object.freeze({
-    begin(seconds: number, confirm: SceneConfirm, cinemaActive: boolean): void {
-      slot.frame(tick(), seconds, confirm, cinemaActive);
-      inner.begin(seconds, confirm, cinemaActive);
-    },
-    preludeApplied: () => {
-      inner.preludeApplied();
-    },
-    end: (steps: number) => {
-      inner.end(steps);
-    },
-  });
-}
+import type { LiveReplayTap, ReplayTapRewardChoices } from "./live-replay-tap-slot";
 
 interface OpenRun {
   readonly recorder: ReplayRecorder;
@@ -137,7 +65,7 @@ export function createLiveReplayTap(header: Readonly<{ build: ReplayBuild; look:
     frame(tick: number, seconds: number, confirm: SceneConfirm, scene: boolean): void {
       if (open !== null && scene && tick === open.lastTick) open.recorder.frame(tick, seconds, confirm);
     },
-    decision(decision: RewardDecision, before: RewardChoices): void {
+    decision(decision: RewardDecision, before: ReplayTapRewardChoices): void {
       const action = rewardDecisionAction(decision, before);
       if (open !== null && action !== undefined) open.pending.push(action);
     },

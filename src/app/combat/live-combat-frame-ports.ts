@@ -1,4 +1,4 @@
-import type { LiveReplayTapSeams } from "../replay/live-replay-tap";
+import type { LiveReplayTapSeams } from "../replay/live-replay-tap-slot";
 import type { LiveCampaignTrainingAssembly } from "../campaign/live-campaign-training-assembly";
 import { createLiveMusicObservation, projectLiveMusicRun } from "../interface/music-observation-adapter";
 import type { LiveScreenNavigation } from "../interface/live-screen-navigation";

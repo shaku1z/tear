@@ -48,7 +48,7 @@ import type { GameBlade, GamePlayer, GameRun } from "../../gameplay/runtime/game
 import { createLiveProductionWorld } from "./production-world";
 import { RuntimeFrameDriver } from "./runtime-frame-driver";
 import { createLiveSessionServices } from "./session-services-composition";
-import { createLiveReplayTapSlot, withReplayTapFrames } from "../replay/live-replay-tap";
+import { createLiveReplayTapSlot, withReplayTapFrames } from "../replay/live-replay-tap-slot";
 
 /**
  * Composes the live game: browser surface, Ghost V3 sidecar, session services,

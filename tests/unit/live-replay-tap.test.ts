@@ -5,7 +5,8 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { createLiveReplayTap, createLiveReplayTapSlot } from "../../src/app/replay/live-replay-tap";
+import { createLiveReplayTap } from "../../src/app/replay/live-replay-tap";
+import { createLiveReplayTapSlot } from "../../src/app/replay/live-replay-tap-slot";
 import type { RunStartChoices } from "../../src/gameplay/run/run-start-choices";
 import { readReplayRecord } from "../../src/replay/record";
 
@@ -72,5 +73,20 @@ describe("the live replay tap", () => {
       tap.stepped(1, () => HASH);
       expect(tap.finish({ score: 0, wave: 0, time: 0 })).toBeNull();
     }
+  });
+
+  it("opens no record the reader would refuse: no run on an engineering-only boss or an unknown one", () => {
+    const tap = createLiveReplayTap(HEADER);
+    const recordOn = (boss: string) => {
+      tap.runStarted({ ...CHOICES, mode: "bossonly", boss });
+      tap.sealed(1, []);
+      tap.stepped(1, () => HASH);
+      return tap.finish({ score: 0, wave: 0, time: 0 });
+    };
+    const released = recordOn("warden");
+    expect(released?.run.start.boss).toBe("warden");
+    expect(readReplayRecord(JSON.parse(JSON.stringify(released)))).toMatchObject({ ok: true });
+    expect(recordOn("rootbound-rebuild")).toBeNull();
+    expect(recordOn("no-such-boss")).toBeNull();
   });
 });
