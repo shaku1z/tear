@@ -20,7 +20,9 @@ import {
   limit,
   orderBy,
   query,
+  serverTimestamp,
   setDoc,
+  Timestamp,
   type DocumentData,
   type Firestore,
 } from "firebase/firestore";
@@ -198,6 +200,32 @@ describe("leaderboards/{board}/scores/{uid}", () => {
     await assertFails(best(1200, Date.now()));
     await assertFails(best(1300, earlier + 9_000));
     await assertSucceeds(best(1300, Date.now()));
+  });
+
+  it("spaces a row by the server's clock once it has one, which the client cannot set", async () => {
+    const db = as("alice");
+    const earlier = Date.now() - 60_000;
+    const best = (score: number, extra: DocumentData = {}, merge = true) =>
+      setDoc(doc(db, path("alice")), row("alice", { score, ...extra }), { merge });
+    await seed(path("alice"), row("alice", { ts: earlier, at: Timestamp.fromMillis(earlier) }));
+    await assertFails(best(1300, { at: Timestamp.now() }));
+    await assertFails(best(1300, { at: Timestamp.fromMillis(earlier) }));
+    // Once a row has the server's clock, every best carries it: by merge (the stored one is stale) or replace.
+    await assertFails(best(1300));
+    await assertFails(best(1300, {}, false));
+    await assertSucceeds(best(1300, { at: serverTimestamp() }));
+    // A client clock set 11 s on does not get past the spacing; only the server's clock counts.
+    await assertFails(best(1400, { at: serverTimestamp(), ts: Date.now() + 11_000 }));
+  });
+
+  it("keeps a row written before the server's clock existed writable, by either kind of client", async () => {
+    const earlier = Date.now() - 60_000;
+    await seed(path("alice"), row("alice", { ts: earlier }));
+    await assertSucceeds(setDoc(doc(as("alice"), path("alice")), row("alice", { score: 1300 }), { merge: true }));
+    await seed(path("bob"), row("bob", { ts: earlier }));
+    await assertSucceeds(
+      setDoc(doc(as("bob"), path("bob")), row("bob", { score: 1300, at: serverTimestamp() }), { merge: true }),
+    );
   });
 
   it("links a replay only to the owner's own row and the owner's own replay", async () => {

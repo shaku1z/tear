@@ -157,7 +157,6 @@ export function createLiveCinematicHost(context: LiveCinematicHostContext) {
     groundY: () => d.CONFIG.world.groundY,
     bomberColor: () => d.CONFIG.colors.bomber,
     dialogueDuck: () => d.CONFIG.presentation.dialogueDuck,
-    verticalResponse: () => d.CONFIG.aldric.verticalResponse,
     time: () => d.CLOCK.sim,
     lerp: d.lerp,
     clamp: d.clamp,

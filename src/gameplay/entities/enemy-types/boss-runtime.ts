@@ -190,8 +190,6 @@ export function createBossRuntime(dependencies: EnemyDependencies) {
     // where the spoken line anchors, so world choreography owns the frame center
     // (Pantheon VI P4). The Source speaks from depth-center; the rest sit in a lower corner.
     const anchorByPose = {
-      aldricCrownfall: "lower-right",
-      aldricFeral: "lower-right",
       echoMirror: "lower-right",
       sourceTrue: "depth-center",
       rootboundGraft: "lower-left",
@@ -208,6 +206,7 @@ export function createBossRuntime(dependencies: EnemyDependencies) {
   // Call perilPing(boss) at the wind-up; the boss's draw calls drawPeril each frame.
   function perilPing(boss: BossPresentationActor) {
     boss._perilUntil = CLOCK.sim + 0.6;
+    boss._perilMove = boss.liveMove?.() ?? null;
     try {
       SFX.rankup();
     } catch {

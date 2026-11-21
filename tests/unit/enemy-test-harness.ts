@@ -1,7 +1,6 @@
 import { CONFIG } from "../../src/config/game-config";
 import { createTearWorldClock } from "../../src/gameplay/runtime/tear-world-clock";
 
-const CLOCK = createTearWorldClock();
 import { aabbOverlap, clamp, len, lerp, segPointDist, segSegmentDist } from "../../src/domain/geometry";
 import { createEnemyTypes, type EnemyTypes } from "../../src/gameplay/entities/enemies";
 import type { EnemyPlatform, EnemyPlayerPort, EnemyProjectile } from "../../src/gameplay/entities/enemy-contracts";
@@ -92,6 +91,8 @@ export function createTestPlayer(overrides: Partial<TestPlayer> = {}): TestPlaye
 }
 
 export function createEnemyHarness(randomValues: readonly number[] = [0.5]) {
+  /** This harness's own simulation clock: a test that draws advances it the way the game's step does. */
+  const CLOCK = createTearWorldClock();
   let randomIndex = 0;
   const next = () => randomValues[randomIndex++ % randomValues.length] ?? 0.5;
   const Projectile = createProjectile({
@@ -134,7 +135,7 @@ export function createEnemyHarness(randomValues: readonly number[] = [0.5]) {
     },
     { id: "ledge", x: 650, y: 520, w: 300, h: 24, oneway: true, arenaPlatId: "test:ledge", arenaState: "stable" },
   ];
-  return { Projectile, types, platforms, player: createTestPlayer() };
+  return { Projectile, types, platforms, player: createTestPlayer(), clock: CLOCK };
 }
 
 type ActorFactory = (types: EnemyTypes) => BehaviorActor;

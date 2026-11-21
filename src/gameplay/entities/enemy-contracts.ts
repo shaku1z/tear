@@ -141,6 +141,7 @@ export interface EnemySoundPort {
   aldricFireWarn?(step: number): void;
   aldricIgnite?(): void;
   aldricCleaverBury?(): void;
+  aldricCrownFall?(): void;
   aldricCleaverWhoosh?(): void;
   sourceDepthPrepare(kind: string): void;
   sourceDepthSnap(kind: string): void;
@@ -264,8 +265,6 @@ export interface BossTransformationSpec {
   brief?: boolean | undefined;
   speaker?: string | undefined;
   after?: string | undefined;
-  crownFall?: boolean | undefined;
-  firstVertical?: boolean | undefined;
 }
 
 export interface BossPresentationActor extends ProjectileOwnerPort {
@@ -280,6 +279,9 @@ export interface BossPresentationActor extends ProjectileOwnerPort {
   bossId?: string | undefined;
   isMiniBoss?: boolean | undefined;
   _perilUntil?: number | undefined;
+  /** The move state the peril was rung in: the diamond shows during that state only. */
+  _perilMove?: string | null | undefined;
+  liveMove?(): string | null;
   _phaseFlashT?: number | undefined;
   cinematicRequest?:
     (BossTransformationSpec & { speaker: string; duration: number; anchor: string }) | null | undefined;
