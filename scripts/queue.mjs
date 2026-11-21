@@ -79,7 +79,7 @@ export const LIGHT = [
     },
   },
   {
-    // The pre-push hook runs this group; a push must not wait behind another session's suite.
+    // Run by hand before a push (`pnpm check:quick`); it must not wait behind another session's suite.
     kind: "the fast check group",
     matches: (args) =>
       startsWith(args, ["pnpm", "check:quick"]) || startsWith(args, ["node", "scripts/run-checks.mjs", "fast"]),

@@ -55,7 +55,7 @@ Where a plan lives:
 New plans start from [TASK_CARD_TEMPLATE.md](TASK_CARD_TEMPLATE.md) and go in
 `active/` with a row in the Active plans table.
 
-The active-plan set is exactly the thirteen active rows across the two tables in
+The active-plan set is exactly the active rows across the two tables in
 this index. `check:docs` derives that set from these tables, requires each
 plan's file metadata to match its Owner/Status/Closure condition cells, and
 fails closed on duplicate, malformed, empty, or additional active rows.

@@ -214,7 +214,10 @@ These hold for any agent, with or without a lead session:
 - A design choice the plan does not settle is the owner's: stop and ask, with your recommendation.
 - Nothing merges unless `pnpm merge:ready <pr>` says READY, through the merge helper. Never around it.
 - A change to a gate file (`config/gate-files.json`) needs a second reader who did not write it: the
-  lead, or the owner when there is no lead. Do not clear your own.
+  lead, or the owner when there is no lead. Do not clear your own: nobody labels their own gate
+  change `gate-reviewed`.
+- With no lead session, a pull request that changes a gate file or adds a new system, folder, tool
+  or screen waits for the owner; any other may merge on `pnpm merge:ready` READY (owner, 2026-11-21).
 - The design check is answered for every pull request. "n/a" needs its reason.
 - Before starting new work, run `pnpm who` and finish, hand over or remove what is yours.
 - `--update` lowers a baseline. Raising one (`--allow-increase`) is never yours to approve alone.
