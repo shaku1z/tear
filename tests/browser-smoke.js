@@ -4,7 +4,16 @@ const fs = require("node:fs");
 const http = require("node:http");
 const { listenOnFreePort } = require("./local-server");
 const path = require("node:path");
-const { STATE_WAIT_MS, clickTarget, pollEvery, settleFor, launchJourney } = require("./browser-waits");
+const {
+  STATE_WAIT_MS,
+  chooseOnSetup,
+  clickTarget,
+  pollEvery,
+  settleFor,
+  launchJourney,
+  startFromSetup,
+  waitForSetup,
+} = require("./browser-waits");
 const { TUTORIAL_SKIPPED_STORAGE } = require("./browser-journey-harness");
 
 (async () => {
@@ -167,11 +176,10 @@ const { TUTORIAL_SKIPPED_STORAGE } = require("./browser-journey-harness");
   await waitForScreen("confirmquit");
   await clickTarget(page, "confirmquit", "SKIP TUTORIAL");
   await waitForScreen("setup");
-  assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().setup.mode), "campaign");
+  assert.equal(await page.evaluate(() => window.__TEAR_SETUP__().mode), "campaign");
   // This journey plays Endless, as a player would pick it.
-  await clickTarget(page, "setup", "ENDLESS");
-  await page.waitForFunction(() => window.__PANTHEON_TEST.state().setup.mode === "endless");
-  await clickTarget(page, "setup", "START");
+  await chooseOnSetup(page, "ENDLESS", { mode: "endless" });
+  await startFromSetup(page);
   await waitForScreen("playing");
   try {
     await page.waitForFunction(
@@ -230,7 +238,7 @@ const { TUTORIAL_SKIPPED_STORAGE } = require("./browser-journey-harness");
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__);
   await clickTarget(page, "menu", "PLAY"); // setup/war table (renders all five weapon cards)
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running");
-  await page.waitForTimeout(settleFor(500));
+  await waitForSetup(page, { ready: true });
   if (process.env.TEAR_SCREENSHOT) await page.screenshot({ path: process.env.TEAR_SCREENSHOT });
   const weaponIds = ["sword", "hammer", "greatsword", "chainblade", "riftlock"];
   async function pulseThrowUntilLaunched(expectedThrows) {
@@ -253,12 +261,13 @@ const { TUTORIAL_SKIPPED_STORAGE } = require("./browser-journey-harness");
       await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__);
       await clickTarget(page, "menu", "PLAY");
     }
-    await clickTarget(page, "setup", weaponIds[i]);
-    await page.waitForTimeout(settleFor(80));
-    await clickTarget(page, "setup", "ENDLESS"); // a skipped tutorial preselects Adventure
-    await page.waitForTimeout(settleFor(80));
-    await clickTarget(page, "setup", "START");
-    await page.waitForTimeout(settleFor(500));
+    await chooseOnSetup(page, weaponIds[i], { weapon: weaponIds[i] });
+    // A skipped tutorial preselects Adventure. Choosing Endless must keep the weapon chosen above.
+    await chooseOnSetup(page, "ENDLESS", { mode: "endless", weapon: weaponIds[i] });
+    await startFromSetup(page);
+    await page.waitForFunction(() => window.TEAR_WEAPON_DEBUG?.()?.lifecycle.phase === "wave-active", undefined, {
+      timeout: STATE_WAIT_MS,
+    });
     const debug = await page.evaluate(() => window.TEAR_WEAPON_DEBUG && window.TEAR_WEAPON_DEBUG());
     assert.equal(
       debug && debug.weapon,
