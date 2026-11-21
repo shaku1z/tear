@@ -10,6 +10,19 @@ import type {
   WeaponSegment,
 } from "../enemy-contracts";
 
+/** The Verdant boss's feedback, shared by the Rootbound and its rebuild until the switch. */
+const ROOTBOUND_FEEDBACK: Readonly<Record<string, BossFxEvent>> = {
+  windup: { shake: 1, cue: "updraft", priority: 2 },
+  launch: { shake: 3, cue: "slam", priority: 3 },
+  contact: { shake: 7, hitstop: 0.045, cue: "slam", priority: 6 },
+  counter: { shake: 5, hitstop: 0.04, cue: "slam", priority: 6 },
+  stagger: { shake: 8, flash: 0.2, cue: "wardenGuardBreak", priority: 8 },
+  phaseTransition: { shake: 8, flash: 0.3, zoom: 0.045, cue: "boom", priority: 9 },
+  platformBreak: { shake: 4, cue: "slam", priority: 3 },
+  platformRebuild: { shake: 1, cue: "platformRebuild", priority: 1 },
+  death: { shake: 10, flash: 0.4, zoom: 0.055, hitstop: 0.09, cue: "bossDeathWarden", priority: 10 },
+};
+
 /**
  * Feedback each boss gives for its named moments, drained by the combat feedback step. A phase change
  * and a death never slow time: the fight keeps running (plans/active/CINEMATICS_OVERHAUL.md). The rule
@@ -63,17 +76,8 @@ export const BOSS_PRESENTATION: Readonly<Record<string, Readonly<Record<string, 
     platformRebuild: { shake: 1, cue: "platformRebuild", priority: 1 },
     death: { shake: 10, flash: 0.36, zoom: 0.05, hitstop: 0.09, cue: "bossDeathAldric", priority: 10 },
   },
-  rootbound: {
-    windup: { shake: 1, cue: "updraft", priority: 2 },
-    launch: { shake: 3, cue: "slam", priority: 3 },
-    contact: { shake: 7, hitstop: 0.045, cue: "slam", priority: 6 },
-    counter: { shake: 5, hitstop: 0.04, cue: "slam", priority: 6 },
-    stagger: { shake: 8, flash: 0.2, cue: "wardenGuardBreak", priority: 8 },
-    phaseTransition: { shake: 8, flash: 0.3, zoom: 0.045, cue: "boom", priority: 9 },
-    platformBreak: { shake: 4, cue: "slam", priority: 3 },
-    platformRebuild: { shake: 1, cue: "platformRebuild", priority: 1 },
-    death: { shake: 10, flash: 0.4, zoom: 0.055, hitstop: 0.09, cue: "bossDeathWarden", priority: 10 },
-  },
+  rootbound: ROOTBOUND_FEEDBACK,
+  "rootbound-rebuild": ROOTBOUND_FEEDBACK,
   "white-hart": {
     windup: { shake: 1, priority: 2 },
     launch: { shake: 3, priority: 3 },

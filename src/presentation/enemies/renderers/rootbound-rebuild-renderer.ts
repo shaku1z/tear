@@ -1,6 +1,6 @@
 import type { EnemyTypes } from "../../../gameplay/entities/enemies";
 import { ROOTBOUND_MOVES } from "../../../gameplay/entities/enemy-types/rootbound-rebuild/rootbound-moves";
-import { drawBossFigure, type BossFigureFrame, type FigurePoseLayer } from "../figures/boss-figure";
+import type { BossFigureFrame, FigurePoseLayer } from "../figures/boss-figure";
 import {
   ROOTBOUND_FIGURE,
   ROOTBOUND_FIGURE_LAYOUT,
@@ -93,7 +93,10 @@ function mound(ctx: CanvasRenderingContext2D, ink: Ink, x: number, ground: numbe
   }
 }
 
-/** The strike itself: the column of roots out of the floor, and the ring of thorns. Not marks: they hit. */
+/**
+ * The strike itself: the column of roots out of the floor, and thorns bristling from the pod. Not marks: they
+ * hit. The burst's reach is its shockwave ring (the simulation's FX), so the thorns stay near the body.
+ */
 function drawStrike(ctx: CanvasRenderingContext2D, boss: Boss, ink: Ink, ground: number) {
   const k = boss.progress();
   if (boss.state === "surface" || (boss.state === "split" && k < 0.4)) {
@@ -115,7 +118,7 @@ function drawStrike(ctx: CanvasRenderingContext2D, boss: Boss, ink: Ink, ground:
     }
   }
   if (boss.state === "burst") {
-    const radius = ROOTBOUND_MOVES.thornBurst.radius;
+    const bristle = 70 * (1 - boss.progress() * 0.4);
     ctx.strokeStyle = ink.thorn;
     ctx.lineWidth = 6;
     ctx.lineCap = "round";
@@ -123,7 +126,7 @@ function drawStrike(ctx: CanvasRenderingContext2D, boss: Boss, ink: Ink, ground:
       const angle = (index / 12) * Math.PI * 2;
       ctx.beginPath();
       ctx.moveTo(boss.x + Math.cos(angle) * boss.hw * 0.7, boss.y + Math.sin(angle) * boss.hh * 0.7);
-      ctx.lineTo(boss.x + Math.cos(angle) * radius, boss.y + Math.sin(angle) * radius);
+      ctx.lineTo(boss.x + Math.cos(angle) * (boss.hw + bristle), boss.y + Math.sin(angle) * (boss.hh + bristle));
       ctx.stroke();
     }
   }
@@ -185,7 +188,7 @@ export function installRootboundRebuildRenderer(types: EnemyTypes, runtime: Enem
       if (this.state === "rise") mound(ctx, ink, this.x, ground, 1 - k * 0.5);
       ctx.save();
       ctx.translate(this.x, this.y + this.hh);
-      drawBossFigure(ctx, ROOTBOUND_FIGURE, figureFrame(this, intro, high, THEME.ink));
+      runtime.drawBossFigure(ctx, ROOTBOUND_FIGURE, figureFrame(this, intro, high, THEME.ink));
       ctx.restore();
       ctx.save();
       drawVine(runtime, ctx, this, ink);

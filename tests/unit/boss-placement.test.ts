@@ -24,7 +24,7 @@ describe("boss placement", () => {
 
   it("enters a boss with a start gap at least that far from the player, on the side with more room", () => {
     const x = (playerX: number) => planBossPlacement("rootbound-rebuild", CONFIG.view.w, CONFIG, playerX).x;
-    expect([x(800), x(900), x(300), x(440), x(1160)]).toEqual([440, 540, 660, 800, 800]);
+    expect([x(800), x(900), x(500), x(300), x(440), x(1160)]).toEqual([440, 540, 860, 800, 800, 800]);
     for (const playerX of [0, 120, 500, 799, 801, 1100, 1600]) expect(Math.abs(x(playerX) - playerX)).toBeGreaterThanOrEqual(360);
     // A boss without a gap enters at the centre wherever the player stands.
     expect(planBossPlacement("aldric", CONFIG.view.w, CONFIG, 800).x).toBe(800);

@@ -1,5 +1,5 @@
 import type { BossPresentationActor, Point, WeaponActor, WeaponPose } from "../../../gameplay/entities/enemy-contracts";
-import { traceStem } from "../figures/boss-figure";
+import { drawBossFigure, traceStem, type BossFigureDefinition, type BossFigureFrame } from "../figures/boss-figure";
 import type {
   CrownRenderPose,
   EnemyMarkHelper,
@@ -310,6 +310,10 @@ export function createEnemyRendererRuntime(dependencies: EnemyPresentationDepend
    * The Rootbound's vine, a weapon like the cleaver: a stem from the shoulder to a thorned tip, bowed up by
    * `lift` and thinning from `width`. It may reach far from the body, so it is a prop, not a mark.
    */
+  const figure = prop("drawBossFigure", (draw: () => void) => {
+    draw();
+  });
+
   function drawRootVine(
     ctx: CanvasRenderingContext2D,
     from: Point,
@@ -571,6 +575,16 @@ export function createEnemyRendererRuntime(dependencies: EnemyPresentationDepend
     drawGreatCleaver: prop("drawGreatCleaver", drawGreatCleaver),
     drawPeril: observed("drawPeril", drawPeril),
     drawRootVine: prop("drawRootVine", drawRootVine),
+    /** A boss's figure is its body, whatever its pose reaches (a stretch, the death beat): never a mark. */
+    drawBossFigure: <Key extends string>(
+      ctx: CanvasRenderingContext2D,
+      definition: BossFigureDefinition<Key>,
+      frame: BossFigureFrame<Key>,
+    ): void => {
+      figure(() => {
+        drawBossFigure(ctx, definition, frame);
+      });
+    },
     drawWardstaff: prop("drawWardstaff", drawWardstaff),
     telegraphInk,
     traceWeaponPolygon,

@@ -382,6 +382,7 @@ export function createRootboundRebuildType(
     /** The end of every Burrow and of Uproot: the mound swells under the player, the column comes. */
     surface(): void {
       this.facing = this.facing || 1;
+      this.hitSpent = false;
       this.go("rise", M.surfaceStrike.windup);
       perilPing(this);
       bossFeedback(this, "windup", { quiet: true });

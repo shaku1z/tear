@@ -63,9 +63,13 @@ export const ENEMY_MARK_HELPERS = Object.freeze([
   "weaponGlint",
 ] as const);
 export type EnemyMarkHelper = (typeof ENEMY_MARK_HELPERS)[number];
-/** The shared helpers that draw a prop: a weapon or a dropped crown, which may reach far from the body. */
+/**
+ * The shared helpers that draw a prop: a weapon, a dropped crown or a boss's figure (its body, posed), which
+ * may reach far from the body box.
+ */
 export const ENEMY_PROP_HELPERS = Object.freeze([
   "drawAldricCrown",
+  "drawBossFigure",
   "drawGreatCleaver",
   "drawRootVine",
   "drawWardstaff",

@@ -20,10 +20,12 @@ const expected = [
 const expectedPublished = expected.filter(({ id }) => id !== "white-hart");
 
 describe("authored boss reference", () => {
-  it("keeps authored seven-entry identity while exposing only six public bosses", () => {
-    expect(BOSS_DEFINITIONS.map(({ id, name, phaseMarks }) => ({ id, name, phaseMarks }))).toEqual(
-      expected.map(({ id, name, phaseMarks }) => ({ id, name, phaseMarks })),
-    );
+  it("keeps the authored identities, the rebuild last, while exposing only six public bosses", () => {
+    // The rebuilt Rootbound is authored after them, on the engineering channel until it replaces the Rootbound.
+    expect(BOSS_DEFINITIONS.map(({ id, name, phaseMarks }) => ({ id, name, phaseMarks }))).toEqual([
+      ...expected.map(({ id, name, phaseMarks }) => ({ id, name, phaseMarks })),
+      { id: "rootbound-rebuild", name: "The Rootbound (rebuild)", phaseMarks: [0.65, 0.28] },
+    ]);
     expect(Object.isFrozen(BOSS_DEFINITIONS)).toBe(true);
     for (const definition of BOSS_DEFINITIONS) expect(Object.isFrozen(definition.phaseMarks)).toBe(true);
     expect(BOSS_ROSTER).toEqual(expectedPublished.map(({ id, name }) => ({ id, name })));
