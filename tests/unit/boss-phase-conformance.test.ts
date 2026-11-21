@@ -172,16 +172,48 @@ describe("boss phase conformance", () => {
     expect(boss.mode).toBe("fire");
     expect(boss.fireZones.length).toBeGreaterThan(0);
 
+    // Aldric stands on the arena ledge, so the crown falls onto a platform that can break.
+    const ledge = platforms.find((platform) => platform.arenaPlatId !== undefined);
+    if (!ledge) throw new Error("Expected an arena ledge");
+    Object.assign(boss, { x: ledge.x + ledge.w / 2, y: ledge.y - boss.hh, vx: 0, vy: 0, onGround: true });
     boss.hp = boss.maxHp * (fakeTier - 0.01);
     updateBoss(boss, platforms, player, projectiles);
+    // CROWNFALL is a move in the fight: the kneel starts on the phase tick, no scene is requested,
+    // and the knocked-off crown flies onto the platform below it, which shows its crack at once.
     expect(boss).toMatchObject({ mode: "downed", phaseTag: "THE KNEEL" });
+    expect(boss.cinematicRequest).toBeNull();
     expect(boss.zones).toEqual([]);
+    const crowned = boss as BossActor & {
+      crown: { x: number; y: number; vy: number; state: string; restPlatform: EnemyPlatform | null } | null;
+    };
+    const landing = crowned.crown?.restPlatform;
+    if (!crowned.crown || !landing) throw new Error("Expected the crown to fly to a platform");
+    expect(crowned.crown).toMatchObject({ state: "airborne" });
+    expect(crowned.crown.vy).toBeLessThan(0);
+    expect(landing).toBe(ledge);
+    expect(landing.arenaFractureRequest).toEqual({ reason: "crownfall", color: CONFIG.colors.bomber });
+    let flight = 0;
+    while (crowned.crown.state === "airborne" && flight < 240) {
+      updateBoss(boss, platforms, player, projectiles, 1 / 120);
+      flight++;
+    }
+    expect(crowned.crown).toMatchObject({ state: "fallen", y: landing.y - 10 });
+    expect(crowned.crown.x).toBeGreaterThanOrEqual(landing.x);
+    expect(crowned.crown.x).toBeLessThanOrEqual(landing.x + landing.w);
     boss.hit(100_000, 1, 0);
     expect(boss.hp).toBe(1);
 
-    const revive = boss as BossActor & { revive(witnessed: boolean): void; witnessEarned: boolean; anger: boolean };
-    revive.revive(false);
-    expect(revive).toMatchObject({ mode: "frenzy", witnessEarned: false, anger: true });
+    // The revive is a move too: frenzy starts and its first move is the vault onto a platform.
+    // Aldric kneels on the floor below the ledge, which is the platform he can vault to.
+    Object.assign(boss, { y: CONFIG.world.groundY - boss.hh, onGround: true });
+    const revive = boss as BossActor & {
+      revive(witnessed: boolean, platforms: EnemyPlatform[], player: unknown): void;
+      witnessEarned: boolean;
+      anger: boolean;
+    };
+    revive.revive(false, platforms, player);
+    expect(revive).toMatchObject({ mode: "frenzy", witnessEarned: false, anger: true, state: "vaultwind" });
+    expect(boss.cinematicRequest).toBeNull();
   });
 
   it("preserves the live MirrorHost Echo split, final reflection and clone cleanup", () => {
@@ -393,7 +425,6 @@ function practiceWorld() {
     groundY: () => CONFIG.world.groundY,
     bomberColor: () => CONFIG.colors.bomber,
     dialogueDuck: () => CONFIG.presentation.dialogueDuck,
-    verticalResponse: () => 1,
     time: () => tick / 120,
     lerp,
     clamp,

@@ -1,9 +1,11 @@
 // The gate: main's copy judges a change (judgedChecks), and a change to a gate file waits for review.
+import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { posix, resolve } from "node:path";
+import process from "node:process";
 import { describe, expect, it } from "vitest";
 import { DESIGN_CHECK_LABELS } from "../../scripts/design-check.mjs";
-import { checkedScripts, GATE_LABEL, gateFilesIn, loadGateList } from "../../scripts/gate-files.mjs";
+import { changedFilesFrom, checkedScripts, GATE_LABEL, gateFilesIn, loadGateList } from "../../scripts/gate-files.mjs";
 import { decide, FIX_LABEL } from "../../scripts/merge-ready.mjs";
 import { judgedChecks, loadChecks } from "../../scripts/run-checks.mjs";
 
@@ -105,6 +107,35 @@ describe("the gate file list (config/gate-files.json)", () => {
         "src/app/main.ts",
       ]),
     ).toEqual(["config/checks.json", "scripts/ci-verdict.mjs", ".github/workflows/nightly.yml"]);
+  });
+});
+
+describe("the changed-file list a shell pipes in (changedFilesFrom)", () => {
+  const flag = (input) =>
+    spawnSync(process.execPath, [resolve(root, "scripts/gate-files.mjs"), "--flag"], {
+      cwd: root,
+      input,
+      encoding: "utf8",
+      env: { ...process.env, GITHUB_STEP_SUMMARY: "" },
+    }).stdout;
+
+  it("drops a byte order mark and carriage returns, and keeps every path, spaces included", () => {
+    expect(changedFilesFrom("\uFEFFscripts/gate-files.mjs\r\nsrc/a b.ts\r\n\r\n")).toEqual([
+      "scripts/gate-files.mjs",
+      "src/a b.ts",
+    ]);
+    expect(changedFilesFrom("\uFEFF")).toEqual([]);
+    expect(changedFilesFrom("a\nb\n")).toEqual(["a", "b"]);
+  });
+
+  it("flags a gate file that comes first in a list with a byte order mark and CRLF, as PowerShell pipes it", () => {
+    const first = ".github/workflows/deploy-preview.yml";
+    expect(flag(`\uFEFF${first}\r\n`)).toContain(`::warning title=gate files changed::${first}:`);
+    expect(flag(`\uFEFF${first}\r\nsrc/main.ts\r\nscripts/gate-files.mjs\r\n`)).toContain(
+      `::warning title=gate files changed::${first}, scripts/gate-files.mjs:`,
+    );
+    expect(flag(`${first}\n`)).toContain(`::warning title=gate files changed::${first}:`);
+    expect(flag("\uFEFFsrc/main.ts\r\n")).toBe("no gate files changed\n");
   });
 });
 

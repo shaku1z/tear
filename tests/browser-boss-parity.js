@@ -248,29 +248,21 @@ withJourney({ name: "boss oracle parity", recordFrames: true }, async ({ page, w
     );
   }
 
-  // Aldric's fire turn is immediate, then the crownfall and resurrection are
-  // serialized rituals around an intentionally still kneel.
+  // Aldric's fire turn, crownfall and revive all happen in the fight: the kneel starts on the
+  // phase tick, and he rises into frenzy when it ends, with no scene at either change.
   await startReadyBoss(page, "aldric");
-  await page.evaluate(() => window.__PANTHEON_TEST.setBossHealthFraction(0.19));
-  await page.waitForFunction(() => window.__PANTHEON_TEST.state().cinema === "aldric-crownfall", undefined, {
-    timeout: STATE_WAIT_MS,
-  });
-  await forcePhase(page, "aldric", 0.19, "aldric-crownfall");
-  let aldric = await bossSnapshot(page, "aldric");
-  assert.equal(aldric.mode, "downed", "Aldric must enter the authored kneel after crownfall");
+  const aldric = await crossPhaseInFight(page, "aldric", 0.19, 3);
+  assert.equal(aldric.mode, "downed", "Aldric must enter the kneel on the crownfall tick");
   await page.waitForFunction(
-    () => ["aldric-witnessed", "aldric-angered"].includes(window.__PANTHEON_TEST.state().cinema),
+    () => window.TEAR_WEAPON_DEBUG?.().enemies.find((enemy) => enemy.bossId === "aldric")?.mode === "frenzy",
     undefined,
     { timeout: STATE_WAIT_MS },
   );
-  await page.evaluate(() => {
-    for (let index = 0; index < 12; index += 1) window.__PANTHEON_TEST.advance();
-  });
-  await page.waitForFunction(() => !window.__PANTHEON_TEST.state().active, undefined, {
-    timeout: STATE_WAIT_MS,
-  });
-  aldric = await waitForBossSimulationAdvance(page, "aldric", aldric.aliveT, 0.6);
-  assert.equal(aldric.mode, "frenzy", "Aldric must rise into frenzy after the kneel");
+  assert.equal(
+    (await page.evaluate(() => window.__PANTHEON_TEST.state())).active,
+    false,
+    "Aldric's revive must never start a scene",
+  );
 
   // Echo has no dialogue channel in the source-of-truth fight: phase two splits
   // the reflection and phase three dissolves it while the mirror brain stays live.
