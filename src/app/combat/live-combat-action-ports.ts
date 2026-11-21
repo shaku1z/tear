@@ -72,7 +72,8 @@ export function createLiveCombatActionPorts(options: LiveCombatActionPortsOption
   const W = options.surface.width;
   const { stage: stageRuntime, story } = campaignTraining.campaign;
   const TUT = campaignTraining.training.tutorial;
-  const { startVoidDescent, startBossTransformation, step: stepCinematicPlaying } = campaignTraining.cinematic.runtime;
+  const { startBossTransformation, step: stepCinematicPlaying } = campaignTraining.cinematic.runtime;
+  const { advanceUnmake } = campaignTraining.cinematic.sourceRuntime;
   const { addFloater, syncVoidPlayerSupport, updateVoidScroll, stepPlayground } = campaignTraining;
   const {
     addShake,
@@ -107,8 +108,8 @@ export function createLiveCombatActionPorts(options: LiveCombatActionPortsOption
   const { endRun, updateWave } = options.services.controllers.api;
   const { updateBossArenaPlatforms, lobExplode } = orchestration;
   const isGameProjectile = (value: unknown): value is GameProjectile => value instanceof dependencies.Projectile;
-  const isSourceOwner = (value: unknown): value is GameEnemy & Parameters<typeof startVoidDescent>[0] =>
-    isGameEnemy(value); // the descent derives its actor id from presentationId/bossId
+  const isSourceOwner = (value: unknown): value is GameEnemy & Parameters<typeof advanceUnmake>[0] =>
+    isGameEnemy(value); // the Unmake derives its actor id from presentationId/bossId
   const isRitualOwner = (
     value: unknown,
   ): value is GameEnemy & NonNullable<Parameters<typeof startBossTransformation>[0]> =>
@@ -225,7 +226,7 @@ export function createLiveCombatActionPorts(options: LiveCombatActionPortsOption
         updateWave,
         updateBossArenaPlatforms,
         updateVoidScroll,
-        startVoidDescent: (boss) => isSourceOwner(boss) && startVoidDescent(boss),
+        advanceSourceUnmake: (boss, dt) => isSourceOwner(boss) && advanceUnmake(boss, dt),
         nearestEnemy: (x, y) => {
           const enemy = nearestEnemy(x, y);
           return isGameEnemy(enemy) ? enemy : null;

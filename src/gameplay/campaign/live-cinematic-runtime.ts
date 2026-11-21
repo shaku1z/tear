@@ -6,19 +6,10 @@ import type {
   BossRitualIntent,
   BossRitualPlatform,
 } from "../entities/boss-ritual-controller";
-import type {
-  ArenaPlatform,
-  SourceVoidController,
-  SourceVoidPlayer,
-  SourceVoidState,
-  SourceVoidTransitionState,
-} from "../training/arena-rules";
+import type { ArenaPlatform, SourceVoidPlayer } from "../training/arena-rules";
 import {
-  sourceDescentActor,
   buildBossRitualScript,
-  buildSourceDescentScript,
   launchBossRitual,
-  launchSourceDescent,
   type PortableBossCinematicBinding,
   type RuntimeCinematicChannel,
 } from "./cinematic-launch-runtime";
@@ -28,7 +19,7 @@ import {
   type CinematicRuntimeBlade,
   type CinematicRuntimePlayer,
 } from "./cinematic-player-runtime";
-import type { SourceRuntimeOwner, SourceVoidRuntimeBridge } from "./source-void-runtime";
+import type { SourceVoidRuntimeBridge } from "./source-void-runtime";
 import { isObject, requireRecord } from "../../domain/records";
 
 export type LiveRitualOwner = BossRitualActor;
@@ -40,7 +31,6 @@ export interface LiveCinematicStory {
 }
 export interface LiveCinematicRuntimeOptions {
   readonly cinema: RuntimeCinematicChannel & Readonly<{ playerMode: string }>;
-  readonly sourceController: SourceVoidController;
   readonly ritualController: BossRitualController;
   readonly sourceRuntime: SourceVoidRuntimeBridge;
   readonly player: () => CinematicRuntimePlayer & SourceVoidPlayer;
@@ -50,9 +40,6 @@ export interface LiveCinematicRuntimeOptions {
   readonly replacePlatforms: (platforms: ArenaPlatform[]) => void;
   readonly projectiles: () => unknown[];
   readonly replaceProjectiles: (projectiles: unknown[]) => void;
-  readonly sourceSeed: () => string | number;
-  readonly setDescent: (transition: SourceVoidTransitionState | null) => void;
-  readonly setStream: (stream: SourceVoidState) => void;
   readonly hasVoidScroll: () => boolean;
   readonly story: LiveCinematicStory;
   readonly policy: () => Readonly<{ play: boolean; brief: boolean }>;
@@ -78,7 +65,6 @@ export interface LiveCinematicRuntimeOptions {
 }
 
 export function createLiveCinematicRuntime(options: LiveCinematicRuntimeOptions): Readonly<{
-  startVoidDescent(owner: SourceRuntimeOwner | null): boolean;
   startBossTransformation(owner: LiveRitualOwner | null, cue: BossRitualCue | null): boolean;
   captureBinding(): PortableBossCinematicBinding | null;
   stageBinding(
@@ -104,27 +90,6 @@ export function createLiveCinematicRuntime(options: LiveCinematicRuntimeOptions)
       else options.storeSeen(intent.key);
     }
   };
-  const sourceOptions = (owner: SourceRuntimeOwner) => ({
-    controller: options.sourceController,
-    cinema: options.cinema,
-    owner,
-    get player() {
-      return options.player();
-    },
-    get seed() {
-      return options.sourceSeed();
-    },
-    getPlatforms: options.platforms,
-    setTransition: options.setDescent,
-    setStream(stream: SourceVoidState) {
-      options.setStream(stream);
-      options.replacePlatforms(stream.platforms);
-    },
-    execute: (intents: Parameters<typeof options.sourceRuntime.execute>[0], source: SourceRuntimeOwner) => {
-      options.sourceRuntime.execute(intents, source);
-    },
-    supportingPlayer: () => options.sourceRuntime.supporting(options.player()) !== null,
-  });
   const ritualOptions = (owner: LiveRitualOwner, cue: BossRitualCue) => {
     const policy = options.policy();
     return {
@@ -149,15 +114,6 @@ export function createLiveCinematicRuntime(options: LiveCinematicRuntimeOptions)
     };
   };
   return Object.freeze({
-    startVoidDescent(owner) {
-      return (
-        owner !== null &&
-        launchSourceDescent(sourceOptions(owner), (value) => {
-          binding = value;
-          bindingScriptId = buildSourceDescentScript(sourceOptions(owner), value.transition).id;
-        })
-      );
-    },
     startBossTransformation(owner, cue) {
       return (
         owner !== null &&
@@ -176,20 +132,12 @@ export function createLiveCinematicRuntime(options: LiveCinematicRuntimeOptions)
       const raw = requireRecord(value, "Invalid boss cinematic binding");
       if (raw.kind !== "source-descent" && raw.kind !== "boss-ritual")
         throw new TypeError("Invalid boss cinematic binding kind");
-      if (raw.kind === "source-descent" && !isObject(raw.transition)) throw new TypeError("Invalid Source transition");
+      // The Unmake replaced the Source's descent cinematic: a world saved inside one no longer loads.
+      if (raw.kind === "source-descent") throw new RangeError("The Source's void descent cinematic was retired");
       if (raw.kind === "boss-ritual" && (!isObject(raw.context) || !isObject(raw.ritual)))
         throw new TypeError("Invalid ritual context");
-      const saved = value as PortableBossCinematicBinding;
+      const saved = value as Extract<PortableBossCinematicBinding, { kind: "boss-ritual" }>;
       if (!owners.includes(saved.owner)) throw new RangeError("Boss cinematic owner is not in the candidate world");
-      if (saved.kind === "source-descent") {
-        if (
-          Object.keys(saved).some((key) => !["kind", "owner", "transition"].includes(key)) ||
-          Object.keys(saved).length !== 3
-        )
-          throw new TypeError("Invalid Source binding fields");
-        if (saved.owner.bossId !== "source") throw new RangeError("Invalid Source cinematic binding");
-        return { script: buildSourceDescentScript(sourceOptions(saved.owner), saved.transition), context: {} };
-      }
       if (
         saved.context.owner !== saved.owner ||
         typeof saved.reducedMotion !== "boolean" ||
@@ -240,11 +188,6 @@ export function createLiveCinematicRuntime(options: LiveCinematicRuntimeOptions)
       bindingScriptId = undefined;
       binding = value === undefined ? null : (value as PortableBossCinematicBinding | null);
       if (binding?.kind === "boss-ritual") bindingScriptId = binding.context.cue.id;
-      if (binding?.kind === "source-descent") {
-        bindingScriptId = buildSourceDescentScript(sourceOptions(binding.owner), binding.transition).id;
-        Object.assign(binding.transition, { owner: sourceDescentActor(binding.owner) });
-        if (binding.transition.stream) binding.transition.stream.owner = binding.transition.owner;
-      }
     },
     step(dt) {
       const mode = options.cinema.playerMode;

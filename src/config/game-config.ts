@@ -425,17 +425,14 @@ const CONFIG = {
     siphonDiminish2: 0.7,
     siphonDiminish3: 0.45,
     siphonDiminish4: 0.25,
-    voidDelay: 4.8, // complete authored descent window; the cinematic director owns its beats
-    // THE VOID DESCENT — the cinematic that opens the void run
+    // THE UNMAKE — Phase II's move in the fight: the arena cracks, the floor goes, the void run begins
+    unmakeDissolve: 0.8, // the crack tell, then the floor goes and the stream forms under the player
+    unmakeChannel: 1.6, // the void run starts; the Source holds still and can be hit until then
     voidCamZoom: 0.8, // camera pulls this far OUT during the void (wider frame = plan your route)
-    descentChallenge: 0.65,
-    descentDeclaration: 0.95,
-    descentDissolve: 0.8,
-    descentLift: 0.72,
-    descentReveal: 0.82,
-    descentArrival: 0.85,
-    descentLiftV: -310,
-    descentIngressBelow: 190,
+    descentArrival: 0.85, // the stream's scroll ramps in over this long from the void run's start
+    descentLiftV: -310, // the retired descent cinematic's float; unused until plan PR 5 removes it
+    descentIngressBelow: 190, // the stream's first platform sits this far below the player's feet (band-clamped)
+    unmakeLiftClearance: 60, // a player below that platform is lifted this far above it, then lands on it
     cycleCd: 2.5, // seconds between mechanic casts (phase 1)
     shockDmg: 18,
     shockSpeed: 720,

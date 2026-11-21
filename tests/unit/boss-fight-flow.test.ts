@@ -42,8 +42,6 @@ const FIGHT_LIMIT_TICKS = 90 * TEAR_SIMULATION_TICKS_PER_SECOND;
 const STILL_BLOCKING: Readonly<Partial<Record<BossDefinitionId, number>>> = {
   // Phase II and Phase III rituals; the Verdant rebuild owns these.
   rootbound: 2,
-  // The Phase II void descent and the true-form ritual (Phase III already changes in the fight).
-  source: 2,
 };
 
 interface BossActor {

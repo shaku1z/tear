@@ -686,7 +686,7 @@ export function createProductionCombatPhases(
       if (!replay.tutorial.session().bossPractice?.defeated) replay.practiceCinematic.sourceRuntime.update(dt);
     },
     unlockWitness: note("unlockWitness"),
-    startVoidDescent: (boss: never) => replay.practiceCinematic.runtime.startVoidDescent(boss),
+    advanceSourceUnmake: (boss: never, dt: number) => replay.practiceCinematic.sourceRuntime.advanceUnmake(boss, dt),
     spawnBossAdds: (boss: never) => {
       const source = boss as {
         x: number;

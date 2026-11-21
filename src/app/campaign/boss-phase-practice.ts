@@ -1,4 +1,4 @@
-import { sourceDescentActor } from "../../gameplay/campaign/cinematic-launch-runtime";
+import { liveSourceActor } from "../../gameplay/campaign/source-void-runtime";
 import type { CONFIG } from "../../config/game-config";
 import { createBossArena } from "../../gameplay/training/arena-rules";
 import { beginBossEncounter, cleanupBossEncounterActors } from "../../gameplay/run/boss-encounter";
@@ -189,7 +189,7 @@ export function createLiveBossPhasePractice(options: {
       runtime.restore(selected.runtime, candidate);
       original = candidate.actor as BossActor;
       const stream = run().voidScroll;
-      if (selected.bossId === "source" && stream) stream.owner = sourceDescentActor(original);
+      if (selected.bossId === "source" && stream) stream.owner = liveSourceActor(original);
     },
     capture() {
       if (original?.dead !== true && runtime.snapshot() && runtime.captureAvailability() !== "canonical-checkpoint")

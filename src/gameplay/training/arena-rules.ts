@@ -360,16 +360,18 @@ export interface SourceVoidConfig {
   readonly voidWispCooldown: number;
   readonly arrivalFxStep: number;
   readonly crackWarn: number;
-  readonly descentDissolve: number;
-  readonly descentLift: number;
-  readonly descentReveal: number;
+  /** Seconds from the Unmake's first tick to the floor's release; the arena shows its crack tell until then. */
+  readonly unmakeDissolve: number;
+  /** Seconds from the Unmake's first tick to the void run's start. */
+  readonly unmakeChannel: number;
+  /** How far above the stream's first platform the Unmake's lift carries a player who is below it. */
+  readonly unmakeLiftClearance: number;
   readonly voidCrumbleStand: number;
   readonly voidFallDamage: number;
   readonly voidSlowDuration: number;
 }
 
 export interface SourceDescentTiming {
-  readonly dialogueDuck: number;
   readonly unmakeMix: number;
   readonly releaseMix: number;
   readonly revealMix: number;
@@ -427,24 +429,6 @@ export interface SourceVoidTransitionState {
   stream: SourceVoidState | null;
 }
 
-export interface SourceDescentBeat {
-  readonly id: "challenge" | "declaration" | "unmake" | "release" | "reveal" | "land";
-  readonly duration?: number;
-  readonly minDuration?: number;
-  readonly completion?: "confirm-or-timeout";
-  readonly playerMode: "locked" | "float" | "landing";
-  readonly speaker?: "THE SOURCE";
-  readonly line?: string;
-}
-
-export interface SourceDescentSequence {
-  readonly id: "voidDescent";
-  readonly color: string;
-  readonly blocksCombat: true;
-  readonly hideHud: true;
-  readonly beats: readonly SourceDescentBeat[];
-}
-
 export type SourceVoidIntent =
   | Readonly<{ type: "clear-owner-projectiles"; ownerId: string }>
   | Readonly<{ type: "flash"; amount: number }>
@@ -490,58 +474,75 @@ export class SourceVoidController {
     private readonly descentTiming: SourceDescentTiming,
   ) {}
 
-  beginDescent(owner: SourceVoidActor): Readonly<{
+  /**
+   * The Unmake's first tick (the Source's Phase II, in the fight): the Source's breach locks, its shots clear,
+   * and every one-way platform starts its crack tell. The transition is the run's record of the Unmake until
+   * the void run starts.
+   */
+  beginUnmake(
+    owner: SourceVoidActor,
+    platforms: readonly ArenaPlatform[],
+  ): Readonly<{
     transition: SourceVoidTransitionState;
-    sequence: SourceDescentSequence;
-    intents: readonly SourceVoidIntent[];
-  }> {
-    return this.prepareDescent(owner);
-  }
-
-  /** Pure authored sequence/context construction for callback rebinding during hydration. */
-  prepareDescent(owner: SourceVoidActor): Readonly<{
-    transition: SourceVoidTransitionState;
-    sequence: SourceDescentSequence;
     intents: readonly SourceVoidIntent[];
   }> {
     const transition: SourceVoidTransitionState = { owner, unmade: false, floorReleased: false, stream: null };
-    const sequence: SourceDescentSequence = {
-      id: "voidDescent",
-      color: owner.color,
-      blocksCombat: true,
-      hideHud: true,
-      beats: [
-        {
-          id: "challenge",
-          completion: "confirm-or-timeout",
-          playerMode: "locked",
-          speaker: "THE SOURCE",
-          line: "YOU MISTOOK THE FLOOR FOR MERCY.",
-        },
-        {
-          id: "declaration",
-          completion: "confirm-or-timeout",
-          playerMode: "locked",
-          speaker: "THE SOURCE",
-          line: "THERE IS NO BELOW.",
-        },
-        { id: "unmake", duration: this.config.descentDissolve, playerMode: "locked" },
-        { id: "release", duration: this.config.descentLift, playerMode: "float" },
-        { id: "reveal", duration: this.config.descentReveal, playerMode: "float" },
-        { id: "land", minDuration: 0.18, playerMode: "landing" },
-      ],
-    };
     return {
       transition,
-      sequence,
       intents: [
         { type: "source-breach-lock", ownerId: owner.id },
         { type: "clear-owner-projectiles", ownerId: owner.id },
         { type: "world-zoom", value: 1 },
-        { type: "music-duck", amount: this.descentTiming.dialogueDuck, duration: 0.18 },
         { type: "void-mix", amount: 0, duration: 0.05 },
+        ...this.unmakeArena(transition, platforms),
+        { type: "void-mix", amount: this.descentTiming.unmakeMix, duration: 0.3 },
       ],
     };
+  }
+
+  /**
+   * One tick of the Unmake. `remaining` is the Unmake's clock (seconds left of `unmakeChannel`) before the
+   * tick. At `unmakeDissolve` the floor goes and the void stream forms, its first platform placed under the
+   * player as the descent placed it. The player keeps control. The stream's lower band sits above the floor, so
+   * a player whose feet are below that platform gets one lift, the smallest that carries them
+   * `unmakeLiftClearance` above it; they land on it under normal gravity. When the clock runs out the stream
+   * starts and the void run begins.
+   */
+  advanceUnmake(
+    transition: SourceVoidTransitionState,
+    remaining: number,
+    dt: number,
+    platforms: ArenaPlatform[],
+    seed: string | number,
+    player: SourceVoidPlayer,
+  ): Readonly<{ intents: readonly SourceVoidIntent[]; remaining: number; done: boolean }> {
+    const { unmakeDissolve: dissolve, unmakeChannel: channel, voidCamZoom: zoom } = this.config;
+    const elapsed = channel - remaining,
+      next = elapsed + dt,
+      left = Math.max(0, remaining - dt),
+      intents: SourceVoidIntent[] = [];
+    if (elapsed < dissolve && next >= dissolve) {
+      const formed = this.ensureStream(transition, platforms, seed, player);
+      const rise = player.y + player.hh - formed.state.ingress.y + this.config.unmakeLiftClearance;
+      if (rise > this.config.unmakeLiftClearance)
+        player.vy = Math.min(player.vy, -Math.sqrt(2 * this.physics.gravity * rise));
+      intents.push(
+        ...formed.intents,
+        { type: "sound", cue: "void-ground-tear" },
+        { type: "void-mix", amount: this.descentTiming.releaseMix, duration: 0.45 },
+        { type: "flash", amount: 0.36 },
+        { type: "shake", amount: 7 },
+        { type: "void-mix", amount: this.descentTiming.revealMix, duration: 0.55 },
+      );
+    }
+    if (left <= 0)
+      return { intents: [...intents, ...this.completeDescent(transition, player)], remaining: 0, done: true };
+    const value =
+      next < dissolve
+        ? 1 + (zoom - 1) * (next / dissolve) * 0.45
+        : 0.92 + (zoom - 0.92) * Math.min(1, (next - dissolve) / (channel - dissolve));
+    intents.push({ type: "world-zoom", value });
+    return { intents, remaining: left, done: false };
   }
 
   unmakeArena(transition: SourceVoidTransitionState, platforms: readonly ArenaPlatform[]): readonly SourceVoidIntent[] {
@@ -617,6 +618,7 @@ export class SourceVoidController {
       stream.forming = false;
       stream.frozen = false;
       stream.active = true;
+      stream.arrivalTime = this.config.descentArrival; // the scroll ramps in from the void run's start
       for (const platform of stream.platforms) platform.materializationState = "active";
     }
     player.voidTransferT = Math.max(player.voidTransferT, this.config.voidTransferGrace);
@@ -627,52 +629,6 @@ export class SourceVoidController {
       { type: "void-mix", amount: 0, duration: 0.9 },
       { type: "music-duck", amount: 1, duration: 0.75 },
     ];
-  }
-
-  cancelDescent(): readonly SourceVoidIntent[] {
-    return [
-      { type: "void-mix", amount: 0, duration: 0.2 },
-      { type: "music-duck", amount: 1, duration: 0.25 },
-    ];
-  }
-
-  enterDescentBeat(
-    transition: SourceVoidTransitionState,
-    beat: SourceDescentBeat["id"],
-    platforms: ArenaPlatform[],
-    seed: string | number,
-    player: SourceVoidPlayer,
-  ): readonly SourceVoidIntent[] {
-    if (beat === "challenge" || beat === "declaration") return [{ type: "sound", cue: "source-dialogue" }];
-    if (beat === "unmake")
-      return [
-        ...this.unmakeArena(transition, platforms),
-        { type: "void-mix", amount: this.descentTiming.unmakeMix, duration: 0.3 },
-      ];
-    if (beat === "release")
-      return [
-        ...this.releaseFloor(transition, platforms, player),
-        { type: "sound", cue: "void-ground-tear" },
-        { type: "void-mix", amount: this.descentTiming.releaseMix, duration: 0.45 },
-      ];
-    const stream = this.ensureStream(transition, platforms, seed, player);
-    if (beat === "land") {
-      player.vy = Math.max(player.vy, 90);
-      player.onGround = false;
-      return stream.intents;
-    }
-    return [
-      ...stream.intents,
-      { type: "flash", amount: 0.36 },
-      { type: "shake", amount: 7 },
-      { type: "void-mix", amount: this.descentTiming.revealMix, duration: 0.55 },
-    ];
-  }
-
-  updateDescentBeat(beat: SourceDescentBeat["id"], progress: number): readonly SourceVoidIntent[] {
-    if (beat === "unmake") return [{ type: "world-zoom", value: 1 + (this.config.voidCamZoom - 1) * progress * 0.45 }];
-    if (beat === "release") return [{ type: "world-zoom", value: 0.92 + (this.config.voidCamZoom - 0.92) * progress }];
-    return [];
   }
 
   options(startX: number, player: Readonly<{ hw: number; hh: number }>): VoidOptions {
@@ -828,11 +784,12 @@ export class SourceVoidController {
   ): readonly SourceVoidIntent[] {
     const intents: SourceVoidIntent[] = [];
     const standing = this.syncPlayer(state, player);
-    const dangerous = state.owner.dead !== true && state.owner.dying !== true;
+    // A forming stream (the Unmake) arms no fire, cage or crumble; the fall rescue below still applies.
+    const dangerous = state.owner.dead !== true && state.owner.dying !== true && !state.forming;
     for (const platform of [...state.platforms]) {
       if (!platform.void) continue;
       const onPlatform = standing === platform;
-      if (platform.voidType === "crumble" && onPlatform && platform.touchT < 0) {
+      if (dangerous && platform.voidType === "crumble" && onPlatform && platform.touchT < 0) {
         platform.touchT = this.config.voidCrumbleStand;
         platform.materializationState = "cracking";
       }
@@ -919,7 +876,8 @@ export class SourceVoidController {
     const intents: SourceVoidIntent[] = [];
     state.rescueCooldown = Math.max(0, state.rescueCooldown - dt);
     player.voidTransferT = Math.max(0, player.voidTransferT - dt);
-    if (state.arrivalIndex < state.arrivalQueue.length) {
+    // A forming stream (the Unmake) holds its arrival rings until the void run starts.
+    if (!state.forming && state.arrivalIndex < state.arrivalQueue.length) {
       state.arrivalFxTime -= dt;
       if (state.arrivalFxTime <= 0) {
         state.arrivalFxTime = this.config.arrivalFxStep;

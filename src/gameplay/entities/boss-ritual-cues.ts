@@ -34,14 +34,6 @@ const cues: Readonly<
     sfx: "boom",
     anchor: "lower-left",
   },
-  "source-true-form": {
-    bossId: "source",
-    phase: 3,
-    pose: "sourceTrue",
-    line: "EVERY BLADE RETURNS TO ME.",
-    sfx: "sourceCross",
-    anchor: "depth-center",
-  },
 };
 export function canonicalBossRitualCue(owner: BossRitualActor, cue: BossRitualCue): BossRitualCue {
   const expected = cues[cue.id];

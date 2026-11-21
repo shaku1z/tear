@@ -6,15 +6,7 @@ import type {
   BossRitualIntent,
   BossRitualOptions,
 } from "../entities/boss-ritual-controller";
-import type {
-  ArenaPlatform,
-  SourceDescentBeat,
-  SourceVoidController,
-  SourceVoidIntent,
-  SourceVoidPlayer,
-  SourceVoidState,
-  SourceVoidTransitionState,
-} from "../training/arena-rules";
+import type { SourceVoidTransitionState } from "../training/arena-rules";
 import type { SourceRuntimeOwner } from "./source-void-runtime";
 import type { CampaignCinematicDirector, CampaignCinematicScript } from "./cinematic-contracts";
 
@@ -24,19 +16,11 @@ export interface RuntimeCinematicChannel {
   start(script: CampaignCinematicScript): unknown;
 }
 
-export interface SourceDescentLaunchOptions {
-  readonly controller: SourceVoidController;
-  readonly cinema: RuntimeCinematicChannel;
-  readonly owner: SourceRuntimeOwner;
-  readonly player: SourceVoidPlayer;
-  readonly seed: string | number;
-  getPlatforms(): ArenaPlatform[];
-  setTransition(transition: SourceVoidTransitionState | null): void;
-  setStream(stream: SourceVoidState): void;
-  execute(intents: readonly SourceVoidIntent[], owner: SourceRuntimeOwner): void;
-  supportingPlayer(): boolean;
-}
-
+/**
+ * The saved binding of the Source's retired void descent cinematic. The Unmake replaced it (cinematics plan
+ * PR 4), so nothing captures one now; the shape stays in `bossCinematicBinding` until plan PR 5 removes the
+ * binding with a codec step.
+ */
 export interface SourceDescentBinding {
   readonly kind: "source-descent";
   readonly owner: SourceRuntimeOwner;
@@ -51,110 +35,6 @@ export interface RitualBinding {
   readonly time: number;
 }
 export type PortableBossCinematicBinding = SourceDescentBinding | RitualBinding;
-export function sourceDescentActor(owner: SourceRuntimeOwner) {
-  return {
-    id: owner.presentationId ?? owner.bossId ?? "source",
-    get x() {
-      return owner.x;
-    },
-    get y() {
-      return owner.y;
-    },
-    get color() {
-      return owner.color;
-    },
-  };
-}
-export function buildSourceDescentScript(
-  options: SourceDescentLaunchOptions,
-  transition?: SourceVoidTransitionState,
-): CampaignCinematicScript {
-  // The live boss carries no generic `id`. Give the cinematic a stable adapter whose
-  // position remains a live view of the actor without mutating the combat entity.
-  const actorId = options.owner.presentationId ?? options.owner.bossId ?? "source";
-  const voidActor = {
-    id: actorId,
-    get x() {
-      return options.owner.x;
-    },
-    get y() {
-      return options.owner.y;
-    },
-    get color() {
-      return options.owner.color;
-    },
-  };
-  const started = options.controller.prepareDescent(voidActor);
-  if (transition !== undefined) Object.assign(started, { transition });
-  function sync(transition: SourceVoidTransitionState): SourceVoidState | null {
-    if (!transition.stream) return null;
-    transition.stream.owner = voidActor;
-    options.setStream(transition.stream);
-    return transition.stream;
-  }
-  function enter(transition: SourceVoidTransitionState, beat: SourceDescentBeat): void {
-    options.execute(
-      options.controller.enterDescentBeat(transition, beat.id, options.getPlatforms(), options.seed, options.player),
-      options.owner,
-    );
-    sync(transition);
-    if ((beat.id === "reveal" || beat.id === "land") && transition.stream) {
-      for (const platform of transition.stream.platforms) if (platform.void) platform.materializationState = "active";
-    }
-  }
-  const beats: CampaignCinematicScript["beats"] = started.sequence.beats.map((beat) => ({
-    ...beat,
-    ...(beat.id === "release" ? { skipScale: 1 } : {}),
-    onEnter() {
-      enter(started.transition, beat);
-    },
-    onUpdate(_context, director: CampaignCinematicDirector) {
-      options.execute(options.controller.updateDescentBeat(beat.id, director.progress), options.owner);
-      if (beat.id === "reveal" && director.progress > 0.32 && started.transition.stream) {
-        for (const platform of started.transition.stream.platforms)
-          if (platform.void) platform.materializationState = "active";
-      }
-    },
-    ...(beat.id === "land" ? { waitUntil: () => options.supportingPlayer() } : {}),
-  }));
-  return {
-    ...started.sequence,
-    beats,
-    onStart() {
-      options.execute(started.intents, options.owner);
-    },
-    onSkip(_context, director) {
-      options.execute(options.controller.unmakeArena(started.transition, options.getPlatforms()), options.owner);
-      director.skipTo("release");
-    },
-    onComplete() {
-      const ensured = options.controller.ensureStream(
-        started.transition,
-        options.getPlatforms(),
-        options.seed,
-        options.player,
-      );
-      sync(started.transition);
-      options.execute(ensured.intents, options.owner);
-      options.execute(options.controller.completeDescent(started.transition, options.player), options.owner);
-    },
-    onCancel() {
-      options.execute(options.controller.cancelDescent(), options.owner);
-    },
-  };
-}
-export function launchSourceDescent(
-  options: SourceDescentLaunchOptions,
-  bind?: (binding: SourceDescentBinding) => void,
-): boolean {
-  if (options.cinema.active) return false;
-  const transition = options.controller.beginDescent(sourceDescentActor(options.owner)).transition;
-  options.setTransition(transition);
-  bind?.({ kind: "source-descent", owner: options.owner, transition });
-  options.cinema.start(buildSourceDescentScript(options, transition));
-  return true;
-}
-
 export interface BossRitualLaunchOptions {
   readonly controller: BossRitualController;
   readonly cinema: RuntimeCinematicChannel;
