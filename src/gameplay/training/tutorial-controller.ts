@@ -1,4 +1,3 @@
-import type { PracticeBossAdmission } from "./boss-phase-practice-runtime";
 import {
   practiceBossLesson,
   validatePracticeBoss,
@@ -442,8 +441,6 @@ function interpolate(frames: readonly TutorialGhostFrame[], time: number): Reado
 export class TutorialController {
   private ghostTraces: Readonly<Record<string, TutorialGhostScript>> | undefined;
   private readonly configuration: typeof GameConfiguration;
-  /** The bosses this world's phase practice opens; the published roster when absent. */
-  private readonly practiceBosses: PracticeBossAdmission | undefined;
   counters: Partial<Record<TutorialMark, number>> = {};
   active = false;
   lessonIndex = 0;
@@ -545,16 +542,13 @@ export class TutorialController {
   }
   selectBoss(entry: PracticeBossEntry, runtime: PracticeBossState["runtime"]): boolean {
     if (!this.practiceOrigin || !entry.canPractice) return false;
-    const state = validatePracticeBoss(
-      {
-        bossId: entry.bossId,
-        phase: entry.phase,
-        knowledge: entry.knowledge,
-        runtime,
-        defeated: false,
-      },
-      this.practiceBosses,
-    );
+    const state = validatePracticeBoss({
+      bossId: entry.bossId,
+      phase: entry.phase,
+      knowledge: entry.knowledge,
+      runtime,
+      defeated: false,
+    });
     this.annex = undefined;
     this.enemyPractice = undefined;
     this.bossPractice = undefined;
@@ -569,7 +563,7 @@ export class TutorialController {
     return true;
   }
   syncBoss(state: PracticeBossState): void {
-    this.bossPractice = validatePracticeBoss(state, this.practiceBosses);
+    this.bossPractice = validatePracticeBoss(state);
     if (state.defeated) {
       this.active = false;
       this.phase = "free-practice";
@@ -755,8 +749,7 @@ export class TutorialController {
         ? data.practiceOrigin
         : undefined;
     this.annex = data.version === 4 ? validateWeaponAnnex(data.annex) : undefined;
-    this.bossPractice =
-      data.version === 6 ? validatePracticeBoss(data.bossPractice, this.practiceBosses) : undefined;
+    this.bossPractice = data.version === 6 ? validatePracticeBoss(data.bossPractice) : undefined;
     this.enemyPractice = data.version === 5 ? validatePracticeEnemy(data.enemyPractice) : undefined;
     this.skipped = new Set(data.version === 7 ? data.skipped : []);
     this.courseSessionId = data.courseSessionId;
@@ -792,9 +785,8 @@ export class TutorialController {
     this.practiceTab = practiceTabFromFlags(value);
   }
 
-  constructor(config: typeof GameConfiguration, practiceBosses?: PracticeBossAdmission) {
+  constructor(config: typeof GameConfiguration) {
     this.configuration = config;
-    this.practiceBosses = practiceBosses;
   }
 
   /** Starts the course after the lessons the profile kept (see `resumedTutorialCourse`). */

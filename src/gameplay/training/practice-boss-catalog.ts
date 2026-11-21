@@ -1,9 +1,7 @@
 import { BOSS_ROSTER } from "../run/content-director";
 import {
-  isPracticeBossId,
   validateBossPhasePracticeState,
   type BossPhasePracticeState,
-  type PracticeBossAdmission,
   type PracticeBossId,
   type PracticeBossPhase,
 } from "./boss-phase-practice-runtime";
@@ -69,12 +67,9 @@ export function practiceBossCatalog(
     }),
   );
 }
-export function validatePracticeBoss(
-  value: unknown,
-  admits: PracticeBossAdmission = isPracticeBossId,
-): PracticeBossState {
+export function validatePracticeBoss(value: unknown): PracticeBossState {
   const state = requireRecord(value, "Invalid boss practice selection"),
-    runtime = validateBossPhasePracticeState(state.runtime, undefined, admits);
+    runtime = validateBossPhasePracticeState(state.runtime);
   if (
     Object.keys(state).length !== 5 ||
     Object.keys(state).some((key) => !["bossId", "phase", "knowledge", "runtime", "defeated"].includes(key)) ||

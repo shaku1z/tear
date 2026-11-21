@@ -1,4 +1,3 @@
-import type { PracticeBossAdmission } from "./boss-phase-practice-runtime";
 import type { TutorialAttemptFact } from "./tutorial-failure-coach";
 import type {
   BossPracticeCandidate,
@@ -211,8 +210,6 @@ export interface LiveTutorialPort<TEnemy extends LiveTutorialEnemy> {
   readonly bladeTipVY?: () => number;
   readonly weaponId?: () => string;
   readonly bossCatalog?: () => readonly PracticeBossEntry[];
-  /** The bosses this world's phase practice opens; the published roster when absent. */
-  readonly practiceBosses?: PracticeBossAdmission;
   readonly enemyCatalog?: () => readonly PracticeEnemyEntry[];
   readonly enemies: () => TEnemy[];
   readonly playSound: (cue: "rankup" | "ui") => void;
@@ -310,7 +307,7 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
   port: LiveTutorialPort<TEnemy>,
 ): LiveTutorialRuntime {
   let bossPort: BossPracticePort | undefined;
-  const controller = new TutorialController(port.config, port.practiceBosses);
+  const controller = new TutorialController(port.config);
   const coach = new TutorialGhostCoach(() => {
     const corpus = shippingTutorialGold();
     return corpus?.compatibility.configurationHash === stableVerificationHash(port.config) ? corpus : undefined;

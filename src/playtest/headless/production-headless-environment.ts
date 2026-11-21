@@ -151,7 +151,10 @@ export interface ProductionHeadlessEnvironment extends TearHeadlessEnvironment<
   /** A new episode from caller-supplied identity, never an inferred historical next-run seed. */
   continueTutorialPractice(nextScenario: TearScenarioV1): CanonicalGameplayState;
   /** In a fresh tutorial episode: Playground boss practice at a chosen phase. Returns a reader of its lifecycle. */
-  practiceBoss(bossId: HeadlessPracticeBossId, phase: PracticeBossPhase): ReturnType<typeof beginProductionBossPractice>;
+  practiceBoss(
+    bossId: HeadlessPracticeBossId,
+    phase: PracticeBossPhase,
+  ): ReturnType<typeof beginProductionBossPractice>;
   /** Replaces the enemies in play with these, made by the game's own factory, for a playtest of chosen enemies. */
   replaceEnemies(spawns: readonly Readonly<{ id: string; x: number; y: number }>[]): void;
   /** Puts one enemy of this kind in play through the game's own spawner, which chooses where it arrives. */

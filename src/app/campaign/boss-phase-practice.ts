@@ -81,65 +81,65 @@ export function createLiveBossPhasePractice(options: {
       (phase !== 3 || active.voidScroll.frozen));
   const runtime = createBossPhasePracticeRuntime(
     {
-    createEncounter(request, generation, encounterId) {
-      const active = run();
-      if (active.mode !== "tutorial" || active.weaponId !== "sword" || active.diff !== "normal")
-        throw new RangeError("Boss practice requires baseline Sword/Normal tutorial disposition");
-      active.practiceBossEntry = { bossId: request.bossId, generation, encounterId, seed: request.seed };
-      options.selectStage(
-        Math.max(
-          0,
-          // A boss being rebuilt is practised on the stage of the boss it rebuilds.
-          STAGES.findIndex((stage) => stage.boss === bossStageOwner(request.bossId)),
-        ),
-      );
-      Reflect.set(active, "_biomeIdx", options.stage.index);
-      options.stage.platforms = stagePlatforms(options.stage.index, options.config);
-      const placement = planBossPlacement(
-        request.bossId,
-        options.config.view.w,
-        options.config,
-        options.state.player()?.x ?? options.config.view.w / 2,
-      );
-      const actor = options.createEnemy(placement.factoryId, placement.x, placement.y, active);
-      if (!isPracticeBossActor(actor)) throw new RangeError("Boss lacks authored practice entry");
-      actor.bossId = request.bossId;
-      if (request.bossId === "echo") Reflect.set(actor, "_live", true);
-      original = actor;
-      active.curBoss = request.bossId;
-      options.state.setEnemies([actor]);
-      beginBossEncounter(active, actor, options.config.bossTheater.introDur, {
-        platforms: () => options.stage.platforms,
-        setPlatforms: (value) => {
-          options.stage.platforms = value;
-        },
-        arenaFor: (id) => {
-          const value = createBossArena(
-            id,
-            options.config.view.w,
-            options.config.view.h,
-            options.config.world.groundY,
-            options.config.bossArena.reformWarn,
-          );
-          return value === null ? null : [...value];
-        },
-      });
-      options.state.setBossIntro({ boss: actor, t: 0, dur: options.config.bossTheater.introDur, delay: 0 });
-    },
-    observe: () => world(),
-    cleanup() {
-      cleanupBossEncounterActors(options.state.enemies(), "reset");
-      options.cancelCinema();
-      options.resetEnvironment();
-      options.state.setEnemies([]);
-      options.state.setProjectiles([]);
-      options.state.setBossIntro(null);
-      options.state.setBossBeat(null);
-      const active = run();
-      active.voidScroll = null;
-      Reflect.set(active, "voidDescent", null);
-      original = undefined;
-    },
+      createEncounter(request, generation, encounterId) {
+        const active = run();
+        if (active.mode !== "tutorial" || active.weaponId !== "sword" || active.diff !== "normal")
+          throw new RangeError("Boss practice requires baseline Sword/Normal tutorial disposition");
+        active.practiceBossEntry = { bossId: request.bossId, generation, encounterId, seed: request.seed };
+        options.selectStage(
+          Math.max(
+            0,
+            // A boss being rebuilt is practised on the stage of the boss it rebuilds.
+            STAGES.findIndex((stage) => stage.boss === bossStageOwner(request.bossId)),
+          ),
+        );
+        Reflect.set(active, "_biomeIdx", options.stage.index);
+        options.stage.platforms = stagePlatforms(options.stage.index, options.config);
+        const placement = planBossPlacement(
+          request.bossId,
+          options.config.view.w,
+          options.config,
+          options.state.player()?.x ?? options.config.view.w / 2,
+        );
+        const actor = options.createEnemy(placement.factoryId, placement.x, placement.y, active);
+        if (!isPracticeBossActor(actor)) throw new RangeError("Boss lacks authored practice entry");
+        actor.bossId = request.bossId;
+        if (request.bossId === "echo") Reflect.set(actor, "_live", true);
+        original = actor;
+        active.curBoss = request.bossId;
+        options.state.setEnemies([actor]);
+        beginBossEncounter(active, actor, options.config.bossTheater.introDur, {
+          platforms: () => options.stage.platforms,
+          setPlatforms: (value) => {
+            options.stage.platforms = value;
+          },
+          arenaFor: (id) => {
+            const value = createBossArena(
+              id,
+              options.config.view.w,
+              options.config.view.h,
+              options.config.world.groundY,
+              options.config.bossArena.reformWarn,
+            );
+            return value === null ? null : [...value];
+          },
+        });
+        options.state.setBossIntro({ boss: actor, t: 0, dur: options.config.bossTheater.introDur, delay: 0 });
+      },
+      observe: () => world(),
+      cleanup() {
+        cleanupBossEncounterActors(options.state.enemies(), "reset");
+        options.cancelCinema();
+        options.resetEnvironment();
+        options.state.setEnemies([]);
+        options.state.setProjectiles([]);
+        options.state.setBossIntro(null);
+        options.state.setBossBeat(null);
+        const active = run();
+        active.voidScroll = null;
+        Reflect.set(active, "voidDescent", null);
+        original = undefined;
+      },
     },
     options.practiceBosses,
   );

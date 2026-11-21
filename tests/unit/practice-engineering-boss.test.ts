@@ -44,14 +44,14 @@ function savedSelection(bossId: string, phase: 2 | 3) {
 describe("an engineering-only boss and boss phase practice", () => {
   it("has at least one boss to speak of, and none of them is published", () => {
     expect(ENGINEERING_ONLY_BOSS_IDS.length).toBeGreaterThan(0);
-    for (const boss of ENGINEERING_ONLY_BOSS_IDS) expect(BOSS_ROSTER.map(({ id }) => String(id))).not.toContain(boss);
+    for (const boss of ENGINEERING_ONLY_BOSS_IDS) expect(BOSS_ROSTER.map(({ id }): string => id)).not.toContain(boss);
   });
 
   describe.each(ENGINEERING_ONLY_BOSS_IDS)("%s, where a player can reach", (boss) => {
     it("is not in the Practice list, whatever the profile has met or defeated", () => {
       const everything = practiceBossCatalog(() => 1);
       expect(everything.length).toBeGreaterThan(0);
-      expect(everything.map((entry) => String(entry.bossId))).not.toContain(boss);
+      expect(everything.map((entry): string => entry.bossId)).not.toContain(boss);
       expect(everything.some((entry) => entry.id.startsWith(`${boss}:`))).toBe(false);
     });
 
@@ -75,13 +75,14 @@ describe("an engineering-only boss and boss phase practice", () => {
       expect(created).toBe(0);
     });
 
-    it("is refused as a saved selection, also after a headless world has accepted the same state", () => {
+    it("is refused as a saved selection, also as a copy of a state a headless world accepted", () => {
       expect(isPracticeBossId(boss)).toBe(false);
       const saved = savedSelection(boss, 2);
       expect(() => validatePracticeBoss(saved)).toThrow();
-      // The headless world's check remembers a frozen state it has passed; a released check must still refuse it.
-      const accepted = validateBossPhasePracticeState(Object.freeze({ ...saved.runtime }), undefined, opensHeadlessPractice);
-      expect(() => validateBossPhasePracticeState(accepted)).toThrow();
+      // A headless world's own state stays valid as that object. What a save holds is a copy, and is refused.
+      const accepted = validateBossPhasePracticeState(saved.runtime, undefined, opensHeadlessPractice);
+      expect(() => validateBossPhasePracticeState(structuredClone(accepted))).toThrow();
+      expect(() => validatePracticeBoss({ ...saved, runtime: structuredClone(accepted) })).toThrow();
     });
   });
 

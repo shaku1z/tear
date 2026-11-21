@@ -402,7 +402,6 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
   const tutorial = createLiveTutorialRuntime({
     weaponId: () => world.state.run()?.weaponId ?? "sword",
     config,
-    ...(options.practiceBosses === undefined ? {} : { practiceBosses: options.practiceBosses }),
     viewportWidth: config.view.w,
     groundY: () => config.world.groundY,
     skipPressed: () => false,

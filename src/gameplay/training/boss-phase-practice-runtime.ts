@@ -77,8 +77,8 @@ export function isPracticeBossId(value: unknown): value is PracticeBossId {
 /**
  * Which bosses a world's phase practice opens. Every world a player reaches uses the published roster
  * (`isPracticeBossId`, the default everywhere); only a headless engineering world is given a wider one, to open
- * a boss that is still being rebuilt. It is handed to the practice runtime, to the tutorial that holds the
- * selection and to every check of a practice state, so one world answers the question one way.
+ * a boss that is still being rebuilt. It is asked when a practice begins and when a state from outside (a save)
+ * is adopted; every check without one uses the published roster.
  */
 export type PracticeBossAdmission = (bossId: unknown) => boolean;
 
@@ -118,8 +118,9 @@ function assertPracticeStateFields(
   value: unknown,
   admits: PracticeBossAdmission,
 ): asserts value is BossPhasePracticeState {
-  // The remembered check covers the fields' shape; which bosses are admitted is the asking world's, asked each time.
-  if (isObject(value) && checkedStates.has(value) && admits(value.bossId)) return;
+  // A remembered state is one a practice runtime in this process made or adopted, so it stays valid wherever that
+  // same object is handed on (the tutorial holds it). A state from a save is a new object and is checked in full.
+  if (isObject(value) && checkedStates.has(value)) return;
   if (!isObject(value) || Array.isArray(value) || Object.getPrototypeOf(value) !== Object.prototype)
     throw new Error("Invalid boss practice state");
   const descriptors = Object.getOwnPropertyDescriptors(value);
