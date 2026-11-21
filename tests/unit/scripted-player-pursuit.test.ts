@@ -16,6 +16,7 @@ import { TEAR_SIMULATION_TICKS_PER_SECOND } from "../../src/tearbench/simulation
 /**
  * The herald must fall within this long of being left alone. With the stall it stood for minutes. The slowest
  * weapon, Chainblade, takes 42 s: the player sees each enemy's attack and gives way to the wave's other spawns.
+ * Measured 2026-11-21, seed "117": Greatsword 0.9 s, Sword 2.9 s, Hammer 4.0 s, Riftlock 4.5 s, Chainblade 41.6 s.
  */
 const CLEAR_LIMIT_TICKS = 60 * TEAR_SIMULATION_TICKS_PER_SECOND;
 /** The first wave has enemies in play within this long of the start. */
