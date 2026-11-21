@@ -1,5 +1,5 @@
 import { initializeApp, type FirebaseApp } from "firebase/app";
-import { CustomProvider, ReCaptchaV3Provider, initializeAppCheck } from "firebase/app-check";
+import { ReCaptchaV3Provider, initializeAppCheck, type CustomProvider } from "firebase/app-check";
 import {
   GoogleAuthProvider,
   connectAuthEmulator,

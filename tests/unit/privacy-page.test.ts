@@ -30,7 +30,7 @@ describe("the privacy page the standalone build links to", () => {
   });
 
   it("names reCAPTCHA exactly when App Check has a site key, so the page lists it while the build loads it", () => {
-    expect(page.includes("reCAPTCHA")).toBe(FIREBASE_APP_CHECK_SITE_KEY !== "");
+    expect(page.includes("reCAPTCHA")).toBe(FIREBASE_APP_CHECK_SITE_KEY.length > 0);
   });
 
   it("names the developer only by the public repository, with no email address or personal name", () => {

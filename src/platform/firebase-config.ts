@@ -25,4 +25,4 @@ export const FIREBASE_CONFIG: FirebaseClientConfig = Object.freeze({
  * Check off. The owner registers the key in the console (plans/active/FIREBASE_REFRESH.md), and the change that
  * sets it also names reCAPTCHA on the privacy page, which tests/unit/privacy-page.test.ts holds it to.
  */
-export const FIREBASE_APP_CHECK_SITE_KEY: string = "";
+export const FIREBASE_APP_CHECK_SITE_KEY = "";
