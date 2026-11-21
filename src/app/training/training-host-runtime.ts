@@ -181,8 +181,8 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
       state.setProjectiles([]);
     },
     spawn: context.spawn,
-    announce: (text, at) => {
-      context.callouts.post({ text, tone: "info", ...(at ? { at } : {}) });
+    announce: (text, target) => {
+      context.callouts.post({ text, tone: "info", ...(target ? { target } : {}) });
     },
     navigate: (screen) => {
       // ABILITIES is the menu's last tab on its own screen: the menu reopens on it when it was

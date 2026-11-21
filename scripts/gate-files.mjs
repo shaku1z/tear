@@ -30,11 +30,44 @@ export function loadGateList(path = resolve(root, "config/gate-files.json")) {
 
 const RUN_SCRIPT = /(?:^|\s)(scripts\/[\w./-]+\.[cm]?js)(?=\s|$)/gu;
 const RELATIVE_IMPORT = /(?:\bfrom|\bimport|\brequire)\s*\(?\s*["'](\.\.?\/[^"']+\.[cm]?js)["']/gu;
+const config = (stem, extensions) => extensions.map((extension) => `${stem}.${extension}`);
+const VITE = ["ts", "mts", "cts", "js", "mjs", "cjs"];
 
 /**
- * Every script under scripts/ that takes part in a verdict: each one a `config/checks.json` command
- * runs directly, and each one those import from scripts/, followed to the end. A map from path to
- * the reason. Tests are not followed: a change may add and change its own tests.
+ * The config files a check's tool reads without the command naming them: the file after the tool's
+ * config flag, or else the first of its default paths that exists (the tool's own lookup order).
+ */
+export const TOOL_CONFIGS = [
+  {
+    tool: /\bvitest(?:\.mjs)?\s+run\b/u,
+    flag: /\s(?:--config|-c)[ =](\S+)/u,
+    defaults: [...config("vitest.config", VITE), ...config("vite.config", VITE)],
+  },
+  { tool: /\btsc(?:\.js)?\s/u, flag: /\s(?:-p|--project|-b|--build)\s+(\S+\.json)\b/u, defaults: ["tsconfig.json"] },
+  {
+    tool: /\bplaywright(?:\.js)?\s+test\b/u,
+    flag: /\s(?:--config|-c)[ =](\S+)/u,
+    defaults: config("playwright.config", ["ts", "mts", "js", "mjs", "cjs"]),
+  },
+];
+
+/** The files a tsconfig brings in: the one it `extends` and the projects it lists as `references`. */
+function tsconfigLinks(file, text) {
+  const links = [...text.matchAll(/"(extends|path)"\s*:\s*"(\.\.?\/[^"]+)"/gu)].map(([, key, spec]) => {
+    const target = posix.join(posix.dirname(file), spec);
+    return [
+      /\.json$/u.test(target) ? target : `${target}/tsconfig.json`,
+      key === "extends" ? "extended" : "referenced",
+    ];
+  });
+  return links.map(([target, how]) => [target, `${how} by ${file}`]);
+}
+
+/**
+ * Every file that takes part in a verdict without being a test: each script a `config/checks.json`
+ * command runs directly, each config file a check's tool reads (TOOL_CONFIGS), the tsconfigs those
+ * extend or reference, and every script any of them imports from scripts/, followed to the end. A map
+ * from path to the reason. Tests are not followed: a change may add and change its own tests.
  */
 export function checkedScripts(checks, read = (file) => readFileSync(resolve(root, file), "utf8")) {
   const runs = [];
@@ -53,15 +86,36 @@ export function checkedScripts(checks, read = (file) => readFileSync(resolve(roo
     reached.set(file, why);
     queue.push(file);
   };
-  for (const run of runs) for (const [, file] of run.matchAll(RUN_SCRIPT)) add(file, `run by the check \`${run}\``);
+  const exists = (file) => {
+    try {
+      read(file);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  for (const run of runs) {
+    for (const [, file] of run.matchAll(RUN_SCRIPT)) add(file, `run by the check \`${run}\``);
+    for (const { tool, flag, defaults } of TOOL_CONFIGS) {
+      if (!tool.test(run)) continue;
+      const named = flag.exec(run)?.[1];
+      if (named !== undefined) add(posix.normalize(named), `named by the check \`${run}\``);
+      else {
+        const found = defaults.find(exists);
+        if (found !== undefined) add(found, `read by default by the check \`${run}\``);
+      }
+    }
+  }
   while (queue.length > 0) {
     const file = queue.shift();
     let text;
     try {
       text = read(file);
     } catch {
-      continue; // a check names a script that does not exist: the check fails on its own
+      continue; // a check names a file that does not exist: the check fails on its own
     }
+    if (/(?:^|\/)tsconfig[^/]*\.json$/u.test(file))
+      for (const [target, why] of tsconfigLinks(file, text)) add(target, why);
     for (const [, spec] of text.matchAll(RELATIVE_IMPORT)) {
       const imported = posix.join(posix.dirname(file), spec);
       if (imported.startsWith("scripts/")) add(imported, `imported by ${file}`);

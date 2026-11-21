@@ -1,7 +1,6 @@
-import type { CosmeticCatalog, CosmeticState } from "../domain/cosmetic-types";
+import type { CosmeticCatalog, CosmeticChange, CosmeticState } from "../domain/cosmetic-types";
 import {
   claimableGrants,
-  equipCosmetic,
   grantItems,
   markSeen,
   mergeCosmeticStates,
@@ -117,8 +116,8 @@ export interface ProfileStore {
   /** Shards left to spend: earned minus the prices paid for owned cosmetics, never below zero. */
   shardBalance(): number;
   buyCosmetic(itemId: string): Promise<CompletionStatus | PurchaseRefusal>;
-  /** `null` clears the slot back to the default look. */
-  equipCosmetic(slot: string, itemId: string | null): Promise<CompletionStatus | "unknown">;
+  /** Commits a pure change to the cosmetic record (equip, a loadout change); "unknown" when it changes nothing. */
+  changeCosmetics(change: CosmeticChange): Promise<CompletionStatus | "unknown">;
   /** Grants items earned without paying (an achievement, a defeated boss, a finished collection). */
   claimCosmeticGrants(): Promise<CompletionStatus>;
   /** Records that the player has seen these items, which clears their "new" badge. */
@@ -595,11 +594,11 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
         result.value = "committed";
       });
     },
-    async equipCosmetic(slot, itemId) {
+    async changeCosmetics(change) {
       const catalog = options.getCosmeticCatalog?.();
       if (!catalog) return "unknown";
       return runCosmeticChange<CompletionStatus>(this, "unknown", (target, result) => {
-        const next = equipCosmetic(catalog, normalizeCosmeticState(target.cosmetics), slot, itemId, now());
+        const next = change(catalog, normalizeCosmeticState(target.cosmetics), now());
         if (!next) return;
         target.cosmetics = next;
         result.value = "committed";

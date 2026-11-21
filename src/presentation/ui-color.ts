@@ -36,6 +36,17 @@ export function withAlpha(color: string, alpha: number): string {
   return `rgba(${String(r)},${String(g)},${String(b)},${String(alpha)})`;
 }
 
+/** `top` laid at `alpha` over `bottom`, as #rrggbb: what the eye sees through a translucent plate. */
+export function composite(top: string, alpha: number, bottom: string): string {
+  const over = parseHex(top) ?? [0, 0, 0],
+    under = parseHex(bottom) ?? [255, 255, 255];
+  const mix = (index: 0 | 1 | 2): string =>
+    Math.round(over[index] * alpha + under[index] * (1 - alpha))
+      .toString(16)
+      .padStart(2, "0");
+  return `#${mix(0)}${mix(1)}${mix(2)}`;
+}
+
 /** True for a light ink (dark surface); anything unparsable counts as dark ink. */
 export function inkIsLight(color: string): boolean {
   return (luminance(color) ?? 0) > 0.5;
