@@ -49,8 +49,8 @@ describe("developer-only code in a release bundle", () => {
   it("does not report the TearBench and engineering modules that release replay uses", () => {
     const release = [
       "src/tearbench/contracts.ts",
-      "src/tearbench/detached-world-hydrator.ts",
-      "src/tearbench/production-replay-composition.ts",
+      "src/app/world/detached/world-hydrator.ts",
+      "src/app/world/detached/replay-composition.ts",
       "src/app/engineering/state-setup-adapter.ts",
       "src/app/engineering/test-build-journals.ts",
     ];

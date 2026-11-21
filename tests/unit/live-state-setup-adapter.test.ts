@@ -3,12 +3,12 @@ import { declareSeedRace, seedRaceInitialBuildHash } from "../../src/gameplay/ru
 import { seedRaceCatalogHash } from "../../src/gameplay/run/seed-locked-draft";
 import { describe, expect, it, vi } from "vitest";
 import { createLiveStateSetupAdapter } from "../../src/app/engineering/state-setup-adapter";
-import { createProductionGhostReplayComposition } from "../../src/tearbench/production-replay-composition";
+import { createProductionGhostReplayComposition } from "../../src/app/world/detached/replay-composition";
 import {
   captureLiveStateSetupSnapshot,
   createLiveStateSetupRestoreFactory,
-} from "../../src/tearbench/live-runtime-snapshots";
-import { restoreSnapshotIntoLiveWorld } from "../../src/tearbench/live-state-snapshot";
+} from "../../src/gameplay/snapshot/live-capture";
+import { restoreSnapshotIntoLiveWorld } from "../../src/gameplay/snapshot/live-restore";
 import { createDefaultStateCodecRegistry } from "../../src/gameplay/snapshot/state-codec";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
 import type { RootboundGraftEffects } from "../../src/gameplay/environment/graft-anchor";
@@ -16,9 +16,10 @@ import { STAGES, PLAYGROUND_STAGES } from "../../src/gameplay/stages";
 import { UPGRADES, applyUpgrade } from "../../src/gameplay/upgrades";
 import { applyWeapon } from "../../src/gameplay/weapons";
 import { createLiveHudFeedbackState } from "../../src/app/interface/hud-feedback-state";
-import { createLiveParticlePresentationState } from "../../src/tearbench/particle-presentation-state";
+import { createLiveParticlePresentationState } from "../../src/app/world/detached/particle-state";
 
-import { TutorialController, parseTutorialSessionCheckpoint } from "../../src/gameplay/training/tutorial-controller";
+import { TutorialController } from "../../src/gameplay/training/tutorial-controller";
+import { parseTutorialSessionCheckpoint } from "../../src/gameplay/training/tutorial-session-checkpoint";
 
 type Failure = "clear" | "replace" | "late" | "runtime";
 interface BossFacts {

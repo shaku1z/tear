@@ -59,7 +59,7 @@
       "textRegex": ".*",
       "implementationRefs": [
         "src/app/engineering/state-setup-adapter.ts",
-        "src/tearbench/live-state-snapshot.ts",
+        "src/gameplay/snapshot/live-restore.ts",
         "src/gameplay/snapshot/validation.ts"
       ],
       "evidenceRefs": [

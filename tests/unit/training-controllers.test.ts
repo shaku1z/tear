@@ -3,11 +3,9 @@ import { CONFIG } from "../../src/config/game-config";
 
 import { BossArenaRules, SourceVoidController, createBossArena } from "../../src/gameplay/training/arena-rules";
 import { PlaygroundController, trainingPlatforms } from "../../src/gameplay/training/playground-controller";
-import {
-  TUTORIAL_LESSONS,
-  TutorialController,
-  parseTutorialSessionCheckpoint,
-} from "../../src/gameplay/training/tutorial-controller";
+import { TUTORIAL_ARENAS } from "../../src/gameplay/training/tutorial-arenas";
+import { TUTORIAL_LESSONS, TutorialController } from "../../src/gameplay/training/tutorial-controller";
+import { parseTutorialSessionCheckpoint } from "../../src/gameplay/training/tutorial-session-checkpoint";
 
 const neutralTutorialFrame = {
   dt: 0,
@@ -641,19 +639,14 @@ describe("playground controller", () => {
   it("runs the number-row shortcuts: heal, clear, dummy, repeat the last spawn, and the two rules", () => {
     const controller = new PlaygroundController({ hpMultiplier: 3, count: 5 });
     const press = (...codes: string[]) =>
-      controller.update(
-        {
-          pressed: new Set(codes),
-          viewportWidth: 1600,
-          player: { x: 800, y: 700, facing: 1, hp: 100, maxHp: 100, oneHit: false },
-          enemies: [],
-        },
-        { charger: "red", perfect: "cyan" },
-      );
+      controller.update({
+        pressed: new Set(codes),
+        viewportWidth: 1600,
+        player: { x: 800, y: 700, facing: 1, hp: 100, maxHp: 100, oneHit: false },
+        enemies: [],
+      });
     // Nothing to repeat before the first spawn from the menu.
-    expect(press("Digit4")).toEqual([
-      { type: "announce", text: "SPAWN ONE FROM THE MENU FIRST", emphasis: false, color: "#888" },
-    ]);
+    expect(press("Digit4")).toEqual([{ type: "announce", text: "SPAWN ONE FROM THE MENU FIRST" }]);
     expect(controller.spawn("charger")).toEqual({ type: "spawn", kind: "charger", count: 5, hpScale: 3 });
     expect(press("Digit4")).toContainEqual({ type: "spawn", kind: "charger", count: 5, hpScale: 3 });
     expect(press("Digit1")).toContainEqual({ type: "heal-player" });
@@ -802,5 +795,10 @@ describe("arena rules", () => {
     const rescueIntents = controller.updateHazards(first, 0, hazardPlayer, 0);
     expect(rescueIntents.some((intent) => intent.type === "rescue-player" && intent.damage === 20)).toBe(true);
     expect(first.rescueCooldown).toBe(0.8);
+  });
+
+  it("accepts a pending arena exactly when a lesson uses it: the checkpoint reader checks the arena table, not the lessons", () => {
+    const lessonArenas = new Set(TUTORIAL_LESSONS.map((lesson) => lesson.arena));
+    expect(lessonArenas).toEqual(new Set(TUTORIAL_ARENAS.map((arena) => arena.id)));
   });
 });

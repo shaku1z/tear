@@ -2,6 +2,6 @@
 // bundle so no second copy of the engine is split off (see src/ghost/replay-engine.ts).
 import "../../ghost/live-ghost-reference-worker";
 import { replayEngine } from "../../ghost/replay-engine";
-import * as replayEngineModule from "../../tearbench/production-replay-composition";
+import * as replayEngineModule from "../world/detached/replay-composition";
 
 replayEngine.install(() => Promise.resolve(replayEngineModule));

@@ -51,7 +51,7 @@ import {
   type BloomWellPresentationOptions,
 } from "../gameplay/environment/bloom-well-presentation-facts";
 import { resolveTearSdl, type TearSdlDocumentV1 } from "./tearsdl";
-import type { TearLiveRestoreResult } from "./live-state-snapshot";
+import type { TearLiveRestoreResult } from "../gameplay/snapshot/live-restore";
 import type { StateSetupExitLaunch } from "./state-setup-exit-gate";
 import type {
   LiveTearRuntimeEnvironmentContext,

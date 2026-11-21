@@ -4,7 +4,7 @@ import type {
   PracticeBossPhase,
 } from "../../gameplay/training/boss-phase-practice-runtime";
 import type { PracticeBossState } from "../../gameplay/training/practice-boss-catalog";
-import type { ProductionReplayWorld } from "../../tearbench/production-world-factory";
+import type { ProductionReplayWorld } from "../../app/world/detached/world-factory";
 
 /**
  * Starts Playground boss practice at a chosen phase in a fresh tutorial episode, the way the Playground's boss list

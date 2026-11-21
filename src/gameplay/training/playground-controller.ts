@@ -56,7 +56,7 @@ export interface PlaygroundInputSnapshot {
 }
 
 export type PlaygroundIntent =
-  | Readonly<{ type: "announce"; text: string; emphasis: boolean; color: string }>
+  | Readonly<{ type: "announce"; text: string }>
   | Readonly<{
       type: "apply-difficulty";
       id: string;
@@ -197,7 +197,7 @@ export class PlaygroundController {
     this.state[modifier] = !this.state[modifier];
   }
 
-  update(snapshot: PlaygroundInputSnapshot, colors: Readonly<Record<string, string>>): readonly PlaygroundIntent[] {
+  update(snapshot: PlaygroundInputSnapshot): readonly PlaygroundIntent[] {
     const intents: PlaygroundIntent[] = [],
       { pressed, player, enemies } = snapshot;
     if (this.state.god && player.hp < player.maxHp) intents.push({ type: "heal-player" });
@@ -207,36 +207,25 @@ export class PlaygroundController {
 
     if (anyKeyIn(pressed, "playground-menu"))
       return [{ type: "navigate", screen: "pgmenu" }, { type: "release-pointer" }];
-    const announce = (text: string, color: string, emphasis = false): PlaygroundIntent => ({
-      type: "announce",
-      text,
-      emphasis,
-      color,
-    });
-    if (anyKeyIn(pressed, "heal")) intents.push({ type: "heal-player" }, announce("HEALED", "#1faf5a", true));
+    const announce = (text: string): PlaygroundIntent => ({ type: "announce", text });
+    if (anyKeyIn(pressed, "heal")) intents.push({ type: "heal-player" }, announce("HEALED"));
     if (anyKeyIn(pressed, "clear-enemies"))
-      intents.push(
-        { type: "clear-enemies" },
-        { type: "clear-projectiles" },
-        announce("CLEARED", colors.perfect ?? "#fff", true),
-      );
+      intents.push({ type: "clear-enemies" }, { type: "clear-projectiles" }, announce("CLEARED"));
     if (anyKeyIn(pressed, "spawn-dummy"))
-      intents.push(this.spawnDummy(player, snapshot.viewportWidth), announce("DUMMY", "#888"));
+      intents.push(this.spawnDummy(player, snapshot.viewportWidth), announce("DUMMY"));
     if (anyKeyIn(pressed, "repeat-spawn")) {
       const last = this.#lastSpawn;
       intents.push(
-        ...(last === null
-          ? [announce("SPAWN ONE FROM THE MENU FIRST", "#888")]
-          : [last, announce(last.kind.toUpperCase(), colors[last.kind] ?? "#000")]),
+        ...(last === null ? [announce("SPAWN ONE FROM THE MENU FIRST")] : [last, announce(last.kind.toUpperCase())]),
       );
     }
     if (anyKeyIn(pressed, "toggle-freeze")) {
       this.toggle("freeze");
-      intents.push(announce(this.state.freeze ? "ENEMIES FROZEN" : "ENEMIES MOVE", "#7fd4ff"));
+      intents.push(announce(this.state.freeze ? "ENEMIES FROZEN" : "ENEMIES MOVE"));
     }
     if (anyKeyIn(pressed, "toggle-no-damage")) {
       this.toggle("god");
-      intents.push(announce(this.state.god ? "NO DAMAGE ON" : "NO DAMAGE OFF", "#1faf5a"));
+      intents.push(announce(this.state.god ? "NO DAMAGE ON" : "NO DAMAGE OFF"));
     }
     return intents;
   }

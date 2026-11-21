@@ -5,7 +5,7 @@ import {
 } from "../../ghost/replay-admission";
 import type { VisualReplayProvenance } from "../../replay/visual-replay";
 import type { TearCausalEventV1 } from "../../tearbench/contracts";
-import { ENTITY_KIND_REGISTRY } from "../../tearbench/registries";
+import { ENTITY_KIND_REGISTRY } from "../../gameplay/snapshot/codec-ids";
 import { stableVerificationHash } from "../../domain/hash";
 import type { LiveOpeningCaptureBoundary } from "../run/run-start-host";
 

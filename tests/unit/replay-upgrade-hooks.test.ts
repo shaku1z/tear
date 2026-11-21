@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { CONFIG } from "../../src/config/game-config";
 import { UPGRADE_HOOK_BINDINGS, bindUpgradeHook, type UpgradeHookName } from "../../src/gameplay/upgrade-hooks";
 import type { UpgradeEvent, UpgradeMods } from "../../src/gameplay/upgrades";
-import { createProductionGhostReplayComposition } from "../../src/tearbench/production-replay-composition";
+import { createProductionGhostReplayComposition } from "../../src/app/world/detached/replay-composition";
 
 // Rule over all upgrades: every upgrade hook must run in the production replay world when the
 // replay world's own code raises its event. A hook added later is covered without a new case;

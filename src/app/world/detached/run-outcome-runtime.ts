@@ -1,8 +1,11 @@
-import { createTearTerminalRunFactPublisher } from "../gameplay/runtime/gameplay-event-publishers";
-import type { TearGameplayEventPort } from "../gameplay/runtime/gameplay-events";
-import { LiveRunOutcomeController, type LiveOutcomeControllerPort } from "../gameplay/run/live-outcome-controller";
-import { snapshotOutcomeRun, type PreparedVictory } from "../gameplay/run/outcome-planner";
-import type { ProductionReplayWorld } from "./production-world-factory";
+import { createTearTerminalRunFactPublisher } from "../../../gameplay/runtime/gameplay-event-publishers";
+import type { TearGameplayEventPort } from "../../../gameplay/runtime/gameplay-events";
+import {
+  LiveRunOutcomeController,
+  type LiveOutcomeControllerPort,
+} from "../../../gameplay/run/live-outcome-controller";
+import { snapshotOutcomeRun, type PreparedVictory } from "../../../gameplay/run/outcome-planner";
+import type { ProductionReplayWorld } from "./world-factory";
 
 export interface ProductionRunOutcomeRuntime {
   readonly controller: LiveRunOutcomeController;
