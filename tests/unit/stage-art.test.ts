@@ -12,8 +12,8 @@ import { requiredLayerRect, viewportWorldRect, type Rect } from "../../src/prese
 import type { ScenePaintPorts } from "../../src/presentation/scenes/scene-library";
 import { PAINTED_STAGES } from "../../src/presentation/scenes/scene-registry";
 import type { SceneBitmap, SceneCanvas } from "../../src/presentation/scenes/scene-renderer";
-import { stagePresentationDefinition } from "../../src/presentation/stage-presentation-definitions";
 import { paintedStage } from "../../src/presentation/stage-art/painted-stage";
+import { STAGE_ART_RECIPES as RECIPES } from "../../src/presentation/stage-art/recipes";
 import { VERDANT_SANCTUM_ART } from "../../src/presentation/stage-art/recipes/verdant-sanctum";
 import { STAGE_ART_LIMITS, type StageArtRecipe } from "../../src/presentation/stage-art/stage-art-contract";
 import { stageArtLayerRect } from "../../src/presentation/stage-art/stage-art-painter";
@@ -77,11 +77,14 @@ const firstLayer = VERDANT_SANCTUM_ART.layers[0];
 if (firstLayer === undefined) throw new Error("the Verdant recipe has no layers");
 
 describe("stage art recipes", () => {
-  it("accepts the Verdant Sanctum recipe within the limits", () => {
-    expect(() => {
-      validateStageArt(VERDANT_SANCTUM_ART);
-    }).not.toThrow();
-    expect(VERDANT_SANCTUM_ART.layers.length).toBeLessThanOrEqual(STAGE_ART_LIMITS.layers);
+  it("accepts every drawn stage's recipe within the limits", () => {
+    expect(RECIPES.map((recipe) => recipe.stageId).sort()).toEqual(Object.keys(PAINTED_STAGES).sort());
+    for (const recipe of RECIPES) {
+      expect(() => {
+        validateStageArt(recipe);
+      }, recipe.stageId).not.toThrow();
+      expect(recipe.layers.length).toBeLessThanOrEqual(STAGE_ART_LIMITS.layers);
+    }
   });
 
   it("names the problem when a stroke uses a ramp the recipe lacks", () => {
@@ -101,7 +104,7 @@ describe("stage art recipes", () => {
     }).toThrow(/edge: expected #rrggbb/u);
   });
 
-  it("rejects too many layers and layer ids that collide or take the surface's name", () => {
+  it("rejects too many layers and layer ids that collide", () => {
     const many = Array.from({ length: STAGE_ART_LIMITS.layers + 1 }, (_, index) => ({
       ...firstLayer,
       id: `l${String(index)}`,
@@ -111,10 +114,7 @@ describe("stage art recipes", () => {
     }).toThrow(/layers/u);
     expect(() => {
       validateStageArt(withLayers([firstLayer, firstLayer]));
-    }).toThrow(/duplicate or reserved id/u);
-    expect(() => {
-      validateStageArt(withLayers([{ ...firstLayer, id: "surface" }]));
-    }).toThrow(/duplicate or reserved id/u);
+    }).toThrow(/duplicate id/u);
   });
 
   it("refuses a recipe whose brushwork would make a long bake", () => {
@@ -173,11 +173,9 @@ describe("painting a stage", () => {
     expect(busy.slices()).toBeGreaterThan(100);
   });
 
-  it("keeps the stage's own paper and platform material, and paints the platform surface", async () => {
+  it("keeps the stage's own paper and paints every layer it lists", async () => {
     const loaded = await paintedStage(VERDANT_SANCTUM_ART).paint(paintPorts({ canvases: [] }).ports);
     expect(loaded.scene.theme.paper).toBe(stageDefinition("verdant-sanctum").bg);
-    expect(loaded.scene.platforms.material).toBe(stagePresentationDefinition("verdant-sanctum")?.platformMaterialId);
-    expect(loaded.images.has(loaded.scene.platforms.texture)).toBe(true);
     for (const layer of loaded.scene.layers) expect(loaded.images.has(layer.image)).toBe(true);
   });
 
@@ -311,18 +309,20 @@ describe("layer coverage", () => {
     outer[0] + outer[2] >= inner[0] + inner[2] &&
     outer[1] + outer[3] >= inner[1] + inner[3];
 
-  for (const layer of VERDANT_SANCTUM_ART.layers.filter((entry) => entry.area === undefined)) {
-    it(`${layer.id} covers every required viewport at every camera the stage allows`, () => {
-      const rect = stageArtLayerRect(VERDANT_SANCTUM_ART, layer, WORLD);
-      for (const [name, width, height] of viewports.required) {
-        const need = requiredLayerRect(
-          { camera: VERDANT_SANCTUM_ART.camera, world: WORLD },
-          layer.depth,
-          viewportWorldRect(WORLD, Number(width), Number(height)),
-          WORLD.groundY,
-        );
-        expect(contains(rect, need), `${layer.id} at ${String(name)}`).toBe(true);
-      }
-    });
+  for (const recipe of RECIPES) {
+    for (const layer of recipe.layers.filter((entry) => entry.area === undefined)) {
+      it(`${recipe.stageId} ${layer.id} covers every required viewport at every camera the stage allows`, () => {
+        const rect = stageArtLayerRect(recipe, layer, WORLD);
+        for (const [name, width, height] of viewports.required) {
+          const need = requiredLayerRect(
+            { camera: recipe.camera, world: WORLD },
+            layer.depth,
+            viewportWorldRect(WORLD, Number(width), Number(height)),
+            WORLD.groundY,
+          );
+          expect(contains(rect, need), `${layer.id} at ${String(name)}`).toBe(true);
+        }
+      });
+    }
   }
 });

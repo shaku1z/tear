@@ -2,7 +2,6 @@ import type { StageId } from "../gameplay/stages";
 import type { BossTellSkinTable } from "./enemies/renderers/boss-tell-skin";
 
 export interface StagePresentationDefinition {
-  readonly platformMaterialId: string;
   /** How boss warnings and strikes are drawn on this stage. Without it the shared default marks are used. */
   readonly bossTellSkin?: BossTellSkinTable;
 }
@@ -10,7 +9,6 @@ export interface StagePresentationDefinition {
 /** Stable presentation dispatch metadata, intentionally separate from display names. */
 export const STAGE_PRESENTATION_DEFINITIONS = Object.freeze({
   "verdant-sanctum": Object.freeze({
-    platformMaterialId: "verdant-rootstone",
     // Roots and thorns rising from the floor: bark-brown root bodies, the warning or strike ink on their tips.
     bossTellSkin: Object.freeze({
       body: "#4a3422",
@@ -22,9 +20,6 @@ export const STAGE_PRESENTATION_DEFINITIONS = Object.freeze({
         reticle: Object.freeze({ shape: "ring", count: 18, length: 34 }),
       }),
     }),
-  }),
-  "pale-traverse": Object.freeze({
-    platformMaterialId: "pale-ice",
   }),
 } as const satisfies Readonly<Partial<Record<StageId, StagePresentationDefinition>>>);
 

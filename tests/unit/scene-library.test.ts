@@ -34,9 +34,9 @@ function layerCanvas(width: number, height: number) {
 }
 
 const PAPER = "#dff2d6";
-const LAYER_IMAGES = 2;
+const LAYER_IMAGES = 1;
 
-/** What a painter hands back: one covering back layer and the platform surface strip. */
+/** What a painter hands back: one covering back layer. */
 function paintedScene(): LoadedScene {
   return {
     scene: {
@@ -56,18 +56,8 @@ function paintedScene(): LoadedScene {
         },
       ],
       live: [],
-      platforms: {
-        material: "fixture",
-        texture: "surface",
-        scale: 1,
-        fill: "#000000",
-        shadow: { color: "#000000", opacity: 0.5, length: 40 },
-      },
     },
-    images: new Map([
-      ["far", layerCanvas(1200, 750)],
-      ["surface", layerCanvas(256, 64)],
-    ]),
+    images: new Map([["far", layerCanvas(1200, 750)]]),
   };
 }
 
@@ -132,15 +122,12 @@ describe("scene library", () => {
     const loader = vi.fn(quickStage);
     const library = createSceneLibrary(ports({ stages: { "fixture-stage": loader } }));
     const { context, calls } = recordingContext();
-    const platform = { x: 150, y: 645, w: 330, h: 24 };
     expect(library.status("fixture-stage")).toBe("none");
     expect(library.paper("fixture-stage")).toBeUndefined();
     expect(library.opaque("fixture-stage")).toBe(false);
     expect(library.loaded("fixture-stage")).toBeUndefined();
     library.drawBack(context, input);
     library.drawFront(context, input);
-    library.drawShadows(context, "fixture-stage", [platform]);
-    expect(library.surfaceMaterial("fixture-stage").draw(context, platform, false)).toBe(false);
     expect(calls).toEqual([]);
     expect(loader).not.toHaveBeenCalled();
     library.prefetch("fixture-stage");
@@ -231,17 +218,6 @@ describe("scene library", () => {
     const { context, calls } = recordingContext();
     library.drawBack(context, input);
     expect(calls.filter((call) => call.startsWith("drawImage"))).toHaveLength(1);
-    const platform = { x: 150, y: 645, w: 330, h: 24 };
-    expect(library.surfaceMaterial("fixture-stage").draw(context, platform, false)).toBe(true);
-    expect(library.surfaceMaterial("grounds").draw(context, platform, false)).toBe(false);
-    calls.length = 0;
-    library.drawShadows(context, "fixture-stage", [
-      platform,
-      { ...platform, arenaState: "broken" },
-      { x: 0, y: 800, w: 1600, h: 100, floor: true },
-    ]);
-    // Only the standing platform casts a shadow.
-    expect(calls.filter((call) => call.startsWith("fillRect"))).toHaveLength(1);
   });
 
   it("falls back for good when a stage cannot be painted", async () => {

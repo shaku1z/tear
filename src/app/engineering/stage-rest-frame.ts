@@ -52,10 +52,8 @@ export function createStageRestFrame(
       timeSeconds,
     };
     Scenes.drawBack(context, input);
-    Scenes.drawShadows(context, current.id, options.stage.platforms);
-    const texture = Scenes.surfaceMaterial(current.id);
     for (const platform of options.stage.platforms) {
-      Backdrop.platform(context, platform, current, platform.floor === true, view, texture);
+      Backdrop.platform(context, platform, current, platform.floor === true, view);
     }
     Scenes.drawFront(context, input);
     return { stageId: current.id, ink: THEME.ink, canvas };
