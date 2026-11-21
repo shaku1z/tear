@@ -21,6 +21,9 @@ import {
   createProductionHeadlessEnvironment,
   type ProductionHeadlessEnvironment,
 } from "../../src/playtest/headless/production-headless-environment";
+import { agentView, bossFightScenario, type BossFightRequest } from "../../src/playtest/boss-fight";
+import { createBossPlayer } from "../../src/playtest/boss-player";
+import { readBoss, readPlayerBox } from "../../src/playtest/boss-view";
 
 const FIXTURE_PATH = "tests/fixtures/canonical-hash-stream.json";
 const FIXTURE_FORMAT = "tear-canonical-hash-stream.v1";
@@ -80,6 +83,91 @@ interface HashStreamFixture {
   readonly format: typeof FIXTURE_FORMAT;
   readonly sampleEvery: number;
   readonly streams: readonly StreamRecord[];
+  readonly fights: readonly FightRecord[];
+}
+
+/**
+ * Boss fights through the game's phase practice, which covers what ruleset v14 changed: a boss's move and
+ * zones ending on its phase-change tick and when its death starts. Practising Phase III makes the game carry
+ * the boss across its phase changes by its own transitions; the scripted player then fights it. The Colossus
+ * dies, so its stream also crosses a death start and follows the death until the game ends the fight. Every
+ * tick is hashed, the practice setup and the death included, and every SAMPLE_EVERY-th hash is kept: the
+ * observation and the boss (its move, phase and tells). The pinned facts are the ticks of each phase change
+ * and of the death start.
+ */
+const FIGHTS: readonly FightSpec[] = [
+  { id: "colossus/phase-three", boss: "colossus" },
+  { id: "aldric/phase-three", boss: "aldric" },
+];
+const FIGHT_PHASE = 3;
+const FIGHT_TICKS = 6_000;
+/** How long, at most, the stream follows the boss after its death starts; the game may end the fight sooner. */
+const DEATH_TICKS = 4 * 120;
+
+interface FightSpec {
+  readonly id: string;
+  readonly boss: BossFightRequest["boss"];
+}
+
+interface FightRecord {
+  readonly id: string;
+  readonly end: "boss died" | "player defeated" | "time limit";
+  readonly ticks: number;
+  readonly phaseChanges: readonly Readonly<{ tick: number; phase: number }>[];
+  readonly deathStart: number | null;
+  readonly finalHash: string;
+  readonly hashes: readonly string[];
+}
+
+function recordFight(fight: FightSpec): FightRecord {
+  const request: BossFightRequest = {
+    boss: fight.boss,
+    player: "scripted",
+    difficulty: "normal",
+    weapon: "sword",
+    seed: "hash-stream:boss-fight",
+    phase: FIGHT_PHASE,
+    maxTicks: FIGHT_TICKS,
+  };
+  const environment = createProductionHeadlessEnvironment(),
+    player = createBossPlayer(request.player),
+    hashes: string[] = [],
+    phaseChanges: { tick: number; phase: number }[] = [];
+  let finalHash = "",
+    tick = 0,
+    phase: number | null = null,
+    deathStart: number | null = null,
+    end: FightRecord["end"] = "time limit";
+  try {
+    environment.reset(bossFightScenario(request));
+    const practice = environment.practiceBoss(request.boss, FIGHT_PHASE);
+    while (tick < FIGHT_TICKS && (deathStart === null || tick < deathStart + DEATH_TICKS)) {
+      const before = readBoss(environment.world());
+      const fighting = practice() === "active" && deathStart === null;
+      const actions = fighting
+        ? player.decide(agentView(environment, request.weapon), before, readPlayerBox(environment.world()))
+        : [];
+      const transition = environment.step(actions);
+      tick += 1;
+      const boss = readBoss(environment.world());
+      finalHash = stableVerificationHash({ observation: transition.observation, boss });
+      if (tick % SAMPLE_EVERY === 0) hashes.push(finalHash);
+      if (boss !== null && phase !== null && boss.phase !== phase) phaseChanges.push({ tick, phase: boss.phase });
+      if (boss !== null) phase = boss.phase;
+      if (deathStart === null && fighting && (boss === null || boss.dead)) {
+        deathStart = tick;
+        end = "boss died";
+      }
+      if (deathStart === null && transition.observation.player.hp <= 0) {
+        end = "player defeated";
+        break;
+      }
+      if (transition.terminated) break;
+    }
+  } finally {
+    environment.dispose();
+  }
+  return { id: fight.id, end, ticks: tick, phaseChanges, deathStart, finalHash, hashes };
 }
 
 const SPECS: readonly StreamSpec[] = WEAPON_IDS.flatMap((weapon) =>
@@ -305,7 +393,12 @@ function recordStream(spec: StreamSpec): StreamRecord {
 
 function readFixture(): HashStreamFixture {
   const fixture = JSON.parse(readFileSync(FIXTURE_PATH, "utf8")) as Partial<HashStreamFixture>;
-  if (fixture.format !== FIXTURE_FORMAT || fixture.sampleEvery !== SAMPLE_EVERY || !Array.isArray(fixture.streams)) {
+  if (
+    fixture.format !== FIXTURE_FORMAT ||
+    fixture.sampleEvery !== SAMPLE_EVERY ||
+    !Array.isArray(fixture.streams) ||
+    !Array.isArray(fixture.fights)
+  ) {
     throw new Error(`${FIXTURE_PATH} has an unexpected format`);
   }
   return fixture as HashStreamFixture;
@@ -336,6 +429,7 @@ function firstDivergence(expected: StreamRecord, actual: StreamRecord): string |
 }
 
 const recorded = new Map<string, StreamRecord>();
+const recordedFights = new Map<string, FightRecord>();
 const fixture = WRITE ? undefined : readFixture();
 
 describe("canonical authoritative hash streams", () => {
@@ -347,6 +441,11 @@ describe("canonical authoritative hash streams", () => {
       streams: SPECS.map((spec) => {
         const record = recorded.get(spec.id);
         if (record === undefined) throw new Error(`stream ${spec.id} was not recorded`);
+        return record;
+      }),
+      fights: FIGHTS.map((fight) => {
+        const record = recordedFights.get(fight.id);
+        if (record === undefined) throw new Error(`fight ${fight.id} was not recorded`);
         return record;
       }),
     };
@@ -368,6 +467,37 @@ describe("canonical authoritative hash streams", () => {
     },
     60_000,
   );
+
+  it.each(FIGHTS)(
+    "$id reproduces its recorded fight",
+    (fight) => {
+      const actual = recordFight(fight);
+      recordedFights.set(fight.id, actual);
+      if (fixture === undefined) return;
+      const expected = fixture.fights.find((record) => record.id === fight.id);
+      if (expected === undefined)
+        throw new Error(`${fight.id}: no recorded fight in ${FIXTURE_PATH}; regenerate deliberately`);
+      const sample = actual.hashes.findIndex((hash, index) => hash !== expected.hashes[index]);
+      if (sample >= 0)
+        throw new Error(
+          `${fight.id}: the fight's hash first diverges at sampled tick ${String((sample + 1) * SAMPLE_EVERY)}`,
+        );
+      expect(actual).toEqual(expected);
+    },
+    120_000,
+  );
+
+  it("crosses a boss phase change and a boss death start", () => {
+    const fights = FIGHTS.map((fight) => recordedFights.get(fight.id));
+    for (const record of fights)
+      expect(record?.phaseChanges.length, `${String(record?.id)} changed phase`).toBeGreaterThan(0);
+    const died = fights.filter((record) => record?.deathStart !== null && record?.deathStart !== undefined);
+    expect(died.length, "a boss's death started").toBeGreaterThan(0);
+    for (const record of died)
+      expect(record?.ticks, `${String(record?.id)} was followed past its death start`).toBeGreaterThan(
+        record?.deathStart ?? 0,
+      );
+  });
 
   it("covers every required behaviour for every weapon over full-length runs", () => {
     expect(
