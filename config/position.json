@@ -136,6 +136,20 @@
       ]
     },
     {
+      "id": "shards",
+      "name": "Shards (cosmetics)",
+      "state": "In progress: milestones 1 to 11 and 13 merged; milestone 12 has PR 1, PR 2 and its follow-up merged, and replay slice 1 (#375) approved",
+      "summary": "Shards buy looks only, never power (owner rule 2026-11-13). Merged on main: the catalog in src/gameplay/progression/cosmetics/*.json (slots, families, tiers, collections, items); state, merge and caps in src/domain/cosmetics.ts; daily-claim receipts; the Shop SHARDS tab (src/presentation/screens/shard-shelves.ts); draw hooks for blade, swing trail and hit sparks in runs (#332); the passport title and banner, collections and named loadouts with identity-based merge (#345, #359; src/domain/cosmetic-loadouts.ts); plain item names and one Rootbound palette (#368). Each wearer keeps its own loadout and a blade-hit burst names its blade (BurstSource), so a replay racer and the live player each show their own look: #375, approved, merging once CI is green. Item evolution is not scheduled (lead's decision). Every build target must deploy close together: builds before #345 strip createdAt, home and deletedLoadouts from saved loadouts.",
+      "next": "Replay cards: show the recorded player's title and banner on the replay list row, the replay card and a leaderboard replay, with resolveCosmeticStyles(catalog, record.look.cosmetics, calm) and drawBannerBand (the passport's code). Agreed with the replay overhaul on 2026-11-21: ReplayLook.cosmetics is the Shards Loadout, filled with loadoutOf(COSMETIC_CATALOG, PROFILE.cosmetics()) at run start by replay PR 10, which also draws it in watch and caps the entry count; the viewer's calm setting wins; the feed and leaderboard summaries carry no cosmetics. This waits until replay PR 6 (store) and PR 8 (switch) put the new records in the list; until then the list reads the old capsules, which carry no cosmetics. Add a test that a record with an unknown id draws the defaults.",
+      "owner_action": "",
+      "evidence": [
+        "plans/active/REPLAY_OVERHAUL_PLAN.md",
+        "https://github.com/shaku1z/tear/pull/345",
+        "https://github.com/shaku1z/tear/pull/368",
+        "https://github.com/shaku1z/tear/pull/375"
+      ]
+    },
+    {
       "id": "firebase",
       "name": "Firebase",
       "state": "In progress: PR 1 merged and its rules deployed (2026-11-21); PR 2a (leaderboard spacing by the server's clock, rules only) open; PR 2 (modular SDK) and PR 3 (App Check) follow",
