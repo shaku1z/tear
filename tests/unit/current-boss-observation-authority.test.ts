@@ -122,6 +122,12 @@ describe("current boss observation authority", () => {
     expect(projectLiveBossObservation(boss)?.phase).toBe("3");
   });
 
+  it("projects a rebuild on the home stage of the boss it rebuilds", () => {
+    const harness = createEnemyHarness();
+    const boss = new harness.types.RootboundRebuild(CONFIG.view.w / 2, CONFIG.world.groundY - CONFIG.boss.h / 2);
+    expect(projectLiveBossObservation(boss)).toMatchObject({ id: "rootbound-rebuild", homeStage: "verdant-sanctum" });
+  });
+
   it("rejects canonical scenario subject or specialized mechanic drift", () => {
     const rootbound = scenarioCatalog.find((entry) => entry.id === "rootbound-graft-anchor-destruction");
     const bloom = scenarioCatalog.find((entry) => entry.id === "verdant-bloom-well-cycle");

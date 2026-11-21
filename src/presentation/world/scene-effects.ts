@@ -205,6 +205,46 @@ export function renderGroundHazards(canvas: CanvasRenderingContext2D, snapshot: 
   }
 }
 
+/** A seam the boss drove along the floor (Aldric's, the new Rootbound's Root Seam), in its zone colour. */
+function drawSeam(
+  canvas: CanvasRenderingContext2D,
+  zone: BossZoneVisualSnapshot,
+  snapshot: SceneEffectsSnapshot,
+  x0: number,
+  width: number,
+): void {
+  const ground = snapshot.groundY,
+    now = snapshot.timeMilliseconds,
+    pulse = 0.5 + 0.5 * Math.sin(now / 140);
+  const amount = clamp(zone.life / (zone.maximumLife || snapshot.seamLife), 0, 1),
+    direction = zone.direction || 1;
+  canvas.globalAlpha = 0.24 + amount * 0.68;
+  canvas.strokeStyle = snapshot.zoneColor;
+  canvas.lineWidth = 5;
+  canvas.beginPath();
+  canvas.moveTo(x0, ground - 2);
+  for (let index = 1; index <= 6; index += 1)
+    canvas.lineTo(x0 + (width * index) / 6, ground - 2 - (index % 2 ? 5 * amount : 0));
+  canvas.stroke();
+  canvas.globalAlpha = 0.65 * amount;
+  canvas.fillStyle = "#ffd66e";
+  for (let index = 1; index < 5; index += 1) {
+    const x = x0 + (width * index) / 5,
+      tip = x + direction * 8;
+    canvas.beginPath();
+    canvas.moveTo(x - direction * 5, ground - 10);
+    canvas.lineTo(tip, ground - 5);
+    canvas.lineTo(x - direction * 5, ground);
+    canvas.closePath();
+    canvas.fill();
+  }
+  if (!snapshot.lowGraphics) {
+    const x = x0 + ((now / 5 + zone.x) % width);
+    canvas.globalAlpha = 0.6 * amount;
+    canvas.fillRect(x, ground - 18 - 12 * pulse, 3, 3);
+  }
+}
+
 /**
  * A bramble row (the new Rootbound's Bramble Rows): while it warns, thorn tips push up through the floor along
  * its width, higher as the burn nears; while it burns, the thorns stand tall.
@@ -362,33 +402,7 @@ function drawZone(
       canvas.fillRect(x0 + 2, ground - (active ? 4 : 2), width - 4, active ? 4 : 2);
     }
   } else if (zone.kind === "seam") {
-    const amount = clamp(zone.life / (zone.maximumLife || snapshot.seamLife), 0, 1),
-      direction = zone.direction || 1;
-    canvas.globalAlpha = 0.24 + amount * 0.68;
-    canvas.strokeStyle = snapshot.zoneColor;
-    canvas.lineWidth = 5;
-    canvas.beginPath();
-    canvas.moveTo(x0, ground - 2);
-    for (let index = 1; index <= 6; index += 1)
-      canvas.lineTo(x0 + (width * index) / 6, ground - 2 - (index % 2 ? 5 * amount : 0));
-    canvas.stroke();
-    canvas.globalAlpha = 0.65 * amount;
-    canvas.fillStyle = "#ffd66e";
-    for (let index = 1; index < 5; index += 1) {
-      const x = x0 + (width * index) / 5,
-        tip = x + direction * 8;
-      canvas.beginPath();
-      canvas.moveTo(x - direction * 5, ground - 10);
-      canvas.lineTo(tip, ground - 5);
-      canvas.lineTo(x - direction * 5, ground);
-      canvas.closePath();
-      canvas.fill();
-    }
-    if (!snapshot.lowGraphics) {
-      const x = x0 + ((now / 5 + zone.x) % width);
-      canvas.globalAlpha = 0.6 * amount;
-      canvas.fillRect(x, ground - 18 - 12 * pulse, 3, 3);
-    }
+    drawSeam(canvas, zone, snapshot, x0, width);
   } else if (zone.kind === "bramble") {
     drawBramble(canvas, zone, snapshot, x0, width);
   } else if (zone.kind === "trail") {
