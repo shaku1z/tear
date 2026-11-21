@@ -336,11 +336,10 @@ export function createMirrorTypes(dependencies: MirrorDependencies) {
         this._wtT = 2.2;
         this.juice({ txt: "FINAL REFLECTION", x: h.x, y: h.y - 84, big: true });
       } // the reflection self-dissolves at P3
-      // the release BEAT: a deep slow-mo punch so each unseal lands like an event
+      // the release BEAT: a punch so each unseal lands like an event; the fight never slows for it
       this.juice({
         shake: ph === 3 ? 13 : 10,
         flash: ph === 3 ? 0.4 : 0.28,
-        slowmo: 0.55,
         zoom: CONFIG.juice.zoomBig,
         hitstop: CONFIG.hitStop.big,
       });
