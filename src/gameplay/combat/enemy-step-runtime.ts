@@ -34,6 +34,8 @@ export interface EnemyStepActor {
   packAttackAuthorized?: boolean;
   lockPackAssignment?(role: "line" | "flank", flank: -1 | 1, duration: number): void;
   tickTimers(dt: number): void;
+  /** Ends the live move on the tick a boss's phase changes (enemy-base.ts). */
+  noticePhase?(): void;
   updateDeath(dt: number): boolean;
   tickStatus(dt: number): void;
   update(dt: number, platforms: readonly unknown[], player: unknown, projectiles: unknown[]): void;
@@ -84,6 +86,7 @@ export function stepEnemyActors(options: EnemyActorStepOptions): boolean {
       enemy.x = Math.max(enemy.hw, Math.min(enemy.x, options.viewportWidth - enemy.hw));
       continue;
     }
+    enemy.noticePhase?.();
     if (enemy.stun > 0) {
       enemy.tickTimers(options.dt);
       continue;

@@ -111,7 +111,7 @@ candidate is integrated through its reviewed pull request.
   `111` artifact files.
 - Preview rehearsal run `32572769987` succeeded from the same SHA; job
   `97030609365` published only `tear-preview` at
-  `https://tear-preview.shatheartboy.workers.dev` with Cloudflare version
+  the preview address of that time (now `https://preview.tearblade.com`) with Cloudflare version
   `940bfa1c-24dd-4d29-a78b-e3164abfd28d`.
 - The live preview `build-info.json` exactly reports repository `shaku1z/tear`,
   SHA `9b545b0382fb8c015da7a3410932a1d09e88750b`, target `standalone`, hash

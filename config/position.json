@@ -53,12 +53,14 @@
     {
       "id": "verdant-gameplay",
       "name": "Verdant Sanctum gameplay",
-      "state": "In progress: rebuild from scratch, plan under the lead's review",
+      "state": "In progress: slice 1 of 7 (the two rules) in review",
       "summary": "The owner rejected the Verdant gameplay a third time on 2026-11-20: the shared Verdant base is slop, move visuals linger after the move, and Verdant leans on tells far more than any other boss. Verdant's boss, enemies and stage are rebuilt from scratch in the pattern of Aldric, the Echo and the Colossus, keeping only the approved Rootbound seed-pod figure and the drawn background. Measured on main 6fb1a7cd: a scripted player takes 2.8, 1.1 and 0 hits per 10 s from today's Rootbound across its three phases, against 4 to 7 from the reference bosses; its Phase III does not move; its two phase cinematics block 12.9 s of a 37 s fight; it draws 16 tell marks against Aldric's 6. The plan adds two rules over every boss and enemy (nothing outlives its move, tell weight) and builds the new Verdant on the engineering channel until the owner approves it on preview.",
-      "next": "The lead reviews the plan; then slice 1, the two rules over every boss and enemy.",
+      "next": "Slice 1 merges: every boss and enemy is held to the two rules, with Rootbound, White Hart and Rimehound exempt until rebuilt. Then slice 2, the new Rootbound Phase I on the engineering channel.",
       "owner_action": "",
       "evidence": [
         "plans/active/VERDANT_PALE_REBUILD.md",
+        "tests/unit/move-visual-lifetime.test.ts",
+        "tests/unit/boss-tell-weight.test.ts",
         "plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md"
       ]
     },
@@ -114,9 +116,9 @@
     {
       "id": "playtest-tool",
       "name": "Playtest tool",
-      "state": "Stage 2 under way: stage 1 is done (pnpm playtest bosses and sweep); pnpm playtest waves opens any Adventure wave directly, runs plays whole runs from wave 1, enemies meets each enemy kind alone, and coverage lists what the game defines that no report brought into play",
+      "state": "Stage 2 under way: stage 1 is done (pnpm playtest bosses and sweep); pnpm playtest waves opens any Adventure wave directly, runs plays whole runs from wave 1, enemies meets each enemy kind alone, coverage lists what the game defines that no report brought into play, and --compare prints what changed against another commit",
       "summary": "One command, pnpm playtest, that plays the game headless with scripted players on fixed seeds and reports clear rates, time to kill, damage taken and differences between builds. It is built from the working parts of TearBench and the scripted player and replaces both names. Verified on 2026-11-16: the scripted player runs headless at 13 to 15 times real time and the same seed reproduces exactly.",
-      "next": "--compare: the same situations and seeds on another commit, printing only what changed.",
+      "next": "Stage 2's last item (every boss phase, wave and enemy kind as a row that starts directly), then stage 3: a stronger player.",
       "owner_action": "",
       "evidence": [
         "plans/active/PLAYTEST_TOOL_PLAN.md"
@@ -136,13 +138,14 @@
     {
       "id": "firebase",
       "name": "Firebase",
-      "state": "In progress: PR 1 (rules tests and hardened rules) open",
-      "summary": "Firestore rules for saves, leaderboards (score boards and Gauntlet clear boards), statistics and replays are tested under the local emulator, allowed and refused writes both, and the game's own adapter runs against them. The game still loads the 10.12.2 compat SDK from gstatic; App Check is not wired; Remote Config v1 is still read.",
-      "next": "Merge PR 1, then PR 2: the modular SDK bundled into the standalone build only.",
-      "owner_action": "Deploy the rules from PR 1 once it merges.",
+      "state": "In progress: PR 1 merged and its rules deployed (2026-11-21); PR 2a (leaderboard spacing by the server's clock, rules only) open; PR 2 (modular SDK) and PR 3 (App Check) follow",
+      "summary": "Firestore rules for saves, leaderboards (score boards and Gauntlet clear boards), statistics and replays are tested under the local emulator, allowed and refused writes both, and the game's own adapter runs against them; they are live on tear-682cf. The game still loads the 10.12.2 compat SDK from gstatic; App Check is not wired; Remote Config v1 is still read.",
+      "next": "Merge PR 2a and have the owner deploy its rules; then PR 2, the modular SDK, which writes the server's clock on each best.",
+      "owner_action": "Deploy the rules from PR 2a once it merges, before the PR 2 build reaches players.",
       "evidence": [
         "plans/active/FIREBASE_REFRESH.md",
-        "tests/rules/firestore-rules.test.ts"
+        "tests/rules/firestore-rules.test.ts",
+        "https://github.com/shaku1z/tear/pull/349"
       ]
     },
     {

@@ -1,4 +1,5 @@
 // What the Validate workflow must do, tested by behaviour rather than by its exact text.
+import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import vm from "node:vm";
@@ -644,6 +645,36 @@ describe("Cloudflare deploy configs", () => {
       const directories = [...read(file).matchAll(/"directory":\s*"([^"]*)"/gu)].map((match) => match[1]);
       expect(directories, file).toEqual(["./dist/standalone"]);
     }
+  });
+
+  // The default Cloudflare subdomain of a Worker contains the account name, and this repository is public.
+  it("keep the Worker's default Cloudflare subdomain and per-version preview addresses off", () => {
+    expect(read("wrangler.jsonc")).toMatch(/"workers_dev":\s*false/u);
+    const preview = read("wrangler.preview.jsonc");
+    expect(preview).toMatch(/"workers_dev":\s*false/u);
+    expect(preview).toMatch(/"preview_urls":\s*false/u);
+    expect(preview).toMatch(
+      /"routes":\s*\[\s*\{\s*"pattern":\s*"preview\.tearblade\.com",\s*"custom_domain":\s*true\s*\}\s*\]/u,
+    );
+  });
+
+  it("leave no workers address and no account name in any tracked text file", () => {
+    // Pieces, so this file does not contain what it forbids. The owner's e-mail address is the Git identity the
+    // commit guard requires, not the Cloudflare account name, so only that exact form is allowed.
+    const forbidden = [["workers", "\\.dev"].join(""), ["shathe", "artboy"].join("")].join("|");
+    const email = ["shathe", "artboy@gmail.com"].join("");
+    let found = "";
+    try {
+      found = execFileSync("git", ["grep", "-I", "-i", "-n", "-E", forbidden], { cwd: root, encoding: "utf8" });
+    } catch (error) {
+      if (error.status !== 1) throw error; // 1 means no match, which is the pass
+    }
+    const offending = found
+      .split("\n")
+      .filter(Boolean)
+      .filter((line) => new RegExp(forbidden, "iu").test(line.replaceAll(email, "")))
+      .map((line) => line.split(":", 2).join(":"));
+    expect(offending).toEqual([]);
   });
 });
 
