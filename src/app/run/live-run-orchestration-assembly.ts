@@ -1,3 +1,4 @@
+import type { LiveReplayTapSeams } from "../replay/live-replay-tap-slot";
 import type { AttackPresentationCueSink } from "../../gameplay/combat/attack-presentation-cue";
 import type { LiveCampaignTrainingAssembly } from "../campaign/live-campaign-training-assembly";
 import type { LiveCanonicalCombatHost } from "../combat/live-canonical-state";
@@ -29,6 +30,7 @@ export interface LiveRunOrchestrationAssemblyOptions {
   readonly ghostRecording: Pick<LiveGhostRecording, "career" | "frames" | "opening">;
   readonly ghostPractice: LiveGhostPracticeSessionState;
   readonly chase: Pick<LiveGhostChaseRuntime, "installed">;
+  readonly replayTap: Pick<LiveReplayTapSeams, "runStarted">;
   readonly attackPresentation: AttackPresentationCueSink;
   readonly hudFeedback: Pick<LiveHudFeedbackState, "restore">;
   readonly journals: Pick<LiveTestBuildJournals, "outcomeChronology">;
@@ -97,6 +99,7 @@ export function assembleLiveRunOrchestration(options: LiveRunOrchestrationAssemb
     runInstalled: (run) => {
       options.chase.installed(run);
     },
+    runStarted: options.replayTap.runStarted,
     selectedBoss: () => session.selectedBoss(),
     worldServices: world.context.services,
     applySettings,

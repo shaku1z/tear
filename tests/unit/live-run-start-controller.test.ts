@@ -1566,6 +1566,7 @@ describe("LiveRunStartController", () => {
         cinematics: "full",
         playedChapters: [],
       }),
+      openReplayRecord: () => events.push("replay-record"),
       resetRunRandom: () => events.push("random"),
       installSession: (session) => {
         installedSeed = session.runSeed;
@@ -1589,6 +1590,7 @@ describe("LiveRunStartController", () => {
     expect(session.voidSeed).toBeGreaterThan(0);
     expect(events).toEqual([
       "replace",
+      "replay-record",
       "world",
       "clocks",
       "random",
