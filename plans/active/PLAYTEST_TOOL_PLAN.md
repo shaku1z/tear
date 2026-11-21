@@ -499,6 +499,16 @@ Open after it, for whoever picks this up (pull request 377):
 - The headless pause above is with the replay owner. The scripted player pauses only when its safety check
   rejects an observation, never in play.
 
+Named gaps the Verdant tuning step found (2026-11-21, plans/active/VERDANT_PALE_REBUILD.md 2.4). The lead
+decides when; nobody fixes them now:
+- The headless players never throw the blade. Not one thrown tick at any boss in the Phase I fights measured
+  there, so a boss's answer to throws (a deflect, a cut by a thrown blade) is never played.
+- The cuts-objects player cuts only the stage's combat objects (`readCuttableObjects`). A boss part a blade
+  cuts (`cutPoint()` on the enemy, the new Rootbound's planted vine) is not one, so the Root Seam is never cut.
+- No boss declares `tells()`, so the tell-avoiding players read only state names ending in wind, windup or
+  aim (`bossTells`). Boss zones (rows, seams) warn the screen but not the player, and their hits count as
+  unmarked.
+
 Done when:
 - [ ] Every boss phase, every wave of each biome and every enemy kind is a row that starts directly, in under 1 s each.
 - [x] `pnpm playtest runs` reports where runs end and per-wave time and health cost for 3 modes, 3 difficulties and 5 weapons.
