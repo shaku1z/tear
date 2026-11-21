@@ -149,6 +149,22 @@ async function forcePhase(page, bossId, fraction, cinematicId) {
   return released;
 }
 
+// A boss whose phase changes in the fight: crossing the mark changes the phase with no scene, and the
+// boss keeps fighting (plans/active/CINEMATICS_OVERHAUL.md).
+async function crossPhaseInFight(page, bossId, fraction, phase) {
+  await page.evaluate((value) => window.__PANTHEON_TEST.setBossHealthFraction(value), fraction);
+  await page.waitForFunction(
+    ({ id, expected }) => window.TEAR_WEAPON_DEBUG?.().enemies.find((enemy) => enemy.bossId === id)?.phase === expected,
+    { id: bossId, expected: phase },
+    { timeout: STATE_WAIT_MS },
+  );
+  const entered = await bossSnapshot(page, bossId);
+  const cinema = await page.evaluate(() => window.__PANTHEON_TEST.state());
+  assert.equal(cinema.active, false, `${bossId} phase ${String(phase)} must not start a scene`);
+  assert.equal(entered.cinematicPending, false, `${bossId} phase ${String(phase)} must not request a scene`);
+  return entered;
+}
+
 withJourney({ name: "boss oracle parity", recordFrames: true }, async ({ page, waitArmed, clickLabel }) => {
   if (!REQUIRE_POINTER_LOCK) {
     // Decline pointer lock for the whole run, in this page and after any reload. Dropping a lock
@@ -214,22 +230,22 @@ withJourney({ name: "boss oracle parity", recordFrames: true }, async ({ page, w
   const retriedStage = await page.evaluate(() => window.__PANTHEON_TEST.bossStage("rootbound"));
   assert.equal(retriedStage.currentId, retriedStage.authoredId, "Rootbound retry must return to Verdant Sanctum");
 
-  // Warden and Colossus both have two serialized transformation gates. Crossing
-  // either gate used to strand cinematicRequest and freeze the boss forever.
-  for (const [bossId, firstScene, finalScene] of [
-    ["warden", "warden-unchained", "warden-nothing-left"],
-    ["colossus", "colossus-breach", "colossus-meltdown"],
-  ]) {
+  // The Warden and the Colossus change phase in the fight: no scene starts, and the boss's AI keeps
+  // running through both phase changes.
+  for (const bossId of ["warden", "colossus"]) {
     await startReadyBoss(page, bossId);
-    const phaseTwo = await forcePhase(page, bossId, 0.5, firstScene);
-    assert.equal(phaseTwo.phase, 2, `${bossId} must enter phase two`);
+    const phaseTwo = await crossPhaseInFight(page, bossId, 0.5, 2);
     const phaseTwoMoving = await waitForBossSimulationAdvance(page, bossId, phaseTwo.aliveT, 0.6);
-    assert.ok(phaseTwoMoving.aliveT > phaseTwo.aliveT + 0.6, `${bossId} phase-two AI must resume after ritual`);
+    assert.ok(phaseTwoMoving.aliveT > phaseTwo.aliveT + 0.6, `${bossId} phase-two AI must keep running`);
 
-    const phaseThree = await forcePhase(page, bossId, 0.2, finalScene);
-    assert.equal(phaseThree.phase, 3, `${bossId} must enter phase three`);
+    const phaseThree = await crossPhaseInFight(page, bossId, 0.2, 3);
     const phaseThreeMoving = await waitForBossSimulationAdvance(page, bossId, phaseThree.aliveT, 0.6);
-    assert.ok(phaseThreeMoving.aliveT > phaseThree.aliveT + 0.6, `${bossId} final-phase AI must resume after ritual`);
+    assert.ok(phaseThreeMoving.aliveT > phaseThree.aliveT + 0.6, `${bossId} final-phase AI must keep running`);
+    assert.equal(
+      (await page.evaluate(() => window.__PANTHEON_TEST.state())).active,
+      false,
+      `${bossId} must never start a scene`,
+    );
   }
 
   // Aldric's fire turn is immediate, then the crownfall and resurrection are

@@ -9,6 +9,7 @@ import { createEnemyTypes } from "../../src/gameplay/entities/enemies";
 import { createProjectile } from "../../src/gameplay/entities/projectile";
 import { stepEnemyActors } from "../../src/gameplay/combat/enemy-step-runtime";
 import { BossRitualController } from "../../src/gameplay/entities/boss-ritual-controller";
+import { bossPhaseMarks } from "../../src/gameplay/run/boss-definitions";
 
 const FX = {
   burst() {
@@ -190,7 +191,8 @@ describe("boss ritual gate", () => {
 
   it("never strands a phase transformation request on the actor", () => {
     const types = createTestEnemyTypes();
-    const warden = new types.Warden(300, CONFIG.world.groundY - 60) as unknown as {
+    // Rootbound still changes phase through a ritual (the Verdant rebuild replaces it).
+    const boss = new types.Rootbound(300, CONFIG.world.groundY - 60) as unknown as {
       hp: number;
       maxHp: number;
       spawnT: number;
@@ -198,10 +200,10 @@ describe("boss ritual gate", () => {
       stun: number;
       cinematicRequest?: unknown;
     };
-    warden.spawnT = 0;
-    warden.introT = 0;
-    warden.stun = 0;
-    warden.hp = warden.maxHp * 0.5; // cross the 0.65 phase mark -> phase 2 ritual
+    boss.spawnT = 0;
+    boss.introT = 0;
+    boss.stun = 0;
+    boss.hp = boss.maxHp * (bossPhaseMarks("rootbound")[0] - 0.01); // cross the first mark -> phase 2 ritual
 
     const player = {
       x: 400,
@@ -218,7 +220,7 @@ describe("boss ritual gate", () => {
     let started = false;
     stepEnemyActors({
       dt: 1 / 120,
-      enemies: [warden as never],
+      enemies: [boss as never],
       platforms,
       player,
       projectiles: [],
@@ -246,6 +248,6 @@ describe("boss ritual gate", () => {
     });
 
     expect(started, "the phase ritual must actually start").toBe(true);
-    expect(warden.cinematicRequest ?? null, "a stranded request freezes the boss forever").toBe(null);
+    expect(boss.cinematicRequest ?? null, "a stranded request freezes the boss forever").toBe(null);
   });
 });
