@@ -53,7 +53,7 @@ describe("keyboard binding table", () => {
     expect(keyCodeLabel("Escape")).toBe("ESC");
     expect(keyboardLabel("jump")).toBe("W / SPACE / ↑");
     expect(keyboardLabel("pause")).toBe("ESC / P");
-    expect(keyboardLabel("quick-spawn")).toBe("1–8");
+    expect(keyboardLabel("toggle-no-damage")).toBe("6");
     expect(keyboardLabel("confirm")).toBe("SPACE");
   });
 

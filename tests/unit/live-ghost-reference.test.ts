@@ -1,5 +1,5 @@
 import * as browserReference from "../../src/app/replay/browser-live-ghost-reference";
-import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
+import { createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
 import { drawLiveGhostSplits } from "../../src/presentation/world/live-ghost-reference";
 import { createLiveGhostChase } from "../../src/app/replay/ghost-chase-composition";
 import { describe, expect, it, vi } from "vitest";

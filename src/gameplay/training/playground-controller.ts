@@ -1,18 +1,7 @@
 import { ENEMY_IDENTITY_IDS } from "../run/content-director";
-import { anyKeyIn, keyCodes } from "../../domain/keyboard-bindings";
+import { anyKeyIn } from "../../domain/keyboard-bindings";
 
-export const PLAYGROUND_HOTKEY_KINDS = Object.freeze([
-  "charger",
-  "ranged",
-  "flyer",
-  "bomber",
-  "armored",
-  "wraith",
-  "chimera",
-  "priest",
-] as const);
-
-/** Menu projection of the canonical enemy identity authority; hotkeys remain the stable eight-key subset. */
+/** Menu projection of the canonical enemy identity authority. */
 export const PLAYGROUND_ALL_KINDS = ENEMY_IDENTITY_IDS;
 
 export type PlaygroundEnemyKind = (typeof PLAYGROUND_ALL_KINDS)[number];
@@ -34,13 +23,6 @@ export interface PlaygroundDifficulty {
   readonly mods?: Readonly<{ dmg?: number; hp?: number; count?: number; coin?: number; score?: number }>;
 }
 
-export interface PlaygroundRunSnapshot {
-  readonly difficulty: string;
-  readonly difficultyDamage: number;
-  readonly bossIndex: number;
-  readonly bossOrder: readonly string[];
-}
-
 export interface PlaygroundPlayerSnapshot {
   readonly x: number;
   readonly y: number;
@@ -54,7 +36,6 @@ export interface PlaygroundEnemySnapshot {
   readonly id: string;
   readonly dead: boolean;
   readonly tutorialDummy: boolean;
-  readonly mirrorBoss: boolean;
   readonly hp: number;
   readonly maxHp: number;
 }
@@ -70,13 +51,12 @@ export interface PlaygroundUpgradeSnapshot {
 export interface PlaygroundInputSnapshot {
   readonly pressed: ReadonlySet<string>;
   readonly player: PlaygroundPlayerSnapshot;
-  readonly run: PlaygroundRunSnapshot;
   readonly enemies: readonly PlaygroundEnemySnapshot[];
   readonly viewportWidth: number;
 }
 
 export type PlaygroundIntent =
-  | Readonly<{ type: "announce"; text: string; emphasis: boolean; color: string }>
+  | Readonly<{ type: "announce"; text: string }>
   | Readonly<{
       type: "apply-difficulty";
       id: string;
@@ -90,7 +70,6 @@ export type PlaygroundIntent =
   | Readonly<{ type: "apply-upgrade"; upgradeId: string }>
   | Readonly<{ type: "clear-enemies" }>
   | Readonly<{ type: "clear-projectiles" }>
-  | Readonly<{ type: "dismiss-mirror"; enemyId: string }>
   | Readonly<{ type: "heal-player" }>
   | Readonly<{ type: "navigate"; screen: "pgmenu" | "pglab" | "playing" }>
   | Readonly<{ type: "release-pointer" }>
@@ -99,7 +78,6 @@ export type PlaygroundIntent =
   | Readonly<{ type: "select-arena"; arena: number }>
   | Readonly<{ type: "spawn"; kind: string; count: number; hpScale: number; role?: "dummy" | "boss"; x?: number }>
   | Readonly<{ type: "stabilize-dummy"; enemyId: string; minimumStun: number; healBelow: number }>
-  | Readonly<{ type: "summon-boss"; bossId: string; nextBossIndex: number }>
   | Readonly<{ type: "tier-up"; upgradeId: string }>
   | Readonly<{ type: "wipe" }>;
 
@@ -124,8 +102,12 @@ export function trainingPlatforms(
   ]);
 }
 
+/** An enemy spawn from the menu, as the repeat key brings it back: kind, count and health. */
+export type PlaygroundSpawn = Extract<PlaygroundIntent, { type: "spawn" }>;
+
 export class PlaygroundController {
   readonly state: PlaygroundState;
+  #lastSpawn: PlaygroundSpawn | null = null;
 
   constructor(initial?: Partial<PlaygroundState>) {
     this.state = {
@@ -172,8 +154,20 @@ export class PlaygroundController {
     return (stageNames[this.state.arena] ?? "TRAINING GROUNDS").toUpperCase();
   }
 
-  spawn(kind: string): PlaygroundIntent {
-    return { type: "spawn", kind, count: this.state.count || 1, hpScale: this.state.hpMultiplier || 1 };
+  spawn(kind: string): PlaygroundSpawn {
+    const spawn: PlaygroundSpawn = {
+      type: "spawn",
+      kind,
+      count: this.state.count || 1,
+      hpScale: this.state.hpMultiplier || 1,
+    };
+    this.#lastSpawn = spawn;
+    return spawn;
+  }
+
+  /** The last enemy spawn again (the repeat key), or null before the first. */
+  get lastSpawn(): PlaygroundSpawn | null {
+    return this.#lastSpawn;
   }
 
   spawnDummy(player: PlaygroundPlayerSnapshot, viewportWidth: number): PlaygroundIntent {
@@ -203,9 +197,9 @@ export class PlaygroundController {
     this.state[modifier] = !this.state[modifier];
   }
 
-  update(snapshot: PlaygroundInputSnapshot, colors: Readonly<Record<string, string>>): readonly PlaygroundIntent[] {
+  update(snapshot: PlaygroundInputSnapshot): readonly PlaygroundIntent[] {
     const intents: PlaygroundIntent[] = [],
-      { pressed, player, enemies, run } = snapshot;
+      { pressed, player, enemies } = snapshot;
     if (this.state.god && player.hp < player.maxHp) intents.push({ type: "heal-player" });
     for (const enemy of enemies)
       if (enemy.tutorialDummy && !enemy.dead)
@@ -213,51 +207,25 @@ export class PlaygroundController {
 
     if (anyKeyIn(pressed, "playground-menu"))
       return [{ type: "navigate", screen: "pgmenu" }, { type: "release-pointer" }];
-    const spawnKeys = keyCodes("quick-spawn");
-    for (let index = 0; index < PLAYGROUND_HOTKEY_KINDS.length; index++) {
-      const kind = PLAYGROUND_HOTKEY_KINDS[index];
-      const code = spawnKeys[index];
-      if (kind && code !== undefined && pressed.has(code))
-        intents.push(this.spawn(kind), {
-          type: "announce",
-          text: kind.toUpperCase(),
-          emphasis: false,
-          color: colors[kind] ?? "#000",
-        });
-    }
-    if (anyKeyIn(pressed, "spawn-dummy"))
-      intents.push(this.spawnDummy(player, snapshot.viewportWidth), {
-        type: "announce",
-        text: "DUMMY",
-        emphasis: false,
-        color: "#888",
-      });
-    if (anyKeyIn(pressed, "summon-boss")) {
-      const bossId = run.bossOrder[run.bossIndex % run.bossOrder.length];
-      if (bossId) intents.push({ type: "summon-boss", bossId, nextBossIndex: run.bossIndex + 1 });
-    }
+    const announce = (text: string): PlaygroundIntent => ({ type: "announce", text });
+    if (anyKeyIn(pressed, "heal")) intents.push({ type: "heal-player" }, announce("HEALED"));
     if (anyKeyIn(pressed, "clear-enemies"))
+      intents.push({ type: "clear-enemies" }, { type: "clear-projectiles" }, announce("CLEARED"));
+    if (anyKeyIn(pressed, "spawn-dummy"))
+      intents.push(this.spawnDummy(player, snapshot.viewportWidth), announce("DUMMY"));
+    if (anyKeyIn(pressed, "repeat-spawn")) {
+      const last = this.#lastSpawn;
       intents.push(
-        { type: "clear-enemies" },
-        { type: "clear-projectiles" },
-        { type: "announce", text: "CLEARED", emphasis: true, color: colors.perfect ?? "#fff" },
+        ...(last === null ? [announce("SPAWN ONE FROM THE MENU FIRST")] : [last, announce(last.kind.toUpperCase())]),
       );
-    if (anyKeyIn(pressed, "heal"))
-      intents.push({ type: "heal-player" }, { type: "announce", text: "HEALED", emphasis: true, color: "#1faf5a" });
-    if (anyKeyIn(pressed, "abilities"))
-      intents.push({ type: "navigate", screen: "pglab" }, { type: "release-pointer" });
-    if (anyKeyIn(pressed, "summon-echo")) {
-      const mirror = enemies.find((enemy) => enemy.mirrorBoss && !enemy.dead);
-      if (mirror)
-        intents.push(
-          { type: "dismiss-mirror", enemyId: mirror.id },
-          { type: "announce", text: "ECHO DISMISSED", emphasis: false, color: "#b06cff" },
-        );
-      else
-        intents.push(
-          { type: "summon-boss", bossId: "echo", nextBossIndex: run.bossIndex },
-          { type: "announce", text: "THE ECHO", emphasis: true, color: "#b06cff" },
-        );
+    }
+    if (anyKeyIn(pressed, "toggle-freeze")) {
+      this.toggle("freeze");
+      intents.push(announce(this.state.freeze ? "ENEMIES FROZEN" : "ENEMIES MOVE"));
+    }
+    if (anyKeyIn(pressed, "toggle-no-damage")) {
+      this.toggle("god");
+      intents.push(announce(this.state.god ? "NO DAMAGE ON" : "NO DAMAGE OFF"));
     }
     return intents;
   }

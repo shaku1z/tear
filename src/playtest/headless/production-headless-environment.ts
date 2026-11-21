@@ -5,19 +5,19 @@ import type { CanonicalGameplayState } from "../../gameplay/runtime/canonical-st
 import type { AuthoritativeInputSnapshot } from "../../gameplay/runtime/authoritative-input";
 import { TearGameplayEventBus, type TearGameplayEvent } from "../../gameplay/runtime/gameplay-events";
 import { stableVerificationHash } from "../../domain/hash";
-import type { createProductionCombatSimulation } from "../../tearbench/production-combat-simulation";
+import type { createProductionCombatSimulation } from "../../app/world/detached/combat-simulation";
 import {
   captureProductionReplayCheckpoint,
   captureProductionRewardSelection,
   createProductionGhostReplayComposition,
   type ProductionGhostReplayCompositionOptions,
   projectProductionReplayCanonicalState,
-  type ProductionReplayBootstrap,
   type ProductionApplicationFrameConfirm,
-} from "../../tearbench/production-replay-composition";
-import { productionRunSeed, type ProductionReplayWorld } from "../../tearbench/production-world-factory";
-import type { ProductionRunOpening, ProductionWaveRewardRuntime } from "../../tearbench/production-wave-reward-runtime";
-import type { ProductionWaveRewardIntent } from "../../tearbench/production-wave-reward-runtime";
+} from "../../app/world/detached/replay-composition";
+import type { ProductionReplayBootstrap } from "../../gameplay/snapshot/snapshot-contract";
+import { productionRunSeed, type ProductionReplayWorld } from "../../app/world/detached/world-factory";
+import type { ProductionRunOpening, ProductionWaveRewardRuntime } from "../../app/world/detached/wave-reward-runtime";
+import type { ProductionWaveRewardIntent } from "../../app/world/detached/wave-reward-runtime";
 import type { TearCausalEventV1, TearObservationV1, TearScenarioV1 } from "../../tearbench/contracts";
 import type { TearSnapshotV1 } from "../../gameplay/snapshot/snapshot-contract";
 import {

@@ -42,6 +42,8 @@ interface BrowserGamepadInternal extends BrowserGamepad {
   _dtLastDir: number;
   _dtT: number;
   _stickWas: boolean;
+  _viewWas: boolean;
+  _viewUsed: boolean;
   _release(): void;
   _resetTether(): void;
   _detectDoubleTapDash(gamepad: Gamepad, horizontalAxis: number, dt: number): void;
@@ -54,7 +56,23 @@ interface BrowserGamepadInternal extends BrowserGamepad {
   _downAny(gamepad: Gamepad, buttons: readonly number[]): boolean;
   /** Any button, or the left stick past the menu deadzone: an end screen waits for all of it to let go. */
   _anyMenuInputDown(gamepad: Gamepad): boolean;
+  /** The Playground layer on View; true while it holds the D-pad in play. */
+  _viewLayer(gamepad: Gamepad, uiMode: boolean): boolean;
+  /** Movement keys from the left stick, and from the D-pad unless the View layer holds it. */
+  _move(gamepad: Gamepad, ax: number, ay: number, deadL: number, dpad: boolean): void;
 }
+
+/**
+ * The Playground layer, held on View (button 8): the D-pad and Y press the Playground's shortcut
+ * keys from the binding table. No damage stays in the menu: no free button is a natural fit.
+ */
+const VIEW_LAYER: readonly (readonly [number, KeyboardAction])[] = [
+  [12, "heal"],
+  [13, "clear-enemies"],
+  [14, "spawn-dummy"],
+  [15, "repeat-spawn"],
+  [3, "toggle-freeze"],
+];
 
 // Temporary ESM Gamepad adapter for the classic game shell.
 export function createBrowserGamepad(dependencies: BrowserGamepadDependencies): Readonly<{
@@ -71,6 +89,7 @@ export function createBrowserGamepad(dependencies: BrowserGamepadDependencies): 
   //   A -> jump edge     B / RT -> dash edge     X / RB / LT -> throw (rmb)
   //   right stick -> radial blade aim via Input.stickAim (shared with touch STICK)
   //   Start -> pause edge          menus: dpad/stick nav + A confirm + B back
+  //   View -> Playground menu; held: D-pad and Y are the Playground shortcuts (VIEW_LAYER)
   const PAD_CONFIG: GamepadSettings = (CONFIG.pad = {
     dead: 0.22, // radial deadzone, both sticks
     menuRepeat: 0.24, // seconds between held-direction menu steps
@@ -121,6 +140,8 @@ export function createBrowserGamepad(dependencies: BrowserGamepadDependencies): 
     _dtLastDir: 0,
     _dtT: 999, // directional double-tap-dash tracking
     _stickWas: false,
+    _viewWas: false,
+    _viewUsed: false, // a View hold that pressed a shortcut is not a tap
 
     init() {
       window.addEventListener("gamepadconnected", (e) => {
@@ -247,9 +268,20 @@ export function createBrowserGamepad(dependencies: BrowserGamepadDependencies): 
     },
     glyph(index) {
       const style = this._glyphStyle();
-      const PS = { 0: "✕", 1: "◯", 2: "▢", 3: "△", 4: "L1", 5: "R1", 6: "L2", 7: "R2", 9: "Options" };
-      const XB = { 0: "A", 1: "B", 2: "X", 3: "Y", 4: "LB", 5: "RB", 6: "LT", 7: "RT", 9: "Menu" };
-      const GN = { 0: "South", 1: "East", 2: "West", 3: "North", 4: "LB", 5: "RB", 6: "LT", 7: "RT", 9: "Start" };
+      const PS = { 0: "✕", 1: "◯", 2: "▢", 3: "△", 4: "L1", 5: "R1", 6: "L2", 7: "R2", 8: "Create", 9: "Options" };
+      const XB = { 0: "A", 1: "B", 2: "X", 3: "Y", 4: "LB", 5: "RB", 6: "LT", 7: "RT", 8: "View", 9: "Menu" };
+      const GN = {
+        0: "South",
+        1: "East",
+        2: "West",
+        3: "North",
+        4: "LB",
+        5: "RB",
+        6: "LT",
+        7: "RT",
+        8: "Select",
+        9: "Start",
+      };
       const map: Readonly<Record<number, string>> = style === "playstation" ? PS : style === "generic" ? GN : XB;
       return map[index] ?? `#${String(index)}`;
     },
@@ -307,6 +339,29 @@ export function createBrowserGamepad(dependencies: BrowserGamepadDependencies): 
     _downAny(gp, arr) {
       return arr.some((i) => this._isDown(gp, i));
     },
+    // View: a tap (released with no shortcut pressed) is the Playground menu's key, which opens
+    // the menu in play and closes it in the menu; held in play, the D-pad and Y are the
+    // Playground's shortcuts instead of movement. Outside the Playground none of these keys acts.
+    _viewLayer(gp, uiMode) {
+      const view = this._isDown(gp, 8);
+      for (const [button, action] of VIEW_LAYER)
+        if (this._edge(gp, button) && view && !uiMode) {
+          Input.pressed.add(keyFor(action));
+          this._viewUsed = true;
+        }
+      if (this._edge(gp, 8)) this._viewUsed = false;
+      else if (!view && this._viewWas && !this._viewUsed)
+        Input.pressed.add(keyFor(uiMode ? "close-menu" : "playground-menu"));
+      this._viewWas = view;
+      return view && !uiMode;
+    },
+    // movement: left stick beyond the (tunable) left deadzone, or dpad, -> held keys
+    _move(gp, ax, ay, deadL, dpad) {
+      this._setHeld(keyFor("move-left"), ax < -deadL || (dpad && this._down(gp, 14)));
+      this._setHeld(keyFor("move-right"), ax > deadL || (dpad && this._down(gp, 15)));
+      this._setHeld(keyFor("move-up"), ay < -0.5 || (dpad && this._down(gp, 12))); // up (dash aim / climbs)
+      this._setHeld(keyFor("move-down"), ay > 0.55 || (dpad && this._down(gp, 13))); // hold to drop through platforms
+    },
     _anyMenuInputDown(gp) {
       const stick = Math.max(Math.abs(gp.axes[0] ?? 0), Math.abs(gp.axes[1] ?? 0));
       return stick > MENU_DEAD || gp.buttons.some((_, index) => this._isDown(gp, index));
@@ -349,6 +404,7 @@ export function createBrowserGamepad(dependencies: BrowserGamepadDependencies): 
         tDown = this._downAny(gp, P.tether);
       if (!tDown) this._tetherBlocked = false;
 
+      const layer = this._viewLayer(gp, uiMode); // true: the D-pad is the Playground layer, not movement
       if (uiMode) {
         // ---- menus: dpad / left stick step focus in ALL FOUR directions, A confirms,
         // B backs out. Left/Right were previously dropped; now emitted with dominant-
@@ -418,11 +474,7 @@ export function createBrowserGamepad(dependencies: BrowserGamepadDependencies): 
       Input.padScrollY = 0; // scroll intent is menu-only
       const deadL = PAD_CONFIG.deadL,
         deadR = PAD_CONFIG.deadR;
-      // movement: left stick beyond the (tunable) left deadzone, or dpad, -> held keys
-      this._setHeld(keyFor("move-left"), ax < -deadL || this._down(gp, 14));
-      this._setHeld(keyFor("move-right"), ax > deadL || this._down(gp, 15));
-      this._setHeld(keyFor("move-up"), ay < -0.5 || this._down(gp, 12)); // up (dash aim / climbs)
-      this._setHeld(keyFor("move-down"), ay > 0.55 || this._down(gp, 13)); // hold to drop through platforms
+      this._move(gp, ax, ay, deadL, !layer);
       Input.syncSemanticMovement();
 
       // actions resolved from the active preset (match the touch edges so every

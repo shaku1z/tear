@@ -8,7 +8,7 @@ import { TEAR_SIMULATION_TICKS_PER_SECOND } from "../tearbench/simulation-profil
 import { agentView, UNMARKED_HIT, type AttributedHits } from "./boss-fight";
 import { BOSS_PLAYER_IDS, createBossPlayer, type BossPlayer, type BossPlayerId } from "./boss-player";
 import { boxOverlaps, readPlayerBox, type PlayerBox } from "./boss-view";
-import { chapterState, CHAPTER_WAVE_LIVE, skipChapter } from "./headless/chapter";
+import { chapterHolds, skipChapter } from "./headless/chapter";
 import {
   createProductionHeadlessEnvironment,
   type ProductionHeadlessEnvironment,
@@ -55,6 +55,8 @@ export interface WaveResult extends WaveRequest {
   readonly graceTicks: number;
   /** Upgrades the player arrived with. */
   readonly upgrades: number;
+  /** Upgrades the drafts before the wave offered, by id: more than were taken. */
+  readonly offered: readonly string[];
   /** Where the player stood when defeated. */
   readonly diedAt?: Readonly<{ tick: number; x: number; y: number }>;
   /** Every enemy of the wave in the order it arrived. */
@@ -200,8 +202,7 @@ export function copyActors(world: WaveWorld): Readonly<{ projectiles: Projectile
 
 function start(environment: ProductionHeadlessEnvironment, request: WaveRequest): string | undefined {
   environment.reset(waveScenario(request));
-  if (chapterState(environment) !== CHAPTER_WAVE_LIVE && !skipChapter(environment))
-    return "the stage's story chapter did not end";
+  if (chapterHolds(environment) && !skipChapter(environment)) return "the stage's story chapter did not end";
   const run = environment.world().run() as unknown as RunView;
   return run.wave === request.wave
     ? undefined
@@ -213,11 +214,13 @@ function start(environment: ProductionHeadlessEnvironment, request: WaveRequest)
  * so the player has no upgrades from earlier waves.
  */
 export function playWave(request: WaveRequest, player: BossPlayer = createBossPlayer(request.player)): WaveResult {
+  const offered = new Set<string>();
   const environment = createProductionHeadlessEnvironment(
     request.build === "none"
       ? {}
       : {
           build: (choices) => {
+            for (const choice of choices) offered.add(choice.id);
             const scores = choices.map((choice) => buildWatchChoiceScore(choice.id, request.weapon));
             return scores.indexOf(Math.max(...scores));
           },
@@ -294,6 +297,7 @@ export function playWave(request: WaveRequest, player: BossPlayer = createBossPl
         : {}),
       graceTicks,
       upgrades,
+      offered: [...offered].sort(),
       ...(diedAt === undefined ? {} : { diedAt }),
       spawned,
       elites: spawned.filter((enemy) => enemy.affixes.length > 0).length,

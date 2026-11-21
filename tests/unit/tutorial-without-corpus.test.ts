@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import binding from "../../src/gameplay/training/tutorial-gold-binding.json";
 import type { LiveTutorialRuntime } from "../../src/gameplay/training/live-tutorial-runtime";
 import { createLiveTrainingHost, type LiveTrainingHostContext } from "../../src/app/training/training-host";
+import { createTrainingCallouts } from "../../src/app/training/training-coach";
 import {
   loadShippingTutorialGold,
   shippingTutorialGold,
@@ -24,6 +25,7 @@ describe("the tutorial without its demonstration corpus", () => {
     const host = createLiveTrainingHost({
       dependencies: { tutorialCompletionPersistence: undefined },
       state: { player: () => undefined },
+      callouts: createTrainingCallouts(),
     } as unknown as LiveTrainingHostContext);
     const statusAtStart: string[] = [];
     await host.startTutorial(() => {

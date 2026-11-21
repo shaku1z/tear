@@ -23,7 +23,6 @@ import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "../gameplay/snapsho
 import {
   BOSS_REGISTRY,
   DIFFICULTY_REGISTRY,
-  ENTITY_KIND_REGISTRY,
   EVENT_REGISTRY,
   GAMEPLAY_SCENARIO_SUBJECT_REGISTRY,
   HEADLESS_GAMEPLAY_SCENARIO_SUBJECT_IDS,
@@ -37,6 +36,7 @@ import {
   ENVIRONMENT_FIELD_SCENARIO_SUBJECT_REGISTRY,
   ENVIRONMENT_COMBAT_OBJECT_SCENARIO_SUBJECT_REGISTRY,
 } from "./registries";
+import { ENTITY_KIND_REGISTRY } from "../gameplay/snapshot/codec-ids";
 import { requiredInvariantIdsForSubject } from "./invariants";
 
 const MAX_COLLECTION = 100_000;

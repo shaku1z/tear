@@ -18,7 +18,11 @@
     "agents": ["src/agents/**"],
     "tearbench": ["src/tearbench/**"],
     "playtest": ["src/playtest/**"],
-    "app": ["src/app/**"],
+    "app": [
+      "src/app/{campaign,combat,engineering,interface,library,progress,replay,run,screens,shell,training}/**",
+      "src/app/world/*.ts"
+    ],
+    "detached-world": ["src/app/world/detached/**"],
     "entrypoints": ["src/entrypoints/**"],
     "ambient": ["src/*.d.ts"]
   },
@@ -43,11 +47,17 @@
       "domain": "any", "config": "any", "simulation": "any", "input": "any", "gameplay": "any", "replay": "any", "audio": "any",
       "persistence": "any", "platform": "any", "presentation": "any", "ghost": "any", "game-reference": "any", "diagnostics": "any"
     },
-    "playtest": { "domain": "any", "input": "any", "gameplay": "any", "agents": "any", "tearbench": "any" },
+    "playtest": {
+      "domain": "any", "input": "any", "gameplay": "any", "agents": "any", "tearbench": "any", "detached-world": "any"
+    },
     "app": {
       "domain": "any", "config": "any", "simulation": "any", "input": "any", "gameplay": "any", "replay": "any", "audio": "any",
       "persistence": "any", "platform": "any", "presentation": "any", "ghost": "any", "game-reference": "any", "diagnostics": "any",
-      "agents": "any", "tearbench": "any"
+      "agents": "any", "tearbench": "any", "detached-world": "any"
+    },
+    "detached-world": {
+      "domain": "any", "config": "any", "simulation": "any", "input": "any", "gameplay": "any", "presentation": "any",
+      "ghost": "any", "app": "any"
     },
     "entrypoints": {
       "domain": "any", "config": "any", "input": "any", "audio": "any", "persistence": "any", "platform": "any", "presentation": "any",

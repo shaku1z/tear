@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  COACH_CALLOUT_SECONDS,
   COACH_HELP_SECONDS,
   COACH_IDLE_SECONDS,
   COACH_LEARNED_SECONDS,
@@ -97,16 +98,43 @@ describe("training coach", () => {
     const coach = new TrainingCoach();
     const marks = coach.step(frame({ playground: { runKey: run } }));
     expect(marks[0]?.mark).toMatchObject({ id: "playground:help", tone: "info" });
-    expect(marks[0]?.mark.text).toBe("TAB menu  ·  U abilities  ·  1–8 spawn");
+    expect(marks[0]?.mark.text).toBe("TAB menu  ·  1 heal  ·  2 clear  ·  3 dummy  ·  4 repeat");
     let later = marks;
     for (let elapsed = 0; elapsed < COACH_HELP_SECONDS + 1; elapsed += 1)
       later = coach.step(frame({ deltaSeconds: 1, playground: { runKey: run } }));
     expect(ids(later)).toEqual([]);
     expect(ids(coach.step(frame({ playground: { runKey: run, arena: 2 } })))).toEqual(["playground:help"]);
-    // Touch and controller have no shortcuts: the help points at pause, which opens the menu.
-    for (const inputMode of ["touch", "gamepad"] as const) {
-      const help = new TrainingCoach().step(frame({ inputMode, playground: { runKey: run } }))[0]?.mark;
-      expect(help).toMatchObject({ id: "playground:help", text: "Pause for the Playground menu.", keys: ["PAUSE"] });
-    }
+    // A controller names its View layer; touch has no shortcuts, so the help points at pause.
+    const pad = new TrainingCoach().step(frame({ inputMode: "gamepad", playground: { runKey: run } }))[0]?.mark;
+    expect(pad?.text).toBe("VIEW menu  ·  VIEW + ↑ heal  ·  VIEW + ↓ clear  ·  VIEW + ← dummy  ·  VIEW + → repeat");
+    const touch = new TrainingCoach().step(frame({ inputMode: "touch", playground: { runKey: run } }))[0]?.mark;
+    expect(touch).toMatchObject({ id: "playground:help", text: "Pause for the Playground menu.", keys: ["PAUSE"] });
+  });
+
+  it("gives each new arena the full help time, even when the last help is still showing", () => {
+    const run = {};
+    const coach = new TrainingCoach();
+    coach.step(frame({ playground: { runKey: run, arena: 0 } }));
+    coach.step(frame({ deltaSeconds: COACH_HELP_SECONDS - 3, playground: { runKey: run, arena: 0 } }));
+    coach.step(frame({ playground: { runKey: run, arena: 1 } }));
+    // Past the first help's end: the second arena's help still has time left.
+    const later = coach.step(frame({ deltaSeconds: COACH_HELP_SECONDS - 1, playground: { runKey: run, arena: 1 } }));
+    expect(ids(later)).toEqual(["playground:help"]);
+  });
+
+  it("draws a call-out above what it names, and gives a repeated call-out its full time", () => {
+    const coach = new TrainingCoach();
+    const enemy = { x: 900, y: 500 };
+    const first = coach.step(frame({ callouts: [{ text: "GRUNT", tone: "info", anchor: enemy }] }));
+    expect(first.map((entry) => entry.mark)).toEqual([
+      expect.objectContaining({ title: "GRUNT", text: "", anchor: enemy, channel: "callout" }),
+    ]);
+    coach.step(frame({ deltaSeconds: COACH_CALLOUT_SECONDS - 0.2 }));
+    // A second HEALED (no anchor: at the player) replaces the first and restarts.
+    coach.step(frame({ callouts: [{ text: "HEALED", tone: "info" }] }));
+    const later = coach.step(frame({ deltaSeconds: COACH_CALLOUT_SECONDS - 0.2 }));
+    expect(later.map((entry) => entry.mark)).toEqual([
+      expect.objectContaining({ title: "HEALED", anchor: { x: 300, y: 600 } }),
+    ]);
   });
 });

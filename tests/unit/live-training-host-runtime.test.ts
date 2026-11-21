@@ -16,7 +16,6 @@ vi.mock("../../src/gameplay/training/playground-controller", () => ({
     readonly state = { labFilter: "" };
   },
   PLAYGROUND_ALL_KINDS: [],
-  PLAYGROUND_HOTKEY_KINDS: [],
 }));
 vi.mock("../../src/gameplay/training/runtime-bridge", () => ({
   createPlaygroundRuntimeBridge: () => Object.freeze({ homePlatforms: () => [] }),
@@ -30,6 +29,7 @@ vi.mock("../../src/gameplay/training/live-playground-presentation", () => ({
 }));
 
 import { createLiveTrainingHostRuntime } from "../../src/app/training/training-host-runtime";
+import { createTrainingCallouts } from "../../src/app/training/training-coach";
 
 describe("live training host runtime", () => {
   it("supplies its tutorial profile-stat port from the shared adapter", () => {
@@ -53,7 +53,7 @@ describe("live training host runtime", () => {
       startPractice: vi.fn(),
       selectedWeapon: vi.fn(),
       selectWeapon: vi.fn(),
-      addFloater: vi.fn(),
+      callouts: createTrainingCallouts(),
       drawGhost: vi.fn(),
       abilityColors: vi.fn(),
       scroll: vi.fn(),

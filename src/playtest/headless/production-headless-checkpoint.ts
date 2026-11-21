@@ -6,8 +6,8 @@ import type { AuthoritativeInputSnapshot } from "../../gameplay/runtime/authorit
 import type { TearCausalEventV1, TearScenarioV1 } from "../../tearbench/contracts";
 import type { TearSnapshotV1 } from "../../gameplay/snapshot/snapshot-contract";
 import { requireProductionReplayBootstrap as requireBootstrap } from "../../tearbench/production-replay-bootstrap-check";
-import type { ProductionReplayBootstrap } from "../../tearbench/production-replay-composition";
-import { productionRunSeed } from "../../tearbench/production-world-factory";
+import type { ProductionReplayBootstrap } from "../../gameplay/snapshot/snapshot-contract";
+import { productionRunSeed } from "../../app/world/detached/world-factory";
 import { validateTearContract } from "../../tearbench/validation";
 import { requireProductionHeadlessScenario } from "./production-headless-scenario";
 
