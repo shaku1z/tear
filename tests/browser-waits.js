@@ -457,8 +457,56 @@ async function clickTarget(page, screen, name) {
   await page.mouse.click(point.x, point.y);
 }
 
+/**
+ * Waits until the run setup shows `expected`, a part of its selection (`{ weapon: "riftlock" }`,
+ * `{ mode: "endless" }`, `{ ready: true }` for START drawn and enabled), and says what it showed
+ * instead when it does not. Needs a test build (`window.__TEAR_SETUP__`).
+ */
+async function waitForSetup(page, expected) {
+  try {
+    await page.waitForFunction(
+      (want) => {
+        const setup = window.__TEAR_SETUP__?.();
+        return setup !== undefined && Object.entries(want).every(([key, value]) => setup[key] === value);
+      },
+      expected,
+      { timeout: STATE_WAIT_MS },
+    );
+  } catch (error) {
+    const shown = await within(
+      page.evaluate(() => window.__TEAR_SETUP__?.() ?? "not exposed"),
+      5000,
+      "the page did not answer",
+    ).catch((reason) => String(reason));
+    throw new Error(`the run setup never showed ${JSON.stringify(expected)}: ${JSON.stringify(shown)}`, {
+      cause: error,
+    });
+  }
+}
+
+/**
+ * Clicks a choice on the run setup screen and waits until the selection shows it: a click on a
+ * weapon card or a mode lands in the setup's state before anything else is clicked.
+ */
+async function chooseOnSetup(page, name, expected) {
+  await clickTarget(page, "setup", name);
+  await waitForSetup(page, expected);
+}
+
+/** Clicks START once the setup has it drawn and enabled, and waits for the run's first screen. */
+async function startFromSetup(page) {
+  await waitForSetup(page, { ready: true });
+  await clickTarget(page, "setup", "START");
+  await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__?.app.snapshot().screen !== "setup", undefined, {
+    timeout: STATE_WAIT_MS,
+  });
+}
+
 module.exports = {
   clickTarget,
+  waitForSetup,
+  chooseOnSetup,
+  startFromSetup,
   reportWorkerScripts,
   trackScriptLoads,
   waitForScriptLoads,
