@@ -939,10 +939,10 @@ CONFIG.touch = {
   joyFollow: 96, // joystick: re-anchor once the thumb passes this (logical px)
 };
 
-// live balance knobs, overridable via Firebase Remote Config (standalone build) WITHOUT
-// a redeploy. All default to 1.0 (no change); applied to per-run values at run start, so
-// tweaking them can never destabilize the config-restore system. Set matching numeric
-// parameters in the Firebase console (Remote Config) to tune the live game.
+// Run multipliers, all 1 (no change), applied to per-run values at run start. Firebase Remote
+// Config used to be able to override them; its only template ever published (2026-07-04) kept
+// every value at 1, and the game stopped fetching it with the modular SDK
+// (plans/active/FIREBASE_REFRESH.md, which removes these knobs and their readers next).
 const REMOTE = { coinMult: 1, enemyHpMult: 1, enemyDensityMult: 1, scoreMult: 1 };
 
 const THEME = {

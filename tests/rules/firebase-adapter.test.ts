@@ -1,18 +1,17 @@
-// The game's Firebase adapter (src/platform/firebase-cloud.ts) against the emulators with firestore.rules
-// loaded: every write the game makes is one the rules allow, and every read gets back what was written.
+// The game's Firebase adapter (src/platform/firebase-cloud.ts) on the SDK the standalone build ships
+// (src/platform/firebase-sdk.ts), against the emulators with firestore.rules loaded: every write the game
+// makes is one the rules allow, and every read gets back what was written.
 // Run with `pnpm test:rules`. The rules on their own, allowed and refused writes, are in
 // tests/rules/firestore-rules.test.ts.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { initializeTestEnvironment, type RulesTestEnvironment } from "@firebase/rules-unit-testing";
-import firebase from "firebase/compat/app";
-import "firebase/compat/auth";
-import "firebase/compat/firestore";
 import { collection, getDocs } from "firebase/firestore";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { AccountContext, CloudStatus, CloudUser } from "../../src/platform/cloud";
-import { createFirebaseCloudCompatibility, type FirebaseCompatSdk } from "../../src/platform/firebase-cloud";
+import { createFirebaseCloudCompatibility } from "../../src/platform/firebase-cloud";
 import type { FirebaseClientConfig } from "../../src/platform/firebase-config";
+import { createFirebaseServices } from "../../src/platform/firebase-sdk";
 import { rulesTestProject } from "./rules-test-project";
 
 const projectId = rulesTestProject();
@@ -35,11 +34,14 @@ const context: AccountContext = {
   },
   sync: () => Promise.resolve(),
 };
+const [firestoreHost = "127.0.0.1", firestorePort = "8189"] = (process.env.FIRESTORE_EMULATOR_HOST ?? "").split(":");
+const emulators = {
+  authUrl: `http://${process.env.FIREBASE_AUTH_EMULATOR_HOST ?? "127.0.0.1:9199"}`,
+  firestoreHost,
+  firestorePort: Number(firestorePort),
+};
 const cloud = createFirebaseCloudCompatibility({
-  config,
-  getSdk: () => firebase as unknown as FirebaseCompatSdk,
-  loadScript: () => Promise.reject(new Error("the SDK is already loaded")),
-  remote: {},
+  services: () => Promise.resolve(createFirebaseServices(config, emulators)),
   now: () => Date.now() + clockOffset,
 });
 
@@ -57,11 +59,6 @@ beforeAll(async () => {
     projectId,
     firestore: { rules: readFileSync(resolve(import.meta.dirname, "../../firestore.rules"), "utf8") },
   });
-  // The adapter's own initializeApp then finds the app already there, as it allows for.
-  firebase.initializeApp(config);
-  firebase.auth().useEmulator(`http://${process.env.FIREBASE_AUTH_EMULATOR_HOST ?? "127.0.0.1:9199"}`);
-  const [host = "127.0.0.1", port = "8189"] = (process.env.FIRESTORE_EMULATOR_HOST ?? "").split(":");
-  firebase.firestore().useEmulator(host, Number(port));
   await cloud.account.init(context);
   // init reports the local guest first, then the anonymous Firebase account once it is signed in.
   await until(() => (signedIn !== undefined && signedIn.user.id !== "local" ? signedIn : undefined), "the sign-in");
@@ -72,7 +69,6 @@ beforeEach(async () => {
 });
 afterAll(async () => {
   cloud.account.dispose?.();
-  await firebase.app().delete();
   await env.cleanup();
 });
 
