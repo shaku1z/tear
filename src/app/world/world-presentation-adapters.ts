@@ -344,7 +344,6 @@ export function createLiveWorldPresentationAdapters(
         d.Scenes.show(stageId);
         if (!d.Scenes.opaque(stageId)) d.Backdrop.draw(canvas, stage.current, time, playerX, bounds);
         d.Scenes.drawBack(canvas, sceneInput(stageId, time, playerX, bounds, camera));
-        d.Scenes.drawShadows(canvas, stageId, stage.platforms);
       },
       drawBackdropFront: (bounds, camera) => {
         d.Scenes.drawFront(
@@ -353,8 +352,7 @@ export function createLiveWorldPresentationAdapters(
         );
       },
       drawPlatform: (platform, _value, floor, bounds) => {
-        const texture = d.Scenes.surfaceMaterial(stage.current.id);
-        d.Backdrop.platform(canvas, platform, stage.current, floor, bounds, texture);
+        d.Backdrop.platform(canvas, platform, stage.current, floor, bounds);
       },
       drawFinale: drawFinaleWorld,
       tutorialActive: actorsIncluded && run.mode === "tutorial" && tutorial.active,

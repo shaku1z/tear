@@ -13,5 +13,8 @@
     "maxChangedShare": 0.1,
     "maxMeanChange": 3
   },
-  "stages": [{ "stage": "verdant-sanctum", "check": "tests/browser-verdant-presentation.js" }]
+  "stages": [
+    { "stage": "verdant-sanctum", "check": "tests/browser-verdant-presentation.js" },
+    { "stage": "pale-traverse", "check": "tests/browser-pale-presentation.js" }
+  ]
 }

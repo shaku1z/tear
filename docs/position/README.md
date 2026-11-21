@@ -13,7 +13,7 @@ The build players have: [Production](production.md).
 
 - [Release readiness](release-readiness.md)
 - [Production deploy](production-deploy.md)
-- [Verdant Sanctum visuals](verdant-visuals.md)
+- [Drawn stage backgrounds (Verdant, Pale)](verdant-visuals.md)
 - [Verdant Sanctum gameplay](verdant-gameplay.md)
 - [Tutorial and Playground experience](training-ux.md)
 - [Pale Traverse rework](pale-traverse.md)

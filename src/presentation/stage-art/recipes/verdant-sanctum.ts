@@ -24,15 +24,6 @@ export const VERDANT_SANCTUM_ART: StageArtRecipe = {
     water: ["#8fe8c0", "#46b98e", "#23876f"],
   },
   edge: "#0a1d16",
-  surface: {
-    width: 256,
-    height: 40,
-    ramp: "stone",
-    mossRamp: "moss",
-    scale: 0.66,
-    fill: "#0b1c14",
-    shadow: { color: "#04110c", opacity: 0.1, length: 22 },
-  },
   layers: [
     {
       id: "far",

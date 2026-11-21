@@ -114,7 +114,6 @@ describe("live recipe limits", () => {
   it("refuses entries the painter could not place", () => {
     rejects([{ ...MOTES, layer: "nowhere" }], /unknown layer "nowhere"/u);
     rejects([PART, PART], /duplicate or reserved id/u);
-    rejects([{ ...PART, id: "surface" }], /duplicate or reserved id/u);
     rejects([UNMOVING], /needs a sway or a breathe/u);
     rejects([{ ...WATER, bottom: WATER.top }], /bottom must be below top/u);
     rejects(
