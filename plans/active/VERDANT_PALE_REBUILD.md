@@ -415,40 +415,91 @@ Measured with `pnpm playtest bosses --boss rootbound,aldric,colossus,echo --seed
 | Blocking ticks in a fight | 0 | references block in their phase changes today | 1548 |
 | Drawn marks | at most the largest reference (Aldric's 6) | 2-6 | 16 |
 
-The health (3800) and the cooldowns are the dials, in this order.
+The health (3800) and the cooldowns are the dials, in this order, once the new boss and the references
+are measured the same way (below).
 
-**Re-derived on #377's headless player (slice 3, 2026-11-21; the lead's call).** #377 changed the
-scripted players, and every reference's numbers moved, so the table above no longer describes the
-target. These replace its hit and clear-time targets. Tuning against them is its own step, after
-slice 3.
+**Re-derived on #377's headless player (2026-11-21; the lead's calls).** #377 changed the scripted
+players, and every reference's numbers moved, so the table above no longer describes the target. What
+follows replaces its hit and clear-time targets.
 
-- **Method:** each bound is scaled by the change in the references' median.
-  - The references are Aldric, the Colossus and the Echo, as in 1.5: normal, Sword, seeds 1 and 2,
-    each phase opened through practice (`--phase 1`, `--phase 2`, `--phase 3`).
-  - For each phase: new bound = old bound × (median of the three references now ÷ their median in
-    1.5).
-  - That keeps the band where it sat among the references.
-  - Clear times take the median over the fights the avoids-tells player cleared.
-  - Measured on slice 3's branch: Phases I and II on main ce0e258c, Phase III on main 59bab68d (after #372).
+- **Method:** each bound is scaled by the change in the references' median, which keeps the band where it
+  sat among the references.
+  - The references are Aldric, the Colossus and the Echo, as in 1.5: normal, Sword, seeds 1 to 6, each
+    phase opened through practice (`--phase 1,2,3`).
+  - For each phase: new bound = old bound × (the references' median now ÷ their median in 1.5).
+  - A clear time is the avoids-tells player's: first each reference's median over the fights it cleared,
+    then the median across the references that were cleared.
+  - Aldric and the Colossus play all six seeds identically, so a pooled median would count one fight six
+    times. More seeds add samples only for the Echo.
+  - Measured on main 59bab68d (after #372).
 
-| Phase | Scripted hits per 10 s, references now (Aldric / Colossus / Echo) | Median, 1.5 → now | Target, old → new |
+| Phase | Scripted hits per 10 s, references (Aldric / Colossus / Echo) | Median, 1.5 → now | Target |
 | --- | --- | --- | --- |
-| I | 2.8 / 1.5 / 2.2 | 4.7 → 2.2 | 4-7 → **1.9-3.3** |
-| II | 8.6 / 5.6 / 2.6 | 4.8 → 5.6 | 4-7 → **4.7-8.2** |
-| III | 7.0 / 6.6 / 4.7 | 5.7 → 6.6 | 4-7 → **4.6-8.1** |
+| I | 2.8 / 1.5 / 2.6 | 4.7 → 2.6 | **2.2-3.9** |
+| II | 8.3 / 5.6 / 3.7 | 4.8 → 5.6 | **4.7-8.2** |
+| III | 7.0 / 6.6 / 3.9 | 5.7 → 6.6 | **4.6-8.1** |
 
-| Phase | Avoids-tells clears now | Median, 1.5 → now | Target, old → new |
+| Phase | Avoids-tells clears, each reference's median | Median, 1.5 → now | Target |
 | --- | --- | --- | --- |
-| I | Aldric 14.3, 14.3 s; the Colossus and the Echo were not cleared | 20.8 → 14.3 s | 12-25 → **8.2-17.2 s** |
-| II | the Colossus 5.8, 5.8 s; the Echo 10.0, 24.3 s; Aldric was not cleared | 9.2 → 7.9 s | 10-20 → **8.6-17.3 s** |
-| III | the Colossus 6.6, 6.6 s; Aldric and the Echo were not cleared | 4.2 → 6.6 s | 8-15 → **12.6-23.6 s** |
+| I | Aldric 14.3 s (6 of 6), the Echo 15.4 s (1 of 6), the Colossus not cleared | 20.8 → 14.9 s | **8.6-17.8 s** |
+| II | the Colossus 5.8 s (6 of 6), the Echo 10.2 s (6 of 7), Aldric not cleared | 9.2 → 8.0 s | **8.7-17.3 s** |
+| III | the Colossus 6.6 s (6 of 12), the Echo 11.3 s (3 of 12), Aldric not cleared | 4.2 → 9.0 s | **17.0-32.0 s** |
 
-- Phase I's and Phase III's clear-time targets each rest on one reference's clears, so they are thin.
-  Phase II's rests on two.
-- **The new Rootbound against the new band** (whole fights from Phase I, slice 3):
-  - Phase I: 0.7 hits per 10 s, under 1.9-3.3. Avoids-tells does not clear it within 37 s.
-  - Phase II: 3.4 hits per 10 s, under 4.7-8.2. Avoids-tells is in it for 42 s and dies there,
-    against 8.6-17.3 s.
+**These targets are for fights opened through practice, and the new boss can't be measured that way
+yet.** Practice admits only published bosses, so the new Rootbound has been measured in whole fights from
+Phase I. The two are not the same fight. Practice runs in the Playground: another arena, and Aldric has
+4300 health there against 4816 in a whole fight. In practice the player deals Aldric 111 damage a second;
+in a whole fight, 35. The first comparison (27 a second against 111) set one kind of fight against the
+other.
+
+**Phase I like for like** (whole fights from Phase I, normal, Sword, seeds 1 to 6, main b23d7348):
+
+| Boss | Damage dealt per second (avoids-tells / scripted) | Hits on the player per 10 s (avoids-tells / scripted) | Avoids-tells clears |
+| --- | --- | --- | --- |
+| new Rootbound | 27 / 32 | 0.7 / 1.6 | 55.8 s, 6 of 6 |
+| Aldric | 35 / 25 | 1.8 / 1.6 | 48.8 s, 6 of 6 |
+| the Colossus | 4 / 8 | 1.5 / 2.3 | not cleared |
+| the Echo | 22 / 18 | 2.9 / 2.3 | not cleared |
+
+**Where the player's damage goes** (the same whole fights, seed 1, Phase I, share of the phase's ticks,
+avoids-tells / scripted; measured with a probe on the playtest's own fight loop):
+
+| Boss | Boss within the blade's reach | Boss can't take damage | Fast swings in reach that touch nothing | Throws |
+| --- | --- | --- | --- | --- |
+| new Rootbound | 21 / 20 % | 5 / 6 % (under the floor in Burrow) | 10 / 10 % | none |
+| Aldric | 24 / 17 % | 1 / 1 % | 11 / 8 % | none |
+| the Colossus | 11 / 19 % | its body refuses the blade the whole phase | 4 / 8 % | none |
+| the Echo | 7 / 15 % | 1 / 2 % | 5 / 10 % | none |
+
+- For the new Rootbound and Aldric alike, almost every blade contact that dealt nothing fell in the boss's
+  short immunity after the hit before.
+- **What that settles:**
+  - The new Rootbound is not short of time it can be hit. It takes about as much damage a second as
+    Aldric, and more than the Colossus and the Echo.
+  - Its Phase I clear (55.8 s) is 7 s longer than Aldric's. He is the only reference a player clears in a
+    whole fight.
+  - So the tuning step changes nothing on the boss, and no health or cooldown is tuned against the
+    practice numbers above.
+- **A small real gap:** the avoids-tells player takes 0.7 hits per 10 s, under every reference
+  (1.5-2.9). The scripted player's 1.6 equals Aldric's, against 2.3 from the other two. It is measured
+  again once tool fix 1 below lands.
+- **What the slice 3 sweeps showed** (uncommitted, seeds 1 and 2): health moves the Phase I clear time a
+  lot, and not in proportion (2850 health: 20.3 s; 2200: 14.0 s). Halving the attack cooldowns did not
+  raise the hits on the player (0.8 per 10 s against 1.6). A faster walk or a shorter step back moved
+  both measures erratically. Each setting is one deterministic path, so none was chosen from them.
+
+**The playtest tool's gaps found here:**
+1. Practice can't open an engineering-only boss at a phase. The lead brings the playtest tool back for
+   this one fix, in the headless and engineering paths only. When it lands, all three phases of the new
+   Rootbound are measured against the practice targets above, and only then is any tuning decided.
+2. The headless player never throws, at any boss.
+3. The vine's cut point is not one of the stage's cuttable objects, so the cuts-objects player never cuts
+   the Root Seam.
+4. No boss declares `tells()`. The avoiding players read only state names ending in wind, windup or aim,
+   so the Bramble Rows and the Root Seam hit them unmarked.
+
+Gaps 2 to 4 are named in plans/active/PLAYTEST_TOOL_PLAN.md. Nobody fixes them now.
+
 - **Mend, how often it fires** (Phase II, normal, seeds 1 and 2; Mend is its only healing, so the
   playtest's `bossHealed` counts it):
 
@@ -852,7 +903,8 @@ repository must be able to take the next slice from here.
 | 0 | Approved by the lead (D1-D4 approved). |
 | 1 | Merged, #354 (95a34063), ruleset v17. |
 | 2 | Merged, #381 (b7260214), ruleset v20. |
-| 3 | In review, #385 (branch `codex/verdant-rootbound-phase2`), ruleset v22, after #372's v21. Merge it before slice 4 starts. |
+| 3 | Merged, #385 (b23d7348), ruleset v22. |
+| Tuning | In review (branch `codex/verdant-rootbound-tuning`): plan only. 2.4 re-based, no boss change. |
 | 4-7 | Not started. |
 
 **What slice 2 left in place** (read these first):
@@ -870,8 +922,10 @@ repository must be able to take the next slice from here.
   - the new boss, whole fights from Phase I (its Phase II and III numbers are the phases a player
     reaches): `pnpm playtest bosses --boss rootbound-rebuild --seed 1,2 --seconds 300 --json <file>`;
   - the references, each phase opened through practice:
-    `pnpm playtest bosses --boss aldric,colossus,echo --seed 1,2 --phase 1,2 --json <file>`.
-  - Practice admits only published bosses, so `--phase` can't reach the new one yet.
+    `pnpm playtest bosses --boss aldric,colossus,echo --seed 1,2,3,4,5,6 --phase 1,2,3 --json <file>`;
+  - the references in whole fights from Phase I, which is how the new boss compares today:
+    `pnpm playtest bosses --boss aldric,colossus,echo --seed 1,2,3,4,5,6 --seconds 300 --json <file>`.
+  - Practice admits only published bosses, so `--phase` can't reach the new one until tool fix 1 (2.4).
 
 **What slice 3 added:**
 - Phase II's rows in `rootbound-moves.ts` (Second Swing, Root Seam, Bramble Rows, Mend, Last Bloom),
@@ -906,9 +960,13 @@ repository must be able to take the next slice from here.
 - The death: every vine, seam, row and mound ends on the tick it starts (5.1 already checks it).
 - Done when: all three phases are measured with the commands above, with 0 blocking ticks and 4
   marks, and the lead asks the owner to play it on preview.
-- Any change to the new boss steps the ruleset (`RULESET_STEPS` in `ruleset-version.ts`, the refusal
-  strings in `gauntlet-records.test.ts`, `config/campaign-publication-boundary.json`). The exception
-  is if the replay-admission proposal below lands first.
+- **Ruleset (the lead, 2026-11-21):** since #386, replays refuse engineering-only bosses and the replay
+  content hash leaves them out.
+  - A change confined to the new Rootbound's own code and data needs no ruleset step.
+  - A change to shared code still steps it: collision, `scene-effects.ts`, tells, or anything a released
+    boss runs (`RULESET_STEPS` in `ruleset-version.ts`, the refusal strings in `gauntlet-records.test.ts`,
+    `config/campaign-publication-boundary.json`).
+  - Each pull request says which kind it is.
   - A change to the entity kinds also moves the content hash: the tutorial gold hashes and the two
     production-headless fixtures. Slice 3 added no kind, so it changed neither.
 
@@ -918,17 +976,19 @@ repository must be able to take the next slice from here.
   owed for it. The new Rootbound's figure is settled, and slice 3 builds on it.
 - **Tell weight over budget (decided 2026-11-21, 5.2):** the new Rootbound reads 5 harness pairs
   with the vault against a budget of 4. Fix it before the switch, not in slice 2.
-- **Replay admission:** refuse to record runs with an engineering-only boss, so that slices stop
-  stepping the ruleset (4.1). The lead approved it in principle on 2026-11-21 and routes it to the
-  replay session after #372. Not built in slice 2.
-- **Pace:** 2.4's band was re-derived on #377's player in slice 3. The new Rootbound is under it in
-  Phase I and II.
-  - The next step, after slice 3, tunes against the new band: health first, then cooldowns.
+- **Replay admission:** built by the replay session as #386 (cleared, merging after #385). Replays then
+  refuse engineering-only bosses (4.1), and slices that touch only the new Rootbound stop stepping the
+  ruleset.
+- **Pace:** 2.4 is re-based on six seeds. In Phase I, compared like for like in whole fights, the new
+  Rootbound sits among the references, with one small gap: the avoids-tells player takes fewer hits.
+  - Phases II and III wait for tool fix 1 (practice for an engineering-only boss), which the lead has
+    brought back to the playtest tool. Then all three phases are measured against the practice targets
+    and any tuning is decided.
 - **Mend** fires about once per fight for the players who stand back, and never for the scripted
   player (2.4). Its trigger stays as 2.1 has it.
 - **Named gaps to keep carrying:**
   - The Echo's tell weight is not measured (5.2).
-  - The playtest "open" column reads declared `tells()`, which the new boss does not declare.
+  - The playtest "open" column reads declared `tells()`, which no boss declares (tool gap 4 in 2.4).
   - The "no tell" column belongs to the playtest tool.
 
 **Measured before and after, in the pull requests that change them:**

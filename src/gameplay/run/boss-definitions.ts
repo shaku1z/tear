@@ -1,3 +1,5 @@
+import { asRecord } from "../../domain/records";
+
 /** Pure authored boss identity authority. */
 export const BOSS_IDENTITY_IDS = Object.freeze([
   "warden",
@@ -104,6 +106,26 @@ export const BOSS_DEFINITIONS = Object.freeze([
   }),
   ROOTBOUND_REBUILD_DEFINITION,
 ] as const satisfies readonly BossDefinition[]);
+
+/**
+ * The bosses only engineering surfaces reach: each rebuild that fights on another boss's stage (`stageOf`)
+ * until it replaces it. Replays refuse a run with one, and the replay content hash leaves them out, so a change
+ * confined to one needs no ruleset step (src/gameplay/run/ruleset-version.ts).
+ */
+export const ENGINEERING_ONLY_BOSS_IDS: readonly BossDefinitionId[] = Object.freeze(
+  BOSS_DEFINITIONS.filter((definition: BossDefinition) => definition.stageOf !== undefined).map(({ id }) => id),
+);
+
+export function isEngineeringOnlyBoss(id: string): boolean {
+  return ENGINEERING_ONLY_BOSS_IDS.some((boss) => boss === id);
+}
+
+/** Whether a saved run (a replay's opening, say) names an engineering-only boss as its boss or in its boss order. */
+export function runNamesEngineeringOnlyBoss(run: unknown): boolean {
+  const saved = asRecord(run);
+  const order: readonly unknown[] = Array.isArray(saved?.bossOrder) ? saved.bossOrder : [];
+  return [saved?.curBoss, ...order].some((id) => typeof id === "string" && isEngineeringOnlyBoss(id));
+}
 
 /** Source-derived display projection; boss IDs and names remain definition-owned. */
 export const BOSS_DISPLAY_NAMES = Object.freeze(

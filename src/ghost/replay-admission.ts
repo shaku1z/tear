@@ -13,7 +13,7 @@ import { readGhostAuthoritativeReceipt } from "./authoritative-receipt";
 import type { AuthoritativeInputSnapshot } from "../gameplay/runtime/authoritative-input";
 import { APP_SCREENS, LEGAL_TRANSITIONS, type AppScreen } from "../domain/screen-catalog";
 import { GHOST_APPLICATION_FRAMES_V1 } from "./application-frame-events";
-import { isBossDefinitionId } from "../gameplay/run/boss-definitions";
+import { isBossDefinitionId, runNamesEngineeringOnlyBoss } from "../gameplay/run/boss-definitions";
 
 export const GHOST_REPLAY_CONTEXT_FORMAT = "tear-ghost-replay-context" as const;
 export const GHOST_REPLAY_CONTEXT_SCHEMA_VERSION = 1 as const;
@@ -568,14 +568,7 @@ export function ghostReplayContextFingerprint(context: GhostReplayRunContextV1):
 }
 
 function fingerprintsMatch(left: GhostReplayBuildFingerprint, right: GhostReplayBuildFingerprint): boolean {
-  return (
-    left.version === right.version &&
-    left.revision === right.revision &&
-    left.target === right.target &&
-    left.rulesetVersion === right.rulesetVersion &&
-    left.contentHash === right.contentHash &&
-    left.configHash === right.configHash
-  );
+  return staticBuildMatches(left, right) && left.configHash === right.configHash;
 }
 
 /** Registry is intentionally metadata-only until C27A supplies a detached real-world factory. */
@@ -709,6 +702,8 @@ export function assessGhostReplayBootstrap(
   ) {
     return "tick-zero State Setup snapshot does not match replay bootstrap build or seed";
   }
+  if (runNamesEngineeringOnlyBoss(bootstrapSnapshot.state["tear.run.v1"]))
+    return "capsule opens on an engineering-only boss, which replays refuse";
   try {
     const snapshotRng = normalizeRng(bootstrapSnapshot.state["tear.rng.v1"], "tick-zero snapshot RNG");
     if (stableVerificationHash(snapshotRng) !== stableVerificationHash(context.rng)) {

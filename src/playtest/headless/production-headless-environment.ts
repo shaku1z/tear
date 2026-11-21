@@ -201,6 +201,8 @@ export function createProductionHeadlessEnvironment(
 ): ProductionHeadlessEnvironment {
   let core: ProductionHeadlessCore | null = null;
   let nextCommandId = 0;
+  // Steps in a row on which a held screen (paused, a draft) kept the world from advancing.
+  let heldSteps = 0;
   let actionTrace: CommandEnvelope<GameAction>[] = [];
   let deliveredCausalEventCount = 0;
   let eventSequenceBase = 0;
@@ -342,6 +344,7 @@ export function createProductionHeadlessEnvironment(
       const scenario = requireProductionHeadlessScenario(source);
       core = compose(scenario);
       nextCommandId = 0;
+      heldSteps = 0;
       actionTrace = [];
       deliveredCausalEventCount = 0;
       eventSequenceBase = 0;
@@ -411,6 +414,7 @@ export function createProductionHeadlessEnvironment(
       const state = observation(candidate);
       core = candidate;
       nextCommandId = 0;
+      heldSteps = 0;
       actionTrace = [];
       deliveredCausalEventCount = 0;
       eventSequenceBase = 0;
@@ -455,7 +459,10 @@ export function createProductionHeadlessEnvironment(
       // A terminal lifecycle transition at the horizon is a natural
       // termination, not a truncation. Keep the two terminal dispositions
       // mutually exclusive for browser and artifact consumers.
-      const truncated = !terminated && result.tick >= current.scenario.maxTicks;
+      heldSteps = result.tick < tick ? heldSteps + 1 : 0;
+      // The horizon bounds held steps too, so a policy that never leaves a held screen ends.
+      const truncated =
+        !terminated && (result.tick >= current.scenario.maxTicks || heldSteps >= current.scenario.maxTicks);
       const causalEvents = undelivered(current);
       deliveredCausalEventCount = current.nativeEvents.length;
       pendingEvents = [];
@@ -542,6 +549,7 @@ export function createProductionHeadlessEnvironment(
       }
       core = restored;
       nextCommandId = checkpoint.checkpoint.nextCommandId;
+      heldSteps = 0;
       actionTrace = [...checkpoint.actions];
       deliveredCausalEventCount = 0;
       eventSequenceBase = checkpoint.delivery.nextSequence;
@@ -564,6 +572,7 @@ export function createProductionHeadlessEnvironment(
       // would create a false equivalence claim.
       core = restored;
       nextCommandId = evaluation.source.checkpoint.nextCommandId;
+      heldSteps = 0;
       actionTrace = [...evaluation.source.actions];
       deliveredCausalEventCount = 0;
       // Surgical hydration must not relabel pending natural-source facts as its own evidence.
@@ -588,6 +597,7 @@ export function createProductionHeadlessEnvironment(
     dispose(): void {
       core = null;
       nextCommandId = 0;
+      heldSteps = 0;
       actionTrace = [];
       pendingEvents = [];
       eventSequenceBase = 0;

@@ -393,6 +393,9 @@ export function createProductionWaveRewardRuntime(
     chooseTier: (index: number) => {
       activeReward.selectTier(index);
     },
+    rerollDraft: () => {
+      activeReward.reroll();
+    },
     dispatchPlayground: () => undefined,
     renderControls: () => undefined,
     controls: () => [],
