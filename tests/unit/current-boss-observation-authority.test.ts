@@ -21,6 +21,7 @@ function liveBossRuntime() {
     colossus: harness.types.Colossus,
     aldric: harness.types.Aldric,
     rootbound: harness.types.Rootbound,
+    "rootbound-rebuild": harness.types.RootboundRebuild,
     "white-hart": harness.types.WhiteHart,
     echo: harness.types.Echo,
     source: harness.types.Source,

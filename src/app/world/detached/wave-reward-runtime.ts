@@ -143,7 +143,12 @@ export function createProductionWaveRewardRuntime(
     world.state.setEnemies([...world.state.enemies(), enemy as never]);
   };
   const makeBoss = (id: string) => {
-    const placement = planBossPlacement(id, config.view.w, config);
+    const placement = planBossPlacement(
+      id,
+      config.view.w,
+      config,
+      (world.state.player() as { x?: number } | undefined)?.x ?? config.view.w / 2,
+    );
     return world.entities.createEnemy(placement.factoryId, placement.x, placement.y, run());
   };
   const content = createLiveContentRuntime<ReturnType<typeof makeBoss>>({

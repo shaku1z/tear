@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildMenuSnapshot, buildSetupSnapshot } from "../../src/presentation/menu-setup-snapshots";
-import { BOSS_ROSTER } from "../../src/gameplay/run/content-director";
+import { BOSS_ROSTER, BOSS_TEST_ROSTER } from "../../src/gameplay/run/content-director";
 import { CONFIG } from "../../src/config/game-config";
 import { createSurfaceAvailability } from "../../src/domain/surface-availability";
 
@@ -112,6 +112,33 @@ describe("menu/setup snapshots", () => {
       label: "THE ROOTBOUND",
       selected: true,
     });
+  });
+  it("offers the rebuilt Rootbound last in the engineering Boss Test picker, and in no released roster", () => {
+    const view = buildSetupSnapshot({
+      selectedMode: "bossonly",
+      selectedDifficulty: "normal",
+      selectedWeapon: "blade",
+      selectedBoss: "rootbound-rebuild",
+      startGlyph: "▢",
+      modes: [{ id: "bossonly", label: "Boss Test", blurb: "bosses", debug: true }],
+      difficulties,
+      weapons: [{ id: "blade", name: "Blade", blurb: "cut", tags: ["fast"], throwIdentity: "return" }],
+      bosses: BOSS_TEST_ROSTER,
+      surfaces: ENGINEERING,
+      best: { wave: 0, score: 0 },
+      formatTime: String,
+    });
+    expect(view.bossChoices?.map((choice) => choice.id)).toEqual([
+      "shuffle",
+      ...BOSS_ROSTER.map(({ id }) => id),
+      "rootbound-rebuild",
+    ]);
+    expect(view.bossChoices?.at(-1)).toEqual({
+      id: "rootbound-rebuild",
+      label: "THE ROOTBOUND (REBUILD)",
+      selected: true,
+    });
+    expect(BOSS_ROSTER.map(({ id }) => id)).not.toContain("rootbound-rebuild");
   });
   it("hides Boss Test, Enemy Test, the boss picker and Seed-Locked Race in the release channel", () => {
     const release = buildSetupSnapshot(setupInput("endless", RELEASE));
