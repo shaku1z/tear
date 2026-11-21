@@ -477,12 +477,11 @@ notes, starts here.
     hashes. A pinned boss seed that no longer survives is re-picked by the rule in
     `tests/support/hash-stream-corpus.ts` (the first surviving seed in the fixed list), and the
     counts there are updated.
-- **Owed:** an in-game preview card for #367 and #374 together, once previews resume and #374 is
-  deployed to preview.tearblade.com. It goes to the owner through the ledger. It gives:
-  - the preview link;
-  - where to see Aldric's crownfall (at 20% health: the crown flies onto the platform below and
-    cracks it, with no scene) and his revive (after the kneel, starting with the vault);
-  - what to watch: the fight never stops, and the boss arrival feels as before (1.4 s).
+- **Preview card:** the in-game card for #367 is on the ledger as `visuals/cinematics-aldric-preview`, posted
+  2026-11-21 against preview main b9c31197. It gives the preview link, the quickest route to Aldric (`/dev/`,
+  PLAY, Boss Test, Aldric), what to watch in the crownfall and the revive, and two test-build frames.
+  **Owed:** once #374 is on the preview, add it to that card: the boss arrival counts game ticks and
+  should feel as before (1.4 s). This is a new picture or a note on the same document, never a new card.
 - **Next slice:** PR 4, the Source (below). Its first step is a fresh `pnpm playtest bosses --boss
   source` run, whose numbers set the Unmake timings. The fall-forever regression test comes next.
 - **After it:** PR 5 waits for Rootbound's pull request (see "Coordination"). PRs 6-8 draw new art
