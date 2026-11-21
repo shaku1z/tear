@@ -3,7 +3,7 @@
     "standalone": {
       "coldBytesToFirstFrame": 650000,
       "coldRequestsToFirstFrame": 28,
-      "coldBytesToPlayingWithoutStems": 710000,
+      "coldBytesToPlayingWithoutStems": 740000,
       "warmNetworkRequestsToFirstFrame": 3,
       "coldCrossOriginScriptRequests": 0,
       "coldCrossOriginScriptBytes": 0,

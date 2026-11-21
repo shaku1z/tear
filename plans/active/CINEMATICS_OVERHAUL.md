@@ -310,7 +310,8 @@ never typed out letter by letter, and gone with the banner.
   - The boss's entrance is a move of 1.0 s of game time (120 ticks) in which it cannot attack. Today
     it is 1.4 s of wall time at time scale 0.25, which is 0.35 s of game time.
   - The entrance is counted in simulation ticks. Today `introT` is counted by the frame prelude in
-    wall time (`frame-runtime.ts:50-57`).
+    wall time (`frame-runtime.ts:50-57`). The intro-clock slice (after PR 3) moves it onto ticks
+    first with the arrival unchanged; PR 6 then restyles the arrival on that tick clock.
   - It can be hit, except where a boss's own design says otherwise (Rootbound blocks during its
     intro today; that is the Verdant rebuild's call).
   - Existing entrance moves stay: Warden's shockwave, Colossus's two ground shocks.
@@ -412,7 +413,8 @@ to the catalog.
 
 - **Replays (coordinated with the replay owner).**
   - Each pull request that changes the simulation steps the ruleset in
-    `src/gameplay/run/ruleset-version.ts`, with a one-line reason: pull requests 1, 2, 3, 4, 6, 7 and 8.
+    `src/gameplay/run/ruleset-version.ts`, with a one-line reason: pull requests 1, 2, 3, 4, 6, 7 and 8,
+    and the intro-clock slice.
   - A replay recorded under an earlier ruleset shows the replay plan's retired-ruleset line in
     place of WATCH (`REPLAY_OVERHAUL_PLAN.md`, "Stored and published replays when the format or
     ruleset changes"). Nothing is deleted.
@@ -496,8 +498,26 @@ style, the chapter card, the epilogue card) and wait for the owner's verdict on 
 - Crownfall and revive become the moves above.
 - The crown is a world object that fractures the platform it lands on.
 - Two entries leave the allowlist (crownfall and the revive). Ruleset step.
+- The ritual binding saved in a world snapshot keeps its crown fields (`crownStart`,
+  `crownTarget`, `crownPlatform`, `crownSound`, `crownFractureColor`) and the ritual's
+  `bomberColor`, always empty now: they are part of the `bossCinematicBinding` shape, which PR 5
+  removes with its codec step. No ritual moves a crown after this pull request.
 - Done when the rule passes for Aldric, and the existing kneel, witness and anger tests pass
   unchanged.
+
+### The intro-clock slice: the arrival counts simulation ticks
+
+Approved by the lead on 2026-11-21, after PR 3. It narrows replay's frame-clock exception (see
+"Coordination") and changes nothing a player sees or hears.
+
+- `introT` counts 42 simulation ticks at the same time scale 0.25, instead of 1.4 s of wall time
+  counted by the frame prelude.
+- A test proves the wall-clock arrival is unchanged: 1.4 s within one frame, at 60 Hz and at the
+  120-tick step.
+- Before and after frames match at the same moments.
+- One ruleset step, at the next free number.
+- The lead is copied on the pull request, and the replay overhaul gets its number.
+- PR 6 later restyles the arrival on this tick clock.
 
 ### PR 4: the Source's Unmake and true form
 
@@ -535,8 +555,8 @@ Waits for the owner's verdict on the look board.
   approved style. Its world field goes into the world codec, live capture and the detached world
   hydrator (see "Coordination").
 - `bossPhaseBeat` and the boss arrival add a banner.
-- The arrival loses its slow motion (`introScale`), letterbox and hidden HUD. The entrance moves to
-  120 simulation ticks.
+- The arrival loses its slow motion (`introScale`), letterbox and hidden HUD. The entrance, already
+  counted in ticks since the intro-clock slice, becomes 120 simulation ticks.
 - Ruleset step.
 - Done when the banner matches the approved board in a built screenshot, the detached parity tests
   pass, and `pnpm test:determinism` passes.
@@ -568,6 +588,7 @@ Waits for the owner's verdict on the look board (the epilogue card).
 - Delete:
   - `cinematic-director.ts` and `tear.cinematic.v1`;
   - the application-frame confirm path and the UI-mode switch during scenes;
+  - replay's frame-clock exception and its test (see "Coordination");
   - `scene-release.ts`, the cinematic presentation files and prompts.
 - Update `docs/FEATURE_INVENTORY.md`, `RUNTIME_RECOVERY_CONTRACT.md`, `PITFALLS.md`, the skills'
   routing text and `config/change-impact-defaults.json`.
@@ -605,6 +626,14 @@ Waits for the owner's verdict on the look board (the epilogue card).
     `detached-finale-live-parity.test.ts` check that they agree.
   - Replay PR 5 deletes `ghost-frame-recording.ts` and `application-frame-events.ts`. Whichever
     of that and PR 8 lands second deletes the remaining application-frame confirm path.
+  - **The frame-clock exception (lead ruling, 2026-11-21).** Replay PR 5b records the cinematic
+    and boss-intro frame clock as its one exception to "actions at ticks only". This plan narrows it
+    and then removes it:
+    - the intro-clock slice takes the boss arrival off it;
+    - PR 5 takes the rituals and the Source's descent off it;
+    - PR 6 adds no frame-clock reader (the arrival stays on ticks);
+    - PR 8's done list deletes the exception and its test.
+    Skip and confirm are removed with the scenes, not made into GameActions.
   - The lead's Verdant and Pale rebuild plan may touch the same snapshot fields; agree the order
     with the lead before PR 5.
 - **Playtest tool:** `cinematicTicks` in `src/playtest/boss-fight.ts` stays as the measure (it reads

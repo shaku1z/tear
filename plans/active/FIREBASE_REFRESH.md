@@ -33,11 +33,11 @@ The owner approved this refresh on 2026-11-20. It stays on the free tier. Consol
 ## Done when
 
 - [x] `pnpm test:rules` passes and runs in the CI unit job; every collection the game uses has allowed and refused cases (PR 1).
-- [ ] The standalone build bundles the modular SDK in a lazy chunk. Nothing loads from gstatic, the CrazyGames build has no Firebase code, and the sizes before and after are in the pull request (PR 2).
+- [x] The standalone build bundles the modular SDK in a lazy chunk. Nothing loads from gstatic, the CrazyGames build has no Firebase code, and the sizes before and after are in the pull request (PR 2).
 - [ ] App Check with reCAPTCHA v3 is wired in monitor mode and fails open; the owner registers the site key (PR 3).
 - [ ] Remote Config v1 is removed, or kept with its readers named. `/ghosts` is listed as removed once the replay overhaul's PR 8 lands. The authorized-domain fixes are listed for the owner (PR 4).
 - [x] The owner has deployed the rules from PR 1 (released 2026-11-21 08:46 UTC; the deployed ruleset matches main's `firestore.rules`).
-- [ ] Leaderboard bests are spaced by the server's clock: the rules first (PR 2a, deployed by the owner), then the client that writes it (PR 2).
+- [x] Leaderboard bests are spaced by the server's clock: the rules first (PR 2a, deployed by the owner), then the client that writes it (PR 2).
 
 ## Scope
 
@@ -82,3 +82,4 @@ The owner approved this refresh on 2026-11-20. It stays on the free tier. Consol
   - Remote Config is no longer fetched. Its only template (version 1, 2026-07-04) kept all four multipliers at 1, so nothing changes. PR 4 deletes `REMOTE` and its readers.
   - The adapter writes `at` with `serverTimestamp()` on every best, including the full replace of a new best from #347. PR 2a's rules space bests by it.
   - **Deploy order:** the owner deploys PR 2a's rules before PR 2 merges. Every merge to main goes to preview, which uses the same Firebase project, and PR 1's rules refuse a best that carries `at`.
+- 2026-11-21 PR 2a's rules deployed (14:37Z). PR 2's load check now counts bytes to playing from every origin: main about 803 KB (642,700 same-origin plus 160,421 of gstatic scripts), PR 2 705,325, cap 740,000 (about 5% above). Standalone has no cross-origin scripts (caps 0/0). App Check (PR 3) and the cleanup (PR 4) are paused for the weekly budget; the lead deploys rules from now on.

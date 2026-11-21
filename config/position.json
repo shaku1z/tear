@@ -138,10 +138,10 @@
     {
       "id": "firebase",
       "name": "Firebase",
-      "state": "In progress: PR 1 and PR 2a (server-clock spacing rules) merged; PR 2a's rules await the owner's deploy; PR 2 (modular SDK) is a draft until then; PR 3 (App Check) follows",
+      "state": "In progress: PR 1 and PR 2a merged and their rules deployed (PR 2a 2026-11-21 14:37Z); PR 2 (modular SDK) ready to merge; PR 3 (App Check) and PR 4 (cleanup) paused for the weekly budget",
       "summary": "Firestore rules for saves, leaderboards (score boards and Gauntlet clear boards), statistics and replays are tested under the local emulator, allowed and refused writes both, and the game's own adapter runs against them on the SDK it ships. PR 1's rules are live on tear-682cf. PR 2 bundles the modular SDK (Auth and Firestore Lite) in one on-demand chunk of 67 KB gzip, where the gstatic compat scripts were 159 KB, and the CrazyGames build has no Firebase code. App Check is not wired yet.",
-      "next": "The owner deploys PR 2a's rules; then PR 2 leaves draft and merges; then PR 3, App Check in monitor mode.",
-      "owner_action": "Deploy the rules from PR 2a (#364) before PR 2 merges: firebase deploy --only firestore:rules --project tear-682cf.",
+      "next": "Merge PR 2; then PR 3, App Check in monitor mode, when the lead resumes it.",
+      "owner_action": "None now. The lead deploys Firestore rules; PR 3 later needs the owner's reCAPTCHA key and App Check registration.",
       "evidence": [
         "plans/active/FIREBASE_REFRESH.md",
         "tests/rules/firestore-rules.test.ts",
@@ -153,10 +153,10 @@
     {
       "id": "cinematics",
       "name": "Cinematics",
-      "state": "PR 1 merged (a rule over every boss fight; no boss event slows time). PR 2 (the Warden and the Colossus change phase in the fight) in review. Look board waiting for the owner",
+      "state": "PRs 1-2 merged (a rule over every boss fight; no boss event slows time; the Warden and the Colossus change phase in the fight). PR 3 (Aldric) in review. The owner approved the look board (2026-11-21)",
       "summary": "Boss phase changes stop the fight today: a ritual script freezes the combat step, locks the player and waits for a tap or a reading timeout (5.1-6.8 s each; the Source descent 11.5 s; Rootbound stands still for 12.9 s of a 32-37 s fight). Chapter openings take 25-39 s at Full. The plan makes every in-fight beat a boss move with at most a banner, cuts chapter openings and the finale to short cards that never wait, replaces the cinematic director and ritual layer with one stage beat, and adds a rule over every boss that no tick blocks input or the combat step.",
-      "next": "PR 3 (Aldric) and PR 4 (the Source) take out the remaining rituals; then PR 5 deletes the blocking path. The banner, chapter card and epilogue (PRs 6-8) wait for the owner’s verdict on the look board.",
-      "owner_action": "Approve or correct the look board on the ledger.",
+      "next": "The intro-clock slice (the arrival counts simulation ticks, unchanged on screen), then PR 4 (the Source) takes out its rituals; then PR 5 deletes the blocking path. The banner, chapter card and epilogue (PRs 6-8) follow the approved look board.",
+      "owner_action": "Play Aldric on the preview once PR 3 is there and say how the crownfall and revive feel.",
       "evidence": [
         "plans/active/CINEMATICS_OVERHAUL.md"
       ]
