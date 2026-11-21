@@ -12,9 +12,12 @@ import {
   ROOTBOUND_CADENCE,
   ROOTBOUND_MOVES as M,
 } from "../../src/gameplay/entities/enemy-types/rootbound-rebuild/rootbound-moves";
+import { aimedTellTicks as aimedTell, minAimedTellTicks } from "../../src/gameplay/entities/move-aim";
 import { createEnemyHarness, createTestPlayer, type TestPlayer } from "./enemy-test-harness";
 
 const DT = 1 / 120;
+const aimedTellTicks = (ticks: number) => aimedTell(ticks, CONFIG.dash);
+const MIN_AIMED_TELL_TICKS = minAimedTellTicks(CONFIG.dash);
 const GROUND = CONFIG.world.groundY;
 
 function setup(bossX: number, player: Partial<TestPlayer> = {}) {
@@ -88,6 +91,52 @@ describe("each move's parts last their ticks and deal their damage", () => {
     expect(rested.boss.state).toBe("swingrecover");
     rested.step();
     expect(rested.boss.state).toBe("idle");
+  });
+
+  it("the swing's declared tell is the box its hit test reaches: built from the same vine, never drifting", () => {
+    const check = (fight: ReturnType<typeof setup>, wind: string, swing: string) => {
+      const { boss, step } = fight;
+      while (boss.state !== wind) step();
+      let told = boss.tells()[0];
+      while (boss.state === wind) {
+        told = boss.tells()[0];
+        step();
+      }
+      if (told === undefined) throw new Error(`no tell declared in ${wind}`);
+      expect(told).toMatchObject({ id: "vine-swing", mark: "box", damaging: true });
+      const reach = { left: Infinity, right: -Infinity, top: Infinity, bottom: -Infinity };
+      // Read the vine after each update of the sweep, where the hit test reads it (the last one ends the sweep).
+      for (let sweeping = true; sweeping;) {
+        step();
+        sweeping = boss.state === swing;
+        const from = boss.vineShoulder(),
+          to = boss.vineTip();
+        for (let i = 0; i <= 10; i += 1) {
+          const x = from.x + ((to.x - from.x) * i) / 10,
+            y = from.y + ((to.y - from.y) * i) / 10;
+          reach.left = Math.min(reach.left, x);
+          reach.right = Math.max(reach.right, x);
+          reach.top = Math.min(reach.top, y);
+          reach.bottom = Math.max(reach.bottom, y);
+        }
+      }
+      // The swing strikes 10 px past its segment (beyond the player's half extent); the tell carries that pad.
+      const pad = 10;
+      expect(told.x - told.hw).toBeCloseTo(reach.left - pad, 0);
+      expect(told.x + told.hw).toBeCloseTo(reach.right + pad, 0);
+      expect(told.y + told.hh).toBeCloseTo(reach.bottom + pad, 0);
+      // The sweep's first strike tick is a little past the coil's top, so the tell may reach at most 12 px higher.
+      expect(reach.top - pad - (told.y - told.hh)).toBeGreaterThanOrEqual(0);
+      expect(reach.top - pad - (told.y - told.hh)).toBeLessThan(12);
+    };
+    const first = setup(600, levelAt(790));
+    first.boss.startSwing();
+    check(first, "swingwind", "swing");
+    const second = phaseTwo(600, levelAt(1000));
+    second.boss.startSwing();
+    while (second.boss.state !== "swing2wind") second.step();
+    second.player.x = 1100;
+    check(second, "swing2wind", "swing2");
   });
 
   it("a perfect held-blade parry of the swing stops it landing and leaves it staggered and open", () => {
@@ -210,15 +259,40 @@ function phaseTwo(bossX: number, player: Partial<TestPlayer> = {}) {
 }
 
 describe("Phase II", () => {
-  it("Second Swing follows the first: 32 to wind up, 22 to sweep, then the vine plants for 120", () => {
+  it("Second Swing follows the first: its aimed tell (84) to wind up, 22 to sweep, then the vine plants for 120", () => {
     const { boss, player, until } = phaseTwo(600, levelAt(790));
     boss.startSwing();
     until("swing");
     expect(until("swing2wind")).toBe(M.vineSwing.hit);
-    expect(until("swing2")).toBe(M.secondSwing.windup);
+    expect(until("swing2")).toBe(aimedTellTicks(M.secondSwing.windup));
     expect(until("planted")).toBe(M.secondSwing.hit);
     expect(player.damage.every((hit) => hit.amount === M.vineSwing.damage)).toBe(true);
     expect(until("idle")).toBe(M.rootSeam.planted);
+  });
+
+  it("Second Swing aims once, at where the player is when its tell starts, and steps there through the tell", () => {
+    const { boss, player, step, until } = phaseTwo(600, levelAt(700));
+    boss.startSwing();
+    until("swing");
+    player.x = 1000; // the player dashed through the first sweep's reach and landed here
+    until("swing2wind");
+    const stand = 1000 - M.secondSwing.aim.reachShare * M.vineSwing.reach;
+    const from = boss.x;
+    player.x = 1200; // moving again once the tell has started does not move the aim
+    while (boss.state === "swing2wind") step();
+    expect(boss.x).toBeCloseTo(Math.min(stand, from + M.secondSwing.aim.maxStep), 5);
+    expect(boss.facing).toBe(1);
+  });
+
+  it("Second Swing's tell is never under the shared minimum, Phase III's quicker windups included", () => {
+    const { boss, until } = phaseTwo(600, levelAt(790));
+    boss.enteredPhase = 3;
+    boss.startSwing();
+    until("swing");
+    until("swing2wind");
+    expect(until("swing2")).toBe(MIN_AIMED_TELL_TICKS);
+    // The shared 0.45 s minimum, or the dash's 0.55 s cooldown and 0.15 s of invulnerability: the longer.
+    expect(MIN_AIMED_TELL_TICKS).toBe(84);
   });
 
   it("the planted vine drives a Root Seam along the floor in the swing's direction, at 300 px/s", () => {
@@ -273,7 +347,8 @@ describe("Phase II", () => {
     const { boss, step, until } = phaseTwo(200, levelAt(1100));
     boss.attackT = 999;
     boss.burrowCd = 9999;
-    boss.hp -= 100;
+    // A second and a half of healing short: one full second heals freely, and the cap stops it before its end.
+    boss.hp -= boss.maxHp * M.mend.perSecond * 1.5;
     boss.lastHp = boss.hp;
     // It walks at the player meanwhile, so the test starts it one tick short of the quiet it waits for.
     boss.quietT = M.mend.quiet - 1;
