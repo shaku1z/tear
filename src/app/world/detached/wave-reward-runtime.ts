@@ -402,7 +402,11 @@ export function createProductionWaveRewardRuntime(
   };
   const startOpeningWave = ({ firstWave = 1, build }: ProductionRunOpening = {}) => {
     if (firstWave > 1) {
-      run().wave = firstWave - 1;
+      const opening = run();
+      opening.wave = firstWave - 1;
+      // A later opening wave begins after its stage's chapter has handed over; the wave planner launches the
+      // next stage's chapter itself when the opening wave starts one.
+      if (opening.mode === "campaign") opening.chapterState = "WAVE_LIVE";
       if (build !== undefined) for (let wave = 1; wave < firstWave; wave += 1) draftForBuild(build);
     }
     waves.startNextWave();
