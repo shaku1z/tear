@@ -351,6 +351,17 @@ export function installLiveBossDebugWhenEnabled(sources: LiveTestBuildHookSource
         }));
       },
     });
+    // The run setup's selection, which a click on a mode, difficulty or weapon changes, and whether
+    // START is drawn and enabled on the setup screen: what a journey waits on after each setup click.
+    Object.defineProperty(sources.dependencies.browserWindow, "__TEAR_SETUP__", {
+      configurable: true,
+      value: () => ({
+        ...sources.session.selection(),
+        ready:
+          sources.navigation.screen() === "setup" &&
+          sources.interaction.buttons().some((button) => button.label === "START" && button.enabled !== false),
+      }),
+    });
   }
   if (__TEAR_TEST_BUILD__ && sources.browser.pantheonDebug) {
     void import("./debug-composition").then(({ installLiveGameDebug }) => {

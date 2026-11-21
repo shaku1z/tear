@@ -163,7 +163,8 @@
         "tsconfig.test.json",
         "vite.config.ts",
         "vitest.config.ts",
-        "vitest.endurance.config.ts"
+        "vitest.endurance.config.ts",
+        "vitest.rules.config.ts"
       ]
     }
   ]
