@@ -39,6 +39,50 @@ The owner approved this refresh on 2026-11-20. It stays on the free tier. Consol
 - [x] The owner has deployed the rules from PR 1 (released 2026-11-21 08:46 UTC; the deployed ruleset matches main's `firestore.rules`).
 - [x] Leaderboard bests are spaced by the server's clock: the rules first (PR 2a, deployed by the owner), then the client that writes it (PR 2).
 
+## Remaining slices (handover, 2026-11-21)
+
+Paused for the weekly budget. Another agent can pick these up from the repo alone. Steps marked **OWNER** are Firebase or Google console actions that only the owner does. Firestore rules deploys are the lead's: tell the lead when a change to `firestore.rules` merges.
+
+### PR 3: App Check in monitor mode (branch `codex/firebase-app-check`, pushed)
+
+The branch has the code. It is PR 2 plus:
+- `FIREBASE_APP_CHECK_SITE_KEY` in `src/platform/firebase-config.ts`, empty, so App Check stays off;
+- `createFirebaseServices(config, { appCheck })` in `src/platform/firebase-sdk.ts`, which calls `initializeAppCheck` with `ReCaptchaV3Provider` and refreshes the token automatically. A failure is caught, and requests go on without a token (fails open).
+- `tests/rules/firebase-app-check.test.ts`, which shows the adapter signing in, saving and submitting with a provider that never returns a token.
+- `tests/unit/privacy-page.test.ts`, which requires the privacy page to name reCAPTCHA exactly when the key is set.
+
+1. Take in main after PR 2's squash merge. A plain `git merge origin/main` conflicts on everything PR 2 touched. Instead:
+   - `git merge <squash>^` (main just before PR 2's squash);
+   - `git merge -s ours <squash>` (PR 2's content is already on the branch);
+   - `git merge origin/main`.
+2. Keep App Check inside the `firebase-sdk` chunk. A separate App Check chunk makes Rolldown split out a shared `index.esm-*.js`, which takes a 47th precache entry; the budget is 46.
+3. Checks: `pnpm test:rules` (42 tests), `pnpm check:quick`, then `pnpm build:standalone`, `pnpm build:crazygames`, `pnpm check:bundles` and `pnpm check:load-budgets`. The SDK chunk was 234,220 B raw / 71,850 B gzip with App Check.
+4. Open the PR. With the key empty it changes nothing at run time.
+5. **OWNER**: create a reCAPTCHA v3 key for `tearblade.com`, `tear-preview.shatheartboy.workers.dev` and `localhost`.
+6. **OWNER**: in Firebase console, App Check, register the web app with that key and its secret. Leave enforcement OFF for Firestore and Authentication (metrics only), and set the token time to live to 1 day. Give the lead the site key; it is public.
+7. A follow-up PR sets `FIREBASE_APP_CHECK_SITE_KEY`. It must also:
+   - name reCAPTCHA on `public/privacy.html` (the privacy test fails otherwise);
+   - show Google's reCAPTCHA notice, or keep the badge.
+8. Cost: free tier only. reCAPTCHA gives 10,000 assessments a month; without billing it returns errors past that and charges nothing. With enforcement off nobody is blocked. Turning enforcement on is a later decision for the owner, after the metrics show real traffic passing.
+
+### PR 4: cleanup and domains (not started; branch from `origin/main`)
+
+1. Remove `REMOTE` (`src/config/game-config.ts`, all four multipliers fixed at 1) and its readers. Find them with `git grep -n "REMOTE" -- src`:
+   - `planRunStart(…, REMOTE)` in `src/app/run/run-start-host.ts` and `src/app/engineering/state-setup-progression.ts`;
+   - the multipliers in `src/app/replay/seed-race-composition.ts`;
+   - the wiring in `src/app/shell/composition.ts` and `src/app/shell/game-runtime-dependencies.ts`;
+   - the parameter in `src/gameplay/run/run-start-plan.ts`.
+   Multiplying by 1 changes nothing, so `pnpm test:determinism` must stay green; keep any replay or seed-race field that stores the multipliers readable.
+2. Delete `remoteconfig.template.json` and the `remoteconfig` entry in `firebase.json`.
+3. **OWNER** (optional): delete the Remote Config template in Firebase console (version 1, 2026-07-04, all four values at 1).
+4. `/ghosts`: once the replay overhaul's PR 8 has removed `loadGhost` and every `/ghosts` read, and after agreeing with the session that owns replay storage:
+   - remove `match /ghosts/{board}` from `firestore.rules`, and its tests in `tests/rules/`;
+   - tell the lead when it merges, so the lead can deploy.
+5. **OWNER**: in Firebase console, Authentication, Settings, Authorized domains, add `tear-preview.shatheartboy.workers.dev` so Google sign-in works on preview, and remove `tear-psi.vercel.app`.
+6. Follow-ups, each its own small PR:
+   - Credit Firebase and Workbox on the credits screen, as for the other bundled dependencies; the bundle strips their licence comments.
+   - Once no build that writes bests without `at` is in use, require `at` on every best in `isRowWrite`. That is one line and a test; the lead deploys it.
+
 ## Scope
 
 - **Changes:** `firestore.rules`, `firebase.json`, `tests/rules/`, `scripts/test-firestore-rules.mjs`,
