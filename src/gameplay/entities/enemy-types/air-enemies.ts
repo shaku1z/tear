@@ -50,6 +50,25 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
       this.onGround = this.y >= CONFIG.world.groundY - this.hh - 1;
     }
 
+    /**
+     * One step of a dive, for every flyer that dives. A dive is a fall at the speed it began with, and nothing in it
+     * steers. It ends on the ground. A launch that stops the fall breaks it: without that, a flyer launched upward
+     * mid-dive kept its dive state and that velocity for good, pinned against the top of the arena.
+     */
+    _dive(dt: number): "falling" | "landed" | "broken" {
+      this.x += this.vx * dt;
+      this.y += this.vy * dt;
+      if (this.y >= CONFIG.world.groundY - this.hh - 2) return "landed";
+      return this.vy > 0 ? "falling" : "broken";
+    }
+
+    /** A broken dive goes back to hovering, with a full interval before the next attack. */
+    _breakDive(C: typeof CONFIG.flyer) {
+      this.state = "hover";
+      this.aimTimer = C.swoopInterval;
+      this.diveX = null;
+    }
+
     _swoop(dt: number, player: EnemyPlayerPort, C: typeof CONFIG.flyer) {
       if (this.state === "swoop") {
         this.swoopT -= dt;
@@ -110,9 +129,9 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
           this.vy = C.swoopSpeed * 1.55;
         }
       } else if (this.state === "dive") {
-        this.x += this.vx * dt;
-        this.y += this.vy * dt;
-        if (this.y >= CONFIG.world.groundY - this.hh - 2) {
+        const dive = this._dive(dt);
+        if (dive === "broken") this._breakDive(C);
+        else if (dive === "landed") {
           this.y = CONFIG.world.groundY - this.hh;
           this.stun = 0.85;
           this.state = "hover";
@@ -155,9 +174,9 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
           this.vy = C.swoopSpeed * 1.7;
         }
       } else if (this.state === "dive") {
-        this.y += this.vy * dt;
-        this.x += this.vx * dt;
-        if (this.y >= CONFIG.world.groundY - this.hh - 2) {
+        const dive = this._dive(dt);
+        if (dive === "broken") this._breakDive(C);
+        else if (dive === "landed") {
           this.y = CONFIG.world.groundY - this.hh;
           this.stun = 0.65;
           this.state = "hover";
@@ -194,9 +213,9 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
           this.vy = C.swoopSpeed * 1.58;
         }
       } else if (this.state === "dive") {
-        this.x += this.vx * dt;
-        this.y += this.vy * dt;
-        if (this.y >= CONFIG.world.groundY - this.hh - 2) {
+        const dive = this._dive(dt);
+        if (dive === "broken") this._breakDive(C);
+        else if (dive === "landed") {
           this.y = CONFIG.world.groundY - this.hh;
           this.state = "recover";
           this.stun = 0.78;
@@ -223,13 +242,7 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
 
     _highdive(dt: number, player: EnemyPlayerPort, C: typeof CONFIG.flyer) {
       if (this.state === "dive") {
-        this.x += this.vx * dt;
-        this.y += this.vy * dt;
-        if (
-          this.y >= CONFIG.world.groundY - this.hh - 2 ||
-          this.x <= this.hw + 1 ||
-          this.x >= CONFIG.view.w - this.hw - 1
-        ) {
+        if (this._dive(dt) !== "falling" || this.x <= this.hw + 1 || this.x >= CONFIG.view.w - this.hw - 1) {
           this.state = "climb";
           this.aimTimer = C.swoopInterval;
         }

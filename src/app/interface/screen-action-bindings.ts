@@ -9,6 +9,8 @@ import type { GhostVaultLibraryPort } from "../library/ghost-vault-library-contr
 import { screenActionAvailable, type SurfaceAvailability } from "../../domain/surface-availability";
 import type { ScreenAction } from "../../presentation/screens/contracts";
 import type { RunExitScreen } from "../../domain/screen-actions";
+import { equipCosmetic } from "../../domain/cosmetics";
+import { createLoadout, switchLoadout } from "../../domain/cosmetic-loadouts";
 import { setMusicPreview, stepMusicPreview } from "../../audio/music/preview";
 import { requestNextSong } from "../../audio/music/music-source";
 
@@ -193,7 +195,20 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
       ports.shop.buyCosmetic(action.id);
     },
     "shards.equip": (action) => {
-      ports.shop.equipCosmetic(action.slot, action.id);
+      ports.shop.changeCosmetics((catalog, state, now) => equipCosmetic(catalog, state, action.slot, action.id, now));
+    },
+    "shards.newLoadout": () => {
+      ports.shop.changeCosmetics((_catalog, state, now) => createLoadout(state, now));
+    },
+    "shards.useLoadout": (action) => {
+      ports.shop.changeCosmetics((_catalog, state, now) => switchLoadout(state, action.id, now));
+    },
+    "shards.renameLoadout": (action) => {
+      const target = ports.shop.loadoutNameTarget(action.id);
+      if (target) ports.settings.beginNaming(target);
+    },
+    "shards.deleteLoadout": (action) => {
+      ports.shop.pressDeleteLoadout(action.id);
     },
     "profile.selectTab": (action) => {
       ports.library.selectProfileTab(action.id);
