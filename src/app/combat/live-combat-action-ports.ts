@@ -73,7 +73,7 @@ export function createLiveCombatActionPorts(options: LiveCombatActionPortsOption
   const { stage: stageRuntime, story } = campaignTraining.campaign;
   const TUT = campaignTraining.training.tutorial;
   const { startBossTransformation, step: stepCinematicPlaying } = campaignTraining.cinematic.runtime;
-  const { advanceUnmake } = campaignTraining.cinematic.sourceRuntime;
+  const sourceRuntime = campaignTraining.cinematic.sourceRuntime;
   const { addFloater, syncVoidPlayerSupport, updateVoidScroll, stepPlayground } = campaignTraining;
   const {
     addShake,
@@ -108,7 +108,7 @@ export function createLiveCombatActionPorts(options: LiveCombatActionPortsOption
   const { endRun, updateWave } = options.services.controllers.api;
   const { updateBossArenaPlatforms, lobExplode } = orchestration;
   const isGameProjectile = (value: unknown): value is GameProjectile => value instanceof dependencies.Projectile;
-  const isSourceOwner = (value: unknown): value is GameEnemy & Parameters<typeof advanceUnmake>[0] =>
+  const isSourceOwner = (value: unknown): value is GameEnemy & Parameters<typeof sourceRuntime.advanceUnmake>[0] =>
     isGameEnemy(value); // the Unmake derives its actor id from presentationId/bossId
   const isRitualOwner = (
     value: unknown,
@@ -226,7 +226,7 @@ export function createLiveCombatActionPorts(options: LiveCombatActionPortsOption
         updateWave,
         updateBossArenaPlatforms,
         updateVoidScroll,
-        advanceSourceUnmake: (boss, dt) => isSourceOwner(boss) && advanceUnmake(boss, dt),
+        advanceSourceUnmake: (boss, dt) => isSourceOwner(boss) && sourceRuntime.advanceUnmake(boss, dt),
         nearestEnemy: (x, y) => {
           const enemy = nearestEnemy(x, y);
           return isGameEnemy(enemy) ? enemy : null;

@@ -425,14 +425,14 @@ const CONFIG = {
     siphonDiminish2: 0.7,
     siphonDiminish3: 0.45,
     siphonDiminish4: 0.25,
-    // THE UNMAKE — Phase II's move in the fight: the arena cracks, the floor goes, the void run begins
-    unmakeDissolve: 0.8, // the crack tell, then the floor goes and the stream forms under the player
-    unmakeChannel: 1.6, // the void run starts; the Source holds still and can be hit until then
+    // THE UNMAKE, Phase II's move in the fight (SourceVoidConfig in arena-rules.ts says what each value does)
+    unmakeDissolve: 0.8,
+    unmakeChannel: 1.6,
     voidCamZoom: 0.8, // camera pulls this far OUT during the void (wider frame = plan your route)
-    descentArrival: 0.85, // the stream's scroll ramps in over this long from the void run's start
-    descentLiftV: -310, // the retired descent cinematic's float; unused until plan PR 5 removes it
-    descentIngressBelow: 190, // the stream's first platform sits this far below the player's feet (band-clamped)
-    unmakeLiftClearance: 60, // a player below that platform is lifted this far above it, then lands on it
+    descentArrival: 0.85,
+    descentLiftV: -310, // unused since the Unmake; plan PR 5 removes it
+    descentIngressBelow: 190,
+    unmakeLiftClearance: 60,
     cycleCd: 2.5, // seconds between mechanic casts (phase 1)
     shockDmg: 18,
     shockSpeed: 720,

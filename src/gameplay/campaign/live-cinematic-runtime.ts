@@ -134,8 +134,7 @@ export function createLiveCinematicRuntime(options: LiveCinematicRuntimeOptions)
         throw new TypeError("Invalid boss cinematic binding kind");
       // The Unmake replaced the Source's descent cinematic: a world saved inside one no longer loads.
       if (raw.kind === "source-descent") throw new RangeError("The Source's void descent cinematic was retired");
-      if (raw.kind === "boss-ritual" && (!isObject(raw.context) || !isObject(raw.ritual)))
-        throw new TypeError("Invalid ritual context");
+      if (!isObject(raw.context) || !isObject(raw.ritual)) throw new TypeError("Invalid ritual context");
       const saved = value as Extract<PortableBossCinematicBinding, { kind: "boss-ritual" }>;
       if (!owners.includes(saved.owner)) throw new RangeError("Boss cinematic owner is not in the candidate world");
       if (

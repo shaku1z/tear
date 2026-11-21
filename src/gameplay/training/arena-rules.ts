@@ -351,7 +351,9 @@ export interface SourceVoidConfig {
   readonly voidFireHot: number;
   readonly voidCageH: number;
   readonly voidCageHalfW: number;
+  /** Seconds the stream's scroll takes to ramp in once the void run starts. */
   readonly descentArrival: number;
+  /** How far below the player's feet the stream's first platform sits, clamped to the lower band. */
   readonly descentIngressBelow: number;
   readonly voidTransferGrace: number;
   readonly voidCamZoom: number;
