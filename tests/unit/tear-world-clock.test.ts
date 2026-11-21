@@ -4,6 +4,7 @@ import * as gameConfig from "../../src/config/game-config";
 import { createTearWorldClock } from "../../src/gameplay/runtime/tear-world-clock";
 import * as particles from "../../src/presentation/particles";
 import * as runRandom from "../../src/simulation/run-random";
+import { DEFAULT_COSMETIC_LOOKS } from "../../src/presentation/cosmetic-defaults";
 
 describe("per-world time and randomness", () => {
   it("hands every world its own clock instance", () => {
@@ -30,6 +31,7 @@ describe("per-world time and randomness", () => {
 
   it("gives each world its own particle system", () => {
     const policy = {
+      looks: DEFAULT_COSMETIC_LOOKS,
       effects: { highBudget: 2, lowBudget: 1, cullMargin: 0 },
       lowGraphics: () => false,
       reducedMotion: () => false,

@@ -6,7 +6,7 @@ import {
   type ReplayNativeTransport,
   type ReplaySpeed,
 } from "./replay-transport-controller";
-import type { ProductionGhostReplayCompositionOptions } from "../../tearbench/production-replay-composition";
+import type { ProductionGhostReplayCompositionOptions } from "../world/detached/replay-composition";
 import type { ReplayClipExportPort, ReplayClipWebm } from "../replay/browser-replay-clip-export";
 import type { GhostVerifiedReplayRenderView } from "../../ghost/production-replay-session";
 import type { GhostReadCapsule } from "../../ghost/capsule-reader";

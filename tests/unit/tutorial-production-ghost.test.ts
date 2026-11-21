@@ -18,15 +18,12 @@ import {
   type TutorialGoldCorpus,
 } from "../../src/gameplay/training/tutorial-gold-reference";
 import { beforeAll, describe, expect, it } from "vitest";
-import { createProductionReplayRun, createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
+import { createProductionReplayRun, createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
 import { stableVerificationHash } from "../../src/domain/hash";
 import { CONFIG } from "../../src/config/game-config";
 import { productionGhostPath, recordProductionGhostTrace } from "../../src/gameplay/training/tutorial-production-ghost";
-import {
-  TutorialGhostCoach,
-  parseTutorialCoachCheckpoint,
-  shippingTutorialGold,
-} from "../../src/gameplay/training/tutorial-ghost-coach";
+import { parseTutorialCoachCheckpoint } from "../../src/gameplay/training/tutorial-coach-checkpoint";
+import { TutorialGhostCoach, shippingTutorialGold } from "../../src/gameplay/training/tutorial-ghost-coach";
 import { loadShippingTutorialGold } from "../../src/gameplay/training/tutorial-gold-shipping";
 
 // These tests need the coach's demonstrations, so they load the on-demand corpus first; the game asks for it once a lesson is played.

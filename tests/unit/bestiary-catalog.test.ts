@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LEADERBOARD_KINDS } from "../../src/domain/leaderboards";
 import {
   publishedBestiaryEntries,
   ENEMY_BESTIARY_COPY,
@@ -90,11 +91,15 @@ describe("leaderboard states", () => {
       cloudAvailable: true,
       loading: false,
       data: [],
-      modes: [{ id: "endless", label: "Endless" }],
+      boards: [{ id: "endless", label: "ENDLESS" }],
+      board: "endless",
+      kind: LEADERBOARD_KINDS.score,
+      legacyGhost: "ghost:endless:normal",
+      formatTime: (seconds) =>
+        `${String(Math.floor(seconds / 60))}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`,
       difficulties: [{ id: "normal", label: "Normal" }],
-      mode: "endless",
       difficulty: "normal",
-      localBest: { wave: 0, score: 0 },
+      localBest: { count: 0, score: 0 },
       rowView: () => ({ id: "x", title: "x", detail: "x" }),
       ...overrides,
     }).view.status;

@@ -12,13 +12,16 @@ import type { EnemyBaseConstructor } from "./enemy-base";
 import type { BossRuntime } from "./boss-runtime";
 import { bossPhaseMarks } from "../../run/boss-definitions";
 
+/** BREACHED: how long the arm is drawn back before the torn-off shield is thrown as the saw. */
+const SAW_WINDUP = 0.45;
+
 export function createColossusType(
   dependencies: EnemyDependencies,
   Enemy: EnemyBaseConstructor,
   bossRuntime: BossRuntime,
 ) {
   const { CONFIG, FX, GAME_RANDOM, Projectile, SFX, clamp, lerp } = dependencies;
-  const { bossFeedback, bossTransformation, perilPing } = bossRuntime;
+  const { bossFeedback, bossPhaseBeat, perilPing } = bossRuntime;
   // ---- The Iron Colossus (Stage 2 boss): tank with a front shield -> thrown sweeping arm -> molten core ----
   class Colossus extends Enemy {
     blockStyle: string;
@@ -116,10 +119,19 @@ export function createColossusType(
       return Object.freeze({
         phase,
         targetPhase: this.phase,
-        ready: this.introT <= 0 && this.cinematicT <= 0 && this.cinematicRequest === null,
-        stage:
-          this.introT > 0 ? "opening" : this.cinematicRequest !== null || this.cinematicT > 0 ? "transition" : "combat",
+        ready: !this._inPhaseMove() && this.introT <= 0,
+        stage: this.introT > 0 ? "opening" : this._inPhaseMove() ? "transition" : "combat",
       });
+    }
+    /** How long the current windup lasts; the windup tell is drawn against it. */
+    windupLength() {
+      const C = this.cfg;
+      if (this.pendingAtk === "saw") return SAW_WINDUP;
+      return this.pendingAtk === "charge" ? C.chargeWindup : C.windup;
+    }
+    /** The phase change's own move: the arm drawn back to throw the torn-off shield. */
+    _inPhaseMove() {
+      return this.state === "windup" && this.pendingAtk === "saw";
     }
     get phase() {
       const f = this.hp / this.maxHp,
@@ -234,24 +246,21 @@ export function createColossusType(
       }
       FX.ring(this.x, this.y, 16, CONFIG.colors.boss);
     }
-    _enterPhase(ph: number, projectiles: EnemyProjectile[]) {
-      void projectiles;
+    // A phase change is a move in the fight, never a scene that stops it
+    // (plans/active/CINEMATICS_OVERHAUL.md). Phase II tears the shield off and its first move
+    // throws it as the saw; Phase III opens the core and the hot panels start stepping. The
+    // banner names each phase with its tag.
+    _enterPhase(ph: number) {
+      const C = this.cfg;
       if (ph === 2) {
         this.shielded = false;
         this.phaseTag = "BREACHED";
         this.crossT = 0.8;
-        bossTransformation(this, {
-          id: "colossus-breach",
-          title: "THE SHIELD FALLS",
-          pose: "colossusContainment",
-          speaker: "FOUNDRY WARNING",
-          line: "OUTER CONTAINMENT FAILED.",
-          color: CONFIG.colors.armoredShield,
-          sfx: "colossusServo",
-          after: "throwShield",
-        });
+        this.state = "windup";
+        this.pendingAtk = "saw";
+        this.stateT = this.windupLength();
+        bossPhaseBeat(this, this.phaseTag, CONFIG.colors.armoredShield);
       } else if (ph === 3) {
-        const C = this.cfg;
         this.zones = [];
         for (let i = 0; i < C.panelCount; i++)
           this.zones.push({
@@ -267,15 +276,7 @@ export function createColossusType(
         this.panelStepT = 0.35;
         this.meltdownCd = C.meltdownCd * 0.65;
         this.phaseTag = "MELTDOWN";
-        bossTransformation(this, {
-          id: "colossus-meltdown",
-          title: "THE CORE IGNITES",
-          pose: "colossusCore",
-          speaker: "FOUNDRY WARNING",
-          line: "CORE CONTAINMENT: LOST.",
-          color: CONFIG.colors.slam,
-          sfx: "colossusServo",
-        });
+        bossPhaseBeat(this, this.phaseTag, CONFIG.colors.slam);
       }
     }
 
@@ -332,7 +333,6 @@ export function createColossusType(
         banner: perfect ? "CORE EXPOSED" : "SHIELD ARM RUPTURED",
         color: perfect ? CONFIG.colors.perfect : "#ff8a32",
         priority: perfect ? 9 : 7,
-        slowmo: perfect ? 0.42 : 0,
         zoom: perfect ? 0.09 : 0.045,
       });
       FX.shockwave(this.x, this.y, 12, perfect ? CONFIG.colors.perfect : "#ff8a32", perfect ? 260 : 180, 6);
@@ -352,10 +352,9 @@ export function createColossusType(
       this.facing = Math.sign(player.x - this.x) || this.facing;
       this.exposed = player.y < this.y - this.hh * 0.15; // attacking from above
       if (ph !== this.phaseMarker) {
-        this._enterPhase(ph, projectiles);
+        this._enterPhase(ph);
         this.phaseMarker = ph;
       }
-      if (this.cinematicRequest) return;
       if (this.introT > 0) {
         const ip = 1 - this.introT / (CONFIG.bossTheater.introDur || 1.4);
         if (ip > 0.64 && !this._introBeat) {
@@ -421,7 +420,6 @@ export function createColossusType(
             priority: 9,
             shake: 14,
             flash: 0.4,
-            slowmo: 0.4,
             zoom: 0.08,
           });
           this.state = "recover";
@@ -474,7 +472,7 @@ export function createColossusType(
             player.takeDamage(this.cfg.smashDmg, this.x, this);
           FX.shockwave(this.x, this.y + this.hh, 16, CONFIG.colors.slam, 300, 7);
           this.plateKickT = 0.45;
-          bossFeedback(this, "contact", { shake: 12, slowmo: 0.36, zoom: 0.06 });
+          bossFeedback(this, "contact", { shake: 12, zoom: 0.06 });
           this.state = "recover";
           this.stateT = 0.7;
           this.atkT = this.cfg.atkCd;
@@ -563,7 +561,7 @@ export function createColossusType(
             perilPing(this);
           } else {
             this.state = "windup";
-            this.stateT = this.pendingAtk === "charge" ? C.chargeWindup : C.windup;
+            this.stateT = this.windupLength();
           }
           if (this.pendingAtk === "charge") this.chargeStop = GAME_RANDOM.next() < C.chargeStopShort; // most charges halt short
         }
@@ -579,6 +577,13 @@ export function createColossusType(
     }
     _fire(_player: EnemyPlayerPort, projectiles: EnemyProjectile[], C: typeof CONFIG.colossus, ph: number) {
       const a = this.pendingAtk;
+      if (a === "saw") {
+        this._throwShield(projectiles);
+        this.state = "idle";
+        this.atkT = C.atkCd / (1 + (ph - 1) * 0.25);
+        bossFeedback(this, "launch", { color: CONFIG.colors.armoredShield });
+        return;
+      }
       if (a === "stomp") {
         this._shock(projectiles, 1);
         this._shock(projectiles, -1);

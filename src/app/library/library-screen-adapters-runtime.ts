@@ -18,7 +18,18 @@ import {
 } from "../../presentation/codex-snapshots";
 import { buildAchievementSnapshot } from "../../presentation/achievement-snapshot";
 import type { AchievementSource } from "../../presentation/achievement-snapshot";
-import { buildFeedLeaderboardSnapshot, buildRankedLeaderboardSnapshot } from "../../presentation/leaderboard-snapshots";
+import {
+  buildFeedLeaderboardSnapshot,
+  buildRankedLeaderboardSnapshot,
+  type LocalBoardBest,
+} from "../../presentation/leaderboard-snapshots";
+import {
+  leaderboardChoices,
+  leaderboardId,
+  leaderboardKind,
+  type LeaderboardKindId,
+  type LeaderboardRef,
+} from "../../domain/leaderboards";
 import {
   buildLeaderboardRow,
   buildProfileRecords,
@@ -33,6 +44,9 @@ import type { GhostVaultLibraryPort } from "./ghost-vault-library-controller";
 import type { GhostTheaterOpenResult } from "../../ghost/theater-open-result";
 import { createLiveBestiaryPreview } from "./bestiary-preview";
 import { VAULT_OPENING_MESSAGE, vaultListState } from "../../presentation/screens/profile-list-empty-state";
+import { resolveCosmeticStyles } from "../../presentation/cosmetic-styles";
+import { COSMETIC_CATALOG } from "../../gameplay/progression/cosmetic-catalog";
+import { loadoutOf } from "../../domain/cosmetics";
 
 type Dependencies = Pick<
   GameRuntimeDependencies,
@@ -202,7 +216,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     profileMessage = "",
     achievementFilter = "all";
   let leaderboardTab = "global",
-    leaderboardMode = "",
+    leaderboardBoard = "",
     leaderboardDifficulty = "normal",
     leaderboardKey = "";
   let leaderboardData: readonly LeaderboardRowSource[] | null = null,
@@ -224,6 +238,17 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       leaderboardMessage = message;
     },
   });
+  /** The player's own best on each kind of board, as this device keeps it. */
+  const localBoardBest: Readonly<Record<LeaderboardKindId, (board: LeaderboardRef) => LocalBoardBest | null>> = {
+    score: (board) => {
+      const best = services.getBest(board.mode, board.difficulty);
+      return { count: best.wave, score: best.score };
+    },
+    "gauntlet-clear": (board) => {
+      const best = d.PROFILE.gauntletBest(board.difficulty);
+      return best === null ? null : { score: best.ticks };
+    },
+  };
   const rowView = (row: LeaderboardRowSource, fallbackId?: string) =>
     buildLeaderboardRow(row, d.CONFIG.modes, d.Cloud.user?.id, services.formatTime, fallbackId);
   /** Clamps the shared scroll to a snapshot's extent; a phone composition (compact density) measures and clamps its own. */
@@ -343,6 +368,8 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     // The vault toolbar (import) sits above the list: profile-achievements vaultToolbar.
     const archiveInset = profileTab === "vault" && ghostVault.archive !== undefined ? 84 : 0;
     const result = buildProfileSnapshot({
+      // The passport has no motion, so the calm looks (which only still motion) never apply to it.
+      cosmetics: resolveCosmeticStyles(COSMETIC_CATALOG, loadoutOf(COSMETIC_CATALOG, d.PROFILE.cosmetics()), false),
       tab: profileTab,
       tabs: profileTabs,
       signedIn,
@@ -481,13 +508,21 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       return;
     }
     const modes = d.CONFIG.modes.filter((mode) => !mode.training && !mode.debug);
-    if (!leaderboardMode || !modes.some((mode) => mode.id === leaderboardMode)) leaderboardMode = modes[0]?.id ?? "";
-    const key = leaderboardMode + "_" + leaderboardDifficulty;
+    // Boards this target ranks: a direction the provider cannot rank is not offered (see LEADERBOARD_KINDS).
+    const boards = leaderboardChoices(modes, (direction) => !cloud || d.Cloud.ranksLeaderboard(direction));
+    const choice = boards.find((entry) => entry.id === leaderboardBoard) ?? boards[0];
+    leaderboardBoard = choice?.id ?? "";
+    const board: LeaderboardRef = {
+      kind: choice?.kind ?? "score",
+      mode: choice?.mode ?? "",
+      difficulty: leaderboardDifficulty,
+    };
+    const key = leaderboardId(board);
     if (cloud && key !== leaderboardKey) {
       leaderboardKey = key;
       leaderboardData = null;
       leaderboardLoading = true;
-      void d.Cloud.topScores(leaderboardMode, leaderboardDifficulty, 25)
+      void d.Cloud.topScores(board, 25)
         .then((rows) => {
           if (leaderboardKey === key) {
             leaderboardData = rows ?? [];
@@ -513,12 +548,15 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       height: services.height,
       scroll: services.scroll(),
       data: leaderboardData ?? [],
-      modes,
+      boards,
+      board: leaderboardBoard,
+      kind: leaderboardKind(board),
+      ...(board.kind === "score" ? { legacyGhost: `ghost:${board.mode}:${board.difficulty}` } : {}),
       difficulties: d.CONFIG.difficulties,
-      mode: leaderboardMode,
       difficulty: leaderboardDifficulty,
       ...(d.Cloud.user === null ? {} : { currentUserId: d.Cloud.user.id }),
-      localBest: services.getBest(leaderboardMode, leaderboardDifficulty),
+      localBest: localBoardBest[board.kind](board),
+      formatTime: services.formatTime,
       rowView: (row) => rowView(row),
     });
     clampScroll(result.maximumScroll);
@@ -636,7 +674,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     },
     selectLeaderboardBoard: (id) => {
       const [kind, value = ""] = id.split(":");
-      if (kind === "mode") leaderboardMode = value;
+      if (kind === "board") leaderboardBoard = value;
       else if (kind === "difficulty") leaderboardDifficulty = value;
       services.setScroll(0);
       leaderboardMessage = "";

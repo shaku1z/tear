@@ -2,12 +2,13 @@ import { buildWatchChoiceScore } from "../agents/watch-build-choice";
 import type { RunDifficulty } from "../gameplay/run/session";
 import { stageIdsAvailableOn } from "../gameplay/stages";
 import type { WeaponId } from "../gameplay/weapon-selection";
-import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION, type TearScenarioV1 } from "../tearbench/contracts";
+import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "../gameplay/snapshot/snapshot-contract";
+import type { TearScenarioV1 } from "../tearbench/contracts";
 import { TEAR_SIMULATION_TICKS_PER_SECOND } from "../tearbench/simulation-profile";
 import { agentView, UNMARKED_HIT, type AttributedHits } from "./boss-fight";
 import { BOSS_PLAYER_IDS, createBossPlayer, type BossPlayer, type BossPlayerId } from "./boss-player";
 import { boxOverlaps, readPlayerBox, type PlayerBox } from "./boss-view";
-import { chapterState, CHAPTER_WAVE_LIVE, skipChapter } from "./headless/chapter";
+import { chapterHolds, skipChapter } from "./headless/chapter";
 import {
   createProductionHeadlessEnvironment,
   type ProductionHeadlessEnvironment,
@@ -54,6 +55,8 @@ export interface WaveResult extends WaveRequest {
   readonly graceTicks: number;
   /** Upgrades the player arrived with. */
   readonly upgrades: number;
+  /** Upgrades the drafts before the wave offered, by id: more than were taken. */
+  readonly offered: readonly string[];
   /** Where the player stood when defeated. */
   readonly diedAt?: Readonly<{ tick: number; x: number; y: number }>;
   /** Every enemy of the wave in the order it arrived. */
@@ -76,6 +79,7 @@ const ATTRIBUTION_MARGIN_PIXELS = 12;
 
 interface EnemyActor {
   readonly kind?: string;
+  readonly supportType?: string;
   readonly affixes?: readonly string[];
   readonly x: number;
   readonly y: number;
@@ -104,14 +108,16 @@ interface RunView {
   readonly waveLog: readonly Readonly<{ wave: number | string; time: number; kills: number }>[];
 }
 
-interface WaveWorld {
+export interface WaveWorld {
   enemies(): readonly unknown[];
   projectiles(): readonly unknown[];
   player(): unknown;
   run(): unknown;
 }
 
-const kindOf = (enemy: EnemyActor | null | undefined): string => enemy?.kind ?? "unknown";
+/** The name the game's enemy lists use: the four support enemies share one kind and differ by `supportType`. */
+export const kindOf = (enemy: Readonly<{ kind?: string; supportType?: string }> | null | undefined): string =>
+  enemy?.supportType ?? enemy?.kind ?? "unknown";
 
 /** The stage's waves a `waves` report plays: its nine waves before the boss wave. */
 export function stageWaves(stage: string): readonly number[] {
@@ -168,7 +174,7 @@ export function attributeWaveHit(
 }
 
 /** A copy of what attribution reads, taken before the step: the game moves and removes the actors themselves. */
-function before(world: WaveWorld): Readonly<{ projectiles: ProjectileActor[]; enemies: EnemyActor[] }> {
+export function copyActors(world: WaveWorld): Readonly<{ projectiles: ProjectileActor[]; enemies: EnemyActor[] }> {
   return {
     projectiles: (world.projectiles() as readonly ProjectileActor[])
       .filter((projectile) => projectile.dead !== true)
@@ -182,8 +188,9 @@ function before(world: WaveWorld): Readonly<{ projectiles: ProjectileActor[]; en
       })),
     enemies: (world.enemies() as readonly EnemyActor[])
       .filter((enemy) => enemy.dead !== true && enemy.dying !== true)
-      .map(({ kind, x, y, hw, hh, contactReach }) => ({
+      .map(({ kind, supportType, x, y, hw, hh, contactReach }) => ({
         ...(kind === undefined ? {} : { kind }),
+        ...(supportType === undefined ? {} : { supportType }),
         x,
         y,
         hw,
@@ -195,8 +202,7 @@ function before(world: WaveWorld): Readonly<{ projectiles: ProjectileActor[]; en
 
 function start(environment: ProductionHeadlessEnvironment, request: WaveRequest): string | undefined {
   environment.reset(waveScenario(request));
-  if (chapterState(environment) !== CHAPTER_WAVE_LIVE && !skipChapter(environment))
-    return "the stage's story chapter did not end";
+  if (chapterHolds(environment) && !skipChapter(environment)) return "the stage's story chapter did not end";
   const run = environment.world().run() as unknown as RunView;
   return run.wave === request.wave
     ? undefined
@@ -208,11 +214,13 @@ function start(environment: ProductionHeadlessEnvironment, request: WaveRequest)
  * so the player has no upgrades from earlier waves.
  */
 export function playWave(request: WaveRequest, player: BossPlayer = createBossPlayer(request.player)): WaveResult {
+  const offered = new Set<string>();
   const environment = createProductionHeadlessEnvironment(
     request.build === "none"
       ? {}
       : {
           build: (choices) => {
+            for (const choice of choices) offered.add(choice.id);
             const scores = choices.map((choice) => buildWatchChoiceScore(choice.id, request.weapon));
             return scores.indexOf(Math.max(...scores));
           },
@@ -247,7 +255,7 @@ export function playWave(request: WaveRequest, player: BossPlayer = createBossPl
       const view = agentView(environment, request.weapon);
       const box = readPlayerBox(world);
       const hpBefore = view.state.player.hp;
-      const actors = before(world);
+      const actors = copyActors(world);
       const step = environment.step(player.decide(view, null, box));
       ticks += 1;
       const after = environment.policyObservation().player;
@@ -289,6 +297,7 @@ export function playWave(request: WaveRequest, player: BossPlayer = createBossPl
         : {}),
       graceTicks,
       upgrades,
+      offered: [...offered].sort(),
       ...(diedAt === undefined ? {} : { diedAt }),
       spawned,
       elites: spawned.filter((enemy) => enemy.affixes.length > 0).length,

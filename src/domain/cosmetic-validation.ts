@@ -11,9 +11,9 @@
 import { colourProblem, isHexColor, type ReadabilityBackdrops } from "./cosmetic-readability";
 import {
   ACQUIRE_KINDS_WITH_ID,
+  MAX_DELETED_LOADOUTS,
   MAX_FLASHES_PER_SECOND,
   MAX_LOADOUT_NAME,
-  MAX_LOADOUTS,
   MAX_PRICE,
   SLOT_GROUPS,
   COSMETIC_STATE_VERSION,
@@ -24,7 +24,8 @@ import {
   type LookFamily,
   type ParamSpec,
 } from "./cosmetic-types";
-import { isItemId, isReferenceId, MAX_ID_LENGTH } from "./identifiers";
+import { LOADOUT_IDS } from "./cosmetic-loadouts";
+import { isItemId, isReferenceId } from "./identifiers";
 import { isRecord } from "./records";
 import { conditionProblems } from "./unlock-condition";
 
@@ -342,9 +343,9 @@ const LATEST_PLAUSIBLE_TIME = 9_999_999_999_999;
  * The largest cosmetic record this catalog allows, in characters. It must fit MAX_STATE_CHARS.
  *
  * The bound is the catalog, not MAX_OWNED (which only refuses a purchase). The worst case is every item
- * owned, seen and counted, plus MAX_LOADOUTS loadouts with every slot filled.
- * Every value is at its longest: the highest price, the latest plausible time, the largest counter, ids at
- * MAX_ID_LENGTH where a player chooses them, and loadout names that each escape to six characters in JSON.
+ * owned, seen and counted, a loadout under every pool id with every slot filled and a home written out, and
+ * MAX_DELETED_LOADOUTS deletes. Every value is at its longest: the highest price, the latest plausible time, the
+ * largest counter, and loadout names that each escape to six characters in JSON.
  *
  * Outside this bound: owned items and counters for ids this catalog does not list. Neither is ever dropped
  * (`mergeCosmeticStates`), because they are a newer client's purchases and progress. That newer build checks
@@ -356,19 +357,18 @@ export function worstCaseStateSize(catalog: CosmeticCatalog): number {
   const at = LATEST_PLAUSIBLE_TIME;
   const every = (value: number) => Object.fromEntries(items.map((id) => [id, value]));
   const slots = Object.fromEntries(catalog.slots.map((slot) => [slot.id, { id: longestItem, at }]));
-  const loadoutId = (index: number) => `${String(index)}_`.padEnd(MAX_ID_LENGTH, "x");
-  const loadouts = Object.fromEntries(
-    Array.from({ length: MAX_LOADOUTS }, (_, index) => [
-      loadoutId(index),
-      { name: "\u0001".repeat(MAX_LOADOUT_NAME), nameAt: at, deletedAt: at, slots },
-    ]),
-  );
+  const home = LOADOUT_IDS.reduce((longest, id) => (id.length > longest.length ? id : longest), "");
+  const loadout = { name: "\u0001".repeat(MAX_LOADOUT_NAME), nameAt: at, createdAt: at, home, slots };
+  const loadouts = Object.fromEntries(LOADOUT_IDS.map((id) => [id, loadout]));
+  const identity = (index: number) => `${home}_${String(at - index)}`;
+  const deletedLoadouts = Object.fromEntries(Array.from({ length: MAX_DELETED_LOADOUTS }, (_, i) => [identity(i), at]));
   return JSON.stringify({
     v: COSMETIC_STATE_VERSION,
     owned: every(MAX_PRICE),
     seen: every(at),
     counters: every(Number.MAX_SAFE_INTEGER),
     loadouts,
-    active: { id: loadoutId(0), at },
+    deletedLoadouts,
+    active: { id: identity(0), at },
   }).length;
 }

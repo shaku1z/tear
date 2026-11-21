@@ -1,6 +1,7 @@
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { GameEnemy, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
+import type { TrainingCallouts } from "./training-coach";
 import {
   createLiveTutorialRuntime,
   resetTutorialActors,
@@ -8,11 +9,7 @@ import {
 } from "../../gameplay/training/live-tutorial-runtime";
 import { stepUiTab } from "../interface/ui-action-coordinator";
 import { PLAYGROUND_TABS } from "../../gameplay/training/runtime-bridge";
-import {
-  PLAYGROUND_ALL_KINDS,
-  PLAYGROUND_HOTKEY_KINDS,
-  PlaygroundController,
-} from "../../gameplay/training/playground-controller";
+import { PLAYGROUND_ALL_KINDS, PlaygroundController } from "../../gameplay/training/playground-controller";
 import { createPlaygroundRuntimeBridge } from "../../gameplay/training/runtime-bridge";
 import { createLivePlaygroundPresentation } from "../../gameplay/training/live-playground-presentation";
 import type { PlaygroundScreenModel } from "../../gameplay/training/live-playground-presentation";
@@ -54,7 +51,7 @@ export interface LiveTrainingHostContext {
   readonly resetTrainingCarry?: () => void;
   readonly selectedWeapon: () => string;
   readonly selectWeapon: (id: string) => void;
-  readonly addFloater: (x: number, y: number, text: string, emphasis: boolean, color: string) => void;
+  readonly callouts: TrainingCallouts;
   readonly drawGhost: (snapshot: TutorialGhostSnapshot) => void;
   readonly abilityColors: () => Readonly<Record<string, Readonly<{ color: string }>>>;
   readonly scroll: () => number;
@@ -130,17 +127,12 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
     addProfileStat: d.profileStatsPersistence.add,
     completeCourse: async (id) => {
       const status = await (d.tutorialCompletionPersistence?.complete(id) ?? Promise.resolve("unavailable"));
-      const actor = state.player();
-      if (actor !== undefined)
-        context.addFloater(
-          actor.x,
-          actor.y - 70,
-          status === "committed" || status === "already"
-            ? "TUTORIAL PROGRESS SAVED"
-            : "TUTORIAL COMPLETE · SAVE NOT CONFIRMED",
-          true,
-          status === "committed" || status === "already" ? d.CONFIG.colors.perfect : "#e0a326",
-        );
+      const saved = status === "committed" || status === "already";
+      context.callouts.post(
+        saved
+          ? { text: "TUTORIAL PROGRESS SAVED", tone: "success" }
+          : { text: "TUTORIAL COMPLETE · SAVE NOT CONFIRMED", tone: "nudge" },
+      );
       return status;
     },
     recordLesson: (lessonId) => {
@@ -157,9 +149,6 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
     controller,
     get difficulties() {
       return d.CONFIG.difficulties;
-    },
-    get colors() {
-      return d.CONFIG.colors;
     },
     get stageNames() {
       return d.PLAYGROUND_STAGES.map((stage) => stage.name);
@@ -192,13 +181,12 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
       state.setProjectiles([]);
     },
     spawn: context.spawn,
-    announce: (text, emphasis, color) => {
-      const actor = player();
-      context.addFloater(actor.x, actor.y - 60, text, emphasis, color);
+    announce: (text, target) => {
+      context.callouts.post({ text, tone: "info", ...(target ? { target } : {}) });
     },
     navigate: (screen) => {
-      // ABILITIES is the menu's last tab on its own screen: U opens it directly, and the
-      // menu reopens on it when it was the tab left open.
+      // ABILITIES is the menu's last tab on its own screen: the menu reopens on it when it was
+      // the tab left open.
       if (screen === "pglab") runtime.tab = "abilities";
       const target = screen === "pgmenu" && runtime.tab === "abilities" ? "pglab" : screen;
       context.navigate(target);
@@ -206,9 +194,6 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
     },
     releasePointer: context.releasePointer,
     requestPointer: context.requestPointer,
-    dismissMirror: () => {
-      d.Mirror.active = false;
-    },
     selectArena: (arena) => {
       if (arena === -1) {
         context.selectStage(0);
@@ -234,7 +219,7 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
       resetAtDifficulty: () => {
         context.resetRun(requireRun(state).diff);
       },
-      openLab: () => {
+      openAbilities: () => {
         context.navigate("pglab");
         context.resetScroll();
       },
@@ -285,7 +270,6 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
       }
       return runtime.tab;
     },
-    hotkeyKinds: PLAYGROUND_HOTKEY_KINDS,
     selectedWeapon: context.selectedWeapon,
     upgrades: () => d.UPGRADES,
     abilityColors: context.abilityColors,

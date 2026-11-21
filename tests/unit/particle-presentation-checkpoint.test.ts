@@ -3,14 +3,16 @@ import { createParticleSystem } from "../../src/presentation/particles";
 import {
   parseParticlePresentationCheckpoint,
   validateParticlePresentationBinding,
-} from "../../src/tearbench/particle-presentation-checkpoint";
+} from "../../src/gameplay/snapshot/particle-checkpoint";
 import { createCosmeticEmissionRandom } from "../../src/domain/cosmetic-emission-random";
+import { DEFAULT_COSMETIC_LOOKS } from "../../src/presentation/cosmetic-defaults";
 
 function fixture(highBudget = 32, lowBudget = 2) {
   let draws = 0,
     low = false;
   const effects = { highBudget, lowBudget, cullMargin: 180 };
   const fx = createParticleSystem({
+    looks: DEFAULT_COSMETIC_LOOKS,
     effects,
     lowGraphics: () => low,
     reducedMotion: () => false,

@@ -7,25 +7,27 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { CONFIG } from "../../src/config/game-config";
 import { TUTORIAL_LESSON_IDS } from "../../src/gameplay/training/tutorial-lesson-ids";
-import { TutorialController, type TutorialSessionCheckpoint } from "../../src/gameplay/training/tutorial-controller";
+import { TutorialController } from "../../src/gameplay/training/tutorial-controller";
+import type { TutorialSessionCheckpoint } from "../../src/gameplay/training/tutorial-session-checkpoint";
 import { createTutorialArena } from "../../src/gameplay/training/tutorial-arenas";
 import { projectCanonicalGameplayState } from "../../src/gameplay/runtime/canonical-state";
 import { stableVerificationHash } from "../../src/domain/hash";
 import {
   captureProductionReplayCheckpoint,
   createProductionGhostReplayComposition,
-} from "../../src/tearbench/production-replay-composition";
+} from "../../src/app/world/detached/replay-composition";
 import {
   createProductionHeadlessEnvironment,
   type ProductionHeadlessCheckpoint,
   type ProductionTutorialHandoffArtifact,
 } from "../../src/playtest/headless/production-headless-environment";
-import type { TearScenarioV1, TearSnapshotV1 } from "../../src/tearbench/contracts";
+import type { TearScenarioV1 } from "../../src/tearbench/contracts";
+import type { TearSnapshotV1 } from "../../src/gameplay/snapshot/snapshot-contract";
 import {
-  firstProductionC27AHashDivergence,
-  replayProductionC27ATrace,
-  type ProductionC27ATrace,
-} from "../../src/tearbench/production-c27a-matrix";
+  firstLiveDetachedParityHashDivergence,
+  replayLiveDetachedParityTrace,
+  type LiveDetachedParityTrace,
+} from "../../src/tearbench/live-detached-parity-matrix";
 import { runLiveCollisionPhase } from "../../src/gameplay/combat/live-collision-phase";
 import { WEAPON_IDS } from "../../src/gameplay/weapon-selection";
 import type { createBlade } from "../../src/gameplay/entities/blade";
@@ -354,6 +356,15 @@ describe("production tutorial reconstructed-byte continuation", () => {
       ),
     ).toBe(false);
   });
+  /**
+   * The entry/cinematic cases step the whole production world through the boss's entry, then two
+   * worlds in lockstep for 900 ticks, and for Source its phase-3 fight to the kill. Stepping is the
+   * cost: comparing state hashes instead of whole states saved nothing. Measured alone on one machine
+   * (2026-11-20): Aldric 1.1 to 2.1 s, Source 2.3 to 3.3 s; Source took 5.4 s while other sessions'
+   * tests ran beside it, past the 5 s default. 20 s holds a three- to four-fold slowdown and still
+   * fails a hang well before the run's own limits.
+   */
+  const ENTRY_CONTINUATION_BUDGET_MS = 20_000;
   it.each(["source", "aldric"] as const)(
     "continues %s authored entry/cinematic against decoded owners without replaying launch",
     (bossId) => {
@@ -448,17 +459,22 @@ describe("production tutorial reconstructed-byte continuation", () => {
         expect(finished.replay.stage.platforms).toEqual(source.replay.stage.platforms);
       }
     },
+    ENTRY_CONTINUATION_BUDGET_MS,
   );
-  it("captures actual boss defeat/removal as a finished portable attempt and restarts without course effects", () => {
-    const source = bossAttempt("colossus", 3);
-    for (let tick = 1; tick <= 1000 && source.replay.world.context.cinema.id !== "colossus-breach"; tick++)
+  it("refuses a portable boss ritual whose cue differs from its authored transition", () => {
+    const source = bossAttempt("aldric", 3);
+    for (let tick = 1; tick <= 3000 && source.replay.world.context.cinema.id !== "aldric-crownfall"; tick++)
       bossStep(source, tick);
+    expect(source.replay.world.context.cinema.id).toBe("aldric-crownfall");
     const altered = JSON.parse(JSON.stringify(capture(source).snapshot)) as TearSnapshotV1;
     const runtime = (altered.state["tear.world.v1"] as Record<string, unknown>).runtime as {
-      bossCinematicBinding: { context: { cue: { after?: string } } };
+      bossCinematicBinding: { context: { cue: { crownFall?: boolean } } };
     };
-    delete runtime.bossCinematicBinding.context.cue.after;
+    delete runtime.bossCinematicBinding.context.cue.crownFall;
     expect(() => composition().create(altered)).toThrow(/authored boss transition/);
+  });
+  it("captures actual boss defeat/removal as a finished portable attempt and restarts without course effects", () => {
+    const source = bossAttempt("colossus", 3);
     for (
       let tick = 1;
       tick <= 10000 && source.replay.tutorial.session().bossPractice?.runtime.lifecycle !== "active";
@@ -763,11 +779,11 @@ describe("production tutorial reconstructed-byte continuation", () => {
     () => {
       const path = process.env.TEAR_TUTORIAL_CONTINUATION_TRACE;
       if (path === undefined) throw new Error("actual live tutorial trace path is required");
-      const trace = JSON.parse(readFileSync(path, "utf8")) as ProductionC27ATrace;
+      const trace = JSON.parse(readFileSync(path, "utf8")) as LiveDetachedParityTrace;
       expect(trace.originInput).toBeDefined();
       expect(trace.hashes.length).toBeGreaterThan(0);
-      const replay = replayProductionC27ATrace(trace);
-      const divergence = firstProductionC27AHashDivergence(trace, replay);
+      const replay = replayLiveDetachedParityTrace(trace);
+      const divergence = firstLiveDetachedParityHashDivergence(trace, replay);
       if (divergence !== null) {
         expect(
           replay.hashes.find((entry) => entry.tick === divergence.tick)?.state,

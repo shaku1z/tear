@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { CONFIG } from "../../src/config/game-config";
 import { stableVerificationHash } from "../../src/domain/hash";
-import { captureProductionReplayCheckpoint, createProductionGhostReplayComposition } from "../../src/tearbench";
+import {
+  captureProductionReplayCheckpoint,
+  createProductionGhostReplayComposition,
+} from "../../src/app/world/detached/replay-composition";
 
 describe("White Hart State Setup and canonical projection", () => {
   it("restores Phase I owned projectiles and their boss references", () => {

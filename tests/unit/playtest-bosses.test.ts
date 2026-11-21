@@ -260,13 +260,15 @@ describe("start at a chosen phase through the game's boss practice", () => {
 
 describe("boss fight measurement", () => {
   it("gives the same table for the same seed", () => {
+    // Five seconds of fight, played twice. Fifteen seconds took 1.8 s on an idle machine and passed the 5 s limit
+    // on a loaded one (2026-11-20). The property is the same at any length; this length took 1.0 s on a loaded machine.
     const request = {
       boss: "rootbound",
       difficulty: "normal",
       weapon: "sword",
       seed: "3",
       player: "avoids-tells",
-      maxTicks: 1800,
+      maxTicks: 600,
     } as const;
     const first = playBossFight(request);
     const second = playBossFight(request);

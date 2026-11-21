@@ -1,8 +1,8 @@
 import { issueGhostRecordedOpeningPermit } from "../../src/ghost/replay-admission";
 import { readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { hydrateRewardCodecPayload } from "../../src/tearbench/reward-codec-hydrator";
-import type { TearCodecValue } from "../../src/tearbench/state-codecs";
+import { hydrateRewardCodecPayload } from "../../src/app/world/detached/reward-hydrator";
+import type { TearCodecValue } from "../../src/gameplay/snapshot/state-codec";
 import type { GhostReadCapsule } from "../../src/ghost/capsule-reader";
 import { verifyGhostCapsuleProductionReplay } from "../../src/ghost/production-replay-verification";
 import { describe, expect, it } from "vitest";
@@ -10,8 +10,8 @@ import {
   createProductionGhostReplayComposition,
   captureProductionReplayCheckpoint,
   restoreProductionReplaySnapshot,
-} from "../../src/tearbench/production-replay-composition";
-import { createProductionReplayWorld, type ProductionReplayWorld } from "../../src/tearbench/production-world-factory";
+} from "../../src/app/world/detached/replay-composition";
+import { createProductionReplayWorld, type ProductionReplayWorld } from "../../src/app/world/detached/world-factory";
 import { UPGRADES, applyUpgrade, tierUp } from "../../src/gameplay/upgrades";
 import { upgradeHookIdentity } from "../../src/gameplay/upgrade-hooks";
 

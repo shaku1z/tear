@@ -31,6 +31,12 @@ export type ScreenAction =
   | { readonly type: "shards.buy"; readonly id: string }
   /** Equip an owned cosmetic in its slot; a null id puts the game look back. */
   | { readonly type: "shards.equip"; readonly slot: string; readonly id: string | null }
+  /** Save a copy of the loadout in use as a new loadout, and use it. */
+  | { readonly type: "shards.newLoadout" }
+  | { readonly type: "shards.useLoadout"; readonly id: string }
+  | { readonly type: "shards.renameLoadout"; readonly id: string }
+  /** The first press asks; a later deliberate press deletes. */
+  | { readonly type: "shards.deleteLoadout"; readonly id: string }
   | { readonly type: "career.control"; readonly command: string; readonly id?: string }
   | { readonly type: "profile.selectTab"; readonly id: string }
   | { readonly type: "profile.watchReplay"; readonly id: string }

@@ -405,10 +405,52 @@ record what hit the player, so it goes to the owner of a shot on the player, els
 player, else "unmarked". Verdant, sword, Normal, three seeds, two players: 54 waves in 71 s on five
 jobs. Tests: `tests/unit/playtest-waves.test.ts`.
 
+Built third (2026-11-20): `pnpm playtest runs`, whole runs from wave 1 in the Adventure, Endless and the
+Gauntlet, on the production headless path with no copied game logic: the scripted player drafts from what the
+game offers after each wave and skips each story chapter as a player does. Per mode and difficulty it prints a
+row per weapon (runs won, the wave runs ended in, run time, upgrades held) and a row per wave over every weapon
+and seed (runs that reached it, runs that cleared it, the game's own clear time, health lost, health coming in
+and going out). The default set is 3 modes, Easy, Normal and Hard, 5 weapons and seeds 1 to 3: 135 runs in
+76 s on six jobs. What three seeds can show: the wave a weapon's runs usually end in, to within a wave
+or two, and which waves cost the most health. What they cannot: a difference of one wave between two weapons,
+or a clear rate for a wave that one or two runs reached. And every number is the scripted player's: it shows
+how far that player gets, not how far a person gets, until stage 3's stronger player. Tests:
+`tests/unit/playtest-runs.test.ts`.
+
+Built fourth (2026-11-20): `pnpm playtest enemies`, each enemy kind alone against the player. A meeting is in
+the Playground, the game's own empty arena, and the enemies are put in play by the game's own spawner, so there
+is no copied spawn logic and a new enemy kind appears with no edit. It prints a row per kind: how the meetings
+end (cleared, player fell, stalled, time limit), time to clear, the enemies' health and the share left
+standing, health lost and what it is lost to. The default set is every enemy the published game has, 1 and 3
+of a kind, Sword on Normal, seeds 1 to 3: 72 meetings in 61 s on four jobs. Its limits: the enemies are at
+wave 1 strength and the player has no upgrades, so the rows compare the kinds with each other and are not
+what a kind costs late in a run; and "in authored groups" (question 5) is answered by `pnpm playtest waves`,
+which plays the groups the game's wave planner makes, not by this report. "Stalled" is a meeting the scripted
+player gave up after 15 seconds in which no health changed on either side. Tests:
+`tests/unit/playtest-enemies.test.ts`.
+
+Built fifth (2026-11-20): `pnpm playtest coverage`. It plays the four reports, each as its own run of the
+command (bosses twice: from Phase I, and from Phases II and III through the game's boss practice; waves over
+every Adventure stage on seed 1), and compares what they brought into play with the game's own lists: published
+enemies, enemy affixes, bosses, boss phases and upgrades (an upgrade appears when a draft offers it). The game
+keeps no list of stage objects, so that line says what appeared and cannot say what is missing. 315 fights,
+waves, runs and meetings; 897 s through the queue on a loaded machine. The first list has three entries, each
+a gap in what was played and not in the game, reported to the lead:
+- White Hart Phase III: the White Hart is not in the game's boss practice, so its fights start at Phase I and
+  no scripted player gets past Phase II in 180 s.
+- Air Superiority and Bloodrite: never offered in these drafts. Drafts repeat on a seed, so the set holds few
+  different drafts; both are offered on seeds 2 to 6 of a deep Verdant wave (checked by hand).
+
+Building it found a fault in `pnpm playtest waves`: every wave of the Grounds after its first was reported as
+broken ("the stage's story chapter did not end"). The Grounds shows no chapter there, and the wave start read
+"no chapter" as "chapter not over". `chapterHolds` in `headless/chapter.ts` now answers that question for the
+waves and the runs. Tests: `tests/unit/playtest-coverage.test.ts`, and a Grounds wave in
+`tests/unit/playtest-waves.test.ts`.
+
 Done when:
 - [ ] Every boss phase, every wave of each biome and every enemy kind is a row that starts directly, in under 1 s each.
-- [ ] `pnpm playtest runs` reports where runs end and per-wave time and health cost for 3 modes, 3 difficulties and 5 weapons.
-- [ ] The coverage section lists content that never appeared; the list is empty or each entry is reported to the lead.
+- [x] `pnpm playtest runs` reports where runs end and per-wave time and health cost for 3 modes, 3 difficulties and 5 weapons.
+- [x] The coverage section lists content that never appeared; the list is empty or each entry is reported to the lead.
 - [ ] `--compare` passes the test of failure mode 3 and prints no rows for a commit compared with itself.
 
 ### Stage 3: a stronger player
@@ -438,7 +480,19 @@ Done when:
 Move the headless game and players under `src/playtest/`, rename State Forge to snapshots,
 delete `scripts/tearbench*.mjs`, the task registry and what is left of `src/agents`.
 
+The last `playtest -> tearbench` imports are this stage's to move (lead, 2026-11-20). The replay overhaul's
+third and fourth pull requests take the replay side (the snapshot contract and codecs, the world factory, the
+composition, the wave reward runtime and the combat simulation). What `src/playtest` still imports from
+`src/tearbench` after them, measured on main `c0270eff`: `contracts` (the scenario, observation and causal event
+types), `simulation-profile`, `validation`, `observation-identity`, `live-observation-actors`,
+`live-observation-projectiles`, `headless`, `gameplay-causal-events` and `production-replay-bootstrap-check`,
+which stays with the headless environment. They move into `src/playtest` with whatever only they use. The pull
+request that moves the last one also removes the `playtest -> tearbench` allowance from
+`config/architecture-layers.json`. The order is agreed with the replay overhaul first, so the two do not edit
+the same imports at the same time: these moves start after its fourth pull request is on main.
+
 Done when:
+- [ ] `src/playtest` imports nothing from `src/tearbench`, and `config/architecture-layers.json` no longer allows it.
 - [ ] `git grep -i tearbench` finds nothing outside `plans/completed/` and the replay code that waits for the replay overhaul.
 - [ ] Architecture and code-budget baselines are lower than before, never higher.
 - [ ] `pnpm check` passes.

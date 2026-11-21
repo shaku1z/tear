@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Use main's copy of the gate. Copies main's version of the gate's definition (the `fromMain` files
+# of main's config/gate-files.json) into $RUNNER_TEMP/gate, and points TEAR_GATE at it and
+# TEAR_CHECKED_ROOT at this checkout. The runner then judges the change with main's checks plus the
+# checks only the change adds. While main has no config/gate-files.json, the change's own copy runs.
+#
+# Every Validate job runs main's copy of this script, read with `git show "$MAIN:scripts/ci-main-gate.sh"`,
+# so it needs nothing from the change's checkout: a head cut before the gate existed is judged too.
+#
+#   bash scripts/ci-main-gate.sh <main commit>
+set -euo pipefail
+MAIN="$1"
+gate="$RUNNER_TEMP/gate"
+rm -rf "$gate"
+mkdir -p "$gate/config"
+if git cat-file -e "$MAIN:config/gate-files.json" 2>/dev/null; then
+  git show "$MAIN:config/gate-files.json" > "$gate/config/gate-files.json"
+  node -e 'for (const path of JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).fromMain) console.log(path)' "$gate/config/gate-files.json" |
+    while IFS= read -r path; do
+      mkdir -p "$gate/$(dirname "$path")"
+      git show "$MAIN:$path" > "$gate/$path"
+    done
+  { echo "TEAR_GATE=$gate/scripts"; echo "TEAR_GATE_LIST=$gate/config/gate-files.json"; echo "TEAR_CHECKED_ROOT=$PWD"; } >> "$GITHUB_ENV"
+  echo "Judged by main's gate at \`$MAIN\`, plus checks only this change adds." >> "$GITHUB_STEP_SUMMARY"
+else
+  { echo "TEAR_GATE=$PWD/scripts"; echo "TEAR_GATE_LIST=$PWD/config/gate-files.json"; } >> "$GITHUB_ENV"
+  echo "Main \`$MAIN\` has no config/gate-files.json yet: judged by this change's own gate." >> "$GITHUB_STEP_SUMMARY"
+fi

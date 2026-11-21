@@ -11,7 +11,10 @@ import { createAuroraTrackFieldState } from "../../src/gameplay/environment/auro
 import { advanceAuroraTrack } from "../../src/gameplay/environment/aurora-track-runtime";
 import { createTearWorldClock } from "../../src/gameplay/runtime/tear-world-clock";
 import { stableVerificationHash } from "../../src/domain/hash";
-import { captureProductionReplayCheckpoint, createProductionGhostReplayComposition } from "../../src/tearbench";
+import {
+  captureProductionReplayCheckpoint,
+  createProductionGhostReplayComposition,
+} from "../../src/app/world/detached/replay-composition";
 
 function fixture() {
   const CLOCK = createTearWorldClock();

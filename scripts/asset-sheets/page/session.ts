@@ -12,7 +12,7 @@ import { createSceneCanvas, releaseSceneBitmap } from "../../../src/presentation
 import { createSceneLibrary } from "../../../src/presentation/scenes/scene-library";
 import { PAINTED_STAGES } from "../../../src/presentation/scenes/scene-registry";
 import { createUi } from "../../../src/presentation/ui";
-import { createProductionGhostReplayComposition } from "../../../src/tearbench/production-replay-composition";
+import { createProductionGhostReplayComposition } from "../../../src/app/world/detached/replay-composition";
 import type { SheetScene } from "../manifest";
 import { createSvgContext } from "./svg-context";
 

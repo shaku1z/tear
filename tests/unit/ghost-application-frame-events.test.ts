@@ -1,4 +1,4 @@
-import { declareSeedRace, seedRaceInitialBuildHash } from "../../src/ghost/seed-race-contract";
+import { declareSeedRace, seedRaceInitialBuildHash } from "../../src/gameplay/run/seed-race-contract";
 import { seedRaceCatalogHash } from "../../src/gameplay/run/seed-locked-draft";
 import { createSeedRaceDecision, readSeedRaceDecisions } from "../../src/ghost/seed-race-decisions";
 import { mapGhostCapsuleToReplayEnvelope } from "../../src/ghost/capsule-replay-envelope";
@@ -20,11 +20,11 @@ import { createGhostAuthoritativeReceipt } from "../../src/ghost/authoritative-r
 import {
   captureProductionReplayCheckpoint,
   createProductionGhostReplayComposition,
-} from "../../src/tearbench/production-replay-composition";
+} from "../../src/app/world/detached/replay-composition";
 import { GhostProductionReplayWorld } from "../../src/ghost/replay-world";
 import { createGhostV3, type GhostReplayTrident } from "../../src/ghost/truth-kernel";
 import type { GhostReadCapsule } from "../../src/ghost/capsule-reader";
-import type { TearSnapshotV1 } from "../../src/tearbench/contracts";
+import type { TearSnapshotV1 } from "../../src/gameplay/snapshot/snapshot-contract";
 import { createLiveGhostFrameRecording } from "../../src/app/replay/ghost-frame-recording";
 import type { LiveGhostRecordingSessionState } from "../../src/app/replay/ghost-recording-session-state";
 import { GhostLiveRecorder } from "../../src/ghost/live-recorder";

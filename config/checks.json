@@ -114,9 +114,14 @@
     "unit": [
       {
         "id": "vitest",
-        "run": "node node_modules/vitest/vitest.mjs run --no-file-parallelism",
+        "run": "node node_modules/vitest/vitest.mjs run",
         "seconds": 290,
         "shardable": true
+      },
+      {
+        "id": "firestore-rules",
+        "run": "node scripts/test-firestore-rules.mjs node_modules/vitest/vitest.mjs run --config vitest.rules.config.ts",
+        "seconds": 60
       }
     ],
     "build": [
@@ -490,6 +495,14 @@
       {
         "id": "replay-world-and-vault",
         "run": "node node_modules/vitest/vitest.mjs run tests/unit/ghost-replay-world.test.ts tests/unit/ghost-capsule-vault.test.ts"
+      },
+      {
+        "id": "build-test-standalone",
+        "run": "node scripts/build-target.mjs test-standalone"
+      },
+      {
+        "id": "scripted-agent-autonomy",
+        "run": "node tests/browser-scripted-agent-autonomy.js"
       }
     ],
     "mobile": [

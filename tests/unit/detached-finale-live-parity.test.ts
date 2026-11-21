@@ -12,7 +12,8 @@ import type {
 import { TearGameplayEventBus, type TearGameplayEvent } from "../../src/gameplay/runtime/gameplay-events";
 import { applyWeapon } from "../../src/gameplay/weapons";
 import type { GameAction } from "../../src/input/game-action";
-import { applyTearCodecConfiguration, hydrateTearCodecWorld, type TearCodecValue } from "../../src/tearbench";
+import { applyTearCodecConfiguration, hydrateTearCodecWorld } from "../../src/app/world/detached/world-hydrator";
+import type { TearCodecValue } from "../../src/gameplay/snapshot/state-codec";
 import {
   projectGameplayEventForParity,
   type TearSemanticEngineEventV1,

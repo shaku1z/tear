@@ -18,12 +18,13 @@ import {
 } from "../../presentation/world/runtime-snapshots";
 import { formatEnemyLabel } from "../../presentation/world/entity-layer";
 import { isEnvironmentDrawnEnemy, renderEnvironmentLayer } from "../world/environment-layer";
+import { DEFAULT_COSMETIC_LOOKS } from "../../presentation/cosmetic-defaults";
 import {
   createLiveWorldSimulationPresentationAdapter,
   type LiveWorldSimulationPresentationAdapterOptions,
 } from "../world/world-simulation-factories";
-import type { ProductionReplayPresentationContext } from "../../tearbench/production-world-factory";
-import type { ProductionGhostReplayCompositionOptions } from "../../tearbench/production-replay-composition";
+import type { ProductionReplayPresentationContext } from "../world/detached/world-factory";
+import type { ProductionGhostReplayCompositionOptions } from "../world/detached/replay-composition";
 
 type Ui = LiveWorldSimulationPresentationAdapterOptions["ui"] & CinematicUiPort & WorldUiPort;
 /** The parts of a drawn replay frame a caller may leave out. */
@@ -77,6 +78,8 @@ export function createBrowserGhostReplayPresentation(
         configuration: { config: context.config, theme, graphics, accessibility },
         geometry: { clamp, len, lerp },
         cosmeticRandom: context.cosmeticRandom,
+        // A replay draws the game's own look until it records the wearer's loadout (agreed with the replay rebuild).
+        looks: DEFAULT_COSMETIC_LOOKS,
       });
     },
     renderView(replay, tick, screen) {

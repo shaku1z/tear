@@ -187,8 +187,16 @@
       ],
       "duration": "long"
     },
+    "test:rules": {
+      "purpose": "Firestore rules tests and the game's Firebase adapter under local emulators; the first run downloads the emulator",
+      "effects": [
+        "starts-server",
+        "network"
+      ],
+      "duration": "under-a-minute"
+    },
     "playtest": {
-      "purpose": "Plays the real game headless: `bosses` a table per fight, `sweep` every weapon on Easy and Normal (queue it), `waves` a row per wave of a stage",
+      "purpose": "Plays the real game headless: `bosses`, `sweep`, `waves`, `runs`, `enemies` reports; `coverage` lists what never appeared (queue sweep, runs, coverage)",
       "effects": [
         "read-only"
       ],
@@ -408,7 +416,7 @@
       "duration": "under-a-minute"
     },
     "test:browser:current-live-detached-parity": {
-      "purpose": "Live browser parity trace then detached-world parity Vitest for one C27A scenario",
+      "purpose": "Live browser parity trace then detached-world parity Vitest for one scenario",
       "effects": [
         "writes-artifacts",
         "launches-browser"
@@ -479,7 +487,7 @@
       "duration": "under-a-minute"
     },
     "test:browser:state-setup": {
-      "purpose": "Browser State Setup runtime, studio and exit-matrix journeys",
+      "purpose": "Browser State Setup runtime, State Editor and exit-matrix journeys",
       "effects": [
         "writes-artifacts",
         "launches-browser"
@@ -487,7 +495,7 @@
       "duration": "minutes"
     },
     "test:browser:state-editor": {
-      "purpose": "Browser State Setup studio journey only",
+      "purpose": "Browser State Editor journey only",
       "effects": [
         "writes-artifacts",
         "launches-browser"
@@ -1000,7 +1008,7 @@
       "duration": "long"
     },
     "check:weekly": {
-      "purpose": "Weekly group of config/checks.json: endurance plus ghost replay and vault suites",
+      "purpose": "Weekly group of config/checks.json: endurance, replay and vault suites, and the scripted-agent autonomy journey on a test build",
       "effects": [
         "read-only"
       ],
@@ -1334,8 +1342,29 @@
       "via": [],
       "runBy": [
         ".github/workflows/ci.yml",
-        ".github/workflows/nightly.yml",
-        ".github/workflows/tearbench-program.yml"
+        ".github/workflows/nightly.yml"
+      ]
+    },
+    "scripts/gate-files.mjs": {
+      "purpose": "The gate file list (config/gate-files.json): flags changed gate files in Validate; merge:ready reads it",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [],
+      "runBy": [
+        ".github/workflows/ci.yml"
+      ]
+    },
+    "scripts/ci-main-gate.sh": {
+      "purpose": "Every Validate job's gate loader, run as main's copy: puts main's fromMain files in $RUNNER_TEMP/gate, sets TEAR_GATE in $GITHUB_ENV",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "seconds",
+      "via": [],
+      "runBy": [
+        ".github/workflows/ci.yml"
       ]
     },
     "scripts/ci-verdict.mjs": {
@@ -1439,7 +1468,7 @@
       ]
     },
     "scripts/run-current-live-detached-parity.mjs": {
-      "purpose": "Runs the C27A live browser parity trace then the detached parity Vitest",
+      "purpose": "Runs the live browser parity trace then the detached parity Vitest",
       "effects": [
         "writes-artifacts",
         "launches-browser"
@@ -1483,7 +1512,7 @@
       ]
     },
     "scripts/playtest.mjs": {
-      "purpose": "Playtest command: loads src/playtest through Vite, plays boss fights or waves headless, in worker processes when many; --json writes them",
+      "purpose": "Playtest command: loads src/playtest through Vite, plays fights, waves, runs, enemy meetings or all for coverage, in worker processes; --json writes them",
       "effects": [
         "read-only"
       ],
@@ -1501,6 +1530,17 @@
       "duration": "minutes",
       "via": [
         "tearbench"
+      ]
+    },
+    "scripts/test-firestore-rules.mjs": {
+      "purpose": "Runs tests/rules/ against local Firebase Auth and Firestore emulators (demo- project, no credentials); needs Java 21+",
+      "effects": [
+        "starts-server",
+        "network"
+      ],
+      "duration": "under-a-minute",
+      "via": [
+        "test:rules"
       ]
     },
     "scripts/verify-release-artifact.mjs": {
@@ -1581,6 +1621,10 @@
     "scripts/eslint-rules/one-record-guard.mjs": [
       "eslint.config.mjs",
       "tests/unit/one-record-guard.test.mjs"
+    ],
+    "scripts/eslint-rules/replay-engine-loaded.mjs": [
+      "eslint.config.mjs",
+      "tests/unit/replay-engine-loaded-rule.test.mjs"
     ],
     "scripts/build-targets.mjs": [
       "scripts/build-target.mjs",
@@ -1667,7 +1711,8 @@
     "scripts/test-files.mjs": [
       "tests/unit/pitfall-guards.test.mjs",
       "vitest.config.ts",
-      "vitest.endurance.config.ts"
+      "vitest.endurance.config.ts",
+      "vitest.rules.config.ts"
     ],
     "scripts/wiki-data-export.mjs": [
       "scripts/export-game-reference.mjs"

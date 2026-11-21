@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createGhostV3, type GhostReplayTrident } from "../../src/ghost/truth-kernel";
 import { GhostProductionReplayWorld } from "../../src/ghost/replay-world";
 import { stableVerificationHash } from "../../src/domain/hash";
-import { captureProductionReplayCheckpoint } from "../../src/tearbench/production-replay-composition";
+import { captureProductionReplayCheckpoint } from "../../src/app/world/detached/replay-composition";
 import type { GameAction } from "../../src/input/game-action";
 import {
   createProductionHeadlessEnvironment,
@@ -14,8 +14,8 @@ import {
   type ProductionHeadlessCheckpoint,
   type ProductionHeadlessTerminalArtifact,
 } from "../../src/playtest/headless/production-headless-environment";
+import { createProductionGhostReplayComposition } from "../../src/app/world/detached/replay-composition";
 import {
-  createProductionGhostReplayComposition,
   BoundedArtifactSampler,
   createOneFrameBoundaryLaunchMatrix,
   TearHeadlessRunner,
@@ -900,7 +900,7 @@ describe("C30 production headless environment", () => {
     ]);
     expect(terminal?.terminal.semanticHash).toMatch(/^[a-f0-9]{16}$/u);
     const fixture: unknown = JSON.parse(
-      readFileSync(resolve("tests", "fixtures", "c30-production-headless-terminal-movement-jump.json"), "utf8"),
+      readFileSync(resolve("tests", "fixtures", "production-headless-terminal-movement-jump.json"), "utf8"),
     );
     expectLegacyTerminalFixture(fixture, terminal);
   });
@@ -928,7 +928,7 @@ describe("C30 production headless environment", () => {
     environment.dispose();
 
     const fixture: unknown = JSON.parse(
-      readFileSync(resolve("tests", "fixtures", "c30-production-headless-terminal-onehit-failure.json"), "utf8"),
+      readFileSync(resolve("tests", "fixtures", "production-headless-terminal-onehit-failure.json"), "utf8"),
     );
     expectLegacyTerminalFixture(fixture, terminal);
     expect(terminal?.terminal).toEqual({

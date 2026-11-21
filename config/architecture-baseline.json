@@ -39,22 +39,7 @@
     },
     {
       "from": "src/ghost/capsule-replay-envelope.ts",
-      "to": "src/tearbench/state-codecs.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/ghost/capsule-replay-envelope.ts",
       "to": "src/tearbench/validation.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/ghost/fork-origin.ts",
-      "to": "src/tearbench/contracts.ts",
-      "kind": "type"
-    },
-    {
-      "from": "src/ghost/fork-origin.ts",
-      "to": "src/tearbench/environment-codec.ts",
       "kind": "value"
     },
     {
@@ -68,26 +53,6 @@
       "kind": "value"
     },
     {
-      "from": "src/ghost/live-ghost-reference.ts",
-      "to": "src/tearbench/live-runtime-snapshots.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/ghost/live-ghost-reference.ts",
-      "to": "src/tearbench/production-replay-composition.ts",
-      "kind": "type"
-    },
-    {
-      "from": "src/ghost/live-ghost-reference.ts",
-      "to": "src/tearbench/registries.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/ghost/production-replay-session.ts",
-      "to": "src/tearbench/production-replay-composition.ts",
-      "kind": "type"
-    },
-    {
       "from": "src/ghost/replay-admission.ts",
       "to": "src/tearbench/contracts.ts",
       "kind": "type"
@@ -95,16 +60,6 @@
     {
       "from": "src/ghost/replay-admission.ts",
       "to": "src/tearbench/validation.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/ghost/replay-world.ts",
-      "to": "src/tearbench/contracts.ts",
-      "kind": "type"
-    },
-    {
-      "from": "src/ghost/replay-world.ts",
-      "to": "src/tearbench/state-codecs.ts",
       "kind": "value"
     },
     {
@@ -130,56 +85,6 @@
     {
       "from": "src/tearbench/browser/live-runtime-bridge.ts",
       "to": "src/agents/live-watch-agent-host.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/tearbench/production-combat-simulation.ts",
-      "to": "src/app/training/tutorial-coach-frame.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/tearbench/production-finale-runtime.ts",
-      "to": "src/app/world/game-host-state.ts",
-      "kind": "type"
-    },
-    {
-      "from": "src/tearbench/production-replay-composition.ts",
-      "to": "src/app/engineering/state-setup-adapter.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/tearbench/production-replay-composition.ts",
-      "to": "src/app/engineering/state-setup-runtime-bridge.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/tearbench/production-replay-composition.ts",
-      "to": "src/app/shell/frame-runtime.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/tearbench/production-world-factory.ts",
-      "to": "src/app/campaign/boss-phase-practice.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/tearbench/production-world-factory.ts",
-      "to": "src/app/campaign/cinematic-host.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/tearbench/production-world-factory.ts",
-      "to": "src/app/run/source-void-controller.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/tearbench/production-world-factory.ts",
-      "to": "src/app/shell/game-runtime-dependencies.ts",
-      "kind": "type"
-    },
-    {
-      "from": "src/tearbench/production-world-factory.ts",
-      "to": "src/app/world/world-composition.ts",
       "kind": "value"
     },
     {

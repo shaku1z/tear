@@ -12,9 +12,10 @@ import {
 } from "../../src/gameplay/environment/aurora-track-runtime";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 import { bindPaleEnvironmentActors } from "./environment-feature-fixture";
-import { environmentHash } from "../../src/tearbench/environment-codec";
+import { environmentHash } from "../../src/gameplay/snapshot/environment-codec";
 import { EnvelopeSequencer } from "../../src/domain/envelopes";
-import { createProductionCombatSimulation, createProductionReplayWorld } from "../../src/tearbench";
+import { createProductionCombatSimulation } from "../../src/app/world/detached/combat-simulation";
+import { createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
 
 function track(state: "warning" | "active" | "cooldown" = "active"): AuroraTrackFieldState {
   return Object.freeze({

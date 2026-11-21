@@ -4,6 +4,7 @@ import path from "node:path";
 import tseslint from "typescript-eslint";
 
 import { oneRecordGuard } from "./scripts/eslint-rules/one-record-guard.mjs";
+import { replayEngineLoaded } from "./scripts/eslint-rules/replay-engine-loaded.mjs";
 
 const inwardLayers = Object.freeze({
   domain: new Set([
@@ -24,6 +25,7 @@ const inwardLayers = Object.freeze({
 const tearArchitecture = {
   rules: {
     "one-record-guard": oneRecordGuard,
+    "replay-engine-loaded": replayEngineLoaded,
     "inward-imports": {
       meta: {
         type: "problem",
@@ -287,9 +289,10 @@ export default tseslint.config(
   },
   {
     // One plain-object guard: only src/domain/records.ts compares typeof with "object".
+    // Only the modules that work on a read capsule call replayEngine.loaded() synchronously.
     files: ["src/**/*.ts"],
     plugins: { tear: tearArchitecture },
-    rules: { "tear/one-record-guard": "error" },
+    rules: { "tear/one-record-guard": "error", "tear/replay-engine-loaded": "error" },
   },
   {
     files: ["src/domain/**/*.ts", "src/simulation/**/*.ts", "src/gameplay/**/*.ts"],

@@ -1,5 +1,6 @@
-import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION, type TearObservationV1 } from "../../tearbench/contracts";
-import { environmentSnapshotToObservation } from "../../tearbench/environment-codec";
+import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "../../gameplay/snapshot/snapshot-contract";
+import type { TearObservationV1 } from "../../tearbench/contracts";
+import { environmentSnapshotToObservation } from "../../gameplay/snapshot/environment-codec";
 import {
   projectLiveActorMechanics,
   projectLiveBladeMechanics,
@@ -11,7 +12,7 @@ import {
   canonicalObservationEnemyKind,
   canonicalObservationStage,
 } from "../../tearbench/observation-identity";
-import type { ProductionReplayWorld } from "../../tearbench/production-world-factory";
+import type { ProductionReplayWorld } from "../../app/world/detached/world-factory";
 
 /** What a scripted player is given each tick: the player, blade, enemies, projectiles and run of this exact world. */
 export function projectProductionPolicyObservation(

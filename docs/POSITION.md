@@ -17,13 +17,15 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 | [Release readiness](#release-readiness) | Merged to main | Production deploy, after the owner has played the build. | — |
 | [Production deploy](#production-deploy) | Deployed 2026-11-13 | The next production deploy follows the Verdant, Tutorial and music work. | — |
 | [Verdant Sanctum visuals](#verdant-visuals) | In progress | The owner judges the moving stage; then Pale Traverse from a recipe, with its own live list. | Judge the drawn look against the reference illustration: the owner's taste decides visual work. |
-| [Verdant Sanctum gameplay](#verdant-gameplay) | In progress | Close Verdant: the owner plays the waves and the Rootbinder; then Pale. | Playtest the Rootbound in all three phases. |
+| [Verdant Sanctum gameplay](#verdant-gameplay) | In progress: rebuild from scratch, plan under the lead's review | The lead reviews the plan; then slice 1, the two rules over every boss and enemy. | — |
 | [Tutorial and Playground experience](#training-ux) | In progress | One source of names for the drilled weapon moves (this pull request, then its floaters), then the release tutorial flow and menu fixes. | — |
-| [Pale Traverse rework](#pale-traverse) | Not started | Start once the Verdant gameplay rework has landed. | — |
+| [Pale Traverse rework](#pale-traverse) | In progress | Waits for the Verdant rebuild: Pale is replanned on what Verdant proves (plans/active/VERDANT_PALE_REBUILD.md). | — |
 | [Player wiki](#wiki) | In progress | Review the move pull request, then confirm the Cloudflare secret question and run the first wiki deploy. | Archive shaku1z/tear-wiki after the first deploy from this repository. |
 | [Repository structure and workflow](#repository-structure) | In progress | After the hooks pull request merges, run pnpm setup:hooks in the canonical checkout on main (scripts/governance/README.md). | — |
-| [Playtest tool](#playtest-tool) | Stage 2 under way: stage 1 is done (pnpm playtest bosses and sweep); pnpm playtest waves opens any Adventure wave directly and prints a row per wave of a stage | pnpm playtest runs (full runs: where they end, time and health cost per wave), then the enemies report, the coverage list and --compare. | — |
-| [Replays](#replays) | In progress: PR 1 and PR 2 merged (hidden replay features and replay extras removed); PR 2b open (REPAIR) | Merge PR 2b, then PR 3 (the snapshot codecs move to src/gameplay/snapshot). | Deploy the Firestore chunk-write rules from the merged rules PR. |
+| [Playtest tool](#playtest-tool) | Stage 2 under way: stage 1 is done (pnpm playtest bosses and sweep); pnpm playtest waves opens any Adventure wave directly, runs plays whole runs from wave 1, enemies meets each enemy kind alone, and coverage lists what the game defines that no report brought into play | --compare: the same situations and seeds on another commit, printing only what changed. | — |
+| [Replays](#replays) | In progress: PR 1, PR 2, PR 2b and PR 3 merged (hidden replay features, replay extras and REPAIR removed; snapshot codecs in src/gameplay/snapshot); PR 4 open (the detached world moves to src/app/world/detached) | Merge PR 4, then PR 5 (one replay record: record.ts, recorder.ts and verify.ts, with the round-trip check). | Deploy the Firestore chunk-write rules from the merged rules PR. |
+| [Firebase](#firebase) | In progress: PR 1 (rules tests and hardened rules) open | Merge PR 1, then PR 2: the modular SDK bundled into the standalone build only. | Deploy the rules from PR 1 once it merges. |
+| [Cinematics](#cinematics) | PR 1 merged (a rule over every boss fight; no boss event slows time). PR 2 (the Warden and the Colossus change phase in the fight) in review. Look board waiting for the owner | PR 3 (Aldric) and PR 4 (the Source) take out the remaining rituals; then PR 5 deletes the blocking path. The banner, chapter card and epilogue (PRs 6-8) wait for the owner’s verdict on the look board. | Approve or correct the look board on the ledger. |
 | [Mobile, touch and phone layouts](#mobile) | Paused by the owner 2026-11-19; out of the release builds | Nothing until the owner resumes mobile; plans/MOBILE_LATER.md says how to turn it back on. | Mark the CrazyGames listing desktop only. Say when mobile resumes. |
 
 <a id="release-readiness"></a>
@@ -60,11 +62,11 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 ### Verdant Sanctum gameplay
 
-**In progress.** The Rootbound boss is rebuilt in all three phases as data on a shared boss move layer that Pale and later bosses reuse: Phase I's moves, Phase II's Grafts, Root Cage and Bloom Wells, and Phase III's Regrowth and Last Spring. Its body no longer hurts on touch: it blocks, and it does not play a move the player could not walk out of. The stage's Bloom Wells stand on the floor and lift the player and light enemies; who a stage field moves is one data row. The Rootbinder is rebuilt as a support that backs away, plants and roots the allies near it, so they cannot be flung or lifted until the root is cut; cutting every root or one heavy hit uproots it, and it takes more damage while planted. Its old leash on the player is replaced by a warned snare: a ring marked on the ground that holds a player who stays in it, with a cut, a 2 second release and an immunity afterwards. Verdant's nine waves are written: each has listed enemies in spawn order (wave 32 two ground allies and then a Rootbinder, 33 a Mender, 36 a Chimera, 38 a second Rootbinder late) and the pool fills the rest; any stage can carry such a table. Listed enemies arrive without affixes. The waves were measured with the playtest tool on 24 seeds: nothing justified a change to their size or health.
+**In progress: rebuild from scratch, plan under the lead's review.** The owner rejected the Verdant gameplay a third time on 2026-11-20: the shared Verdant base is slop, move visuals linger after the move, and Verdant leans on tells far more than any other boss. Verdant's boss, enemies and stage are rebuilt from scratch in the pattern of Aldric, the Echo and the Colossus, keeping only the approved Rootbound seed-pod figure and the drawn background. Measured on main 6fb1a7cd: a scripted player takes 2.8, 1.1 and 0 hits per 10 s from today's Rootbound across its three phases, against 4 to 7 from the reference bosses; its Phase III does not move; its two phase cinematics block 12.9 s of a 37 s fight; it draws 16 tell marks against Aldric's 6. The plan adds two rules over every boss and enemy (nothing outlives its move, tell weight) and builds the new Verdant on the engineering channel until the owner approves it on preview.
 
-- Next: Close Verdant: the owner plays the waves and the Rootbinder; then Pale.
-- Owner action: Playtest the Rootbound in all three phases.
-- Evidence: [plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md)
+- Next: The lead reviews the plan; then slice 1, the two rules over every boss and enemy.
+- Owner action: none
+- Evidence: [plans/active/VERDANT_PALE_REBUILD.md](../plans/active/VERDANT_PALE_REBUILD.md), [plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md)
 
 <a id="training-ux"></a>
 
@@ -80,11 +82,11 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 ### Pale Traverse rework
 
-**Not started.** Pale Traverse stays a Playground preview and is not published. The owner wants it reworked after Verdant. Its earlier migration work is on the unmerged branch codex/pale-traverse-r4.
+**In progress.** Pale Traverse stays a Playground preview and is not published. Its gameplay is being rebuilt the way Verdant's was. The audit found that the Aurora Tracks touch nobody standing on a platform or the floor, the White Hart gives no warning the game can check and plays the same fight on every seed, and none of Pale uses the shared layers. The plan is eight pull requests: the tracks, the Rimehound, routes in the boss move layer, the White Hart one phase at a time, the waves, then leftovers. The earlier work on the unmerged branch codex/pale-traverse-r4 is reference only.
 
-- Next: Start once the Verdant gameplay rework has landed.
+- Next: Waits for the Verdant rebuild: Pale is replanned on what Verdant proves (plans/active/VERDANT_PALE_REBUILD.md).
 - Owner action: none
-- Evidence: [plans/active/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md)
+- Evidence: [plans/active/VERDANT_PALE_REBUILD.md](../plans/active/VERDANT_PALE_REBUILD.md), [plans/active/PALE_GAMEPLAY_REBUILD.md](../plans/active/PALE_GAMEPLAY_REBUILD.md), [plans/active/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md)
 
 <a id="wiki"></a>
 
@@ -110,9 +112,9 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 ### Playtest tool
 
-**Stage 2 under way: stage 1 is done (pnpm playtest bosses and sweep); pnpm playtest waves opens any Adventure wave directly and prints a row per wave of a stage.** One command, pnpm playtest, that plays the game headless with scripted players on fixed seeds and reports clear rates, time to kill, damage taken and differences between builds. It is built from the working parts of TearBench and the scripted player and replaces both names. Verified on 2026-11-16: the scripted player runs headless at 13 to 15 times real time and the same seed reproduces exactly.
+**Stage 2 under way: stage 1 is done (pnpm playtest bosses and sweep); pnpm playtest waves opens any Adventure wave directly, runs plays whole runs from wave 1, enemies meets each enemy kind alone, and coverage lists what the game defines that no report brought into play.** One command, pnpm playtest, that plays the game headless with scripted players on fixed seeds and reports clear rates, time to kill, damage taken and differences between builds. It is built from the working parts of TearBench and the scripted player and replaces both names. Verified on 2026-11-16: the scripted player runs headless at 13 to 15 times real time and the same seed reproduces exactly.
 
-- Next: pnpm playtest runs (full runs: where they end, time and health cost per wave), then the enemies report, the coverage list and --compare.
+- Next: --compare: the same situations and seeds on another commit, printing only what changed.
 - Owner action: none
 - Evidence: [plans/active/PLAYTEST_TOOL_PLAN.md](../plans/active/PLAYTEST_TOOL_PLAN.md)
 
@@ -120,11 +122,31 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 ### Replays
 
-**In progress: PR 1 and PR 2 merged (hidden replay features and replay extras removed); PR 2b open (REPAIR).** Players reach two replay systems today: Ghost 2 (position samples in localStorage, used by the REPLAYS tab, the feed and leaderboard links) and the Ghost V3 capsules (re-simulated, in IndexedDB, used by VAULT, CAREER and the Theater). The plan replaces both with one versioned record and five plain modules (record, store, watch, share, verify), moves the replay world and snapshot codecs out of TearBench, and deletes src/ghost (118 replay modules and about 800,000 characters today).
+**In progress: PR 1, PR 2, PR 2b and PR 3 merged (hidden replay features, replay extras and REPAIR removed; snapshot codecs in src/gameplay/snapshot); PR 4 open (the detached world moves to src/app/world/detached).** Players reach two replay systems today: Ghost 2 (position samples in localStorage, used by the REPLAYS tab, the feed and leaderboard links) and the Ghost V3 capsules (re-simulated, in IndexedDB, used by VAULT, CAREER and the Theater). The plan replaces both with one versioned record and five plain modules (record, store, watch, share, verify), moves the replay world and snapshot codecs out of TearBench, and deletes src/ghost (118 replay modules and about 800,000 characters today).
 
-- Next: Merge PR 2b, then PR 3 (the snapshot codecs move to src/gameplay/snapshot).
+- Next: Merge PR 4, then PR 5 (one replay record: record.ts, recorder.ts and verify.ts, with the round-trip check).
 - Owner action: Deploy the Firestore chunk-write rules from the merged rules PR.
 - Evidence: [plans/active/REPLAY_OVERHAUL_PLAN.md](../plans/active/REPLAY_OVERHAUL_PLAN.md)
+
+<a id="firebase"></a>
+
+### Firebase
+
+**In progress: PR 1 (rules tests and hardened rules) open.** Firestore rules for saves, leaderboards (score boards and Gauntlet clear boards), statistics and replays are tested under the local emulator, allowed and refused writes both, and the game's own adapter runs against them. The game still loads the 10.12.2 compat SDK from gstatic; App Check is not wired; Remote Config v1 is still read.
+
+- Next: Merge PR 1, then PR 2: the modular SDK bundled into the standalone build only.
+- Owner action: Deploy the rules from PR 1 once it merges.
+- Evidence: [plans/active/FIREBASE_REFRESH.md](../plans/active/FIREBASE_REFRESH.md), [tests/rules/firestore-rules.test.ts](../tests/rules/firestore-rules.test.ts)
+
+<a id="cinematics"></a>
+
+### Cinematics
+
+**PR 1 merged (a rule over every boss fight; no boss event slows time). PR 2 (the Warden and the Colossus change phase in the fight) in review. Look board waiting for the owner.** Boss phase changes stop the fight today: a ritual script freezes the combat step, locks the player and waits for a tap or a reading timeout (5.1-6.8 s each; the Source descent 11.5 s; Rootbound stands still for 12.9 s of a 32-37 s fight). Chapter openings take 25-39 s at Full. The plan makes every in-fight beat a boss move with at most a banner, cuts chapter openings and the finale to short cards that never wait, replaces the cinematic director and ritual layer with one stage beat, and adds a rule over every boss that no tick blocks input or the combat step.
+
+- Next: PR 3 (Aldric) and PR 4 (the Source) take out the remaining rituals; then PR 5 deletes the blocking path. The banner, chapter card and epilogue (PRs 6-8) wait for the owner’s verdict on the look board.
+- Owner action: Approve or correct the look board on the ledger.
+- Evidence: [plans/active/CINEMATICS_OVERHAUL.md](../plans/active/CINEMATICS_OVERHAUL.md)
 
 <a id="mobile"></a>
 

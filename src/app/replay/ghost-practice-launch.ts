@@ -1,7 +1,7 @@
 import type { GhostPracticeChild } from "../../ghost/replay-world";
-import { createLiveStateSetupRestoreFactory } from "../../tearbench/live-runtime-snapshots";
-import { restoreSnapshotIntoLiveWorld, type TearLiveWorldAdapter } from "../../tearbench/live-state-snapshot";
-import type { TearStateCodecRegistry } from "../../tearbench/state-codecs";
+import { createLiveStateSetupRestoreFactory } from "../../gameplay/snapshot/live-capture";
+import { restoreSnapshotIntoLiveWorld, type TearLiveWorldAdapter } from "../../gameplay/snapshot/live-restore";
+import type { TearStateCodecRegistry } from "../../gameplay/snapshot/state-codec";
 import type { LiveGhostPracticeSessionState } from "./ghost-practice-session-state";
 
 export interface GhostPracticeLaunchPort {

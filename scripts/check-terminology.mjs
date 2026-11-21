@@ -408,39 +408,6 @@ export function validateRegistry(registry) {
   return errors;
 }
 
-function replaceDeprecatedCopyAliases(value, registry) {
-  let result = value;
-  for (const term of registry.terms) {
-    for (const alias of term.deprecatedCopyAliases ?? []) {
-      const pattern = aliasPattern(alias);
-      result = result.replace(pattern, (match, prefix = "") => `${prefix}${term.displayName}`);
-    }
-  }
-  return result;
-}
-
-/**
- * Translate only mutable generated prose. Source IDs, source statements, and
- * hash-bound fields are copied byte-for-byte and never pass through aliases.
- */
-export function translateMutableGeneratedDescriptions(value, registry) {
-  const mutableFields = new Set(
-    registry.mutableProjectionPolicy?.mutableGeneratedTextFields ?? DEFAULT_MUTABLE_GENERATED_TEXT_FIELDS,
-  );
-  if (Array.isArray(value)) return value.map((entry) => translateMutableGeneratedDescriptions(entry, registry));
-  if (!value || typeof value !== "object") return value;
-  const result = {};
-  for (const [key, entry] of Object.entries(value)) {
-    result[key] =
-      mutableFields.has(key) && typeof entry === "string"
-        ? replaceDeprecatedCopyAliases(entry, registry)
-        : Array.isArray(entry) || (entry && typeof entry === "object")
-          ? translateMutableGeneratedDescriptions(entry, registry)
-          : entry;
-  }
-  return result;
-}
-
 function scanPatternMatches(text, patterns) {
   return patterns.flatMap((pattern) => {
     const expression = new RegExp(pattern, "gimu");

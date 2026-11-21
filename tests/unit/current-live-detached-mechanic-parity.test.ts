@@ -2,7 +2,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { replayProductionC27ATrace, type ProductionC27ATrace } from "../../src/tearbench/production-c27a-matrix";
+import {
+  replayLiveDetachedParityTrace,
+  type LiveDetachedParityTrace,
+} from "../../src/tearbench/live-detached-parity-matrix";
 import { validateTearContract } from "../../src/tearbench";
 import { readSourceIdentitySync } from "../../scripts/release-artifact.mjs";
 
@@ -11,9 +14,9 @@ const artifactDirectory = resolve("artifacts/tearbench/checkpoints/core/C27A/liv
 const focusedArtifact = resolve(artifactDirectory, `focused-${SELECTED_SCENARIO_ID}.json`);
 const matrixArtifact = resolve(artifactDirectory, `${SELECTED_SCENARIO_ID}.json`);
 const defaultArtifact = existsSync(focusedArtifact) ? focusedArtifact : matrixArtifact;
-const requestedArtifact = process.env.TEAR_C27A_PARITY_ARTIFACT;
+const requestedArtifact = process.env.TEAR_LIVE_PARITY_ARTIFACT;
 const artifactPath = resolve(requestedArtifact ?? defaultArtifact);
-const parityRequired = requestedArtifact !== undefined || process.env.TEAR_C27A_PARITY_REQUIRED === "1";
+const parityRequired = requestedArtifact !== undefined || process.env.TEAR_LIVE_PARITY_REQUIRED === "1";
 
 interface TraceIdentity {
   readonly sourceIdentity?: Readonly<{ revision?: unknown; state?: unknown; fingerprint?: unknown }>;
@@ -25,7 +28,7 @@ interface MechanicalState {
   readonly blade: Readonly<{ state: string; x: number; y: number }> | null;
 }
 
-function readTrace(): ProductionC27ATrace {
+function readTrace(): LiveDetachedParityTrace {
   const value: unknown = JSON.parse(readFileSync(artifactPath, "utf8"));
   if (typeof value !== "object" || value === null) throw new TypeError("C27A parity artifact must be an object");
   const raw = value as { scenario?: unknown; origin?: unknown };
@@ -51,7 +54,7 @@ function readTrace(): ProductionC27ATrace {
     throw new Error("C27A parity artifact build identity is stale or invalid");
   }
   return {
-    ...(value as Omit<ProductionC27ATrace, "scenario" | "origin">),
+    ...(value as Omit<LiveDetachedParityTrace, "scenario" | "origin">),
     scenario: scenario.value,
     origin: origin.value,
   };
@@ -67,7 +70,7 @@ describe.skipIf(!parityRequired)("current live/detached mechanic parity", () => 
     expect(trace.scenario.start.weapon).toBe("sword");
     expect(trace.hashes.length).toBeGreaterThanOrEqual(40);
     expect(trace.engineEventProjection.events.every((event) => event.tick > trace.origin.tick)).toBe(true);
-    const replay = replayProductionC27ATrace(trace);
+    const replay = replayLiveDetachedParityTrace(trace);
     expect(replay.hashes.map(({ tick }) => tick)).toEqual(trace.hashes.map(({ tick }) => tick));
     expect(replay.hashes.map(({ canonical }) => canonical)).toEqual(trace.hashes.map(({ canonical }) => canonical));
     expect(replay.engineEvents).toEqual(trace.engineEventProjection.events);

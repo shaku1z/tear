@@ -31,7 +31,7 @@ for the complete branch/worktree/object inventory and preservation evidence:
 - [G0 closure](G0_CLOSURE.md)
 - [G1 release-authority checkpoint](G1_RELEASE_AUTHORITY_CHECKPOINT.md)
 - [G1 ruleset/environment export](G1_RELEASE_AUTHORITY_EXPORT.json)
-- [G2 sequencing authority](../../../plans/TEAR_PROGRAM_NORMALIZATION_MASTER_PLAN.md)
+- G2 sequencing authority: `plans/TEAR_PROGRAM_NORMALIZATION_MASTER_PLAN.md` (deleted 2026-11-20; in git history)
 
 The G0 preservation root is
 `C:\Users\realm\Desktop\game\Tear-archives\2026-08-20-program-normalization-g0`.

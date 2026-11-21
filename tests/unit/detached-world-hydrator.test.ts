@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { createParticleSystem } from "../../src/presentation/particles";
-import { createLiveParticlePresentationState } from "../../src/tearbench/particle-presentation-state";
+import { createLiveParticlePresentationState } from "../../src/app/world/detached/particle-state";
 import { createCosmeticEmissionRandom } from "../../src/domain/cosmetic-emission-random";
 
 import {
   hydrateTearCodecWorld,
-  type TearCodecId,
-  type TearCodecValue,
-  type TearCodecWorld,
   type TearWorldConstructionPort,
   type TearWorldHydrationContext,
-} from "../../src/tearbench";
+} from "../../src/app/world/detached/world-hydrator";
+import type { TearCodecId } from "../../src/gameplay/snapshot/codec-ids";
+import type { TearCodecValue, TearCodecWorld } from "../../src/gameplay/snapshot/state-codec";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
+import { DEFAULT_COSMETIC_LOOKS } from "../../src/presentation/cosmetic-defaults";
 
 interface FakePlayer extends Record<string, unknown> {
   kind: "player";
@@ -200,6 +200,7 @@ describe("detached Tear codec world hydrator", () => {
     const source = completeCodecWorld(),
       effects = { highBudget: 3, lowBudget: 1, cullMargin: 180 };
     const fx = createParticleSystem({
+      looks: DEFAULT_COSMETIC_LOOKS,
       effects,
       lowGraphics: () => false,
       reducedMotion: () => false,

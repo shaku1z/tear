@@ -2,15 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import { GhostReplayWorld, createPracticeFromHere, type GhostReplaySimulation } from "../../src/ghost/replay-world";
 import { createGhostV3, type GhostReplayTrident } from "../../src/ghost/truth-kernel";
+import { CODEC_REGISTRY } from "../../src/gameplay/snapshot/codec-ids";
 import {
-  CODEC_REGISTRY,
   captureCodecState,
   createDefaultStateCodecRegistry,
   type TearCodecWorld,
   type TearCodecValue,
-  type TearCausalEventV1,
-  type TearSnapshotV1,
-} from "../../src/tearbench";
+} from "../../src/gameplay/snapshot/state-codec";
+import type { TearCausalEventV1 } from "../../src/tearbench";
+import type { TearSnapshotV1 } from "../../src/gameplay/snapshot/snapshot-contract";
 import { stableVerificationHash } from "../../src/domain/hash";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
 

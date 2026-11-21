@@ -15,11 +15,13 @@ Dependencies point inward. Code in `domain`, `simulation`, and gameplay rules mu
 
 ### Direction as enforced
 
-`config/architecture-layers.json` declares one layer per top-level `src` directory and the cross-layer edges each may use; edges inside a layer are always allowed, and "type" means `import type` only. Every `src` file must belong to exactly one layer, so a new top-level directory fails the gate until it is placed.
+`config/architecture-layers.json` declares one layer per top-level `src` directory and the cross-layer edges each may use; edges inside a layer are always allowed, and "type" means `import type` only. Every `src` file must belong to exactly one layer, so a new top-level directory fails the gate until it is placed. The one exception to one layer per directory is the detached world (`src/app/world/detached/`, the production world that watch, verify, race and the playtest headless environment run without the browser app): it is its own `detached-world` layer, so that `playtest` may import it and nothing else in `src/app`. The `app` layer therefore lists its folders, and a new `src/app` folder fails the gate until it is added there.
 
 ```text
 entrypoints    -> app, platform, presentation, audio, persistence, input, config, domain
 app            -> every layer except entrypoints (composition)
+detached-world -> app, ghost, presentation, gameplay, input, simulation, config, domain
+playtest       -> detached-world, tearbench, agents, gameplay, input, domain
 agents         -> tearbench, ghost, replay, presentation, gameplay, input, simulation, config, domain
 tearbench      -> ghost, replay, presentation, audio, persistence, platform, game-reference, diagnostics, gameplay, input, simulation, config, domain
 presentation   -> gameplay, audio, simulation, domain; type-only: input, replay, ghost
@@ -110,7 +112,7 @@ The baselines only shrink. `--update` rewrites `config/architecture-baseline.jso
 1. Move the file and rewrite its importers with a TypeScript-aware codemod; `tsc` must pass.
 2. Run `pnpm check:architecture`. Every role pattern that named the old path fails with `role <name>.include: "<old path>" matches no file`; replace it with the new path in `config/architecture-roles.json`, or widen the role to a directory glob if that is the real invariant.
 3. Allowlisted edges and recorded cycles that name the old path fail as stale. Run `node scripts/check-source-architecture.mjs --update --move <old>=<new>` (repeatable; a trailing `/` moves a directory prefix) or `--moves-file <json>` with an `{ "old": "new" }` map. The moved entries are carried across, so the update needs no `--allow-increase`.
-4. Do the same for the code budget (`node scripts/check-code-budget.mjs --update --move <old>=<new>`). Its character count ignores import and re-export declarations and dynamic module specifiers, so a move never raises the recorded size of the moved file or its importers. Then update path strings outside `src` that name the file, for example in `tests/fixtures/architecture-legacy-cases.json`, `src/tearbench/evidence-routes.json`, `scripts/check-production-test-isolation.mjs` and `config/terminology-registry.json`. `scripts/application-chunks.mjs` (the chunk rule `vite.config.ts` uses) assigns `src/app` modules to chunks by folder (`APPLICATION_FOLDER_CHUNKS`); a new folder goes to `runtime-app-core` unless it is listed there.
+4. Do the same for the code budget (`node scripts/check-code-budget.mjs --update --move <old>=<new>`). Its character count ignores import and re-export declarations and dynamic module specifiers, so a move never raises the recorded size of the moved file or its importers. Then update path strings outside `src` that name the file, for example in `tests/fixtures/architecture-legacy-cases.json`, `src/tearbench/evidence-routes.json`, `scripts/check-production-test-isolation.mjs` and `config/terminology-registry.json`. `scripts/application-chunks.mjs` (the chunk rule `vite.config.ts` uses) assigns `src/app` modules to chunks by folder (`APPLICATION_FOLDER_CHUNKS`); a new folder goes to `runtime-app-core` unless it is listed there. `src/gameplay` folders get a `gameplay-<folder>` chunk each unless `GAMEPLAY_FOLDER_CHUNKS` folds one into another folder's chunk; every startup chunk is a precache entry, so a small new folder is listed there.
 
 ## One plain-object guard
 

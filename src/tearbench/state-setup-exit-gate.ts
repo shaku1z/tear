@@ -1,6 +1,6 @@
 import { requireRecord } from "../domain/records";
 import { stableVerificationHash } from "../domain/hash";
-import type { TearSnapshotV1 } from "./contracts";
+import type { TearSnapshotV1 } from "../gameplay/snapshot/snapshot-contract";
 import type { TearProgressionEvent, TearSynthesizedProgression } from "./progression-ledger";
 import { reconstructProgression, synthesizeProgression } from "./progression-ledger";
 import type { TearProgressionReplayResult } from "./progression-replay";

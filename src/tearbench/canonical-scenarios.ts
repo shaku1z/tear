@@ -1,11 +1,6 @@
 import { isRecord } from "../domain/records";
-import {
-  TEAR_CONTRACT_FORMAT,
-  TEAR_CONTRACT_VERSION,
-  type TearScenarioBackendV1,
-  type TearCanonicalScenarioV1,
-  type TearScenarioSubjectV1,
-} from "./contracts";
+import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "../gameplay/snapshot/snapshot-contract";
+import type { TearScenarioBackendV1, TearCanonicalScenarioV1, TearScenarioSubjectV1 } from "./contracts";
 import {
   BOSS_REGISTRY,
   DIFFICULTY_REGISTRY,

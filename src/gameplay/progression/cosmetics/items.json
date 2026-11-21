@@ -14,7 +14,6 @@
         "#7a4ff0"
       ],
       "widthScale": 1,
-      "glow": 0.4,
       "fade": "linear"
     }
   },
@@ -34,7 +33,6 @@
         "#0f9fb0"
       ],
       "widthScale": 1.1,
-      "glow": 0.5,
       "fade": "linear"
     }
   },
@@ -54,7 +52,6 @@
         "#0f9fb0"
       ],
       "widthScale": 1.2,
-      "glow": 0.5,
       "fade": "hold"
     },
     "collection": "rootbound"

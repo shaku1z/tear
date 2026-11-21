@@ -15,6 +15,15 @@ const APPLICATION_FOLDER_CHUNKS = Object.freeze({
   world: "runtime-app-combat",
 });
 
+/**
+ * `src/gameplay/<folder>/` -> chunk for a folder that joins another folder's chunk; every other folder gets
+ * `gameplay-<folder>`. Each startup chunk is a precache entry and a request, so a small folder that only one
+ * startup chunk's code reads (the snapshot codecs serialize run state) is listed here instead of adding a file.
+ */
+const GAMEPLAY_FOLDER_CHUNKS = Object.freeze({
+  snapshot: "gameplay-run",
+});
+
 /** The entry points import the application composition dynamically; it is where the startup path begins. */
 const STARTUP_ROOT = "/src/app/shell/composition.ts";
 
@@ -80,15 +89,17 @@ export function applicationChunk(id, meta) {
   const source = normalized.indexOf("/src/");
   if (source < 0) return undefined;
   const relative = normalized.slice(source + "/src/".length);
+  // The ~1.5 MB tutorial demonstration corpus has its own chunk, named here because the bundle budget, the
+  // precache ignore list and the runtime cache all recognise it by that name. It is a leaf with no imports, so
+  // naming it cannot merge it with startup code; this comes first so that being reached only dynamically (the
+  // normal case) does not hand it the name of the module that imports it.
+  if (relative === TUTORIAL_GOLD_DATA) return "tutorial-gold-reference";
   if (reachedOnlyDynamically(id, meta)) return sharedOnDemandChunk(id, meta);
   const topLevel = relative.split("/")[0] ?? "";
   if (topLevel === "app") return APPLICATION_FOLDER_CHUNKS[relative.split("/")[1] ?? ""] ?? "runtime-app-core";
-  // The ~1.5 MB tutorial demonstration corpus is imported only by training
-  // preflight; its own chunk keeps it out of the startup modulepreload set.
-  if (relative === TUTORIAL_GOLD_DATA) return "tutorial-gold-reference";
   if (topLevel === "gameplay") {
     const area = relative.split("/").slice(1, 2)[0] ?? "core";
-    return `gameplay-${area}`;
+    return GAMEPLAY_FOLDER_CHUNKS[area] ?? `gameplay-${area}`;
   }
   if (
     [

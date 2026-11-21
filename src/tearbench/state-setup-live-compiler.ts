@@ -2,9 +2,9 @@ import { isRecord, requireRecord } from "../domain/records";
 import { stableVerificationHash } from "../domain/hash";
 import { stageRuntimeIndexForSurface, type StageId } from "../gameplay/stages";
 import { findVariant } from "../gameplay/variants";
-import type { TearSnapshotV1 } from "./contracts";
+import type { TearSnapshotV1 } from "../gameplay/snapshot/snapshot-contract";
 import type { TearSdlResolved } from "./tearsdl";
-import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "./authored-environment-codec-validation";
+import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "../gameplay/snapshot/authored-environment-validation";
 
 type MutableRecord = Record<string, unknown>;
 

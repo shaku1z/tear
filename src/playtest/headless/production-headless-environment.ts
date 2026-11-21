@@ -5,19 +5,21 @@ import type { CanonicalGameplayState } from "../../gameplay/runtime/canonical-st
 import type { AuthoritativeInputSnapshot } from "../../gameplay/runtime/authoritative-input";
 import { TearGameplayEventBus, type TearGameplayEvent } from "../../gameplay/runtime/gameplay-events";
 import { stableVerificationHash } from "../../domain/hash";
-import type { createProductionCombatSimulation } from "../../tearbench/production-combat-simulation";
+import type { createProductionCombatSimulation } from "../../app/world/detached/combat-simulation";
 import {
   captureProductionReplayCheckpoint,
   captureProductionRewardSelection,
   createProductionGhostReplayComposition,
+  type ProductionGhostReplayCompositionOptions,
   projectProductionReplayCanonicalState,
-  type ProductionReplayBootstrap,
   type ProductionApplicationFrameConfirm,
-} from "../../tearbench/production-replay-composition";
-import { productionRunSeed, type ProductionReplayWorld } from "../../tearbench/production-world-factory";
-import type { ProductionRunOpening, ProductionWaveRewardRuntime } from "../../tearbench/production-wave-reward-runtime";
-import type { ProductionWaveRewardIntent } from "../../tearbench/production-wave-reward-runtime";
-import type { TearCausalEventV1, TearObservationV1, TearScenarioV1, TearSnapshotV1 } from "../../tearbench/contracts";
+} from "../../app/world/detached/replay-composition";
+import type { ProductionReplayBootstrap } from "../../gameplay/snapshot/snapshot-contract";
+import { productionRunSeed, type ProductionReplayWorld } from "../../app/world/detached/world-factory";
+import type { ProductionRunOpening, ProductionWaveRewardRuntime } from "../../app/world/detached/wave-reward-runtime";
+import type { ProductionWaveRewardIntent } from "../../app/world/detached/wave-reward-runtime";
+import type { TearCausalEventV1, TearObservationV1, TearScenarioV1 } from "../../tearbench/contracts";
+import type { TearSnapshotV1 } from "../../gameplay/snapshot/snapshot-contract";
 import {
   TearHeadlessEnvironmentPool,
   type TearHeadlessEnvironment,
@@ -77,6 +79,8 @@ export interface ProductionHeadlessEnvironmentOptions {
   readonly captureSourceTracks?: boolean;
   /** The build a run opened on a later wave gives its player; see `ProductionRunOpening`. */
   readonly build?: ProductionRunOpening["build"];
+  /** Who wears which cosmetics; the game's own look when absent. The simulation never reads it. */
+  readonly looks?: ProductionGhostReplayCompositionOptions["looks"];
 }
 
 export interface ProductionHeadlessTerminalArtifact {
@@ -117,6 +121,8 @@ export interface ProductionHeadlessStateSetupEvaluation {
   readonly builtSnapshot: TearSnapshotV1;
 }
 
+type SpawnableEnemyKind = Parameters<ProductionWaveRewardRuntime["spawnTutorial"]>[0];
+
 export interface ProductionHeadlessEnvironment extends TearHeadlessEnvironment<
   TearScenarioV1,
   CanonicalGameplayState,
@@ -143,6 +149,8 @@ export interface ProductionHeadlessEnvironment extends TearHeadlessEnvironment<
   practiceBoss(bossId: PracticeBossId, phase: PracticeBossPhase): ReturnType<typeof beginProductionBossPractice>;
   /** Replaces the enemies in play with these, made by the game's own factory, for a playtest of chosen enemies. */
   replaceEnemies(spawns: readonly Readonly<{ id: string; x: number; y: number }>[]): void;
+  /** Puts one enemy of this kind in play through the game's own spawner, which chooses where it arrives. */
+  spawnEnemy(kind: SpawnableEnemyKind): void;
   captureCheckpoint(): ProductionHeadlessCheckpoint;
   restoreCheckpoint(checkpoint: ProductionHeadlessCheckpoint): CanonicalGameplayState;
   restoreStateSetupEvaluation(evaluation: ProductionHeadlessStateSetupEvaluation): CanonicalGameplayState;
@@ -270,6 +278,7 @@ export function createProductionHeadlessEnvironment(
           }),
       ...(snapshot === undefined || input === undefined ? {} : { inputSnapshots: new Map([[snapshot.tick, input]]) }),
       gameplayEvents,
+      ...(options.looks === undefined ? {} : { looks: options.looks }),
       ...(sourceTracks === undefined
         ? {}
         : {
@@ -369,6 +378,7 @@ export function createProductionHeadlessEnvironment(
       const placed = spawns.map((spawn) => entities.createEnemy(spawn.id, spawn.x, spawn.y, state.run() as never));
       state.setEnemies(placed);
     },
+    spawnEnemy: (kind: SpawnableEnemyKind) => void requireCore().waveReward.spawnTutorial(kind, 1),
     continueTutorialPractice: (source: TearScenarioV1): CanonicalGameplayState => {
       const current = requireCore();
       if (current.replay.tutorialHandoff() === null)

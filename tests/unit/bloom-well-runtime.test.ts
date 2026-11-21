@@ -21,12 +21,12 @@ import { projectBloomWellPresentation } from "../../src/presentation/environment
 import {
   captureProductionReplayCheckpoint,
   createProductionGhostReplayComposition,
-} from "../../src/tearbench/production-replay-composition";
+} from "../../src/app/world/detached/replay-composition";
 import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-setup-live-compiler";
 import { buildBloomWellCycleState } from "../../src/tearbench/state-setup-factories";
 import { resolveTearSdl, type TearSdlDocumentV1 } from "../../src/tearbench/tearsdl";
-import { environmentHash } from "../../src/tearbench/environment-codec";
-import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "../../src/tearbench/authored-environment-codec-validation";
+import { environmentHash } from "../../src/gameplay/snapshot/environment-codec";
+import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "../../src/gameplay/snapshot/authored-environment-validation";
 import { TearGameplayEventBus, type TearGameplayEvent } from "../../src/gameplay/runtime/gameplay-events";
 
 const definition = {

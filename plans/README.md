@@ -5,18 +5,10 @@ disposition of Markdown files directly under `plans/` and the explicitly
 authorized `active/` and `completed/` destinations. Each placement change or
 combined transaction must remain link-checked and reviewable.
 
-## Current sequencing authority
-
-`TEAR_PROGRAM_NORMALIZATION_MASTER_PLAN.md` is the single authority for the
-G0–G8 sequence, gate semantics, production freeze, and the G5 move policy.
-The plan-specific documents below cannot reopen or close a program goal on
-their own.
-
 ## Plan classification
 
 | File | Classification | Owner | Status | Closure condition | Role |
 | --- | --- | --- | --- | --- | --- |
-| [TEAR_PROGRAM_NORMALIZATION_MASTER_PLAN.md](TEAR_PROGRAM_NORMALIZATION_MASTER_PLAN.md) | current authority | Release governance owner | Active | The master plan records the current G0–G8 state and the protected-main evidence for every closed goal. | Program sequencing and governance |
 | [MOBILE_LATER.md](MOBILE_LATER.md) | parked notes | Mobile owner (mobile-input) | Paused | The owner resumes mobile work; each item then becomes a task card or is dropped. | The one place for mobile follow-ups while mobile is paused (owner, 2026-11-19); any session may add a note |
 
 ## Active plans
@@ -32,7 +24,11 @@ their own.
 | [RELEASE_READINESS_PLAN.md](active/RELEASE_READINESS_PLAN.md) | Release-readiness owner | Active | Every phase in the plan is done or explicitly dropped by the owner, `pnpm check` passes from the final commit, and the owner has authorised the merge and deployment. | Phased plan to make the game releasable to players: gate developer surfaces, green gates, input and first-run fixes, UI system and screen passes, payload, repository and workflow cleanup. |
 | [PLAYTEST_TOOL_PLAN.md](active/PLAYTEST_TOOL_PLAN.md) | Playtest tool owner | Active | Every "done when" line of stages 1 to 6 holds, `pnpm check` passes from the final commit, and no file, command or document is still named TearBench. | One command that plays Tear headless with scripted players and reports clear rates, time to kill, damage and comparisons between builds; replaces TearBench and the AI-player work. |
 | [DRILLED_MOVE_NAMES.md](active/DRILLED_MOVE_NAMES.md) | Training and Playground experience owner (training-ux) | Active | Every "done when" line below holds and `pnpm check:functional` passes from the final commit. | One source of display names for the moves the weapon drills train, used by the drill steps, the weapon teaching lines and the Drills WEAPONS help. |
+| [PALE_GAMEPLAY_REBUILD.md](active/PALE_GAMEPLAY_REBUILD.md) | Pale gameplay owner (verdant-gameplay session) | Active | Every "done when" line below holds and `pnpm check:functional` passes from the final commit. | Rebuild of Pale's Aurora Tracks, Rimehound, variants, White Hart and waves on the shared layers Verdant built; replaces checkpoints C2 to C8 of the Pale Revision 3 plan for gameplay; does not publish Pale. |
 | [REPLAY_OVERHAUL_PLAN.md](active/REPLAY_OVERHAUL_PLAN.md) | Replay owner (replay-overhaul session) | Active | Every "done when" line below holds, `src/ghost/` no longer exists, and `pnpm check:functional` passes from the final commit. | One plain replay system (record, store, watch, share, verify) on one versioned record, replacing Ghost 2 and the Ghost V3 capsules; the stable record for seed races, Shards cosmetics in shared replays, a later clip export and the playtest tool. |
+| [FIREBASE_REFRESH.md](active/FIREBASE_REFRESH.md) | Firebase owner (firebase-refresh session) | Active | Every "done when" line below holds and `pnpm check:functional` passes from the final commit of each pull request. | Firebase brought up to date in four pull requests: tested and hardened Firestore rules, the modular SDK bundled into the standalone build only, App Check in monitor mode, and removal of dead Remote Config and legacy paths. |
+| [CINEMATICS_OVERHAUL.md](active/CINEMATICS_OVERHAUL.md) | Cinematics owner (cinematics-overhaul session) | Active | Every "done when" line below holds, `src/gameplay/runtime/cinematic-director.ts` and the boss ritual files no longer exist, the rule over every boss passes, and `pnpm check:functional` passes from the final commit. | Boss phase changes, arrivals and deaths happen inside the running fight as boss moves; chapter openings and the finale become short cards with no waiting; one stage beat replaces the cinematic director, the ritual layer and the blocking paths. |
+| [VERDANT_PALE_REBUILD.md](active/VERDANT_PALE_REBUILD.md) | Verdant rebuild owner (verdant-pale-rebuild session) | Active | Every "done when" line below holds for Verdant, the owner has approved the new Verdant on preview, and `pnpm check:functional` passes from the final commit. | Rebuild of the Verdant boss, enemies and stage from scratch in the pattern of Aldric, the Echo and the Colossus, with two rules over all content (nothing outlives its move, tell weight); Pale follows on what Verdant proves; supersedes the Verdant Revision 3 plan and the Pale gameplay plan at its switch slice. |
 
 ## Completed plans
 
@@ -51,16 +47,13 @@ Where a plan lives:
 - `active/` holds open plans and their companion files, such as the Verdant and
   Pale checkpoint ledgers.
 - `completed/` holds closed plans kept as records.
-- Directly under `plans/` stays the normalization master plan; its row is in
-  the classification table above.
-- `MOBILE_LATER.md` also stays directly under `plans/`: it is not a plan but the
+- `MOBILE_LATER.md` stays directly under `plans/`: it is not a plan but the
   notes file every session writes mobile follow-ups to while mobile is paused.
-- `archive/` remains a future G5 destination.
 
 New plans start from [TASK_CARD_TEMPLATE.md](TASK_CARD_TEMPLATE.md) and go in
 `active/` with a row in the Active plans table.
 
-The active-plan set is exactly the twelve active rows across the two tables in
+The active-plan set is exactly the thirteen active rows across the two tables in
 this index. `check:docs` derives that set from these tables, requires each
 plan's file metadata to match its Owner/Status/Closure condition cells, and
 fails closed on duplicate, malformed, empty, or additional active rows.

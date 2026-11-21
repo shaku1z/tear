@@ -218,7 +218,7 @@ test("selection exposes canonical matrix and capability obligations bound to exe
 });
 
 test("production composition exposes all required hook-family dispositions", () => {
-  const selection = select(["src/tearbench/production-replay-composition.ts"]);
+  const selection = select(["src/app/world/detached/replay-composition.ts"]);
   assert.deepEqual(
     selection.backendDispositions.map((entry) => entry.family),
     [
@@ -270,7 +270,7 @@ test("production hook-family coverage and evidence ownership fail closed", () =>
     ],
   ];
   for (const [name, mutate, expected] of mutations) {
-    const result = rejected(["src/tearbench/production-replay-composition.ts"], {
+    const result = rejected(["src/app/world/detached/replay-composition.ts"], {
       routes: mutatedRoutes(name, mutate),
     });
     assert.notEqual(result.status, 0, name);
@@ -520,8 +520,8 @@ test("boss, stage, progression, event, and player owners receive current mapped 
 
 test("production replay/headless composition is explicitly dispositioned", () => {
   const selection = select([
-    "src/tearbench/production-combat-phases.ts",
-    "src/tearbench/production-replay-composition.ts",
+    "src/app/world/detached/combat-phases.ts",
+    "src/app/world/detached/replay-composition.ts",
     "src/playtest/headless/production-headless-environment.ts",
   ]);
   assert.ok(selection.routes.includes("production-replay-headless-composition"));
@@ -661,25 +661,22 @@ test("documentation plus an unmapped change cannot masquerade as documentation-o
   assert.ok(selection.buildTargets.includes("test-standalone"));
 });
 
-test("the scheduled TearBench workflow inspects the complete commit range", () => {
-  const scheduledWorkflow = readFileSync(join(root, ".github", "workflows", "tearbench-program.yml"), "utf8");
-  assert.doesNotMatch(scheduledWorkflow, /HEAD\^\s+HEAD/u);
-  assert.match(scheduledWorkflow, /git rev-list --max-parents=0 HEAD/u);
-  assert.match(scheduledWorkflow, /fetch-depth: 0/u);
-});
-
-test("the scheduled TearBench workflow runs only the weekly endurance job, after the job naming its browser image", () => {
-  const scheduledWorkflow = readFileSync(join(root, ".github", "workflows", "tearbench-program.yml"), "utf8");
-  const jobs = scheduledWorkflow.slice(scheduledWorkflow.indexOf("\njobs:"));
-  assert.deepEqual(
-    [...jobs.matchAll(/^ {2}([\w-]+):$/gmu)].map((match) => match[1]),
-    ["image", "weekly-endurance"],
-  );
-  assert.deepEqual(
-    [...scheduledWorkflow.matchAll(/cron: "([^"]+)"/gu)].map((match) => match[1]),
-    ["23 8 * * 0"],
-  );
-  assert.match(scheduledWorkflow, /pnpm check:weekly/u);
+test("every journey a route can select runs in a group of config/checks.json", () => {
+  // No workflow runs the selection; the weekly group carries the one journey no other group ran.
+  // Read from the routes themselves: a selection over every tracked file picks the same journeys
+  // but takes about 20 seconds.
+  const journeys = [
+    ...new Set(JSON.parse(readFileSync(routesPath, "utf8")).flatMap((route) => route.journeyCommands ?? [])),
+  ];
+  const groups = JSON.parse(readFileSync(join(root, "config", "checks.json"), "utf8")).groups;
+  const runs = Object.values(groups).flatMap((checks) => checks.map((check) => check.run));
+  assert.ok(journeys.length > 0);
+  const unrun = journeys.filter((command) => {
+    const file = command.split(" ").find((token) => token.startsWith("tests/")) ?? command;
+    return !runs.some((run) => run.includes(file));
+  });
+  assert.deepEqual(unrun, []);
+  assert.ok(groups.weekly.some((check) => check.run === "node tests/browser-scripted-agent-autonomy.js"));
 });
 
 test("missing active weapon evidence fails closed", () => {

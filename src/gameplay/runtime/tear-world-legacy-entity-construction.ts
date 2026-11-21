@@ -40,7 +40,6 @@ export interface TearWorldLegacyEntityConstructorPorts<
     voidWisp: (x: number, y: number) => Enemy;
     reflection: (x: number, y: number) => Enemy;
     support: (x: number, y: number, kind: SupportKind) => Enemy;
-    boss: (x: number, y: number) => Enemy;
   }>;
   /** Reconnects the Echo's mutable run-modifier link after codec hydration. */
   readonly rebindEchoMods?: (enemy: Enemy, mods: EchoMods) => void;
@@ -86,7 +85,6 @@ export function createTearWorldLegacyEntityConstruction<
       mender: { create: (x, y) => ports.enemy.support(x, y, "mender") },
       anchor: { create: (x, y) => ports.enemy.support(x, y, "anchor") },
       rootbinder: { create: (x, y) => ports.enemy.support(x, y, "rootbinder") },
-      boss: { create: ports.enemy.boss },
     },
     ...(ports.rebindEchoMods === undefined
       ? {}

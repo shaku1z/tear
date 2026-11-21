@@ -5,8 +5,10 @@ import { normalizeGameAction } from "../input/game-action";
 import { stableVerificationHash } from "../domain/hash";
 import type { RunRandomStreamsSnapshot } from "../simulation/run-random";
 import { STAGES } from "../gameplay/stages";
-import type { TearCausalEventV1, TearObservationV1, TearScenarioV1, TearSnapshotV1, TearStateClass } from "./contracts";
-import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "./contracts";
+import type { TearCausalEventV1, TearObservationV1, TearScenarioV1 } from "./contracts";
+import type { TearSnapshotV1, TearStateClass } from "../gameplay/snapshot/snapshot-contract";
+import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "../gameplay/snapshot/snapshot-contract";
+import { TearProgressMeter } from "./progress-meter";
 import { DIFFICULTY_REGISTRY, RUN_MODE_REGISTRY, WEAPON_REGISTRY } from "./registries";
 import {
   canonicalObservationActions,
@@ -36,7 +38,7 @@ import {
 } from "./state-setup-exit-gate";
 import { createCampaignVictoryOrigin, createCampaignWave59RewardFrontier } from "./campaign-victory-origin";
 import { createGameplayCausalEvent, projectGameplayEventForParity } from "./gameplay-causal-events";
-import { environmentSnapshotToObservation } from "./environment-codec";
+import { environmentSnapshotToObservation } from "../gameplay/snapshot/environment-codec";
 import {
   buildBloomWellCycleState,
   buildEnvironmentCombatObjectState,
@@ -50,7 +52,7 @@ import {
   type BloomWellPresentationOptions,
 } from "../gameplay/environment/bloom-well-presentation-facts";
 import { resolveTearSdl, type TearSdlDocumentV1 } from "./tearsdl";
-import type { TearLiveRestoreResult } from "./live-state-snapshot";
+import type { TearLiveRestoreResult } from "../gameplay/snapshot/live-restore";
 import type { StateSetupExitLaunch } from "./state-setup-exit-gate";
 import type {
   LiveTearRuntimeEnvironmentContext,
@@ -356,7 +358,7 @@ export function createLiveTearRuntimeEnvironment(
   let outcomeChronologyStart = 0;
   let deliveredEventCount = 0;
   let lastProgressTick = 0;
-  let lastProgressSignature = "";
+  const progress = new TearProgressMeter();
   let startingRun = false;
   const eventLog: TearCausalEventV1[] = [];
   const nativeEventLog: TearGameplayEvent[] = [];
@@ -374,29 +376,23 @@ export function createLiveTearRuntimeEnvironment(
   const projectObservation = (tick: number): TearObservationV1 => {
     const run = context.state.run();
     const player = context.state.player();
-    const blade = context.state.blade();
     const lifecycle = context.lifecycle();
-    const enemies = context.state.enemies().filter((enemy) => !enemy.dead);
-    const projectiles = context.state.projectiles().filter((projectile) => !projectile.dead);
-    const signature = [
-      lifecycle.phase,
-      lifecycle.revision,
-      run?.wave,
-      run?.score,
-      run?.spawnQueue.length,
-      player?.x,
-      player?.y,
-      player?.hp,
-      blade?.x,
-      blade?.y,
-      blade?.state,
-      ...enemies.flatMap((enemy) => [enemy.x, enemy.y, enemy.hp]),
-      ...projectiles.flatMap((projectile) => [projectile.x, projectile.y]),
-    ].join("|");
-    if (signature !== lastProgressSignature) {
-      lastProgressSignature = signature;
+    // Run progress as TearProgressMeter defines it, the one definition `runtime.no-softlock` and the Watch Agent's
+    // watchdog share. A step of the run's lifecycle counts as a screen change.
+    const reading = {
+      player: { hp: player?.hp ?? 0 },
+      run: { wave: run?.wave ?? 0, score: run?.score ?? 0 },
+      entities: context.state
+        .enemies()
+        .filter((enemy) => !enemy.dead)
+        .map((enemy) => ({
+          id: context.actorId(enemy),
+          kind: "enemy",
+          hpRatio: enemy.maxHp > 0 ? enemy.hp / enemy.maxHp : 0,
+        })),
+    };
+    if (progress.observe(reading, `${context.screen()}/${lifecycle.phase}/${String(lifecycle.revision)}`))
       lastProgressTick = tick;
-    }
     return projectLiveTearObservation(
       context,
       tick,
@@ -494,7 +490,7 @@ export function createLiveTearRuntimeEnvironment(
       nativeEventLog.length = 0;
       deliveredEventCount = 0;
       lastProgressTick = 0;
-      lastProgressSignature = "";
+      progress.reset();
       waveOwnership.invalidate();
       startingRun = true;
       try {

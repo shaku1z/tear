@@ -2,24 +2,23 @@ import { readFileSync } from "node:fs";
 import { preflightGhostRecordedCanonicalSnapshot } from "../../src/ghost/capsule-replay-envelope";
 import { describe, expect, it, vi } from "vitest";
 import { createCosmeticEmissionRandom } from "../../src/domain/cosmetic-emission-random";
-import { createLiveStateCodec } from "../../src/tearbench/state-codecs";
+import { createLiveStateCodec } from "../../src/gameplay/snapshot/state-codec";
 import { CONFIG } from "../../src/config/game-config";
 import { createBossArena } from "../../src/gameplay/training/arena-rules";
 import { stableVerificationHash } from "../../src/domain/hash";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
 
+import { CODEC_REGISTRY } from "../../src/gameplay/snapshot/codec-ids";
+import { TEAR_CONTRACT_FORMAT, type TearSnapshotV1 } from "../../src/gameplay/snapshot/snapshot-contract";
 import {
-  CODEC_REGISTRY,
-  TEAR_CONTRACT_FORMAT,
   captureCodecState,
   createDefaultStateCodecRegistry,
   diffCodecWorlds,
-  restoreSnapshotIntoLiveWorld,
   restoreSnapshotTransactionally,
   type TearCodecWorld,
-  type TearSnapshotV1,
   type TearWorldFactory,
-} from "../../src/tearbench";
+} from "../../src/gameplay/snapshot/state-codec";
+import { restoreSnapshotIntoLiveWorld } from "../../src/gameplay/snapshot/live-restore";
 
 function world(): TearCodecWorld {
   return { components: new Map(), references: new Map(), entityIds: new Set(["player", "blade"]) };

@@ -1,118 +1,12 @@
 // ------- lightweight FX: sparks + shockwave rings + shards (color-aware) -------
+import type { BurstKind } from "../domain/cosmetic-types";
 import { clamp } from "../domain/geometry";
-
-interface ViewRect {
-  left: number;
-  top: number;
-  right: number;
-  bottom: number;
-}
-export type EffectPriority = "cosmetic" | "combat" | "hazard";
-interface ParticleBase {
-  type: string;
-  x: number;
-  y: number;
-  life: number;
-  max: number;
-  col?: string | null;
-  priority?: EffectPriority;
-}
-interface SparkParticle extends ParticleBase {
-  type: "spark";
-  vx: number;
-  vy: number;
-}
-interface RingParticle extends ParticleBase {
-  type: "ring";
-  r: number;
-}
-interface RibbonParticle extends ParticleBase {
-  type: "ribbon";
-  x1: number;
-  y1: number;
-}
-interface EdgeTraceParticle extends ParticleBase {
-  type: "edgeTrace";
-  x1: number;
-  y1: number;
-  thickness: number;
-}
-interface ContactMarkParticle extends ParticleBase {
-  type: "contactMark";
-  tx: number;
-  ty: number;
-  length: number;
-  thickness: number;
-}
-interface GroundPulseParticle extends ParticleBase {
-  type: "groundPulse";
-  nx: number;
-  ny: number;
-  halfWidth: number;
-}
-interface MuzzleWedgeParticle extends ParticleBase {
-  type: "muzzleWedge";
-  dx: number;
-  dy: number;
-  length: number;
-  halfWidth: number;
-}
-interface ShardParticle extends ParticleBase {
-  type: "shard";
-  vx: number;
-  vy: number;
-  rot: number;
-  spin: number;
-  size: number;
-}
-interface FlashParticle extends ParticleBase {
-  type: "flash";
-  r: number;
-}
-interface ShockParticle extends ParticleBase {
-  type: "shock";
-  r: number;
-  vr: number;
-  thick: number;
-}
-interface SmokeParticle extends ParticleBase {
-  type: "smoke";
-  vx: number;
-  vy: number;
-  size: number;
-}
-interface GhostParticle extends ParticleBase {
-  type: "ghost";
-  hw: number;
-  hh: number;
-}
-interface EmberParticle extends ParticleBase {
-  type: "ember";
-  vx: number;
-  vy: number;
-  size: number;
-}
-interface DripParticle extends ParticleBase {
-  type: "drip";
-  vx: number;
-  vy: number;
-  size: number;
-}
-type Particle =
-  | SparkParticle
-  | RingParticle
-  | RibbonParticle
-  | EdgeTraceParticle
-  | ContactMarkParticle
-  | GroundPulseParticle
-  | MuzzleWedgeParticle
-  | ShardParticle
-  | FlashParticle
-  | ShockParticle
-  | SmokeParticle
-  | GhostParticle
-  | EmberParticle
-  | DripParticle;
+import type {
+  ParticleShape as Particle,
+  EffectPriority,
+  ParticleViewRect as ViewRect,
+} from "../gameplay/snapshot/particle-checkpoint";
+import type { CosmeticLooks } from "./cosmetic-styles";
 
 export type ParticleEmissionDisposition = "emitted" | "culled" | "budget";
 
@@ -140,6 +34,8 @@ export interface ParticleSystemPolicy {
   readonly lowGraphics: () => boolean;
   readonly reducedMotion: () => boolean;
   readonly random: () => number;
+  /** The wearer's styles: a "blade-hit" burst is the local player's blade striking, so it wears their spark. */
+  readonly looks: Pick<CosmeticLooks, "worn">;
 }
 
 function emissionReceipt(
@@ -167,7 +63,15 @@ export interface ParticleSystem {
   _visible(particle: Particle, extra: number): boolean;
   _emit(particle: Particle, priority: EffectPriority): ParticleEmissionDisposition;
   spark(x: number, y: number, dirX: number, dirY: number, color?: string): ParticleEmissionDisposition;
-  burst(x: number, y: number, dirX: number, dirY: number, count: number, color?: string): ParticleEmissionReceipt;
+  burst(
+    x: number,
+    y: number,
+    dirX: number,
+    dirY: number,
+    count: number,
+    color?: string,
+    kind?: BurstKind,
+  ): ParticleEmissionReceipt;
   ring(x: number, y: number, radius?: number, color?: string): ParticleEmissionReceipt;
   ribbon(x0: number, y0: number, x1: number, y1: number, color?: string): void;
   edgeTrace(x0: number, y0: number, x1: number, y1: number, thickness: number, life: number, color: string): void;
@@ -313,15 +217,19 @@ function createParticleSystem(policy: ParticleSystemPolicy): ParticleSystem {
       );
     },
 
-    burst(x, y, dirX, dirY, n, col) {
+    burst(x, y, dirX, dirY, n, col, kind) {
+      // A worn spark replaces the colour (its colours in turn) and scales the count; the particle budget still applies.
+      const spark = kind === "blade-hit" ? policy.looks.worn().spark : null;
+      const worn = spark?.worn ? spark : null;
+      const total = worn ? Math.max(1, Math.round(n * worn.countScale)) : n;
       const before = this.list.length;
       let requested = 0,
         emitted = 0,
         culled = 0,
         budget = 0;
-      for (let i = 0; i < n; i++) {
+      for (let i = 0; i < total; i++) {
         requested++;
-        const result = this.spark(x, y, dirX, dirY, col);
+        const result = this.spark(x, y, dirX, dirY, worn ? (worn.colors[i % worn.colors.length] ?? col) : col);
         if (result === "emitted") emitted++;
         else if (result === "culled") culled++;
         else budget++;

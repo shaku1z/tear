@@ -428,6 +428,7 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
         debug: PANTHEON_DEBUG,
         stage: stageRuntime,
         tutorial: TUT,
+        trainingCallouts: campaignTraining.training.callouts,
         finale: () => story.finale,
         formatTime: fmtTime,
         trickColor,
@@ -444,7 +445,11 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
   const leaveCareer = () => {
     libraryAdapters.careerAction("suspend");
   };
-  navigation.bind({ cancelPendingReplayOpen: replayAdapters.cancelPendingOpen, leaveCareer });
+  navigation.bind({
+    cancelPendingReplayOpen: replayAdapters.cancelPendingOpen,
+    leaveCareer,
+    leaveShop: screenComposition.leaveShop,
+  });
   browserWindow.addEventListener("pagehide", leaveCareer);
   return interfaceComposition;
 }

@@ -1,5 +1,6 @@
 import { shardShelvesHeight, shelfColumns } from "./shard-shelves-snapshot";
-import type { ShardsView, ShopScreenView } from "./screens/contracts";
+import type { ShopScreenView } from "./screens/contracts";
+import type { ShardsView } from "./screens/shard-contracts";
 
 export const SHOP_CATEGORIES = Object.freeze([
   ["vit", "VITALITY"],

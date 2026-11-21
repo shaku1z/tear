@@ -13,7 +13,7 @@ import type { GhostLiveRecorder } from "../../ghost/live-recorder";
 import { verifyGhostCapsuleOpeningContinuation } from "../../ghost/production-replay-verification";
 import type { GameAction } from "../../input/game-action";
 import { emitLiveTearBenchPhysicalInput } from "../../tearbench/browser/live-physical-input";
-import { liveRewardChoiceIds, routeLiveTearBenchAction } from "../../tearbench/live-runtime-action-routing";
+import { liveRewardChoiceIds, routeLiveTearBenchAction } from "../world/detached/action-routing";
 import type { LiveCampaignTrainingAssembly } from "../campaign/live-campaign-training-assembly";
 import type { LiveCanonicalCombatHost, LiveCanonicalStateCapture } from "../combat/live-canonical-state";
 import type { LiveInterfaceComposition } from "../interface/interface-composition";
@@ -328,7 +328,8 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
 export function installLiveBossDebugWhenEnabled(sources: LiveTestBuildHookSources): void {
   if (__TEAR_TEST_BUILD__) {
     // The click targets of the latest drawn frame, as a pointer click is matched against them, each
-    // with the page point of its centre (the inverse of the pointer's logical mapping).
+    // with the page point of its centre (the inverse of the pointer's logical mapping) and the action
+    // a click runs, so a journey can click one of several controls that share a label.
     const { canvas } = sources.browser;
     const { CONFIG, OVERSCAN } = sources.dependencies;
     Object.defineProperty(sources.dependencies.browserWindow, "__TEAR_UI_TARGETS__", {
@@ -344,10 +345,22 @@ export function installLiveBossDebugWhenEnabled(sources: LiveTestBuildHookSource
           w: button.w,
           h: button.h,
           enabled: button.enabled !== false,
+          action: button.semanticAction,
           clientX: rect.left + ((button.x + button.w / 2 + OVERSCAN.x) / spanWidth) * rect.width,
           clientY: rect.top + ((button.y + button.h / 2 + OVERSCAN.y) / spanHeight) * rect.height,
         }));
       },
+    });
+    // The run setup's selection, which a click on a mode, difficulty or weapon changes, and whether
+    // START is drawn and enabled on the setup screen: what a journey waits on after each setup click.
+    Object.defineProperty(sources.dependencies.browserWindow, "__TEAR_SETUP__", {
+      configurable: true,
+      value: () => ({
+        ...sources.session.selection(),
+        ready:
+          sources.navigation.screen() === "setup" &&
+          sources.interaction.buttons().some((button) => button.label === "START" && button.enabled !== false),
+      }),
     });
   }
   if (__TEAR_TEST_BUILD__ && sources.browser.pantheonDebug) {

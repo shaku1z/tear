@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  COACH_CALLOUT_SECONDS,
   COACH_HELP_SECONDS,
   COACH_IDLE_SECONDS,
   COACH_LEARNED_SECONDS,
@@ -97,16 +98,59 @@ describe("training coach", () => {
     const coach = new TrainingCoach();
     const marks = coach.step(frame({ playground: { runKey: run } }));
     expect(marks[0]?.mark).toMatchObject({ id: "playground:help", tone: "info" });
-    expect(marks[0]?.mark.text).toBe("TAB menu  ·  U abilities  ·  1–8 spawn");
+    expect(marks[0]?.mark.text).toBe("TAB menu  ·  1 heal  ·  2 clear  ·  3 dummy  ·  4 repeat");
     let later = marks;
     for (let elapsed = 0; elapsed < COACH_HELP_SECONDS + 1; elapsed += 1)
       later = coach.step(frame({ deltaSeconds: 1, playground: { runKey: run } }));
     expect(ids(later)).toEqual([]);
     expect(ids(coach.step(frame({ playground: { runKey: run, arena: 2 } })))).toEqual(["playground:help"]);
-    // Touch and controller have no shortcuts: the help points at pause, which opens the menu.
-    for (const inputMode of ["touch", "gamepad"] as const) {
-      const help = new TrainingCoach().step(frame({ inputMode, playground: { runKey: run } }))[0]?.mark;
-      expect(help).toMatchObject({ id: "playground:help", text: "Pause for the Playground menu.", keys: ["PAUSE"] });
-    }
+    // A controller names its View layer; touch has no shortcuts, so the help points at pause.
+    const pad = new TrainingCoach().step(frame({ inputMode: "gamepad", playground: { runKey: run } }))[0]?.mark;
+    expect(pad?.text).toBe("VIEW menu  ·  VIEW + ↑ heal  ·  VIEW + ↓ clear  ·  VIEW + ← dummy  ·  VIEW + → repeat");
+    const touch = new TrainingCoach().step(frame({ inputMode: "touch", playground: { runKey: run } }))[0]?.mark;
+    expect(touch).toMatchObject({ id: "playground:help", text: "Pause for the Playground menu.", keys: ["PAUSE"] });
+  });
+
+  it("gives each new arena the full help time, even when the last help is still showing", () => {
+    const run = {};
+    const coach = new TrainingCoach();
+    coach.step(frame({ playground: { runKey: run, arena: 0 } }));
+    coach.step(frame({ deltaSeconds: COACH_HELP_SECONDS - 3, playground: { runKey: run, arena: 0 } }));
+    coach.step(frame({ playground: { runKey: run, arena: 1 } }));
+    // Past the first help's end: the second arena's help still has time left.
+    const later = coach.step(frame({ deltaSeconds: COACH_HELP_SECONDS - 1, playground: { runKey: run, arena: 1 } }));
+    expect(ids(later)).toEqual(["playground:help"]);
+  });
+
+  it("shows the help in full for each of two arena changes a few seconds apart", () => {
+    const run = {};
+    const coach = new TrainingCoach();
+    const at = (arena: number, deltaSeconds = 1 / 60) =>
+      coach.step(frame({ deltaSeconds, playground: { runKey: run, arena } }));
+    at(0);
+    at(0, 2);
+    at(1);
+    at(1, 2);
+    // The second change starts the help again with its whole time ahead: still on screen
+    // almost a full help time later, though the first help began more than that ago.
+    at(2);
+    expect(ids(at(2, COACH_HELP_SECONDS - 0.5))).toEqual(["playground:help"]);
+    expect(ids(at(2, 1))).toEqual([]);
+  });
+
+  it("plates a call-out beside what it names, and gives a repeated call-out its full time", () => {
+    const coach = new TrainingCoach();
+    const enemy = { x: 880, y: 500, w: 40, h: 40 };
+    const first = coach.step(frame({ callouts: [{ text: "GRUNT", tone: "info", target: enemy }] }));
+    expect(first.map((entry) => entry.mark)).toEqual([
+      expect.objectContaining({ title: "GRUNT", text: "", target: enemy, backing: "plate", channel: "callout" }),
+    ]);
+    coach.step(frame({ deltaSeconds: COACH_CALLOUT_SECONDS - 0.2 }));
+    // A second HEALED (no anchor: at the player) replaces the first and restarts.
+    coach.step(frame({ callouts: [{ text: "HEALED", tone: "info" }] }));
+    const later = coach.step(frame({ deltaSeconds: COACH_CALLOUT_SECONDS - 0.2 }));
+    expect(later.map((entry) => entry.mark)).toEqual([
+      expect.objectContaining({ title: "HEALED", anchor: { x: 300, y: 600 } }),
+    ]);
   });
 });

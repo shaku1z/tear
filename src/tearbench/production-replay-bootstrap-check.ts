@@ -1,6 +1,6 @@
 import { isRecord } from "../domain/records";
 import { RUN_RANDOM_STREAM_NAMES } from "../simulation/run-random";
-import type { ProductionReplayBootstrap } from "./production-replay-composition";
+import type { ProductionReplayBootstrap } from "../gameplay/snapshot/snapshot-contract";
 
 /** Checks an untrusted checkpoint bootstrap (build identity, random streams, frame policy) and returns a frozen copy. */
 export function requireProductionReplayBootstrap(value: unknown): ProductionReplayBootstrap {
