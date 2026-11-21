@@ -1,12 +1,22 @@
 import { BOSS_ROSTER } from "../../gameplay/run/content-director";
 import { buildSetupSnapshot } from "../../presentation/menu-setup-snapshots";
 import { firstRunProfileFacts, isFirstRunProfile } from "../../gameplay/progression/first-run-guidance";
-import { hasOwnKey } from "../../domain/records";
+import { hasOwnKey, ownValue } from "../../domain/records";
 import { CONDITION_NAMES } from "../../gameplay/progression/condition-names";
 import { COSMETIC_CATALOG } from "../../gameplay/progression/cosmetic-catalog";
 import { buildShardShelves } from "../../presentation/shard-shelves-snapshot";
 import { buildShopSnapshot, SHOP_TABS } from "../../presentation/shop-snapshot";
 import type { MenuScreenServices, MenuScreenState } from "../screens/menu-screen-adapters";
+import { createArmedConfirm } from "../interface/armed-confirm";
+import {
+  deleteLoadout,
+  loadoutIdentity,
+  loadoutSummaries,
+  MIN_LOADOUT_NAME,
+  renameLoadout,
+} from "../../domain/cosmetic-loadouts";
+import { MAX_LOADOUT_NAME, type CosmeticChange } from "../../domain/cosmetic-types";
+import type { NameTarget } from "../../domain/display-names";
 
 const collectionName = (id: string): string =>
   COSMETIC_CATALOG.collections.find((entry) => entry.id === id)?.name ?? id;
@@ -15,6 +25,19 @@ export function createLiveSetupShopRenderers(state: MenuScreenState, services: M
   const { dependencies: d, renderers } = services;
   /** Items that were new when the SHARDS tab opened: they keep their NEW badge for this visit only. */
   let freshItems: ReadonlySet<string> = new Set();
+  /** DELETE's question; any other change to the cosmetics, a tab change or leaving the Shop withdraws it. */
+  const deleteConfirm = createArmedConfirm(() => performance.now());
+  /** DELETE asks about a loadout, not a place: a merge that moves another loadout there withdraws the question. */
+  const loadoutAt = (id: string): string => {
+    const loadout = ownValue(d.PROFILE.cosmetics().loadouts, id);
+    return loadout ? loadoutIdentity(id, loadout) : id;
+  };
+  const changeCosmetics = (change: CosmeticChange): void => {
+    deleteConfirm.cancel();
+    void d.PROFILE.changeCosmetics(change).then((result) => {
+      if (result === "committed") d.SFX.ui();
+    });
+  };
   const shards = () =>
     buildShardShelves({
       catalog: COSMETIC_CATALOG,
@@ -24,6 +47,9 @@ export function createLiveSetupShopRenderers(state: MenuScreenState, services: M
       names: CONDITION_NAMES,
       collectionName,
       newItems: freshItems,
+      deleteArmed:
+        loadoutSummaries(d.PROFILE.cosmetics()).find((loadout) => deleteConfirm.view(loadoutAt(loadout.id)).armed)
+          ?.id ?? null,
     });
   /** Grants anything already earned, then badges and marks as seen what the player holds but has not seen. */
   const openShards = async (): Promise<void> => {
@@ -114,6 +140,7 @@ export function createLiveSetupShopRenderers(state: MenuScreenState, services: M
       const tab = SHOP_TABS.find(([entry]) => entry === id)?.[0];
       if (tab === undefined || tab === state.shop().tab) return;
       d.SFX.ui();
+      deleteConfirm.cancel();
       state.setShop({ ...state.shop(), tab });
       state.setScroll(0);
       if (tab === "shards") void openShards();
@@ -125,10 +152,27 @@ export function createLiveSetupShopRenderers(state: MenuScreenState, services: M
         await d.PROFILE.markCosmeticsSeen([id]);
       });
     },
-    equipCosmetic(slot: string, id: string | null): void {
-      void d.PROFILE.equipCosmetic(slot, id).then((result) => {
-        if (result === "committed") d.SFX.ui();
-      });
+    changeCosmetics,
+    leaveShop(): void {
+      deleteConfirm.cancel();
+    },
+    pressDeleteLoadout(id: string): void {
+      if (deleteConfirm.press(loadoutAt(id)))
+        changeCosmetics((_catalog, cosmetics, now) => deleteLoadout(cosmetics, id, now));
+      else d.SFX.ui();
+    },
+    loadoutNameTarget(id: string): NameTarget | null {
+      const loadout = loadoutSummaries(d.PROFILE.cosmetics()).find((entry) => entry.id === id);
+      if (!loadout) return null;
+      return {
+        subject: "loadout",
+        initial: loadout.name,
+        minLength: MIN_LOADOUT_NAME,
+        maxLength: MAX_LOADOUT_NAME,
+        commit: (name) => {
+          changeCosmetics((_catalog, cosmetics, now) => renameLoadout(cosmetics, id, name, now));
+        },
+      };
     },
   });
 }

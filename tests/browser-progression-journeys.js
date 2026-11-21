@@ -327,6 +327,104 @@ withJourney(
       await page.evaluate(() => window.__TEAR_UI_TARGETS__().some((target) => target.label === "ON")),
       "double-tap dash is still on after the reload",
     );
+    await clickTarget(page, "settings", "BACK");
+    await waitScreen("menu");
+
+    // Shards: buy and wear a title and a banner, keep a second loadout without the title, switch back,
+    // reload, and the passport shows what the loadout in use wears. Every step is a real click.
+    /** The point of the drawn control that runs `action`, scrolling the list until it is drawn. */
+    async function clickAction(screen, action) {
+      const encoded = JSON.stringify(action);
+      const find = () =>
+        page.evaluate((wanted) => {
+          const target = window.__TEAR_UI_TARGETS__().find((entry) => JSON.stringify(entry.action) === wanted);
+          return target && target.enabled ? { x: target.clientX, y: target.clientY } : null;
+        }, encoded);
+      let point = await find();
+      for (let step = 0; point === null && step < 24; step += 1) {
+        await page.mouse.move(800, 500);
+        await page.mouse.wheel(0, step < 12 ? 240 : -240);
+        await settleInput();
+        point = await find();
+      }
+      assert.ok(point, `the ${screen} screen drew a control for ${encoded}`);
+      await page.mouse.click(point.x, point.y);
+    }
+    const cosmetics = async () => JSON.parse((await storageSnapshot()).tear_profile_v2).profile.cosmetics ?? {};
+    /** Waits until the saved cosmetic record passes `test`, read from the isolated storage. */
+    async function waitCosmetics(test, label) {
+      const deadline = Date.now() + STATE_WAIT_MS;
+      while (Date.now() < deadline) {
+        if (test(await cosmetics())) return;
+        await settleInput();
+      }
+      assert.fail(`timed out waiting until the shards journey ${label}`);
+    }
+    const withShards = { ...(await storageSnapshot()) };
+    const envelope = JSON.parse(withShards.tear_profile_v2);
+    envelope.profile = { ...envelope.profile, shards: (envelope.profile.shards ?? 0) + 200 };
+    withShards.tear_profile_v2 = JSON.stringify(envelope);
+    await reloadWith(withShards);
+    await clickTarget(page, "menu", "SHOP");
+    await waitScreen("shop");
+    await clickDrawn("SHARDS");
+    await waitDrawn("LOADOUTS");
+    for (const [slot, id] of [
+      ["title", "title_wanderer"],
+      ["banner", "banner_nightfall"],
+    ]) {
+      await clickAction("shop", { type: "shards.buy", id });
+      await waitCosmetics((state) => state.owned?.[id] !== undefined, `bought ${id}`);
+      await clickAction("shop", { type: "shards.equip", slot, id });
+      await waitCosmetics((state) => state.loadouts?.main?.slots?.[slot]?.id === id, `wore ${id} in MAIN`);
+    }
+    await clickAction("shop", { type: "shards.newLoadout" });
+    await waitCosmetics(
+      (state) => state.active?.id?.startsWith("loadout_2_") === true,
+      "made and used a second loadout",
+    );
+    await clickAction("shop", { type: "shards.equip", slot: "title", id: null });
+    await waitCosmetics(
+      (state) => state.loadouts?.loadout_2?.slots?.title?.id === null,
+      "took the title off in LOADOUT 2",
+    );
+    await clickAction("shop", { type: "shards.useLoadout", id: "main" });
+    await waitCosmetics((state) => state.active?.id === "main", "switched back to MAIN");
+    const kept = await cosmetics();
+    assert.equal(kept.loadouts.loadout_2.slots.banner.id, "banner_nightfall", "the copy kept the banner");
+    await clickTarget(page, "shop", "BACK");
+    await waitScreen("menu");
+
+    // Reload: both loadouts are read back, MAIN is in use, and the passport wears its title.
+    await reloadWith(await storageSnapshot());
+    await clickTarget(page, "menu", "SHOP");
+    await waitScreen("shop");
+    await clickDrawn("SHARDS");
+    await waitDrawn("LOADOUTS");
+    assert.ok(await drawn("MAIN"), "MAIN is still listed after the reload");
+    assert.ok(await drawn("LOADOUT 2"), "the second loadout is still listed after the reload");
+    await clickTarget(page, "shop", "BACK");
+    await waitScreen("menu");
+    await clickAction("menu", { type: "navigate", to: "profile", resetScroll: true, tab: "bests" });
+    await waitScreen("profile");
+    await waitDrawn("WANDERER");
+    await clickTarget(page, "profile", "BACK");
+    await waitScreen("menu");
+    await clickTarget(page, "menu", "SHOP");
+    await waitScreen("shop");
+    await clickDrawn("SHARDS");
+    await waitDrawn("LOADOUTS");
+    await clickAction("shop", { type: "shards.useLoadout", id: "loadout_2" });
+    await waitCosmetics(
+      (state) => state.active?.id?.startsWith("loadout_2_") === true,
+      "switched to LOADOUT 2 after the reload",
+    );
+    await clickTarget(page, "shop", "BACK");
+    await waitScreen("menu");
+    await clickAction("menu", { type: "navigate", to: "profile", resetScroll: true, tab: "bests" });
+    await waitScreen("profile");
+    await waitDrawn("PROFILE");
+    assert.equal(await drawn("WANDERER"), false, "LOADOUT 2 wears no title on the passport");
   },
 )
   .then(() => console.log("browser progression journeys passed"))
