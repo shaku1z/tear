@@ -737,7 +737,6 @@ function createKill(context: LiveCombatActionContext): LiveKillHost {
       d.FX.explode(enemy.x, enemy.y - 20, accent, 1.4);
       f.addShake(d.CONFIG.juice.shakeBig * 1.5);
       f.addZoom(d.CONFIG.juice.zoomBig);
-      f.triggerSlowMotion();
       d.Input.buzz([30, 40, 60]);
     },
     releaseStolenBlade: (enemy) => {
