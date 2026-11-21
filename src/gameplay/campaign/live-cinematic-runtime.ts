@@ -101,7 +101,7 @@ export function createLiveCinematicRuntime(options: LiveCinematicRuntimeOptions)
         );
       else if (intent.type === "music-duck") options.setMusicDuck(intent.amount, intent.duration);
       else if (intent.type === "sound") options.playSound(intent.cue);
-      else if (intent.type === "store-seen") options.storeSeen(intent.key);
+      else options.storeSeen(intent.key);
     }
   };
   const sourceOptions = (owner: SourceRuntimeOwner) => ({

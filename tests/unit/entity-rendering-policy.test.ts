@@ -200,8 +200,8 @@ describe("entity rendering policies", () => {
       secondStyles: string[] = [];
     const crown = { x: 40, y: 50, rot: 0 };
 
-    enemyRuntime("first").drawAldricCrown(canvas(firstStyles), crown as never, 0.5);
-    enemyRuntime("second").drawAldricCrown(canvas(secondStyles), crown as never, 0.5);
+    enemyRuntime("first").drawAldricCrown(canvas(firstStyles), crown, 0.5);
+    enemyRuntime("second").drawAldricCrown(canvas(secondStyles), crown, 0.5);
 
     expect(firstStyles).toContain("first-bomber");
     expect(secondStyles).toContain("second-bomber");

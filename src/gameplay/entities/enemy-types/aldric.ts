@@ -859,7 +859,7 @@ export function createAldricType(
     _crownLands(platforms: readonly EnemyPlatform[]) {
       const crown = this.crown,
         target = crown?.restPlatform;
-      if (!crown || crown.state !== "airborne" || !target || crown.vy <= 0 || !platforms.includes(target)) return false;
+      if (crown?.state !== "airborne" || !target || crown.vy <= 0 || !platforms.includes(target)) return false;
       if (crown.y < target.y - 10 || crown.x < target.x || crown.x > target.x + target.w) return false;
       crown.y = target.y - 10;
       crown.vx = 0;
