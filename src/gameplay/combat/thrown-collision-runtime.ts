@@ -60,6 +60,13 @@ export interface ThrownEnemy {
   x: number;
   y: number;
   radius: number;
+  /**
+   * A part of a boss that one blade hit cuts, held or thrown (the new Rootbound's planted vine): where it is,
+   * null while there is none, and the cut, which returns false if it was refused.
+   */
+  cutPoint?: (() => { x: number; y: number; r: number } | null) | undefined;
+  cutPart?: (() => boolean) | undefined;
+
   hp: number;
   maxHp: number;
   color: string;
@@ -189,6 +196,19 @@ export function resolveThrownCollisions(
   }
   for (const enemy of enemies) {
     if (enemy.dead || enemy.dying || (enemy.introT ?? 0) > 0 || !blade.canHitThrownEnemy(enemy)) continue;
+    const cut = enemy.cutPoint?.() ?? null;
+    if (
+      cut !== null &&
+      hooks.segmentCircle(segment, cut.x, cut.y, cut.r + blade.thrownCollisionPad()) &&
+      enemy.cutPart?.()
+    ) {
+      blade.pierced.add(enemy);
+      hooks.burst(cut.x, cut.y, blade.vx, blade.vy, 10, enemy.color);
+      hooks.floater(cut.x, cut.y - 20, "CUT", true, enemy.color);
+      hooks.style("parry");
+      hooks.setHitStop(tuning.hitStopSmall);
+      break;
+    }
     if (!hooks.segmentCircle(segment, enemy.x, enemy.y, enemy.radius + blade.thrownCollisionPad())) continue;
     if (enemy.blocksDamage({ type: "throw" })) continue;
     if (enemy.behavior === "duelist" && enemy.duelReady) {

@@ -3,12 +3,43 @@
  * 2.1). Every length is in simulation ticks: the boss counts one tick per update, so no row repeats the tick
  * rate. Distances are in world pixels, speeds in pixels per second.
  *
- * Slice 2 builds Phase I and Uproot (the change into Phase II). Phase II and III fight with these moves until
- * slices 3 and 4 add theirs.
+ * Slice 2 built Phase I and Uproot (the change into Phase II). Slice 3 adds Phase II and Last Bloom (the change
+ * into Phase III). Phase III fights with Phase II's moves until slice 4 adds its own; every per-phase list holds
+ * three entries, and slice 4 sets the third.
  */
 export const ROOTBOUND_MOVES = Object.freeze({
   /** In reach and level: the vine swings in a 280 px arc in front. A held-blade parry staggers it, open. */
   vineSwing: Object.freeze({ windup: 54, hit: 22, recover: 42, damage: 18, reach: 280, range: 300, stagger: 72 }),
+  /** Phase II on: straight after the Vine Swing's sweep, a second one, which plants the vine (Root Seam). */
+  secondSwing: Object.freeze({ windup: 32, hit: 22 }),
+  /**
+   * The vine the last swing planted stays in the floor for `planted` ticks and drives a seam along the floor in
+   * the swing's direction: a boss zone `width` wide at `speed`, for at most `life` ticks, `damage` every
+   * `tickEvery` ticks. One blade hit on the vine's root, held or thrown, cuts it: the seam ends that tick and
+   * the keeper staggers (Vine Swing's `stagger`), open.
+   */
+  rootSeam: Object.freeze({ planted: 120, width: 110, speed: 300, life: 240, damage: 7, tickEvery: 48, root: 24 }),
+  /**
+   * Phase II on, with the player on the floor: it kneels, open the whole time, and three thirds of the floor
+   * light in turn, starting with the player's and sweeping away from the keeper. Each warns for `warn`, then
+   * burns for `burn`; the next starts warning `gap` ticks after the one before starts burning.
+   */
+  brambleRows: Object.freeze({
+    windup: 60,
+    rows: 3,
+    warn: 36,
+    burn: 84,
+    gap: 48,
+    recover: 48,
+    damage: 12,
+    tickEvery: 48,
+    cooldown: 1080,
+  }),
+  /**
+   * Phase II only: the player has stood back without hitting it. It kneels and heals a share of its full health
+   * each second, never above the health it entered Phase II with. Any hit ends it, and it splits, open.
+   */
+  mend: Object.freeze({ windup: 24, quiet: 480, far: 500, perSecond: 0.015, most: 240, broken: 72 }),
   /** At range: a seed pod thrown on an arc, deflectable like any projectile. */
   seedThrow: Object.freeze({
     windup: 54,
@@ -54,6 +85,11 @@ export const ROOTBOUND_MOVES = Object.freeze({
   }),
   /** The change into Phase II: sink, under the floor to the player, then Surface Strike's windup there. */
   uproot: Object.freeze({ sink: 24, under: 72, banner: "THE GARDEN REMEMBERS" }),
+  /**
+   * The change into Phase III, Uproot's shape: sink, under the floor to the arena's centre, then Surface
+   * Strike's windup there, and a Thorn Burst ring of `radius` instead of the column.
+   */
+  lastBloom: Object.freeze({ sink: 24, under: 72, radius: 180, banner: "NOTHING HERE DIES" }),
 });
 
 /** Its body: the approved figure's 118 px frame (the old Rootbound's), 3800 health, a 120 px/s walk. */
@@ -69,8 +105,11 @@ export const ROOTBOUND_BODY = Object.freeze({
 
 /** How the body moves and how often it attacks. */
 export const ROOTBOUND_CADENCE = Object.freeze({
-  /** Ticks between attacks in Phase I (Aldric's is 204). */
-  attackCooldown: 180,
+  /** Ticks between attacks in Phase I, II and III (Aldric's is 204); Phase II is Phase I's ÷1.25. */
+  attackCooldowns: Object.freeze([180, 144, 144] as const),
+  /** How many times each Burrow surfaces in Phase I, II and III, and the ticks under the floor between them. */
+  surfaces: Object.freeze([1, 2, 2] as const),
+  resurfaceUnder: Object.freeze([0, 60, 60] as const),
   /** Inside this distance it steps back, keeping its vine's reach. */
   spacing: 190,
   /** The player counts as level within this height of its feet. */

@@ -50,6 +50,16 @@ export function resolveHeldBladeEnemyCollisions(input: HeldBladeCollisionInput):
       (blade.canHitHeldEnemy && !blade.canHitHeldEnemy(enemy))
     )
       continue;
+    const cut = baseDamage > 0 ? (enemy.cutPoint?.() ?? null) : null;
+    if (cut !== null && input.segmentCircle(segment, cut.x, cut.y, cut.r + segment.pad) && enemy.cutPart?.()) {
+      fx.burst(cut.x, cut.y, blade.tipVX, blade.tipVY, 10, enemy.color);
+      fx.floater(cut.x, cut.y - 20, "CUT", true, enemy.color);
+      fx.style("parry");
+      fx.sound("deflect");
+      hitStop = Math.max(hitStop, t.hitStop.small);
+      enemy.hitCd = 0.14;
+      continue;
+    }
     const liveWeapon = enemy.parryBaton && (enemy.batonStrike ?? 0) > 0 ? (enemy.batonSegment?.() ?? null) : null;
     const weaponContact = liveWeapon
       ? input.weaponSegmentContact(liveWeapon, segment.x1, segment.y1, segment.x2, segment.y2)

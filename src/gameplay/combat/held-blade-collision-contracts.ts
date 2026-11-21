@@ -122,6 +122,12 @@ export interface HeldBladeEnemy {
   batonStrike?: number;
   batonSegment?: (() => BatonSegment) | undefined;
   immuneToBlade?: boolean;
+  /**
+   * A part of a boss that one blade hit cuts, held or thrown (the new Rootbound's planted vine): where it is,
+   * null while there is none, and the cut, which returns false if it was refused.
+   */
+  cutPoint?: (() => { x: number; y: number; r: number } | null) | undefined;
+  cutPart?: (() => boolean) | undefined;
   trySeverSiphon?: ((blade: HeldBladeWeapon) => boolean) | undefined;
   applyBreak?: ((power: number) => boolean) | undefined;
   onBladeImpulse?: ((input: HeldBladeImpulse) => boolean | { handled?: boolean } | undefined) | undefined;
