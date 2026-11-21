@@ -6,6 +6,46 @@
 - **Status:** Active
 - **Closure condition:** Every "done when" line below holds, `src/ghost/` no longer exists, and `pnpm check:functional` passes from the final commit.
 
+## Where this stands (hand-over; keep current with every pull request)
+
+Written so that someone with only this repository can continue. The decision log at the end has the history.
+
+- **Merged:** PRs 1, 2, 2b, 3, 4 and 5a (#361: `src/replay/record.ts`, `recorder.ts`, `verify.ts`, the round-trip check).
+- **Open: PR 5b-1, #372** (branch `codex/replay-live-start`): one seed type, one start record and one run start for live play and detached worlds. The lead approved the design.
+  - Before it merges it must land after #374 (cinematics' intro clock, ruleset v19), then:
+    - merge `origin/main`;
+    - step the ruleset to v20, keeping v19 as #374's history line (`src/gameplay/run/ruleset-version.ts`, `config/campaign-publication-boundary.json`, `tests/unit/gauntlet-records.test.ts`);
+    - move the replays position edit to `config/position/replays.json` (#366 splits `config/position.json` per area).
+  - The determinism corpus:
+    - Keep #374's pinned boss seeds (`BOSS_SEED_INDEX`) and its tell-avoiding boss player.
+    - Keep `STREAM_BOSSES` in `tests/support/hash-stream-corpus.ts`, set to the boss each pinned seed fought on main (read `facts.bossKinds` in main's `tests/fixtures/canonical-hash-stream.json`).
+    - Regenerate on the merged tree: `TEAR_HASH_STREAM_WRITE=1 pnpm test:determinism` and `TEAR_TUTORIAL_GOLD_WRITE=1 pnpm exec vitest run tests/unit/tutorial-production-ghost.test.ts`.
+    - Check that every stream's play facts equal main's.
+    - If a boss stream fails its coverage fact (survival, or riftlock's later phase), re-pick its seed from the fixed list `hash-stream:<weapon>:boss`, then `:1` to `:9`, taking the first that passes. Update the counts in the corpus comment, name the moved seeds in the PR, and tell cinematics. The seed probe is in the lead's shared notes folder (`boss-seed-probe/`).
+  - The PR body must keep its first-run failure record.
+- **Next: PR 5b-2, picks as actions.**
+  - Draft, reserve and tier-up picks and rerolls become GameActions the UI dispatches, so a record holds them at their ticks.
+  - In the same PR:
+    - **Cinematics hint:** the Settings row for Cinematics says, during a run, that a change applies from the next run.
+    - **Paused-world hold:** a paused screen holds a detached or headless world as it holds live play. Today 600 paused ticks cost the player 33 health. Prove it by pausing for a number of ticks in `tests/unit/run-start-parity.test.ts` and comparing. Tell playtest-tool when it lands.
+- **Then: PR 5b-3.**
+  - The named frame-clock exception with its test. After #374 it covers cinematics only: the boss intro advances on ticks. Cinematics PR 8 ends it.
+  - Browser evidence, on a built test target, that a live run with a draft, a boss intro and a chapter verifies from its seed alone, with no keyframes.
+- **Then: PR 5c, the live recorder.** Its content is in the PR 5 section below.
+  - A seed race records the race's ranks as the start's `metaRanks`. The owner keeps seed races, so they are recorded, not refused.
+  - Capsules from before are refused with a player-facing line in the terminology registry's names.
+- **Agreed with Shards (for PR 10):**
+  - `ReplayLook.cosmetics` is the domain `Loadout`, filled at run start with `loadoutOf(COSMETIC_CATALOG, PROFILE.cosmetics())`.
+  - `readLook` caps the entry count at the number of catalog slots.
+  - The viewer's calm setting wins.
+  - No cosmetics in the feed or leaderboard summaries.
+  - Shards makes the wardrobe hold one style per owner before PR 9 (race) needs two wearers.
+- **Rules that apply to every step:**
+  - Each step that changes gameplay identity takes the next free ruleset number when it merges.
+  - A test's first run is its verdict, and the PR records it.
+  - No Firebase rules deploys; that is the owner's step.
+  - Mobile is paused.
+
 ## Why
 
 The owner said on 2026-11-13 that replays "need to be updated as well, in general", and on
