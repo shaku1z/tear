@@ -962,7 +962,7 @@
     {
       "id": "colossus/phase-three",
       "end": "boss died",
-      "ticks": 2523,
+      "ticks": 2200,
       "phaseChanges": [
         {
           "tick": 170,
@@ -973,8 +973,8 @@
           "phase": 3
         }
       ],
-      "deathStart": 2414,
-      "finalHash": "70fb710825ab9761",
+      "deathStart": 2091,
+      "finalHash": "e274ab3cea3751c2",
       "hashes": [
         "0d03c66c29068677",
         "508dc6265c8b81bb",
@@ -1003,21 +1003,15 @@
         "d9db41863c15273e",
         "e73879373559335e",
         "ea7f5227ba80355e",
-        "4d9388737220d3ed",
-        "147c9effe79f512e",
-        "affbe9f8c4c479c7",
-        "beedf99f4690634e",
-        "ca2eb93141f02b97",
-        "3b09de34c660c92a",
-        "f6dcabfe81e8a1b8",
-        "107deb4d885e83d7",
-        "cab1d3e93de1022f",
-        "2aac8ac1dbe7d9c9",
-        "ac8f2da86a5f4570",
-        "72b0e82c1da381a6",
-        "fbc710879bbe65d5",
-        "661e17c494fb8ed5",
-        "87fdde2728fd44f6"
+        "d9498265064bb7e0",
+        "fb2cbc794601c2f7",
+        "a59007b2be83a7b6",
+        "a14874483added6e",
+        "ee132bb4f3b94ccb",
+        "de5599735f4afd72",
+        "55d5f12da899d3b8",
+        "34490f7a7285249b",
+        "79c6e25c17beb677"
       ]
     },
     {

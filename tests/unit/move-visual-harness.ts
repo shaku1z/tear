@@ -231,10 +231,17 @@ export type Steppable = EnemyStepActor &
     cinematicRequest?: unknown;
     cinematicT?: number;
     introT?: number;
+    practicePhaseEntry?(): { readonly phase: number };
     draw(context: CanvasRenderingContext2D, player?: unknown): void;
     liveMove(): string | null;
     drawRear?(context: CanvasRenderingContext2D): void;
   };
+
+/** The phase the boss has entered (its `practicePhaseEntry()`, as the game commits it), else its phase field. */
+function committedPhase(entity: Steppable): number {
+  if (typeof entity.practicePhaseEntry === "function") return entity.practicePhaseEntry().phase;
+  return typeof entity.phase === "number" ? entity.phase : 1;
+}
 
 export interface Subject {
   readonly id: string;
@@ -326,7 +333,7 @@ function subjectFor(
       return {
         tick: Math.round(harness.clock.sim / DT),
         state: moveState(entity),
-        phase: typeof entity.phase === "number" ? entity.phase : 1,
+        phase: committedPhase(entity),
         stunned: entity.stun > 0,
         dying: entity.dying,
         marks: [...new Set(marks)],
@@ -411,11 +418,13 @@ export const BOSS_PHASE_SECONDS = 40;
 export const ENEMY_SECONDS = 20;
 /** Seconds a stun lasts: the hammer's break on a boss (`applyBreak`), and a parry on an enemy. */
 const BOSS_STUN = 0.42;
+/** How long a boss fight waits, at the end of a phase, for a move to be live before crossing the next mark. */
+const MID_MOVE_WAIT_SECONDS = 10;
 const ENEMY_STUN = 0.5;
 
 /**
  * Steps a fight and draws every tick. Every third move the entity starts is stunned on its tenth tick.
- * A boss runs each phase in turn, its health set just under the next phase mark, then takes a lethal hit
+ * A boss runs each phase in turn, its health set just under the next phase mark while a move is live, then takes a lethal hit
  * and is stepped through its death.
  */
 export function runFight(subject: Subject, boss: readonly number[] | null): Fight {
@@ -463,7 +472,14 @@ export function runFight(subject: Subject, boss: readonly number[] | null): Figh
   }
   entity.introT = 0;
   for (let phase = 1; phase <= boss.length + 1; phase += 1) {
-    if (phase > 1) entity.hp = entity.maxHp * ((boss[phase - 2] ?? 0) - 0.02);
+    if (phase > 1) {
+      // Cross the mark mid-move, so the phase change has a live move to end.
+      for (let i = 0; i < MID_MOVE_WAIT_SECONDS / DT; i += 1) {
+        if (entity.liveMove() !== null && entity.stun <= 0) break;
+        if (advance()) return { records, stuns };
+      }
+      entity.hp = entity.maxHp * ((boss[phase - 2] ?? 0) - 0.02);
+    }
     for (let i = 0; i < BOSS_PHASE_SECONDS / DT; i += 1) if (advance()) return { records, stuns };
   }
   for (let i = 0; i < 12 / DT; i += 1) {

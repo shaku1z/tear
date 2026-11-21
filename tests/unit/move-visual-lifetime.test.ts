@@ -5,19 +5,34 @@
  * and drawn each tick through the production renderers (tests/unit/move-visual-harness.ts). The shared
  * mark helpers report every mark they draw. The rules:
  * - a mark is drawn only while a move is live (`liveMove()`), and never while the entity is stunned;
+ * - a mark ends with the move state it began in: one drawn for a windup is gone when the strike starts,
+ *   and none carries into the recovery or the next move;
  * - a stun does not end the move: on the first tick after it, the move is where the stun caught it;
+ * - the live move ends on the tick the boss's phase changes (the fight crosses every mark mid-move);
  * - from the tick death starts, no mark is drawn and no zone remains;
  * - a boss zone ends on the phase-change tick, and one with a declared length (`maxLife`) lives no
  *   longer than that length. A zone may outlive the move that made it; a mark may not.
  * - a renderer draws its marks only through the shared helpers: what it draws by hand that looks like a
  *   mark (a dashed line, or anything reaching further past its body than a body reaches) is a fault,
- *   except today's, listed in HAND_DRAWN_MARKS, which may only shrink.
+ *   except today's, listed in config/move-rules-baseline.json, which may only shrink.
  *
- * Not here: the Echo, which the mirror presentation draws, and the enemies the environment layer draws
- * (`ENVIRONMENT_DRAWN_ENEMY_KINDS`, today the Rootbinder). Neither goes through the enemy renderers.
+ * The lists and thresholds live in config/move-rules-baseline.json, a gate file: an entry is added only
+ * with the lead's review, and this test fails on an entry that no longer applies.
+ *
+ * Named gaps (each closed by the slice named in the plan, 5.1):
+ * - Hand-drawn marks do not hide during a stun: only the shared helpers do. The entities on the
+ *   hand-drawn list keep their own windup lines through a stun until they draw through the helpers.
+ * - Projectiles: the harness empties them every tick, so a boss projectile or debris that outlives a
+ *   death start or a phase change is not seen here.
+ * - The Echo, which the mirror presentation draws, and the enemies the environment layer draws
+ *   (`ENVIRONMENT_DRAWN_ENEMY_KINDS`, today the Rootbinder): neither goes through the enemy renderers.
+ * - Stage features owned outside the boss (the Warden's fracture warnings, the Source's void hazards).
+ * - The helper-only check sees strokes and fills only: not `drawImage`, `Path2D` shapes, marks within
+ *   MARK_REACH of the body, or the boss tell skins (`drawBossTells`).
  */
 import { describe, expect, it } from "vitest";
 
+import BASELINE from "../../config/move-rules-baseline.json";
 import { ENVIRONMENT_DRAWN_ENEMY_KINDS } from "../../src/app/world/environment-layer";
 import type { ArenaZone } from "../../src/gameplay/entities/enemy-contracts";
 import { BOSS_DEFINITIONS } from "../../src/gameplay/run/boss-definitions";
@@ -33,67 +48,19 @@ import {
   type TickRecord,
 } from "./move-visual-harness";
 
-/**
- * Entities not yet held to the rules, until they are rebuilt. This list may only shrink: the Rootbound
- * leaves it in the Verdant switch, the White Hart and the Rimehound with Pale's rebuild.
- */
-const EXEMPT: readonly string[] = ["rootbound", "white-hart", "rimehound"];
-
-/**
- * What separates a body from a mark, in pixels past the entity's own box, measured over every fight below.
- * Bodies reach at most 83 (Aldric's cleaver in a lunge); weapons and props stay inside that. The nearest
- * mark reaches 143 (the Geomancer's wall telegraph). A primitive drawn outside the helpers that reaches
- * further than MARK_REACH, or is dashed, looks like a mark.
- */
-const MEASURED_BODY_REACH = 83;
-const MEASURED_NEAREST_MARK_REACH = 143;
-const MARK_REACH = 120;
-
-/**
- * Marks drawn by hand today instead of through the helpers. Each entry is a fault this list keeps visible:
- * it may only shrink, and an entry whose entity stops drawing it must be removed.
- */
-const HAND_DRAWN_MARKS: Readonly<Record<string, Readonly<{ file: string; draws: string }>>> = {
-  warden: {
-    file: "warden-colossus-renderers.ts",
-    draws: "the dashed dive line and target ring of its ceiling lunge, and its custody-hook rope (a prop)",
-  },
-  colossus: {
-    file: "warden-colossus-renderers.ts",
-    draws: "the dashed slam line in its windup, and the steam vent column",
-  },
-  source: {
-    file: "source-renderer.ts",
-    draws: "the dash lane, the dashed depth spear and siphon lines, the beam sweep",
-  },
-  charger: { file: "base-renderers.ts", draws: "the dashed charge arrow in its windup (the bull's)" },
-  "charger:bull": { file: "base-renderers.ts", draws: "the dashed charge arrow in its windup" },
-  "charger:executioner": { file: "base-renderers.ts", draws: "the floor line of its windup" },
-  "charger:gravedigger": { file: "base-renderers.ts", draws: "the arc of its windup and swing" },
-  "charger:rime-runner": { file: "base-renderers.ts", draws: "the dashed charge arrow in its windup" },
-  ranged: { file: "base-renderers.ts", draws: "the dashed aim line to the player" },
-  "ranged:sentinel": { file: "base-renderers.ts", draws: "the aim line to the player" },
-  "ranged:rifleman": { file: "base-renderers.ts", draws: "the dashed aim line to the player" },
-  "ranged:marksman": { file: "base-renderers.ts", draws: "the dashed aim line to the player" },
-  "ranged:warlock": { file: "base-renderers.ts", draws: "the dashed aim line to the player" },
-  "ranged:chain": { file: "base-renderers.ts", draws: "the dashed aim line to the player" },
-  "ranged:seedcaster": { file: "base-renderers.ts", draws: "the dashed aim line to the player" },
-  "ranged:prism-seer": { file: "base-renderers.ts", draws: "the dashed aim line to the player" },
-  "flyer:divebomber": { file: "standard-renderers.ts", draws: "the ground ring and dashed drop line of its dive" },
-  "flyer:canopy-diver": { file: "standard-renderers.ts", draws: "the ground ring and dashed drop line of its dive" },
-  "flyer:snowfall-kite": { file: "standard-renderers.ts", draws: "the ground ring and dashed drop line of its dive" },
-  "bomber:geomancer": { file: "standard-renderers.ts", draws: "the wall rising at its target" },
-  armored: { file: "standard-renderers.ts", draws: "the floor warning of its stomp" },
-  "armored:bark-sentinel": { file: "standard-renderers.ts", draws: "the floor warning of its stomp" },
-  "armored:glacier-guard": { file: "standard-renderers.ts", draws: "the floor warning of its stomp" },
-  priest: { file: "standard-renderers.ts", draws: "its aura ring (an aura's reach, drawn the way a mark is)" },
-  herald: { file: "standard-renderers.ts", draws: "its aura ring (an aura's reach, drawn the way a mark is)" },
-};
+/** Entities not yet held to the rules, until they are rebuilt. */
+const EXEMPT: readonly string[] = Object.keys(BASELINE.lifetimeExempt);
+/** Marks drawn by hand today instead of through the helpers, each with its file and what it draws. */
+const HAND_DRAWN_MARKS: Readonly<Record<string, Readonly<{ file: string; draws: string }>>> = BASELINE.handDrawnMarks;
+const { measuredBodyReach: MEASURED_BODY_REACH, markReach: MARK_REACH } = BASELINE.reach;
+const MEASURED_NEAREST_MARK_REACH = BASELINE.reach.measuredNearestMarkReach;
 
 interface Offences {
   markAtRest: number;
   markWhileStunned: number;
+  markPastItsState: number;
   notResumed: number;
+  moveOverPhaseChange: number;
   afterDeathStart: number;
   zoneOverPhaseChange: number;
   zonePastItsLength: number;
@@ -104,7 +71,9 @@ function offences(fight: Fight): Offences {
   const result: Offences = {
     markAtRest: 0,
     markWhileStunned: 0,
+    markPastItsState: 0,
     notResumed: 0,
+    moveOverPhaseChange: 0,
     afterDeathStart: 0,
     zoneOverPhaseChange: 0,
     zonePastItsLength: 0,
@@ -117,8 +86,15 @@ function offences(fight: Fight): Offences {
     if (record.marks.length > 0 && record.liveMove === null) result.markAtRest += 1;
     if (record.marks.length > 0 && record.stunned) result.markWhileStunned += 1;
     if (record.dying && (record.marks.length > 0 || record.zones.length > 0)) result.afterDeathStart += 1;
-    if (previous !== undefined && record.phase !== previous.phase)
-      result.zoneOverPhaseChange += record.zones.filter((zone) => previous?.zones.includes(zone)).length;
+    if (previous !== undefined) {
+      const before = previous;
+      const moved = before.liveMove !== null && record.liveMove !== null && before.liveMove !== record.liveMove;
+      if (moved && record.marks.some((helper) => before.marks.includes(helper))) result.markPastItsState += 1;
+      if (record.phase !== before.phase) {
+        result.zoneOverPhaseChange += record.zones.filter((zone) => before.zones.includes(zone)).length;
+        if (before.liveMove !== null && record.liveMove === before.liveMove) result.moveOverPhaseChange += 1;
+      }
+    }
     for (const zone of record.zones) {
       const ticks = (age.get(zone) ?? 0) + (record.stunned ? 0 : 1);
       age.set(zone, ticks);
@@ -142,79 +118,129 @@ function bossFight(id: HarnessBossId, plant?: (subject: Subject) => void): Fight
   return runFight(subject, subject.phaseMarks);
 }
 
-/** A fault planted for the proof: on the first tick at rest, the renderer draws the last marking state again. */
-function keepMarkOneTickLate(subject: Subject): void {
-  const paint = subject.paint;
-  const entity = subject.entity as Subject["entity"] & { state: string };
-  let marking: string | null = null;
-  let wasLive = false;
-  subject.paint = () => {
-    const live = entity.liveMove() !== null;
-    if (!live && wasLive && marking !== null) {
-      const state = entity.state;
-      entity.state = marking;
+/**
+ * Plants a fault for a proof: on the first tick of a new move state, the renderer also draws the marks of
+ * the state before it, as a renderer that keys a mark on a timer or a flag set in the windup would.
+ * `atRest` limits it to the first tick back at rest, the other to the first tick of the next live state.
+ */
+function keepMarkOneTickLate(atRest: boolean) {
+  return (subject: Subject): void => {
+    const paint = subject.paint;
+    const entity = subject.entity as Subject["entity"] & { state: string };
+    /** The last state of the live move that drew a mark, and the state that drew one on the tick before. */
+    let moveMarking: string | null = null;
+    let lastMarking: string | null = null;
+    let lastLive: string | null = null;
+    subject.paint = () => {
+      const live = entity.liveMove();
+      const changed = lastLive !== null && live !== lastLive;
+      const late = !changed ? null : atRest ? (live === null ? moveMarking : null) : live !== null ? lastMarking : null;
+      if (late !== null) {
+        const state = entity.state;
+        entity.state = late;
+        paint();
+        entity.state = state;
+      }
       paint();
-      entity.state = state;
-    } else paint();
-    wasLive = live;
-  };
-  const draw = subject.draw.bind(subject);
-  subject.draw = () => {
-    const record = draw();
-    if (record.marks.length > 0 && record.liveMove !== null) marking = record.state;
-    return record;
+      lastLive = live;
+    };
+    const draw = subject.draw.bind(subject);
+    subject.draw = () => {
+      const record = draw();
+      lastMarking = record.marks.length > 0 && record.liveMove !== null ? record.state : null;
+      if (record.liveMove === null) moveMarking = null;
+      else if (lastMarking !== null) moveMarking = lastMarking;
+      return record;
+    };
   };
 }
 
-/** Every rule held. Hand-drawn marks are checked against HAND_DRAWN_MARKS instead. */
+/** Plants the fault of a step that never tells the boss its phase changed: its move runs on across it. */
+function withoutPhaseNotice(subject: Subject): void {
+  (subject.entity as { noticePhase?: () => void }).noticePhase = () => undefined;
+}
+
+/** Every rule held. Hand-drawn marks are checked against the baseline instead. */
 const NO_RULE_BROKEN: Omit<Offences, "handDrawnMarks"> = {
   markAtRest: 0,
   markWhileStunned: 0,
+  markPastItsState: 0,
   notResumed: 0,
+  moveOverPhaseChange: 0,
   afterDeathStart: 0,
   zoneOverPhaseChange: 0,
   zonePastItsLength: 0,
 };
 
+/** The largest reach past its body that each entity drew outside the helpers, for the threshold check. */
+const reaches = new Map<string, number>();
+function noteReach(id: string, fight: Fight): void {
+  reaches.set(id, Math.max(0, ...fight.records.map((record) => record.reach)));
+}
+
+function checkEntity(id: string, fight: Fight): void {
+  const found = offences(fight);
+  noteReach(id, fight);
+  const { handDrawnMarks, ...rules } = found;
+  expect(rules, JSON.stringify(rules)).toEqual(NO_RULE_BROKEN);
+  expect(handDrawnMarks > 0, `${id} draws marks by hand; the baseline must list exactly those that do`).toBe(
+    id in HAND_DRAWN_MARKS,
+  );
+}
+
 describe("nothing outlives its move", { timeout: 120_000 }, () => {
-  it("names the thresholds once, between the measured body and mark sizes", () => {
-    expect(MARK_REACH).toBeGreaterThan(MEASURED_BODY_REACH);
-    expect(MARK_REACH).toBeLessThan(MEASURED_NEAREST_MARK_REACH);
+  it("keeps the lists to entities the game defines", () => {
+    const known = new Set([
+      ...BOSS_IDS,
+      ...enemyCases().map(({ kind, variant }) => (variant === null ? kind : `${kind}:${variant}`)),
+    ]);
+    for (const id of [...EXEMPT, ...Object.keys(HAND_DRAWN_MARKS)]) expect(known.has(id), id).toBe(true);
     expect(REST_MOVE_STATES.has("idle")).toBe(true);
   });
 
-  it("keeps the exemption list to the entities named when it was made", () => {
-    expect(["rootbound", "white-hart", "rimehound"]).toEqual(expect.arrayContaining([...EXEMPT]));
+  it("fails on a planted fault: a mark kept one tick past its move, into rest", () => {
+    expect(offences(bossFight("aldric", keepMarkOneTickLate(true))).markAtRest).toBeGreaterThan(0);
   });
 
-  it("fails on a planted fault: a mark kept one tick past its move", () => {
-    const planted = offences(bossFight("aldric", keepMarkOneTickLate));
-    expect(planted.markAtRest).toBeGreaterThan(0);
+  it("fails on a planted fault: a windup's mark kept into the next state of the move", () => {
+    expect(offences(bossFight("colossus", keepMarkOneTickLate(false))).markPastItsState).toBeGreaterThan(0);
   });
 
-  const report: Record<string, Offences> = {};
+  it("fails on a planted fault: the step does not end the move when the phase changes", () => {
+    expect(offences(bossFight("aldric", withoutPhaseNotice)).moveOverPhaseChange).toBeGreaterThan(0);
+  });
+
   describe.each(BOSS_IDS.filter((id) => !EXEMPT.includes(id)))("%s", (id) => {
-    it("draws no mark outside its live move, resumes after a stun, and leaves nothing past death or a phase", () => {
+    it("draws no mark outside its move state, resumes after a stun, and leaves nothing past death or a phase", () => {
       const fight = bossFight(id);
-      const found = offences(fight);
-      report[id] = found;
       expect(fight.stuns.length, "the fight stunned it mid-move").toBeGreaterThan(0);
-      const { handDrawnMarks, ...rules } = found;
-      expect(rules, JSON.stringify(rules)).toEqual(NO_RULE_BROKEN);
-      expect(handDrawnMarks > 0, `${id} draws marks by hand`).toBe(id in HAND_DRAWN_MARKS);
+      checkEntity(id, fight);
     });
   });
 
-  describe.each(
-    enemyCases().filter(({ kind }) => !EXEMPT.includes(kind) && !ENVIRONMENT_DRAWN_ENEMY_KINDS.includes(kind)),
-  )("$kind $variant", ({ kind, variant }) => {
-    it("draws no mark outside its live move and resumes after a stun", () => {
+  const enemies = enemyCases().filter(({ kind }) => !ENVIRONMENT_DRAWN_ENEMY_KINDS.includes(kind));
+  describe.each(enemies.filter(({ kind }) => !EXEMPT.includes(kind)))("$kind $variant", ({ kind, variant }) => {
+    it("draws no mark outside its move state and resumes after a stun", () => {
       const subject = createEnemySubject(kind, variant);
-      const found = offences(runFight(subject, null));
-      report[subject.id] = found;
-      const { handDrawnMarks, ...rules } = found;
-      expect(rules).toEqual(NO_RULE_BROKEN);
-      expect(handDrawnMarks > 0, `${subject.id} draws marks by hand`).toBe(subject.id in HAND_DRAWN_MARKS);
+      checkEntity(subject.id, runFight(subject, null));
     });
+  });
+
+  it.each(EXEMPT)("%s, exempt until rebuilt, still breaks a rule (else it leaves the list)", (id) => {
+    const enemy = enemies.find(({ kind }) => kind === id);
+    const fight =
+      enemy === undefined ? bossFight(id as HarnessBossId) : runFight(createEnemySubject(enemy.kind, null), null);
+    expect(Object.values(offences(fight)).some((count) => count > 0)).toBe(true);
+  });
+
+  it("re-measures the thresholds: the largest body, and the nearest hand-drawn mark", () => {
+    const bodies = [...reaches].filter(([id]) => !(id in HAND_DRAWN_MARKS)).map(([, reach]) => reach);
+    const marks = [...reaches]
+      .filter(([id, reach]) => id in HAND_DRAWN_MARKS && reach > MARK_REACH)
+      .map(([, reach]) => reach);
+    expect(Math.round(Math.max(...bodies))).toBe(MEASURED_BODY_REACH);
+    expect(Math.round(Math.min(...marks))).toBe(MEASURED_NEAREST_MARK_REACH);
+    expect(MARK_REACH).toBeGreaterThan(MEASURED_BODY_REACH);
+    expect(MARK_REACH).toBeLessThan(MEASURED_NEAREST_MARK_REACH);
   });
 });

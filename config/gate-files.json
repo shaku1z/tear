@@ -26,6 +26,7 @@
     { "path": "config/bundle-budgets.json", "why": "bundle size budgets" },
     { "path": "config/load-budgets.json", "why": "load time budgets" },
     { "path": "config/browser-performance-budgets.json", "why": "browser performance budgets" },
+    { "path": "config/move-rules-baseline.json", "why": "the move rules' exemptions, hand-drawn marks and tell-weight cap" },
     { "path": "vite.config.ts", "why": "what every build contains: read by `vite build`, which scripts/build-target.mjs starts (no check command names it, so the config rule cannot reach it)" },
     { "path": "eslint.config.mjs", "why": "lint rules" },
     { "path": "scripts/eslint-rules/", "why": "the repository's own lint rules" },

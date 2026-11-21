@@ -317,8 +317,9 @@ export function createEnemyRendererRuntime(dependencies: EnemyPresentationDepend
 
   function drawPeril(ctx: CanvasRenderingContext2D, boss: RenderInstance<"Enemy">) {
     const left = (boss._perilUntil || 0) - CLOCK.sim;
-    // The diamond belongs to the move that rang it: it does not linger once the boss is back at rest.
-    if (left <= 0 || boss.liveMove() === null) return;
+    // The diamond belongs to the move state that rang it (a windup): it ends with that state, not on a clock.
+    const live = boss.liveMove();
+    if (left <= 0 || live === null || live !== boss._perilMove) return;
     const k = left / 0.6,
       s = 13 + (1 - k) * 8,
       high = A11Y.highContrast;

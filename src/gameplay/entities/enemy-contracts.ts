@@ -280,6 +280,9 @@ export interface BossPresentationActor extends ProjectileOwnerPort {
   bossId?: string | undefined;
   isMiniBoss?: boolean | undefined;
   _perilUntil?: number | undefined;
+  /** The move state the peril was rung in: the diamond shows during that state only. */
+  _perilMove?: string | null | undefined;
+  liveMove?(): string | null;
   _phaseFlashT?: number | undefined;
   cinematicRequest?:
     (BossTransformationSpec & { speaker: string; duration: number; anchor: string }) | null | undefined;
