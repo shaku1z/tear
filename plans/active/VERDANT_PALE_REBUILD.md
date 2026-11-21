@@ -672,8 +672,8 @@ change, an entity's renderer draws nothing that belongs to the old move.
 - The renderer runtime hides every shared mark while the entity is stunned or dying. The peril diamond
   (`drawPeril`) shows only during the move state that rang it, not for a fixed 0.6 s: before, it ran on
   into the Colossus's grab and recovery, the Warden's lunge and the Source's next move.
-- This changes what bosses do in released modes, so the ruleset steps (v15, after cinematics PR 1's
-  v14).
+- This changes what bosses do in released modes, so the ruleset steps (v16, after cinematics PR 1's
+  v14 and the flyer fix's v15).
 
 **Measured by.** The number of offending ticks per entity, by rule. It is 0 for every entity not on
 the exemption list.

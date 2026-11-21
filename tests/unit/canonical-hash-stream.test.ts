@@ -88,7 +88,7 @@ interface HashStreamFixture {
 }
 
 /**
- * Boss fights through the game's phase practice, which covers what ruleset v15 changed: a boss's move and
+ * Boss fights through the game's phase practice, which covers what ruleset v16 changed: a boss's move and
  * zones ending on its phase-change tick and when its death starts. Practising Phase III makes the game carry
  * the boss across its phase changes by its own transitions; the scripted player then fights it. The Colossus
  * dies, so its stream also crosses a death start and follows the death until the game ends the fight. Every
