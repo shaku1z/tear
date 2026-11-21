@@ -14,8 +14,12 @@
  * v12: Verdant's waves are written (a stage wave script: listed enemies first and last, the pool fills between).
  * v13: the enemies a wave script lists arrive without affixes. v14: no boss event slows time (phase changes,
  * deaths, staggers and strikes); only the player's own parry does (plans/active/CINEMATICS_OVERHAUL.md, PR 1).
+ * v15: the Warden and the Colossus change phase in the fight, with a move instead of a scene (PR 2).
  */
-export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v14";
+export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v15";
+
+/** The identity while the Warden and the Colossus stopped the fight to change phase; historical replays only. */
+export const SIX_BIOME_PALE_PREVIEW_V14_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v14";
 
 /** The identity while boss events slowed time; historical replays only. */
 export const SIX_BIOME_PALE_PREVIEW_V13_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v13";
@@ -99,7 +103,8 @@ export const RULESET_STEPS: readonly RulesetStep[] = Object.freeze(
       version: SIX_BIOME_PALE_PREVIEW_V13_RULESET_VERSION,
       change: "the listed enemies of a wave began arriving without affixes",
     },
-    { version: CURRENT_RULESET_VERSION, change: "bosses stopped slowing time" },
+    { version: SIX_BIOME_PALE_PREVIEW_V14_RULESET_VERSION, change: "bosses stopped slowing time" },
+    { version: CURRENT_RULESET_VERSION, change: "the Warden and the Colossus began changing phase in the fight" },
   ].map((step) => Object.freeze(step)),
 );
 
