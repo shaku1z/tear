@@ -53,7 +53,12 @@ function stateLayer(boss: Boss): FigurePoseLayer | null {
   return { pose, weight: grow === "in" ? k : grow === "out" ? 1 - k : 1 };
 }
 
-function figureFrame(boss: Boss, intro: number, highContrast: boolean, ink: string): BossFigureFrame<RootboundFigureColor> {
+function figureFrame(
+  boss: Boss,
+  intro: number,
+  highContrast: boolean,
+  ink: string,
+): BossFigureFrame<RootboundFigureColor> {
   const layers: (FigurePoseLayer | null)[] = [
     { pose: ROOTBOUND_PHASE_POSES[boss.enteredPhase] ?? "", weight: 1 },
     stateLayer(boss),
@@ -161,7 +166,14 @@ export function installRootboundRebuildRenderer(types: EnemyTypes, runtime: Enem
       const high = A11Y.highContrast;
       const palette = ROOTBOUND_FIGURE.palettes[high ? "highContrast" : "standard"];
       const ink: Ink = high
-        ? { stem: palette.stem, edge: palette.ink, thorn: "#fff36b", earth: "#4b00d1", vine: "#ffffff", mark: "#fff36b" }
+        ? {
+            stem: palette.stem,
+            edge: palette.ink,
+            thorn: "#fff36b",
+            earth: "#4b00d1",
+            vine: "#ffffff",
+            mark: "#fff36b",
+          }
         : {
             stem: palette.stem,
             edge: THEME.ink,
@@ -177,7 +189,14 @@ export function installRootboundRebuildRenderer(types: EnemyTypes, runtime: Enem
         runtime.dangerColumn(ctx, this.x, width, ground - height, ground, ink.mark, k);
       }
       if (this.state === "vaultwind" && this.vaultTarget !== null)
-        runtime.dangerReticle(ctx, this.vaultToX, this.vaultToY + this.hh, ROOTBOUND_MOVES.canopyVault.range, k, ink.mark);
+        runtime.dangerReticle(
+          ctx,
+          this.vaultToX,
+          this.vaultToY + this.hh,
+          ROOTBOUND_MOVES.canopyVault.range,
+          k,
+          ink.mark,
+        );
       runtime.drawPeril(ctx, this);
       if (this.hidden) {
         mound(ctx, ink, this.x, ground, 1);

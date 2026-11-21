@@ -540,6 +540,11 @@ The brief listed five hooks. Measured:
   they don't change what a released mode plays.
   - Slice 2 checks whether a run on the engineering channel can be recorded. If it can, every slice
     that changes the new boss's behaviour steps the ruleset too, and says so in its pull request.
+  - **Found in slice 2:** it can. A Boss Test run opens fresh on a boss (`freshBossOpening` in
+    `src/ghost/replay-admission.ts`), so it is recordable, and the new boss is a new entity kind, which
+    changes the replay content hash (`ENTITY_KIND_REGISTRY`). Slice 2 stepped the ruleset to v18.
+    Slices 3 to 5 step it again unless replay admission refuses runs with an engineering-only boss;
+    that is proposed to the replay-overhaul owner, not done here.
 - **Old replays.**
   - A replay plays only under the ruleset it was recorded with (replay overhaul plan, "Stored and
     published replays when the format or ruleset changes", rule 1).
@@ -726,12 +731,20 @@ the exemption list.
   - The Echo is not measured: the mirror presentation draws it without the shared marks, so this
     harness would read 0. Slice 2 measures it through the mirror presentation, when the new Rootbound
     is first held to the cap. The cap is final from then.
+    - **Slice 2:** still not measured. The mirror presentation calls no shared helper, so the pair count
+      is 0 by construction; a real count needs the Echo's tells drawn through the helpers, which is Echo
+      work this plan leaves alone. The cap stays 9, measured over the four references.
   - The Rootbinder is drawn by the environment layer. Slice 5 rebuilds it on the shared helpers and
     measures it.
 - **Measured by.** The table it prints: boss, mark count and the cap.
   - The Rootbound and the White Hart start on the exemption list. Both read 0 under this harness,
     because their renderers call no shared helper. The new Rootbound is measured from slice 2 and must
     be at 4 or under when it leaves the list in the switch slice.
+    - **Slice 2:** the new Rootbound is not exempt and measures 3 pairs in the harness fight: (rise,
+      dangerColumn), (rise, drawPeril) and (swell, drawPeril). The harness never puts the player above
+      it, so Canopy Vault's two pairs (vaultwind with dangerReticle and with drawPeril) don't show; with
+      them it is 5. The "4 or under" above counts drawn marks (2 in Phase I); the harness also counts the
+      peril diamond. The lead decides before the switch which the 4 means.
   - The White Hart leaves the list with Pale.
 - **What it replaces.** `tests/unit/boss-tell-rules.test.ts` and its per-hit minimum lead go, with
   `boss-tells.ts` (see 3). There is no per-hit tell contract and no "untold hits" target.

@@ -231,7 +231,8 @@ export function createRootboundRebuildType(
       this.crowdT = dx < M.thornBurst.crowd && Math.abs(player.y - this.y) < this.hh + 60 ? this.crowdT + 1 : 0;
       this.integrate(dt, platforms);
       if (!this.onGround) return;
-      const target = this.aboveT >= M.canopyVault.track && this.vaultCd <= 0 ? this.vaultTargetFor(player, platforms) : null;
+      const target =
+        this.aboveT >= M.canopyVault.track && this.vaultCd <= 0 ? this.vaultTargetFor(player, platforms) : null;
       if (target !== null) return this.startVault(target, player);
       if (this.crowdT >= M.thornBurst.track && this.burstCd <= 0) return this.startBurst();
       if (this.attackT > 0) return;
@@ -297,7 +298,10 @@ export function createRootboundRebuildType(
         if (p.arenaState === "warning" || p.arenaState === "reforming") continue;
         if (p.y >= feet - 24 || feet - p.y > 330) continue;
         const center = p.x + p.w / 2;
-        const s = Math.abs(center - player.x) + Math.abs(p.y - (player.y + player.hh)) + (p === player.supportPlatform ? -420 : 0);
+        const s =
+          Math.abs(center - player.x) +
+          Math.abs(p.y - (player.y + player.hh)) +
+          (p === player.supportPlatform ? -420 : 0);
         if (s < score) {
           score = s;
           best = p;

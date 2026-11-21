@@ -30,7 +30,10 @@ export function isPracticeBossActor(actor: object): actor is BossActor {
 /** Shared host adapter. All entry decisions stay in the actor/runtime owners. */
 export function createLiveBossPhasePractice(options: {
   config: typeof CONFIG;
-  state: Pick<LiveGameHostState, "run" | "player" | "enemies" | "setEnemies" | "setProjectiles" | "setBossIntro" | "setBossBeat">;
+  state: Pick<
+    LiveGameHostState,
+    "run" | "player" | "enemies" | "setEnemies" | "setProjectiles" | "setBossIntro" | "setBossBeat"
+  >;
   stage: { index: number; platforms: unknown[] };
   selectStage(index: number): void;
   resetEnvironment(): void;

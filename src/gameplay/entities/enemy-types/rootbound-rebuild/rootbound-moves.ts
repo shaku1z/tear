@@ -42,7 +42,16 @@ export const ROOTBOUND_MOVES = Object.freeze({
     cooldowns: Object.freeze([552, 402, 294] as const),
   }),
   /** The player has crowded it: a ring of thorns. Open after. */
-  thornBurst: Object.freeze({ windup: 34, hit: 12, recover: 54, damage: 16, radius: 150, crowd: 130, track: 48, cooldown: 360 }),
+  thornBurst: Object.freeze({
+    windup: 34,
+    hit: 12,
+    recover: 54,
+    damage: 16,
+    radius: 150,
+    crowd: 130,
+    track: 48,
+    cooldown: 360,
+  }),
   /** The change into Phase II: sink, under the floor to the player, then Surface Strike's windup there. */
   uproot: Object.freeze({ sink: 24, under: 72, banner: "THE GARDEN REMEMBERS" }),
 });
