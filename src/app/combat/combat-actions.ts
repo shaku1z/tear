@@ -417,7 +417,7 @@ export function createLiveCombatActions<
     unlockWitness() {
       if (f.achievementsEnabled()) d.ACH.unlock("witness");
     },
-    startVoidDescent: f.startVoidDescent,
+    advanceSourceUnmake: f.advanceSourceUnmake,
     spawnBossAdds(boss) {
       const adds: Enemy[] = [];
       const owner = boss as typeof boss & { bossId?: string; presentationId?: string };

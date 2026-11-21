@@ -12,7 +12,7 @@ export function createSourceType(
   throneFireRuntime: ThroneFireRuntime,
 ) {
   const { CONFIG, FX, GAME_RANDOM, Projectile, clamp, len, lerp } = dependencies;
-  const { bossFeedback, bossPhaseBeat, bossTransformation, perilPing } = bossRuntime;
+  const { bossFeedback, bossPhaseBeat, perilPing } = bossRuntime;
   const { clearThroneFire, startThroneFire, tickThroneFire } = throneFireRuntime;
   const SourceCore = createSourceCore(dependencies, Enemy, bossRuntime);
   class Source extends SourceCore {
@@ -369,12 +369,14 @@ export function createSourceType(
       const C = CONFIG.source;
       this._cancelSoftBreach(C.breachIntervalMin);
       if (ph === 2) {
-        // THE VOID RUN begins at the halfway mark: the whole floor shatters fast,
-        // then the platform stream replaces the world — the fight's centerpiece.
+        // THE UNMAKE, in the fight: the whole floor shatters fast, then the platform
+        // stream replaces the world and THE VOID RUN begins. `voidDelayT` is the
+        // Unmake's clock and `requestVoidCinematic` stays set until the void run starts
+        // (both names are saved in world snapshots; PR 5 of the cinematics plan renames them).
         this.mode = "collapse";
         this.collapsing = true;
         this.collapseT = 0.05;
-        this.voidDelayT = C.voidDelay;
+        this.voidDelayT = C.unmakeChannel;
         this.requestVoidCinematic = true;
         this.phaseTag = "WORLD UNMAKES";
         clearThroneFire(this, true); // no ground fire once the floor is going
@@ -405,14 +407,7 @@ export function createSourceType(
       this.castIdx = 0;
       this.atkT = 0.35;
       this.beamCd = C.beamCd * 0.55;
-      bossTransformation(this, {
-        id: "source-true-form",
-        title: "TRUE FORM",
-        pose: "sourceTrue",
-        line: "EVERY BLADE RETURNS TO ME.",
-        color: CONFIG.colors.perfect,
-        sfx: "sourceCross",
-      });
+      bossPhaseBeat(this, "TRUE FORM", CONFIG.colors.perfect); // its first move follows at once (atkT, depthCd)
     }
     tryCatchBlade(
       blade: {
@@ -499,8 +494,8 @@ export function createSourceType(
         return;
       }
 
-      // The cinematic director owns the collapse clock, player safety and exact
-      // hand-off. Source simulation is held here so it cannot cast through speech.
+      // THE UNMAKE: the Source holds still while the arena goes, and can be hit. The
+      // Source void runtime owns the Unmake's clock and hands it into the void run.
       if (this.mode === "collapse") {
         this.vx = lerp(this.vx, 0, clamp(5 * dt, 0, 1));
         this.vy = lerp(this.vy, 0, clamp(5 * dt, 0, 1));

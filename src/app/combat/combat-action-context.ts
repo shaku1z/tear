@@ -122,7 +122,7 @@ export interface LiveCombatLocalPorts<Enemy extends CombatEnemy = CombatEnemy> {
     updateWave: Opening["updateWave"];
     updateBossArenaPlatforms: Opening["updateBossArenaPlatforms"];
     updateVoidScroll: Opening["updateVoidScroll"];
-    startVoidDescent: Opening["startVoidDescent"];
+    advanceSourceUnmake: Opening["advanceSourceUnmake"];
     nearestEnemy: Collision["nearestEnemy"];
     openingNearestEnemy: Opening["nearestEnemy"];
     areaDamage: (x: number, y: number, radius: number, damage: number, playerOwned?: boolean) => number;

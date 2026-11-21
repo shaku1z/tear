@@ -55,7 +55,8 @@ export interface BossStepOptions {
   readonly thawMultiplier: number;
   readonly maximumScrollSpeed: number;
   unlockWitness(): void;
-  startVoidDescent(boss: BossStepEnemy): boolean;
+  /** One tick of the Source's Unmake; true on the tick the void run starts. */
+  advanceSourceUnmake(boss: BossStepEnemy, dt: number): boolean;
   spawnAdds(boss: BossStepEnemy): BossStepEnemy[];
   spawnClone(boss: BossStepEnemy): void;
   floater(x: number, y: number, text: string): void;
@@ -88,10 +89,8 @@ export function stepBossRuntime(options: BossStepOptions): void {
       boss.campT = Math.max(0, (boss.campT ?? 0) - options.dt * 1.6);
       if (boss.campT <= 0) boss.campPlat = null;
     }
-    // Keep the request queued until the exclusive cinematic channel accepts it.
-    // Clearing first strands Source in `collapse` if an adapter rejects the owner
-    // or another cinematic still owns the channel.
-    if (boss.requestVoidCinematic && options.startVoidDescent(boss)) boss.requestVoidCinematic = false;
+    // The Source's Unmake runs in the fight, one tick per step, until the void run starts.
+    if (boss.requestVoidCinematic && options.advanceSourceUnmake(boss, options.dt)) boss.requestVoidCinematic = false;
     if (boss.freezeVoid && options.run.voidScroll) {
       boss.freezeVoid = false;
       options.run.voidScroll.active = false;

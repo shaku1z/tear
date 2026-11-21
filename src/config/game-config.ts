@@ -425,17 +425,14 @@ const CONFIG = {
     siphonDiminish2: 0.7,
     siphonDiminish3: 0.45,
     siphonDiminish4: 0.25,
-    voidDelay: 4.8, // complete authored descent window; the cinematic director owns its beats
-    // THE VOID DESCENT — the cinematic that opens the void run
+    // THE UNMAKE, Phase II's move in the fight (SourceVoidConfig in arena-rules.ts says what each value does)
+    unmakeDissolve: 0.8,
+    unmakeChannel: 1.6,
     voidCamZoom: 0.8, // camera pulls this far OUT during the void (wider frame = plan your route)
-    descentChallenge: 0.65,
-    descentDeclaration: 0.95,
-    descentDissolve: 0.8,
-    descentLift: 0.72,
-    descentReveal: 0.82,
     descentArrival: 0.85,
-    descentLiftV: -310,
+    descentLiftV: -310, // unused since the Unmake; plan PR 5 removes it
     descentIngressBelow: 190,
+    unmakeLiftClearance: 60,
     cycleCd: 2.5, // seconds between mechanic casts (phase 1)
     shockDmg: 18,
     shockSpeed: 720,

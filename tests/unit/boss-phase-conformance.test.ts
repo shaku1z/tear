@@ -13,6 +13,7 @@ import {
   createBossArena,
   type ArenaPlatform,
   type SourceVoidState,
+  type SourceVoidTransitionState,
 } from "../../src/gameplay/training/arena-rules";
 import {
   BossRitualController,
@@ -20,7 +21,7 @@ import {
   type BossRitualCue,
 } from "../../src/gameplay/entities/boss-ritual-controller";
 import { createLiveCinematicRuntime } from "../../src/gameplay/campaign/live-cinematic-runtime";
-import { createSourceVoidRuntimeBridge } from "../../src/gameplay/campaign/source-void-runtime";
+import { createSourceVoidRuntimeBridge, type SourceUnmakeOwner } from "../../src/gameplay/campaign/source-void-runtime";
 import { CinematicTimeline } from "../../src/gameplay/runtime/cinematic-director";
 import { stepBossRuntime } from "../../src/gameplay/combat/boss-step-runtime";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
@@ -306,6 +307,7 @@ function practiceWorld() {
   let projectiles: EnemyProjectile[] = [];
   let clones: InstanceType<typeof mirror.ReflectionEnemy>[] = [];
   let stream: SourceVoidState | null = null;
+  let descent: SourceVoidTransitionState | null = null;
   let tick = 0;
   let created = 0;
   let binding: Pick<BossPhasePracticeWorld, "encounterId" | "generation" | "seed" | "bossId">;
@@ -345,7 +347,6 @@ function practiceWorld() {
       dashDuration: CONFIG.dash.duration,
     },
     {
-      dialogueDuck: CONFIG.presentation.dialogueDuck,
       unmakeMix: CONFIG.presentation.voidUnmakeMix,
       releaseMix: CONFIG.presentation.voidReleaseMix,
       revealMix: CONFIG.presentation.voidRevealMix,
@@ -369,13 +370,28 @@ function practiceWorld() {
     get state() {
       return stream;
     },
+    get descent() {
+      return descent;
+    },
+    get seed() {
+      return binding.seed;
+    },
+    setDescent(value) {
+      descent = value;
+    },
+    setStream(value) {
+      stream = value;
+      platforms = value.platforms;
+    },
     replaceProjectiles(value) {
       projectiles = value;
     },
     replacePlatforms(value) {
       platforms = value;
     },
-    clearDescent: no,
+    clearDescent() {
+      descent = null;
+    },
     clearBossBeat: no,
     setWorldZoom: no,
     spawnWisp: no,
@@ -395,7 +411,6 @@ function practiceWorld() {
   });
   const cinematic = createLiveCinematicRuntime({
     cinema,
-    sourceController,
     ritualController: new BossRitualController(),
     sourceRuntime,
     player: () => player,
@@ -408,11 +423,6 @@ function practiceWorld() {
     projectiles: () => projectiles,
     replaceProjectiles(value) {
       projectiles = value as EnemyProjectile[];
-    },
-    sourceSeed: () => binding.seed,
-    setDescent: no,
-    setStream(value) {
-      stream = value;
     },
     hasVoidScroll: () => stream !== null,
     story: { finale: null, lastCinemaPlayerMode: null, markFinaleLanded: no, syncFinale: no },
@@ -486,6 +496,7 @@ function practiceWorld() {
       clones = [];
       projectiles = [];
       stream = null;
+      descent = null;
     },
   };
   const runtime = createBossPhasePracticeRuntime(services);
@@ -518,7 +529,8 @@ function practiceWorld() {
         thawMultiplier: CONFIG.source.thawSpeedMult,
         maximumScrollSpeed: CONFIG.source.scrollSpeedMax,
         unlockWitness: no,
-        startVoidDescent: () => cinematic.startVoidDescent(boss),
+        advanceSourceUnmake: (_boss, stepDt) =>
+          sourceRuntime.advanceUnmake(boss as BossActor & SourceUnmakeOwner, stepDt),
         spawnAdds: () => [],
         spawnClone() {
           clones.push(new mirror.ReflectionEnemy(boss.x + 120, boss.y));

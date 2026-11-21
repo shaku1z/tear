@@ -5,6 +5,7 @@ import type {
   SourceVoidIntent,
   SourceVoidPlayer,
   SourceVoidState,
+  SourceVoidTransitionState,
 } from "../training/arena-rules";
 import type { VoidLane } from "../voidgen-contracts";
 
@@ -19,6 +20,27 @@ export interface SourceRuntimeOwner extends Omit<SourceVoidActor, "id"> {
   breachContactSpent?: boolean;
   beginVoidRun?(): void;
   startVoidSiphon?(player: SourceRuntimePlayer): number;
+}
+
+/** The Source during its Unmake: `voidDelayT` is the Unmake's clock, seconds left until the void run starts. */
+export interface SourceUnmakeOwner extends SourceRuntimeOwner {
+  voidDelayT: number;
+}
+
+/** A live view of the Source for the Unmake record and the void stream, which outlive any one tick. */
+export function liveSourceActor(owner: SourceRuntimeOwner): SourceVoidActor {
+  return {
+    id: owner.presentationId ?? owner.bossId ?? "source",
+    get x() {
+      return owner.x;
+    },
+    get y() {
+      return owner.y;
+    },
+    get color() {
+      return owner.color;
+    },
+  };
 }
 
 export interface SourceRuntimePlayer extends SourceVoidPlayer {
@@ -51,6 +73,11 @@ export interface SourceVoidRuntimeDependencies<TProjectile extends SourceRuntime
   readonly perfectColor: string;
   readonly runTime: number;
   readonly state: SourceVoidState | null;
+  /** The run's Unmake record, from the Unmake's first tick until the void run starts. */
+  readonly descent: SourceVoidTransitionState | null;
+  readonly seed: string | number;
+  setDescent(transition: SourceVoidTransitionState): void;
+  setStream(stream: SourceVoidState): void;
   replaceProjectiles(projectiles: TProjectile[]): void;
   replacePlatforms(platforms: ArenaPlatform[]): void;
   clearDescent(): void;
@@ -81,6 +108,8 @@ export interface SourceVoidRuntimeBridge {
   syncPlayer(): ArenaPlatform | null;
   updateHazards(state: SourceVoidState, dt: number): void;
   update(dt: number): void;
+  /** One tick of the Source's Unmake; true on the tick the void run starts. */
+  advanceUnmake(owner: SourceUnmakeOwner, dt: number): boolean;
 }
 
 export function createSourceVoidRuntimeBridge<TProjectile extends SourceRuntimeProjectile>(
@@ -212,5 +241,32 @@ export function createSourceVoidRuntimeBridge<TProjectile extends SourceRuntimeP
     updateHazards(state, dt);
   }
 
-  return { actor, execute, supporting, syncPlayer, updateHazards, update };
+  function advanceUnmake(owner: SourceUnmakeOwner, dt: number): boolean {
+    const { controller, player } = dependencies;
+    const transition = dependencies.descent;
+    if (transition === null) {
+      const begun = controller.beginUnmake(liveSourceActor(owner), dependencies.platforms);
+      dependencies.setDescent(begun.transition);
+      execute(begun.intents, owner);
+      return false;
+    }
+    const formed = transition.stream !== null;
+    const step = controller.advanceUnmake(
+      transition,
+      owner.voidDelayT,
+      dt,
+      dependencies.platforms,
+      dependencies.seed,
+      player,
+    );
+    owner.voidDelayT = step.remaining;
+    if (!formed && transition.stream) {
+      transition.stream.owner = transition.owner;
+      dependencies.setStream(transition.stream);
+    }
+    execute(step.intents, owner);
+    return step.done;
+  }
+
+  return { actor, execute, supporting, syncPlayer, updateHazards, update, advanceUnmake };
 }

@@ -15,11 +15,12 @@ import { readBoss } from "../../src/playtest/boss-view";
 import { createProductionHeadlessEnvironment } from "../../src/playtest/headless/production-headless-environment";
 
 /**
- * A boss phase change may hold the simulation in a cinematic that places the player. Wherever the player stands
- * when it starts, and whatever they press while it plays, it ends, and play resumes with the player standing
- * inside the arena. Found by the playtest: at the Source's Phase II with the player at the right wall, Riftlock
- * shots fired during the descent kept the player below the landing shard, the landing beat waited for ever and
- * the player fell without end.
+ * A boss phase change may move the arena under the player, and may still hold the simulation in a cinematic
+ * (Rootbound's, until its rebuild). Wherever the player stands when it starts, and whatever they press while it
+ * plays, it ends, and play resumes with the player standing inside the arena. Found by the playtest: at the
+ * Source's Phase II with the player at the right wall, Riftlock shots fired during the void descent kept the
+ * player below the landing shard, the landing beat waited for ever and the player fell without end. The descent
+ * is now the Unmake, a move in the fight; the player still fires Riftlock all the way down.
  */
 
 interface RawBoss {
@@ -40,6 +41,8 @@ const TICKS_PER_SECOND = 120;
 const PHASE_LIMIT_TICKS = 5 * TICKS_PER_SECOND;
 /** The longest phase change in the game runs about 12 s; this is the most any may take. */
 const CINEMATIC_LIMIT_TICKS = 30 * TICKS_PER_SECOND;
+/** A phase change that is a move in the fight plays out within this time (the Source's Unmake takes 1.6 s). */
+const PHASE_MOVE_TICKS = 2 * TICKS_PER_SECOND;
 /** After the phase change, the player is standing again within this time. */
 const STANDING_LIMIT_TICKS = 2 * TICKS_PER_SECOND;
 /** The void run carries the player on moving shards, so a wall position may be a fraction of a pixel out. */
@@ -57,7 +60,8 @@ function isRawBoss(value: unknown): value is RawBoss {
 
 /**
  * Hold the wall, aimed at the arena's centre and up, so a shot's recoil pushes down and into the wall. The trigger
- * is pressed only while a cinematic has lifted the player, so Riftlock comes to that moment with every chamber full.
+ * is pressed only while a phase change has the player in the air, so Riftlock comes to that moment with every
+ * chamber full.
  */
 function wallInput(wall: (typeof WALLS)[number], tick: number, firing: boolean): GameAction[] {
   return [
@@ -102,11 +106,12 @@ describe("a boss phase change with the player at a wall", () => {
       const phase = (): number | undefined => readBoss(environment.world())?.phase;
       const player = () => environment.world().player() as RawPlayer;
       let tick = 0;
-      let cinematicTicks = 0;
+      let changing = false;
+      let airborneTicks = 0;
       const step = (): void => {
-        const cinematic = environment.cinematicActive();
-        if (cinematic) cinematicTicks += 1;
-        environment.step(wallInput(wall, tick++, cinematic && !player().onGround));
+        const firing = changing && !player().onGround;
+        if (firing) airborneTicks += 1;
+        environment.step(wallInput(wall, tick++, firing));
       };
       for (let waited = 0; actor() === undefined && waited < 600; waited += 1) step();
       for (const [index, mark] of bossDefinition(boss).phaseMarks.entries()) {
@@ -118,19 +123,23 @@ describe("a boss phase change with the player at a wall", () => {
         const body = player();
         body.x = wall === "left" ? body.hw : CONFIG.view.w - body.hw;
         found.hp = found.maxHp * mark * 0.98;
+        changing = true;
         for (let waited = 0; phase() === index + 1 && waited < PHASE_LIMIT_TICKS; waited += 1) step();
         for (let held = 0; environment.cinematicActive() && held < CINEMATIC_LIMIT_TICKS; held += 1) step();
         expect(phase(), `${where}: the phase after`).toBe(index + 2);
         expect(environment.cinematicActive(), `${where}: the cinematic ended`).toBe(false);
+        for (let played = 0; played < PHASE_MOVE_TICKS; played += 1) step();
         for (let waited = 0; !player().onGround && waited < STANDING_LIMIT_TICKS; waited += 1) step();
+        changing = false;
         const after = player();
         expect(after.onGround, `${where}: standing (x ${after.x.toFixed(0)}, y ${after.y.toFixed(0)})`).toBe(true);
         expect(after.x, where).toBeGreaterThanOrEqual(after.hw - EDGE_TOLERANCE);
         expect(after.x, where).toBeLessThanOrEqual(CONFIG.view.w - after.hw + EDGE_TOLERANCE);
         expect(after.y + after.hh, where).toBeLessThanOrEqual(CONFIG.world.groundY);
       }
-      // The Source's descent is the cinematic this guards; a boss whose change plays none still lands its player.
-      if (boss === "source") expect(cinematicTicks).toBeGreaterThan(0);
+      // The Source's Unmake takes the floor away, so its player fires through a fall; a boss whose change keeps
+      // the floor still lands its player.
+      if (boss === "source") expect(airborneTicks).toBeGreaterThan(0);
     } finally {
       environment.dispose();
     }

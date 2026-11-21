@@ -231,7 +231,7 @@ describe("boss step runtime", () => {
       unlockWitness() {
         calls.push("witness");
       },
-      startVoidDescent() {
+      advanceSourceUnmake() {
         calls.push("void");
         return true;
       },
@@ -259,10 +259,10 @@ describe("boss step runtime", () => {
     expect(calls).toEqual(["spike"]);
   });
 
-  it("retains Source's descent request until the cinematic channel accepts it", () => {
+  it("advances the Source's Unmake each tick, with that tick's dt, until the void run starts", () => {
     const boss = { x: 800, y: 300, hw: 40, hh: 60, facing: 1, isBoss: true, requestVoidCinematic: true };
-    let available = false,
-      attempts = 0;
+    let done = false;
+    const steps: number[] = [];
     const step = () => {
       stepBossRuntime({
         dt: 0.1,
@@ -275,9 +275,9 @@ describe("boss step runtime", () => {
         unlockWitness() {
           return;
         },
-        startVoidDescent() {
-          attempts++;
-          return available;
+        advanceSourceUnmake(_boss, dt) {
+          steps.push(dt);
+          return done;
         },
         spawnAdds() {
           return [];
@@ -301,11 +301,12 @@ describe("boss step runtime", () => {
     };
 
     step();
-    expect(boss.requestVoidCinematic, "a busy/rejected launch must remain retryable").toBe(true);
-    available = true;
+    expect(boss.requestVoidCinematic, "the Unmake stays in progress until the void run starts").toBe(true);
+    done = true;
     step();
-    expect(boss.requestVoidCinematic, "an accepted launch consumes the request exactly once").toBe(false);
-    expect(attempts).toBe(2);
+    expect(boss.requestVoidCinematic, "the void run's start ends the Unmake exactly once").toBe(false);
+    step();
+    expect(steps).toEqual([0.1, 0.1]);
   });
 });
 
