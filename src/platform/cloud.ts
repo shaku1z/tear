@@ -1,3 +1,4 @@
+import type { LeaderboardRef, ScoreDirection } from "../domain/leaderboards";
 import { isObject } from "../domain/records";
 import type { IdentityService, PlatformServices, Unsubscribe, TearBuildTarget } from "./contracts";
 
@@ -68,8 +69,12 @@ export interface ScoreEntry extends Record<string, unknown> {
 
 export interface SharedCloudService {
   readonly available: boolean;
-  submitScore(mode: string, difficulty: string, entry: ScoreEntry): Promise<boolean>;
-  topScores(mode: string, difficulty: string, limit: number): Promise<readonly Record<string, unknown>[] | null>;
+  /** Whether this service ranks boards of `direction` (a lowest-first clear time, say). */
+  ranks(direction: ScoreDirection): boolean;
+  /** Stores the entry when it beats the player's stored one on the board; false when it does not or cannot. */
+  submitScore(board: LeaderboardRef, entry: ScoreEntry): Promise<boolean>;
+  /** The board's entries in rank order, best first. */
+  topScores(board: LeaderboardRef, limit: number): Promise<readonly Record<string, unknown>[] | null>;
   logEvent(name: string, data: Record<string, unknown>): void;
   publishReplay(
     recording: Record<string, unknown>,
@@ -78,7 +83,7 @@ export interface SharedCloudService {
   ): Promise<string | null>;
   loadReplay(shareId: string): Promise<Record<string, unknown> | null>;
   replayFeed(limit: number): Promise<readonly Record<string, unknown>[] | null>;
-  linkReplay(mode: string, difficulty: string, shareId: string): Promise<boolean>;
+  linkReplay(board: LeaderboardRef, shareId: string): Promise<boolean>;
   loadGhost(mode: string, difficulty: string): Promise<Record<string, unknown> | null>;
 }
 
@@ -120,8 +125,10 @@ export interface LegacyCloudFacade {
   /** Overwrites the online copy of the save (see `AccountProvider.replace`); never throws. */
   replaceSave(payload: CloudSavePayload): Promise<CloudReplaceResult>;
   hasLeaderboards(): boolean;
-  submitScore(mode: string, difficulty: string, entry: ScoreEntry): Promise<boolean>;
-  topScores(mode: string, difficulty: string, limit: number): Promise<readonly Record<string, unknown>[] | null>;
+  /** Whether the leaderboards rank boards of `direction`; a board they cannot rank is not shown. */
+  ranksLeaderboard(direction: ScoreDirection): boolean;
+  submitScore(board: LeaderboardRef, entry: ScoreEntry): Promise<boolean>;
+  topScores(board: LeaderboardRef, limit: number): Promise<readonly Record<string, unknown>[] | null>;
   logEvent(name: string, data?: Record<string, unknown>): void;
   publishReplay(
     recording: Record<string, unknown>,
@@ -130,7 +137,7 @@ export interface LegacyCloudFacade {
   ): Promise<string | null>;
   loadReplay(shareId: string): Promise<Record<string, unknown> | null>;
   replayFeed(limit: number): Promise<readonly Record<string, unknown>[] | null>;
-  linkReplay(mode: string, difficulty: string, shareId: string): Promise<boolean>;
+  linkReplay(board: LeaderboardRef, shareId: string): Promise<boolean>;
   submitGhost(mode: string, difficulty: string, data: unknown): Promise<boolean>;
   loadGhost(mode: string, difficulty: string): Promise<Record<string, unknown> | null>;
 }
@@ -358,17 +365,20 @@ export function createCloudCompatibility(options: CloudCompatibilityOptions): Cl
     hasLeaderboards() {
       return options.shared.available;
     },
-    async submitScore(mode, difficulty, entry) {
+    ranksLeaderboard(direction) {
+      return options.shared.available && options.shared.ranks(direction);
+    },
+    async submitScore(board, entry) {
       entry.name = this.displayName();
       try {
-        return await options.shared.submitScore(mode, difficulty, entry);
+        return await options.shared.submitScore(board, entry);
       } catch {
         return false;
       }
     },
-    async topScores(mode, difficulty, limit) {
+    async topScores(board, limit) {
       try {
-        return await options.shared.topScores(mode, difficulty, limit);
+        return await options.shared.topScores(board, limit);
       } catch {
         return null;
       }
@@ -402,9 +412,9 @@ export function createCloudCompatibility(options: CloudCompatibilityOptions): Cl
         return null;
       }
     },
-    async linkReplay(mode, difficulty, shareId) {
+    async linkReplay(board, shareId) {
       try {
-        return await options.shared.linkReplay(mode, difficulty, shareId);
+        return await options.shared.linkReplay(board, shareId);
       } catch {
         return false;
       }

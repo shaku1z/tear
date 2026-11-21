@@ -12,7 +12,8 @@ import type {
   RunResultInfo,
   VictoryProgressionIntent,
 } from "../../gameplay/run/outcome-planner";
-import type { RunDifficulty, RunMode } from "../../gameplay/run/session";
+import type { RunDifficulty } from "../../gameplay/run/session";
+import type { LeaderboardRef } from "../../domain/leaderboards";
 import {
   LivePendingFinaleController,
   type PendingFinalePlayer,
@@ -39,12 +40,11 @@ export interface LiveRunOutcomeHostContext<TReplay extends RecordedReplay> {
   readonly setLastRecording: (recording: TReplay | null) => void;
   readonly setLastVaultId: (id: string | null) => void;
   readonly submitScore: (
-    mode: RunMode,
-    difficulty: RunDifficulty,
+    board: LeaderboardRef,
     score: Readonly<{ score: number; wave: number; time: number }>,
   ) => Promise<boolean>;
   readonly publishReplay: (recording: TReplay, board: string) => Promise<string | null>;
-  readonly linkReplay: (mode: RunMode, difficulty: RunDifficulty, shareId: string) => void;
+  readonly linkReplay: (board: LeaderboardRef, shareId: string) => void;
   readonly attachShareId: (vaultId: string, shareId: string) => void;
   readonly replaceWaveLog: (log: OutcomeRunState["waveLog"]) => void;
   readonly waveActive: () => boolean;

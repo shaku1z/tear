@@ -20,6 +20,7 @@ function dependencies() {
   const meta: LegacyMetaPort = { data: {}, merge: vi.fn(), save: vi.fn() };
   const shared: SharedCloudService = {
     available: false,
+    ranks: () => true,
     submitScore: () => Promise.resolve(false),
     topScores: () => Promise.resolve(null),
     logEvent() {
@@ -72,7 +73,9 @@ describe("cloud compatibility", () => {
       throw new Error("UI listener");
     });
     await expect(compatibility.Cloud.init()).resolves.toBe("guest");
-    await expect(compatibility.Cloud.submitScore("endless", "normal", { score: 1 })).resolves.toBe(false);
+    await expect(
+      compatibility.Cloud.submitScore({ kind: "score", mode: "endless", difficulty: "normal" }, { score: 1 }),
+    ).resolves.toBe(false);
   });
 
   it("replaces the online save through the provider that has one, and says when it cannot", async () => {
