@@ -805,7 +805,7 @@ repository must be able to take the next slice from here.
 | 0 | Approved by the lead (D1-D4 approved). |
 | 1 | Merged, #354 (95a34063), ruleset v17. |
 | 2 | Merged, #381 (b7260214), ruleset v20. |
-| 3 | In review (branch `codex/verdant-rootbound-phase2`), ruleset v21. Its place in the order against #372 (also v21) is the lead's; the later one steps again. Merge it before slice 4 starts. |
+| 3 | In review, #385 (branch `codex/verdant-rootbound-phase2`), ruleset v22, after #372's v21. Merge it before slice 4 starts. |
 | 4-7 | Not started. |
 
 **What slice 2 left in place** (read these first):

@@ -4,9 +4,9 @@
  * pinned determinism hash at that tick, and the verdict must be "verified". A record changed in one
  * action, one summary field or its ruleset must not verify; one changed only in its look must.
  *
- * This proves the record and verify on headless runs. A live run in the browser is not covered here:
- * its seed, start choices, reward picks and frame clock differ from a headless run (see PR 5b in
- * plans/active/REPLAY_OVERHAUL_PLAN.md).
+ * This proves the record and verify on headless runs. A live run starts the same way (PR 5b-1,
+ * tests/unit/run-start-parity.test.ts); its reward picks and frame clock are PRs 5b-2 and 5b-3 in
+ * plans/active/REPLAY_OVERHAUL_PLAN.md.
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
@@ -20,6 +20,7 @@ import { REPLAY_CHECKPOINT_TICKS, readReplayRecord, type ReplayRecord } from "..
 import { createReplayRecorder } from "../../src/replay/recorder";
 import { verifyReplay } from "../../src/replay/verify";
 import { createDetachedReplayWorld } from "../../src/app/replay/detached-replay-world";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 import { SPECS, createCorpusPlayer, scenarioContract, type StreamSpec } from "../support/hash-stream-corpus";
 
 const DETERMINISM = JSON.parse(readFileSync("tests/fixtures/canonical-hash-stream.json", "utf8")) as {
@@ -37,8 +38,19 @@ function recordCorpusStream(spec: StreamSpec): ReplayRecord {
     const recorder = createReplayRecorder({
       ruleset: CURRENT_RULESET_VERSION,
       build: BUILD,
-      seed: spec.seed,
-      start: { mode: spec.mode as "endless" | "bossonly", difficulty: spec.difficulty, weapon: spec.weapon },
+      seed: scenarioRunSeed(spec.seed),
+      start: {
+        mode: spec.mode as "endless" | "bossonly",
+        difficulty: spec.difficulty,
+        weapon: spec.weapon,
+        ...(spec.boss === undefined ? {} : { boss: spec.boss }),
+        metaRanks: {},
+        variantDiscovery: [],
+        achievementSnapshot: [],
+        restoredTrail: false,
+        cinematics: "full",
+        playedChapters: [],
+      },
       look: LOOK,
     });
     let id = 0;

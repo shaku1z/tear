@@ -8,13 +8,15 @@
  * every REPLAY_CHECKPOINT_TICKS and at the end. It holds no keyframes, random tracks or frame clocks:
  * the detached world re-simulates the run, and keyframes for seeking are a cache kept beside a record.
  *
- * Until replay PR 5b, a record verifies only against the detached world that made it: a record from
- * live play is not yet guaranteed to verify. Live play differs from a detached start in four places:
- * its seed type (a uint32 run seed against the detached world's hashed seed text), its start choices
- * (meta progression and opening content), its reward picks (UI calls, not actions) and the cinema
- * frame clock. The detached world also carries one frame-clock exception (src/app/world/detached/
- * detached-step.ts): while a boss intro or a cinematic holds the fight, each tick first runs one
- * application frame of one tick's length with no confirm press.
+ * Live play and the detached world start a run the same way: one run start (src/app/run/run-start-world.ts)
+ * from the same start choices, the record's `seed` and `start`. Until the rest of replay PR 5b, a record
+ * from live play is still not guaranteed to verify, for two reasons: its reward picks are UI calls, not
+ * actions, and the cinema frame clock. The detached world also carries one frame-clock exception
+ * (src/app/world/detached/detached-step.ts): while a boss intro or a cinematic holds the fight, each tick
+ * first runs one application frame of one tick's length with no confirm press.
+ *
+ * Tutorial and Playground runs are never recorded (they earn nothing and are practice), so a record of
+ * one is refused.
  */
 import { isRecord } from "../domain/records";
 import { hasMonotonicEnvelopes, type CommandEnvelope } from "../domain/envelopes";
@@ -26,6 +28,7 @@ import type { RunMode } from "../gameplay/run/session";
 import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
 import { isWeaponId, type WeaponId } from "../gameplay/weapon-selection";
 import { normalizeGameAction, type GameAction } from "../input/game-action";
+import { isRunSeed, type RunStartChoices } from "../gameplay/run/run-start-choices";
 
 export const REPLAY_FORMAT = "tear-replay";
 /**
@@ -46,12 +49,25 @@ export interface ReplayBuild {
   readonly target: string;
 }
 
-export interface ReplayStart {
+/**
+ * The run's start choices besides its seed: the player's picks, and the saved progress and settings the
+ * start read (see RunStartChoices).
+ */
+export interface ReplayStart extends Omit<RunStartChoices, "runSeed" | "boss" | "mode" | "difficulty" | "weapon"> {
   readonly mode: RunMode;
   readonly difficulty: DifficultyId;
   readonly weapon: WeaponId;
   /** The boss a boss-only run fights; absent when the mode chooses. */
   readonly boss?: string;
+}
+
+/** Modes whose runs are recorded: every mode but the practice ones. */
+export const RECORDED_MODE_IDS = Object.freeze(MODE_IDS.filter((mode) => mode !== "tutorial" && mode !== "playground"));
+
+/** The start choices a record's run starts from. */
+export function replayStartChoices(run: Pick<ReplayRun, "seed" | "start">): RunStartChoices {
+  const { boss, ...start } = run.start;
+  return Object.freeze({ ...start, boss: boss ?? "shuffle", runSeed: run.seed });
 }
 
 export interface ReplayCheckpoint {
@@ -71,7 +87,8 @@ export interface ReplayResult {
 export interface ReplayRun {
   readonly ruleset: string;
   readonly build: ReplayBuild;
-  readonly seed: string;
+  /** The run seed: a non-zero unsigned 32-bit integer. */
+  readonly seed: number;
   readonly start: ReplayStart;
   readonly actions: readonly ReplayAction[];
   readonly checkpoints: readonly ReplayCheckpoint[];
@@ -168,17 +185,46 @@ function oneOf<T extends string>(value: unknown, options: readonly T[], path: st
   return value as T;
 }
 
+function runSeed(value: unknown, path: string): number {
+  if (!isRunSeed(value)) fail(path, "must be a non-zero 32-bit whole number");
+  return value;
+}
+
+function texts(value: unknown, path: string): readonly string[] {
+  return Object.freeze(list(value, path).map((entry, index) => text(entry, `${path}[${String(index)}]`)));
+}
+
+function readRanks(value: unknown, path: string): Readonly<Record<string, number>> {
+  const ranks: Record<string, number> = {};
+  for (const [id, rank] of Object.entries(object(value, path))) ranks[text(id, path)] = count(rank, `${path}.${id}`);
+  return Object.freeze(ranks);
+}
+
+function readChapters(value: unknown, path: string): readonly number[] {
+  const chapters = list(value, path).map((entry, index) => count(entry, `${path}[${String(index)}]`));
+  if (chapters.some((chapter, index) => index > 0 && chapter <= (chapters[index - 1] ?? -1)))
+    fail(path, "must be in ascending order without repeats");
+  return Object.freeze(chapters);
+}
+
 function readStart(value: unknown): ReplayStart {
   const start = object(value, "run.start");
   const weapon = text(start.weapon, "run.start.weapon");
   if (!isWeaponId(weapon)) fail("run.start.weapon", "is not a weapon");
   const boss = start.boss === undefined ? undefined : text(start.boss, "run.start.boss");
   if (boss !== undefined && !isBossDefinitionId(boss)) fail("run.start.boss", "is not a boss");
+  if (typeof start.restoredTrail !== "boolean") fail("run.start.restoredTrail", "must be true or false");
   return Object.freeze({
-    mode: oneOf(start.mode, MODE_IDS, "run.start.mode"),
+    mode: oneOf(start.mode, RECORDED_MODE_IDS, "run.start.mode"),
     difficulty: oneOf(start.difficulty, DIFFICULTY_IDS, "run.start.difficulty"),
     weapon,
     ...(boss === undefined ? {} : { boss }),
+    metaRanks: readRanks(start.metaRanks, "run.start.metaRanks"),
+    variantDiscovery: texts(start.variantDiscovery, "run.start.variantDiscovery"),
+    achievementSnapshot: texts(start.achievementSnapshot, "run.start.achievementSnapshot"),
+    restoredTrail: start.restoredTrail,
+    cinematics: oneOf(start.cinematics, ["full", "brief", "off"] as const, "run.start.cinematics"),
+    playedChapters: readChapters(start.playedChapters, "run.start.playedChapters"),
   });
 }
 
@@ -223,7 +269,7 @@ function readRun(value: unknown): ReplayRun {
       revision: text(build.revision, "run.build.revision"),
       target: text(build.target, "run.build.target"),
     }),
-    seed: text(run.seed, "run.seed"),
+    seed: runSeed(run.seed, "run.seed"),
     start: readStart(run.start),
     actions: readActions(run.actions, resultTick),
     checkpoints: readCheckpoints(run.checkpoints, resultTick),

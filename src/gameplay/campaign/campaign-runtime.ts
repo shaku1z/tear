@@ -1,8 +1,8 @@
 import type { CampaignStage, ChapterPage } from "./chapter-controller";
 import type { PreparedVictory } from "../run/outcome-planner";
 import type { CampaignCinematicChannel } from "./campaign-sequences";
-import { launchCampaignChapter } from "./campaign-sequences";
-import { chapterLaunchPolicy, type CinematicLaunchPolicy, type CinematicPreference } from "./cinematic-preference";
+import { beginRunChapter, runChapterGatesWave, type RunChapterPort } from "./run-chapter";
+import { createChapterLaunchMemory, type CinematicPreference } from "./cinematic-preference";
 import { dispatchChapterIntents, type ChapterIntentPorts } from "./campaign-intent-coordinator";
 import { createFinaleRuntime, type FinaleBladeSegment, type FinaleIntentPorts } from "./finale-runtime";
 import type { FinaleIntent } from "./finale-controller";
@@ -75,6 +75,8 @@ export interface LiveCampaignRuntimeApi {
    * prepared, so nothing would ever release a deferred wave.
    */
   readonly chapterGatesWave: (index: number) => boolean;
+  /** Chapters played this session, by stage index; a run start records them. */
+  readonly playedChapters: () => readonly number[];
   readonly severFinaleAnchor: (assisted: boolean) => boolean;
   readonly beginFinaleRestoration: () => void;
   readonly tryFinaleBladeCut: (segment: LiveFinaleBladeSegment) => void;
@@ -92,11 +94,22 @@ export interface StagedLiveChapterBinding {
 /** Bound campaign API that owns all spanning chapter/finale orchestration and intent dispatch. */
 export function createLiveCampaignRuntime(port: LiveCampaignRuntimePort): LiveCampaignRuntimeApi {
   // Chapters played in this session; a retry of one of them skips its cinematic.
-  const playedChapters = new Set<number>();
-  const chapterPolicy = (index: number): CinematicLaunchPolicy =>
-    chapterLaunchPolicy(port.preference(), playedChapters.has(index));
+  const chapters = createChapterLaunchMemory(port.preference);
   const dispatchChapter = (intents: Parameters<typeof dispatchChapterIntents>[0]): void => {
     dispatchChapterIntents(intents, port.chapterIntents);
+  };
+  const chapterPort: RunChapterPort = {
+    run: port.run,
+    stageAt: port.stageAt,
+    chapters,
+    launch: {
+      runtime: port.runtime,
+      cinema: port.cinema,
+      preparedWave: port.preparedWave,
+      activationDeferred: port.activationDeferred,
+      dispatch: dispatchChapter,
+      clearBossBeat: port.clearBossBeat,
+    },
   };
   const finale = createFinaleRuntime({
     runtime: port.runtime,
@@ -146,35 +159,10 @@ export function createLiveCampaignRuntime(port: LiveCampaignRuntimePort): LiveCa
       return run?.mode === "campaign" && run.chapterState !== "WAVE_LIVE";
     },
     beginChapter: (index, priorOutro = null) => {
-      const run = port.run();
-      const stage = port.stageAt(index);
-      if (run === null) return;
-      if (run.mode !== "campaign" || stage?.chapter === undefined) {
-        run.chapterState = "WAVE_LIVE";
-        return;
-      }
-      const policy = chapterPolicy(index);
-      if (policy.play) playedChapters.add(index);
-      launchCampaignChapter({
-        runtime: port.runtime,
-        cinema: port.cinema,
-        stageIndex: index,
-        stage,
-        priorOutro,
-        brief: policy.brief,
-        play: policy.play,
-        prologueShown: run._prologueShown === true,
-        preparedWave: port.preparedWave,
-        activationDeferred: port.activationDeferred,
-        dispatch: dispatchChapter,
-        rememberPrologue: (shown) => {
-          run._prologueShown = shown;
-        },
-        clearBossBeat: port.clearBossBeat,
-      });
+      beginRunChapter(chapterPort, index, priorOutro);
     },
-    chapterGatesWave: (index) =>
-      port.run()?.mode === "campaign" && port.stageAt(index)?.chapter !== undefined && chapterPolicy(index).play,
+    playedChapters: chapters.played,
+    chapterGatesWave: (index) => runChapterGatesWave(chapterPort, index),
     severFinaleAnchor: finale.severAnchor,
     beginFinaleRestoration: finale.beginRestoration,
     tryFinaleBladeCut: finale.tryBladeCut,

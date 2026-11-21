@@ -8,7 +8,6 @@ import {
   markStageRestriction,
   parryIntents,
   recordBossHit,
-  resetStageRestrictions,
   stageDoneIntents,
   tickAchievementRuntime,
   tracksAchievements,
@@ -39,7 +38,6 @@ export interface LiveStylePlayer extends AchievementPlayer {
 
 export interface LiveAchievementTracker {
   on(): boolean;
-  stageReset(): void;
   swung(): void;
   thrown(): void;
   jumped(): void;
@@ -107,9 +105,6 @@ export function createLiveStyleAchievementRuntime<TProjectile extends SplitProje
   };
   const achievements: LiveAchievementTracker = {
     on: tracks,
-    stageReset: () => {
-      resetStageRestrictions(options.run());
-    },
     swung: () => {
       markStageRestriction(options.run(), "swung");
     },

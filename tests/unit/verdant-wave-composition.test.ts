@@ -9,6 +9,7 @@ import { BOSS_ROSTER, type EnemyKind } from "../../src/gameplay/run/content-dire
 import { planNextWave, type WaveStage } from "../../src/gameplay/run/wave-planner";
 import { DIFFICULTY_CATALOG } from "../../src/gameplay/run/difficulty-catalog";
 import { createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 const stages: readonly WaveStage[] = STAGES.map((stage) => ({
   id: stage.id,
@@ -126,7 +127,7 @@ describe("Verdant wave composition budget", () => {
       expect(planned.state.spawnQueue[0]?.dmgScale).toBeCloseTo(1.34);
 
       const replay = createProductionReplayWorld({
-        seed: `verdant-${difficulty.id}`,
+        runSeed: scenarioRunSeed(`verdant-${difficulty.id}`),
         mode: "campaign",
         difficulty: difficulty.id,
       });

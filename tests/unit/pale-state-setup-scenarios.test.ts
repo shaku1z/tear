@@ -15,11 +15,13 @@ import { resolveTearSdl } from "../../src/tearbench/tearsdl";
 import scenarioCatalog from "../../src/tearbench/canonical-scenarios.json";
 import { materializeCanonicalScenario } from "../../src/tearbench/canonical-scenarios";
 import { assertCanonicalStructuredObservations } from "../../src/tearbench/canonical-structured-assertions";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 function sourceSnapshot() {
-  const source = createProductionGhostReplayComposition({ seed: "pt3-c10-pale-forge", mode: "campaign" }).create(
-    undefined,
-  );
+  const source = createProductionGhostReplayComposition({
+    runSeed: scenarioRunSeed("pt3-c10-pale-forge"),
+    mode: "campaign",
+  }).create(undefined);
   return captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "pt3-c10-pale-forge-source")
     .snapshot;
 }

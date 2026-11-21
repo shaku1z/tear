@@ -20,6 +20,7 @@ import { createLiveParticlePresentationState } from "../../src/app/world/detache
 
 import { TutorialController } from "../../src/gameplay/training/tutorial-controller";
 import { parseTutorialSessionCheckpoint } from "../../src/gameplay/training/tutorial-session-checkpoint";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 type Failure = "clear" | "replace" | "late" | "runtime";
 interface BossFacts {
@@ -34,9 +35,10 @@ interface BossFacts {
 }
 
 function fixture(includeTutorial = false) {
-  const host = createProductionGhostReplayComposition({ seed: "live-adapter-ownership", mode: "endless" }).create(
-    undefined,
-  );
+  const host = createProductionGhostReplayComposition({
+    runSeed: scenarioRunSeed("live-adapter-ownership"),
+    mode: "endless",
+  }).create(undefined);
   const { replay, combat } = host;
   const state = replay.world.state,
     environment = replay.world.context.environment;

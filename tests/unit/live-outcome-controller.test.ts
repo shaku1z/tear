@@ -18,6 +18,7 @@ import {
 } from "../../src/gameplay/run/live-outcome-controller";
 import type { OutcomeRunState, PreparedVictory } from "../../src/gameplay/run/outcome-planner";
 import { createOutcomeChronologyJournal } from "../../src/gameplay/run/outcome-chronology-journal";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 function createHarness(
   options: Readonly<{
@@ -156,7 +157,7 @@ describe("LiveRunOutcomeController", () => {
       // Constructed outcome dispatch through the real native publisher + durable recorder;
       // actual natural defeat trigger is covered by the retained browser failure.
       const host = createProductionGhostReplayComposition({
-        seed: "117",
+        runSeed: scenarioRunSeed("117"),
         mode: "endless",
         difficulty: "easy",
         weaponId: "riftlock",

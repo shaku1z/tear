@@ -2,6 +2,7 @@ import type { BeatRunBinding } from "./beat-run";
 import type { DifficultyId } from "./difficulty-catalog";
 import type { GhostRunAssistance } from "./ghost-assistance";
 import type { SeedRaceRun } from "./seed-locked-draft";
+import type { CinematicPreference } from "../campaign/cinematic-preference";
 
 export type RunMode = "campaign" | "endless" | "gauntlet" | "playground" | "tutorial" | "bossonly" | "sandbox";
 export type RunDifficulty = DifficultyId;
@@ -23,6 +24,8 @@ export interface CreateRunSessionOptions<TMods> {
   readonly scaling: RunDifficultyScaling;
   readonly achievementSnapshot: readonly string[];
   readonly variantDiscovery?: readonly string[];
+  /** The run's cinematics setting, fixed at its start; "full" when the start states none. */
+  readonly cinematics?: CinematicPreference;
 }
 
 export interface RunWeaponStats {
@@ -102,6 +105,8 @@ export interface RunSession<TMods> {
   _prologueShown: boolean;
   /** Persisted source-owned Endless/Gauntlet discovery authority. */
   variantDiscovery?: string[];
+  /** The cinematics setting the run started with; chapters and boss scenes read it, never the live setting. */
+  cinematics?: CinematicPreference;
 }
 
 function finiteNonNegative(value: number, label: string): number {
@@ -178,6 +183,7 @@ export function createRunSession<TMods extends { weaponId?: string }>(
     pendingBossOutro: null,
     _prologueShown: false,
     variantDiscovery: [...(options.variantDiscovery ?? [])],
+    cinematics: options.cinematics ?? "full",
   };
 }
 import type { WaveSpawnSpec } from "./wave-planner";

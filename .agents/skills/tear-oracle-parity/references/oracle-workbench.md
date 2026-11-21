@@ -1,40 +1,58 @@
-# Oracle Workbench
+# Reading the oracle
 
 Ways to consult `ee5e93141d67cc02505b2227b3be0b10d1819e1c`, cheapest first.
 
-## Point reads (no worktree needed)
+## Point reads, no checkout needed
 
 ```bash
 git show ee5e931:js/game.js | sed -n '3560,3620p'
 git show ee5e931 --stat
-git log ee5e931 --oneline -20          # what the oracle itself contains
-git diff ee5e931 HEAD -- js/ src/      # full divergence surface (huge; scope it)
+git grep -n "aimSensitivity" ee5e931 -- js/
 ```
 
-Key oracle files: `js/game.js` (state machine, screens, draft flow, pointer-lock policy), `js/ui.js` (UI.t tokens + components), `js/input.js` (Input.mode, allowLock, consumeDelta), `js/blade.js`, `js/player.js`, `js/enemy.js` (~4225 lines: all enemies + bosses), `js/mirror.js`, `js/config.js` (all tuning constants), `js/voidgen.js`, `js/projectile.js`.
+Oracle files: `js/game.js` (state machine, screens, draft flow, pointer-lock policy), `js/ui.js` (tokens
+and components), `js/input.js`, `js/blade.js`, `js/player.js`, `js/enemy.js` (all enemies and bosses),
+`js/mirror.js`, `js/config.js` (all tuning), `js/voidgen.js`, `js/projectile.js`. They exist only at that
+commit; `main` has no `js/` folder.
 
-## Worktree
+## The locked checkout
 
-`../Tear-oracle` is a git worktree pinned at the oracle. If missing:
+A checkout pinned at the oracle sits beside the canonical game checkout, in a folder named `Tear-oracle`.
+It is locked ([docs/DECISIONS.md](../../../../docs/DECISIONS.md), D-002): read and serve it, never edit,
+commit in or build from it, and do not create another one.
 
-```bash
-git worktree add ../Tear-oracle ee5e931
-```
+The parity commands look for it at `../Tear-oracle` relative to the repository root. From a worktree that
+path is wrong, so set `TEAR_ORACLE_ROOT` to the locked checkout's path. They refuse to run if it is not
+exactly at `ee5e931`.
 
-Use it for grep across the whole monolith, and for serving.
+## Parity commands
 
-## Twin-serve A/B
+[docs/PARITY.md](../../../../docs/PARITY.md), "Parity microscope", is the authority. Each serves the oracle
+and the current test build on separate local origins, replays one fixture from `tests/parity/` through
+both, and writes paired traces and a report under `artifacts/parity/`:
 
-The oracle is plain JS — serve it directly with `python ../Tear-oracle/serve.py` (or any static server) from the worktree. Serve the redesign build alongside. Open both in two tabs for direct side-by-side feel/pixel checks of the same scripted session (menu → play → draft → pause → menu).
+- `pnpm parity:blade`, `pnpm parity:player`, `pnpm parity:enemy`, `pnpm parity:combat`,
+  `pnpm parity:ranged`, `pnpm parity:projectile-parry`, `pnpm parity:mirror`
+- `pnpm parity:diff` compares two trace files and reports the first differing frame and field.
+- `pnpm test:parity:unit` tests the differ itself.
 
-## Measurement, not vibes
+The required check runs the same fixtures against the current build only (the `test:browser:*` scripts that
+pass `--current-only`), so it needs no oracle.
 
-- **Constant diff:** field-by-field diff of `js/config.js@ee5e931` vs `src/config/*` (blade aimSensitivity, aimRadius, tether, spring constants, physics accel/friction).
-- **Token diff:** `js/ui.js` UI.t values vs `src/presentation/ui-tokens.ts` — one wrong token reskins dozens of screens.
-- **String-literal sweep:** grep oracle screen strings (labels, empty states, column headers) and confirm each exists in the redesign renderers.
-- **Trace differ:** where it exists (`tests/parity/`, `scripts/parity-diff.mjs`), record one raw input stream, inject into both builds, dump per-frame state, report first-divergence frame + field. Prefer extending this over eyeballing.
-- **Screenshot census:** capture the oracle screen at reference viewports (1920×1080 + mobile logical size) and image-compare against the redesign journey screenshots.
+## Measuring by hand
 
-## Oracle state census
+- **Constants:** compare `js/config.js` at the oracle with `src/config/` field by field.
+- **Tokens:** compare the oracle's `js/ui.js` values with `src/presentation/ui-tokens.ts`. One wrong token
+  changes many screens.
+- **Strings:** search the oracle's labels, empty states and column headers and confirm each is in the
+  current renderers.
+- **Side by side:** serve the oracle with any static file server and the current build with
+  `pnpm preview`, and play the same scripted session in both.
+- **Screens:** capture the oracle at a reference viewport and compare with the current journey's
+  screenshots.
 
-`menu, setup, playing, paused, draft, reserve, tierup, settings, continue, gameover, win, pgmenu, pglab, rename, replay` plus codex/profile/leaderboard hubs and the 7 Ledger sub-screens. Use this list when sweeping for sibling divergences.
+## Oracle screen states
+
+`menu, setup, playing, paused, draft, reserve, tierup, settings, continue, gameover, win, pgmenu, pglab,
+rename, replay`, plus the codex, profile and leaderboard hubs. Use the list when sweeping for the same
+difference elsewhere.

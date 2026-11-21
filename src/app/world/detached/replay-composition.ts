@@ -9,9 +9,9 @@ import type { ProductionReplayWorldOptions } from "./world-factory";
 import { definedFields } from "../../../domain/records";
 import { applyWeapon } from "../../../gameplay/weapons";
 import { A11Y, GFX } from "../../../config/game-config";
-import { launchCampaignChapter } from "../../../gameplay/campaign/campaign-sequences";
-import { createCampaignChapterController } from "../../../gameplay/campaign/campaign-controller-factory";
-import { createUiState } from "../../../presentation/ui-tokens";
+import { beginRunChapter, runChapterGatesWave } from "../../../gameplay/campaign/run-chapter";
+import { scenarioRunSeed, scenarioRunStartChoices, type SavedRunStart } from "../../../gameplay/run/run-start-choices";
+import { createDetachedChapterPort, startDetachedRun } from "./detached-run-start";
 import { createLiveParticlePresentationState } from "./particle-state";
 import { validateParticlePresentationBinding } from "../../../gameplay/snapshot/particle-checkpoint";
 import { prepareParticlePresentationRestore } from "../../../gameplay/snapshot/particle-checkpoint";
@@ -100,11 +100,14 @@ export interface ProductionGhostReplayCompositionOptions {
   readonly observeTerminal?: (outcome: "defeat" | "victory") => void;
   readonly presentation?: ProductionReplayWorldOptions["presentation"];
   readonly renderView?: (world: ProductionReplayWorld, tick: number, screen: string) => GhostReplayRenderView;
-  readonly seed: string;
+  /** A fresh run's seed; a snapshot carries its own. */
+  readonly runSeed: number;
   readonly mode?: string;
   readonly weaponId?: string;
   readonly difficulty?: RunDifficulty;
   readonly firstBoss?: string;
+  /** The saved progress and settings a fresh run starts with; a new player's when absent. */
+  readonly saved?: SavedRunStart;
   readonly opening?: ProductionRunOpening;
   /** Optional immutable identity supplied by the build/composition boundary. */
   readonly buildIdentity?: Omit<TearBuildIdentityV1, "configHash">;
@@ -409,7 +412,7 @@ export function captureProductionReplayCheckpoint(
     platforms: () => replay.stage.platforms as never,
     stageIndex: () => replay.stage.index,
     restoreStageIndex: (index) => {
-      replay.stage.index = index;
+      replay.stage.restoreIndex(index);
     },
     replacePlatforms: (platforms) => {
       replay.stage.platforms = platforms;
@@ -697,7 +700,7 @@ export function restoreProductionReplaySnapshot(
   blade.weapon = weapon;
   blade.model = weapon.model;
   replay.world.context.services.random.restore(staged.rng as never);
-  replay.stage.index = staged.stageIndex;
+  replay.stage.restoreIndex(staged.stageIndex);
   // Preserve an explicitly unknown source stage in the semantic projection;
   // inferred campaign stage would make a valid checkpoint restore hash drift.
   const environmentStage = rebasedEnvironment.stageId;
@@ -739,9 +742,25 @@ export function createProductionGhostReplayComposition(options: ProductionGhostR
           "firstBoss",
           "looks",
         ]),
-        seed: snapshot?.seed ?? options.seed,
+        runSeed: snapshot === undefined ? options.runSeed : scenarioRunSeed(snapshot.seed),
         tutorialHandoff: () => {
           waveReward?.restoreScreen("paused");
+        },
+      });
+      const choices = scenarioRunStartChoices({
+        ...definedFields(options, ["mode", "weaponId", "difficulty", "firstBoss", "saved"]),
+        runSeed: options.runSeed,
+      });
+      const unbindChapter = () => {
+        productionChapterBindings.delete(replay);
+      };
+      const chapters = createDetachedChapterPort(replay, choices, {
+        install: (chapter) => {
+          installProductionChapter(replay, chapter);
+        },
+        clear: unbindChapter,
+        dispatch: (intents) => {
+          dispatchProductionChapter(replay, intents);
         },
       });
       const runtimeBuild = injectedBuildIdentity("production-headless", CONTENT_HASH);
@@ -819,47 +838,23 @@ export function createProductionGhostReplayComposition(options: ProductionGhostR
           waveReward?.restoreScreen("win");
         },
         chapterFlowActive: () => productionChapterBindings.has(replay),
+        chapterGatesWave: (index) => runChapterGatesWave(chapters, index),
         beginCampaignChapter: (index, priorOutro = null) => {
-          const run = replay.world.state.run() as never as { _prologueShown?: boolean };
-          launchCampaignChapter({
-            runtime: {
-              chapterController: createCampaignChapterController(
-                createUiState(replay.configuration.value.colors).t.motion,
-                replay.configuration.value,
-              ),
-              installChapterBinding: (chapter) => {
-                installProductionChapter(replay, chapter);
-              },
-              clearChapterBinding: () => {
-                productionChapterBindings.delete(replay);
-              },
-            },
-            cinema: {
-              startBinding: (binding) => {
-                replay.world.context.cinema.start(binding.script, binding.context);
-              },
-            },
-            stageIndex: index,
-            stage: stageAt(index),
-            priorOutro,
-            brief: false,
-            play: true,
-            prologueShown: run._prologueShown === true,
-            preparedWave: () => replay.world.lifecycle.hasPreparedWave,
-            activationDeferred: () => replay.world.lifecycle.activationDeferred,
-            dispatch: (intents) => {
-              dispatchProductionChapter(replay, intents);
-            },
-            rememberPrologue: (shown) => {
-              run._prologueShown = shown;
-            },
-            clearBossBeat: () => undefined,
-          });
+          beginRunChapter(chapters, index, priorOutro);
         },
       });
       productionWaveRewards.set(replay, waveReward);
       replay.bindTutorialSpawn(waveReward.spawnTutorial);
-      if (staged === undefined) waveReward.startNaturalOpening(options.opening);
+      replay.bindAuthoritativeTick(() => core.simulationRuntime.lastResult?.tick ?? 0);
+      if (staged === undefined)
+        startDetachedRun({
+          replay,
+          waveReward,
+          combat: core,
+          choices,
+          resetChapter: unbindChapter,
+          ...definedFields(options, ["opening"]),
+        });
       else {
         waveReward.reward.restore(staged.reward);
         waveReward.restoreUi(staged.screen, productionFocus.get(replay) ?? -1);

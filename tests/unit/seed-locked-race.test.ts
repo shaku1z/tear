@@ -18,6 +18,7 @@ import { stableVerificationHash } from "../../src/domain/hash";
 import { legalSeedRaceUpgrade, type SeedRaceRun } from "../../src/gameplay/run/seed-locked-draft";
 import { createRewardRuntime } from "../../src/gameplay/run/reward-runtime";
 import { createSeedRaceDecision, createSeedRaceDecisionPlayback } from "../../src/ghost/seed-race-decisions";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 const spec = { policy: "seed-locked-common-offers.v1" as const, seed: 117, catalogHash: seedRaceCatalogHash() };
 const roller = () => {
@@ -104,7 +105,10 @@ describe("Seed-Locked Race", () => {
     expect(controller.snapshot().reservedChoice).toBeNull();
   });
   it("captures a real production mid-draft and preserves subsequent common offers, personal reserve and RNG", () => {
-    const composition = createProductionGhostReplayComposition({ seed: "race-portable", mode: "endless" });
+    const composition = createProductionGhostReplayComposition({
+      runSeed: scenarioRunSeed("race-portable"),
+      mode: "endless",
+    });
     const source = composition.create(undefined),
       run = requireRaceValue(source.replay.world.state.run());
     Object.assign(run.mods, { expandedDraft: true, reservePick: true, draftRerolls: 3 });
@@ -164,7 +168,7 @@ describe("Seed-Locked Race", () => {
     );
     source.waveReward.reward.decide({ kind: "reserve", index: 0 }, 110);
     const forward = createProductionGhostReplayComposition({
-      seed: "race-portable",
+      runSeed: scenarioRunSeed("race-portable"),
       raceDecisions: [pickup, reserve],
     }).create(captured.snapshot);
     for (const host of [source, forward]) {

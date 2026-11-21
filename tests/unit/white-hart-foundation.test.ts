@@ -23,6 +23,7 @@ import { createSurfaceAvailability } from "../../src/domain/surface-availability
 import { projectLiveBossObservation } from "../../src/tearbench/live-observation-actors";
 import { createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
 import { WHITE_HART_ATTACK_IDS } from "../../src/gameplay/entities/enemy-types/white-hart";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 function recordingCanvas(calls: string[]): CanvasRenderingContext2D {
   const values = new Map<PropertyKey, unknown>();
@@ -191,7 +192,7 @@ describe("White Hart production foundation", () => {
 
   it("constructs the same White Hart family in an isolated detached production world", () => {
     const replay = createProductionReplayWorld({
-      seed: "pt3-c6-white-hart-detached",
+      runSeed: scenarioRunSeed("pt3-c6-white-hart-detached"),
       mode: "bossonly",
       enemies: [{ id: "white-hart", x: 800, y: CONFIG.world.groundY - CONFIG.whiteHart.h / 2 }],
     });
@@ -215,7 +216,7 @@ describe("White Hart production foundation", () => {
     });
 
     const second = createProductionReplayWorld({
-      seed: "pt3-c6-white-hart-detached-second",
+      runSeed: scenarioRunSeed("pt3-c6-white-hart-detached-second"),
       mode: "bossonly",
       enemies: [{ id: "white-hart", x: 800, y: CONFIG.world.groundY - CONFIG.whiteHart.h / 2 }],
     });

@@ -25,6 +25,7 @@ import { productionGhostPath, recordProductionGhostTrace } from "../../src/gamep
 import { parseTutorialCoachCheckpoint } from "../../src/gameplay/training/tutorial-coach-checkpoint";
 import { TutorialGhostCoach, shippingTutorialGold } from "../../src/gameplay/training/tutorial-ghost-coach";
 import { loadShippingTutorialGold } from "../../src/gameplay/training/tutorial-gold-shipping";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 // These tests need the coach's demonstrations, so they load the on-demand corpus first; the game asks for it once a lesson is played.
 beforeAll(async () => {
@@ -165,7 +166,7 @@ describe("verified tutorial gold corpus", () => {
     expect(corpus.compatibility.configurationHash).toBe(
       stableVerificationHash(
         createProductionReplayWorld({
-          seed: "gold-baseline",
+          runSeed: scenarioRunSeed("gold-baseline"),
           mode: "tutorial",
           weaponId: "sword",
           difficulty: "normal",

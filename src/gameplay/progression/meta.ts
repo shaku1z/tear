@@ -191,144 +191,21 @@ export function mergeMetaData(local: MetaData, remote: unknown): MetaData {
   return merged;
 }
 
-export function createMetaProgression<Upgrade extends UpgradeDefinition, ApplyContext extends ProgressionApplyContext>(
-  dependencies: MetaProgressionDependencies<Upgrade, ApplyContext>,
-): Readonly<{ META: MetaProgression<ApplyContext>; SHOP: readonly ShopItem<ApplyContext>[] }> {
+/** What the shop's effects reach: one world's configuration, its draft random stream and the upgrades. */
+export type MetaShopDependencies<
+  Upgrade extends UpgradeDefinition = UpgradeDefinition,
+  ApplyContext extends ProgressionApplyContext = ProgressionApplyContext,
+> = Pick<MetaProgressionDependencies<Upgrade, ApplyContext>, "config" | "random" | "upgrades" | "applyUpgrade">;
+
+/**
+ * The META shop over one world. The live game builds it over its configuration; a detached world builds
+ * it over its own, so a run's ranks change the world that plays the run.
+ */
+export function createMetaShop<Upgrade extends UpgradeDefinition, ApplyContext extends ProgressionApplyContext>(
+  dependencies: MetaShopDependencies<Upgrade, ApplyContext>,
+): readonly ShopItem<ApplyContext>[] {
   const { config, random } = dependencies;
-  let shop: readonly ShopItem<ApplyContext>[] = [];
-
-  function assertProgressionContext(context: ApplyContext | null | undefined): asserts context is ApplyContext {
-    const candidate = context as Partial<ApplyContext>;
-    if (context === undefined || context === null) {
-      throw new TypeError("Meta progression context is required");
-    }
-    if (candidate.player === undefined) {
-      throw new TypeError("Meta progression context missing player");
-    }
-    if (candidate.blade === undefined) {
-      throw new TypeError("Meta progression context missing blade");
-    }
-    if (candidate.mods === undefined) {
-      throw new TypeError("Meta progression context missing mods");
-    }
-  }
-  const commit = async (
-    change: (candidate: MetaData) => void = () => undefined,
-    newReceipt: () => boolean = () => false,
-  ): Promise<CompletionStatus> => {
-    if (!dependencies.store.acknowledged) return "unavailable";
-    const result = await dependencies.store.acknowledged.update(META_STORE_KEY, (text) => {
-      const candidate = mergeMetaData(structuredClone(meta.data), text === null ? {} : (JSON.parse(text) as unknown));
-      change(candidate);
-      return JSON.stringify(candidate);
-    });
-    if (result.status !== "committed") return result.status;
-    const committed = migrateMetaData(JSON.parse(result.value) as unknown);
-    if (newReceipt() && meta.data.rewardReceipts === undefined)
-      meta.data.rewardReceipts = currencyLedger(undefined, meta.data.lifetimeEarned);
-    meta.data = mergeMetaData(meta.data, committed);
-    return "committed";
-  };
-  const meta: MetaProgression<ApplyContext> = {
-    data: migrateMetaData({}),
-    load() {
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(dependencies.store.get(META_STORE_KEY) ?? "{}");
-      } catch {
-        parsed = {};
-        dependencies.reportProblem?.("meta-unreadable");
-      }
-      const migrated = migrateMetaData(parsed);
-      this.data = migrated;
-      const source = asRecord(parsed);
-      if (source?.coins !== undefined && source.lifetimeEarned === undefined) this.save();
-      return this.data;
-    },
-    save() {
-      if (dependencies.store.acknowledged) {
-        void commit();
-        return;
-      }
-      try {
-        dependencies.store.set(META_STORE_KEY, JSON.stringify(this.data));
-      } catch {
-        /* offline memory remains playable */
-      }
-    },
-    flushAcknowledged: () => commit(),
-    async grantReward(id, coins) {
-      if (!/^achievement:[a-z0-9_]+$/u.test(id) || !Number.isSafeInteger(coins) || coins < 0) return "unknown";
-      let already = false;
-      const receiptExists = (): boolean => already;
-      const status = await commit(
-        (candidate) => {
-          const ledger = currencyLedger(candidate.rewardReceipts, candidate.lifetimeEarned);
-          if (ledger.receipts[id] !== undefined && ledger.receipts[id] !== coins)
-            throw new Error("Conflicting reward receipt");
-          already = ledger.receipts[id] !== undefined;
-          if (!already)
-            ledger.baseline =
-              currencyEarned(ledger) - Object.values(ledger.receipts).reduce((sum, value) => sum + value, 0);
-          ledger.receipts[id] = coins;
-          candidate.rewardReceipts = ledger;
-          candidate.lifetimeEarned = currencyEarned(ledger);
-        },
-        () => !already,
-      );
-      return status === "committed" && receiptExists() ? "already" : status;
-    },
-    coins() {
-      return Math.max(0, this.data.lifetimeEarned - this.data.lifetimeSpent);
-    },
-    level(id) {
-      return this.data.buy[id] ?? 0;
-    },
-    addCoins(value) {
-      const added = amount(value);
-      this.data.lifetimeEarned += added;
-      if (this.data.rewardReceipts !== undefined) {
-        try {
-          const ledger = currencyLedger(this.data.rewardReceipts);
-          ledger.baseline =
-            currencyEarned(ledger) - Object.values(ledger.receipts).reduce((sum, coins) => sum + coins, 0) + added;
-          this.data.rewardReceipts = ledger;
-        } catch {
-          /* unsupported ledger remains intact */
-        }
-      }
-      this.save();
-    },
-    cost(item) {
-      const level = this.level(item.id);
-      if (item.costs) return item.costs[Math.min(level, item.costs.length - 1)] ?? 0;
-      const base = item.baseCost ?? 0;
-      return Math.round((base * (1 + 0.28 * level + 0.09 * level * level)) / 25) * 25;
-    },
-    canBuy(item) {
-      return this.level(item.id) < item.maxLevel && this.coins() >= this.cost(item);
-    },
-    buy(item) {
-      if (!this.canBuy(item)) return false;
-      this.data.lifetimeSpent += this.cost(item);
-      this.data.buy[item.id] = this.level(item.id) + 1;
-      this.save();
-      if (dependencies.cloud.loggedIn()) void dependencies.cloud.push();
-      return true;
-    },
-    apply(context) {
-      assertProgressionContext(context);
-      for (const item of shop) {
-        const level = this.level(item.id);
-        if (level > 0) item.apply(level, context);
-      }
-    },
-    merge(remote) {
-      this.data = mergeMetaData(this.data, remote);
-    },
-  };
-
-  shop = [
+  return Object.freeze([
     {
       id: "tough",
       name: "Toughness",
@@ -624,7 +501,152 @@ export function createMetaProgression<Upgrade extends UpgradeDefinition, ApplyCo
         mods.expandedDraft = level > 0;
       },
     },
-  ];
+  ]);
+}
+
+/** Applies META ranks in shop order: the one way a run's meta upgrades reach its world. */
+export function applyMetaRanks<ApplyContext extends ProgressionApplyContext>(
+  shop: readonly ShopItem<ApplyContext>[],
+  ranks: Readonly<Record<string, number>>,
+  context: ApplyContext,
+): void {
+  for (const item of shop) {
+    const level = ranks[item.id] ?? 0;
+    if (level > 0) item.apply(level, context);
+  }
+}
+export function createMetaProgression<Upgrade extends UpgradeDefinition, ApplyContext extends ProgressionApplyContext>(
+  dependencies: MetaProgressionDependencies<Upgrade, ApplyContext>,
+): Readonly<{ META: MetaProgression<ApplyContext>; SHOP: readonly ShopItem<ApplyContext>[] }> {
+  const shop = createMetaShop<Upgrade, ApplyContext>(dependencies);
+
+  function assertProgressionContext(context: ApplyContext | null | undefined): asserts context is ApplyContext {
+    const candidate = context as Partial<ApplyContext>;
+    if (context === undefined || context === null) {
+      throw new TypeError("Meta progression context is required");
+    }
+    if (candidate.player === undefined) {
+      throw new TypeError("Meta progression context missing player");
+    }
+    if (candidate.blade === undefined) {
+      throw new TypeError("Meta progression context missing blade");
+    }
+    if (candidate.mods === undefined) {
+      throw new TypeError("Meta progression context missing mods");
+    }
+  }
+  const commit = async (
+    change: (candidate: MetaData) => void = () => undefined,
+    newReceipt: () => boolean = () => false,
+  ): Promise<CompletionStatus> => {
+    if (!dependencies.store.acknowledged) return "unavailable";
+    const result = await dependencies.store.acknowledged.update(META_STORE_KEY, (text) => {
+      const candidate = mergeMetaData(structuredClone(meta.data), text === null ? {} : (JSON.parse(text) as unknown));
+      change(candidate);
+      return JSON.stringify(candidate);
+    });
+    if (result.status !== "committed") return result.status;
+    const committed = migrateMetaData(JSON.parse(result.value) as unknown);
+    if (newReceipt() && meta.data.rewardReceipts === undefined)
+      meta.data.rewardReceipts = currencyLedger(undefined, meta.data.lifetimeEarned);
+    meta.data = mergeMetaData(meta.data, committed);
+    return "committed";
+  };
+  const meta: MetaProgression<ApplyContext> = {
+    data: migrateMetaData({}),
+    load() {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(dependencies.store.get(META_STORE_KEY) ?? "{}");
+      } catch {
+        parsed = {};
+        dependencies.reportProblem?.("meta-unreadable");
+      }
+      const migrated = migrateMetaData(parsed);
+      this.data = migrated;
+      const source = asRecord(parsed);
+      if (source?.coins !== undefined && source.lifetimeEarned === undefined) this.save();
+      return this.data;
+    },
+    save() {
+      if (dependencies.store.acknowledged) {
+        void commit();
+        return;
+      }
+      try {
+        dependencies.store.set(META_STORE_KEY, JSON.stringify(this.data));
+      } catch {
+        /* offline memory remains playable */
+      }
+    },
+    flushAcknowledged: () => commit(),
+    async grantReward(id, coins) {
+      if (!/^achievement:[a-z0-9_]+$/u.test(id) || !Number.isSafeInteger(coins) || coins < 0) return "unknown";
+      let already = false;
+      const receiptExists = (): boolean => already;
+      const status = await commit(
+        (candidate) => {
+          const ledger = currencyLedger(candidate.rewardReceipts, candidate.lifetimeEarned);
+          if (ledger.receipts[id] !== undefined && ledger.receipts[id] !== coins)
+            throw new Error("Conflicting reward receipt");
+          already = ledger.receipts[id] !== undefined;
+          if (!already)
+            ledger.baseline =
+              currencyEarned(ledger) - Object.values(ledger.receipts).reduce((sum, value) => sum + value, 0);
+          ledger.receipts[id] = coins;
+          candidate.rewardReceipts = ledger;
+          candidate.lifetimeEarned = currencyEarned(ledger);
+        },
+        () => !already,
+      );
+      return status === "committed" && receiptExists() ? "already" : status;
+    },
+    coins() {
+      return Math.max(0, this.data.lifetimeEarned - this.data.lifetimeSpent);
+    },
+    level(id) {
+      return this.data.buy[id] ?? 0;
+    },
+    addCoins(value) {
+      const added = amount(value);
+      this.data.lifetimeEarned += added;
+      if (this.data.rewardReceipts !== undefined) {
+        try {
+          const ledger = currencyLedger(this.data.rewardReceipts);
+          ledger.baseline =
+            currencyEarned(ledger) - Object.values(ledger.receipts).reduce((sum, coins) => sum + coins, 0) + added;
+          this.data.rewardReceipts = ledger;
+        } catch {
+          /* unsupported ledger remains intact */
+        }
+      }
+      this.save();
+    },
+    cost(item) {
+      const level = this.level(item.id);
+      if (item.costs) return item.costs[Math.min(level, item.costs.length - 1)] ?? 0;
+      const base = item.baseCost ?? 0;
+      return Math.round((base * (1 + 0.28 * level + 0.09 * level * level)) / 25) * 25;
+    },
+    canBuy(item) {
+      return this.level(item.id) < item.maxLevel && this.coins() >= this.cost(item);
+    },
+    buy(item) {
+      if (!this.canBuy(item)) return false;
+      this.data.lifetimeSpent += this.cost(item);
+      this.data.buy[item.id] = this.level(item.id) + 1;
+      this.save();
+      if (dependencies.cloud.loggedIn()) void dependencies.cloud.push();
+      return true;
+    },
+    apply(context) {
+      assertProgressionContext(context);
+      applyMetaRanks(shop, this.data.buy, context);
+    },
+    merge(remote) {
+      this.data = mergeMetaData(this.data, remote);
+    },
+  };
 
   return Object.freeze({ META: meta, SHOP: shop });
 }
