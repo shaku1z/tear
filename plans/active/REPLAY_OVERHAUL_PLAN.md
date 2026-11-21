@@ -10,32 +10,18 @@
 
 Written so that someone with only this repository can continue. The decision log at the end has the history.
 
-- **Merged:** PRs 1, 2, 2b, 3, 4, 5a (#361: `src/replay/record.ts`, `recorder.ts`, `verify.ts`, the round-trip check) and 5b-1 (#372, ruleset v21: one seed type, one start record and one run start for live play and detached worlds).
-- **Now: engineering-only bosses leave replay identity** (branch `codex/replay-engineering-bosses`; the lead approved it in principle, 2026-11-21).
-  - **Problem:** A rebuild slice for a boss that only engineering surfaces reach changes gameplay identity, so it takes a ruleset step, and the step retires every replay although no player run can contain that boss. Verdant slice 2 (#381) stepped to v20 for two reasons: the old live recorder admits a fresh Boss Test opening (`freshBossOpening` in `src/ghost/replay-admission.ts`), and the new entity kind moved the replay content hash (a hash of every entity kind).
-  - **Findings (2026-11-21, main 59bab68d):**
-    - `stageOf` marks the engineering-only bosses: `BOSS_TEST_ROSTER` adds exactly those to the published roster, and the definition says it fights on another boss's stage until it replaces it. Today that is `rootbound-rebuild`.
-    - No released path reaches one. Boss Rush order, Gauntlet trials and the mini-boss pool draw from published rosters; the only way in is an explicit pick in Boss Test, which is an engineering mode (`surface: "engineering"`). The Codex lists `BOSS_ROSTER`.
-    - No determinism stream or tutorial lesson fights one.
-    - Slices 3 to 5 change the rebuild's behaviour, not the entity kinds, so admission alone spares them a step. A future rebuild that adds a kind also needs the content hash to leave it out.
-  - **The change:**
-    - One list, `ENGINEERING_ONLY_BOSS_IDS` in `src/gameplay/run/boss-definitions.ts`, read from `stageOf`.
-    - `readReplayRecord` refuses a start that names one. The old live admission refuses a capsule whose opening boss order holds one (until 5c retires it).
-    - The replay content hash is computed once, over the entity kinds without them (`REPLAY_CONTENT_HASH` in `src/gameplay/snapshot/codec-ids.ts`), instead of in seven places. Its value changes once in this PR.
-    - `src/gameplay/run/ruleset-version.ts` states the rule: a step is for a change to what an admitted replay contains or how it plays; a change confined to an engineering-only boss needs none.
-  - **Done when:**
-    - a record and a capsule with an engineering-only boss are refused, with tests;
-    - a test fails if a released roster or surface can reach one;
-    - the rule is written in `src/gameplay/run/ruleset-version.ts`.
-- **Next: PR 5b-2, picks as actions.**
-  - Draft, reserve and tier-up picks and rerolls become GameActions the UI dispatches, so a record holds them at their ticks.
-  - In the same PR:
-    - **Cinematics hint:** the Settings row for Cinematics says, during a run, that a change applies from the next run.
-    - **Paused-world hold:** a paused screen holds a detached or headless world as it holds live play. Today 600 paused ticks cost the player 33 health. Prove it by pausing for a number of ticks in `tests/unit/run-start-parity.test.ts` and comparing. Tell playtest-tool when it lands.
-- **Then: PR 5b-3.**
-  - The named frame-clock exception with its test. After #374 it covers cinematics only: the boss intro advances on ticks. Cinematics PR 8 ends it.
+- **Merged:** PRs 1, 2, 2b, 3, 4, 5a (#361: `src/replay/record.ts`, `recorder.ts`, `verify.ts`, the round-trip check), 5b-1 (#372, ruleset v21: one seed type, one start record and one run start for live play and detached worlds) and the engineering-only boss rule (#386).
+  - **#386:** `ENGINEERING_ONLY_BOSS_IDS` (`src/gameplay/run/boss-definitions.ts`, read from `stageOf`) lists the bosses only engineering surfaces reach. Replay admission refuses them, and the replay content hash (`REPLAY_CONTENT_HASH`, `src/gameplay/snapshot/codec-ids.ts`) leaves them out. `src/gameplay/run/ruleset-version.ts` says when to step: a change to what an admitted replay contains or how it plays; a change confined to an engineering-only boss needs none. The switch slice that makes a rebuild the real boss removes `stageOf` and steps.
+- **Open: PR 5b-2, picks as actions (#388, branch `codex/replay-picks-as-actions`; the lead cleared it, it merges in the next batch).**
+  - A held screen holds a detached world: `stepDetachedWorld` (`src/app/world/detached/detached-step.ts`) routes the tick's actions, then returns the last result without advancing unless the screen is `playing`, as live play does. The headless `maxTicks` also bounds held steps in a row. Proof: the pause case in `tests/unit/run-start-parity.test.ts`.
+  - Reward decisions are actions: `rewardDecisionAction` (`src/app/world/detached/action-routing.ts`) maps a `RewardDecision` to its GameAction by choice id, and `routeLiveTearBenchAction` maps it back; `draft-reroll` is new. Live picks still go to the reward runtime directly; 5c records at its decision seam (`RewardRuntime.decide` and its `beforeDecision` hook).
+  - Settings opened from pause says "A CHANGE APPLIES FROM THE NEXT RUN" on the story-scene row.
+  - No ruleset step: no stream, gold or round-trip fixture moved.
+- **Next: PR 5b-3.**
+  - The named frame-clock exception with its test. #374 (merged) moved the boss intro to simulation ticks, so the exception covers cinematics only. Cinematics PR 8 ends it.
   - Browser evidence, on a built test target, that a live run with a draft, a boss intro and a chapter verifies from its seed alone, with no keyframes.
 - **Then: PR 5c, the live recorder.** Its content is in the PR 5 section below.
+  - It records reward decisions at the reward runtime's decision seam, as GameActions from `rewardDecisionAction`, at the tick that consumes them.
   - A seed race records the race's ranks as the start's `metaRanks`. The owner keeps seed races, so they are recorded, not refused.
   - Capsules from before are refused with a player-facing line in the terminology registry's names.
 - **Agreed with Shards (for PR 10):**
