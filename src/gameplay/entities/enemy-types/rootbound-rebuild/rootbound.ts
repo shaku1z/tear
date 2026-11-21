@@ -4,27 +4,44 @@ import {
   type BossPracticeActorEntry,
   type PracticeBossPhase,
 } from "../../../training/boss-phase-practice-runtime";
-import type { EnemyDependencies, EnemyPlatform, EnemyPlayerPort, EnemyProjectile } from "../../enemy-contracts";
+import type {
+  ArenaZone,
+  EnemyDependencies,
+  EnemyPlatform,
+  EnemyPlayerPort,
+  EnemyProjectile,
+} from "../../enemy-contracts";
+import type { MoveEndReason } from "../../move-lifetime";
 import type { EnemyBaseConstructor } from "../enemy-base";
 import type { BossRuntime } from "../boss-runtime";
 import { ROOTBOUND_REBUILD_DEFINITION } from "../../../run/boss-definitions";
 import { ROOTBOUND_BODY, ROOTBOUND_CADENCE, ROOTBOUND_MOVES } from "./rootbound-moves";
+import { BRAMBLE_ROWS_TICKS, RootboundZones } from "./rootbound-zones";
 
 /**
  * The new Rootbound (plans/active/VERDANT_PALE_REBUILD.md, 2.1): a body with a move table, built the way
  * Aldric, the Colossus and the Echo are. It walks at the player, burrows to them, vaults up to them and
- * crowds them back. Every move is a `state`; lengths are ticks, counted one per update (`stateT` is what is
- * left, `stateLen` the whole). The phase change is a move of its own (Uproot), so nothing stops the fight.
+ * crowds them back. From Phase II it swings twice and plants its vine to drive a Root Seam, lights Bramble
+ * Rows and Mends when the player stands back. Every move is a `state`; lengths are ticks, counted one per
+ * update (`stateT` is what is left, `stateLen` the whole). Each phase change is a move of its own (Uproot,
+ * Last Bloom), so nothing stops the fight.
  *
  * Engineering channel only (Boss Test) until the switch slice replaces the old Rootbound with it.
  */
 
 /** Under the floor: no body to hit, touch or push against. */
-const UNDER_STATES: ReadonlySet<string> = new Set(["burrow", "uprootunder"]);
-/** Open: it takes more damage (a parried swing, a Surface Strike's and a Thorn Burst's recovery). */
-const OPEN_STATES: ReadonlySet<string> = new Set(["staggered", "split", "burstrecover"]);
-/** The change into Phase II: its own move, which the practice runtime waits out. */
-const UPROOT_STATES: ReadonlySet<string> = new Set(["uprootsink", "uprootunder"]);
+const UNDER_STATES: ReadonlySet<string> = new Set(["burrow", "resurface", "uprootunder", "bloomunder"]);
+/**
+ * Open: it takes more damage (a parried swing or a cut vine, a Surface Strike's and a Thorn Burst's recovery,
+ * kneeling through its Bramble Rows, and a broken Mend).
+ */
+const OPEN_STATES: ReadonlySet<string> = new Set(["staggered", "split", "burstrecover", "bramble", "mendsplit"]);
+/** The phase changes: moves of their own, which the practice runtime waits out. */
+const CHANGE_STATES: ReadonlySet<string> = new Set(["uprootsink", "uprootunder", "bloomsink", "bloomunder"]);
+/** The swings the vine can be parried in, the first and Phase II's second. */
+const SWING_STATES: ReadonlySet<string> = new Set(["swing", "swing2"]);
+/** One second of ticks, for the per-second rates. */
+const TICKS_PER_SECOND = 120;
 /** What it does at rest: walking at the player or stepping back to keep its reach. */
 const REST_STATES: ReadonlySet<string> = new Set(["idle", "walk"]);
 
@@ -64,6 +81,23 @@ export function createRootboundRebuildType(
     vaultToY = 0;
     /** The parry window of the vine, while it swings. */
     batonStrike = 0;
+    brambleCd = 0;
+    /** Ticks since the player last hurt it, and its health a tick ago, for Mend. */
+    quietT = 0;
+    lastHp = 0;
+    /** The health it entered Phase II with: Mend never heals above it. */
+    phaseTwoHp = 0;
+    /** Surface Strikes left in the Burrow in progress, and the radius of the Thorn Burst in progress. */
+    surfacesLeft = 0;
+    ringRadius: number = M.thornBurst.radius;
+    /** True while the rise in progress is Last Bloom's, which ends in a Thorn Burst ring, not the column. */
+    blooming = false;
+    /** Where the planted vine's root is in the floor. */
+    rootX = 0;
+    readonly field = new RootboundZones(CONFIG.view.w);
+    /** What the world damages through and the shared zone renderer draws. */
+    zones: ArenaZone[] = [];
+    zoneColor = LEAF;
 
     override bodyContact: BossBodyContactRow | null = BOSS_BODY_CONTACT["rootbound-rebuild"];
 
@@ -80,6 +114,7 @@ export function createRootboundRebuildType(
       this.isBoss = true;
       this.color = CONFIG.colors.boss;
       this.facing = -1;
+      this.lastHp = this.hp;
     }
 
     get phase(): number {
@@ -99,7 +134,7 @@ export function createRootboundRebuildType(
     }
 
     practicePhaseEntry(): BossPracticeActorEntry {
-      const uprooting = UPROOT_STATES.has(this.state);
+      const uprooting = CHANGE_STATES.has(this.state);
       return Object.freeze({
         phase: this.enteredPhase as PracticeBossPhase,
         targetPhase: this.phase as PracticeBossPhase,
@@ -152,12 +187,35 @@ export function createRootboundRebuildType(
 
     /** A held-blade parry of the swinging vine: the swing does not land, and it staggers, open. */
     parryBaton(): boolean {
-      if (this.dying || this.state !== "swing" || this.hitSpent) return false;
+      if (this.dying || !SWING_STATES.has(this.state) || this.hitSpent) return false;
       this.hitSpent = true;
       this.batonStrike = 0;
       this.go("staggered", M.vineSwing.stagger);
       bossFeedback(this, "stagger", { banner: "PARRIED", color: LEAF, quiet: true });
       return true;
+    }
+
+    /** The planted vine's root, which one blade hit cuts, held or thrown; null while nothing is planted. */
+    cutPoint(): { x: number; y: number; r: number } | null {
+      if (this.dying || this.state !== "planted") return null;
+      return { x: this.rootX, y: CONFIG.world.groundY - M.rootSeam.root / 2, r: M.rootSeam.root };
+    }
+
+    /** A blade cut the planted vine: the seam ends this tick, and it staggers, open. */
+    cutPart(): boolean {
+      if (this.cutPoint() === null) return false;
+      this.field.endSeam();
+      this.zones = this.field.list;
+      this.go("staggered", M.vineSwing.stagger);
+      bossFeedback(this, "stagger", { banner: "CUT", color: LEAF, quiet: true });
+      return true;
+    }
+
+    /** Its seam and rows end with the move: on the phase-change tick and when death starts. */
+    override endMoveZones(reason: MoveEndReason): void {
+      void reason;
+      this.field.clear();
+      this.zones = this.field.list;
     }
 
     vineShoulder() {
@@ -167,8 +225,8 @@ export function createRootboundRebuildType(
     /** The vine's angle from the facing direction: drawn back and up in the coil, swept down through the swing. */
     vineAngle(): number {
       const k = this.progress();
-      if (this.state === "swingwind") return -1.25 * k;
-      if (this.state === "swing") return -1.25 + 1.65 * k;
+      if (this.state === "swingwind" || this.state === "swing2wind") return -1.25 * k;
+      if (SWING_STATES.has(this.state)) return -1.25 + 1.65 * k;
       return 0.4;
     }
 
@@ -192,24 +250,36 @@ export function createRootboundRebuildType(
         return;
       }
       this.enterPhases();
+      this.quietT = this.hp < this.lastHp ? 0 : this.quietT + 1;
       if (REST_STATES.has(this.state)) this.rest(dt, platforms, player);
       else this.move(dt, platforms, player, projectiles);
-      this.batonStrike = this.state === "swing" && !this.hitSpent ? 1 : 0;
+      this.field.step(dt);
+      this.zones = this.field.list;
+      this.lastHp = this.hp;
+      this.batonStrike = SWING_STATES.has(this.state) && !this.hitSpent ? 1 : 0;
       this.immuneToBlade = this.hidden;
       this.x = clamp(this.x, this.hw, CONFIG.view.w - this.hw);
     }
 
-    /** The phase changes on the tick its health crosses the mark; the change into Phase II is Uproot. */
+    /**
+     * The phase changes on the tick its health crosses the mark: into Phase II with Uproot, into Phase III with
+     * Last Bloom. Health that crosses both at once enters Phase II first; the next mark ends Uproot (the phase
+     * change ends the move in progress) and starts Last Bloom.
+     */
     enterPhases(): void {
-      const phase = this.phase;
-      if (phase <= this.enteredPhase) return;
-      if (this.enteredPhase < 2) {
-        this.phaseTag = M.uproot.banner;
-        bossPhaseBeat(this, M.uproot.banner, LEAF);
-        this.vx = 0;
-        this.go("uprootsink", M.uproot.sink);
-      }
-      this.enteredPhase = phase;
+      if (this.phase <= this.enteredPhase || CHANGE_STATES.has(this.state)) return;
+      const change = this.enteredPhase < 2 ? M.uproot : M.lastBloom;
+      this.phaseTag = change.banner;
+      bossPhaseBeat(this, change.banner, LEAF);
+      this.vx = 0;
+      if (this.enteredPhase < 2) this.phaseTwoHp = this.hp;
+      this.go(this.enteredPhase < 2 ? "uprootsink" : "bloomsink", change.sink);
+      this.enteredPhase += 1;
+    }
+
+    /** A per-phase entry of a three-entry list. */
+    byPhase<T>(list: readonly [T, T, T]): T {
+      return list[Math.min(3, Math.max(1, this.enteredPhase)) - 1] as T;
     }
 
     /** Walking at the player, or stepping back inside its spacing, until a move is chosen. */
@@ -226,6 +296,7 @@ export function createRootboundRebuildType(
       this.burrowCd -= 1;
       this.vaultCd -= 1;
       this.burstCd -= 1;
+      this.brambleCd -= 1;
       this.aboveT = playerFeet < feet - M.canopyVault.above ? this.aboveT + 1 : Math.max(0, this.aboveT - 2);
       this.crowdT = dx < M.thornBurst.crowd && Math.abs(player.y - this.y) < this.hh + 60 ? this.crowdT + 1 : 0;
       this.integrate(dt, platforms);
@@ -240,7 +311,16 @@ export function createRootboundRebuildType(
         this.startBurst();
         return;
       }
+      if (this.enteredPhase === 2 && this.quietT >= M.mend.quiet && dx > M.mend.far && this.hp < this.phaseTwoHp) {
+        this.startMend();
+        return;
+      }
       if (this.attackT > 0) return;
+      const onFloor = playerFeet >= CONFIG.world.groundY - 8;
+      if (this.enteredPhase >= 2 && this.brambleCd <= 0 && onFloor) {
+        this.startBramble();
+        return;
+      }
       if (dx > M.burrow.farRange || this.burrowCd <= 0) {
         this.startBurrow();
         return;
@@ -253,7 +333,7 @@ export function createRootboundRebuildType(
     }
 
     attacked(): void {
-      this.attackT = ROOTBOUND_CADENCE.attackCooldown;
+      this.attackT = this.byPhase(ROOTBOUND_CADENCE.attackCooldowns);
       this.vx = 0;
     }
 
@@ -273,11 +353,26 @@ export function createRootboundRebuildType(
     startBurrow(): void {
       this.attacked();
       this.burrowCd = M.burrow.cooldown;
+      this.surfacesLeft = this.byPhase(ROOTBOUND_CADENCE.surfaces);
       this.go("sink", M.burrow.sink);
+    }
+
+    startBramble(): void {
+      this.attacked();
+      this.brambleCd = M.brambleRows.cooldown;
+      this.go("bramblewind", M.brambleRows.windup);
+      bossFeedback(this, "windup", { quiet: true });
+    }
+
+    startMend(): void {
+      this.vx = 0;
+      this.quietT = 0;
+      this.go("mendwind", M.mend.windup);
     }
 
     startBurst(): void {
       this.attacked();
+      this.ringRadius = M.thornBurst.radius;
       this.burstCd = M.thornBurst.cooldown;
       this.crowdT = 0;
       this.hitSpent = false;
@@ -332,7 +427,8 @@ export function createRootboundRebuildType(
           break;
         case "swing":
           this.swingHits(player);
-          if (done) this.go("swingrecover", M.vineSwing.recover);
+          if (done && this.enteredPhase >= 2) this.startSecondSwing(player);
+          else if (done) this.go("swingrecover", M.vineSwing.recover);
           break;
         case "throwwind":
           this.vx = 0;
@@ -343,26 +439,29 @@ export function createRootboundRebuildType(
           break;
         case "sink":
         case "uprootsink":
+        case "bloomsink":
           this.vx = 0;
-          if (done && this.state === "sink") this.go("burrow", M.burrow.maxUnder);
-          else if (done) this.go("uprootunder", M.uproot.under);
+          if (done) this.goUnder();
           break;
         case "burrow":
-        case "uprootunder": {
-          const gap = player.x - this.x;
+        case "resurface":
+        case "uprootunder":
+        case "bloomunder": {
+          const to = this.state === "bloomunder" ? CONFIG.view.w / 2 : player.x;
           this.vx = 0;
-          this.x += clamp(gap, -M.burrow.speed * dt, M.burrow.speed * dt);
+          this.x += clamp(to - this.x, -M.burrow.speed * dt, M.burrow.speed * dt);
           const arrived = this.state === "burrow" && Math.abs(player.x - this.x) < 6;
           if (done || arrived) this.surface();
           break;
         }
         case "rise":
           this.vx = 0;
-          if (done) this.go("surface", M.surfaceStrike.hit);
+          if (done && this.blooming) this.bloom();
+          else if (done) this.go("surface", M.surfaceStrike.hit);
           break;
         case "surface":
           this.columnHits(player);
-          if (done) this.go("split", M.surfaceStrike.recover);
+          if (done) this.afterSurface();
           break;
         case "vaultwind":
           if (done) this.go("vault", M.canopyVault.flight);
@@ -375,7 +474,7 @@ export function createRootboundRebuildType(
           this.vx = 0;
           if (done) {
             this.go("burst", M.thornBurst.hit);
-            FX.shockwave(this.x, this.y, 10, LEAF, M.thornBurst.radius, 5);
+            FX.shockwave(this.x, this.y, 10, LEAF, this.ringRadius, 5);
           }
           break;
         case "burst":
@@ -383,9 +482,12 @@ export function createRootboundRebuildType(
           if (done) this.go("burstrecover", M.thornBurst.recover);
           break;
         default:
-          // swingrecover, throwrecover, split, vaultrecover, burstrecover, staggered
-          this.vx = 0;
-          if (done) this.go("idle", 0);
+          if (!this.movePhaseTwo(done, player)) {
+            // swingrecover, throwrecover, split, vaultrecover, burstrecover, staggered, planted, bramblerecover,
+            // mendsplit
+            this.vx = 0;
+            if (done) this.go("idle", 0);
+          }
       }
       if (this.hidden) {
         this.y = CONFIG.world.groundY - this.hh;
@@ -394,10 +496,96 @@ export function createRootboundRebuildType(
       } else this.integrate(dt, platforms);
     }
 
-    /** The end of every Burrow and of Uproot: the mound swells under the player, the column comes. */
+    /** One tick of a Phase II move, if one is in progress; false otherwise. */
+    movePhaseTwo(done: boolean, player: EnemyPlayerPort): boolean {
+      switch (this.state) {
+        case "swing2wind":
+          this.vx = 0;
+          if (done) this.go("swing2", M.secondSwing.hit);
+          return true;
+        case "swing2":
+          this.swingHits(player);
+          if (done) this.plant();
+          return true;
+        case "bramblewind":
+          this.vx = 0;
+          if (done) {
+            this.field.startRows(player.x, this.x);
+            this.go("bramble", BRAMBLE_ROWS_TICKS);
+          }
+          return true;
+        case "bramble":
+          this.vx = 0;
+          if (done) this.go("bramblerecover", M.brambleRows.recover);
+          return true;
+        case "mendwind":
+        case "mend":
+          this.vx = 0;
+          this.mendTick(done);
+          return true;
+        default:
+          return false;
+      }
+    }
+
+    /** Phase II on: a second sweep straight after the first, toward where the player is now. */
+    startSecondSwing(player: EnemyPlayerPort): void {
+      this.facing = Math.sign(player.x - this.x) || this.facing;
+      this.hitSpent = false;
+      this.go("swing2wind", M.secondSwing.windup);
+      bossFeedback(this, "windup", { quiet: true });
+    }
+
+    /** The last swing's vine stays in the floor and drives a Root Seam in the swing's direction. */
+    plant(): void {
+      const tip = this.vineTip();
+      this.rootX = clamp(tip.x, 0, CONFIG.view.w);
+      this.field.startSeam(this.rootX, this.facing);
+      this.go("planted", M.rootSeam.planted);
+    }
+
+    /** Mend: any hit ends it and it splits, open; otherwise it heals, never above its Phase II health. */
+    mendTick(done: boolean): void {
+      if (this.hp < this.lastHp) {
+        this.go("mendsplit", M.mend.broken);
+        return;
+      }
+      if (this.state === "mendwind") {
+        if (done) this.go("mend", M.mend.most);
+        return;
+      }
+      this.hp = Math.min(this.phaseTwoHp, this.hp + (this.maxHp * M.mend.perSecond) / TICKS_PER_SECOND);
+      if (done) this.go("idle", 0);
+    }
+
+    /** Under the floor: a Burrow toward the player, Uproot toward them, Last Bloom toward the centre. */
+    goUnder(): void {
+      if (this.state === "sink") this.go("burrow", M.burrow.maxUnder);
+      else if (this.state === "uprootsink") this.go("uprootunder", M.uproot.under);
+      else this.go("bloomunder", M.lastBloom.under);
+    }
+
+    /** After a Surface Strike: under again while the Burrow has surfaces left, else the open split. */
+    afterSurface(): void {
+      this.surfacesLeft -= 1;
+      if (this.surfacesLeft > 0) this.go("resurface", this.byPhase(ROOTBOUND_CADENCE.resurfaceUnder));
+      else this.go("split", M.surfaceStrike.recover);
+    }
+
+    /** Last Bloom comes up at the centre in a Thorn Burst ring. */
+    bloom(): void {
+      this.blooming = false;
+      this.ringRadius = M.lastBloom.radius;
+      this.hitSpent = false;
+      this.go("burst", M.thornBurst.hit);
+      FX.shockwave(this.x, this.y, 10, LEAF, this.ringRadius, 5);
+    }
+
+    /** The end of every Burrow and of each phase change: the mound swells, then the column or the ring. */
     surface(): void {
       this.facing = this.facing || 1;
       this.hitSpent = false;
+      this.blooming = this.state === "bloomunder";
       this.go("rise", M.surfaceStrike.windup);
       perilPing(this);
       bossFeedback(this, "windup", { quiet: true });
@@ -431,7 +619,7 @@ export function createRootboundRebuildType(
 
     ringHits(player: EnemyPlayerPort): void {
       if (this.hitSpent || player.invulnerable) return;
-      const reach = M.thornBurst.radius + Math.max(player.hw, player.hh);
+      const reach = this.ringRadius + Math.max(player.hw, player.hh);
       if (Math.hypot(player.x - this.x, player.y - this.y) > reach) return;
       this.hitSpent = true;
       player.takeDamage(M.thornBurst.damage, this.x, this);

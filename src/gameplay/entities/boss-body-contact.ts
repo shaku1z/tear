@@ -57,7 +57,21 @@ export const BOSS_BODY_CONTACT = Object.freeze({
   // The new Rootbound (plans/active/VERDANT_PALE_REBUILD.md, decision D1): its body hurts while it walks,
   // stands and winds up, like Aldric's. Under the floor and rising out of it, it is not there to touch.
   "rootbound-rebuild": row(
-    ["idle", "walk", "swingwind", "throwwind", "sink", "uprootsink", "vaultwind", "swell"],
+    [
+      "idle",
+      "walk",
+      "swingwind",
+      "swing2wind",
+      "throwwind",
+      "sink",
+      "uprootsink",
+      "bloomsink",
+      "vaultwind",
+      "swell",
+      "bramblewind",
+      "mendwind",
+      "mend",
+    ],
     false,
   ),
 });
