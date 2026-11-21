@@ -72,3 +72,8 @@ The owner approved this refresh on 2026-11-20. It stays on the free tier. Consol
   - Sizes: the SDK chunk is 219,880 B raw / 66,303 B gzip. Before, the four 10.12.2 compat scripts from gstatic were 539,470 / 158,763 B.
   - The chunk is not precached (precache 46/46 entries, 2,625,576 → 2,623,912 B), and startup grows by 25 B.
   - Remote Config is no longer fetched. Its only template (version 1, 2026-07-04) kept all four multipliers at 1, so nothing changes. PR 4 deletes `REMOTE` and its readers.
+- 2026-11-21 PR 2 also spaces leaderboard bests by the server's clock (the lead's follow-up to PR 1's review).
+  - The adapter writes `at` as `serverTimestamp()`. The rules require `at` to equal `request.time`, and require 10 s of server time since the stored `at`.
+  - A row written before `at` existed is spaced by `ts` until its next best adds `at`, and it keeps it from then on.
+  - **Deploy order:** PR 1's rules refuse a row write that carries `at`. So the owner deploys PR 2's rules before the PR 2 build reaches players. Those rules accept writes from both builds.
+  - Once no build without `at` is in use, a later change can require `at` on every best.

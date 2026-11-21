@@ -28,7 +28,16 @@ export interface FirebaseListedDocument {
   readonly data: DataRecord;
 }
 
-/** What the adapter needs from Firestore, by slash-separated document and collection paths. */
+/**
+ * A field value the store writes as the server's clock at the write (Firestore's serverTimestamp()). It reads
+ * back as epoch milliseconds. firestore.rules spaces leaderboard writes by it, which a client cannot set.
+ */
+export const SERVER_TIME: unique symbol = Symbol("server time");
+
+/**
+ * What the adapter needs from Firestore, by slash-separated document and collection paths. A top-level field
+ * whose value is SERVER_TIME is written as the server's clock; timestamps read back as epoch milliseconds.
+ */
 export interface FirestorePort {
   /** The document's data, or null when it does not exist. */
   read(path: string): Promise<DataRecord | null>;
@@ -313,6 +322,7 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
               time: Math.round(number(entry.time)),
               uid: session.uid,
               ts: now(),
+              at: SERVER_TIME,
             },
             true,
           ),

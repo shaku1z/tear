@@ -21,9 +21,12 @@ import {
   limit,
   orderBy,
   query,
+  serverTimestamp,
   setDoc,
+  Timestamp,
+  type DocumentData,
 } from "firebase/firestore/lite";
-import type { FirebaseServices, FirebaseUser } from "./firebase-cloud";
+import { SERVER_TIME, type FirebaseServices, type FirebaseUser } from "./firebase-cloud";
 import type { FirebaseClientConfig } from "./firebase-config";
 
 /** Local emulators to use instead of the project; only the rules tests pass them. */
@@ -33,6 +36,21 @@ export interface FirebaseEmulators {
   readonly firestoreHost: string;
   readonly firestorePort: number;
 }
+
+/** The record as Firestore takes it: SERVER_TIME becomes the server's clock. */
+const outgoing = (data: Record<string, unknown>): DocumentData =>
+  Object.fromEntries(
+    Object.entries(data).map(([key, value]) => [key, value === SERVER_TIME ? serverTimestamp() : value]),
+  );
+
+/** The document as the adapter reads it: plain values, a timestamp as epoch milliseconds. */
+const incoming = (data: DocumentData): Record<string, unknown> =>
+  Object.fromEntries(
+    Object.entries(data).map(([key, value]: [string, unknown]) => [
+      key,
+      value instanceof Timestamp ? value.toMillis() : value,
+    ]),
+  );
 
 const user = (account: User): FirebaseUser => ({
   uid: account.uid,
@@ -73,17 +91,17 @@ export function createFirebaseServices(config: FirebaseClientConfig, emulators?:
     store: Object.freeze({
       async read(path: string) {
         const snapshot = await getDoc(doc(db, path));
-        return snapshot.exists() ? snapshot.data() : null;
+        return snapshot.exists() ? incoming(snapshot.data()) : null;
       },
       async write(path: string, data: Record<string, unknown>, merge: boolean) {
-        await (merge ? setDoc(doc(db, path), data, { merge: true }) : setDoc(doc(db, path), data));
+        await (merge ? setDoc(doc(db, path), outgoing(data), { merge: true }) : setDoc(doc(db, path), outgoing(data)));
       },
       async append(collectionPath: string, data: Record<string, unknown>) {
-        await addDoc(collection(db, collectionPath), data);
+        await addDoc(collection(db, collectionPath), outgoing(data));
       },
       async list(collectionPath: string, field: string, direction: "asc" | "desc", count: number) {
         const snapshot = await getDocs(query(collection(db, collectionPath), orderBy(field, direction), limit(count)));
-        return snapshot.docs.map((document) => ({ id: document.id, data: document.data() }));
+        return snapshot.docs.map((document) => ({ id: document.id, data: incoming(document.data()) }));
       },
     }),
   });
