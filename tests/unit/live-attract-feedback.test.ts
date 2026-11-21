@@ -4,10 +4,11 @@ import { createAttract } from "../../src/presentation/attract-runtime";
 import { createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
 import { STAGES } from "../../src/gameplay/stages";
 import { aabbOverlap, clamp, len } from "../../src/domain/geometry";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 describe("menu emission isolation", () => {
   it("isolates actual menu reset/update/kill/explode/deflection and real Player damage from live FX/entropy", () => {
-    const live = createProductionReplayWorld({ seed: "menu-emission-isolation" });
+    const live = createProductionReplayWorld({ runSeed: scenarioRunSeed("menu-emission-isolation") });
     live.effects.spark(800, 775, 1, -1);
     const before = structuredClone({
       list: live.effects.list,

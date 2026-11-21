@@ -20,6 +20,7 @@ import { applyWeapon } from "../gameplay/weapons";
 import { driveTutorialCourse, type TutorialDriverObservation, type TutorialDriverPort } from "./tutorial-course-driver";
 import type { TearSnapshotV1 } from "../gameplay/snapshot/snapshot-contract";
 import type { TearScenarioV1 } from "./contracts";
+import { scenarioRunSeed } from "../gameplay/run/run-start-choices";
 
 export interface TutorialGoldProofReference {
   readonly lessonId: TutorialGoldReference["lessonId"];
@@ -113,7 +114,7 @@ function makeSource(seed: string, legacy = false) {
   const source = replayEngine
     .loaded()
     .createProductionGhostReplayComposition({
-      seed,
+      runSeed: scenarioRunSeed(seed),
       mode: "tutorial",
       weaponId: "sword",
       difficulty: "normal",
@@ -385,7 +386,7 @@ export function verifyTutorialGoldReference(reference: TutorialGoldReference, pr
   const source = replayEngine
     .loaded()
     .createProductionGhostReplayComposition({
-      seed: "tutorial-gold-replay",
+      runSeed: scenarioRunSeed("tutorial-gold-replay"),
       mode: "tutorial",
       weaponId: "sword",
       difficulty: "normal",

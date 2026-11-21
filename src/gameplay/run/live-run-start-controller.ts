@@ -5,6 +5,7 @@ import {
   type RunMode,
   type RunSession,
 } from "./session";
+import type { RunStartChoices } from "./run-start-choices";
 
 export type RunSessionBlueprint<TMods> = Omit<
   CreateRunSessionOptions<TMods>,
@@ -13,10 +14,14 @@ export type RunSessionBlueprint<TMods> = Omit<
 
 export interface LiveRunStartPort<TMods extends { weaponId?: string }> {
   readonly replaceActiveRun: () => void;
-  readonly initializeWorld: (mode: RunMode, difficulty: RunDifficulty) => RunSessionBlueprint<TMods>;
+  /**
+   * The run's start choices, resolved once after the previous run is replaced: the live game reads its
+   * session, profile and META; a replay reads its record. Every world step below reads only these.
+   */
+  readonly resolveStart: (mode: RunMode, difficulty: RunDifficulty) => RunStartChoices;
+  readonly initializeWorld: (start: RunStartChoices) => RunSessionBlueprint<TMods>;
   readonly resetAuthoritativeClocks: () => void;
   readonly finishWorldReset: () => void;
-  readonly createRunSeed: () => number;
   readonly resetRunRandom: (runSeed: number) => void;
   readonly installSession: (session: RunSession<TMods>) => void;
   readonly startLifecycle: (sessionId: string) => void;
@@ -24,8 +29,8 @@ export interface LiveRunStartPort<TMods extends { weaponId?: string }> {
   readonly updateProgressionTracking: (mode: RunMode) => void;
   readonly startRecording: (runId: string, runSeed: number) => void;
   readonly publishRunStarted: (session: RunSession<TMods>, runId: string) => void;
-  readonly configureMode: (mode: RunMode) => void;
-  readonly applyMetaProgression: () => void;
+  readonly configureMode: (start: RunStartChoices) => void;
+  readonly applyMetaProgression: (start: RunStartChoices) => void;
   readonly activateOpeningContent: (mode: RunMode) => void;
   readonly enterPlayingState: (sessionId: string) => void;
   readonly beginMusic: (runId: string, runSeed: number) => void;
@@ -46,9 +51,10 @@ export class LiveRunStartController<TMods extends { weaponId?: string }> {
 
   start(mode: RunMode, difficulty: RunDifficulty): RunSession<TMods> {
     this.#port.replaceActiveRun();
-    const blueprint = this.#port.initializeWorld(mode, difficulty);
+    const start = this.#port.resolveStart(mode, difficulty);
+    const blueprint = this.#port.initializeWorld(start);
     this.#port.resetAuthoritativeClocks();
-    const runSeed = this.#port.createRunSeed();
+    const { runSeed } = start;
     const voidSeed = deriveVoidSeed(runSeed);
     this.#port.resetRunRandom(runSeed);
     const session = createRunSession({
@@ -64,8 +70,8 @@ export class LiveRunStartController<TMods extends { weaponId?: string }> {
     this.#port.startLifecycle(sessionId);
     this.#port.exposeDebugState();
     this.#port.updateProgressionTracking(mode);
-    this.#port.configureMode(mode);
-    this.#port.applyMetaProgression();
+    this.#port.configureMode(start);
+    this.#port.applyMetaProgression(start);
     this.#port.activateOpeningContent(mode);
     // A native V3 sidecar needs one durable capture boundary that describes
     // the world it will actually replay. Opening campaign content installs its

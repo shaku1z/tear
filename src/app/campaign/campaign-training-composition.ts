@@ -91,6 +91,9 @@ export interface LiveCampaignTrainingOptions {
 /** Composes campaign, training, cinematics, weapon feedback, and style progression. */
 export function createLiveCampaignTrainingComposition(options: LiveCampaignTrainingOptions) {
   const d = options.dependencies;
+  // A run's chapters and boss scenes follow the cinematics setting it started with, so its replay does too.
+  const runCinematics = (): CinematicPreference =>
+    options.state.run()?.cinematics ?? options.applySettingsCinematicPreference();
   let style: ReturnType<typeof createLiveStyleHost> | null = null;
   const requireStyle = () => {
     if (style === null) throw new Error("Style runtime is not installed");
@@ -111,14 +114,11 @@ export function createLiveCampaignTrainingComposition(options: LiveCampaignTrain
     checkAchievements: () => {
       requireStyle().check();
     },
-    resetStageAchievements: () => {
-      requireStyle().achievements.stageReset();
-    },
     rememberBiome(name) {
       if (options.persistentEffects?.() !== false) d.biomeProgressPersistence.remember(name);
       requireStyle().check();
     },
-    cinematicPreference: options.applySettingsCinematicPreference,
+    cinematicPreference: runCinematics,
     addFlash: (amount): FinaleMaximumFeelReceipt => {
       const before = options.getFlash();
       options.setFlash(Math.max(before, amount));
@@ -279,7 +279,7 @@ export function createLiveCampaignTrainingComposition(options: LiveCampaignTrain
         campaign.story.syncFinale();
       },
     },
-    policy: () => cinematicLaunchPolicy(options.applySettingsCinematicPreference()),
+    policy: () => cinematicLaunchPolicy(runCinematics()),
     clearBossBeat: () => {
       options.state.setBossBeat(null);
     },

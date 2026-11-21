@@ -18,11 +18,13 @@ import {
   VERDANT_WAVE_ENGINEERING_TEARSDL,
 } from "../../src/tearbench/verdant-stage-engineering-scenario";
 import type { TearSnapshotV1 } from "../../src/gameplay/snapshot/snapshot-contract";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 function sourceSnapshot(): TearSnapshotV1 {
-  const source = createProductionGhostReplayComposition({ seed: "verdant-stage-wave-31", mode: "campaign" }).create(
-    undefined,
-  );
+  const source = createProductionGhostReplayComposition({
+    runSeed: scenarioRunSeed("verdant-stage-wave-31"),
+    mode: "campaign",
+  }).create(undefined);
   return captureProductionReplayCheckpoint(
     source.replay,
     source.combat,

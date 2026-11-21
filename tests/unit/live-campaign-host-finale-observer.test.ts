@@ -55,7 +55,6 @@ describe("live campaign host finale observation", () => {
       win: vi.fn(),
       achievementsEnabled: () => false,
       checkAchievements: vi.fn(),
-      resetStageAchievements: vi.fn(),
       rememberBiome: vi.fn(),
       cinematicPreference: () => "full",
       addFlash: vi.fn(),
@@ -132,7 +131,6 @@ describe("live campaign host finale observation", () => {
       win: vi.fn(),
       achievementsEnabled: () => false,
       checkAchievements: vi.fn(),
-      resetStageAchievements: vi.fn(),
       rememberBiome: vi.fn(),
       cinematicPreference: () => "full" as const,
       addFlash(amount: number) {
@@ -265,7 +263,6 @@ describe("live campaign host finale observation", () => {
       win: vi.fn(),
       achievementsEnabled: () => false,
       checkAchievements: vi.fn(),
-      resetStageAchievements: vi.fn(),
       rememberBiome: vi.fn(),
       cinematicPreference: () => "full",
       addFlash: () => {
@@ -337,7 +334,6 @@ describe("live campaign host finale observation", () => {
       win: vi.fn(),
       achievementsEnabled: () => false,
       checkAchievements: vi.fn(),
-      resetStageAchievements: vi.fn(),
       rememberBiome: vi.fn(),
       cinematicPreference: () => "full",
       addFlash: vi.fn(),

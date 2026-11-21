@@ -18,6 +18,7 @@ import {
 } from "../../src/app/world/detached/replay-composition";
 import { PALE_VARIANT_STATE_SETUP_SCENARIOS } from "../../src/tearbench/pale-state-setup-scenarios";
 import { createEnemyHarness, createStandardActor, updateActor } from "./enemy-test-harness";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 const random = { next: () => 0.999 };
 const PALE_FAMILIES = [
@@ -108,7 +109,7 @@ describe("Pale variant selection contract", () => {
 
   it("round-trips every Pale identity through the production State Setup boundary", () => {
     for (const { family: kind, variantId: id, seed } of PALE_VARIANT_STATE_SETUP_SCENARIOS) {
-      const composition = createProductionGhostReplayComposition({ seed, mode: "endless" });
+      const composition = createProductionGhostReplayComposition({ runSeed: scenarioRunSeed(seed), mode: "endless" });
       const source = composition.create(undefined);
       const actor = source.replay.world.entities.createEnemy(
         kind,

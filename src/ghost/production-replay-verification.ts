@@ -16,6 +16,7 @@ import { stableVerificationHash } from "../domain/hash";
 import { AuthoritativeInputState, type AuthoritativeInputSnapshot } from "../gameplay/runtime/authoritative-input";
 import { AIM_MAGNITUDE_SCALE } from "../input/game-action";
 import { readGhostApplicationClockSchedule, type GhostApplicationClockSchedule } from "./application-frame-events";
+import { scenarioRunSeed } from "../gameplay/run/run-start-choices";
 
 /** Only explicit validated full magnitude has the canonical omitted-full spelling. Keep every other field. */
 function canonicalReceiptInput(input: AuthoritativeInputSnapshot): AuthoritativeInputSnapshot {
@@ -216,7 +217,7 @@ export function verifyGhostCapsuleOpeningContinuation(capsule: GhostReadCapsule)
     }
     const derived = createGhostV3({ ...mapped.ghost, snapshots: [anchor] });
     const composition = replayEngine.loaded().createProductionGhostReplayComposition({
-      seed: anchor.seed,
+      runSeed: scenarioRunSeed(anchor.seed),
       openingPermit: permit,
       raceDecisions: readSeedRaceDecisions(capsule, context?.run.id ?? ""),
       requireRecordedApplicationFrames: true,
@@ -344,7 +345,7 @@ export function verifyGhostCapsuleProductionReplay(
     });
   }
   const composition = replayEngine.loaded().createProductionGhostReplayComposition({
-    seed: mapped.ghost.snapshots[0]?.seed ?? "unknown",
+    runSeed: scenarioRunSeed(mapped.ghost.snapshots[0]?.seed ?? "unknown"),
     inputSnapshots: inputs,
     ...(forkOrigin === undefined ? {} : { forkOrigin }),
     raceDecisions,

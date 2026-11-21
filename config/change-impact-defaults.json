@@ -31,6 +31,7 @@
         "src/gameplay/campaign/finale-controller.ts",
         "src/gameplay/campaign/finale-outward-call.ts",
         "src/gameplay/campaign/finale-runtime.ts",
+        "src/gameplay/campaign/run-chapter.ts",
         "src/gameplay/campaign/live-cinematic-runtime.ts",
         "src/gameplay/runtime/authoritative-input-adapter.ts",
         "src/gameplay/runtime/authoritative-input.ts",

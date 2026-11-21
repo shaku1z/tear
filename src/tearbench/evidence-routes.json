@@ -519,6 +519,8 @@
       "src/tearbench/live-runtime-environment.ts",
       "src/app/world/detached/world-factory.ts",
       "src/app/world/detached/wave-reward-runtime.ts",
+      "src/app/world/detached/detached-run-start.ts",
+      "src/app/world/run-stage.ts",
       "src/gameplay/snapshot/validation.ts",
       "src/tearbench/registries.ts",
       "src/tearbench/canonical-scenarios.json",

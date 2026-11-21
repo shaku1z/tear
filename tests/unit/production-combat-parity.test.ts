@@ -25,6 +25,7 @@ import { GhostCapsuleReader } from "../../src/ghost/capsule-reader";
 import { createGhostReplayRunContext } from "../../src/ghost/replay-admission";
 import { createLiveGhostCausalEvent } from "../../src/ghost/live-causal-events";
 import { projectGhostRunDnaTheater } from "../../src/ghost/run-dna-theater";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 describe("production TearBench combat parity", () => {
   it("dispatches acquired held-hit callbacks and the existing Overrun multiplier", () => {
@@ -121,9 +122,10 @@ describe("production TearBench combat parity", () => {
 
   it("aims a real perfect parry from the projectile rather than the blade origin", () => {
     // Engineered settled collision boundary, composed from actual production actors.
-    const source = createProductionGhostReplayComposition({ seed: "projectile-origin-parry", mode: "endless" }).create(
-      undefined,
-    );
+    const source = createProductionGhostReplayComposition({
+      runSeed: scenarioRunSeed("projectile-origin-parry"),
+      mode: "endless",
+    }).create(undefined);
     const { replay, combat } = source,
       run = replay.world.state.run(),
       blade = replay.world.state.blade();
@@ -162,7 +164,7 @@ describe("production TearBench combat parity", () => {
 
   it("applies native Riftlock recoil after movement and preserves restored chamber state", () => {
     const composition = createProductionGhostReplayComposition({
-      seed: "riftlock-native-shot-phase",
+      runSeed: scenarioRunSeed("riftlock-native-shot-phase"),
       mode: "endless",
       weaponId: "riftlock",
     });
@@ -188,7 +190,7 @@ describe("production TearBench combat parity", () => {
       "riftlock-shot-restoration",
     );
     const restored = createProductionGhostReplayComposition({
-      seed: checkpoint.snapshot.seed,
+      runSeed: scenarioRunSeed(checkpoint.snapshot.seed),
       inputSnapshots: new Map([[checkpoint.snapshot.tick, checkpoint.input]]),
     }).create(checkpoint.snapshot);
     const restoredBlade = restored.replay.world.state.blade();
@@ -203,7 +205,7 @@ describe("production TearBench combat parity", () => {
   });
   it("attributes real held contact on the catch tick to the returning throw", () => {
     const replay = createProductionReplayWorld({
-      seed: "dna-catch",
+      runSeed: scenarioRunSeed("dna-catch"),
       mode: "endless",
       enemies: [{ id: "charger", x: 1400, y: CONFIG.world.groundY - 20 }],
     });
@@ -302,7 +304,7 @@ describe("production TearBench combat parity", () => {
     // execute identical real commands and native collision/damage owners.
     const runCase = (observed: boolean) => {
       const replay = createProductionReplayWorld({
-        seed: "native-dna",
+        runSeed: scenarioRunSeed("native-dna"),
         mode: "endless",
         weaponId: "sword",
         enemies: [
@@ -489,7 +491,7 @@ describe("production TearBench combat parity", () => {
   });
   it("proves non-empty environment parity through supported detached production composition", () => {
     const create = (seed: string) => {
-      const replay = createProductionReplayWorld({ seed });
+      const replay = createProductionReplayWorld({ runSeed: scenarioRunSeed(seed) });
       const events: TearGameplayEvent[] = [];
       const gameplayEvents = new TearGameplayEventBus(() => 0);
       gameplayEvents.subscribe((event) => {
@@ -566,7 +568,7 @@ describe("production TearBench combat parity", () => {
   });
   it("uses a real boss weapon capsule and source-owned area damage", () => {
     const replay = createProductionReplayWorld({
-      seed: "parity-sword",
+      runSeed: scenarioRunSeed("parity-sword"),
       weaponId: "sword",
       enemies: [
         { id: "warden", x: 520, y: CONFIG.world.groundY - 60 },
@@ -588,7 +590,7 @@ describe("production TearBench combat parity", () => {
 
   it("propagates authoritative primary input into the real Riftlock event drain", () => {
     const sequence = new EnvelopeSequencer();
-    const replay = createProductionReplayWorld({ seed: "parity-riftlock", weaponId: "riftlock" });
+    const replay = createProductionReplayWorld({ runSeed: scenarioRunSeed("parity-riftlock"), weaponId: "riftlock" });
     const core = createProductionCombatSimulation<Record<string, unknown>>(replay, { snapshot: (tick) => ({ tick }) });
     core.simulationRuntime.reset(0);
     core.simulationRuntime.advanceOne([
@@ -602,7 +604,7 @@ describe("production TearBench combat parity", () => {
   });
 
   it.each(WEAPON_IDS)("updates the source-owned %s weapon ability runtime", (weaponId) => {
-    const replay = createProductionReplayWorld({ seed: `parity-ability-${weaponId}`, weaponId });
+    const replay = createProductionReplayWorld({ runSeed: scenarioRunSeed(`parity-ability-${weaponId}`), weaponId });
     const phases = createProductionCombatPhases(replay);
     expect(() => {
       phases.opening.updateWeaponAbilities(1 / 60);
@@ -611,7 +613,7 @@ describe("production TearBench combat parity", () => {
 
   it("applies support aura, world slow, and boss-zone damage through shared resolvers", () => {
     const replay = createProductionReplayWorld({
-      seed: "parity-support",
+      runSeed: scenarioRunSeed("parity-support"),
       enemies: [
         { id: "priest", x: 400, y: CONFIG.world.groundY - CONFIG.enemy.h / 2 },
         { id: "charger", x: 440, y: CONFIG.world.groundY - CONFIG.enemy.h / 2 },
@@ -643,7 +645,7 @@ describe("production TearBench combat parity", () => {
 
   it("binds the source-owned Hammer Meteor effect to detached world state", () => {
     const replay = createProductionReplayWorld({
-      seed: "parity-meteor",
+      runSeed: scenarioRunSeed("parity-meteor"),
       weaponId: "hammer",
       enemies: [{ id: "charger", x: 410, y: CONFIG.world.groundY - CONFIG.enemy.h / 2 }],
     });
@@ -661,7 +663,7 @@ describe("production TearBench combat parity", () => {
 
   it("advances authored boss-arena fracture and supports real boss adds/clones", () => {
     const replay = createProductionReplayWorld({
-      seed: "parity-boss-arena",
+      runSeed: scenarioRunSeed("parity-boss-arena"),
       enemies: [{ id: "warden", x: 800, y: CONFIG.world.groundY - 60 }],
     });
     const authored = createBossArena(
@@ -695,7 +697,7 @@ describe("production TearBench combat parity", () => {
 
   it("publishes distinct source-owned spawn facts for each real boss add and clone", () => {
     const replay = createProductionReplayWorld({
-      seed: "parity-boss-support-events",
+      runSeed: scenarioRunSeed("parity-boss-support-events"),
       enemies: [{ id: "warden", x: 800, y: CONFIG.world.groundY - 60 }],
     });
     const events: TearGameplayEvent[] = [];
@@ -729,9 +731,10 @@ describe("production TearBench combat parity", () => {
 });
 
 function semanticBindingFixture() {
-  const host = createProductionGhostReplayComposition({ seed: "semantic-collision-bindings", mode: "endless" }).create(
-    undefined,
-  );
+  const host = createProductionGhostReplayComposition({
+    runSeed: scenarioRunSeed("semantic-collision-bindings"),
+    mode: "endless",
+  }).create(undefined);
   const run = host.replay.world.state.run(),
     player = host.replay.world.state.player(),
     blade = host.replay.world.state.blade();
