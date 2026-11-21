@@ -218,6 +218,8 @@ export interface TickRecord {
   readonly far: readonly (DrawnPrimitive & { readonly reach: number })[];
   /** The production `liveMove()`: the move the entity is in, or null at rest. */
   readonly liveMove: string | null;
+  /** The time left in the move state (`stateT`), where the entity keeps one: it rises when a state starts again. */
+  readonly stateT: number | null;
   readonly zones: readonly ArenaZone[];
 }
 
@@ -341,6 +343,7 @@ function subjectFor(
         dashedOutside: outside.some((primitive) => primitive.dashed),
         far,
         liveMove: entity.liveMove(),
+        stateT: typeof entity.stateT === "number" ? entity.stateT : null,
         zones: [...(entity.zones ?? [])],
       };
     },

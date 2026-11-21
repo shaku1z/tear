@@ -92,7 +92,10 @@ function offences(fight: Fight): Offences {
       if (moved && record.marks.some((helper) => before.marks.includes(helper))) result.markPastItsState += 1;
       if (record.phase !== before.phase) {
         result.zoneOverPhaseChange += record.zones.filter((zone) => before.zones.includes(zone)).length;
-        if (before.liveMove !== null && record.liveMove === before.liveMove) result.moveOverPhaseChange += 1;
+        // The same state may start again on the phase tick, as a phase's own move (its timer then rises).
+        const restarted = record.stateT !== null && before.stateT !== null && record.stateT > before.stateT;
+        if (before.liveMove !== null && record.liveMove === before.liveMove && !restarted)
+          result.moveOverPhaseChange += 1;
       }
     }
     for (const zone of record.zones) {
