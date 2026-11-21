@@ -149,6 +149,26 @@ describe("coach queue", () => {
     expect(queue.visible()[0]).toMatchObject({ age: 2, mark: { text: "two" } });
   });
 
+  it("starts a re-offered mark again, with its new content, when it names a new occasion", () => {
+    const queue = new CoachQueue();
+    queue.offer(mark({ id: "a", text: "Grounds", occasion: "1" }));
+    queue.step(5);
+    queue.offer(mark({ id: "a", text: "Voidspire", occasion: "2" }));
+    expect(queue.visible()).toHaveLength(1);
+    expect(queue.visible()[0]).toMatchObject({ age: 0, mark: { text: "Voidspire" } });
+  });
+
+  it("keeps the clock for a re-offer on the same occasion or with none", () => {
+    const queue = new CoachQueue();
+    queue.offer(mark({ id: "a", occasion: "1" }));
+    queue.step(2);
+    queue.offer(mark({ id: "a", text: "same", occasion: "1" }));
+    expect(queue.visible()[0]).toMatchObject({ age: 2, mark: { text: "same" } });
+    queue.step(1);
+    queue.offer(mark({ id: "a", text: "none" }));
+    expect(queue.visible()[0]).toMatchObject({ age: 3, mark: { text: "none" } });
+  });
+
   it("dismisses, clears and never repeats a once mark", () => {
     const queue = new CoachQueue();
     queue.offer(mark({ id: "intro" }), { once: true });

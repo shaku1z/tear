@@ -1,4 +1,4 @@
-import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
+import { createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
 import { createLiveWorldEntityFactory } from "../../src/app/world/world-entity-factory";
 import { createLiveWorldSimulationPresentationAdapter } from "../../src/app/world/world-simulation-factories";
 import { createUi } from "../../src/presentation/ui";

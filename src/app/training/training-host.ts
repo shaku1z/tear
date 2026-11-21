@@ -14,6 +14,7 @@ import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies
 import type { GameEnemy, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
 import type { AppScreen } from "../../domain/screen-catalog";
+import type { TrainingCallouts } from "./training-coach";
 
 interface TrainingLifecycle {
   terminate(reason: string): void;
@@ -42,7 +43,7 @@ export interface LiveTrainingHostContext {
   readonly resetTrainingCarry?: () => void;
   readonly selectedWeapon: () => string;
   readonly selectWeapon: (id: string) => void;
-  readonly addFloater: (x: number, y: number, text: string, emphasis: boolean, color: string) => void;
+  readonly callouts: TrainingCallouts;
   readonly drawGhost: (snapshot: TutorialGhostSnapshot) => void;
   readonly abilityColors: () => Readonly<Record<string, Readonly<{ color: string }>>>;
   readonly scroll: () => number;
@@ -60,6 +61,8 @@ type TrainingRuntime = Readonly<{
 }>;
 
 export interface LiveTrainingHost extends TrainingRuntime {
+  /** Call-outs the coach draws (spawned enemies' names, save notices). */
+  readonly callouts: TrainingCallouts;
   openPractice(): boolean;
   ensureLoaded(): Promise<void>;
   startTutorial(start: () => void): Promise<void>;
@@ -312,6 +315,7 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
     tutorial,
     runtime: playground,
     presentation,
+    callouts: context.callouts,
     openPractice: () => {
       const tutorialDone = context.dependencies.PROFILE.stat("tutorialDone");
       if (!loaded || !Number.isSafeInteger(tutorialDone) || tutorialDone <= 0) return false;
@@ -337,17 +341,8 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
       retryDemonstrations = true;
       try {
         start();
-        if (issued?.status !== "committed") {
-          const actor = context.state.player();
-          if (actor !== undefined)
-            context.addFloater(
-              actor.x,
-              actor.y - 70,
-              "PROGRESS STORAGE UNAVAILABLE · COURSE IS PLAYABLE",
-              true,
-              "#e0a326",
-            );
-        }
+        if (issued?.status !== "committed")
+          context.callouts.post({ text: "PROGRESS STORAGE UNAVAILABLE · COURSE IS PLAYABLE", tone: "nudge" });
       } finally {
         preparedCourseId = undefined;
       }

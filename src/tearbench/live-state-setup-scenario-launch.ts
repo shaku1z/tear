@@ -3,7 +3,7 @@ import type { LiveTearRuntimeEnvironmentContext, TearStructuredRuntimeEnvironmen
 import type { LiveRuntimeSnapshotController } from "./live-runtime-snapshots";
 import { synthesizeProgression } from "./progression-ledger";
 import { compileResolvedTearSdlSnapshot } from "./state-setup-live-compiler";
-import type { TearLiveRestoreResult } from "./live-state-snapshot";
+import type { TearLiveRestoreResult } from "../gameplay/snapshot/live-restore";
 import type { TearSdlResolved } from "./tearsdl";
 import { CAMPAIGN_STAGE_IDS, stageRuntimeIndexForSurface, type StageId } from "../gameplay/stages";
 

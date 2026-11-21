@@ -39,7 +39,6 @@ import {
   ENGINEERING_IDENTITY_COVERAGE,
   DIFFICULTY_IDS,
   DIFFICULTY_REGISTRY,
-  ENTITY_KIND_REGISTRY,
   ENVIRONMENT_OBJECT_KIND_IDS,
   ENVIRONMENT_OBJECT_KIND_REGISTRY,
   NATIVE_GAMEPLAY_EVENT_KIND_IDS,
@@ -56,6 +55,7 @@ import {
   PUBLISHED_BOSS_IDS,
   PUBLISHED_TEARBENCH_STAGE_IDS,
 } from "../../src/tearbench/registries";
+import { ENTITY_KIND_REGISTRY } from "../../src/gameplay/snapshot/codec-ids";
 
 interface CurrentCatalogEntry {
   readonly id: string;

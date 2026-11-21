@@ -3,7 +3,7 @@ import type { GameAction } from "../input/game-action";
 import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
 import type { TearScenarioV1 } from "./contracts";
 import type { TearSnapshotV1 } from "../gameplay/snapshot/snapshot-contract";
-import type { ProductionC27ATrace } from "./production-c27a-matrix";
+import type { LiveDetachedParityTrace } from "./live-detached-parity-matrix";
 
 export interface TutorialDriverObservation {
   readonly tick: number;
@@ -23,7 +23,7 @@ export interface TutorialDriverPort {
     canonicalState(): CanonicalGameplayState | null;
     metrics(): Readonly<Record<string, number>>;
     captureSnapshot(id: string, stateClass: "recorded-canonical"): TearSnapshotV1;
-    engineEventProjection(): ProductionC27ATrace["engineEventProjection"]["events"];
+    engineEventProjection(): LiveDetachedParityTrace["engineEventProjection"]["events"];
   };
   tutorial(): {
     lessonIndex: number;
@@ -53,11 +53,11 @@ interface TutorialCourseRecord {
   blade: TutorialDriverObservation["blade"];
   entities: TutorialDriverObservation["entities"];
 }
-type MutableContinuation = Omit<ProductionC27ATrace, "hashes" | "segments" | "engineEventProjection"> & {
-  hashes: ProductionC27ATrace["hashes"][number][];
-  segments: NonNullable<ProductionC27ATrace["segments"]>[number][];
-  engineEventProjection: Omit<ProductionC27ATrace["engineEventProjection"], "events"> & {
-    events: ProductionC27ATrace["engineEventProjection"]["events"][number][];
+type MutableContinuation = Omit<LiveDetachedParityTrace, "hashes" | "segments" | "engineEventProjection"> & {
+  hashes: LiveDetachedParityTrace["hashes"][number][];
+  segments: NonNullable<LiveDetachedParityTrace["segments"]>[number][];
+  engineEventProjection: Omit<LiveDetachedParityTrace["engineEventProjection"], "events"> & {
+    events: LiveDetachedParityTrace["engineEventProjection"]["events"][number][];
   };
 };
 /** Shared semantic program only: the supplied production world owns all physics and collisions. */
