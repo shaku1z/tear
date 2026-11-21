@@ -90,19 +90,33 @@ describe("each move's parts last their ticks and deal their damage", () => {
     expect(rested.boss.state).toBe("idle");
   });
 
-  it("a held-blade parry of the swing stops it landing and leaves it staggered and open", () => {
+  it("a perfect held-blade parry of the swing stops it landing and leaves it staggered and open", () => {
     const { boss, player, step } = setup(600, levelAt(790));
     boss.startSwing();
     for (let tick = 0; tick < M.vineSwing.windup; tick += 1) step();
     expect(boss.state).toBe("swing");
     expect(boss.batonStrike).toBe(1);
-    expect(boss.parryBaton()).toBe(true);
+    expect(boss.parryBaton(true)).toBe(true);
     expect(boss.state).toBe("staggered");
     expect(boss.stateT).toBe(M.vineSwing.stagger);
     expect(boss.damageTakenMult()).toBe(ROOTBOUND_CADENCE.openDamageTaken);
     for (let tick = 0; tick < 10; tick += 1) step();
     expect(player.damage).toEqual([]);
-    expect(boss.parryBaton()).toBe(false);
+    expect(boss.parryBaton(true)).toBe(false);
+  });
+
+  it("a touch that is not perfect does not parry, and the first touch of a sweep decides", () => {
+    const { boss, player, step, until } = setup(600, levelAt(790));
+    boss.startSwing();
+    for (let tick = 0; tick < M.vineSwing.windup; tick += 1) step();
+    expect(boss.parryBaton(false)).toBe(false);
+    expect(boss.parryCd).toBe(M.vineSwing.parryCooldown);
+    step();
+    expect(boss.parryBaton(true)).toBe(false);
+    expect(boss.state).toBe("swing");
+    until("swingrecover");
+    expect(player.damage.map((hit) => hit.amount)).toEqual([M.vineSwing.damage]);
+    expect(M.vineSwing.parryCooldown).toBeGreaterThan(M.vineSwing.hit);
   });
 
   it("Seed Throw: a deflectable pod arcs to where the player stood", () => {

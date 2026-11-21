@@ -7,8 +7,21 @@
  * Phase III), and slice 4 Phase III: Spring Surge and the third entry of every per-phase list.
  */
 export const ROOTBOUND_MOVES = Object.freeze({
-  /** In reach and level: the vine swings in a 280 px arc in front. A held-blade parry staggers it, open. */
-  vineSwing: Object.freeze({ windup: 54, hit: 22, recover: 42, damage: 18, reach: 280, range: 300, stagger: 72 }),
+  /**
+   * In reach and level: the vine swings in a 280 px arc in front. A perfect held-blade parry (a fast tip) staggers
+   * it, open. Any blade touch of the swinging vine starts `parryCooldown`, the Warden's 0.22 s, during which it
+   * can't be parried: the first touch of a sweep decides.
+   */
+  vineSwing: Object.freeze({
+    windup: 54,
+    hit: 22,
+    recover: 42,
+    damage: 18,
+    reach: 280,
+    range: 300,
+    stagger: 72,
+    parryCooldown: 26,
+  }),
   /** Phase II on: straight after the Vine Swing's sweep, a second one, which plants the vine (Root Seam). */
   secondSwing: Object.freeze({ windup: 32, hit: 22 }),
   /**
