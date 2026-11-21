@@ -168,116 +168,55 @@ export function createUiCinematic(dependencies: UiDependencies) {
       ctx.restore();
       return bottom;
     },
-    // Arrival ceremony: overscan-safe letterbox, radial vignette, name, identity
-    // stroke, and lore epithet. `t` is elapsed real time, not simulation time.
-    bossIntro(this: UiRuntime, ctx: CanvasRenderingContext2D, opts?: UiOptions) {
+    // The banner stage beat (src/gameplay/stage-beat.ts), under the boss bar, in the approved look
+    // (plans/active/CINEMATICS_OVERHAUL.md, look board): the mark in the accent colour, a muted dot, the
+    // title in the condensed display face and the biome ink, a short accent rule, and the optional line in
+    // mono. No panel and no input. The caller supplies a 0..1 alpha from the beat's tick progress.
+    beatBanner(this: UiRuntime, ctx: CanvasRenderingContext2D, opts?: UiOptions) {
       const o = truthyOr<UiOptions>(opts, () => ({})),
-        t = this.t,
-        m = t.metric,
-        a = t.alpha,
-        motion = t.motion;
-      const fallbackW = view.w;
-      const fallbackH = view.h;
-      const sr = truthyOr(o.screen, () => ({ x: 0, y: 0, w: fallbackW, h: fallbackH }));
-      const vw = fallbackW,
-        vh = fallbackH,
-        cx = vw / 2;
-      const elapsed = Math.max(0, Number(o.t) || 0),
-        dur = Math.max(Number(o.dur) || 1.4, 0.001);
-      const clamp01 = (n: number) => Math.max(0, Math.min(n, 1));
-      const easeOut = (n: number) => {
-        const k = clamp01(n);
-        return 1 - (1 - k) * (1 - k);
-      };
-      const k = clamp01(elapsed / dur);
-      const aIn = easeOut(elapsed / motion.bossIntroIn);
-      const aOut = 1 - easeOut((k - motion.bossIntroOutAt) / motion.bossIntroOutSpan);
-      const alpha = aIn * aOut;
-      const barH = m.bossIntroBarH * aIn;
-      const color = truthyOr(o.color, () => t.color.danger);
-      ctx.save();
-      // Vignette first, bars second: the bars retain a clean cinematic black.
-      const inner = Math.min(vw, vh) * m.bossVignetteInner;
-      const outer = Math.max(vw, vh) * m.bossVignetteOuter;
-      const vignette = ctx.createRadialGradient(
-        cx,
-        vh * m.bossVignetteFocusY,
-        inner,
-        cx,
-        vh * m.bossVignetteFocusY,
-        outer,
-      );
-      vignette.addColorStop(0, "transparent");
-      vignette.addColorStop(1, t.color.cinema);
-      ctx.globalAlpha = a.cinemaVignette * alpha;
-      ctx.fillStyle = vignette;
-      ctx.fillRect(sr.x, sr.y, sr.w, sr.h);
-      ctx.globalAlpha = a.cinemaBar * aOut;
-      ctx.fillStyle = t.color.cinema;
-      ctx.fillRect(sr.x, sr.y, sr.w, Math.max(0, barH - sr.y));
-      const bottomY = vh - barH,
-        screenBottom = sr.y + sr.h;
-      ctx.fillRect(sr.x, bottomY, sr.w, Math.max(0, screenBottom - bottomY));
-      // Card typography is intentionally fixed light-on-cinema, independent of biome ink.
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = t.color.cinemaInk;
-      ctx.font = this.font(t.type.display, true);
-      ctx.textAlign = "center";
-      ctx.textBaseline = "alphabetic";
-      if (o.openingLine) {
-        ctx.globalAlpha = alpha * a.cinemaSubtitle;
-        ctx.font = this.font(t.type.body, true);
-        ctx.fillText(o.openingLine, cx, m.bossIntroOpeningTop);
-        ctx.globalAlpha = alpha;
-        ctx.font = this.font(t.type.display, true);
-      }
-      ctx.fillText(
-        truthyOr(o.bossName, () => "BOSS"),
-        cx,
-        vh - m.bossIntroTitleBottom,
-      );
-      const accentK = easeOut((elapsed - motion.bossIntroAccentDelay) / motion.bossIntroAccentGrow);
-      const accentW = m.bossIntroAccentHalfW * accentK;
-      ctx.fillStyle = color;
-      ctx.fillRect(cx - accentW, vh - m.bossIntroAccentBottom, accentW * 2, m.bossIntroAccentH);
-      if (o.epithet) {
-        ctx.globalAlpha = alpha * a.cinemaSubtitle;
-        ctx.fillStyle = t.color.cinemaMuted;
-        ctx.font = this.font(t.type.body, true);
-        ctx.fillText(o.epithet, cx, vh - m.bossIntroEpithetBottom);
-      }
-      ctx.restore();
-      return alpha;
-    },
-    // Screen-space phase title. The caller owns its clock and supplies a 0..1 alpha;
-    // this component owns every visual detail so phase beats stay consistent.
-    bossPhaseBanner(this: UiRuntime, ctx: CanvasRenderingContext2D, opts?: UiOptions) {
-      const o = truthyOr<UiOptions>(opts, () => ({})),
-        text = truthyOr(o.text, () => "");
-      if (!text) return;
+        title = truthyOr(o.text, () => "");
+      if (!title) return;
       const t = this.t,
         m = t.metric;
       const a = o.alpha == null ? 1 : Math.max(0, Math.min(o.alpha || 0, 1));
-      const vw = view.w;
-      const vh = view.h;
-      const w = Math.min(m.bossPhaseBannerW, vw - t.space.xl * 2);
-      const h = m.bossPhaseBannerH,
-        x = (vw - w) / 2,
-        y = vh * m.bossPhaseBannerY - h / 2;
-      const color = truthyOr(o.color, () => t.color.danger);
+      const cx = view.w / 2,
+        y = view.h * m.beatBannerTitleY;
+      const accent = truthyOr(o.color, () => t.color.danger);
+      const mark = truthyOr(o.mark, () => "");
       ctx.save();
-      ctx.globalAlpha = a * t.alpha.bossPhasePanel;
-      ctx.fillStyle = t.color.cinema;
-      ctx.fillRect(x, y, w, h);
       ctx.globalAlpha = a;
-      ctx.fillStyle = color;
-      ctx.fillRect(x, y, w, m.bossPhaseAccentH);
-      ctx.fillRect(x, y + h - m.bossPhaseAccentH, w, m.bossPhaseAccentH);
-      ctx.fillStyle = t.color.cinemaInk;
-      ctx.font = this.font(t.type.h2, true);
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(text, vw / 2, y + h / 2);
+      ctx.textBaseline = "alphabetic";
+      ctx.font = this.displayFont(m.beatBannerTitleSize);
+      const track = m.beatBannerTitleTrack;
+      const width = (text: string) => {
+        let total = 0;
+        for (let i = 0; i < text.length; i++)
+          total += ctx.measureText(text.charAt(i)).width + (i < text.length - 1 ? track : 0);
+        return total;
+      };
+      const dot = "·",
+        gap = m.beatBannerGap;
+      const parts = mark ? width(mark) + gap + width(dot) + gap + width(title) : width(title);
+      let x = cx - parts / 2;
+      if (mark) {
+        ctx.fillStyle = accent;
+        x = this.trackedText(ctx, mark, x, y, track, "left") - track + gap;
+        ctx.fillStyle = t.color.muted;
+        x = this.trackedText(ctx, dot, x, y, track, "left") - track + gap;
+      }
+      ctx.fillStyle = this.ink;
+      this.trackedText(ctx, title, x, y, track, "left");
+      ctx.fillStyle = accent;
+      // The rule wipes out from the centre as the banner comes in (`reveal`, 0 to 1).
+      const half = m.beatBannerRuleHalfW * Math.max(0, Math.min(o.reveal ?? 1, 1));
+      ctx.fillRect(cx - half, y + m.beatBannerRuleGap, half * 2, m.beatBannerRuleH);
+      const line = truthyOr(o.line, () => "");
+      if (line) {
+        ctx.fillStyle = this.ink;
+        ctx.globalAlpha = a * t.alpha.muted;
+        ctx.font = this.bodyFont(m.beatBannerLineSize);
+        this.trackedText(ctx, line, cx, y + m.beatBannerLineGap, m.beatBannerLineTrack, "center");
+      }
       ctx.restore();
     },
     // Shared cinematic chrome. Game code supplies only state; the design system
@@ -314,7 +253,7 @@ export function createUiCinematic(dependencies: UiDependencies) {
       ctx.fillRect(sr.x, fallbackH - barH, sr.w, Math.max(0, sr.y + sr.h - (fallbackH - barH)));
       ctx.globalAlpha = k * a.soft;
       ctx.fillStyle = color;
-      ctx.fillRect(sr.x, barH - m.bossPhaseAccentH, sr.w, m.bossPhaseAccentH);
+      ctx.fillRect(sr.x, barH - m.cinemaAccentH, sr.w, m.cinemaAccentH);
       ctx.restore();
     },
     // Dialogue card for authored boss speech. Lines are intentionally concise;
@@ -340,7 +279,7 @@ export function createUiCinematic(dependencies: UiDependencies) {
       ctx.fillRect(x, y, w, h);
       ctx.globalAlpha = k;
       ctx.fillStyle = color;
-      ctx.fillRect(x, y, m.bossPhaseAccentH, h);
+      ctx.fillRect(x, y, m.cinemaAccentH, h);
       this.ink = t.color.cinemaInk;
       this.tag(
         ctx,

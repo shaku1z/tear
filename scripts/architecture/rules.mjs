@@ -479,7 +479,7 @@ const LIVE_ROOT_RULES = [
   liveRootStateRule(
     "app.live-root-boss-cinematic",
     ["R47"],
-    /\blet\s+(?:bossIntro|bossBeat)\b/u,
+    /\blet\s+(?:bossIntro|stageBeat)\b/u,
     "live boss cinematic state must stay in world state",
     "let bossIntro = null;",
     "const intro = hostState.bossIntro();",

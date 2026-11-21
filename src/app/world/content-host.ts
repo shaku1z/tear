@@ -54,7 +54,7 @@ export interface LiveContentHostContext<TEnemy extends ContentHostEnemy> {
   readonly bossIntroDuration: number;
   readonly wipeRemainingSeconds: () => number;
   readonly setBossIntro: (enemy: TEnemy, duration: number, delay: number) => void;
-  readonly clearBossBeat: () => void;
+  readonly clearStageBeat: () => void;
   readonly clearBanners: () => void;
   readonly bossArena: (bossId: string) => ArenaPlatform[] | null;
 }
@@ -79,7 +79,7 @@ export function createLiveContentHost<TEnemy extends ContentHostEnemy>(
       });
       context.startClipper();
       context.setBossIntro(enemy, context.bossIntroDuration, context.wipeRemainingSeconds());
-      context.clearBossBeat();
+      context.clearStageBeat();
       context.clearBanners();
     },
   };

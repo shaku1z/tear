@@ -352,7 +352,7 @@ withJourney({ name: "C23 live State Setup" }, async ({ page, buildInfo }) => {
     };
   }, scenario);
   const introSource = bossIntroResult.source.state["tear.world.v1"].runtime;
-  assert.equal(introSource.bossIntroVersion, 1);
+  assert.equal(introSource.bossIntroVersion, 2);
   assert.ok(introSource.bossIntro && introSource.bossIntro.dur > 0, "normal boss startup must capture an active intro");
   assert.deepEqual(
     Object.keys(introSource.bossIntro.boss),

@@ -280,8 +280,8 @@ export function createLiveCampaignTrainingComposition(options: LiveCampaignTrain
       },
     },
     policy: () => cinematicLaunchPolicy(runCinematics()),
-    clearBossBeat: () => {
-      options.state.setBossBeat(null);
+    clearStageBeat: () => {
+      options.state.setStageBeat(null);
     },
     setWorldZoom: (value) => {
       options.setWorldZoom(value, false);

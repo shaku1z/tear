@@ -94,6 +94,8 @@ export interface UiOptions {
   line?: string;
   openingLine?: string;
   lowGraphics?: boolean;
+  /** beatBanner: written in the accent colour before the title (a phase numeral or a boss's name). */
+  mark?: string | null;
   maxWidth?: number;
   morphK?: number;
   morphTo?: string;

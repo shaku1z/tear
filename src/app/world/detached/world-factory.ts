@@ -369,8 +369,8 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
     },
     width: config.view.w,
     policy: () => ({ play: true, brief: false }),
-    clearBossBeat: () => {
-      state.setBossBeat(null);
+    clearStageBeat: () => {
+      state.setStageBeat(null);
     },
     setWorldZoom: (value) => {
       world.context.transient.feel.worldZoomTarget = value;

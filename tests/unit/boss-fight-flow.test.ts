@@ -52,7 +52,6 @@ interface BossActor {
   hpDisplay?: number;
   dead?: boolean;
   dying?: boolean;
-  introT?: number;
   hidden?: boolean;
   blocksDamage?(): boolean;
   damageTakenMult?(): number;
@@ -83,12 +82,7 @@ interface FlowRecord {
 }
 
 function refuses(boss: BossActor): boolean {
-  return (
-    (boss.introT ?? 0) > 0 ||
-    boss.hidden === true ||
-    boss.blocksDamage?.() === true ||
-    (boss.damageTakenMult?.() ?? 1) <= 0
-  );
+  return boss.hidden === true || boss.blocksDamage?.() === true || (boss.damageTakenMult?.() ?? 1) <= 0;
 }
 
 function fightFlow(id: BossDefinitionId): FlowRecord {

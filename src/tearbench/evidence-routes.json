@@ -4,6 +4,7 @@
     "prefixes": [
       "src/gameplay/combat/",
       "src/gameplay/entities/",
+      "src/gameplay/stage-beat.ts",
       "src/gameplay/weapons.ts"
     ],
     "scenarios": [

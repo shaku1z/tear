@@ -27,7 +27,7 @@ describe("live cinematic persistence adapter", () => {
         stage: { platforms: [], current: { accent: "#fff" } },
         width: 1,
         policy: () => ({ play: true, brief: true }),
-        clearBossBeat: vi.fn(),
+        clearStageBeat: vi.fn(),
         setWorldZoom: vi.fn(),
         spawnWisp: vi.fn(),
         addFlash: vi.fn(),

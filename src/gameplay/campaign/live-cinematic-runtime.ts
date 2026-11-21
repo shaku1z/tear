@@ -54,7 +54,7 @@ export interface LiveCinematicRuntimeOptions {
   readonly time: () => number;
   readonly lerp: (from: number, to: number, amount: number) => number;
   readonly clamp: (value: number, minimum: number, maximum: number) => number;
-  readonly clearBossBeat: () => void;
+  readonly clearStageBeat: () => void;
   readonly setMusicDuck: (amount: number, duration: number) => void;
   readonly playSound: (cue: string) => void;
   readonly storeSeen: (key: string) => void;
@@ -110,7 +110,7 @@ export function createLiveCinematicRuntime(options: LiveCinematicRuntimeOptions)
       execute: (intents: readonly BossRitualIntent[]) => {
         executeRitual(owner, intents);
       },
-      clearBossBeat: options.clearBossBeat,
+      clearStageBeat: options.clearStageBeat,
     };
   };
   return Object.freeze({

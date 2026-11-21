@@ -4,6 +4,7 @@ import type { LiveStyleAchievementOptions } from "../../../gameplay/scoring/live
 import { bindRunDnaShot, runDnaObserver } from "../../../gameplay/runtime/run-dna-observer";
 import { aabbOverlap, clamp, len, lerp, segCircle, segPointDist } from "../../../domain/geometry";
 import { GFX, THEME } from "../../../config/game-config";
+import type { FeedbackBannerEvent } from "../../../gameplay/stage-beat";
 import {
   CombatEntityRuntime,
   type CombatEntityRuntimeHooks,
@@ -463,10 +464,7 @@ export function createProductionCombatPhases(
 
   const opening = {
     config,
-    bossIntro: () => world.state.bossIntro(),
-    endBossIntro: () => {
-      world.state.setBossIntro(null);
-    },
+    world: world.state,
     get player() {
       return player();
     },
@@ -500,8 +498,8 @@ export function createProductionCombatPhases(
     get practicePreparing() {
       return replay.tutorial.preparingBoss;
     },
-    get transformationBlocked() {
-      return world.context.cinema.active && world.context.cinema.blocksCombat;
+    get transformationBlocked(): boolean {
+      return opening.blocking;
     },
     overrunMovementMultiplier: () => 1,
     runDamageMultiplier: () => 1,
@@ -651,13 +649,18 @@ export function createProductionCombatPhases(
     },
     updateFeedback: (dt: number) => {
       const mirror = replay.factories.mirrorTypes.Mirror as unknown as Parameters<typeof updateMirrorCombat>[0] & {
-        fxq?: unknown[];
+        fxq?: FeedbackBannerEvent[];
+        color: string;
       };
       if (updateMirrorCombat(mirror, dt, player(), blade())) outward.push("mirrorShattered");
-      if (mirror.fxq !== undefined && mirror.fxq.length > 0)
-        outward.push(`mirrorFx:${String(mirror.fxq.splice(0).length)}`);
+      const mirrorFx = mirror.fxq?.splice(0) ?? [];
+      if (mirrorFx.length > 0) outward.push(`mirrorFx:${String(mirrorFx.length)}`);
       const drained = replay.factories.enemyTypes.BOSSFX.drain();
       if (drained.length > 0) outward.push(`bossFx:${String(drained.length)}`);
+      return [
+        [mirrorFx, mirror.color],
+        [drained, config.colors.boss],
+      ] as const;
     },
     consumeThrow: () => input.consumeThrow(() => false),
     updateWave: (dt: number) => {

@@ -42,7 +42,7 @@ export interface ChapterSequenceLaunchOptions {
   readonly activationDeferred: () => boolean;
   readonly dispatch: (intents: readonly ChapterIntent[]) => void;
   readonly rememberPrologue: (shown: boolean) => void;
-  readonly clearBossBeat: () => void;
+  readonly clearStageBeat: () => void;
 }
 
 /** Launches or deterministically skips one chapter without leaking sequence policy into the game loop. */
@@ -68,7 +68,7 @@ export function launchCampaignChapter(options: ChapterSequenceLaunchOptions): vo
   );
   options.runtime.installChapterBinding(staged);
   options.rememberPrologue(staged.prologueShownAfter);
-  options.clearBossBeat();
+  options.clearStageBeat();
   options.dispatch(staged.initialIntents);
 
   const complete = (): void => {

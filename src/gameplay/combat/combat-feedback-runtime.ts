@@ -3,7 +3,10 @@ export interface CombatFeedbackEvent {
   readonly flash?: number;
   readonly hitstop?: number;
   readonly zoom?: number;
+  /** A banner the opening phase writes as a stage beat (`lastFeedbackBanner`); nothing here draws it. */
   readonly banner?: string;
+  /** Written before the banner in its colour: a phase numeral (`bossPhaseBeat`). */
+  readonly mark?: string;
   readonly txt?: string;
   readonly x?: number;
   readonly y?: number;
@@ -21,7 +24,6 @@ export interface CombatFeedbackPort {
   shake(amount: number): void;
   flash(amount: number): void;
   zoom(amount: number): void;
-  banner(text: string, color: string): void;
   floater(x: number, y: number, text: string, big: boolean, color: string): void;
   sound(cue: string): void;
   slam(): void;
@@ -39,7 +41,6 @@ export function applyCombatFeedback(
     if (event.flash) port.flash(event.flash);
     if (event.hitstop) state.hitStop = Math.max(state.hitStop, event.hitstop);
     if (event.zoom) port.zoom(event.zoom);
-    if (event.banner) port.banner(event.banner, event.color ?? fallback.color);
     if (event.txt)
       port.floater(
         event.x ?? fallback.x,

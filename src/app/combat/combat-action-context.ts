@@ -1,4 +1,5 @@
 import type { BossIntroClock } from "../../gameplay/run/boss-encounter";
+import type { StageBeat } from "../../gameplay/stage-beat";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { LiveCollisionPhaseHost, LiveCollisionPhaseState } from "../../gameplay/combat/live-collision-phase";
 import type { LiveOpeningPhaseHost, LiveOpeningState } from "../../gameplay/combat/live-opening-phase";
@@ -61,7 +62,9 @@ export interface LiveCombatMutableState<
   walls(): ReturnType<CombatEntityRuntimeHooks["walls"]>;
   setWalls(value: ReturnType<CombatEntityRuntimeHooks["walls"]>): void;
   bossIntro(): BossIntroClock | null;
-  endBossIntro(): void;
+  setBossIntro(value: null): void;
+  stageBeat(): StageBeat | null;
+  setStageBeat(value: StageBeat | null): void;
   openingProtection(): Opening["protection"];
   setOpeningProtection(value: Opening["protection"]): void;
   openingState(): LiveOpeningState;
@@ -166,7 +169,6 @@ export interface LiveCombatLocalPorts<Enemy extends CombatEnemy = CombatEnemy> {
     ghostSample: Collision["ghostSample"];
     restorePlatforms: LiveKillHost["restorePlatforms"];
     playSound: (name: string, argument?: unknown) => void;
-    setBossBanner: (text: string, color: string) => void;
   }>;
 }
 

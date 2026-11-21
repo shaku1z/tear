@@ -74,7 +74,8 @@ export type LiveBlade = HeldBladeWeapon &
     refillRiftChambers(amount: number): void;
     primeReversal(target: object): boolean;
   };
-export type LiveEnemy = HeldBladeEnemy & ThrownEnemy & ContactEnemy & TailEnemy;
+/** `introT` is the arrival countdown, which `src/gameplay/run/boss-encounter.ts` writes each tick. */
+export type LiveEnemy = HeldBladeEnemy & ThrownEnemy & ContactEnemy & TailEnemy & { introT?: number };
 export type LiveProjectile = SweeperProjectile & ParryProjectile & TailProjectile;
 export type LiveRun = HeldBladeRun &
   ThrownRun &
