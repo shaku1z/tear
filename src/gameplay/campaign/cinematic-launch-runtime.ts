@@ -180,13 +180,7 @@ export function buildBossRitualScript(
     },
     onUpdate(_context, director: CampaignCinematicDirector) {
       options.execute(
-        options.controller.updateBeat(
-          started.context,
-          beat.id,
-          director.elapsed,
-          director.progress,
-          options.time,
-        ),
+        options.controller.updateBeat(started.context, beat.id, director.elapsed, director.progress, options.time),
       );
     },
   }));
