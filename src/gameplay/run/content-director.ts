@@ -40,7 +40,7 @@ export const AUTHORED_BOSS_ROSTER = Object.freeze(projectBossRoster(BOSS_DEFINIT
  */
 export const BOSS_TEST_ROSTER = Object.freeze([
   ...BOSS_ROSTER,
-  ...projectBossRoster(BOSS_DEFINITIONS.filter(({ stageOf }) => stageOf !== undefined)),
+  ...projectBossRoster(BOSS_DEFINITIONS.filter((definition: BossDefinition) => definition.stageOf !== undefined)),
 ]);
 
 export type BossId = (typeof BOSS_IDENTITY_IDS)[number];
