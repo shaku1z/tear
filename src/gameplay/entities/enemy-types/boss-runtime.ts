@@ -208,6 +208,7 @@ export function createBossRuntime(dependencies: EnemyDependencies) {
   // Call perilPing(boss) at the wind-up; the boss's draw calls drawPeril each frame.
   function perilPing(boss: BossPresentationActor) {
     boss._perilUntil = CLOCK.sim + 0.6;
+    boss._perilMove = boss.liveMove?.() ?? null;
     try {
       SFX.rankup();
     } catch {

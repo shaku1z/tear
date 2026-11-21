@@ -132,6 +132,18 @@ export function gateFilesIn(list, files) {
   );
 }
 
+/**
+ * The paths in a list of changed files, one per line, as a shell hands it over. Windows PowerShell puts
+ * a byte order mark before text it pipes into a program and ends lines with CRLF; left in, the mark makes
+ * the first path match nothing, and a gate file listed first goes unreported.
+ */
+export function changedFilesFrom(text) {
+  return text
+    .split("\n")
+    .map((line) => line.replace(/^\uFEFF/u, "").replace(/\r$/u, ""))
+    .filter(Boolean);
+}
+
 if (process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const at = process.argv.indexOf("--flag");
   if (at === -1) {
@@ -139,7 +151,7 @@ if (process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(
     process.exitCode = 2;
   } else {
     const list = loadGateList(process.argv[at + 1] === undefined ? undefined : resolve(process.argv[at + 1]));
-    const changed = gateFilesIn(list, readFileSync(0, "utf8").split(/\r?\n/u).filter(Boolean));
+    const changed = gateFilesIn(list, changedFilesFrom(readFileSync(0, "utf8")));
     if (changed.length === 0) console.log("no gate files changed");
     else {
       const names = changed.join(", ");

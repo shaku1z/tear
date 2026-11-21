@@ -1,0 +1,131 @@
+{
+  "format": "tear-move-rules-baseline.v1",
+  "note": "The two rules over every boss and enemy (plans/active/VERDANT_PALE_REBUILD.md, 5.1 and 5.2): tests/unit/move-visual-lifetime.test.ts and tests/unit/boss-tell-weight.test.ts. Every list here may only shrink, and the tests fail on an entry that no longer applies. This is a gate file (config/gate-files.json): adding an entry, or raising the cap, needs the lead's review.",
+  "reach": {
+    "about": "What separates a body from a mark, in pixels past the entity's own box. measuredBodyReach is the furthest any entity off the hand-drawn list draws (Aldric's cleaver in a lunge); measuredNearestMarkReach is the least, among the hand-drawn entities that reach past markReach, of how far each reaches (the Geomancer's wall and the Gravedigger's arc). The test re-measures both over every fight and fails if either moves.",
+    "measuredBodyReach": 83,
+    "markReach": 120,
+    "measuredNearestMarkReach": 156
+  },
+  "lifetimeExempt": {
+    "rootbound": "until the new Rootbound replaces it in the Verdant switch (slice 6)",
+    "white-hart": "until Pale's rebuild",
+    "rimehound": "until Pale's rebuild"
+  },
+  "handDrawnMarks": {
+    "armored": {
+      "file": "src/presentation/enemies/renderers/standard-renderers.ts",
+      "draws": "the floor warning of its stomp"
+    },
+    "armored:bark-sentinel": {
+      "file": "src/presentation/enemies/renderers/standard-renderers.ts",
+      "draws": "the floor warning of its stomp"
+    },
+    "armored:glacier-guard": {
+      "file": "src/presentation/enemies/renderers/standard-renderers.ts",
+      "draws": "the floor warning of its stomp"
+    },
+    "bomber:geomancer": {
+      "file": "src/presentation/enemies/renderers/standard-renderers.ts",
+      "draws": "the wall rising at its target"
+    },
+    "charger": {
+      "file": "src/presentation/enemies/renderers/base-renderers.ts",
+      "draws": "the dashed charge arrow in its windup (the bull's)"
+    },
+    "charger:bull": {
+      "file": "src/presentation/enemies/renderers/base-renderers.ts",
+      "draws": "the dashed charge arrow in its windup"
+    },
+    "charger:executioner": {
+      "file": "src/presentation/enemies/renderers/base-renderers.ts",
+      "draws": "the floor line of its windup"
+    },
+    "charger:gravedigger": {
+      "file": "src/presentation/enemies/renderers/base-renderers.ts",
+      "draws": "the arc of its windup and swing"
+    },
+    "charger:rime-runner": {
+      "file": "src/presentation/enemies/renderers/base-renderers.ts",
+      "draws": "the dashed charge arrow in its windup"
+    },
+    "colossus": {
+      "file": "src/presentation/enemies/renderers/warden-colossus-renderers.ts",
+      "draws": "the dashed slam line in its windup, and the steam vent column"
+    },
+    "flyer:canopy-diver": {
+      "file": "src/presentation/enemies/renderers/standard-renderers.ts",
+      "draws": "the ground ring and dashed drop line of its dive"
+    },
+    "flyer:divebomber": {
+      "file": "src/presentation/enemies/renderers/standard-renderers.ts",
+      "draws": "the ground ring and dashed drop line of its dive"
+    },
+    "flyer:snowfall-kite": {
+      "file": "src/presentation/enemies/renderers/standard-renderers.ts",
+      "draws": "the ground ring and dashed drop line of its dive"
+    },
+    "herald": {
+      "file": "src/presentation/enemies/renderers/standard-renderers.ts",
+      "draws": "its aura ring (an aura's reach, drawn the way a mark is)"
+    },
+    "priest": {
+      "file": "src/presentation/enemies/renderers/standard-renderers.ts",
+      "draws": "its aura ring (an aura's reach, drawn the way a mark is)"
+    },
+    "ranged": {
+      "file": "src/presentation/enemies/renderers/base-renderers.ts",
+      "draws": "the dashed aim line to the player"
+    },
+    "ranged:chain": {
+      "file": "src/presentation/enemies/renderers/base-renderers.ts",
+      "draws": "the dashed aim line to the player"
+    },
+    "ranged:marksman": {
+      "file": "src/presentation/enemies/renderers/base-renderers.ts",
+      "draws": "the dashed aim line to the player"
+    },
+    "ranged:prism-seer": {
+      "file": "src/presentation/enemies/renderers/base-renderers.ts",
+      "draws": "the dashed aim line to the player"
+    },
+    "ranged:rifleman": {
+      "file": "src/presentation/enemies/renderers/base-renderers.ts",
+      "draws": "the dashed aim line to the player"
+    },
+    "ranged:seedcaster": {
+      "file": "src/presentation/enemies/renderers/base-renderers.ts",
+      "draws": "the dashed aim line to the player"
+    },
+    "ranged:sentinel": {
+      "file": "src/presentation/enemies/renderers/base-renderers.ts",
+      "draws": "the aim line to the player"
+    },
+    "ranged:warlock": {
+      "file": "src/presentation/enemies/renderers/base-renderers.ts",
+      "draws": "the dashed aim line to the player"
+    },
+    "source": {
+      "file": "src/presentation/enemies/renderers/source-renderer.ts",
+      "draws": "the dash lane, the dashed depth spear and siphon lines, the beam sweep"
+    },
+    "warden": {
+      "file": "src/presentation/enemies/renderers/warden-colossus-renderers.ts",
+      "draws": "the dashed dive line and target ring of its ceiling lunge, and its custody-hook rope (a prop)"
+    }
+  },
+  "tellWeight": {
+    "about": "Distinct (move state, mark helper) pairs a boss draws over its fight. The cap is the largest among the references, pinned here.",
+    "references": [
+      "warden",
+      "colossus",
+      "aldric",
+      "source"
+    ],
+    "cap": 9,
+    "exempt": {
+      "rootbound": "until the new Rootbound replaces it in the Verdant switch (slice 6)",
+      "white-hart": "until Pale's rebuild"
+    }
+  }
+}
