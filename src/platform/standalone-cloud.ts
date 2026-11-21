@@ -10,7 +10,10 @@ export const createStandaloneCloud: CloudFactory = (options) => {
   const load = (): Promise<FirebaseCloudCompatibility> => {
     loading ??= Promise.all([import("./firebase-cloud"), import("./firebase-config")]).then(([cloud, config]) => {
       firebase = cloud.createFirebaseCloudCompatibility({
-        services: async () => (await import("./firebase-sdk")).createFirebaseServices(config.FIREBASE_CONFIG),
+        services: async () =>
+          (await import("./firebase-sdk")).createFirebaseServices(config.FIREBASE_CONFIG, {
+            appCheck: config.FIREBASE_APP_CHECK_SITE_KEY,
+          }),
       });
       return firebase;
     });

@@ -1,4 +1,5 @@
 import { initializeApp, type FirebaseApp } from "firebase/app";
+import { CustomProvider, ReCaptchaV3Provider, initializeAppCheck } from "firebase/app-check";
 import {
   GoogleAuthProvider,
   connectAuthEmulator,
@@ -34,6 +35,15 @@ export interface FirebaseEmulators {
   readonly firestorePort: number;
 }
 
+export interface FirebaseServiceOptions {
+  readonly emulators?: FirebaseEmulators;
+  /**
+   * App Check, started before Auth and Firestore: the reCAPTCHA v3 site key (FIREBASE_APP_CHECK_SITE_KEY), or a
+   * provider of its own where reCAPTCHA cannot run (the rules tests, in Node). Empty or absent leaves it off.
+   */
+  readonly appCheck?: string | CustomProvider;
+}
+
 const user = (account: User): FirebaseUser => ({
   uid: account.uid,
   isAnonymous: account.isAnonymous,
@@ -45,9 +55,26 @@ const user = (account: User): FirebaseUser => ({
  * The modular Firebase SDK behind the adapter's ports: Auth, and Firestore Lite (plain requests, no
  * offline cache or listeners, which the game never used). Bundled into the standalone build's on-demand
  * Firebase chunk only; the CrazyGames build never imports it (src/platform/standalone-cloud.ts).
+ *
+ * App Check runs in monitor mode: requests carry a token the console counts, and nothing is refused while
+ * enforcement stays off. A token that cannot be had (reCAPTCHA blocked, or the free 10,000 monthly assessments
+ * used up, after which reCAPTCHA returns errors instead of charging) leaves requests going out without one.
  */
-export function createFirebaseServices(config: FirebaseClientConfig, emulators?: FirebaseEmulators): FirebaseServices {
+export function createFirebaseServices(
+  config: FirebaseClientConfig,
+  options: FirebaseServiceOptions = {},
+): FirebaseServices {
   const app: FirebaseApp = initializeApp(config);
+  if (options.appCheck) {
+    try {
+      const { appCheck } = options;
+      const provider = typeof appCheck === "string" ? new ReCaptchaV3Provider(appCheck) : appCheck;
+      initializeAppCheck(app, { provider, isTokenAutoRefreshEnabled: true });
+    } catch {
+      /* App Check stays off; Auth and Firestore work without it */
+    }
+  }
+  const { emulators } = options;
   const auth = getAuth(app);
   const db = getFirestore(app);
   if (emulators !== undefined) {

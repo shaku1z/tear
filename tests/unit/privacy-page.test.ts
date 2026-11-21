@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { BUILD_TARGETS } from "../../scripts/build-targets.mjs";
+import { FIREBASE_APP_CHECK_SITE_KEY } from "../../src/platform/firebase-config";
 import { OWN_PRIVACY_PAGE } from "../../src/platform/privacy-stance";
 
 const page = readFileSync(join(__dirname, "..", "..", "public", `${OWN_PRIVACY_PAGE.slice(1)}.html`), "utf8");
@@ -26,6 +27,10 @@ describe("the privacy page the standalone build links to", () => {
   it("names every service the build sends data to, and the anonymous-statistics switch", () => {
     for (const phrase of ["Firebase", "Cloudflare", "United States", "Share anonymous run statistics", "under 13"])
       expect(page).toContain(phrase);
+  });
+
+  it("names reCAPTCHA exactly when App Check has a site key, so the page lists it while the build loads it", () => {
+    expect(page.includes("reCAPTCHA")).toBe(FIREBASE_APP_CHECK_SITE_KEY !== "");
   });
 
   it("names the developer only by the public repository, with no email address or personal name", () => {

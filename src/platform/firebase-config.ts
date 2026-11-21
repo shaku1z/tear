@@ -19,3 +19,10 @@ export const FIREBASE_CONFIG: FirebaseClientConfig = Object.freeze({
   appId: "1:545513135103:web:bb60bdbd129a7e53f0e5ca",
   measurementId: "G-V83ZJV3HQ1",
 });
+
+/**
+ * The reCAPTCHA v3 site key Firebase App Check attests with: public, like the config above. Empty leaves App
+ * Check off. The owner registers the key in the console (plans/active/FIREBASE_REFRESH.md), and the change that
+ * sets it also names reCAPTCHA on the privacy page, which tests/unit/privacy-page.test.ts holds it to.
+ */
+export const FIREBASE_APP_CHECK_SITE_KEY: string = "";

@@ -10,20 +10,10 @@ import { collection, getDocs } from "firebase/firestore";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { AccountContext, CloudStatus, CloudUser } from "../../src/platform/cloud";
 import { createFirebaseCloudCompatibility } from "../../src/platform/firebase-cloud";
-import type { FirebaseClientConfig } from "../../src/platform/firebase-config";
 import { createFirebaseServices } from "../../src/platform/firebase-sdk";
-import { rulesTestProject } from "./rules-test-project";
+import { emulatorClientConfig, emulatorHosts, rulesTestProject, until } from "./rules-test-project";
 
 const projectId = rulesTestProject();
-const config: FirebaseClientConfig = {
-  apiKey: "demo-api-key",
-  authDomain: `${projectId}.firebaseapp.com`,
-  projectId,
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: "",
-  measurementId: "",
-};
 
 let env: RulesTestEnvironment;
 let clockOffset = 0;
@@ -34,25 +24,10 @@ const context: AccountContext = {
   },
   sync: () => Promise.resolve(),
 };
-const [firestoreHost = "127.0.0.1", firestorePort = "8189"] = (process.env.FIRESTORE_EMULATOR_HOST ?? "").split(":");
-const emulators = {
-  authUrl: `http://${process.env.FIREBASE_AUTH_EMULATOR_HOST ?? "127.0.0.1:9199"}`,
-  firestoreHost,
-  firestorePort: Number(firestorePort),
-};
 const cloud = createFirebaseCloudCompatibility({
-  services: () => Promise.resolve(createFirebaseServices(config, emulators)),
+  services: () => Promise.resolve(createFirebaseServices(emulatorClientConfig(), { emulators: emulatorHosts() })),
   now: () => Date.now() + clockOffset,
 });
-
-async function until<T>(read: () => T | undefined | Promise<T | undefined>, what: string): Promise<T> {
-  for (let attempt = 0; attempt < 100; attempt += 1) {
-    const value = await read();
-    if (value !== undefined) return value;
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-  throw new Error(`timed out waiting for ${what}`);
-}
 
 beforeAll(async () => {
   env = await initializeTestEnvironment({
