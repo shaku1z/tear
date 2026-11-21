@@ -4,7 +4,7 @@ import type { WorldCamera } from "../../presentation/world/world-frame";
 import type { WorldRect } from "../../presentation/world/contracts";
 import type { PadBindingLabel, PromptInputMode } from "../../domain/prompt-vocabulary";
 import type { TrainingExercise } from "../../gameplay/training/training-exercises";
-import { TrainingCoach, type TrainingCoachFrame } from "../training/training-coach";
+import { TrainingCoach, type TrainingCallout, type TrainingCoachFrame } from "../training/training-coach";
 
 /** World point to screen point through the frame camera (see `renderWorldFrame`). */
 export function worldToScreen(camera: WorldCamera, x: number, y: number): CoachPoint {
@@ -44,6 +44,8 @@ export interface TrainingCoachSources {
   }>;
   readonly lessonCard: WorldRect | undefined;
   readonly touchLayout: TouchControlLayout | undefined;
+  /** Call-outs posted since the last frame, at world points. */
+  readonly callouts?: readonly TrainingCallout[];
 }
 
 /**
@@ -72,13 +74,20 @@ export function createTrainingCoachPresentation() {
       }
       if (sources.lessonCard) avoid.push(sources.lessonCard);
       if (sources.touchLayout) avoid.push(...touchControlRects(sources.touchLayout));
-      const exercise = sources.exercise;
+      const exercise = sources.exercise,
+        camera = sources.camera;
+      const callouts = (sources.callouts ?? []).map(({ text, tone, at }) => ({
+        text,
+        tone,
+        ...(at && camera ? { anchor: worldToScreen(camera, at.x, at.y) } : {}),
+      }));
       const frame: TrainingCoachFrame = {
         deltaSeconds: sources.deltaSeconds,
         reducedMotion: sources.reducedMotion,
         inputMode: sources.inputMode,
         padLabel: sources.padLabel,
         player: anchor,
+        ...(callouts.length > 0 ? { callouts } : {}),
         ...(sources.mode === "tutorial" && exercise
           ? {
               tutorial: {

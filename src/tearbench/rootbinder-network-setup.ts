@@ -1,7 +1,7 @@
 import { launchResolvedLiveState } from "./live-state-setup-scenario-launch";
 import { buildRootbinderNetworkState } from "./state-setup-factories";
 import { resolveTearSdl, type TearSdlDocumentV1 } from "./tearsdl";
-import type { TearLiveRestoreResult } from "./live-state-snapshot";
+import type { TearLiveRestoreResult } from "../gameplay/snapshot/live-restore";
 import type { LiveRuntimeSnapshotController } from "./live-runtime-snapshots";
 import type { LiveTearRuntimeEnvironmentContext, TearStructuredRuntimeEnvironment } from "./live-runtime-contracts";
 

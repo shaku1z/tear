@@ -3,14 +3,14 @@ import { STAGES } from "../../src/gameplay/stages";
 import {
   createProductionGhostReplayComposition,
   captureProductionReplayCheckpoint,
-} from "../../src/tearbench/production-replay-composition";
+} from "../../src/app/world/detached/replay-composition";
 import { createLiveGhostCausalEvent } from "../../src/ghost/live-causal-events";
 import { GhostTimeline, validateGhostEventPayload } from "../../src/ghost/truth-kernel";
 import type { TearCausalEventV1 } from "../../src/tearbench/contracts";
 import { describe, expect, it } from "vitest";
 
-import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
-import { createProductionWaveRewardRuntime } from "../../src/tearbench/production-wave-reward-runtime";
+import { createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
+import { createProductionWaveRewardRuntime } from "../../src/app/world/detached/wave-reward-runtime";
 import { TearGameplayEventBus } from "../../src/gameplay/runtime/gameplay-events";
 import { ghostReferenceBoundary, type GhostReferenceBoundary } from "../../src/ghost/live-ghost-reference-data";
 

@@ -1,11 +1,11 @@
-import { isRecord } from "../domain/records";
-import { readBeatRunBinding } from "../gameplay/run/beat-run";
-import type { RewardSelectionSnapshot } from "../gameplay/run/reward-selection";
-import type { UpgradeDefinition } from "../gameplay/upgrades";
-import { MODE_IDS } from "../gameplay/run/mode-catalog";
-import { decodeTearCodecValue } from "./detached-world-hydrator";
-import type { TearCodecValue } from "../gameplay/snapshot/state-codec";
-import { readSeedLockedDraft, rollSeedLockedDraft } from "../gameplay/run/seed-locked-draft";
+import { isRecord } from "../../../domain/records";
+import { readBeatRunBinding } from "../../../gameplay/run/beat-run";
+import type { RewardSelectionSnapshot } from "../../../gameplay/run/reward-selection";
+import type { UpgradeDefinition } from "../../../gameplay/upgrades";
+import { MODE_IDS } from "../../../gameplay/run/mode-catalog";
+import { decodeTearCodecValue } from "./world-hydrator";
+import type { TearCodecValue } from "../../../gameplay/snapshot/state-codec";
+import { readSeedLockedDraft, rollSeedLockedDraft } from "../../../gameplay/run/seed-locked-draft";
 
 /** Rebinds portable upgrade data to the executable production definition. */
 export function hydrateRewardUpgrade(catalog: readonly UpgradeDefinition[], value: unknown): UpgradeDefinition | null {

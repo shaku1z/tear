@@ -12,7 +12,10 @@ import {
   type VariantSelectionContext,
 } from "../../src/gameplay/variants";
 import { stableVerificationHash } from "../../src/domain/hash";
-import { captureProductionReplayCheckpoint, createProductionGhostReplayComposition } from "../../src/tearbench";
+import {
+  captureProductionReplayCheckpoint,
+  createProductionGhostReplayComposition,
+} from "../../src/app/world/detached/replay-composition";
 import { PALE_VARIANT_STATE_SETUP_SCENARIOS } from "../../src/tearbench/pale-state-setup-scenarios";
 import { createEnemyHarness, createStandardActor, updateActor } from "./enemy-test-harness";
 

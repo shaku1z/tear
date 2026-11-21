@@ -43,7 +43,6 @@ export interface PlaygroundRuntimeRun {
 export interface PlaygroundRuntimeDependencies {
   readonly controller: PlaygroundController;
   readonly difficulties: readonly PlaygroundDifficulty[];
-  readonly colors: Readonly<Record<string, string>>;
   readonly stageNames: readonly string[];
   readonly groundY: number;
   readonly viewportWidth: number;
@@ -55,7 +54,8 @@ export interface PlaygroundRuntimeDependencies {
   scalePlayerDamage(ratio: number): void;
   clearProjectiles(): void;
   spawn(kind: string, hpScale: number): PlaygroundRuntimeEnemy | undefined;
-  announce(text: string, emphasis: boolean, color: string): void;
+  /** A call-out; `at` is the world point it sits above (the enemy it names), else the player. */
+  announce(text: string, at?: Readonly<{ x: number; y: number }>): void;
   navigate(screen: "pgmenu" | "pglab" | "playing"): void;
   releasePointer(): void;
   requestPointer(): void;
@@ -126,9 +126,13 @@ export function createPlaygroundRuntimeBridge(dependencies: PlaygroundRuntimeDep
     );
 
   function execute(intents: readonly PlaygroundIntent[]): void {
+    // The enemy a spawn intent just made: the announce after it names that enemy.
+    let spawned: PlaygroundRuntimeEnemy | undefined;
     for (const intent of intents) {
-      if (intent.type === "announce") dependencies.announce(intent.text, intent.emphasis, intent.color);
-      else if (intent.type === "apply-difficulty") {
+      if (intent.type === "announce") {
+        dependencies.announce(intent.text, spawned && { x: spawned.x, y: spawned.y - spawned.hh });
+        spawned = undefined;
+      } else if (intent.type === "apply-difficulty") {
         dependencies.scalePlayerDamage(intent.damageRatio);
         dependencies.run.diffDmg *= intent.damageRatio;
         dependencies.run.diff = intent.id;
@@ -138,14 +142,11 @@ export function createPlaygroundRuntimeBridge(dependencies: PlaygroundRuntimeDep
         dependencies.run.scoreMod = intent.score;
         dependencies.player.oneHit = intent.oneHit;
         const difficulty = dependencies.difficulties.find((entry) => entry.id === intent.id);
-        dependencies.announce(
-          (difficulty?.label ?? intent.id).toUpperCase(),
-          true,
-          dependencies.colors.perfect ?? "#fff",
-        );
+        dependencies.announce((difficulty?.label ?? intent.id).toUpperCase());
       } else if (intent.type === "spawn") {
         for (let index = 0; index < intent.count; index++) {
           const enemy = dependencies.spawn(intent.role === "boss" ? "boss" : intent.kind, intent.hpScale);
+          spawned = enemy ?? spawned;
           if (enemy && intent.role === "dummy") {
             enemy.tutDummy = true;
             enemy.affixCount = 0;
@@ -179,21 +180,18 @@ export function createPlaygroundRuntimeBridge(dependencies: PlaygroundRuntimeDep
 
   function step(): void {
     execute(
-      controller.update(
-        {
-          pressed: dependencies.pressed,
-          player: dependencies.player,
-          enemies: dependencies.enemies.map((enemy, index) => ({
-            id: String(index),
-            dead: enemy.dead,
-            tutorialDummy: !!enemy.tutDummy,
-            hp: enemy.hp,
-            maxHp: enemy.maxHp,
-          })),
-          viewportWidth: dependencies.viewportWidth,
-        },
-        dependencies.colors,
-      ),
+      controller.update({
+        pressed: dependencies.pressed,
+        player: dependencies.player,
+        enemies: dependencies.enemies.map((enemy, index) => ({
+          id: String(index),
+          dead: enemy.dead,
+          tutorialDummy: !!enemy.tutDummy,
+          hp: enemy.hp,
+          maxHp: enemy.maxHp,
+        })),
+        viewportWidth: dependencies.viewportWidth,
+      }),
     );
   }
 
