@@ -9,7 +9,7 @@ import { seedRaceCatalogHash, type SeedRaceRun, type SeedRaceShared } from "../.
 import { declareSeedRace, readSeedRaceRun, seedRaceInitialBuildHash } from "../../gameplay/run/seed-race-contract";
 import type { GhostLiveReference } from "../../ghost/live-ghost-reference-data";
 import { injectedBuildIdentity } from "../../gameplay/snapshot/live-capture";
-import { ENTITY_KIND_REGISTRY } from "../../gameplay/snapshot/codec-ids";
+import { REPLAY_CONTENT_HASH } from "../../gameplay/snapshot/codec-ids";
 import { CURRENT_RULESET_VERSION } from "../../gameplay/run/ruleset-version";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { GameRun, GamePlayer, GameBlade } from "../../gameplay/runtime/game-runtime-state";
@@ -96,7 +96,7 @@ export function createLiveSeedRace(
             return [id, rank];
           }),
       );
-      if (!injectedBuildIdentity("standalone", stableVerificationHash(ENTITY_KIND_REGISTRY.ids)))
+      if (!injectedBuildIdentity("standalone", REPLAY_CONTENT_HASH))
         throw new Error("Race requires an identified game build");
       scoped({ seed: d.createRunSeed(), ranks }, start);
     },
@@ -146,7 +146,7 @@ export function createLiveSeedRace(
       const state = Object.fromEntries(options.capture()),
         configHash = stableVerificationHash(state["tear.configuration.v1"]);
       const initialBuildHash = seedRaceInitialBuildHash(state);
-      const build = injectedBuildIdentity("standalone", stableVerificationHash(ENTITY_KIND_REGISTRY.ids));
+      const build = injectedBuildIdentity("standalone", REPLAY_CONTENT_HASH);
       if (!build) throw new Error("Race requires an identified game build");
       const shared =
         pending.shared ??
@@ -163,7 +163,7 @@ export function createLiveSeedRace(
           build: {
             ...build,
             rulesetVersion: CURRENT_RULESET_VERSION,
-            contentHash: stableVerificationHash(ENTITY_KIND_REGISTRY.ids),
+            contentHash: REPLAY_CONTENT_HASH,
             configHash,
           },
           draft: { policy: "seed-locked-common-offers.v1", seed: pending.seed, catalogHash: seedRaceCatalogHash() },
