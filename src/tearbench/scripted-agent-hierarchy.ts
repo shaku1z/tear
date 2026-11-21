@@ -10,8 +10,8 @@ import type { TearObservationClass } from "../gameplay/snapshot/snapshot-contrac
 
 export type TearAgentWatchdogKind =
   | "transition-stall"
-  | "no-progress"
-  | "softlock"
+  | "steering-unchanged"
+  | "steering-stuck"
   | "repeated-input"
   | "loading-stall"
   | "paused"
@@ -36,7 +36,12 @@ export interface TearAgentOperationalSignals {
   readonly focused?: boolean;
   readonly deviceConnected?: boolean;
   readonly terminal?: boolean;
-  readonly progressToken?: string;
+  /**
+   * What the scripted player steers by: when this has not changed for `replanAfterTicks`, the player tries
+   * something else. It is not a measure of run progress (anything in the arena changing changes it); for whether a
+   * run is getting anywhere, see `TearProgressMeter`.
+   */
+  readonly steeringToken?: string;
 }
 
 export interface TearHierarchicalObservation extends TearAgentObservation {
@@ -45,14 +50,15 @@ export interface TearHierarchicalObservation extends TearAgentObservation {
 
 export interface TearAgentWatchdogContract {
   readonly transitionTicks: number;
-  readonly noProgressTicks: number;
+  /** Ticks with an unchanged steering token after which the player re-plans. Not a soft-lock limit. */
+  readonly replanAfterTicks: number;
   readonly repeatedInputLimit: number;
   readonly loadingTicks: number;
 }
 
 export const DEFAULT_AGENT_WATCHDOG_CONTRACT = Object.freeze({
   transitionTicks: 3_600,
-  noProgressTicks: 1_800,
+  replanAfterTicks: 1_800,
   repeatedInputLimit: 240,
   loadingTicks: 1_200,
 } satisfies TearAgentWatchdogContract);
@@ -67,7 +73,7 @@ export interface TearAgentWatchdogIncident {
 export interface TearAgentMemorySnapshot {
   readonly decisions: number;
   readonly lastTick: number;
-  readonly lastProgressTick: number;
+  readonly lastSteeringChangeTick: number;
   readonly screenEnteredTick: number;
   readonly loadingEnteredTick?: number;
   readonly targetId?: string;
@@ -99,9 +105,9 @@ function actionSignature(actions: readonly GameAction[]): string {
   return JSON.stringify(actions);
 }
 
-function progressToken(observation: TearHierarchicalObservation): string {
+function steeringToken(observation: TearHierarchicalObservation): string {
   return (
-    observation.signals?.progressToken ??
+    observation.signals?.steeringToken ??
     [
       observation.ui?.screen ?? "playing",
       observation.state.run.wave,
@@ -115,11 +121,11 @@ function progressToken(observation: TearHierarchicalObservation): string {
 export class TearLongHorizonMemory {
   #decisions = 0;
   #lastTick = 0;
-  #lastProgressTick = 0;
+  #lastSteeringChangeTick = 0;
   #screen = "";
   #screenEnteredTick = 0;
   #loadingEnteredTick: number | undefined;
-  #progressToken = "";
+  #steeringToken = "";
   #targetId: string | undefined;
   #actionSignature = "";
   #repeatedActions = 0;
@@ -135,10 +141,10 @@ export class TearLongHorizonMemory {
       this.#screen = screen;
       this.#screenEnteredTick = tick;
     }
-    const token = progressToken(observation);
-    if (token !== this.#progressToken) {
-      this.#progressToken = token;
-      this.#lastProgressTick = tick;
+    const token = steeringToken(observation);
+    if (token !== this.#steeringToken) {
+      this.#steeringToken = token;
+      this.#lastSteeringChangeTick = tick;
     }
     if (observation.signals?.loading === true) {
       this.#loadingEnteredTick ??= tick;
@@ -158,11 +164,11 @@ export class TearLongHorizonMemory {
   reset(tick = 0): void {
     this.#decisions = 0;
     this.#lastTick = tick;
-    this.#lastProgressTick = tick;
+    this.#lastSteeringChangeTick = tick;
     this.#screen = "";
     this.#screenEnteredTick = tick;
     this.#loadingEnteredTick = undefined;
-    this.#progressToken = "";
+    this.#steeringToken = "";
     this.#targetId = undefined;
     this.#actionSignature = "";
     this.#repeatedActions = 0;
@@ -173,7 +179,7 @@ export class TearLongHorizonMemory {
     return Object.freeze({
       decisions: this.#decisions,
       lastTick: this.#lastTick,
-      lastProgressTick: this.#lastProgressTick,
+      lastSteeringChangeTick: this.#lastSteeringChangeTick,
       screenEnteredTick: this.#screenEnteredTick,
       ...(this.#loadingEnteredTick === undefined ? {} : { loadingEnteredTick: this.#loadingEnteredTick }),
       ...(this.#targetId === undefined ? {} : { targetId: this.#targetId }),
@@ -244,12 +250,12 @@ export class TearAgentWatchdog {
     if (tick - memory.screenEnteredTick > this.#contract.transitionTicks && observation.ui?.screen !== "playing") {
       add("transition-stall", "recoverable", "UI transition exceeded its tick budget");
     }
-    const softlockLimit = observation.state.diagnostics?.softlockLimitTicks ?? this.#contract.noProgressTicks;
-    if (tick - memory.lastProgressTick > this.#contract.noProgressTicks) {
-      add("no-progress", "recoverable", "no visible progress was observed");
+    const softlockLimit = observation.state.diagnostics?.softlockLimitTicks ?? this.#contract.replanAfterTicks;
+    if (tick - memory.lastSteeringChangeTick > this.#contract.replanAfterTicks) {
+      add("steering-unchanged", "recoverable", "nothing the player steers by has changed");
     }
-    if (tick - memory.lastProgressTick > softlockLimit) {
-      add("softlock", "fatal", "runtime exceeded its declared softlock budget");
+    if (tick - memory.lastSteeringChangeTick > softlockLimit) {
+      add("steering-stuck", "fatal", "nothing the player steers by has changed for the declared softlock budget");
     }
     if (memory.repeatedActions >= this.#contract.repeatedInputLimit) {
       add("repeated-input", "recoverable", "identical semantic action batch repeated too often");
@@ -406,7 +412,7 @@ export class TearRecoveryPlanner {
       return Object.freeze([{ type: "cancel" }, { type: "confirm" }]);
     }
     if (kinds.has("focus-lost") || kinds.has("device-disconnected")) return Object.freeze([{ type: "pause" }]);
-    if (kinds.has("no-progress") || kinds.has("repeated-input")) {
+    if (kinds.has("steering-unchanged") || kinds.has("repeated-input")) {
       return Object.freeze([
         { type: "move", x: 0, y: 0 },
         { type: "jump", phase: "pressed" },

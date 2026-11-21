@@ -328,15 +328,15 @@
       "difficulty": "easy",
       "ticks": 2160,
       "facts": {
-        "heldHitTicks": 10,
-        "damageTakenTicks": 3,
-        "dashes": 12,
+        "heldHitTicks": 11,
+        "damageTakenTicks": 5,
+        "dashes": 14,
         "jumps": 18,
         "enemiesDefeated": 0,
         "wavesCleared": 0,
         "draftsSelected": 0,
-        "bladeThrows": 7,
-        "bladeCatches": 6,
+        "bladeThrows": 8,
+        "bladeCatches": 7,
         "bossIntros": 1,
         "bossKinds": [
           "warden"
@@ -344,7 +344,7 @@
         "maxBossPhase": 2,
         "terminatedAt": null
       },
-      "finalHash": "242e59d1b13df8d3",
+      "finalHash": "c87ab610d181d4d3",
       "hashes": [
         "54fa8131574e2458",
         "052884e6e081a1cc",
@@ -375,13 +375,13 @@
         "1bb96fe96a5c3cff",
         "ee9045588dd13b2f",
         "5414a66894028656",
-        "65e55e99e2982eea",
-        "794a68d676562ded",
-        "b8b524a5308f0e29",
-        "982f6aa394b42a49",
-        "154572fbd0d84bfd",
-        "e0a47d208a6766e3",
-        "242e59d1b13df8d3"
+        "330e580abbdc133c",
+        "e5f1f5374dffc1f8",
+        "da17899033b60d27",
+        "eaedab26adc8255a",
+        "d2edcf2fa1c0396a",
+        "1caf6ac8c5fa69e4",
+        "c87ab610d181d4d3"
       ]
     },
     {

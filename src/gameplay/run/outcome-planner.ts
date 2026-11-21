@@ -3,6 +3,7 @@ import type { SeedRaceRun } from "./seed-locked-draft";
 import type { RunDifficulty, RunMode, RunWaveLogEntry } from "./session";
 import type { GhostRunAssistance } from "./ghost-assistance";
 import type { GauntletClear } from "../../domain/gauntlet-records";
+import type { LeaderboardRef } from "../../domain/leaderboards";
 
 /** How far a Gauntlet run got: trials cleared, the boss of the trial it ended in, ticks and hits. */
 export interface GauntletProgress {
@@ -23,6 +24,35 @@ export interface GauntletResult extends GauntletProgress {
 
 export function gauntletRunCleared(progress: GauntletProgress | undefined): boolean {
   return progress !== undefined && progress.trialCount > 0 && progress.trialsCleared >= progress.trialCount;
+}
+
+/** A run's entry on one leaderboard: the board and what it records there. */
+export interface RunLeaderboardEntry {
+  readonly board: LeaderboardRef;
+  readonly entry: Readonly<{ score: number; wave: number; time: number }>;
+  /** The board whose published replay the run's vault copy records; exactly one entry per run. */
+  readonly vaultShare: boolean;
+}
+
+/**
+ * The boards a finished run enters: its mode's score board, and on a Gauntlet clear the fastest-clear
+ * board with the clear's simulation ticks as its score (trials cleared in the wave column).
+ */
+export function runLeaderboardEntries(run: OutcomeRunState): readonly RunLeaderboardEntry[] {
+  const entries: RunLeaderboardEntry[] = [
+    {
+      board: { kind: "score", mode: run.mode, difficulty: run.diff },
+      entry: { score: run.score, wave: run.wave, time: run.runTime },
+      vaultShare: true,
+    },
+  ];
+  if (run.gauntlet !== undefined && gauntletRunCleared(run.gauntlet))
+    entries.push({
+      board: { kind: "gauntlet-clear", mode: run.mode, difficulty: run.diff },
+      entry: { score: run.gauntlet.ticks, wave: run.gauntlet.trialsCleared, time: run.runTime },
+      vaultShare: false,
+    });
+  return Object.freeze(entries);
 }
 
 export type OutcomeWaveLogEntry = RunWaveLogEntry;

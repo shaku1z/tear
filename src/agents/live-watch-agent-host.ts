@@ -7,6 +7,7 @@ import { projectLiveTearObservation } from "../tearbench/live-runtime-environmen
 import type { TearStructuredAgentIntent } from "../tearbench/scripted-agent-hierarchy";
 import { TearLiveHierarchicalPolicy } from "./hierarchical-policy-adapter";
 import type { TearAgentIntentTrace, TearAgentProfileId } from "./contracts";
+import { TearProgressMeter } from "../tearbench/progress-meter";
 import { buildWatchChoiceScore } from "./watch-build-choice";
 import { installLiveWatchAgentPanel } from "./live-watch-agent-panel";
 import {
@@ -123,7 +124,7 @@ interface MutableState {
   structuredIntent?: TearStructuredAgentIntent;
   lastScreen: string;
   noProgressTicks: number;
-  progressSignature: string;
+  progress: TearProgressMeter;
   setupStep: number;
   options: Required<TearWatchAgentOptions>;
   policy: TearLiveHierarchicalPolicy;
@@ -249,7 +250,7 @@ export function createLiveWatchAgentHost(context: LiveTearRuntimeEnvironmentCont
     draftPicks: [],
     lastScreen: context.screen(),
     noProgressTicks: 0,
-    progressSignature: "",
+    progress: new TearProgressMeter(),
     setupStep: 0,
     options: DEFAULTS,
     policy: new TearLiveHierarchicalPolicy(DEFAULTS.profile),
@@ -317,7 +318,7 @@ export function createLiveWatchAgentHost(context: LiveTearRuntimeEnvironmentCont
       draftPicks: [],
       lastScreen: "menu",
       noProgressTicks: 0,
-      progressSignature: "",
+      progress: new TearProgressMeter(),
       setupStep: 0,
       options: resolved,
       policy: new TearLiveHierarchicalPolicy(resolved.profile),
@@ -368,7 +369,7 @@ export function createLiveWatchAgentHost(context: LiveTearRuntimeEnvironmentCont
         if (directive.type === "begin-episode") {
           state.setupStep = 0;
           state.noProgressTicks = 0;
-          state.progressSignature = "";
+          state.progress.reset();
           state.policy = new TearLiveHierarchicalPolicy(state.options.profile);
           activateRequired(context, { type: "navigate", to: "setup" }, "longitudinal next episode");
           transition();
@@ -481,12 +482,8 @@ export function createLiveWatchAgentHost(context: LiveTearRuntimeEnvironmentCont
           state.noProgressTicks += 1;
         }
       }
-      const signature = `${screen}:${String(observation.run.wave)}:${String(observation.entities.length)}:${String(Math.round(observation.player.hp))}`;
-      if (signature === state.progressSignature) state.noProgressTicks += 1;
-      else {
-        state.progressSignature = signature;
-        state.noProgressTicks = 0;
-      }
+      if (state.progress.observe(observation, screen)) state.noProgressTicks = 0;
+      else state.noProgressTicks += 1;
       if (state.noProgressTicks > NO_PROGRESS_LIMIT) {
         fail("no-progress-watchdog");
         break;

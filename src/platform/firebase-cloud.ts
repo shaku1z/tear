@@ -1,3 +1,4 @@
+import { leaderboardId, leaderboardKind, scoreBeats, type LeaderboardRef } from "../domain/leaderboards";
 import { asRecord } from "../domain/records";
 import type { AccountProvider, CloudSavePayload, CloudUser, SharedCloudService, SignInResult } from "./cloud";
 
@@ -94,7 +95,8 @@ function cloudUser(user: FirebaseUser): CloudUser {
   };
 }
 
-const board = (mode: string, difficulty: string): string => `leaderboards/${mode}_${difficulty}/scores`;
+/** The collection of a board's rows, one per player. */
+const scores = (board: LeaderboardRef): string => `leaderboards/${leaderboardId(board)}/scores`;
 
 /** At most this many chunks per replay, as firestore.rules allows. */
 const REPLAY_MAX_CHUNKS = 6;
@@ -305,13 +307,19 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
 
   const shared: SharedCloudService = {
     available: true,
-    async submitScore(mode, difficulty, entry) {
+    // A Firestore query orders a board either way, so every direction is ranked.
+    ranks: () => true,
+    async submitScore(board, entry) {
       const session = await passport();
       if (!session) return false;
-      const path = `${board(mode, difficulty)}/${session.uid}`;
+      const kind = leaderboardKind(board);
+      const path = `${scores(board)}/${session.uid}`;
       try {
         const current = await race(session.store.read(path));
-        if (number(current?.score) >= entry.score) return false;
+        if (!scoreBeats(kind, Math.trunc(entry.score), current?.score)) return false;
+        // A new best replaces the whole entry, so the earlier run's replay link goes with it;
+        // linkReplay adds this run's link once its replay is published. `at` is the server's clock,
+        // which firestore.rules spaces bests by.
         await race(
           session.store.write(
             path,
@@ -324,7 +332,7 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
               ts: now(),
               at: SERVER_TIME,
             },
-            true,
+            false,
           ),
         );
         return true;
@@ -332,11 +340,13 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
         return false;
       }
     },
-    async topScores(mode, difficulty, limit) {
+    async topScores(board, limit) {
       const session = await passport();
       if (!session) return null;
+      const { direction } = leaderboardKind(board);
       try {
-        const rows = await race(session.store.list(board(mode, difficulty), "score", "desc", limit || 25));
+        const order = direction === "higher" ? "desc" : "asc";
+        const rows = await race(session.store.list(scores(board), "score", order, limit || 25));
         return rows.map((row) => row.data);
       } catch {
         return null;
@@ -427,11 +437,11 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
         return null;
       }
     },
-    async linkReplay(mode, difficulty, shareId) {
+    async linkReplay(board, shareId) {
       const session = await passport();
       if (!session) return false;
       try {
-        await race(session.store.write(`${board(mode, difficulty)}/${session.uid}`, { replayId: shareId }, true));
+        await race(session.store.write(`${scores(board)}/${session.uid}`, { replayId: shareId }, true));
         return true;
       } catch {
         return false;

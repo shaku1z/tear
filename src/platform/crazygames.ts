@@ -314,6 +314,9 @@ export async function createCrazyGamesPlatformServices(
   const profileStorage = createSdkStorage(sdk, active, profileLocal, "");
   const leaderboardService: LeaderboardsService | undefined = sdk.leaderboards
     ? {
+        // The SDK takes a board and a score with no ranking order, so this build can only claim the
+        // highest-first boards; a lowest-first board (the Gauntlet's fastest clear) is not offered here.
+        ranks: ["higher"],
         submit: async (board, score, replayId) => {
           await sdk.leaderboards?.submit(board, score, replayId);
         },

@@ -68,7 +68,12 @@ describe("Firebase cloud adapter", () => {
     const compatibility = createFirebaseCloudCompatibility({ services });
     await expect(compatibility.shared.replayFeed(20)).resolves.toBeNull();
     await expect(compatibility.shared.replayFeed(20)).resolves.toBeNull();
-    await expect(compatibility.shared.submitScore("endless", "hard", { name: "Guest", score: 5 })).resolves.toBe(false);
+    await expect(
+      compatibility.shared.submitScore(
+        { kind: "score", mode: "endless", difficulty: "hard" },
+        { name: "Guest", score: 5 },
+      ),
+    ).resolves.toBe(false);
     expect(services).toHaveBeenCalledOnce();
   });
 

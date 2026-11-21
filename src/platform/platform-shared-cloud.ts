@@ -1,10 +1,7 @@
+import { leaderboardId, leaderboardKind, rankEntries, scoreBeats } from "../domain/leaderboards";
 import { isRecord } from "../domain/records";
 import type { ScoreEntry, SharedCloudService } from "./cloud";
 import type { PlatformServices } from "./contracts";
-
-function board(mode: string, difficulty: string): string {
-  return `${mode}_${difficulty}`;
-}
 
 function scoreEntry(entry: ScoreEntry, rank: number, replayId?: string): Record<string, unknown> {
   return {
@@ -17,7 +14,11 @@ function scoreEntry(entry: ScoreEntry, rank: number, replayId?: string): Record<
   };
 }
 
-/** Bridges a target's typed leaderboard capability to the legacy cloud facade. */
+/**
+ * Bridges a target's typed leaderboard capability to the legacy cloud facade. A board whose
+ * direction the provider does not rank is refused; a score that does not beat this session's
+ * last submission to the board is not sent; entries come back in the board's rank order.
+ */
 export function createPlatformSharedCloud(getPlatform: () => PlatformServices): SharedCloudService {
   const submittedScores = new Map<string, number>();
   const leaderboards = () => {
@@ -28,20 +29,26 @@ export function createPlatformSharedCloud(getPlatform: () => PlatformServices): 
     get available() {
       return leaderboards() !== null;
     },
-    async submitScore(mode, difficulty, entry) {
+    ranks(direction) {
+      return leaderboards()?.ranks.includes(direction) ?? false;
+    },
+    async submitScore(ref, entry) {
       const service = leaderboards();
-      if (!service) return false;
-      const boardId = board(mode, difficulty);
+      const kind = leaderboardKind(ref);
+      if (!service?.ranks.includes(kind.direction)) return false;
+      const boardId = leaderboardId(ref);
+      if (!scoreBeats(kind, entry.score, submittedScores.get(boardId))) return false;
       await service.submit(boardId, entry.score);
       submittedScores.set(boardId, entry.score);
       return true;
     },
-    async topScores(mode, difficulty, limit) {
+    async topScores(ref, limit) {
       const service = leaderboards();
-      if (!service) return null;
-      const entries = await service.entries(board(mode, difficulty), limit);
+      const { direction } = leaderboardKind(ref);
+      if (!service?.ranks.includes(direction)) return null;
+      const entries = rankEntries(direction, await service.entries(leaderboardId(ref), limit));
       return entries.map((entry, index) =>
-        scoreEntry({ name: entry.displayName, score: entry.score }, entry.rank ?? index + 1, entry.replayId),
+        scoreEntry({ name: entry.displayName, score: entry.score }, index + 1, entry.replayId),
       );
     },
     logEvent(name, data) {
@@ -73,9 +80,9 @@ export function createPlatformSharedCloud(getPlatform: () => PlatformServices): 
     replayFeed() {
       return Promise.resolve(null);
     },
-    async linkReplay(mode, difficulty, shareId) {
+    async linkReplay(ref, shareId) {
       const service = leaderboards();
-      const boardId = board(mode, difficulty);
+      const boardId = leaderboardId(ref);
       const score = submittedScores.get(boardId);
       if (!service || score === undefined) return false;
       await service.submit(boardId, score, shareId);

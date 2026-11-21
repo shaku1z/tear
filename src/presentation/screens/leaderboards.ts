@@ -3,6 +3,9 @@ import { createPageFrame, type PageFrame, type ScrollBlock, type ScrollView } fr
 
 export const LEADERBOARD_HUE = "#e0a326";
 
+/** The ranked table's headings when a view names none (the score boards). */
+const DEFAULT_HEADINGS = Object.freeze({ count: "WAVE", time: "TIME", score: "SCORE" });
+
 type PodiumEntry = NonNullable<LeaderboardsScreenView["podium"]>[number];
 type RankRow = LeaderboardsScreenView["rows"][number];
 type Tokens = ScreenRenderContext["ui"]["t"];
@@ -253,7 +256,7 @@ export function createLeaderboardRenderers(context: ScreenRenderContext) {
 
   function leaderboards(view: LeaderboardsScreenView): void {
     const m = METRICS[ui.density.compact ? "phone" : "desktop"](ui.t);
-    const feed = !view.modes;
+    const feed = !view.boards;
     const frame = frames.open({
       title: "LEADERBOARDS",
       hue: LEADERBOARD_HUE,
@@ -264,10 +267,10 @@ export function createLeaderboardRenderers(context: ScreenRenderContext) {
         : view.signInRequired
           ? "compete globally with an account"
           : "the world's finest runs",
-      pickers: view.modes && [
+      pickers: view.boards && [
         {
-          items: view.modes,
-          action: (id) => ({ type: "leaderboards.selectBoard", id: `mode:${id}` }),
+          items: view.boards,
+          action: (id) => ({ type: "leaderboards.selectBoard", id: `board:${id}` }),
           desktop: DESKTOP.modePicker,
         },
         {
@@ -354,7 +357,7 @@ export function createLeaderboardRenderers(context: ScreenRenderContext) {
     head.push({
       height: m.header.height,
       draw: (y) => {
-        rankHeader(columns, y + m.header.baseline, m.header);
+        rankHeader(columns, y + m.header.baseline, m.header, view.headings ?? DEFAULT_HEADINGS);
       },
     });
     const list = view.rows.map((entry, index): ScrollBlock => ({
@@ -428,7 +431,12 @@ export function createLeaderboardRenderers(context: ScreenRenderContext) {
   }
 
   /** Column headings over the ranked table, and the rule under them. */
-  function rankHeader(columns: RankColumns, baseline: number, header: LeaderboardMetrics["header"]): void {
+  function rankHeader(
+    columns: RankColumns,
+    baseline: number,
+    header: LeaderboardMetrics["header"],
+    headings: NonNullable<LeaderboardsScreenView["headings"]>,
+  ): void {
     const style = {
       size: ui.t.type.micro,
       bold: true,
@@ -437,9 +445,9 @@ export function createLeaderboardRenderers(context: ScreenRenderContext) {
     };
     ink("#", columns.rankX, baseline, style);
     ink("PLAYER", columns.playerX, baseline, style);
-    ink("WAVE", columns.waveX, baseline, { ...style, align: "right" });
-    ink("TIME", columns.timeX, baseline, { ...style, align: "right" });
-    ink("SCORE", columns.scoreX, baseline, { ...style, align: "right" });
+    ink(headings.count, columns.waveX, baseline, { ...style, align: "right" });
+    ink(headings.time, columns.timeX, baseline, { ...style, align: "right" });
+    ink(headings.score, columns.scoreX, baseline, { ...style, align: "right" });
     ui.divider(context.canvas, columns.left, baseline + header.rule, columns.width, 0.16);
   }
 

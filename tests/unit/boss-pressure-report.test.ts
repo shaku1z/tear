@@ -145,9 +145,10 @@ function measure(id: BossId, phase: 1 | 2 | 3, kind: PlayerKind = "walker"): Pha
  * before changing a row. The Rootbound's rebuild is judged on this table; all three phases are rebuilt.
  */
 const BOSS_PRESSURE_RECORD: Readonly<Record<BossId, Measured>> = {
+  // Phase II opens with its staff slam (a 0.3 s windup, standing) instead of a scene; it was [130, 7, 130, 0].
   warden: [
     [51, 1, 16, 0],
-    [130, 7, 130, 0],
+    [126, 7, 120, 0],
     [192, 3, 54, 0],
   ],
   colossus: [
