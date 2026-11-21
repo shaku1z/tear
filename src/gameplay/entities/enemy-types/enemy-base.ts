@@ -8,7 +8,9 @@ import type {
   EnemyProjectile,
 } from "../enemy-contracts";
 import { bossBodyHurts, type BossBodyContactRow } from "../boss-body-contact";
+import { liveMoveOf, type MoveEndReason } from "../move-lifetime";
 import type { BossRuntime } from "./boss-runtime";
+import type { BossPhasePracticeActor } from "../../training/boss-phase-practice-runtime";
 
 export function createEnemyBase(dependencies: EnemyDependencies, bossRuntime: BossRuntime) {
   const { CLOCK, CONFIG, Clipper, GAME_RANDOM, Projectile, aabbOverlap, clamp, len, lerp } = dependencies;
@@ -125,6 +127,7 @@ export function createEnemyBase(dependencies: EnemyDependencies, bossRuntime: Bo
     declare cinematicColor: string;
     declare cinematicT: number;
     declare _perilUntil: number;
+    declare _perilMove: string | null | undefined;
     declare _phaseFlashT: number;
 
     constructor(x: number, y: number, cfg: EnemyConfig) {
@@ -318,6 +321,52 @@ export function createEnemyBase(dependencies: EnemyDependencies, bossRuntime: Bo
     onDeathStart(): void {
       return;
     }
+    /** The move this entity is in, or null at rest (move-lifetime.ts). A boss with parallel moves overrides it. */
+    liveMove(): string | null {
+      return liveMoveOf(this);
+    }
+    /** The highest phase whose start has ended the live move. */
+    movePhase = 0;
+    /**
+     * Run by the step before each update. A boss opts in by declaring its committed phase
+     * (`practicePhaseEntry()`, the one rule the playtest reader uses too). On the step its health first reaches
+     * a phase it has not entered, the live move ends, before the update enters that phase. Each phase ends a
+     * move once: healing back across a mark and losing it again does not end another.
+     */
+    noticePhase(): void {
+      const entry = (this as Partial<BossPhasePracticeActor>).practicePhaseEntry;
+      if (typeof entry !== "function") return;
+      const { phase, targetPhase } = entry.call(this);
+      const reached = Math.max(this.movePhase, phase);
+      if (targetPhase > reached) this.endMove("phase");
+      this.movePhase = Math.max(reached, targetPhase);
+    }
+    /**
+     * Ends the live move and the zones it left, when death starts and when the phase changes, for every
+     * entity. A stun does not call it: the move waits out the stun and resumes, and its marks hide meanwhile.
+     * It ends the move only. An entity with a `state` keeps its move there, and its `atk`/`atkT` are the
+     * cooldown until its next move, which the phase change leaves running; an entity without one keeps its
+     * move in `atk`, timed by `atkT`.
+     */
+    endMove(reason: MoveEndReason): void {
+      const self = this as { state?: unknown; stateT?: unknown };
+      if (typeof self.state === "string") {
+        self.state = "idle";
+        self.stateT = 0;
+      } else {
+        this.atk = "idle";
+        this.atkT = 0;
+        this.feint = false;
+      }
+      this._perilUntil = 0;
+      this.endMoveZones(reason);
+    }
+    /** Clears the zones the entity's moves left. A boss that keeps its zones in its own lists overrides it. */
+    endMoveZones(reason: MoveEndReason): void {
+      void reason;
+      const self = this as { zones?: unknown };
+      if (Array.isArray(self.zones)) self.zones = [];
+    }
     _beginDeath(cause = "") {
       if (this.dead || this.dying) return;
       if (this.isBoss && !this.isMiniBoss) {
@@ -329,6 +378,7 @@ export function createEnemyBase(dependencies: EnemyDependencies, bossRuntime: Bo
         this.vx = 0;
         this.vy = 0;
         bossFeedback(this, "death");
+        this.endMove("death");
         this.onDeathStart();
       } else {
         this.dead = true;

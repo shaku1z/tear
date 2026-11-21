@@ -23,6 +23,7 @@ jobs:
     timeout-minutes: 10
     environment:
       name: Preview
+      url: https://preview.tearblade.com
     steps:
       - name: Resolve successful validation evidence
         id: validation

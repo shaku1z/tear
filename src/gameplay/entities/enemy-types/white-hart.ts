@@ -63,6 +63,13 @@ function freezePoints(points: readonly EnvironmentPoint[]): readonly Environment
 export function createWhiteHartType(dependencies: EnemyDependencies, Enemy: EnemyBaseConstructor) {
   const { CONFIG, FX, Projectile, clamp, len, lerp } = dependencies;
   class WhiteHart extends Enemy {
+    /**
+     * Keeps today's behaviour until this boss is rebuilt: it is on the exemption list of
+     * tests/unit/move-visual-lifetime.test.ts, which may only shrink.
+     */
+    override endMove(): void {
+      return;
+    }
     declare cfg: typeof CONFIG.whiteHart;
     introT = 0;
     phaseMarker: 1 | 2 | 3 = 1;
