@@ -20,7 +20,7 @@
  */
 import { isRecord } from "../domain/records";
 import { hasMonotonicEnvelopes, type CommandEnvelope } from "../domain/envelopes";
-import { isBossDefinitionId } from "../gameplay/run/boss-definitions";
+import { isBossDefinitionId, isEngineeringOnlyBoss } from "../gameplay/run/boss-definitions";
 import { DIFFICULTY_IDS, type DifficultyId } from "../gameplay/run/difficulty-catalog";
 import { MODE_IDS } from "../gameplay/run/mode-catalog";
 import { rulesetRefusal } from "../gameplay/run/ruleset-version";
@@ -213,6 +213,8 @@ function readStart(value: unknown): ReplayStart {
   if (!isWeaponId(weapon)) fail("run.start.weapon", "is not a weapon");
   const boss = start.boss === undefined ? undefined : text(start.boss, "run.start.boss");
   if (boss !== undefined && !isBossDefinitionId(boss)) fail("run.start.boss", "is not a boss");
+  // Engineering-only bosses stay outside replay identity (ENGINEERING_ONLY_BOSS_IDS).
+  if (boss !== undefined && isEngineeringOnlyBoss(boss)) fail("run.start.boss", "is an engineering-only boss");
   if (typeof start.restoredTrail !== "boolean") fail("run.start.restoredTrail", "must be true or false");
   return Object.freeze({
     mode: oneOf(start.mode, RECORDED_MODE_IDS, "run.start.mode"),
