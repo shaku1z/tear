@@ -1,0 +1,12 @@
+{
+  "id": "mobile",
+  "name": "Mobile, touch and phone layouts",
+  "state": "Paused by the owner 2026-11-19; out of the release builds",
+  "summary": "The owner paused all mobile work. The release builds (standalone, CrazyGames, itch) leave out the touch controls, the rotate gate, the phone profile layout and haptics, and a build check fails if they come back; a touch-only phone sees one line saying TEAR is played on a computer for now. Dev and test builds keep everything. The phone browser checks are parked in the mobile group (pnpm check:mobile). Touch-aim fixes are parked as draft pull request 191. Sessions write anything mobile will need later in plans/MOBILE_LATER.md.",
+  "next": "Nothing until the owner resumes mobile; plans/MOBILE_LATER.md says how to turn it back on.",
+  "owner_action": "Mark the CrazyGames listing desktop only. Say when mobile resumes.",
+  "evidence": [
+    "plans/MOBILE_LATER.md",
+    "https://github.com/shaku1z/tear/pull/191"
+  ]
+}

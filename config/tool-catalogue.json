@@ -816,21 +816,21 @@
       "duration": "seconds"
     },
     "check:docs": {
-      "purpose": "Docs authority checker: plans index, links, POSITION.md freshness, repository map and size caps",
+      "purpose": "Docs authority checker: plans index, links, docs/position freshness, repository map and size caps",
       "effects": [
         "read-only"
       ],
       "duration": "seconds"
     },
     "position:render": {
-      "purpose": "Renders docs/POSITION.md from config/position.json",
+      "purpose": "Renders docs/position/ (one page per area, the index and production) from config/position/",
       "effects": [
         "writes-repo-files"
       ],
       "duration": "seconds"
     },
     "check:position": {
-      "purpose": "Fails if docs/POSITION.md is stale",
+      "purpose": "Fails if a page under docs/position/ is stale, hand-edited, missing or has no source",
       "effects": [
         "read-only"
       ],
@@ -1421,7 +1421,7 @@
       ]
     },
     "scripts/position.mjs": {
-      "purpose": "Renders (render) or checks (check) docs/POSITION.md from config/position.json",
+      "purpose": "Renders (render) or checks (check) docs/position/ from config/position/, one page per area",
       "effects": [
         "writes-repo-files"
       ],

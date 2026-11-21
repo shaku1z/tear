@@ -34,9 +34,10 @@ merged.
   when a script is added without an entry.
 - Repository skills live in `.agents/skills/<name>/SKILL.md`. Use the smallest
   set whose description matches the task.
-- Where each workstream stands: [docs/POSITION.md](docs/POSITION.md), generated from
-  `config/position.json` (`pnpm position:render`). Edit the JSON in the pull request that
-  changes an area's state; `pnpm check:docs` fails on a stale or hand-edited render.
+- Where each workstream stands: [docs/position/](docs/position/README.md), one generated page
+  per area from `config/position/<area>.json` (`pnpm position:render`). Edit your area's JSON in
+  the pull request that changes its state; that touches the area's two files only, so pull
+  requests in different areas do not conflict. `pnpm check:docs` fails on a stale or hand-edited page.
 - Every top-level folder and config file, what writes it and whether it is generated:
   [docs/REPOSITORY_MAP.md](docs/REPOSITORY_MAP.md). A new top-level entry needs a row there, and
   tracked documents and evidence stay under the size cap in `config/size-caps.json`.

@@ -3,7 +3,7 @@
 Copy this file to `plans/active/<SHORT_NAME>.md` for a task that takes more than one pull
 request or more than one session. Write the failure modes and the "done when" lines before
 any code or tests. Move the card to `plans/completed/` when every "done when" line holds,
-and update `plans/README.md` and `config/position.json` in the same pull request. A new
+and update `plans/README.md` and your area's file under `config/position/` in the same pull request. A new
 active plan also needs its path in `CANONICAL_ACTIVE_PLAN_PATHS` in `scripts/check-docs.mjs`.
 
 A one-pull-request change does not need a card: its pull request description is enough.
