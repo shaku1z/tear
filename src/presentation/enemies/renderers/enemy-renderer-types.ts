@@ -49,7 +49,34 @@ export interface EnemyPresentationPolicy {
   readonly warden: Readonly<{ batonWindup: number; lungeWind: number; lungeWindup: number; stringWind: number }>;
 }
 
+/**
+ * The shared helpers that draw a mark: a warning of where a strike lands, drawn over the stage. Every
+ * boss and enemy renderer draws its marks only through these, so a test that watches them sees every
+ * mark (tests/unit/move-visual-lifetime.test.ts).
+ */
+export const ENEMY_MARK_HELPERS = Object.freeze([
+  "chargeTelegraph",
+  "dangerArc",
+  "dangerLane",
+  "dangerColumn",
+  "dangerReticle",
+  "drawPeril",
+  "weaponGlint",
+] as const);
+export type EnemyMarkHelper = (typeof ENEMY_MARK_HELPERS)[number];
+/** The shared helpers that draw a prop: a weapon or a dropped crown, which may reach far from the body. */
+export const ENEMY_PROP_HELPERS = Object.freeze(["drawAldricCrown", "drawGreatCleaver", "drawWardstaff"] as const);
+export type EnemyPropHelper = (typeof ENEMY_PROP_HELPERS)[number];
+
+/** Told when a mark or prop helper starts and finishes drawing. Only tests pass one. */
+export interface EnemyMarkObserver {
+  enter(helper: EnemyMarkHelper | EnemyPropHelper): void;
+  exit(helper: EnemyMarkHelper | EnemyPropHelper): void;
+}
+
 export interface EnemyPresentationDependencies {
+  /** Watches the mark helpers; absent in the game. */
+  markObserver?: EnemyMarkObserver;
   A11Y: { highContrast: boolean; reducedMotion: boolean };
   CLOCK: { sim: number };
   policy: EnemyPresentationPolicy;

@@ -275,7 +275,8 @@ export function createAldricType(
     _syncZones() {
       this.zones = this.fireZones.concat(this.seams);
     }
-    override onDeathStart() {
+    /** His seams and throne fire end with the move, on the phase-change tick and when death starts. */
+    override endMoveZones() {
       clearThroneFire(this, true);
       this.seams = [];
       this._syncZones();
@@ -501,11 +502,10 @@ export function createAldricType(
       for (const z of this.seams) z.life = (z.life ?? 0) - dt;
       this.seams = this.seams.filter((z) => (z.life ?? 0) > 0);
       this._syncZones();
-      if (this.crown) {
+      // A CROWNFALL crown that lands this tick comes to rest on the platform it was thrown onto (`_crownLands`).
+      if (this.crown && !this._crownLands(platforms)) {
         const rest = this.crown.restPlatform;
-        if (this._crownLands(platforms)) {
-          // CROWNFALL lands: the crown comes to rest on the platform it was thrown onto.
-        } else if (this.crown.state === "fallen" && rest && platforms.includes(rest)) {
+        if (this.crown.state === "fallen" && rest && platforms.includes(rest)) {
           this.crown.y = rest.y - 10;
           this.crown.vx = 0;
           this.crown.vy = 0;

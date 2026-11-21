@@ -109,6 +109,13 @@ export function createRootboundType(
     return scratch;
   };
   class Rootbound extends Enemy {
+    /**
+     * Keeps today's behaviour until this boss is rebuilt: it is on the exemption list of
+     * tests/unit/move-visual-lifetime.test.ts, which may only shrink.
+     */
+    override endMove(): void {
+      return;
+    }
     declare cfg: typeof CONFIG.boss;
     introT = 0;
     phaseMarker = 1;

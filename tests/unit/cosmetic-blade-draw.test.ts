@@ -14,6 +14,16 @@ import { createBladeRenderer } from "../../src/presentation/entities/blade-rende
  * the game's own blade look: TEAR_BLADE_DRAW_WRITE=1 pnpm exec vitest run tests/unit/cosmetic-blade-draw.test.ts
  */
 const FIXTURE = new URL("../fixtures/blade-default-draw-calls.json", import.meta.url);
+/** A look value from the catalog itself, so a test follows the authored look rather than a copy of it. */
+function lookValue(id: string, key: string): unknown {
+  const item = COSMETIC_CATALOG.items.find((entry) => entry.id === id);
+  if (!item) throw new Error(`no catalog item ${id}`);
+  return item.look[key];
+}
+const lookColors = (id: string): string[] => {
+  const colors = lookValue(id, "colors");
+  return Array.isArray(colors) ? colors.filter((color): color is string => typeof color === "string") : [];
+};
 const INK = { light: "#0a0a0a", dark: "#ecebf6" } as const;
 const STATE_KEYS = [
   "fillStyle",
@@ -174,9 +184,8 @@ describe("blade draw path with cosmetics", () => {
   it("colours the wearer's trail and tip glow from the worn items", () => {
     const scene: Scene = { name: "worn", blade: blade("sword"), dark: false, low: false };
     const fills = paints(wearing(scene, { trail: "trail_tidewater", blade: "blade_moonsteel" })).join("\n");
-    expect(fills).toContain("fill() | #2f7bd6");
-    expect(fills).toContain("fill() | #0f9fb0");
-    expect(fills).toContain("fill() | #7a4ff0");
+    for (const color of lookColors("trail_tidewater")) expect(fills).toContain(`fill() | ${color}`);
+    expect(fills).toContain(`fill() | ${String(lookValue("blade_moonsteel", "glow"))}`);
     expect(fills).not.toContain(`fill() | ${CONFIG.colors.bladeTrail} `);
   });
 
@@ -206,10 +215,11 @@ describe("blade draw path with cosmetics", () => {
     const scene: Scene = { name: "finale", blade: blade("sword", { restoredTrail: true }), dark: true, low: false };
     const wardrobe = fresh();
     wardrobe.wear(scene.blade, { trail: "trail_dusk" });
-    expect(paints(draw(scene, wardrobe)).join("\n")).toContain("#7a4ff0");
+    const [dusk = ""] = lookColors("trail_dusk");
+    expect(paints(draw(scene, wardrobe)).join("\n")).toContain(dusk);
     wardrobe.authored(true);
     expect(draw(scene, wardrobe)).toEqual(draw(scene, fresh()));
     wardrobe.authored(false);
-    expect(paints(draw(scene, wardrobe)).join("\n")).toContain("#7a4ff0");
+    expect(paints(draw(scene, wardrobe)).join("\n")).toContain(dusk);
   });
 });
