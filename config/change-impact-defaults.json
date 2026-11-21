@@ -88,6 +88,9 @@
         "src/gameplay/weapon-tuning.ts",
         "src/replay/envelope.ts",
         "src/replay/legacy-compat-validation.ts",
+        "src/replay/record.ts",
+        "src/replay/recorder.ts",
+        "src/replay/verify.ts",
         "src/test-build.d.ts"
       ]
     },
