@@ -459,6 +459,35 @@ to the catalog.
 Each pull request leaves `main` shippable: every fight is winnable, every boss reaches every phase,
 and Adventure plays from Chapter I to the finale.
 
+### Where it stands (handoff, 2026-11-21)
+
+This section is the handoff. Whoever picks the overhaul up, with or without the earlier sessions'
+notes, starts here.
+
+- **Merged:** PR 0 (#340), PR 1 (#350), PR 2 (#357) and PR 3 (#367, Aldric, ruleset v18).
+- **In review:** the intro-clock slice (#374, ruleset v19), on branch `codex/cinematics-intro-clock`.
+  The lead approved it. It merges alone, after #373, which resumes preview deploys.
+  - Before it merges, run `git merge origin/main` on the branch.
+  - If #366 has landed, move the cinematics position edit into the cinematics area's file under
+    `config/position/` and run `pnpm position:render`.
+  - If main took a ruleset step in the meantime, #374 takes the next free number. #372 (replay)
+    plans to take v20 after it.
+  - If main changed the determinism corpus in the meantime, regenerate
+    `tests/fixtures/canonical-hash-stream.json`. Run it twice: the two runs must give the same
+    hashes. A pinned boss seed that no longer survives is re-picked by the rule in
+    `tests/support/hash-stream-corpus.ts` (the first surviving seed in the fixed list), and the
+    counts there are updated.
+- **Owed:** an in-game preview card for #367 and #374 together, once previews resume and #374 is
+  deployed to preview.tearblade.com. It goes to the owner through the ledger. It gives:
+  - the preview link;
+  - where to see Aldric's crownfall (at 20% health: the crown flies onto the platform below and
+    cracks it, with no scene) and his revive (after the kneel, starting with the vault);
+  - what to watch: the fight never stops, and the boss arrival feels as before (1.4 s).
+- **Next slice:** PR 4, the Source (below). Its first step is a fresh `pnpm playtest bosses --boss
+  source` run, whose numbers set the Unmake timings. The fall-forever regression test comes next.
+- **After it:** PR 5 waits for Rootbound's pull request (see "Coordination"). PRs 6-8 draw new art
+  on the owner-approved look board.
+
 ### PR 0: this plan (docs only)
 
 The plan, its row in `plans/README.md`, and a cinematics area in `config/position.json`.
