@@ -6,20 +6,21 @@ colour ramps and layers of shared strokes. No image file ships for a stage. One
 painter, one scene library and one renderer serve every biome; adding a biome's
 background means adding a recipe and one registry line, never renderer code.
 
-Verdant Sanctum is the first drawn stage
-(`src/presentation/stage-art/recipes/verdant-sanctum.ts`). A stage without a
-recipe keeps its procedural backdrop.
+Verdant Sanctum and Pale Traverse are drawn stages
+(`src/presentation/stage-art/recipes/`). A stage without a recipe keeps its
+procedural backdrop.
 
 ## Rules for every biome
 
 1. **A reference illustration is a target, never an asset.** The owner's
    illustration says what the stage should look like. The recipe is written to
    match it; the illustration itself is not shipped, traced or loaded.
-2. **Platforms are a game layer.** The stage's platform material draws every
-   platform and the floor from the real collision geometry, above the
-   background and below actors, in every state (stable, stressed, warning,
-   broken, reforming). The recipe only supplies that material's surface strip
-   and the contact shadows. Collision can change without repainting anything.
+2. **Platforms are a game layer, the same on every stage.** `Backdrop.platform`
+   draws every platform and the floor from the real collision geometry, above
+   the background and below actors: a plain body in the stage's `plat` colour
+   with a light top edge and a contact shadow. A drawn stage gets no platform
+   look of its own, and a recipe says nothing about platforms. Collision can
+   change without repainting anything.
 3. **The stage keeps its own ink.** The scene's paper is the stage's own
    background colour from `src/gameplay/stages.ts`, so the HUD, the player and
    enemies keep the colours they have on that stage without art. A recipe never
@@ -41,18 +42,17 @@ recipe keeps its procedural backdrop.
 | `src/presentation/stage-art/stage-art-validate.ts` | Checks a recipe before it paints: ramps exist, colours parse, numbers in range, brushwork within the limits. |
 | `src/presentation/stage-art/stage-art-painter.ts` | Paints a recipe into layer canvases in short slices and returns the scene layout. |
 | `src/presentation/stage-art/strokes-*.ts`, `paint-kit.ts` | One routine per stroke kind, and the brush, ramp and noise helpers they share. |
-| `src/presentation/stage-art/recipes/<stage>.ts` | A stage's recipe. |
-| `src/presentation/stage-art/painted-stage.ts` | Binds a recipe to the stage's own paper and platform material. |
-| `src/presentation/scenes/scene-registry.ts` | `stageId -> lazy loader`. One line per drawn stage. |
-| `src/presentation/scenes/scene-library.ts` | When a stage paints, the fade-in, the fallback to the procedural backdrop, release of stages a run has left, the surface texture for any platform material. |
+| `src/presentation/stage-art/recipes/<stage>.ts`, `recipes/index.ts` | A stage's recipe, and the list of every recipe. |
+| `src/presentation/stage-art/painted-stage.ts` | Binds a recipe to the stage's own paper. |
+| `src/presentation/scenes/scene-registry.ts` | The ids of the drawn stages, each with a lazy loader. |
+| `src/presentation/scenes/scene-library.ts` | When a stage paints, the fade-in, the fallback to the procedural backdrop, release of stages a run has left. |
 | `src/presentation/stage-art/stage-art-live.ts` | Turns a recipe's water and motes into the tables drawn each frame; all their randomness is spent here, from the entry's seed. |
-| `src/presentation/scenes/scene-renderer.ts` | Draws the layers with parallax, the platform texture and contact shadows. |
+| `src/presentation/scenes/scene-renderer.ts` | Draws the layers with parallax. |
 | `src/presentation/scenes/scene-live.ts` | Draws what moves over its layer each frame: water, motes, and parts that sway or breathe. |
 | `src/presentation/scenes/scene-contract.ts` | The scene layout the renderer composes, and the camera maths (parallax, overscan, coverage). |
-| `src/presentation/platform-materials/` | The platform materials; each takes a `SurfaceTexture` from the painted stage. |
 | `config/scene-viewports.json` | Every screen shape a covering layer must fill. |
 | `config/stage-readability.json` | The readability zones and floors, the moments at which a moving stage is measured and the ceilings on how much it may move, and each drawn stage with the browser check that measures it. |
-| `tests/unit/stage-art.test.ts`, `stage-live.test.ts`, `scene-library.test.ts`, `scene-contract.test.ts` | Recipe, painter, live list, library and camera tests. |
+| `tests/unit/stage-art.test.ts`, `stage-land.test.ts`, `stage-live.test.ts`, `scene-library.test.ts`, `scene-contract.test.ts` | Recipe, painter, land strokes, live list, library and camera tests. |
 
 ## The recipe
 
@@ -64,8 +64,14 @@ recipe keeps its procedural backdrop.
 | `ramps` | Named colour ramps, dark to light. Strokes name a ramp; they never carry their own colours for form. |
 | `layers` | `{ id, depth, plane, scale, area?, strokes }`. Depth 1 moves with the world, below 1 is further away. `back` draws under platforms, `front` over them. A layer without `area` covers the camera at every required screen shape; the painter sizes it. `scale` is canvas pixels per world unit, at most 1. |
 | `live` | Optional. What moves, as a list (next section). |
-| `surface` | The platform surface strip (lit edge at the top, repeated along x), the fill below it and the contact shadow. |
 | `edge` | Colour past a covering layer's edge at very wide screens. |
+
+Two stroke kinds draw land and sky for any stage (`strokes-land.ts`):
+
+| Kind | What it draws | Main fields |
+| --- | --- | --- |
+| `ridge` | A ridgeline filled down to a base row: a mountain range, rolling ground or a treeline. Faces turned to the key light are lighter, and each pointed summit throws one shadowed face. | `crest`, `base`, `relief`, `span`, `sharp` (0 rolling to 1 pointed), `peaks` (named summits), `teeth` (fir tips) |
+| `ribbon` | A curtain of light standing on a path, such as aurora: wide faint rays and narrow bright ones, brightest just above their feet. | `path` (each point's width is the curtain's height there), `ramp` (foot to top), `alpha`, `rays` per 100 px |
 
 A front layer may only dress the floor body and below: the painter refuses one
 that reaches above the floor surface at any camera the recipe allows, so a
@@ -114,8 +120,9 @@ Rules that hold for every kind:
   background draws every stage in turn and never paints one; it keeps the
   procedural look. Only `show` (the world is drawing the stage) and `prefetch`
   (the run reaches it next) in the scene library start a load.
-- The painter and each recipe are separate lazily imported chunks, so stage art
-  adds nothing to the startup scripts.
+- The painter and every recipe are one lazily imported chunk, so stage art
+  adds nothing to the startup scripts and a new drawn stage adds no file to
+  download or precache.
 - Painting is sliced: the painter hands the thread back after at most 4 ms and
   runs one slice per frame, after the frame has drawn. The diagnostics gauge
   `stageArtSlices` counts slices, and the frame-time scenarios report how many
@@ -148,10 +155,9 @@ brushwork.
   range. Required shapes: 16:9 (1600x900, 1280x720), 16:10, 4:3, 5:4, 21:9
   (2560x1080, 3440x1440) and phone landscape (844x390, 932x419); wider screens
   fall back to the edge colour.
-- The scene's paper is the stage's own background colour and its platform
-  material is the stage's own.
-- Readability, in the built game: with the stage at rest (backdrop, platform
-  shadows, platforms, front plane; no actors, no interface) the stage's ink
+- The scene's paper is the stage's own background colour.
+- Readability, in the built game: with the stage at rest (backdrop, platforms,
+  front plane; no actors, no interface) the stage's ink
   reaches 3:1 on at least 90% of the interface title zone, 90% of the interface
   status zone and 75% of the play band (`config/stage-readability.json`,
   measured by `tests/stage-readability.js`). A unit test requires every
@@ -170,15 +176,21 @@ brushwork.
 
 ## Drawing a background for a biome
 
-1. **Reference (owner).** One approved illustration of the stage without
-   platforms, actors or interface. It stays outside the repository.
+1. **Reference (owner).** One approved picture of the stage: an illustration
+   without platforms, actors or interface, or a composition board the owner
+   picked. It stays outside the repository. The references so far:
+   - Verdant Sanctum: the owner's illustration (`Tear-scene-sources/verdant-sanctum`).
+   - Pale Traverse: board D of round 2, "lake under the ranges", picked by the
+     owner on 2026-11-21 (`pale-r2-D-lake-ranges-board.png`). The board was
+     painted by this painter from the recipe that is now the stage's own.
 2. **Recipe.** Add `src/presentation/stage-art/recipes/<stage>.ts`: the camera
    range from the stage's real camera, the light, the atmosphere, ramps taken
    from the reference, then layers from far to near. Reuse stroke kinds; add a
    new kind (contract, one routine, one case in the painter, its cost in the
    validator) only for a form no existing kind can draw. Add a `live` list
    for what moves once the still picture is approved.
-3. **Register.** One line in `scene-registry.ts`, and the stage with its
+3. **Register.** The recipe in `recipes/index.ts`, the stage id in
+   `scene-registry.ts`, and the stage with its
    browser check in `config/stage-readability.json`.
 4. **Readability.** Run the stage's browser check on a test build
    (`pnpm build:test:standalone`). Below a floor, change values in the recipe
@@ -196,3 +208,8 @@ decoded size budgets, and readability shading drawn over the untouched
 painting. The owner asked for the stage to be drawn like every other stage
 instead, so the game now paints it from a recipe, and the image format, its
 command, its budgets and its checks were removed.
+
+Verdant and Pale then had platform materials of their own (rootstone and ice)
+with a painted surface strip from the recipe. The owner found them too detailed
+beside every other stage, so both were removed and all stages share one
+platform look.
