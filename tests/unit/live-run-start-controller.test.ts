@@ -324,6 +324,7 @@ function actualOpeningHost(
     PROFILE: { data: { stats: {}, ach: {}, rewards: {} }, markMode, cosmetics: emptyCosmeticState },
     COSMETICS: createCosmeticWardrobe(COSMETIC_CATALOG, () => false),
     META: { level: () => 0, apply: noop },
+    SHOP: [],
     SFX: { setVoidDescent: noop, setMusicDuck: noop, musicScoreVersion: () => "unit" },
     newMods,
     Input: {
@@ -1559,7 +1560,17 @@ describe("LiveRunStartController", () => {
       },
       resetAuthoritativeClocks: () => events.push("clocks"),
       finishWorldReset: () => events.push("finish-world"),
-      createRunSeed: () => 12345,
+      resolveStart: (mode, difficulty) => ({
+        mode,
+        difficulty,
+        weapon: "sword",
+        boss: "shuffle",
+        runSeed: 12345,
+        metaRanks: {},
+        variantDiscovery: [],
+        achievementSnapshot: [],
+        restoredTrail: false,
+      }),
       resetRunRandom: () => events.push("random"),
       installSession: (session) => {
         installedSeed = session.runSeed;

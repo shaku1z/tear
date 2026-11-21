@@ -23,6 +23,8 @@ import type { EnvironmentRuntimeState } from "../../gameplay/environment/environ
 import { resolveDiscoveredVariantIds } from "../../gameplay/variants";
 import { cleanupBossEncounterActors } from "../../gameplay/run/boss-encounter";
 import { CURRENT_RULESET_VERSION } from "../../gameplay/run/ruleset-version";
+import type { RunStartChoices } from "../../gameplay/run/run-start-choices";
+import { applyMetaRanks } from "../../gameplay/progression/meta";
 
 interface MutableWorldState {
   resetTransient(): void;
@@ -130,7 +132,7 @@ export function createLiveRunStartHost(
   context: RunStartHostContext,
 ): LiveRunStartController<ReturnType<GameRuntimeDependencies["newMods"]>> {
   const { dependencies, state } = context;
-  const { CONFIG, REMOTE, GHOST, PROFILE, META, SFX, GAMEPLAY_EVENTS, Input, createRunSeed, newMods, COSMETICS } =
+  const { CONFIG, REMOTE, GHOST, PROFILE, META, SHOP, SFX, GAMEPLAY_EVENTS, Input, createRunSeed, newMods, COSMETICS } =
     dependencies;
   const replacement = new RunReplacementGuard({
     recording: () => GHOST.recording(),
@@ -172,7 +174,23 @@ export function createLiveRunStartHost(
         Input.stopSemanticRecording();
       }
     },
-    initializeWorld: (mode, difficulty) => {
+    resolveStart: (mode, difficulty): RunStartChoices => {
+      const baseline = tutorialUsesBaselineLoadout(mode) || context.baselinePractice?.() === true;
+      const discoveredBiomes = Object.keys((PROFILE.data.stats._biomes ?? {}) as Record<string, unknown>);
+      const ordinary = resolveDiscoveredVariantIds(mode, discoveredBiomes);
+      return Object.freeze({
+        mode,
+        difficulty,
+        weapon: migrateWeaponSelection(state.selectedWeapon()),
+        boss: context.selectedBoss(),
+        runSeed: (context.createRunSeed ?? createRunSeed)(),
+        metaRanks: Object.freeze(baseline ? {} : metaRanksOf(SHOP, (id) => META.level(id))),
+        variantDiscovery: Object.freeze([...(context.race?.discovery(ordinary) ?? ordinary)]),
+        achievementSnapshot: Object.freeze(Object.keys(PROFILE.data.ach)),
+        restoredTrail: Boolean(PROFILE.data.rewards?.restoredBladeTrail),
+      });
+    },
+    initializeWorld: (start) => {
       context.clearPracticeSession?.();
       cleanupBossEncounterActors(state.enemies(), "reset");
       context.environment.clear("new-run");
@@ -182,7 +200,7 @@ export function createLiveRunStartHost(
       context.services.mirror.reset();
       context.services.bossFeedback.clear();
       context.services.configuration.resetToBase();
-      const weaponId = migrateWeaponSelection(state.selectedWeapon());
+      const weaponId = start.weapon;
       state.setSelectedWeapon(weaponId);
       context.applySettings();
       try {
@@ -196,13 +214,13 @@ export function createLiveRunStartHost(
           ? [{ id: definition.id, oneHit: definition.oneHit === true, mods: definition.mods }]
           : [],
       );
-      startingPlan = planRunStart(difficulty, difficulties, REMOTE);
+      startingPlan = planRunStart(start.difficulty, difficulties, REMOTE);
       CONFIG.player.dmgTakenMult *= startingPlan.playerDamageMultiplier;
       const player = context.createPlayer(context.width * 0.5, CONFIG.world.groundY - 60);
       player.oneHit = startingPlan.oneHit;
       const blade = context.createBlade();
       context.configureBlade(blade, weaponId);
-      blade.restoredTrail = Boolean(PROFILE.data.rewards?.restoredBladeTrail);
+      blade.restoredTrail = start.restoredTrail;
       COSMETICS.wear(blade, loadoutOf(COSMETIC_CATALOG, PROFILE.cosmetics()));
       state.setPlayer(player);
       state.setBlade(blade);
@@ -213,17 +231,12 @@ export function createLiveRunStartHost(
       context.services.effects.resetWorld();
       context.services.clock.reset();
       musicProgress = snapshotProgress(PROFILE.data);
-      const biomeTracker = PROFILE.data.stats._biomes;
-      const discoveredBiomes = Object.keys((biomeTracker ?? {}) as Record<string, unknown>);
       return {
         weaponId,
         mods: newMods(),
         scaling: startingPlan.scaling,
-        achievementSnapshot: Object.keys(PROFILE.data.ach),
-        variantDiscovery: [
-          ...(context.race?.discovery(resolveDiscoveredVariantIds(mode, discoveredBiomes)) ??
-            resolveDiscoveredVariantIds(mode, discoveredBiomes)),
-        ],
+        achievementSnapshot: [...start.achievementSnapshot],
+        variantDiscovery: [...start.variantDiscovery],
       };
     },
     resetAuthoritativeClocks: context.resetAuthoritativeClocks,
@@ -233,7 +246,6 @@ export function createLiveRunStartHost(
       context.stage.resetBanner();
       context.story.resetChapter();
     },
-    createRunSeed: context.createRunSeed ?? createRunSeed,
     resetRunRandom: (seed) => {
       context.services.random.resetRun(seed);
     },
@@ -454,11 +466,10 @@ export function createLiveRunStartHost(
         throw error;
       }
     },
-    configureMode: (mode) => {
+    configureMode: ({ mode, boss: selected }) => {
       const run = requireRun(state);
       if (mode === "bossonly") {
         const order = context.shuffledRoster();
-        const selected = context.selectedBoss();
         if (selected !== "shuffle" && isBossId(selected)) {
           // The production selector can only supply policy-published IDs. A
           // test-build engineering launch may explicitly supply an authored
@@ -483,11 +494,15 @@ export function createLiveRunStartHost(
         run.bossesBeaten = 0;
       }
     },
-    applyMetaProgression: () => {
+    applyMetaProgression: (start) => {
       const run = requireRun(state);
       if (!tutorialUsesBaselineLoadout(run.mode) && context.baselinePractice?.() !== true) {
         if (context.race?.apply() !== true)
-          META.apply({ player: requirePlayer(state), blade: requireBlade(state), mods: run.mods });
+          applyMetaRanks(SHOP, start.metaRanks, {
+            player: requirePlayer(state),
+            blade: requireBlade(state),
+            mods: run.mods,
+          });
       }
       context.resetRewards();
     },
@@ -547,6 +562,16 @@ export function createLiveRunStartHost(
     },
   });
   return controller;
+}
+
+/** The META ranks a run starts with: every shop item the player holds at a rank above zero. */
+function metaRanksOf(shop: readonly { readonly id: string }[], level: (id: string) => number): Record<string, number> {
+  return Object.fromEntries(
+    shop.flatMap((item) => {
+      const rank = level(item.id);
+      return rank > 0 ? [[item.id, rank] as const] : [];
+    }),
+  );
 }
 
 function requireRun(state: LiveGameHostState): GameRun {
