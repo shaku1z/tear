@@ -70,13 +70,14 @@ export class LiveRecordingController<TReplay extends RecordedReplay> {
       return replay;
     // Each board the run beats gets its own published replay (one per board per player), so a
     // later best on one board never swaps the replay another board links to.
-    for (const { board, entry } of runLeaderboardEntries(run))
+    for (const { board, entry, vaultShare } of runLeaderboardEntries(run))
       void this.#port.submitScore(board, entry).then((accepted) => {
         if (!accepted || replay === null) return;
         void this.#port.publishReplay(replay, `lb_${leaderboardId(board)}`).then((shareId) => {
           if (shareId === null || shareId === "") return;
           this.#port.linkReplay(board, shareId);
-          if (vaultId !== null && vaultId !== "") this.#port.attachShareId(vaultId, shareId);
+          // Only the run's own board names the vault copy's share id, not whichever publish ends last.
+          if (vaultShare && vaultId !== null && vaultId !== "") this.#port.attachShareId(vaultId, shareId);
         });
       });
     return replay;

@@ -30,6 +30,8 @@ export function gauntletRunCleared(progress: GauntletProgress | undefined): bool
 export interface RunLeaderboardEntry {
   readonly board: LeaderboardRef;
   readonly entry: Readonly<{ score: number; wave: number; time: number }>;
+  /** The board whose published replay the run's vault copy records; exactly one entry per run. */
+  readonly vaultShare: boolean;
 }
 
 /**
@@ -41,12 +43,14 @@ export function runLeaderboardEntries(run: OutcomeRunState): readonly RunLeaderb
     {
       board: { kind: "score", mode: run.mode, difficulty: run.diff },
       entry: { score: run.score, wave: run.wave, time: run.runTime },
+      vaultShare: true,
     },
   ];
   if (run.gauntlet !== undefined && gauntletRunCleared(run.gauntlet))
     entries.push({
       board: { kind: "gauntlet-clear", mode: run.mode, difficulty: run.diff },
       entry: { score: run.gauntlet.ticks, wave: run.gauntlet.trialsCleared, time: run.runTime },
+      vaultShare: false,
     });
   return Object.freeze(entries);
 }

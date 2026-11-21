@@ -4,6 +4,7 @@ import {
   leaderboardChoices,
   leaderboardId,
   leaderboardKind,
+  rankedScore,
   rankEntries,
   scoreBeats,
   scoreSeconds,
@@ -16,6 +17,8 @@ const MODES = [
   { id: "endless", label: "Endless" },
   { id: "gauntlet", label: "Gauntlet" },
 ];
+const SCORE = LEADERBOARD_KINDS.score;
+const CLEAR = LEADERBOARD_KINDS["gauntlet-clear"];
 
 describe("leaderboard definitions", () => {
   it("keeps every score board's stored id and names the fastest-clear board by its kind", () => {
@@ -27,12 +30,11 @@ describe("leaderboard definitions", () => {
   it("gives each kind one direction that comparison and ranking both read", () => {
     expect(leaderboardKind({ kind: "score" }).direction).toBe("higher");
     expect(leaderboardKind({ kind: "gauntlet-clear" }).direction).toBe("lower");
-    expect(scoreBeats("higher", 10, 9)).toBe(true);
-    expect(scoreBeats("higher", 9, 9)).toBe(false);
-    expect(scoreBeats("lower", 8, 9)).toBe(true);
-    expect(scoreBeats("lower", 9, 9)).toBe(false);
-    expect(scoreBeats("lower", 99, null)).toBe(true);
-    expect(scoreBeats("higher", 0, undefined)).toBe(true);
+    expect(scoreBeats(SCORE, 10, 9)).toBe(true);
+    expect(scoreBeats(SCORE, 9, 9)).toBe(false);
+    expect(scoreBeats(CLEAR, 8, 9)).toBe(true);
+    expect(scoreBeats(CLEAR, 9, 9)).toBe(false);
+    expect(scoreBeats(CLEAR, 99, null)).toBe(true);
     const entries = [
       { id: "a", score: 5 },
       { id: "b", score: 3 },
@@ -41,6 +43,31 @@ describe("leaderboard definitions", () => {
     ];
     expect(rankEntries("higher", entries).map((entry) => entry.id)).toEqual(["a", "c", "b", "d"]);
     expect(rankEntries("lower", entries).map((entry) => entry.id)).toEqual(["d", "b", "a", "c"]);
+  });
+
+  it("keeps a score board's first entry above 0, as before boards had a direction", () => {
+    expect(scoreBeats(SCORE, 0, undefined)).toBe(false);
+    expect(scoreBeats(SCORE, 0, null)).toBe(false);
+    expect(scoreBeats(SCORE, 1, undefined)).toBe(true);
+    // A stored score below 0 is still a real score, as it was.
+    expect(scoreBeats(SCORE, 0, -5)).toBe(true);
+  });
+
+  it("ranks only plausible scores: a broken stored best counts as none, a broken candidate never enters", () => {
+    // A stored 0, negative or non-finite time would lock the player out of a lowest-first board.
+    for (const stored of [0, -40, Number.NaN, Number.POSITIVE_INFINITY, 12.5, "9000"])
+      expect(scoreBeats(CLEAR, 90_000, stored), String(stored)).toBe(true);
+    // NaN on a highest-first board blocked every later score.
+    expect(scoreBeats(SCORE, 50, Number.NaN)).toBe(true);
+    expect(scoreBeats(SCORE, 50, Number.POSITIVE_INFINITY)).toBe(true);
+    // A 0-tick clear with nothing stored would rank first; it is no clear.
+    for (const candidate of [0, -1, 0.5, Number.NaN, Number.POSITIVE_INFINITY])
+      expect(scoreBeats(CLEAR, candidate, null), String(candidate)).toBe(false);
+    expect(scoreBeats(SCORE, Number.NaN, null)).toBe(false);
+    expect(rankedScore(CLEAR, 7200)).toBe(7200);
+    expect(rankedScore(CLEAR, 0)).toBeNull();
+    expect(rankedScore(SCORE, 0)).toBe(0);
+    expect(rankedScore(SCORE, "12")).toBeNull();
   });
 
   it("reads a clear in ticks as seconds at the simulation rate, and points as they are", () => {

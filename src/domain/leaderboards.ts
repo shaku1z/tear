@@ -1,4 +1,4 @@
-import { GAUNTLET_TICKS_PER_SECOND } from "./gauntlet-records";
+import { clearTicks, GAUNTLET_TICKS_PER_SECOND } from "./gauntlet-records";
 
 /**
  * The leaderboards, as data. Each kind says which way its score ranks and what the score
@@ -63,10 +63,25 @@ export function scoreSeconds(kind: LeaderboardKind, score: number): number {
   return kind.unit === "ticks" ? score / GAUNTLET_TICKS_PER_SECOND : score;
 }
 
-/** True when `candidate` ranks above `stored`; a board with no stored entry takes any score. */
-export function scoreBeats(direction: ScoreDirection, candidate: number, stored: number | null | undefined): boolean {
-  if (stored === null || stored === undefined) return true;
-  return direction === "higher" ? candidate > stored : candidate < stored;
+/**
+ * A score the board can rank, or null. Points are any finite number; ticks follow the Gauntlet's
+ * clear rule (`clearTicks`: a whole number of ticks, at least one), so a 0-tick or broken time never ranks.
+ */
+export function rankedScore(kind: LeaderboardKind, value: unknown): number | null {
+  if (kind.unit === "ticks") return clearTicks(value);
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+/**
+ * True when `candidate` enters the board over `stored`. A candidate the board cannot rank never
+ * enters, and a stored value it cannot rank counts as none. With no stored entry, a lowest-first
+ * board takes any rankable time, and a highest-first board needs more than 0, as score boards always have.
+ */
+export function scoreBeats(kind: LeaderboardKind, candidate: unknown, stored: unknown): boolean {
+  const next = rankedScore(kind, candidate);
+  if (next === null) return false;
+  const best = rankedScore(kind, stored);
+  return kind.direction === "higher" ? next > (best ?? 0) : best === null || next < best;
 }
 
 /** Entries in rank order for the direction; ties keep their given order. */

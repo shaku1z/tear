@@ -123,4 +123,38 @@ describe("Firebase leaderboards read and write in the board's direction", () => 
     expect(store.get("leaderboards/endless_normal/scores/me")).toMatchObject({ score: 5000, wave: 15 });
     expect(((await shared.topScores(ENDLESS, 25)) ?? []).map((row) => row.name)).toEqual(["Older", "Me", "Old"]);
   });
+
+  it("refuses a 0-point first entry on a score board, as before boards had a direction", async () => {
+    const store = new Map<string, Data>();
+    const shared = sharedCloud(store);
+    await expect(shared.submitScore(ENDLESS, { name: "Me", score: 0, wave: 1, time: 4 })).resolves.toBe(false);
+    expect(store.size).toBe(0);
+  });
+
+  it("drops the earlier run's replay link when a new best replaces the entry", async () => {
+    const path = "leaderboards/gauntletclear_hard/scores/me";
+    const store = new Map<string, Data>([
+      [path, { name: "Me", score: 90_000, wave: 6, time: 750, uid: "me", ts: 1, replayId: "lb_gauntletclear_hard_me" }],
+    ]);
+    const shared = sharedCloud(store);
+    await expect(shared.submitScore(CLEAR, { name: "Me", score: 80_000, wave: 6, time: 667 })).resolves.toBe(true);
+    // Until this run's replay is published and linked, the entry names no replay rather than the slower run's.
+    expect(store.get(path)).toEqual({ name: "Me", score: 80_000, wave: 6, time: 667, uid: "me", ts: 1000 });
+    await expect(shared.linkReplay(CLEAR, "lb_gauntletclear_hard_me")).resolves.toBe(true);
+    expect(store.get(path)).toMatchObject({ score: 80_000, replayId: "lb_gauntletclear_hard_me" });
+  });
+
+  it("does not let a broken stored clear time lock the player out, and refuses a 0-tick clear", async () => {
+    for (const stored of [0, -5, "fast"]) {
+      const path = "leaderboards/gauntletclear_hard/scores/me";
+      const store = new Map<string, Data>([[path, { name: "Me", score: stored, wave: 6, uid: "me" }]]);
+      const shared = sharedCloud(store);
+      await expect(shared.submitScore(CLEAR, { name: "Me", score: 0, wave: 6, time: 0 })).resolves.toBe(false);
+      await expect(
+        shared.submitScore(CLEAR, { name: "Me", score: 90_000, wave: 6, time: 750 }),
+        String(stored),
+      ).resolves.toBe(true);
+      expect(store.get(path)).toMatchObject({ score: 90_000 });
+    }
+  });
 });

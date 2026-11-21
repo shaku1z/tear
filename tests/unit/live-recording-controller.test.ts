@@ -109,6 +109,7 @@ describe("LiveRecordingController", () => {
     const submitted: string[] = [];
     const published: string[] = [];
     const linked: string[] = [];
+    const attachShareId = vi.fn();
     const gauntlet = (trialsCleared: number) =>
       new LiveRecordingController({
         snapshot: () => ({
@@ -133,7 +134,7 @@ describe("LiveRecordingController", () => {
           return Promise.resolve(`share-${board}`);
         },
         linkReplay: (board, shareId) => linked.push(`${board.kind}:${shareId}`),
-        attachShareId: vi.fn(),
+        attachShareId,
       });
     gauntlet(6).finish(true);
     await vi.waitFor(() => {
@@ -142,6 +143,8 @@ describe("LiveRecordingController", () => {
     expect(submitted).toEqual(["score:4500:12", "gauntlet-clear:108000:6"]);
     expect(published).toEqual(["lb_gauntlet_hard", "lb_gauntletclear_hard"]);
     expect(linked).toEqual(["score:share-lb_gauntlet_hard", "gauntlet-clear:share-lb_gauntletclear_hard"]);
+    // The vault copy records the score board's replay only, whichever publish ends last.
+    expect(attachShareId.mock.calls).toEqual([["vault-1", "share-lb_gauntlet_hard"]]);
     // A run that ends before the last boss is on the score board only.
     submitted.length = 0;
     gauntlet(4).finish(false);

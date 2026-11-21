@@ -34,10 +34,10 @@ export function createPlatformSharedCloud(getPlatform: () => PlatformServices): 
     },
     async submitScore(ref, entry) {
       const service = leaderboards();
-      const { direction } = leaderboardKind(ref);
-      if (!service?.ranks.includes(direction)) return false;
+      const kind = leaderboardKind(ref);
+      if (!service?.ranks.includes(kind.direction)) return false;
       const boardId = leaderboardId(ref);
-      if (!scoreBeats(direction, entry.score, submittedScores.get(boardId))) return false;
+      if (!scoreBeats(kind, entry.score, submittedScores.get(boardId))) return false;
       await service.submit(boardId, entry.score);
       submittedScores.set(boardId, entry.score);
       return true;

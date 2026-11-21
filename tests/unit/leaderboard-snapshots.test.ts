@@ -118,4 +118,31 @@ describe("leaderboard snapshots", () => {
     expect(result.view.ownRank).toBe("unranked · local best 15:00");
     expect(result.view.legacyGhostId).toBeUndefined();
   });
+
+  it("leaves out a row the clear board cannot rank, so a 0-tick or broken time never takes first place", () => {
+    const result = buildRankedLeaderboardSnapshot({
+      tabs,
+      tab: "global",
+      cloudAvailable: true,
+      message: "",
+      loading: false,
+      height: 900,
+      scroll: 0,
+      data: [
+        { uid: "z", name: "Zero", wave: 6, score: 0 },
+        { uid: "n", name: "Broken", wave: 6, score: Number.NaN },
+        { uid: "a", name: "Ash", wave: 6, score: 72_000 },
+      ],
+      boards: [{ id: "gauntlet-clear", label: "GAUNTLET · FASTEST" }],
+      board: "gauntlet-clear",
+      kind: LEADERBOARD_KINDS["gauntlet-clear"],
+      difficulties: [{ id: "normal", label: "Normal" }],
+      difficulty: "normal",
+      localBest: null,
+      formatTime: (seconds) => `${String(seconds)}s`,
+      rowView: (row) => ({ id: "row", title: row.name ?? "", detail: "run", time: "", score: "" }),
+    });
+    expect(result.view.podium?.map((entry) => entry.name)).toEqual(["Ash"]);
+    expect(result.view.rows).toEqual([]);
+  });
 });

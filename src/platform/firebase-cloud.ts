@@ -369,25 +369,23 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
     async submitScore(board, entry) {
       const session = await passport();
       if (!session) return false;
-      const { direction } = leaderboardKind(board);
+      const kind = leaderboardKind(board);
       const ref = session.db.collection("leaderboards").doc(leaderboardId(board)).collection("scores").doc(session.uid);
       try {
         const current = await race(ref.get());
         const currentData = current.exists ? asRecord(current.data()) : null;
-        const stored = typeof currentData?.score === "number" ? currentData.score : null;
-        if (!scoreBeats(direction, Math.trunc(entry.score), stored)) return false;
+        if (!scoreBeats(kind, Math.trunc(entry.score), currentData?.score)) return false;
+        // A new best replaces the whole entry, so the earlier run's replay link goes with it;
+        // linkReplay adds this run's link once its replay is published.
         await race(
-          ref.set(
-            {
-              name: string(entry.name, "Player"),
-              score: Math.trunc(entry.score),
-              wave: Math.trunc(number(entry.wave)),
-              time: Math.round(number(entry.time)),
-              uid: session.uid,
-              ts: now(),
-            },
-            { merge: true },
-          ),
+          ref.set({
+            name: string(entry.name, "Player"),
+            score: Math.trunc(entry.score),
+            wave: Math.trunc(number(entry.wave)),
+            time: Math.round(number(entry.time)),
+            uid: session.uid,
+            ts: now(),
+          }),
         );
         return true;
       } catch {

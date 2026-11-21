@@ -1,4 +1,4 @@
-import { scoreSeconds, type LeaderboardKind } from "../domain/leaderboards";
+import { rankedScore, scoreSeconds, type LeaderboardKind } from "../domain/leaderboards";
 import type { LeaderboardsScreenView, ReplayView } from "./screens/contracts";
 import type { DifficultyViewSource, LeaderboardRowSource } from "./profile-snapshots";
 
@@ -114,11 +114,13 @@ export function buildRankedLeaderboardSnapshot(
   },
 ): LeaderboardSnapshotResult {
   const { kind } = input;
+  // A row the board cannot rank (a 0-tick or broken time, a non-numeric score) is not listed.
+  const data = input.data.filter((row) => rankedScore(kind, row.score) !== null);
   const text = (count: number | undefined, score: number) => entryText(kind, input.formatTime, count, score);
-  const linked = input.data.some((row) => row.replayId !== undefined);
-  const ghostId = !linked && input.data.length > 0 ? input.legacyGhost : undefined;
+  const linked = data.some((row) => row.replayId !== undefined);
+  const ghostId = !linked && data.length > 0 ? input.legacyGhost : undefined;
   const medals = ["#e0a326", "#c9ccd6", "#cd7f32"] as const;
-  const podium = input.data.slice(0, 3).map((row, index) => ({
+  const podium = data.slice(0, 3).map((row, index) => ({
     rank: index + 1,
     name: (row.name ?? "Player").slice(0, 14),
     detail: text(row.wave ?? 0, row.score ?? 0),
@@ -127,16 +129,15 @@ export function buildRankedLeaderboardSnapshot(
     ...(row.replayId !== undefined ? { replayId: row.replayId } : {}),
   }));
   // A clear-time board ranks the time itself: it goes in the last (ranked) column, the run time column stays empty.
-  const rows = input.data.slice(3).map((row, index) => ({
+  const rows = data.slice(3).map((row, index) => ({
     ...input.rowView(row),
     ...(kind.unit === "ticks" ? { time: "", score: input.formatTime(scoreSeconds(kind, row.score ?? 0)) } : {}),
     rank: index + 4,
   }));
   const maximumScroll = Math.max(0, rows.length * 34 - (input.height - 634));
   const state = scrollState(maximumScroll, input.scroll);
-  const myIndex =
-    input.currentUserId === undefined ? -1 : input.data.findIndex((row) => row.uid === input.currentUserId);
-  const mine = input.data[myIndex];
+  const myIndex = input.currentUserId === undefined ? -1 : data.findIndex((row) => row.uid === input.currentUserId);
+  const mine = data[myIndex];
   const ownRank =
     input.currentUserId !== undefined && myIndex >= 10
       ? `#${String(myIndex + 1)} YOU · ${text(mine?.wave ?? 0, mine?.score ?? 0)}`
@@ -156,7 +157,7 @@ export function buildRankedLeaderboardSnapshot(
       ...(ownRank === undefined ? {} : { ownRank }),
       ...(ghostId === undefined ? {} : { legacyGhostId: ghostId }),
       signInRequired: !input.cloudAvailable,
-      status: leaderboardStatus(input, input.data.length),
+      status: leaderboardStatus(input, data.length),
       boards: input.boards.map((board) => ({
         id: board.id,
         label: board.label,
@@ -174,7 +175,7 @@ export function buildRankedLeaderboardSnapshot(
           ? "Global leaderboards need an account — your runs are waiting to count."
           : input.loading
             ? "Loading the ranks…"
-            : input.data.length === 0
+            : data.length === 0
               ? "No runs recorded on this board yet — set the first."
               : ""),
       canScrollUp: state.canScrollUp,
