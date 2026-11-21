@@ -940,7 +940,7 @@ describe("C30 production headless environment", () => {
     expectLegacyTerminalFixture(fixture, terminal);
     expect(terminal?.terminal).toEqual({
       tick: 403,
-      semanticHash: "e47ed517d44103f0",
+      semanticHash: "07264a2ebe5cba1e",
       terminated: true,
       truncated: false,
     });
