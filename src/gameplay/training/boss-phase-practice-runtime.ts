@@ -74,12 +74,20 @@ export function practicePhaseEntryHealth(marks: readonly number[], phase: 2 | 3)
 export function isPracticeBossId(value: unknown): value is PracticeBossId {
   return BOSS_ROSTER.some(({ id }) => id === value);
 }
+/**
+ * Which bosses a world's phase practice opens. Every world a player reaches uses the published roster
+ * (`isPracticeBossId`, the default everywhere); only a headless engineering world is given a wider one, to open
+ * a boss that is still being rebuilt. It is asked when a practice begins and when a state from outside (a save)
+ * is adopted; every check without one uses the published roster.
+ */
+export type PracticeBossAdmission = (bossId: unknown) => boolean;
+
 export function isPracticeBossPhase(value: unknown): value is PracticeBossPhase {
   return value === 1 || value === 2 || value === 3;
 }
-function validRequest(value: BossPhasePracticeRequest): boolean {
+function validRequest(value: BossPhasePracticeRequest, admits: PracticeBossAdmission): boolean {
   return (
-    isPracticeBossId(value.bossId) &&
+    admits(value.bossId) &&
     isPracticeBossPhase(value.phase) &&
     typeof value.seed === "string" &&
     value.seed.length > 0 &&
@@ -106,7 +114,12 @@ function matches(state: BossPhasePracticeState, world: BossPhasePracticeWorld): 
  */
 const checkedStates = new WeakSet();
 
-function assertPracticeStateFields(value: unknown): asserts value is BossPhasePracticeState {
+function assertPracticeStateFields(
+  value: unknown,
+  admits: PracticeBossAdmission,
+): asserts value is BossPhasePracticeState {
+  // A remembered state is one a practice runtime in this process made or adopted, so it stays valid wherever that
+  // same object is handed on (the tutorial holds it). A state from a save is a new object and is checked in full.
   if (isObject(value) && checkedStates.has(value)) return;
   if (!isObject(value) || Array.isArray(value) || Object.getPrototypeOf(value) !== Object.prototype)
     throw new Error("Invalid boss practice state");
@@ -133,7 +146,7 @@ function assertPracticeStateFields(value: unknown): asserts value is BossPhasePr
   const state = value as BossPhasePracticeState;
   if (
     record.version !== 1 ||
-    !validRequest(state) ||
+    !validRequest(state, admits) ||
     !Number.isSafeInteger(state.generation) ||
     state.generation < 1 ||
     state.encounterId !== identity(state, state.generation) ||
@@ -179,8 +192,12 @@ function assertPracticeWorld(
 }
 
 /** Validate BEFORE adopting a restored world. This never spawns, ticks or requests entry. */
-export function validateBossPhasePracticeState(value: unknown, world?: BossPhasePracticeWorld): BossPhasePracticeState {
-  assertPracticeStateFields(value);
+export function validateBossPhasePracticeState(
+  value: unknown,
+  world?: BossPhasePracticeWorld,
+  admits: PracticeBossAdmission = isPracticeBossId,
+): BossPhasePracticeState {
+  assertPracticeStateFields(value, admits);
   if (world !== undefined) assertPracticeWorld(value, world);
   if (Object.isFrozen(value)) return value;
   const adopted = Object.freeze({ ...value });
@@ -188,7 +205,10 @@ export function validateBossPhasePracticeState(value: unknown, world?: BossPhase
   return adopted;
 }
 
-export function createBossPhasePracticeRuntime(services: BossPhasePracticeServices) {
+export function createBossPhasePracticeRuntime(
+  services: BossPhasePracticeServices,
+  admits: PracticeBossAdmission = isPracticeBossId,
+) {
   let current: BossPhasePracticeState | null = null;
   let generation = 0;
   /** `observed` is this tick's world and phase entry when the caller already read them and changed neither. */
@@ -201,7 +221,7 @@ export function createBossPhasePracticeRuntime(services: BossPhasePracticeServic
     let capture: "canonical-checkpoint" | "unavailable" = "unavailable";
     if (current.lifecycle !== "cancelled" && world !== null) {
       try {
-        assertPracticeStateFields(current);
+        assertPracticeStateFields(current, admits);
         assertPracticeWorld(current, world, observed?.entry);
         capture = "canonical-checkpoint";
       } catch {
@@ -211,7 +231,7 @@ export function createBossPhasePracticeRuntime(services: BossPhasePracticeServic
     return { status: current.lifecycle, state: current, capture };
   }
   function begin(request: BossPhasePracticeRequest): BossPhasePracticeResult {
-    if (!validRequest(request) || generation === Number.MAX_SAFE_INTEGER)
+    if (!validRequest(request, admits) || generation === Number.MAX_SAFE_INTEGER)
       return { status: "refused", reason: "invalid-request" };
     if (current !== null && current.lifecycle !== "cancelled") services.cleanup("replacement");
     generation += 1;
@@ -302,13 +322,13 @@ export function createBossPhasePracticeRuntime(services: BossPhasePracticeServic
     },
     /** The outer v6 owner has already validated genuine terminal actor absence. No world is recreated. */
     restoreFinished(value: unknown): void {
-      const state = validateBossPhasePracticeState(value);
+      const state = validateBossPhasePracticeState(value, undefined, admits);
       if (state.lifecycle !== "active") throw new Error("Finished boss practice requires a completed entry");
       current = state;
       generation = state.generation;
     },
     restore(value: unknown, world: BossPhasePracticeWorld): void {
-      const state = validateBossPhasePracticeState(value, world);
+      const state = validateBossPhasePracticeState(value, world, admits);
       current = state;
       generation = state.generation;
     },
