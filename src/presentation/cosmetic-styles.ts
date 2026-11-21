@@ -148,15 +148,16 @@ export function resolveCosmeticStyles(catalog: CosmeticCatalog, loadout: Loadout
 export interface CosmeticLooks {
   /** The default look, worn by nobody: the game's own look. */
   readonly defaults: CosmeticStyles;
-  /** The wearer's styles when `owner` is the wearer, the defaults for every other owner. */
+  /** What `owner` wears, or the defaults when it wears nothing or an authored beat is playing. */
   of(owner: object): CosmeticStyles;
-  /** The wearer's styles, or the defaults while nobody wears anything or an authored beat is playing. */
-  worn(): CosmeticStyles;
 }
 
-/** The one place a loadout is put on: who wears it, and whether an authored beat has taken the look over. */
+/** The one place a loadout is put on: who wears what, and whether an authored beat has taken the look over. */
 export interface CosmeticWardrobe extends CosmeticLooks {
-  /** Puts `loadout` on `owner` (the local player's blade, at run start). */
+  /**
+   * Puts `loadout` on `owner`: the local player's blade at run start, a recorded racer's blade from its replay.
+   * Each owner keeps its own, so two wearers on screen each show theirs.
+   */
   wear(owner: object, loadout: Loadout): void;
   /**
    * An authored moment (a story or cinematic beat that sets the blade's look, such as the finale's restored
@@ -168,20 +169,20 @@ export interface CosmeticWardrobe extends CosmeticLooks {
 /** `calm` is read on every query, so a settings change applies on the next frame. */
 export function createCosmeticWardrobe(catalog: CosmeticCatalog, calm: () => boolean): CosmeticWardrobe {
   const defaults = resolveCosmeticStyles(catalog, {}, false);
-  let wearer: object | null = null;
-  let styles = { lively: defaults, calm: defaults };
+  const worn = new WeakMap<object, Readonly<{ lively: CosmeticStyles; calm: CosmeticStyles }>>();
   let authoredBeat = false;
-  const worn = (): CosmeticStyles => (authoredBeat ? defaults : calm() ? styles.calm : styles.lively);
   return {
     defaults,
-    of: (owner) => (owner === wearer ? worn() : defaults),
-    worn,
+    of(owner) {
+      const styles = worn.get(owner);
+      if (!styles || authoredBeat) return defaults;
+      return calm() ? styles.calm : styles.lively;
+    },
     wear(owner, loadout) {
-      wearer = owner;
-      styles = {
+      worn.set(owner, {
         lively: resolveCosmeticStyles(catalog, loadout, false),
         calm: resolveCosmeticStyles(catalog, loadout, true),
-      };
+      });
     },
     authored(active) {
       authoredBeat = active;
