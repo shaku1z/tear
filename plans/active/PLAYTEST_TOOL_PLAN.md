@@ -452,8 +452,8 @@ under `public` are extracted once into `artifacts/playtest/base-<sha>/` with `gi
 `src/playtest` is laid over its own, so both builds are played by the same tool; the same set is played on it
 as its own run of the command, and `compare.ts` prints, per situation, each measure that differs. The game is
 deterministic, so any difference is the build's; there is no threshold. It prints only what changed unless
-`--show` asks for the tables. It stops, by name, on a commit that does not exist and on a lockfile that
-differs. Its limit: the tool of today has to load on the game of that commit, so a commit from before a change
+`--show` asks for the tables. It stops, by name, on a commit that does not exist and on one that lists a
+package at another version than this checkout (packages added since do not matter). Its limit: the tool of today has to load on the game of that commit, so a commit from before a change
 to what `src/playtest` imports fails to load and says so; it is for a branch against main and for recent
 history. Checked by hand: `enemies --compare HEAD` prints "nothing changed"; Verdant waves 32 and 35 against
 the commit before the wave change of pull request 316 print both situations as changed, with the affixes that

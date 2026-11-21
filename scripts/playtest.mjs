@@ -139,7 +139,8 @@ function playShare(command, given, index, of, file) {
 /**
  * Another commit's game, ready to be played by this checkout's tool: its `src`, `config` and the JSON under
  * `public` extracted once into `artifacts/playtest/base-<sha>/` (git ignores it), with this checkout's
- * `src/playtest` laid over its own. Dependencies resolve from this checkout, so the lockfile must be the same.
+ * `src/playtest` laid over its own. Dependencies resolve from this checkout, so every package that commit lists
+ * must be listed here at the same version; packages added since do not matter.
  */
 function baseBuild(commit) {
   const git = (...args) =>
@@ -151,13 +152,18 @@ function baseBuild(commit) {
     throw new RangeError(`--compare: no commit "${commit}"`);
   }
   const name = sha.slice(0, 12);
-  try {
-    git("diff", "--quiet", sha, "--", "pnpm-lock.yaml");
-  } catch {
+  const listed = (source) => {
+    const { dependencies = {}, devDependencies = {} } = JSON.parse(source);
+    return { ...devDependencies, ...dependencies };
+  };
+  const theirs = listed(git("show", `${sha}:package.json`));
+  const ours = listed(readFileSync(path.join(root, "package.json"), "utf8"));
+  const differing = Object.keys(theirs).filter((dependency) => theirs[dependency] !== ours[dependency]);
+  if (differing.length > 0)
     throw new RangeError(
-      `--compare: pnpm-lock.yaml differs between ${name} and this checkout, so its game cannot run on these dependencies`,
+      `--compare: ${name} lists ${differing.join(", ")} at another version than this checkout (or not at all here), ` +
+        "so its game cannot run on these dependencies",
     );
-  }
   const folder = path.join(root, "artifacts", "playtest", `base-${name}`);
   if (!existsSync(path.join(folder, "src"))) {
     mkdirSync(folder, { recursive: true });
