@@ -99,10 +99,10 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
     storeReplay: (recording, summary) => d.VAULT.add(recording, storedRecordingMetadata(summary)),
     setLastRecording: options.setLastRecording,
     setLastVaultId: options.setLastVaultId,
-    submitScore: (mode, difficulty, score) => d.Cloud.submitScore(mode, difficulty, score),
+    submitScore: (board, score) => d.Cloud.submitScore(board, score),
     publishReplay: (recording, board) => d.Cloud.publishReplay(recording, null, board),
-    linkReplay: (mode, difficulty, shareId) => {
-      void d.Cloud.linkReplay(mode, difficulty, shareId);
+    linkReplay: (board, shareId) => {
+      void d.Cloud.linkReplay(board, shareId);
     },
     attachShareId: (vaultId, shareId) => {
       d.VAULT.setShareId(vaultId, shareId);

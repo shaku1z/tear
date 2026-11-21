@@ -10,6 +10,7 @@ import "firebase/compat/auth";
 import "firebase/compat/firestore";
 import { collection, getDocs } from "firebase/firestore";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import type { LeaderboardRef } from "../../src/domain/leaderboards";
 import type { AccountContext, CloudStatus, CloudUser } from "../../src/platform/cloud";
 import { createFirebaseCloudCompatibility, type FirebaseCompatSdk } from "../../src/platform/firebase-cloud";
 import type { FirebaseClientConfig } from "../../src/platform/firebase-config";
@@ -77,6 +78,8 @@ afterAll(async () => {
 });
 
 const uid = (): string => signedIn?.user.id ?? "";
+const ENDLESS_HARD: LeaderboardRef = { kind: "score", mode: "endless", difficulty: "hard" };
+const CLEAR_HARD: LeaderboardRef = { kind: "gauntlet-clear", mode: "gauntlet", difficulty: "hard" };
 const recording = (size: number) => ({
   mode: "endless",
   diff: "hard",
@@ -104,13 +107,13 @@ describe("the game's Firebase adapter under firestore.rules", () => {
 
   it("submits a best score, keeps a lower one out and reads the board back", async () => {
     const entry = (score: number) => ({ name: "Guest", score, wave: 5, time: 120.4 });
-    await expect(cloud.shared.submitScore("endless", "hard", entry(1500))).resolves.toBe(true);
-    await expect(cloud.shared.submitScore("endless", "hard", entry(900))).resolves.toBe(false);
+    await expect(cloud.shared.submitScore(ENDLESS_HARD, entry(1500))).resolves.toBe(true);
+    await expect(cloud.shared.submitScore(ENDLESS_HARD, entry(900))).resolves.toBe(false);
     // A higher score within 10 s of the last is refused by the rules' write-rate limit.
-    await expect(cloud.shared.submitScore("endless", "hard", entry(1600))).resolves.toBe(false);
+    await expect(cloud.shared.submitScore(ENDLESS_HARD, entry(1600))).resolves.toBe(false);
     clockOffset = 11_000;
-    await expect(cloud.shared.submitScore("endless", "hard", entry(1700))).resolves.toBe(true);
-    const board = await cloud.shared.topScores("endless", "hard", 25);
+    await expect(cloud.shared.submitScore(ENDLESS_HARD, entry(1700))).resolves.toBe(true);
+    const board = await cloud.shared.topScores(ENDLESS_HARD, 25);
     expect(board).toEqual([
       { name: "Guest", score: 1700, wave: 5, time: 120, uid: uid(), ts: expect.any(Number) as number },
     ]);
@@ -118,18 +121,36 @@ describe("the game's Firebase adapter under firestore.rules", () => {
 
   it("publishes a leaderboard replay in chunks, links it to the row and plays it back", async () => {
     await expect(
-      cloud.shared.submitScore("endless", "hard", { name: "Guest", score: 4200, wave: 7, time: 210 }),
+      cloud.shared.submitScore(ENDLESS_HARD, { name: "Guest", score: 4200, wave: 7, time: 210 }),
     ).resolves.toBe(true);
     const published = recording(1_200_000);
     const shareId = await cloud.shared.publishReplay(published, null, "lb_endless_hard");
     expect(shareId).toBe(`lb_endless_hard_${uid()}`);
-    await expect(cloud.shared.linkReplay("endless", "hard", shareId ?? "")).resolves.toBe(true);
-    const row = (await cloud.shared.topScores("endless", "hard", 25))?.[0];
+    await expect(cloud.shared.linkReplay(ENDLESS_HARD, shareId ?? "")).resolves.toBe(true);
+    const row = (await cloud.shared.topScores(ENDLESS_HARD, 25))?.[0];
     expect(row?.replayId).toBe(shareId);
     await expect(cloud.shared.loadReplay(shareId ?? "")).resolves.toEqual(published);
     // Publishing the next leaderboard run replaces the same replay.
     await expect(cloud.shared.publishReplay(recording(10), null, "lb_endless_hard")).resolves.toBe(shareId);
     await expect(cloud.shared.loadReplay(shareId ?? "")).resolves.toEqual(recording(10));
+  });
+
+  it("keeps the fastest Gauntlet clear lowest first, and a new best replaces the row without the old link", async () => {
+    const clear = (ticks: number) => ({ name: "Guest", score: ticks, wave: 6, time: Math.round(ticks / 120) });
+    await expect(cloud.shared.submitScore(CLEAR_HARD, clear(90_000))).resolves.toBe(true);
+    const shareId = await cloud.shared.publishReplay(recording(10), null, "lb_gauntletclear_hard");
+    expect(shareId).toBe(`lb_gauntletclear_hard_${uid()}`);
+    await expect(cloud.shared.linkReplay(CLEAR_HARD, shareId ?? "")).resolves.toBe(true);
+    expect((await cloud.shared.topScores(CLEAR_HARD, 25))?.[0]?.replayId).toBe(shareId);
+    clockOffset = 11_000;
+    // A slower clear stays out on the client; one under the rules' 30 s floor is refused by the server.
+    await expect(cloud.shared.submitScore(CLEAR_HARD, clear(95_000))).resolves.toBe(false);
+    await expect(cloud.shared.submitScore(CLEAR_HARD, clear(3_599))).resolves.toBe(false);
+    // A faster clear replaces the row: exactly the six fields, the slower run's replay link gone.
+    await expect(cloud.shared.submitScore(CLEAR_HARD, clear(80_000))).resolves.toBe(true);
+    await expect(cloud.shared.topScores(CLEAR_HARD, 25)).resolves.toEqual([
+      { name: "Guest", score: 80_000, wave: 6, time: 667, uid: uid(), ts: expect.any(Number) as number },
+    ]);
   });
 
   it("publishes a replay to the feed under a random id", async () => {
