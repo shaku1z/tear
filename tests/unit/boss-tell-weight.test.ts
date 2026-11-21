@@ -5,8 +5,14 @@
  * Each boss fights every phase as in move-visual-lifetime.test.ts. Its weight is the number of distinct
  * pairs (the live move, the mark helper that drew) seen over the fight. The cap is not written down: it is
  * the largest weight among REFERENCE_BOSSES, so a reference boss that grows raises it, and that shows in
- * the printed table for review. The Echo is not measured: the mirror presentation draws it, without the
- * shared marks.
+ * the printed table for review.
+ *
+ * Named gaps, each with the slice that closes it (plans/active/VERDANT_PALE_REBUILD.md):
+ * - The Echo is not measured. The mirror presentation draws it, not the enemy renderers, and it draws no
+ *   shared mark, so this harness would read 0, which is not its weight. Slice 2 measures it through the
+ *   mirror presentation, when the new Rootbound is first held to the cap; the cap is final from then.
+ * - The Rootbinder, an enemy, is drawn by the environment layer (`ENVIRONMENT_DRAWN_ENEMY_KINDS`) and is
+ *   not measured either. Slice 5 rebuilds it to draw its marks through the shared helpers, and measures it.
  */
 import { describe, expect, it } from "vitest";
 

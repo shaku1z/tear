@@ -17,7 +17,7 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 | [Release readiness](#release-readiness) | Merged to main | Production deploy, after the owner has played the build. | — |
 | [Production deploy](#production-deploy) | Deployed 2026-11-13 | The next production deploy follows the Verdant, Tutorial and music work. | — |
 | [Verdant Sanctum visuals](#verdant-visuals) | In progress | The owner judges the moving stage; then Pale Traverse from a recipe, with its own live list. | Judge the drawn look against the reference illustration: the owner's taste decides visual work. |
-| [Verdant Sanctum gameplay](#verdant-gameplay) | In progress: rebuild from scratch, plan under the lead's review | The lead reviews the plan; then slice 1, the two rules over every boss and enemy. | — |
+| [Verdant Sanctum gameplay](#verdant-gameplay) | In progress: slice 1 of 7 (the two rules) in review | Slice 1 merges: every boss and enemy is held to the two rules, with Rootbound, White Hart and Rimehound exempt until rebuilt. Then slice 2, the new Rootbound Phase I on the engineering channel. | — |
 | [Tutorial and Playground experience](#training-ux) | In progress | One source of names for the drilled weapon moves (this pull request, then its floaters), then the release tutorial flow and menu fixes. | — |
 | [Pale Traverse rework](#pale-traverse) | In progress | Waits for the Verdant rebuild: Pale is replanned on what Verdant proves (plans/active/VERDANT_PALE_REBUILD.md). | — |
 | [Player wiki](#wiki) | In progress | Review the move pull request, then confirm the Cloudflare secret question and run the first wiki deploy. | Archive shaku1z/tear-wiki after the first deploy from this repository. |
@@ -60,11 +60,11 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 ### Verdant Sanctum gameplay
 
-**In progress: rebuild from scratch, plan under the lead's review.** The owner rejected the Verdant gameplay a third time on 2026-11-20: the shared Verdant base is slop, move visuals linger after the move, and Verdant leans on tells far more than any other boss. Verdant's boss, enemies and stage are rebuilt from scratch in the pattern of Aldric, the Echo and the Colossus, keeping only the approved Rootbound seed-pod figure and the drawn background. Measured on main 6fb1a7cd: a scripted player takes 2.8, 1.1 and 0 hits per 10 s from today's Rootbound across its three phases, against 4 to 7 from the reference bosses; its Phase III does not move; its two phase cinematics block 12.9 s of a 37 s fight; it draws 16 tell marks against Aldric's 6. The plan adds two rules over every boss and enemy (nothing outlives its move, tell weight) and builds the new Verdant on the engineering channel until the owner approves it on preview.
+**In progress: slice 1 of 7 (the two rules) in review.** The owner rejected the Verdant gameplay a third time on 2026-11-20: the shared Verdant base is slop, move visuals linger after the move, and Verdant leans on tells far more than any other boss. Verdant's boss, enemies and stage are rebuilt from scratch in the pattern of Aldric, the Echo and the Colossus, keeping only the approved Rootbound seed-pod figure and the drawn background. Measured on main 6fb1a7cd: a scripted player takes 2.8, 1.1 and 0 hits per 10 s from today's Rootbound across its three phases, against 4 to 7 from the reference bosses; its Phase III does not move; its two phase cinematics block 12.9 s of a 37 s fight; it draws 16 tell marks against Aldric's 6. The plan adds two rules over every boss and enemy (nothing outlives its move, tell weight) and builds the new Verdant on the engineering channel until the owner approves it on preview.
 
-- Next: The lead reviews the plan; then slice 1, the two rules over every boss and enemy.
+- Next: Slice 1 merges: every boss and enemy is held to the two rules, with Rootbound, White Hart and Rimehound exempt until rebuilt. Then slice 2, the new Rootbound Phase I on the engineering channel.
 - Owner action: none
-- Evidence: [plans/active/VERDANT_PALE_REBUILD.md](../plans/active/VERDANT_PALE_REBUILD.md), [plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md)
+- Evidence: [plans/active/VERDANT_PALE_REBUILD.md](../plans/active/VERDANT_PALE_REBUILD.md), [tests/unit/move-visual-lifetime.test.ts](../tests/unit/move-visual-lifetime.test.ts), [tests/unit/boss-tell-weight.test.ts](../tests/unit/boss-tell-weight.test.ts), [plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md)
 
 <a id="training-ux"></a>
 

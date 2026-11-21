@@ -607,32 +607,62 @@ the next boss or enemy is covered without editing the test.
 
 **The rule.** On the tick after a move ends, after a death starts, during a stun, and after a phase
 change, an entity's renderer draws nothing that belongs to the old move.
+- **Zones and marks are not the same (lead, slice 1).** A boss zone may outlive the move that made it,
+  but only by its own declared length (`maxLife`), and it ends on the phase-change tick and on the
+  death tick. A mark belongs to the live move only.
+- **A stun hides the move's marks; it does not end the move (lead, slice 1).** `endMove()` runs only
+  when a death starts and on a phase change. After a stun the move resumes its windup where the stun
+  caught it, as it did before.
+- **Marks go through the shared helpers only (lead, slice 1).** The new Rootbound and Rootbinder draw
+  every mark through them.
 
-**The test: `tests/unit/move-visual-lifetime.test.ts`.**
-1. For each boss and each enemy kind, it builds the entity through the production factories and steps
-   it at 120 Hz against the scripted player in the empty arena. Bosses run 40 s in each phase, through
-   the boss practice entry; enemies run 20 s.
-2. Each tick it draws the entity into a recording canvas and wraps the shared mark helpers
-   (`dangerLane`, `dangerColumn`, `dangerReticle`, `chargeTelegraph`, the zone renderer and
-   `drawPeril`) so every call is logged with the move that was live when it was drawn.
+**The test: `tests/unit/move-visual-lifetime.test.ts`** (built in slice 1; the harness is
+`tests/unit/move-visual-harness.ts`).
+1. For each boss and each enemy kind and variant, it builds the entity through the production enemy
+   types and steps it at 120 Hz through the production step (`stepEnemyActors`). Bosses run 40 s in
+   each phase, with their hp set just under each phase mark, then a lethal hit and 12 s of death;
+   enemies run 20 s. Every third move is stunned on its tenth tick.
+2. Each tick it draws the entity into a recording canvas through the production renderers. The shared
+   mark helpers (`chargeTelegraph`, `dangerLane`, `dangerColumn`, `dangerReticle`, `drawPeril`,
+   `weaponGlint`) and the prop helpers (the crown, the cleaver, the wardstaff) report each call.
 3. It fails on any of these:
-   - a mark drawn on a tick when no move is live;
-   - a mark drawn for a move other than the live one;
-   - a mark on the first tick of a stun, or after the tick a death starts;
-   - a boss zone that lives on after the phase-change tick or the death tick.
+   - a mark drawn on a tick when no move is live (`liveMove()` is null), or while the entity is stunned;
+   - a move that does not resume where the stun caught it;
+   - a mark or a zone on any tick from the start of a death;
+   - a boss zone that lives on past the phase-change tick, or past its declared length;
+   - something drawn outside the helpers that looks like a mark: dashed, or reaching further past the
+     entity's box than `MARK_REACH` (120 px). The thresholds are named once, next to what was measured:
+     bodies and props reach at most 83 px (Aldric's cleaver in a lunge), and the nearest mark 143 px
+     (the Geomancer's wall telegraph).
+- **The proof.** A fault planted in the test (Aldric's renderer keeps a mark one tick past its move)
+  makes it fail; Aldric as he is passes. `pnpm test:determinism` also plays two Phase III practice
+  fights through the production game (the Colossus, who dies, and Aldric), hashing the phase changes
+  and the death start; emptying `endMove()` makes the Colossus stream diverge at tick 1,680.
 
 **The cause it fixes once, for every entity.**
 - Causes 3 and 4 in the brief: a dying or stunned enemy skips `update`, so its last move's marks
   freeze.
-- Slice 1 moves the cleanup that `aldric.ts:257` and `source.ts:456` each write by hand into the enemy
-  base: one `endMove()` runs on stun entry, on death start and on a phase change, for every entity.
-- Each renderer then reads a move's marks only from the live move.
+- Slice 1 moves the cleanup that `aldric.ts` and `source.ts` each wrote by hand into the enemy base:
+  one `endMove()` (in `enemy-base.ts`) runs when a death starts and, from the step (`noticePhase()`), on
+  the tick the phase changes. A boss with zones of its own ends them in `endMoveZones()`.
+- The renderer runtime hides every shared mark while the entity is stunned or dying, and `drawPeril`
+  draws only during a live move.
+- This changes what bosses do in released modes, so the ruleset steps (v15, after cinematics PR 1's
+  v14).
 
-**Measured by.** The number of offending ticks per entity, printed by the test. It must be 0.
-- In slice 1 the bosses and enemies not yet rebuilt (Rootbound, White Hart, Rimehound) sit on a
-  named exemption list that can only shrink.
+**Measured by.** The number of offending ticks per entity, by rule. It is 0 for every entity not on
+the exemption list.
+- The bosses and enemies not yet rebuilt (Rootbound, White Hart, Rimehound) sit on a named exemption
+  list that can only shrink.
   - The Rootbound leaves the list in the switch slice.
   - The White Hart and the Rimehound leave it with Pale's rebuild.
+- Marks drawn by hand today sit on a second list, `HAND_DRAWN_MARKS`, which may also only shrink: 25
+  entries, each with its file and what it draws (the Warden, the Colossus and the Source, and the
+  charger, ranged, flyer, bomber, armored, priest and herald kinds and variants that draw their own
+  windup lines, rings and floor warnings). An entity that stops drawing one by hand leaves the list.
+- Not covered by this test: the Echo, which the mirror presentation draws, and the Rootbinder, which
+  the environment layer draws. Neither goes through the enemy renderers. The Rootbinder joins in slice
+  5, when it is rebuilt on the helpers.
 - Causes 1, 2, 5 and 6 (Bloom Wells, Regrowth links, the stage-object fade, always-on Wells) go away
   with the stage features themselves. There is nothing left to test for them on Verdant.
 
@@ -640,19 +670,27 @@ change, an entity's renderer draws nothing that belongs to the old move.
 
 **The rule.** No boss draws more marks than the largest of the existing reference bosses.
 
-**The test: `tests/unit/boss-tell-weight.test.ts`.**
-- It steps every boss as in 5.1 and counts its distinct marks: distinct pairs of (the move that was
-  live, the shared helper called).
-- Aldric counts 6, the Colossus 3, the Echo 2 and the Warden 3.
+**The test: `tests/unit/boss-tell-weight.test.ts`** (built in slice 1).
+- It steps every boss as in 5.1 and counts its distinct marks: distinct pairs of (the move, the shared
+  helper called). A move runs from the tick the boss leaves rest until it rests again and is named by
+  its first state, so a windup, its strike and its recovery are one move. A boss that names parallel
+  moves (the Source) has one move per family.
+- Measured in slice 1: the Warden 4, the Colossus 9, Aldric 3 and the Source 3.
 - **The cap is computed, not written down.** It is the largest count among the bosses on the
-  reference list (Warden, Colossus, Aldric, Echo and Source, named once in the test), so it is 6
-  today.
+  reference list (Warden, Colossus, Aldric and Source, named once in the test), so it is 9 today.
   - A boss on the list that grows its count past the others raises the cap. That shows up as a diff in
     the printed table, which the lead reviews.
   - Any other boss must stay at or under the cap.
+- **Named gaps, each with the slice that closes it.**
+  - The Echo is not measured: the mirror presentation draws it without the shared marks, so this
+    harness would read 0. Slice 2 measures it through the mirror presentation, when the new Rootbound
+    is first held to the cap. The cap is final from then.
+  - The Rootbinder is drawn by the environment layer. Slice 5 rebuilds it on the shared helpers and
+    measures it.
 - **Measured by.** The table it prints: boss, mark count and the cap.
-  - The Rootbound starts on the exemption list at 16 and must be at 4 when it leaves it in the switch
-    slice.
+  - The Rootbound and the White Hart start on the exemption list. Both read 0 under this harness,
+    because their renderers call no shared helper. The new Rootbound is measured from slice 2 and must
+    be at 4 or under when it leaves the list in the switch slice.
   - The White Hart leaves the list with Pale.
 - **What it replaces.** `tests/unit/boss-tell-rules.test.ts` and its per-hit minimum lead go, with
   `boss-tells.ts` (see 3). There is no per-hit tell contract and no "untold hits" target.

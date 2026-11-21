@@ -23,6 +23,7 @@ import {
 } from "../../src/playtest/headless/production-headless-environment";
 import { agentView, bossFightScenario, type BossFightRequest } from "../../src/playtest/boss-fight";
 import { createBossPlayer } from "../../src/playtest/boss-player";
+import type { PracticeBossId } from "../../src/gameplay/training/boss-phase-practice-runtime";
 import { readBoss, readPlayerBox } from "../../src/playtest/boss-view";
 
 const FIXTURE_PATH = "tests/fixtures/canonical-hash-stream.json";
@@ -106,7 +107,7 @@ const DEATH_TICKS = 4 * 120;
 
 interface FightSpec {
   readonly id: string;
-  readonly boss: BossFightRequest["boss"];
+  readonly boss: PracticeBossId;
 }
 
 interface FightRecord {
@@ -140,7 +141,7 @@ function recordFight(fight: FightSpec): FightRecord {
     end: FightRecord["end"] = "time limit";
   try {
     environment.reset(bossFightScenario(request));
-    const practice = environment.practiceBoss(request.boss, FIGHT_PHASE);
+    const practice = environment.practiceBoss(fight.boss, FIGHT_PHASE);
     while (tick < FIGHT_TICKS && (deathStart === null || tick < deathStart + DEATH_TICKS)) {
       const before = readBoss(environment.world());
       const fighting = practice() === "active" && deathStart === null;
@@ -158,7 +159,7 @@ function recordFight(fight: FightSpec): FightRecord {
         deathStart = tick;
         end = "boss died";
       }
-      if (deathStart === null && transition.observation.player.hp <= 0) {
+      if (deathStart === null && (transition.observation.player?.hp ?? 0) <= 0) {
         end = "player defeated";
         break;
       }
