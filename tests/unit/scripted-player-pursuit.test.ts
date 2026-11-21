@@ -80,6 +80,8 @@ describe("scripted player against an enemy that stays away", () => {
     (weapon) => {
       expect(ticksToDefeatLoneHerald(weapon)).not.toBeNull();
     },
-    60_000,
+    // The verdict is the tick bound above, the same on any host. This only stops a hang: a case simulates up to
+    // 65 s of play, about 6 s alone on this machine and several times that on a loaded one.
+    120_000,
   );
 });
