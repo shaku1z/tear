@@ -939,10 +939,9 @@ CONFIG.touch = {
   joyFollow: 96, // joystick: re-anchor once the thumb passes this (logical px)
 };
 
-// Run multipliers, all 1 (no change), applied to per-run values at run start. Firebase Remote
-// Config used to be able to override them; its only template ever published (2026-07-04) kept
-// every value at 1, and the game stopped fetching it with the modular SDK
-// (plans/active/FIREBASE_REFRESH.md, which removes these knobs and their readers next).
+// Run multipliers, all 1, applied to per-run values at run start. Firebase Remote Config once
+// overrode them; its only template (2026-07-04) kept them at 1, and the game no longer fetches
+// it (plans/active/FIREBASE_REFRESH.md removes these knobs and their readers next).
 const REMOTE = { coinMult: 1, enemyHpMult: 1, enemyDensityMult: 1, scoreMult: 1 };
 
 const THEME = {

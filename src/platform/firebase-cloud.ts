@@ -37,7 +37,12 @@ export interface FirestorePort {
   /** Adds a document with a generated id. */
   append(collectionPath: string, data: DataRecord): Promise<void>;
   /** The first `limit` documents ordered by one field. */
-  list(collectionPath: string, field: string, direction: "asc" | "desc", limit: number): Promise<FirebaseListedDocument[]>;
+  list(
+    collectionPath: string,
+    field: string,
+    direction: "asc" | "desc",
+    limit: number,
+  ): Promise<FirebaseListedDocument[]>;
 }
 
 export interface FirebaseServices {
@@ -131,17 +136,21 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
       let first = true;
       removeAuthListener?.();
       removeAuthListener = active.auth.onChange(async (user) => {
-        if (first) {
-          first = false;
-          if (!user) {
-            await active.auth.signInAnonymously();
-            return;
+        try {
+          if (first) {
+            first = false;
+            if (!user) {
+              await active.auth.signInAnonymously();
+              return;
+            }
           }
+          if (!user) return;
+          authUid = user.uid;
+          context.setUser(cloudUser(user), user.isAnonymous ? "guest" : "signedin", true);
+          await context.sync();
+        } catch {
+          /* offline or blocked: the player stays the local guest */
         }
-        if (!user) return;
-        authUid = user.uid;
-        context.setUser(cloudUser(user), user.isAnonymous ? "guest" : "signedin", true);
-        await context.sync();
       });
     },
     async signIn(context): Promise<SignInResult> {
@@ -324,7 +333,10 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
         };
         await race(session.store.write(`replays/${shareId}`, replaySummary, false), 12_000);
         for (let index = 0; index < chunks.length; index += 1) {
-          await race(session.store.write(`replays/${shareId}/chunks/${String(index)}`, { d: chunks[index] ?? "" }, false), 15_000);
+          await race(
+            session.store.write(`replays/${shareId}/chunks/${String(index)}`, { d: chunks[index] ?? "" }, false),
+            15_000,
+          );
         }
         return shareId;
       } catch {

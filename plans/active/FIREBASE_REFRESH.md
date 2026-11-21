@@ -60,3 +60,9 @@ The owner approved this refresh on 2026-11-20. It stays on the free tier. Consol
   - PR 1 hardens the rules, with tests under the emulator.
   - The Gauntlet clear boards (lower is better) were agreed with the keys-gauntlet session.
   - The replay limits (6 chunks, owner-only ids) were agreed with the replay overhaul session.
+- 2026-11-20 PR 1 opened as [#349](https://github.com/shaku1z/tear/pull/349).
+- 2026-11-20 PR 2: the modular SDK. The adapter moved onto two small ports (Auth, Firestore paths), and
+  `src/platform/firebase-sdk.ts` implements them with Auth and Firestore Lite.
+  - Sizes: the SDK chunk is 219,880 B raw / 66,303 B gzip. Before, the four 10.12.2 compat scripts from gstatic were 539,470 / 158,763 B.
+  - The chunk is not precached (precache 46/46 entries, 2,625,576 → 2,623,912 B), and startup grows by 25 B.
+  - Remote Config is no longer fetched. Its only template (version 1, 2026-07-04) kept all four multipliers at 1, so nothing changes. PR 4 deletes `REMOTE` and its readers.

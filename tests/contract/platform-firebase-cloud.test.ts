@@ -78,6 +78,29 @@ describe("Firebase cloud adapter", () => {
     await expect(compatibility.account.signIn?.(context)).resolves.toBe(false);
   });
 
+  it("stays the local guest, with no unhandled rejection, when the anonymous sign-in is refused", async () => {
+    const services = corruptServices();
+    let listener: ((user: FirebaseUser | null) => void | Promise<void>) | undefined;
+    const refused = vi.fn(() => Promise.reject(new Error("network-request-failed")));
+    const compatibility = adapter({
+      ...services,
+      auth: {
+        ...services.auth,
+        current: () => null,
+        onChange: (next) => {
+          listener = next;
+          return () => undefined;
+        },
+        signInAnonymously: refused,
+      },
+    });
+    const users: string[] = [];
+    await compatibility.account.init({ ...context, setUser: (user) => users.push(user.id) });
+    await listener?.(null);
+    expect(refused).toHaveBeenCalledOnce();
+    expect(users).toEqual(["local"]);
+  });
+
   it("rejects a corrupt cloud-save shape instead of merging it", async () => {
     const compatibility = adapter(corruptServices());
     await compatibility.account.init(context);
