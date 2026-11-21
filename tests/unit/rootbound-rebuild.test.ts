@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import { CONFIG } from "../../src/config/game-config";
 import type { EnemyProjectile } from "../../src/gameplay/entities/enemy-contracts";
 import {
+  ROOTBOUND_BODY,
   ROOTBOUND_CADENCE,
   ROOTBOUND_MOVES as M,
 } from "../../src/gameplay/entities/enemy-types/rootbound-rebuild/rootbound-moves";
@@ -18,7 +19,7 @@ const GROUND = CONFIG.world.groundY;
 
 function setup(bossX: number, player: Partial<TestPlayer> = {}) {
   const harness = createEnemyHarness();
-  const boss = new harness.types.RootboundRebuild(bossX, GROUND - CONFIG.rootbound.h / 2);
+  const boss = new harness.types.RootboundRebuild(bossX, GROUND - ROOTBOUND_BODY.h / 2);
   const target = createTestPlayer(player);
   const projectiles: EnemyProjectile[] = [];
   // It faces the player the way `rest()` does before it chooses, for the tests that start a move directly.
@@ -40,8 +41,12 @@ function setup(bossX: number, player: Partial<TestPlayer> = {}) {
 const levelAt = (x: number): Partial<TestPlayer> => ({ x, y: GROUND - 36 });
 
 describe("the new Rootbound chooses its Phase I move from where the player is", () => {
+  it("has the body its spawn lifts by: the old Rootbound's frame", () => {
+    expect(ROOTBOUND_BODY.h).toBe(CONFIG.boss.h);
+  });
+
   it("attacks first after its opening pause, with the vine when the player is level and in reach", () => {
-    const { boss, until } = setup(600, levelAt(850));
+    const { until } = setup(600, levelAt(850));
     expect(until("swingwind")).toBe(ROOTBOUND_CADENCE.firstAttack);
   });
 

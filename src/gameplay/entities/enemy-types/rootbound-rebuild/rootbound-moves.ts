@@ -56,6 +56,17 @@ export const ROOTBOUND_MOVES = Object.freeze({
   uproot: Object.freeze({ sink: 24, under: 72, banner: "THE GARDEN REMEMBERS" }),
 });
 
+/** Its body: the approved figure's 118 px frame (the old Rootbound's), 3800 health, a 120 px/s walk. */
+export const ROOTBOUND_BODY = Object.freeze({
+  w: 118,
+  h: 118,
+  hp: 3800,
+  speed: 120,
+  contactDmg: 20,
+  knockbackTaken: 0.4,
+  weight: 6,
+});
+
 /** How the body moves and how often it attacks. */
 export const ROOTBOUND_CADENCE = Object.freeze({
   /** Ticks between attacks in Phase I (Aldric's is 204). */

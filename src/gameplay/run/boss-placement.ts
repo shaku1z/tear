@@ -11,7 +11,6 @@ import { bossDefinition, isBossDefinitionId } from "./boss-definitions";
 export interface BossPlacementConfig {
   readonly world: { readonly groundY: number };
   readonly boss: { readonly h: number };
-  readonly rootbound: { readonly h: number };
   readonly whiteHart: { readonly h: number };
   readonly echo: { readonly h: number };
   readonly aldric: { readonly h: number };

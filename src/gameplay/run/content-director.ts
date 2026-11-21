@@ -44,8 +44,8 @@ export const BOSS_TEST_ROSTER = Object.freeze([
 ]);
 
 export type BossId = (typeof BOSS_IDENTITY_IDS)[number];
-/** Campaign-only or factory-unavailable bosses cannot enter the mini-boss selector. */
-export type MiniBossId = Exclude<BossId, "source" | "rootbound" | "white-hart">;
+/** Campaign-only, factory-unavailable or engineering-only bosses cannot enter the mini-boss selector. */
+export type MiniBossId = Exclude<BossId, "source" | "rootbound" | "white-hart" | "rootbound-rebuild">;
 export const ENEMY_KIND_IDS = Object.freeze([
   "charger",
   "ranged",

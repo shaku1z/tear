@@ -8,7 +8,7 @@ import type { EnemyDependencies, EnemyPlatform, EnemyPlayerPort, EnemyProjectile
 import type { EnemyBaseConstructor } from "../enemy-base";
 import type { BossRuntime } from "../boss-runtime";
 import { ROOTBOUND_REBUILD_DEFINITION } from "../../../run/boss-definitions";
-import { ROOTBOUND_CADENCE, ROOTBOUND_MOVES } from "./rootbound-moves";
+import { ROOTBOUND_BODY, ROOTBOUND_CADENCE, ROOTBOUND_MOVES } from "./rootbound-moves";
 
 /**
  * The new Rootbound (plans/active/VERDANT_PALE_REBUILD.md, 2.1): a body with a move table, built the way
@@ -66,10 +66,9 @@ export function createRootboundRebuildType(
     batonStrike = 0;
 
     override bodyContact: BossBodyContactRow | null = BOSS_BODY_CONTACT["rootbound-rebuild"];
-    declare cfg: typeof CONFIG.rootbound;
 
     constructor(x: number, y: number) {
-      super(x, y, CONFIG.rootbound);
+      super(x, y, { ...ROOTBOUND_BODY });
       this.kind = ROOTBOUND_REBUILD_DEFINITION.id;
       this.bossId = ROOTBOUND_REBUILD_DEFINITION.id;
       this.bossName = "THE ROOTBOUND";

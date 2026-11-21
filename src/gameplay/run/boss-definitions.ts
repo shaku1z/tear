@@ -16,7 +16,7 @@ export function isBossDefinitionId(value: string): value is BossDefinitionId {
 }
 
 /** A body in the game config whose height sets a boss's spawn height. */
-export type BossSpawnBody = "boss" | "rootbound" | "whiteHart" | "echo" | "aldric" | "colossus";
+export type BossSpawnBody = "boss" | "whiteHart" | "echo" | "aldric" | "colossus";
 
 /** Where a boss enters the arena (read by `planBossPlacement`). */
 export interface BossSpawn {
@@ -64,7 +64,8 @@ export const ROOTBOUND_REBUILD_DEFINITION = Object.freeze({
   name: "The Rootbound (rebuild)",
   phaseMarks: Object.freeze([0.65, 0.28] as const),
   // It never enters inside the player (decision D1 in the plan).
-  spawn: Object.freeze({ factoryId: "rootbound-rebuild", lift: "rootbound", startGap: 360 }),
+  // Its body is the old Rootbound's 118 px frame (ROOTBOUND_BODY), so it lifts like it.
+  spawn: Object.freeze({ factoryId: "rootbound-rebuild", lift: "boss", startGap: 360 }),
   stageOf: "rootbound",
 } as const satisfies BossDefinition);
 
