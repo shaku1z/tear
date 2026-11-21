@@ -66,7 +66,7 @@ import {
   type ProductionWaveRewardIntent,
   type ProductionWaveRewardRuntime,
 } from "./wave-reward-runtime";
-import { ENTITY_KIND_REGISTRY } from "../../../gameplay/snapshot/codec-ids";
+import { REPLAY_CONTENT_HASH } from "../../../gameplay/snapshot/codec-ids";
 import {
   createDefaultStateCodecRegistry,
   restoreSnapshotTransactionally,
@@ -92,8 +92,6 @@ export function captureProductionRewardSelection(selection: RewardSelectionSnaps
 const productionWaveRewards = new WeakMap<ProductionReplayWorld, ProductionWaveRewardRuntime>();
 
 export type { ProductionApplicationFrameConfirm } from "./application-frame";
-
-const CONTENT_HASH = stableVerificationHash(ENTITY_KIND_REGISTRY.ids);
 
 export interface ProductionGhostReplayCompositionOptions {
   readonly observeStyle?: ProductionCombatPhaseOptions["observeStyle"];
@@ -478,7 +476,7 @@ export function captureProductionReplayCheckpoint(
     observationClass: "structured-state",
     producer: "production-headless-checkpoint",
     target: buildIdentity?.target ?? "headless",
-    contentHash: buildIdentity?.contentHash ?? CONTENT_HASH,
+    contentHash: buildIdentity?.contentHash ?? REPLAY_CONTENT_HASH,
     ...(buildIdentity === undefined ? {} : { buildIdentity }),
     // A required contract hash that explicitly denotes absence of a pixel capture;
     // it is not rendered-output evidence.
@@ -763,7 +761,7 @@ export function createProductionGhostReplayComposition(options: ProductionGhostR
           dispatchProductionChapter(replay, intents);
         },
       });
-      const runtimeBuild = injectedBuildIdentity("production-headless", CONTENT_HASH);
+      const runtimeBuild = injectedBuildIdentity("production-headless", REPLAY_CONTENT_HASH);
       const inheritedBuild = snapshot?.provenance.build;
       const suppliedBuild = inheritedBuild === undefined ? (options.buildIdentity ?? runtimeBuild) : undefined;
       const bootstrap = Object.freeze({
@@ -774,7 +772,7 @@ export function createProductionGhostReplayComposition(options: ProductionGhostR
             revision: suppliedBuild?.revision ?? "unbound",
             target: suppliedBuild?.target ?? "production-headless",
             rulesetVersion: suppliedBuild?.rulesetVersion ?? "live",
-            contentHash: suppliedBuild?.contentHash ?? CONTENT_HASH,
+            contentHash: suppliedBuild?.contentHash ?? REPLAY_CONTENT_HASH,
             configHash: stableVerificationHash(replay.configuration.value),
           }),
         rng: replay.world.context.services.random.snapshot(),

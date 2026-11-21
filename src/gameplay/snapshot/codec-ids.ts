@@ -1,5 +1,6 @@
+import { stableVerificationHash } from "../../domain/hash";
 import { createStableRegistry } from "../../domain/stable-registry";
-import { BOSS_IDENTITY_IDS } from "../run/boss-definitions";
+import { BOSS_IDENTITY_IDS, isEngineeringOnlyBoss } from "../run/boss-definitions";
 import { ENEMY_IDENTITY_IDS } from "../run/content-director";
 
 /** The state codecs a snapshot carries, one per part of the game state. */
@@ -36,3 +37,14 @@ export const ENTITY_KIND_IDS = Object.freeze([
 ] as const);
 export const ENTITY_KIND_REGISTRY = createStableRegistry("entity kind", ENTITY_KIND_IDS);
 export type TearEntityKindId = (typeof ENTITY_KIND_IDS)[number];
+
+/** The entity kinds a replay can contain: every kind but the engineering-only bosses, which replays refuse. */
+export const REPLAY_CONTENT_KIND_IDS: readonly TearEntityKindId[] = Object.freeze(
+  ENTITY_KIND_IDS.filter((id) => !isEngineeringOnlyBoss(id)),
+);
+
+/**
+ * The content identity a replay records and is checked against. Adding or removing an engineering-only boss
+ * leaves it as it is, so a boss rebuild on the engineering channel does not retire replays.
+ */
+export const REPLAY_CONTENT_HASH = stableVerificationHash(REPLAY_CONTENT_KIND_IDS);
