@@ -21,7 +21,7 @@ const resolved = Object.freeze({
     schemaVersion: 1,
     id: "c40.source-phase-two-void",
     version: 1,
-    description: "Source phase-two State Setup cinematic handoff",
+    description: "Source phase-two State Setup Unmake handoff",
     stateClass: "reconstructed-reachable",
     executionClass: "engineering",
     seed: "c40-source-void",
@@ -51,30 +51,20 @@ withJourney({ name: "State Setup Source void" }, async ({ page }) => {
       if (boss?.mode === "collapse") break;
     }
     const collapse = environment.captureSnapshot("c40-source-collapse");
-    const advances = [];
-    for (let index = 0; index < 6; index += 1) {
-      advances.push(environment.advanceStateSetupCinematicBeat());
-      environment.advanceApplicationFrame(1 / 60);
-    }
-    for (let index = 0; index < 90; index += 1) environment.advanceApplicationFrame(1 / 60);
+    // The Unmake is a move in the fight (1.6 s): no cinematic beat is left to advance, so frames carry it.
+    const beat = environment.advanceStateSetupCinematicBeat();
+    for (let index = 0; index < 150; index += 1) environment.advanceApplicationFrame(1 / 60);
     const voidSnapshot = environment.captureSnapshot("c40-source-void");
-    return { launched, collapseFrame, advances, collapse, voidSnapshot, metrics: environment.metrics() };
+    return { launched, collapseFrame, beat, collapse, voidSnapshot, metrics: environment.metrics() };
   }, resolved);
 
   assert.equal(result.launched.ok, true, JSON.stringify(result.launched));
   const collapseBoss = result.collapse.state["tear.boss.v1"].find((entry) => entry.factoryId === "source");
-  assert.equal(
-    collapseBoss.mode,
-    "collapse",
-    "State Setup phase-two launch must enter Source collapse before cinema advancement",
-  );
-  assert.ok(
-    result.advances.every((entry) => entry.advanced),
-    "each bounded advancement must consume one real director beat",
-  );
+  assert.equal(collapseBoss.mode, "collapse", "State Setup phase-two launch must enter the Source's Unmake");
+  assert.equal(result.beat.advanced, false, "the Unmake plays in the fight, with no cinematic beat to advance");
   const voidBoss = result.voidSnapshot.state["tear.boss.v1"].find((entry) => entry.factoryId === "source");
   const voidPlatforms = result.voidSnapshot.state["tear.platform.v1"].filter((entry) => entry.void === true);
-  assert.equal(voidBoss.mode, "void", "semantic director advancement must hand Source into production void combat");
+  assert.equal(voidBoss.mode, "void", "the Unmake must hand the Source into production void combat");
   assert.ok(voidPlatforms.length > 0, "void handoff must produce authoritative hazard/navigation platforms");
   assert.ok(
     result.voidSnapshot.tick > result.collapse.tick,
@@ -84,5 +74,5 @@ withJourney({ name: "State Setup Source void" }, async ({ page }) => {
     result.metrics.fixedTicks >= result.voidSnapshot.tick,
     "Class-A metrics must account for authoritative continuation ticks",
   );
-  console.log("State Setup Source collapse-to-void semantic advancement passed");
+  console.log("State Setup Source Unmake-to-void handoff passed");
 });

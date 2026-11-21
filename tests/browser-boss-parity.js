@@ -129,28 +129,6 @@ async function waitForBossCombatProgress(page, bossId, initial, minimumAdvance, 
   return bossSnapshot(page, bossId);
 }
 
-async function forcePhase(page, bossId, fraction, cinematicId) {
-  await page.evaluate((value) => window.__PANTHEON_TEST.setBossHealthFraction(value), fraction);
-  await page.waitForFunction(
-    (id) => window.__PANTHEON_TEST.state().active && window.__PANTHEON_TEST.state().cinema === id,
-    cinematicId,
-    { timeout: STATE_WAIT_MS },
-  );
-  const entered = await bossSnapshot(page, bossId);
-  assert.equal(entered.cinematicPending, false, `${bossId} must consume its phase request when the scene begins`);
-  await page.evaluate(() => {
-    for (let index = 0; index < 12; index += 1) window.__PANTHEON_TEST.advance();
-  });
-  await page.waitForFunction(() => !window.__PANTHEON_TEST.state().active, undefined, {
-    timeout: STATE_WAIT_MS,
-  });
-  const released = await bossSnapshot(page, bossId);
-  assert.equal(released.cinematicT, 0, `${bossId} ritual presentation state must release`);
-  return released;
-}
-
-// A boss whose phase changes in the fight: crossing the mark changes the phase with no scene, and the
-// boss keeps fighting (plans/active/CINEMATICS_OVERHAUL.md).
 async function crossPhaseInFight(page, bossId, fraction, phase) {
   const before = await bossSnapshot(page, bossId);
   await page.evaluate((value) => window.__PANTHEON_TEST.setBossHealthFraction(value), fraction);
@@ -290,14 +268,24 @@ withJourney({ name: "boss oracle parity", recordFrames: true }, async ({ page, w
   echo = await waitForBossSimulationAdvance(page, "echo", echoFinalStart.aliveT, 1.2, 7000);
   assert.ok(echo.aliveT > echoFinalStart.aliveT + 1.2, "Echo's final reflection brain must keep simulating");
 
-  // Source's phase-two request crosses a typed adapter into the void-descent
-  // director. The request must launch, construct the moving stream, and release
-  // Source from `collapse` into live void combat.
+  // The Source's Unmake happens in the fight: the floor goes 0.8 s in, the void stream forms under the
+  // player, and the void run starts at 1.6 s, with no scene at any point.
   await startReadyBoss(page, "source");
-  const sourceVoid = await forcePhase(page, "source", 0.5, "voidDescent");
+  const unmaking = await crossPhaseInFight(page, "source", 0.5, 2);
+  assert.equal(unmaking.mode, "collapse", "Source must start its Unmake on the phase tick");
+  await page.waitForFunction(
+    () => window.TEAR_WEAPON_DEBUG?.().enemies.find((enemy) => enemy.bossId === "source")?.mode === "void",
+    undefined,
+    { timeout: STATE_WAIT_MS },
+  );
+  const sourceVoid = await bossSnapshot(page, "source");
   assert.equal(sourceVoid.phase, 2, "Source must enter phase two");
-  assert.equal(sourceVoid.mode, "void", "Source descent must hand off into void combat");
-  assert.equal(sourceVoid.voidPending, false, "Source descent request must be consumed exactly once");
+  assert.equal(sourceVoid.voidPending, false, "the Unmake must end exactly once, when the void run starts");
+  assert.equal(
+    (await page.evaluate(() => window.__PANTHEON_TEST.state())).active,
+    false,
+    "the Unmake must not start a scene",
+  );
   const sourceMoving = await waitForBossSimulationAdvance(page, "source", sourceVoid.aliveT, 0.8, 7000);
   assert.ok(
     sourceMoving.aliveT > sourceVoid.aliveT + 0.8,
