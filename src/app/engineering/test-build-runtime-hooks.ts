@@ -324,7 +324,7 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
   );
 }
 
-/** Test builds only, with `?bossdebug=1`: loads the boss debug harness. */
+/** Test builds only, with `?bossdebug=1`: loads the boss debug harness (`&overlay=0` hides its overlay). */
 export function installLiveBossDebugWhenEnabled(sources: LiveTestBuildHookSources): void {
   if (__TEAR_TEST_BUILD__) {
     // The click targets of the latest drawn frame, as a pointer click is matched against them, each

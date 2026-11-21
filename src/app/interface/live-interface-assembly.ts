@@ -105,7 +105,7 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
     hint: hintEl,
     fullscreenButton,
     fullscreenAvailable,
-    pantheonDebug: PANTHEON_DEBUG,
+    pantheonDebugOverlay: PANTHEON_DEBUG_OVERLAY,
   } = browser;
   const { state: hostState, environment } = world;
   const { impact, feel } = world.context.transient;
@@ -425,7 +425,7 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
         canvas: ctx,
         width: W,
         height: H,
-        debug: PANTHEON_DEBUG,
+        debug: PANTHEON_DEBUG_OVERLAY,
         stage: stageRuntime,
         tutorial: TUT,
         trainingCallouts: campaignTraining.training.callouts,
@@ -438,7 +438,12 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
         Attract.onBiomeChange = begin;
       },
     },
-    { simulationTick: () => simulation.tick, browserWindow, gfx: () => settings.gfx, debugAvailable: PANTHEON_DEBUG },
+    {
+      simulationTick: () => simulation.tick,
+      browserWindow,
+      gfx: () => settings.gfx,
+      debugAvailable: PANTHEON_DEBUG_OVERLAY,
+    },
   );
   const { frame: presentationHost, screens: screenComposition } = interfaceComposition;
   const { library: libraryAdapters, replay: replayAdapters } = screenComposition;
