@@ -19,7 +19,7 @@ function git(...args) {
 export function sourceState() {
   const head = git('rev-parse', 'HEAD').trim();
   // Only what can change the game's output counts: not the wiki itself, nor workflows, docs, plans or config.
-  const outside = ['--', '.', ':(exclude)wiki', ':(exclude).github', ':(exclude)docs', ':(exclude)plans', ':(exclude)config/position.json'];
+  const outside = ['--', '.', ':(exclude)wiki', ':(exclude).github', ':(exclude)docs', ':(exclude)plans', ':(exclude)config/position'];
   const status = git('status', '--porcelain=v1', '--untracked-files=all', ...outside);
   const treeDirty = git('status', '--porcelain=v1', '--untracked-files=all').trim() !== '';
   const gameDirty = status.trim() !== '';
