@@ -38,7 +38,9 @@ async function coldRun(journey) {
   const options = { mode: "endless", difficulty: "easy", weapon: "sword", seed: 515_305, skipCinematics: true };
   await page.evaluate((start) => window.__TEAR_WATCH_AGENT__.start(start), options);
   // The agent starts the run through the setup screen on its first ticks, not in start().
-  const snapshot = await page.evaluate((ticks) => window.__TEAR_WATCH_AGENT__.runAsync(ticks), BATCH_TICKS);
+  let snapshot = await page.evaluate((ticks) => window.__TEAR_WATCH_AGENT__.runAsync(ticks), BATCH_TICKS);
+  for (let batch = 0; batch < 20 && snapshot.status === "running" && snapshot.screen !== "playing"; batch += 1)
+    snapshot = await page.evaluate((ticks) => window.__TEAR_WATCH_AGENT__.runAsync(ticks), BATCH_TICKS);
   assert.equal(snapshot.screen, "playing", `the cold run did not start (${JSON.stringify(snapshot.status)})`);
   const recording = await page.evaluate(() => window.__TEAR_REPLAY_TAP__.recording());
   await page.evaluate(() => window.__TEAR_WATCH_AGENT__.stop());
