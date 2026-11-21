@@ -1,5 +1,6 @@
 import { bossKillStat } from "../domain/progress-facts";
 import type { ProfileScreenView, ReplayView, StatView } from "./screens/contracts";
+import type { CosmeticStyles } from "./cosmetic-styles";
 
 export interface ModeViewSource {
   readonly id: string;
@@ -205,7 +206,20 @@ export interface ProfileSnapshotResult {
   readonly view: ProfileScreenView;
   readonly maximumScroll: number;
 }
+/** The worn parts of the passport's look, or nothing when the player wears neither. */
+function passportLook({ title, banner }: Pick<CosmeticStyles, "title" | "banner">) {
+  if (!title.worn && !banner.worn) return {};
+  return {
+    look: {
+      ...(title.worn ? { title: title.text } : {}),
+      ...(banner.worn ? { banner: { colors: banner.colors, pattern: banner.pattern } } : {}),
+    },
+  };
+}
+
 export function buildProfileSnapshot(input: {
+  /** The title and banner the player wears (the resolver's styles for their loadout). */
+  readonly cosmetics: Pick<CosmeticStyles, "title" | "banner">;
   readonly tab: string;
   readonly tabs: readonly (readonly [string, string])[];
   readonly signedIn: boolean;
@@ -287,6 +301,7 @@ export function buildProfileSnapshot(input: {
         ? { signInLabel: (input.authRetryPrompt ? "RETRY · " : "") + input.signInLabel.toUpperCase() }
         : {}),
       showcases,
+      ...passportLook(input.cosmetics),
     },
     ...(input.tab === "bests" && top !== undefined
       ? {
