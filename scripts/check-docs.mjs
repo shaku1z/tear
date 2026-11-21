@@ -35,6 +35,7 @@ export const CANONICAL_ACTIVE_PLAN_PATHS = Object.freeze([
   "plans/active/FIREBASE_REFRESH.md",
   "plans/active/CINEMATICS_OVERHAUL.md",
   "plans/active/VERDANT_PALE_REBUILD.md",
+  "plans/active/REMOVE_OVERBUILT_REMAINING.md",
 ]);
 
 // Compatibility export for callers that need the canonical active-plan list.

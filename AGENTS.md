@@ -37,9 +37,10 @@ merged.
   one by reading its file. `pnpm test:agent-skills` fails when a skill cites a path,
   link or package script that does not exist, so fix the skill in the pull request
   that moves or renames what it cites.
-- Where each workstream stands: [docs/POSITION.md](docs/POSITION.md), generated from
-  `config/position.json` (`pnpm position:render`). Edit the JSON in the pull request that
-  changes an area's state; `pnpm check:docs` fails on a stale or hand-edited render.
+- Where each workstream stands: [docs/position/](docs/position/README.md), one generated page
+  per area from `config/position/<area>.json` (`pnpm position:render`). Edit your area's JSON in
+  the pull request that changes its state; that touches the area's two files only, so pull
+  requests in different areas do not conflict. `pnpm check:docs` fails on a stale or hand-edited page.
 - Every top-level folder and config file, what writes it and whether it is generated:
   [docs/REPOSITORY_MAP.md](docs/REPOSITORY_MAP.md). A new top-level entry needs a row there, and
   tracked documents and evidence stay under the size cap in `config/size-caps.json`.

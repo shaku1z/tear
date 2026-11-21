@@ -139,6 +139,10 @@ export function createLiveCombatActionPorts(options: LiveCombatActionPortsOption
       setSlowZones: (value) => {
         hostState.setSlowZones(value);
       },
+      bossIntro: () => hostState.bossIntro(),
+      setBossIntro: (value) => {
+        hostState.setBossIntro(value);
+      },
       temporaryWalls: () => hostState.temporaryWalls(),
       setTemporaryWalls: (value) => {
         hostState.setTemporaryWalls(value);

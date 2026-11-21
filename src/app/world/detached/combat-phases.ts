@@ -56,10 +56,8 @@ export interface ProductionCombatPhaseOptions {
 }
 
 /**
- * Builds the same opening and collision hosts used by live combat over one
- * source-owned world. Its outward adapter intentionally records only semantic
- * intent: pixel, PCM/device, haptic, and durable-output fidelity are later
- * checkpoint evidence, not a claim made by this composition.
+ * Builds live combat's opening and collision hosts over one source-owned world. Its outward adapter
+ * records semantic intent only and claims no pixel, audio, haptic or durable-output fidelity.
  */
 export function createProductionCombatPhases(
   replay: ProductionReplayWorld,
@@ -67,8 +65,7 @@ export function createProductionCombatPhases(
 ) {
   const { world, effects, transient, input, stage } = replay;
   const config = replay.configuration.value;
-  // Match the live opening host's semantic color policy at emission time.
-  // Theme remains current presentation policy, not restored world state.
+  // As in the live opening host, colors resolve at emission from the current theme, not restored state.
   const openingColor = (color?: string): string => {
     if (color === "perfect") return config.colors.perfect;
     if (color === "slam") return config.colors.slam;
@@ -466,6 +463,10 @@ export function createProductionCombatPhases(
 
   const opening = {
     config,
+    bossIntro: () => world.state.bossIntro(),
+    endBossIntro: () => {
+      world.state.setBossIntro(null);
+    },
     get player() {
       return player();
     },

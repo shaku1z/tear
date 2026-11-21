@@ -107,6 +107,10 @@ export function createLiveCombatActions<
   };
   const opening: Omit<LiveOpeningPhaseHost, "state"> = {
     config: d.CONFIG,
+    bossIntro: () => live.bossIntro(),
+    endBossIntro: () => {
+      live.endBossIntro();
+    },
     get player() {
       return player();
     },
