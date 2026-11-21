@@ -3,9 +3,8 @@
  * 2.1). Every length is in simulation ticks: the boss counts one tick per update, so no row repeats the tick
  * rate. Distances are in world pixels, speeds in pixels per second.
  *
- * Slice 2 built Phase I and Uproot (the change into Phase II). Slice 3 adds Phase II and Last Bloom (the change
- * into Phase III). Phase III fights with Phase II's moves until slice 4 adds its own; every per-phase list holds
- * three entries, and slice 4 sets the third.
+ * Slice 2 built Phase I and Uproot (the change into Phase II), slice 3 Phase II and Last Bloom (the change into
+ * Phase III), and slice 4 Phase III: Spring Surge and the third entry of every per-phase list.
  */
 export const ROOTBOUND_MOVES = Object.freeze({
   /**
@@ -96,6 +95,28 @@ export const ROOTBOUND_MOVES = Object.freeze({
     track: 48,
     cooldown: 360,
   }),
+  /**
+   * Phase III, on its own cooldown: it springs up and over to the arena's centre (its windup, not scaled by the
+   * phase's windup scale: it is Phase III's own), then slams. Two root waves run along the floor both ways (ground
+   * shocks the player jumps) and `pods` seed pods arc out, deflectable like the Seed Throw's. Open after.
+   */
+  springSurge: Object.freeze({
+    windup: 102,
+    recover: 66,
+    cooldown: 900,
+    rise: 190,
+    waveSpeed: 760,
+    waveRadius: 16,
+    waveDamage: 16,
+    waveLife: 2,
+    pods: 5,
+    podSpeed: 560,
+    podLift: 120,
+    podGravity: 520,
+    podRadius: 12,
+    podDamage: 12,
+    deflectDamage: 30,
+  }),
   /** The change into Phase II: sink, under the floor to the player, then Surface Strike's windup there. */
   uproot: Object.freeze({ sink: 24, under: 72, banner: "THE GARDEN REMEMBERS" }),
   /**
@@ -118,11 +139,15 @@ export const ROOTBOUND_BODY = Object.freeze({
 
 /** How the body moves and how often it attacks. */
 export const ROOTBOUND_CADENCE = Object.freeze({
-  /** Ticks between attacks in Phase I, II and III (Aldric's is 204); Phase II is Phase I's ÷1.25. */
-  attackCooldowns: Object.freeze([180, 144, 144] as const),
+  /** Ticks between attacks in Phase I, II and III (Aldric's is 204): Phase I's ÷1.25 and ÷1.6, whole ticks. */
+  attackCooldowns: Object.freeze([180, 144, 112] as const),
   /** How many times each Burrow surfaces in Phase I, II and III, and the ticks under the floor between them. */
-  surfaces: Object.freeze([1, 2, 2] as const),
-  resurfaceUnder: Object.freeze([0, 60, 60] as const),
+  surfaces: Object.freeze([1, 2, 3] as const),
+  resurfaceUnder: Object.freeze([0, 60, 48] as const),
+  /** Its walk in Phase I, II and III, in px/s. */
+  walkSpeeds: Object.freeze([120, 120, 160] as const),
+  /** Every move's windup is scaled by this in Phase I, II and III (Spring Surge's is Phase III's own). */
+  windupScales: Object.freeze([1, 1, 0.85] as const),
   /** Inside this distance it steps back, keeping its vine's reach. */
   spacing: 190,
   /** The player counts as level within this height of its feet. */
