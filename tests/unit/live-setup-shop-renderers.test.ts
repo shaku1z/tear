@@ -105,9 +105,21 @@ describe("live setup shop renderers", () => {
     };
 
     expect(askThen(() => undefined)).toBe(true);
-    expect(askThen(() => renderers.leaveShop())).toBe(false);
-    expect(askThen(() => renderers.selectShopTab("upgrades"))).toBe(false);
-    expect(askThen(() => renderers.changeCosmetics(() => null))).toBe(false);
+    expect(
+      askThen(() => {
+        renderers.leaveShop();
+      }),
+    ).toBe(false);
+    expect(
+      askThen(() => {
+        renderers.selectShopTab("upgrades");
+      }),
+    ).toBe(false);
+    expect(
+      askThen(() => {
+        renderers.changeCosmetics(() => null);
+      }),
+    ).toBe(false);
     // A merge put another loadout in that place while DELETE was asking.
     expect(
       askThen(() => {
