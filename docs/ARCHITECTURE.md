@@ -15,11 +15,13 @@ Dependencies point inward. Code in `domain`, `simulation`, and gameplay rules mu
 
 ### Direction as enforced
 
-`config/architecture-layers.json` declares one layer per top-level `src` directory and the cross-layer edges each may use; edges inside a layer are always allowed, and "type" means `import type` only. Every `src` file must belong to exactly one layer, so a new top-level directory fails the gate until it is placed.
+`config/architecture-layers.json` declares one layer per top-level `src` directory and the cross-layer edges each may use; edges inside a layer are always allowed, and "type" means `import type` only. Every `src` file must belong to exactly one layer, so a new top-level directory fails the gate until it is placed. The one exception to one layer per directory is the detached world (`src/app/world/detached/`, the production world that watch, verify, race and the playtest headless environment run without the browser app): it is its own `detached-world` layer, so that `playtest` may import it and nothing else in `src/app`. The `app` layer therefore lists its folders, and a new `src/app` folder fails the gate until it is added there.
 
 ```text
 entrypoints    -> app, platform, presentation, audio, persistence, input, config, domain
 app            -> every layer except entrypoints (composition)
+detached-world -> app, ghost, presentation, gameplay, input, simulation, config, domain
+playtest       -> detached-world, tearbench, agents, gameplay, input, domain
 agents         -> tearbench, ghost, replay, presentation, gameplay, input, simulation, config, domain
 tearbench      -> ghost, replay, presentation, audio, persistence, platform, game-reference, diagnostics, gameplay, input, simulation, config, domain
 presentation   -> gameplay, audio, simulation, domain; type-only: input, replay, ghost

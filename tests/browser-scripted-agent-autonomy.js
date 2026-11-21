@@ -4,7 +4,20 @@ const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
 const { STATE_WAIT_MS } = require("./browser-waits");
 
-withJourney({ name: "C24 competent scripted-agent autonomy" }, async ({ page, errors }) => {
+// The run is bounded by game ticks, not by how long the scripted player survives. A normal campaign with
+// seed 117 ends in a game over at wave 8, tick 17,104 (measured twice on one build: the same tick). Easy has
+// no bound: on 2026-11-20 it reached wave 24 at tick 54,221 and was still there, one enemy left, at tick
+// 498,887 (45 minutes). That is why weekly run 44785591399 met the journey ceiling at wave 21. TICK_LIMIT is
+// the measured end with room for balance changes (1.75x). A run past it fails by name, with the wave and
+// enemies it reached, before the ceiling does.
+const DIFFICULTY = "normal";
+const TICK_LIMIT = 30_000;
+// Weekly run 44785591399 (ubuntu, xvfb, software rendering) took 11.0-13.9 ms of wall time per game tick in
+// every slice from wave 2 to wave 21, draw included. 30,000 ticks at 13.9 ms is 417 s; the normal run is
+// about 205 s at 12 ms. The ceiling sits above the tick limit so the named failure fires first.
+const LIMIT_MS = 480_000;
+
+withJourney({ name: "C24 competent scripted-agent autonomy", limitMs: LIMIT_MS }, async ({ page, errors }) => {
   const url = new URL(page.url());
   url.searchParams.set("watchagent", "1");
   await page.goto(url.toString(), { timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
@@ -28,7 +41,7 @@ withJourney({ name: "C24 competent scripted-agent autonomy" }, async ({ page, er
   );
   await page.getByLabel("Profile").selectOption("competent");
   await page.getByLabel("Mode").selectOption("campaign");
-  await page.getByLabel("Difficulty").selectOption("easy");
+  await page.getByLabel("Difficulty").selectOption(DIFFICULTY);
   await page.getByLabel("Weapon").selectOption("riftlock");
   await page.getByLabel("Seed").fill("117");
 
@@ -41,7 +54,7 @@ withJourney({ name: "C24 competent scripted-agent autonomy" }, async ({ page, er
   assert.deepEqual(result.selection, {
     profile: "competent",
     mode: "campaign",
-    difficulty: "easy",
+    difficulty: DIFFICULTY,
     weapon: "riftlock",
     boss: "shuffle",
     seed: 117,
@@ -56,7 +69,7 @@ withJourney({ name: "C24 competent scripted-agent autonomy" }, async ({ page, er
   assert.equal(result.status, "running");
   console.log("C24 start", JSON.stringify(result));
   const samples = [result];
-  for (let batch = 0; batch < 4_000 && result.status === "running"; batch += 1) {
+  for (let batch = 0; batch < 4_000 && result.status === "running" && result.tick < TICK_LIMIT; batch += 1) {
     result = await page.evaluate(() => window.__TEAR_WATCH_AGENT__.run(200));
     if (batch % 10 === 0 || result.status !== "running") samples.push(result);
     if (batch % 10 === 0 || result.status !== "running")
@@ -79,14 +92,14 @@ withJourney({ name: "C24 competent scripted-agent autonomy" }, async ({ page, er
   const artifact = {
     schemaVersion: 1,
     checkpoint: "C24",
-    gate: "easy-adventure-menu-to-menu",
+    gate: "normal-adventure-menu-to-menu",
     executionClass: "engineering",
     observationClass: "privileged-diagnostic",
     certified: false,
     scenario: {
       profile: "competent",
       mode: "campaign",
-      difficulty: "easy",
+      difficulty: DIFFICULTY,
       weapon: "riftlock",
       boss: "shuffle",
       seed: 117,
@@ -110,7 +123,10 @@ withJourney({ name: "C24 competent scripted-agent autonomy" }, async ({ page, er
     browserErrors: errors,
   };
   await page.screenshot({ path: path.join(artifactDirectory, "watch-agent-result.png") });
-  fs.writeFileSync(path.join(artifactDirectory, "easy-adventure-menu-to-menu.json"), JSON.stringify(artifact, null, 2));
+  fs.writeFileSync(
+    path.join(artifactDirectory, "normal-adventure-menu-to-menu.json"),
+    JSON.stringify(artifact, null, 2),
+  );
   assert.equal(result.debugTransitions, 0);
   assert.equal(result.certified, false);
   assert.equal(artifact.executionClass, "engineering");
@@ -118,6 +134,11 @@ withJourney({ name: "C24 competent scripted-agent autonomy" }, async ({ page, er
   // The journey proves the run reaches one of the game's own ends through the real screens with no broken
   // state. Winning is an open goal, not a gate: the scripted player has no recorded easy riftlock completion
   // (docs/checkpoints/C24_FULL_SCRIPTED_AGENT_AUTONOMY.md).
+  assert.ok(
+    result.status !== "running",
+    `no game end within ${String(TICK_LIMIT)} ticks: wave ${String(result.wave ?? 0)}, ` +
+      `${String(result.enemyCount)} enemies, hp ${String(result.hp ?? 0)}`,
+  );
   const won = result.status === "completed";
   const lost = result.status === "failed" && result.terminalReason === "terminal-gameover";
   assert.ok(won || lost, `the run did not reach a game end: ${JSON.stringify(result)}`);
@@ -143,7 +164,7 @@ withJourney({ name: "C24 competent scripted-agent autonomy" }, async ({ page, er
   assert.deepEqual(artifact.intentEvidence.structured, result.structuredIntent);
   assert.ok(Array.isArray(result.watchdogs.active));
   assert.match(runtimeMetadata.panelText, /Policy: competent/u);
-  assert.match(runtimeMetadata.panelText, /Run: campaign \/ easy \/ riftlock/u);
+  assert.match(runtimeMetadata.panelText, /Run: campaign \/ normal \/ riftlock/u);
   assert.match(runtimeMetadata.panelText, /Observation: Class A - privileged diagnostic/u);
   assert.match(runtimeMetadata.panelText, /Invariants:/u);
   assert.match(runtimeMetadata.panelText, /Memory: [1-9][0-9]* decisions/u);

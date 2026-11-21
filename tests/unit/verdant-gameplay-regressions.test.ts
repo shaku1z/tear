@@ -8,7 +8,7 @@ import { ROOTBOUND_MOVES } from "../../src/gameplay/entities/enemy-types/rootbou
 import {
   captureProductionReplayCheckpoint,
   createProductionGhostReplayComposition,
-} from "../../src/tearbench/production-replay-composition";
+} from "../../src/app/world/detached/replay-composition";
 import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-setup-live-compiler";
 import { buildBloomWellCycleState } from "../../src/tearbench/state-setup-factories";
 import { resolveTearSdl, type TearSdlDocumentV1 } from "../../src/tearbench/tearsdl";

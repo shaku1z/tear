@@ -37,6 +37,12 @@ export interface CoachMark {
   readonly priority: number;
   /** Seconds the mark stays before fading; `Infinity` keeps it until dismissed or replaced. */
   readonly seconds: number;
+  /**
+   * What the mark is about this time (an arena, one call-out). A re-offer of the same id with a
+   * different occasion is a new showing and starts its time again; without one, a re-offer keeps
+   * the time the mark has left.
+   */
+  readonly occasion?: string;
 }
 
 export interface CoachPlacementInput {
@@ -150,7 +156,8 @@ interface QueuedMark {
 
 /**
  * One visible mark per channel: an offer replaces a lower- or equal-priority mark on its
- * channel (a re-offer of the same id keeps its age so it does not flicker), a weaker offer
+ * channel (a re-offer of the same id keeps its age so it does not flicker, unless it names a
+ * different occasion, which starts it again), a weaker offer
  * waits until the stronger mark expires. Marks offered with `once` never return after
  * they were shown and dismissed or expired.
  */
@@ -163,6 +170,7 @@ export class CoachQueue {
     if (options.once === true && this.#retired.has(mark.id)) return;
     const current = this.#visible.get(mark.channel);
     if (current?.mark.id === mark.id) {
+      if (mark.occasion !== undefined && mark.occasion !== current.mark.occasion) current.age = 0;
       current.mark = mark;
       return;
     }

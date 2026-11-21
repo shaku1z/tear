@@ -5,7 +5,7 @@ import { createLiveProfileStatsPersistence } from "../../src/app/progress/profil
 import { createLivePracticeEncounterPersistence } from "../../src/app/progress/practice-encounter-persistence";
 import { createProfileStore } from "../../src/persistence/profile-store";
 import { createLegacyPlatformCompatibility } from "../../src/platform/legacy-compat";
-import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
+import { createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
 
 function encounterBacking() {
   const values = new Map<string, string>();

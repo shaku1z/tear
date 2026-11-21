@@ -1,10 +1,10 @@
-import { liveTutorialCoachFrame } from "../app/training/tutorial-coach-frame";
-import type { AuthoritativeInputState } from "../gameplay/runtime/authoritative-input";
-import { createTearCombatSimulation } from "../gameplay/runtime/tear-combat-simulation";
-import type { DeferredCanonicalState } from "../gameplay/runtime/authoritative-step";
-import type { ProductionReplayWorld } from "./production-world-factory";
-import { createProductionCombatPhases, type ProductionCombatPhaseOptions } from "./production-combat-phases";
-import { bindBiomeActors } from "../gameplay/environment/biome-actors/bind-biome-actors";
+import { liveTutorialCoachFrame } from "../../training/tutorial-coach-frame";
+import type { AuthoritativeInputState } from "../../../gameplay/runtime/authoritative-input";
+import { createTearCombatSimulation } from "../../../gameplay/runtime/tear-combat-simulation";
+import type { DeferredCanonicalState } from "../../../gameplay/runtime/authoritative-step";
+import type { ProductionReplayWorld } from "./world-factory";
+import { createProductionCombatPhases, type ProductionCombatPhaseOptions } from "./combat-phases";
+import { bindBiomeActors } from "../../../gameplay/environment/biome-actors/bind-biome-actors";
 
 export interface ProductionCombatSimulationOptions<State> extends ProductionCombatPhaseOptions {
   snapshot(tick: number, input: AuthoritativeInputState): State | DeferredCanonicalState<State>;

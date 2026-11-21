@@ -5,7 +5,7 @@ import { GhostCapsuleReader } from "../../src/ghost/capsule-reader";
 import {
   createProductionGhostReplayComposition,
   captureProductionReplayCheckpoint,
-} from "../../src/tearbench/production-replay-composition";
+} from "../../src/app/world/detached/replay-composition";
 import { snapshotOutcomeRun } from "../../src/gameplay/run/outcome-planner";
 import { TearGameplayEventBus } from "../../src/gameplay/runtime/gameplay-events";
 import { createTearTerminalRunFactPublisher } from "../../src/gameplay/runtime/gameplay-event-publishers";

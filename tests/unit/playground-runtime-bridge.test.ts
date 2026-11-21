@@ -3,15 +3,16 @@ import { PlaygroundController } from "../../src/gameplay/training/playground-con
 import {
   createPlaygroundRuntimeBridge,
   type PlaygroundRuntimeDependencies,
+  type PlaygroundRuntimeEnemy,
 } from "../../src/gameplay/training/runtime-bridge";
 
-function bridge() {
+function bridge(spawned?: PlaygroundRuntimeEnemy) {
   const opened: string[] = [];
   const screens: string[] = [];
+  const announced: { text: string; at?: Readonly<{ x: number; y: number }> }[] = [];
   const dependencies: PlaygroundRuntimeDependencies = {
     controller: new PlaygroundController(),
     difficulties: [],
-    colors: {},
     stageNames: [],
     groundY: 800,
     viewportWidth: 1600,
@@ -30,8 +31,10 @@ function bridge() {
     enemies: [],
     scalePlayerDamage: () => undefined,
     clearProjectiles: () => undefined,
-    spawn: () => undefined,
-    announce: () => undefined,
+    spawn: () => spawned,
+    announce: (text, at) => {
+      announced.push(at ? { text, at } : { text });
+    },
     navigate: (screen) => {
       screens.push(screen);
     },
@@ -55,7 +58,7 @@ function bridge() {
       playRankUp: () => undefined,
     },
   };
-  return { runtime: createPlaygroundRuntimeBridge(dependencies), opened, screens };
+  return { runtime: createPlaygroundRuntimeBridge(dependencies), opened, screens, announced };
 }
 
 describe("Playground runtime bridge", () => {
@@ -71,5 +74,17 @@ describe("Playground runtime bridge", () => {
     expect(unoffered.opened).toEqual([]);
     expect(unoffered.runtime.tab).not.toBe("abilities");
     expect(unoffered.screens).toEqual([]);
+  });
+
+  it("names a spawned enemy above its head, and anything else at the player", () => {
+    const enemy: PlaygroundRuntimeEnemy = { dead: false, x: 1200, y: 760, hh: 40, stun: 0, hp: 10, maxHp: 10 };
+    const playground = bridge(enemy);
+    playground.runtime.execute([
+      { type: "spawn", kind: "grunt", count: 1, hpScale: 1 },
+      { type: "announce", text: "GRUNT" },
+      { type: "heal-player" },
+      { type: "announce", text: "HEALED" },
+    ]);
+    expect(playground.announced).toEqual([{ text: "GRUNT", at: { x: 1200, y: 720 } }, { text: "HEALED" }]);
   });
 });

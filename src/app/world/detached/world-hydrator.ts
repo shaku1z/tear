@@ -1,19 +1,19 @@
-import { isObject, isRecord } from "../domain/records";
-import { rebindBossPracticeSource } from "../gameplay/training/boss-practice-source-restore";
-import type { TearCodecValue, TearCodecWorld } from "../gameplay/snapshot/state-codec";
-import type { TearWorldEntityConstructionPort } from "../gameplay/runtime/tear-world-entity-construction";
-import type { EnvironmentSnapshot } from "../gameplay/environment/environment-contracts";
+import { isObject, isRecord } from "../../../domain/records";
+import { rebindBossPracticeSource } from "../../../gameplay/training/boss-practice-source-restore";
+import type { TearCodecValue, TearCodecWorld } from "../../../gameplay/snapshot/state-codec";
+import type { TearWorldEntityConstructionPort } from "../../../gameplay/runtime/tear-world-entity-construction";
+import type { EnvironmentSnapshot } from "../../../gameplay/environment/environment-contracts";
 import {
   parseUiTutorialPresentationCheckpoint,
   type UiTutorialPresentationCheckpoint,
   parseUiHudPresentationCheckpoint,
   type UiHudPresentationCheckpoint,
-} from "../gameplay/snapshot/ui-checkpoint";
+} from "../../../gameplay/snapshot/ui-checkpoint";
 import {
   parseParticlePresentationCheckpoint,
   type ParticlePresentationCheckpoint,
-} from "../gameplay/snapshot/particle-checkpoint";
-import { parseTutorialSessionCheckpoint } from "../gameplay/training/tutorial-controller";
+} from "../../../gameplay/snapshot/particle-checkpoint";
+import { parseTutorialSessionCheckpoint } from "../../../gameplay/training/tutorial-controller";
 
 /**
  * The identity graph is validated before construction. Hydration only needs

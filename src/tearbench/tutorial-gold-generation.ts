@@ -16,10 +16,7 @@ import {
   type TutorialGoldFrame,
   type TutorialGoldFrameSource,
 } from "../gameplay/training/tutorial-gold-reference";
-import {
-  createProductionGhostReplayComposition,
-  captureProductionReplayCheckpoint,
-} from "./production-replay-composition";
+import { replayEngine, type ReplayEngine } from "../ghost/replay-engine";
 import { applyWeapon } from "../gameplay/weapons";
 import { driveTutorialCourse, type TutorialDriverObservation, type TutorialDriverPort } from "./tutorial-course-driver";
 import type { TearSnapshotV1 } from "../gameplay/snapshot/snapshot-contract";
@@ -30,7 +27,7 @@ export interface TutorialGoldProofReference {
   readonly curriculumVersion: 1 | 2;
   readonly origin: TearSnapshotV1;
   readonly input: ReturnType<
-    ReturnType<typeof createProductionGhostReplayComposition>["create"]
+    ReturnType<ReplayEngine["createProductionGhostReplayComposition"]>["create"]
   >["simulation"]["input"]["snapshot"] extends () => infer T
     ? T
     : never;
@@ -43,7 +40,7 @@ export interface TutorialGoldProof {
   readonly compatibility: TutorialGoldCorpus["compatibility"];
   readonly references: readonly TutorialGoldProofReference[];
 }
-type Source = ReturnType<ReturnType<typeof createProductionGhostReplayComposition>["create"]>;
+type Source = ReturnType<ReturnType<ReplayEngine["createProductionGhostReplayComposition"]>["create"]>;
 function observation(source: Source): TutorialDriverObservation {
   const player = source.replay.world.state.player(),
     blade = source.replay.world.state.blade();
@@ -114,13 +111,16 @@ function counters(source: Source): Readonly<Record<string, number>> {
 function makeSource(seed: string, legacy = false) {
   const events: TearGameplayEvent[] = [],
     bus = new TearGameplayEventBus();
-  const source = createProductionGhostReplayComposition({
-    seed,
-    mode: "tutorial",
-    weaponId: "sword",
-    difficulty: "normal",
-    gameplayEvents: bus,
-  }).create(undefined);
+  const source = replayEngine
+    .loaded()
+    .createProductionGhostReplayComposition({
+      seed,
+      mode: "tutorial",
+      weaponId: "sword",
+      difficulty: "normal",
+      gameplayEvents: bus,
+    })
+    .create(undefined);
   bus.subscribe((event) => events.push(event));
   if (legacy) {
     const current = source.replay.tutorial.captureSession();
@@ -146,7 +146,7 @@ interface Pending {
   lessonId: TutorialGoldReference["lessonId"];
   arenaId: string;
   originTick: number;
-  origin: ReturnType<typeof captureProductionReplayCheckpoint>;
+  origin: ReturnType<ReplayEngine["captureProductionReplayCheckpoint"]>;
   frames: TutorialGoldFrame[];
   actions: { tick: number; commands: readonly GameAction[] }[];
   hashes: string[];
@@ -203,14 +203,16 @@ function course(legacy: boolean) {
     if (pending?.lessonId === id) return;
     finish();
     // The proof must never recursively include the previous shipping corpus's own presentation identity.
-    const origin = captureProductionReplayCheckpoint(
-      source.replay,
-      source.combat,
-      source.waveReward,
-      `gold-${id}-${legacy ? "v1" : "v2"}`,
-      undefined,
-      { omitGoldCoach: true },
-    );
+    const origin = replayEngine
+      .loaded()
+      .captureProductionReplayCheckpoint(
+        source.replay,
+        source.combat,
+        source.waveReward,
+        `gold-${id}-${legacy ? "v1" : "v2"}`,
+        undefined,
+        { omitGoldCoach: true },
+      );
     pending = {
       lessonId: id,
       arenaId: source.replay.tutorial.step().arena,
@@ -294,9 +296,11 @@ function course(legacy: boolean) {
       canonicalState: () => source.semanticProjection(),
       metrics: () => ({ acceptedActions, fixedTicks: source.simulation.scheduler.tick }),
       captureSnapshot: (id) =>
-        captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, id, undefined, {
-          omitGoldCoach: true,
-        }).snapshot,
+        replayEngine
+          .loaded()
+          .captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, id, undefined, {
+            omitGoldCoach: true,
+          }).snapshot,
       engineEventProjection: () => [],
     },
     tutorial: () => tutorialView(source),
@@ -379,12 +383,15 @@ export function verifyTutorialGoldReference(reference: TutorialGoldReference, pr
     stableVerificationHash(reference.initialInput) !== stableVerificationHash(proof.input)
   )
     throw new Error("Gold proof hash mismatch");
-  const source = createProductionGhostReplayComposition({
-    seed: "tutorial-gold-replay",
-    mode: "tutorial",
-    weaponId: "sword",
-    difficulty: "normal",
-  }).create(proof.origin);
+  const source = replayEngine
+    .loaded()
+    .createProductionGhostReplayComposition({
+      seed: "tutorial-gold-replay",
+      mode: "tutorial",
+      weaponId: "sword",
+      difficulty: "normal",
+    })
+    .create(proof.origin);
   source.simulation.input.restore(proof.input);
   if (
     stableVerificationHash(reference.frames[0]) !== stableVerificationHash(frame(source, proof.origin.tick, 0)) ||

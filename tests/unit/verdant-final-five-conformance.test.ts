@@ -6,7 +6,7 @@ import { EnvironmentRuntime } from "../../src/gameplay/environment/environment-r
 import { bindVerdantEnvironmentActors } from "./environment-feature-fixture";
 import { createEnvironmentCombatObjectRuntime } from "../../src/gameplay/environment/combat-object-runtime";
 import { resolveHeldEnvironmentWeaponContacts } from "../../src/gameplay/combat/environment-weapon-contact-runtime";
-import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
+import { createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
 
 interface ProductionBladeTransport {
   x: number;
