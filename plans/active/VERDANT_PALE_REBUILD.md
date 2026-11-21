@@ -747,8 +747,14 @@ the exemption list.
     - **Slice 2:** the new Rootbound is not exempt and measures 3 pairs in the harness fight: (rise,
       dangerColumn), (rise, drawPeril) and (swell, drawPeril). The harness never puts the player above
       it, so Canopy Vault's two pairs (vaultwind with dangerReticle and with drawPeril) don't show; with
-      them it is 5. The "4 or under" above counts drawn marks (2 in Phase I); the harness also counts the
-      peril diamond. The lead decides before the switch which the 4 means.
+      them it is 5.
+    - **Lead's call (2026-11-21):** there is one definition, what the player reads. The peril
+      diamond counts. The harness is the measure, and the vault counts in it, so "4 or under" means
+      harness pairs, and the budget stays 4.
+    - At 5 with the vault the new Rootbound is over, and that is fixed before the switch, not in
+      slice 2.
+    - Two things are owed before the switch: the harness fight must reach the vault (a player
+      above the boss), and the boss must read 4 or under with it.
   - The White Hart leaves the list with Pale.
 - **What it replaces.** `tests/unit/boss-tell-rules.test.ts` and its per-hit minimum lead go, with
   `boss-tells.ts` (see 3). There is no per-hit tell contract and no "untold hits" target.
@@ -832,10 +838,12 @@ repository must be able to take the next slice from here.
 **Open decisions.**
 - **Owner verdict owed:** `rootbound-figure-before-after` on the ledger's To look at section. It
   compares the approved figure before and after the rebuild at 1:1.
-- **Lead:** what "4 or under at the switch" counts for tell weight (5.2). The harness counts the
-  peril diamond as a pair; the plan's number counted drawn marks.
-- **Replay-overhaul owner:** refuse to record runs with an engineering-only boss. That would stop
-  every slice stepping the ruleset (4.1). Proposed, not done.
+- **Tell weight over budget (decided 2026-11-21, 5.2):** the new Rootbound reads 5 harness pairs
+  with the vault against a budget of 4. Fix it before the switch, not in slice 2.
+- **Replay admission:** refuse to record runs with an engineering-only boss, so that slices stop
+  stepping the ruleset (4.1). The lead approved it in principle on 2026-11-21 and routes it to the
+  replay session after #372. Not built in slice 2.
+- **Pace under the 4-7 band:** accepted by the lead as a named gap for slice 3.
 - **Named gaps to keep carrying:**
   - The Echo's tell weight is not measured (5.2).
   - The playtest "open" column reads declared `tells()`, which the new boss does not declare.
