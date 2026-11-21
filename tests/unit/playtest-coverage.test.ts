@@ -82,7 +82,8 @@ describe("the coverage list", () => {
       weapon: "sword",
       seed: "1",
       player: "scripted",
-      maxTicks: 120 * 1800,
+      // Two minutes of play: long enough to clear a wave and draft, which is all this counts.
+      maxTicks: 120 * 120,
     });
     expect(run.appeared.enemies.length).toBeGreaterThan(0);
     // The run cleared a wave and drafted, so its drafts offered more than it took.

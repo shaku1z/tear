@@ -333,19 +333,23 @@ export class MovementModule implements TearAgentModule<BladeMotorInput, Movement
       Math.hypot(target.vx, target.vy) > 320 ||
       /attack|charge|commit|wind|pounce|slam|stomp|strike|swing/u.test(target.state ?? "");
     const evade = away;
-    const moveX = atLeftEdge
-      ? INPUT_AXIS_SCALE
-      : atRightEdge
-        ? -INPUT_AXIS_SCALE
-        : danger
-          ? evade
-          : riftlock
-            ? away
-            : distance < 100
+    // A wall turns the player back when it would back into it, not when its target stands there out of reach.
+    const approaching = !danger && !riftlock && distance > 145;
+    const moveX = approaching
+      ? toward
+      : atLeftEdge
+        ? INPUT_AXIS_SCALE
+        : atRightEdge
+          ? -INPUT_AXIS_SCALE
+          : danger
+            ? evade
+            : riftlock
               ? away
-              : distance > 145
-                ? toward
-                : orbit;
+              : distance < 100
+                ? away
+                : distance > 145
+                  ? toward
+                  : orbit;
     const dropThrough = target.y > player.y + 100 && player.grounded;
     const powerSlam = target.y > player.y + (armoredTarget ? 25 : 70) && !player.grounded && distance < 300;
     const route = navigationDecision(input, moveX);
