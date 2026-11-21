@@ -111,7 +111,8 @@ describe("Validate workflow", () => {
       expect(code, "the script ends with process.exit").toBeDefined();
       return code === 0;
     };
-    expect(docsOnly(["docs/RELEASE_AUTHORITY.md", "AGENTS.md", "config/position.json"])).toBe(true);
+    expect(docsOnly(["docs/RELEASE_AUTHORITY.md", "AGENTS.md", "config/position/replays.json"])).toBe(true);
+    expect(docsOnly(["config/position/index.json", "docs/position/README.md"])).toBe(true);
     expect(docsOnly(["plans/active/x.md", ".github/pull_request_template.md", "README.md"])).toBe(true);
     expect(docsOnly(["wiki/content/notes/combat.md", "wiki/generator/build.mjs"])).toBe(true);
     expect(docsOnly(["docs/x.md", "src/main.ts"])).toBe(false);
