@@ -6,8 +6,10 @@
  *   has loaded is not recorded (`notLoaded`), and run start never waits for it.
  * - **Never fails a run:** a tap that throws is removed for the rest of that run (`tapErrors`), and every
  *   store failure is counted by reason; the run plays on.
- * - **Kept runs:** the outcome says whether a run is kept. Practice, beat-this-run, seed-race and
- *   assisted runs are recorded but not kept: their start is not the plain start a record replays.
+ * - **Kept runs:** a run ends at its outcome (a defeat or a final win; a campaign stays open across its
+ *   stage wins) or when the player quits it, and `keepsReplayRecord` says whether it is kept. Practice,
+ *   beat-this-run, seed-race and assisted runs are recorded but not kept: their start is not the plain
+ *   start a record replays.
  * - **Privacy:** records stay on this device. Nothing here uploads; publishing is replay PR 8, behind its
  *   own gate. The statistics switch governs statistics events, not this.
  */
@@ -51,6 +53,18 @@ export interface LiveReplayProduction {
   readonly counters: () => LiveReplayProductionCounters;
   /** Settles once every store write started so far has finished (tests and the inspector). */
   readonly settled: () => Promise<void>;
+}
+
+/**
+ * Whether a finished run's record is kept: only a plain start, which the record replays from its seed.
+ * Practice children, beat-this-run attempts, seed races (their start is the race's shared draft and
+ * headstart, replay PR 8) and assisted runs start otherwise.
+ */
+export function keepsReplayRecord(
+  run: Readonly<{ beatThisRun?: unknown; seedRace?: unknown; ghostAssistance?: unknown }>,
+  practice: boolean,
+): boolean {
+  return !practice && run.beatThisRun === undefined && run.seedRace === undefined && run.ghostAssistance === undefined;
 }
 
 /** A tap that removes itself from the slot, for the rest of the run, the first time it throws. */

@@ -236,9 +236,9 @@ describe("live outcome composition pending-finale persistence", () => {
   });
   it.each([
     ["a plain Endless run", { mode: "endless" }, {}, false, true],
-    ["a campaign stage", { mode: "campaign" }, {}, false, false],
-    ["a seed race", { mode: "endless", seedRace: {} }, {}, false, false],
-    ["a beat-this-run attempt", { mode: "endless", beatThisRun: {} }, {}, false, false],
+    ["a campaign run (its defeat or final win)", { mode: "campaign" }, {}, false, true],
+    ["a seed race", { mode: "endless" }, { seedRace: {} }, false, false],
+    ["a beat-this-run attempt", { mode: "endless" }, { beatThisRun: {} }, false, false],
     ["a run with ghost assistance", { mode: "endless" }, { ghostAssistance: {} }, false, false],
     ["a Ghost practice child", { mode: "endless" }, {}, true, false],
   ] as const)(

@@ -49,7 +49,7 @@ import { createLiveProductionWorld } from "./production-world";
 import { RuntimeFrameDriver } from "./runtime-frame-driver";
 import { createLiveSessionServices } from "./session-services-composition";
 import { createLiveReplayTapSlot, withReplayTapFrames } from "../replay/live-replay-tap-slot";
-import { createLiveReplayProduction } from "../replay/live-replay-production";
+import { createLiveReplayProduction, keepsReplayRecord } from "../replay/live-replay-production";
 import { liveReplayRecorder } from "../replay/live-replay-recorder-slot";
 
 /**
@@ -249,6 +249,10 @@ export function startLiveGame(
     ghost: GHOST,
     input: Input,
     run: liveRun,
+    replayRunEnded: (run) => {
+      const totals = { score: run.score, wave: run.wave, time: run.runTime };
+      replayProduction.runEnded(totals, keepsReplayRecord(run, ghostPracticeSession.active() !== null));
+    },
   });
   // One world owns the transient records read by combat, State Setup, and diagnostics.
   const { transient } = worldContext;

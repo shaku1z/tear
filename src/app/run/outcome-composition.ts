@@ -18,6 +18,7 @@ import type { OutcomeChronologyEffect } from "../../gameplay/run/outcome-chronol
 import type { LiveGhostPracticeSessionState } from "../replay/ghost-practice-session-state";
 import type { EnvironmentRuntimeState } from "../../gameplay/environment/environment-contracts";
 import type { ReplayRunEnd } from "../../replay/recorder";
+import { keepsReplayRecord } from "../replay/live-replay-production";
 
 type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
 
@@ -91,9 +92,8 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
       })),
     authoritativeResult: options.authoritativeResult,
     stopRecording: (summary) => {
-      // A record replays one plain start to its end. Practice, beat-this-run, seed-race and assisted runs
-      // start otherwise, and a campaign run goes on past this stage, so those are not kept yet.
-      const keep = !practicing() && summary.ghostAssistance === undefined && summary.mode !== "campaign";
+      // The run's real end: a defeat or a final win (a campaign stage win is not an outcome).
+      const keep = keepsReplayRecord(summary, options.practiceSession?.active() != null);
       options.replayRunEnded?.({ score: summary.score, wave: summary.wave, time: summary.time }, keep);
       try {
         return d.GHOST.stopRec(recordingMetadata(summary), {

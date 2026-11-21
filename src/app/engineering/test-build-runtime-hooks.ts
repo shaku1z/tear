@@ -152,6 +152,10 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
   installGhostVaultConditionalCommitInspector(browserWindow);
   // The inspector carries the recorder and the detached replay world, which live startup must not
   // (src/app/shell/deferred-modules.ts), so it loads on its own.
+  let replayStage = 0;
+  GAMEPLAY_EVENTS.subscribe((event) => {
+    if (event.kind === "stage" && event.transition !== "exited") replayStage = event.stage;
+  });
   void import("./replay-tap-inspector").then(({ installReplayTapInspector }) => {
     installReplayTapInspector(
       browserWindow,
@@ -159,6 +163,7 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
       sources.replayProduction,
       () => authoritativeStep.lastResult?.state.run ?? null,
       () => CINEMA.active,
+      () => replayStage,
     );
   });
   const consumedActions: CommandEnvelope<GameAction>[] = [];
