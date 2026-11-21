@@ -1,21 +1,16 @@
 import { createCloudCompatibility } from "./cloud";
 import type { CloudFactory } from "./cloud-factory";
 import type { AccountProvider, SharedCloudService } from "./cloud";
-import type { FirebaseCompatSdk, FirebaseCloudCompatibility } from "./firebase-cloud";
-import { REMOTE } from "../config/game-config";
+import type { FirebaseCloudCompatibility } from "./firebase-cloud";
 
-/** Standalone-only cloud graph. Firebase never enters portal bundles. */
+/** Standalone-only cloud graph. Firebase never enters portal bundles; its SDK loads on first use. */
 export const createStandaloneCloud: CloudFactory = (options) => {
   let firebase: FirebaseCloudCompatibility | undefined;
   let loading: Promise<FirebaseCloudCompatibility> | undefined;
   const load = (): Promise<FirebaseCloudCompatibility> => {
     loading ??= Promise.all([import("./firebase-cloud"), import("./firebase-config")]).then(([cloud, config]) => {
-      const firebaseWindow: Window & { readonly firebase?: FirebaseCompatSdk } = window;
       firebase = cloud.createFirebaseCloudCompatibility({
-        config: config.FIREBASE_CONFIG,
-        getSdk: () => firebaseWindow.firebase,
-        loadScript: cloud.createBrowserScriptLoader(document),
-        remote: REMOTE,
+        services: async () => (await import("./firebase-sdk")).createFirebaseServices(config.FIREBASE_CONFIG),
       });
       return firebase;
     });

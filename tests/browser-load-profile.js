@@ -236,7 +236,12 @@ function installTextObserver() {
 function watchCrossOrigin(cdp, serverOrigin) {
   const requests = new Map();
   let startedAt = null;
+  // CDP timestamps are monotonic seconds; wallTime (epoch seconds) on a request maps them to the epoch,
+  // which a page's performance.timeOrigin + mark is on, in a top-level page or an iframe alike.
+  let monotonicToEpoch = null;
   cdp.on("Network.requestWillBeSent", (event) => {
+    if (monotonicToEpoch === null && typeof event.wallTime === "number")
+      monotonicToEpoch = event.wallTime - event.timestamp;
     let url;
     try {
       url = new URL(event.request.url);
@@ -253,19 +258,25 @@ function watchCrossOrigin(cdp, serverOrigin) {
       type: event.type ?? "Other",
       startedAt: event.timestamp,
       bytes: 0,
+      finishedAt: null,
       failed: false,
     });
   });
   cdp.on("Network.loadingFinished", (event) => {
     const request = requests.get(event.requestId);
-    if (request) request.bytes = event.encodedDataLength;
+    if (!request) return;
+    request.bytes = event.encodedDataLength;
+    request.finishedAt = event.timestamp;
   });
   cdp.on("Network.loadingFailed", (event) => {
     const request = requests.get(event.requestId);
     if (request) request.failed = true;
   });
-  /** A copy of what has happened so far; later requests (the warm load) do not change it. */
-  return () => {
+  /**
+   * A copy of what has happened so far; later requests (the warm load) do not change it. `untilEpochMs`
+   * (a page's performance.timeOrigin + a mark) also counts the script bytes that had arrived by then.
+   */
+  return (untilEpochMs = null) => {
     const origins = {};
     for (const request of requests.values()) {
       const origin = (origins[request.origin] ??= { requests: 0, bytes: 0, firstRequestMs: null, byType: {} });
@@ -279,12 +290,18 @@ function watchCrossOrigin(cdp, serverOrigin) {
     }
     const all = [...requests.values()];
     const scripts = all.filter((request) => request.type === "Script");
+    const arrivedBy = (request) =>
+      request.finishedAt !== null &&
+      monotonicToEpoch !== null &&
+      (request.finishedAt + monotonicToEpoch) * 1000 <= untilEpochMs;
     return {
       origins,
       requests: all.length,
       bytes: all.reduce((sum, request) => sum + request.bytes, 0),
       scriptRequests: scripts.length,
       scriptBytes: scripts.reduce((sum, request) => sum + request.bytes, 0),
+      scriptBytesToMark:
+        untilEpochMs === null ? null : scripts.filter(arrivedBy).reduce((sum, request) => sum + request.bytes, 0),
     };
   };
 }
@@ -328,6 +345,7 @@ function readTimeline() {
   const at = (name) => performance.getEntriesByName(name)[0]?.startTime ?? null;
   return {
     resources,
+    timeOrigin: performance.timeOrigin,
     domContentLoaded: navigation?.domContentLoadedEventEnd ?? null,
     firstFrame: at("tear:first-frame"),
     menuInteractive: at("tear:loading-finished"),
@@ -532,7 +550,10 @@ async function measureLoad(browser, target, profileId, server) {
     toPlaying: span(coldTimeline, coldTimeline.playing),
     duringStart: pressedMs === null ? null : span(coldTimeline, coldTimeline.playing, pressedMs),
     resources: coldTimeline.resources.map((entry) => ({ ...entry, end: round(entry.end) })),
-    crossOrigin: crossOriginSoFar(),
+    // Cross-origin script bytes that arrived before playing; Resource Timing (toPlaying) cannot size them.
+    crossOrigin: crossOriginSoFar(
+      coldTimeline.playing === null ? null : coldTimeline.timeOrigin + coldTimeline.playing,
+    ),
   };
   // The returning player: on standalone the service worker has installed and controls the next load.
   if (TARGETS[target].serviceWorker)
@@ -583,6 +604,17 @@ function summarize(runs) {
 
 const withoutStems = (span) => (span ? span.bytes - (span.byCategory.audio?.bytes ?? 0) : undefined);
 
+/**
+ * What a new player downloads before playing, from every origin, music stems excluded: same-origin
+ * Resource Timing plus the cross-origin scripts that had arrived by then. Cross-origin API calls are left
+ * out: their size depends on the network and the service, so they are reported, not capped.
+ */
+const bytesToPlaying = (cold) => {
+  const sameOrigin = withoutStems(cold.toPlaying);
+  const scripts = cold.crossOrigin?.scriptBytesToMark;
+  return sameOrigin === undefined || typeof scripts !== "number" ? undefined : sameOrigin + scripts;
+};
+
 /** Byte and request ceilings only: they are deterministic for a build, unlike the times. */
 function enforce(report) {
   const failures = [];
@@ -596,8 +628,8 @@ function enforce(report) {
       // Music stems stream in while the player clicks through the menu, so how many have arrived
       // by START depends on timing; everything else a first run needs has arrived by then.
       [
-        "cold bytes to playing, music stems excluded",
-        withoutStems(measured.cold.toPlaying),
+        "cold bytes to playing from every origin, music stems excluded",
+        bytesToPlaying(measured.cold),
         limits.coldBytesToPlayingWithoutStems,
       ],
       [
@@ -665,11 +697,13 @@ async function main() {
               coldBytesToFirstFrame: summary.cold.toFirstFrame?.bytes,
               coldRequestsToFirstFrame: summary.cold.toFirstFrame?.requests,
               coldBytesToPlaying: summary.cold.toPlaying?.bytes,
+              coldBytesToPlayingWithoutStems: bytesToPlaying(summary.cold),
               coldCrossOrigin: {
                 origins: summary.cold.crossOriginOrigins,
                 requests: summary.cold.crossOrigin.requests,
                 scriptRequests: summary.cold.crossOrigin.scriptRequests,
                 scriptBytes: summary.cold.crossOrigin.scriptBytes,
+                scriptBytesToPlaying: summary.cold.crossOrigin.scriptBytesToMark,
               },
               warmNetworkRequestsToFirstFrame: summary.warm.toFirstFrame?.networkRequests,
             }),

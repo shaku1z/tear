@@ -240,6 +240,8 @@ export default defineConfig(({ mode, command }) => {
                 // The two ~1 MB workers (career archive, live ghost reference) and the two large install icons are not needed to start
                 // the game: the workers are runtime-cached on first use, and the browser
                 // fetches install icons from the network when it installs the app.
+                // Firebase (accounts, leaderboards, shared replays) needs the network anyway:
+                // its on-demand SDK chunk is runtime-cached on first use, not precached.
                 globIgnores: [
                   "**/node_modules/**/*",
                   "assets/tutorial-gold-reference-*.js",
@@ -247,6 +249,7 @@ export default defineConfig(({ mode, command }) => {
                   "assets/worker-tutorial-gold-*.js",
                   "assets/career-archive-worker-*.js",
                   "assets/live-ghost-reference-worker-*.js",
+                  "assets/firebase-sdk-*.js",
                   ...definition.staticPages.map((page) => `${page}.html`),
                   "branding/icons/icon-512.png",
                   "branding/icons/icon-maskable-512.png",
@@ -262,6 +265,11 @@ export default defineConfig(({ mode, command }) => {
                     urlPattern: /\/assets\/(?:career-archive|live-ghost-reference)-worker-[\w-]+\.js$/u,
                     handler: "CacheFirst",
                     options: { cacheName: "tear-workers", expiration: { maxEntries: 6 } },
+                  },
+                  {
+                    urlPattern: /\/assets\/firebase-sdk-[\w-]+\.js$/u,
+                    handler: "CacheFirst",
+                    options: { cacheName: "tear-firebase", expiration: { maxEntries: 6 } },
                   },
                 ],
               },

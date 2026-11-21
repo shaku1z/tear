@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      firebase:
+        specifier: 13.2.0
+        version: 13.2.0(supports-color@10.2.2)
     devDependencies:
       '@eslint/js':
         specifier: 10.0.1
@@ -32,9 +36,6 @@ importers:
       fast-check:
         specifier: 4.10.2
         version: 4.10.2
-      firebase:
-        specifier: 13.2.0
-        version: 13.2.0(supports-color@10.2.2)
       firebase-tools:
         specifier: 15.35.0
         version: 15.35.0(@types/node@24.10.1)(bare-buffer@3.7.3)(supports-color@10.2.2)
