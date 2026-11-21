@@ -12,7 +12,7 @@ import {
 } from "../../src/playtest/boss-fight";
 import { createTellAvoidingBossPlayer, TELL_AVOIDANCE } from "../../src/playtest/boss-player";
 import { formatBossReport, noTellTotals, PRACTICE_REPORT_BOSSES, REPORT_BOSSES } from "../../src/playtest/boss-report";
-import { isPracticeBossId } from "../../src/gameplay/training/boss-phase-practice-runtime";
+import { opensHeadlessPractice } from "../../src/playtest/headless/production-boss-practice-start";
 import { readBoss, trainingResets, type BossView, type PlayerBox } from "../../src/playtest/boss-view";
 import { resolvePlayerDeath } from "../../src/gameplay/combat/combat-tail-runtime";
 import type { TearScenarioV1 } from "../../src/tearbench/contracts";
@@ -170,7 +170,7 @@ describe("start at a chosen phase through the game's boss practice", () => {
     maxTicks: 600,
   });
 
-  // Every boss the game's practice accepts, at every later phase its definition has: no boss has its own path.
+  // Every boss a headless world's practice opens (the published ones and each rebuild), at every later phase its definition has: no boss has its own path.
   const entries = PRACTICE_REPORT_BOSSES.flatMap((boss) =>
     Array.from({ length: bossPhaseCount(boss) - 1 }, (_, index) => [boss, index + 2] as const),
   );
@@ -178,7 +178,7 @@ describe("start at a chosen phase through the game's boss practice", () => {
     const environment = createProductionHeadlessEnvironment();
     try {
       environment.reset(bossFightScenario(practice(boss, phase)));
-      if (!isPracticeBossId(boss) || (phase !== 2 && phase !== 3)) throw new Error("not a practice entry");
+      if (!opensHeadlessPractice(boss) || (phase !== 2 && phase !== 3)) throw new Error("not a practice entry");
       const lifecycle = environment.practiceBoss(boss, phase);
       let ticks = 0;
       for (; ticks < 7200 && lifecycle() !== "active"; ticks += 1) environment.step([]);
@@ -195,7 +195,7 @@ describe("start at a chosen phase through the game's boss practice", () => {
 
   it("takes the default bosses from the game's definitions", () => {
     expect(REPORT_BOSSES).toContain("white-hart");
-    expect(PRACTICE_REPORT_BOSSES).toEqual(REPORT_BOSSES.filter(isPracticeBossId));
+    expect(PRACTICE_REPORT_BOSSES).toEqual(REPORT_BOSSES.filter(opensHeadlessPractice));
     expect(PRACTICE_REPORT_BOSSES).not.toContain("white-hart");
   });
 
