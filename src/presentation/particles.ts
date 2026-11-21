@@ -1,5 +1,5 @@
 // ------- lightweight FX: sparks + shockwave rings + shards (color-aware) -------
-import type { BurstKind } from "../domain/cosmetic-types";
+import type { BurstSource } from "../domain/cosmetic-types";
 import { clamp } from "../domain/geometry";
 import type {
   ParticleShape as Particle,
@@ -34,8 +34,8 @@ export interface ParticleSystemPolicy {
   readonly lowGraphics: () => boolean;
   readonly reducedMotion: () => boolean;
   readonly random: () => number;
-  /** The wearer's styles: a "blade-hit" burst is the local player's blade striking, so it wears their spark. */
-  readonly looks: Pick<CosmeticLooks, "worn">;
+  /** Each wearer's styles: a blade-hit burst wears the spark of whoever owns the blade that struck. */
+  readonly looks: Pick<CosmeticLooks, "of">;
 }
 
 function emissionReceipt(
@@ -70,7 +70,7 @@ export interface ParticleSystem {
     dirY: number,
     count: number,
     color?: string,
-    kind?: BurstKind,
+    from?: BurstSource,
   ): ParticleEmissionReceipt;
   ring(x: number, y: number, radius?: number, color?: string): ParticleEmissionReceipt;
   ribbon(x0: number, y0: number, x1: number, y1: number, color?: string): void;
@@ -217,9 +217,9 @@ function createParticleSystem(policy: ParticleSystemPolicy): ParticleSystem {
       );
     },
 
-    burst(x, y, dirX, dirY, n, col, kind) {
+    burst(x, y, dirX, dirY, n, col, from) {
       // A worn spark replaces the colour (its colours in turn) and scales the count; the particle budget still applies.
-      const spark = kind === "blade-hit" ? policy.looks.worn().spark : null;
+      const spark = from ? policy.looks.of(from.by).spark : null;
       const worn = spark?.worn ? spark : null;
       const total = worn ? Math.max(1, Math.round(n * worn.countScale)) : n;
       const before = this.list.length;

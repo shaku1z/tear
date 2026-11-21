@@ -1,0 +1,20 @@
+{
+  "schema": 2,
+  "about": "Where the Tear program stands, one file per area. This file lists the areas in the order the index page shows them; <area>.json holds one area: its state in a few words, what is true now, the next step, what only the owner can do, and evidence (repository paths that exist, or links to pull requests); production.json holds the deployed build. `pnpm position:render` writes docs/position/ from these files and `pnpm check:docs` fails when a page is stale or was edited by hand. Change an area's file in the same pull request that changes its state, and re-render.",
+  "areas": [
+    "release-readiness",
+    "production-deploy",
+    "verdant-visuals",
+    "verdant-gameplay",
+    "training-ux",
+    "pale-traverse",
+    "wiki",
+    "repository-structure",
+    "playtest-tool",
+    "replays",
+    "shards",
+    "firebase",
+    "cinematics",
+    "mobile"
+  ]
+}
