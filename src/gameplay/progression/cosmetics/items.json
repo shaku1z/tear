@@ -2,7 +2,7 @@
   {
     "id": "trail_dusk",
     "slot": "trail",
-    "name": "Dusk Ribbon",
+    "name": "Violet Trail",
     "tier": "common",
     "acquire": [
       {
@@ -20,7 +20,7 @@
   {
     "id": "trail_tidewater",
     "slot": "trail",
-    "name": "Tidewater",
+    "name": "Blue Trail",
     "tier": "rare",
     "acquire": [
       {
@@ -30,7 +30,7 @@
     "look": {
       "colors": [
         "#2f7bd6",
-        "#0f9fb0"
+        "#5b9cf0"
       ],
       "widthScale": 1.1,
       "fade": "linear"
@@ -39,7 +39,7 @@
   {
     "id": "trail_heartwood",
     "slot": "trail",
-    "name": "Heartwood",
+    "name": "Rootbound Trail",
     "tier": "epic",
     "acquire": [
       {
@@ -49,7 +49,7 @@
     "look": {
       "colors": [
         "#2f9e6b",
-        "#0f9fb0"
+        "#a8a032"
       ],
       "widthScale": 1.2,
       "fade": "hold"
@@ -59,7 +59,7 @@
   {
     "id": "spark_orchid",
     "slot": "spark",
-    "name": "Orchid",
+    "name": "Magenta Sparks",
     "tier": "common",
     "acquire": [
       {
@@ -77,7 +77,7 @@
   {
     "id": "spark_glacier",
     "slot": "spark",
-    "name": "Glacier",
+    "name": "Blue Sparks",
     "tier": "rare",
     "acquire": [
       {
@@ -86,8 +86,8 @@
     ],
     "look": {
       "colors": [
-        "#0f9fb0",
-        "#7a4ff0"
+        "#4f9fe0",
+        "#8ec5f0"
       ],
       "countScale": 1.2,
       "shape": "line"
@@ -96,7 +96,7 @@
   {
     "id": "blade_moonsteel",
     "slot": "blade",
-    "name": "Moonsteel",
+    "name": "Silver Blade",
     "tier": "rare",
     "acquire": [
       {
@@ -104,9 +104,9 @@
       }
     ],
     "look": {
-      "base": "#6f86b8",
-      "glow": "#7a4ff0",
-      "accent": "#2f7bd6"
+      "base": "#8a97b0",
+      "glow": "#b4c4dc",
+      "accent": "#6f86b8"
     }
   },
   {
@@ -141,7 +141,7 @@
   {
     "id": "title_rootcutter",
     "slot": "title",
-    "name": "Rootcutter",
+    "name": "Root Collector",
     "tier": "epic",
     "acquire": [
       {
@@ -150,14 +150,14 @@
       }
     ],
     "look": {
-      "text": "ROOTCUTTER"
+      "text": "ROOT COLLECTOR"
     },
     "collection": "rootbound"
   },
   {
     "id": "banner_nightfall",
     "slot": "banner",
-    "name": "Nightfall",
+    "name": "Violet Banner",
     "tier": "common",
     "acquire": [
       {
@@ -175,7 +175,7 @@
   {
     "id": "banner_morning",
     "slot": "banner",
-    "name": "Verdant Morning",
+    "name": "Verdant Banner",
     "tier": "rare",
     "acquire": [
       {
@@ -193,7 +193,7 @@
   {
     "id": "banner_canopy",
     "slot": "banner",
-    "name": "Rootbound Canopy",
+    "name": "Rootbound Banner",
     "tier": "epic",
     "acquire": [
       {
@@ -202,8 +202,8 @@
     ],
     "look": {
       "colors": [
-        "#2f9e6b",
-        "#7a4ff0"
+        "#1f4a34",
+        "#a8a032"
       ],
       "pattern": "split"
     },
