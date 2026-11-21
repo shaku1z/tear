@@ -27,7 +27,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:related": "vitest related --run",
-    "test:agent-skills": "node --test tests/agent-skill-mirror.test.mjs",
+    "test:agent-skills": "pnpm exec vitest run tests/unit/agent-skills.test.mjs",
     "check:quick": "node scripts/run-checks.mjs fast",
     "test:unit:serial": "pnpm exec vitest run --no-file-parallelism",
     "test:endurance": "vitest run --config vitest.endurance.config.ts",

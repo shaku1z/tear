@@ -33,7 +33,10 @@ merged.
   running a script you do not know; `tests/unit/tool-catalogue.test.mjs` fails
   when a script is added without an entry.
 - Repository skills live in `.agents/skills/<name>/SKILL.md`. Use the smallest
-  set whose description matches the task.
+  set whose description matches the task. They are written for any agent: follow
+  one by reading its file. `pnpm test:agent-skills` fails when a skill cites a path,
+  link or package script that does not exist, so fix the skill in the pull request
+  that moves or renames what it cites.
 - Where each workstream stands: [docs/POSITION.md](docs/POSITION.md), generated from
   `config/position.json` (`pnpm position:render`). Edit the JSON in the pull request that
   changes an area's state; `pnpm check:docs` fails on a stale or hand-edited render.
@@ -224,6 +227,8 @@ guards it; the decisions behind the hard rules are in [docs/DECISIONS.md](docs/D
   guard refuses force pushes.
 
 ## Finishing
+
+`.agents/skills/tear-pull-request` puts the steps from branch to merge in order.
 
 Hand off with the governance skill's handoff block, listing commands and
 results. Pull request descriptions follow

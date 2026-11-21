@@ -1,23 +1,35 @@
-# Envelope workflow
+# Envelopes
 
 ## Settings
 
-Use `src/persistence/settings-envelope.ts` and typed settings consumers. Keep device/accessibility/audio choices validated with safe defaults. Test the immediately previous version, legacy raw settings, malformed values, future versions, unknown extension preservation, and save/load round trip.
+`src/persistence/settings-envelope.ts`, with `src/persistence/audio-settings.ts` and
+`src/persistence/keyboard-settings.ts`. Validate every value and fall back to a safe default. Test the
+previous version, raw legacy settings, malformed values, a future version, unknown-field preservation and
+a save and load round trip.
 
-## Profile and progression
+## Profile and progress
 
-Use `src/persistence/profile-envelope.ts`, `src/persistence/profile-store.ts` conversion, progression/meta systems, and currency/achievement contracts. Test nested and unknown data preservation, immutable canonical envelopes, mutable legacy copies only at compatibility boundaries, full progression round trip, and one-time migration/retrofit behavior.
+`src/persistence/profile-envelope.ts`, `src/persistence/saved-profile.ts` and
+`src/persistence/profile-store.ts`. Test nested and unknown data preservation, the full progress round
+trip, and that a one-time migration or reward runs once.
 
 ## Replay
 
-Use `src/persistence/replay-envelope.ts`, `src/replay/envelope.ts`, legacy compatibility, hash, and round-trip contracts. Persist stable semantic actions/events, version, seed, provenance, and verification data—not presentation frames or audio. Test JSON round trip, legacy versions, deterministic compatibility metadata, render-rate independence, malformed/chunk failures where applicable, and unsupported future versions.
+`src/persistence/replay-envelope.ts` and `src/replay/` (`envelope.ts`, `record.ts`, `verify.ts`). A replay
+stores semantic actions, version, seed, the ruleset version and verification data, never presentation
+frames or audio. Test the JSON round trip, old versions, render-rate independence, malformed or truncated
+data, and an unsupported future version. The replay format is being reworked:
+read `plans/active/REPLAY_OVERHAUL_PLAN.md` before changing it.
 
-## Change sequence
+## Order of work
 
-1. Define ownership and compatibility policy.
+1. Decide who owns the field and what older data must still do.
 2. Update the typed current envelope.
-3. Add a pure migration from each newly supported prior shape.
-4. Validate before exposing data to gameplay/application code.
-5. Preserve extension data deliberately.
-6. Add malformed, legacy, current round-trip, and future-version fixtures.
-7. Update adapter and browser evidence only when their observable contract changes.
+3. Add a pure migration from each prior shape that is still supported.
+4. Validate before gameplay or application code sees the data.
+5. Keep unknown fields on purpose, not by accident.
+6. Add fixtures: malformed, previous version, current round trip, future version.
+7. If stored keys or formats that an earlier release wrote are affected, run
+   `pnpm exec vitest run tests/contract/release-compatibility.test.ts` and read
+   [docs/RELEASE_COMPATIBILITY.md](../../../../docs/RELEASE_COMPATIBILITY.md), "Adding a release".
+8. Update adapter and browser evidence only when what they show changes.

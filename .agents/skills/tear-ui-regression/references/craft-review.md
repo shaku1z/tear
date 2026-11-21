@@ -1,30 +1,35 @@
 # Visual craft review
 
-Inspect screenshots and interaction traces for qualities deterministic gates cannot fully judge.
+What to look for in captures and interaction that checks cannot judge. The direction is set in
+[docs/VISUAL_DESIGN_DIRECTION.md](../../../../docs/VISUAL_DESIGN_DIRECTION.md) and the components in
+[docs/DESIGN_SYSTEM.md](../../../../docs/DESIGN_SYSTEM.md).
 
 ## Hierarchy and composition
 
-- Primary action and current state are immediately legible.
-- Titles, sections, cards, and controls form a deliberate reading order.
-- Density matches the task; empty space and alignment feel intentional.
-- Long or unusual content does not break the composition.
+- The primary action and the current state are clear at once.
+- Titles, sections, cards and controls read in a deliberate order.
+- Density fits the task; space and alignment look intended.
+- Long or unusual content does not break the layout.
 
 ## Readability and feedback
 
-- Text, icons, tells, and status information remain readable over every relevant biome/background.
-- Hover, focus, selected, disabled, loading, empty, success, error, and destructive states are distinguishable.
-- Motion clarifies cause and continuity without delaying control or violating reduced-motion settings.
-- Combat HUD and telegraphs prioritize actionable information.
+- Text, icons, warnings and status stay readable over every biome and background they can appear on.
+- Hover, focus, selected, disabled, loading, empty, success, error and destructive states are distinct.
+- Motion explains cause and continuity without delaying control, and respects reduced motion.
+- The combat HUD and boss warnings put what the player must act on first. Nothing in a fight stops the
+  fight.
 
-## Input and responsive behavior
+## Input and layout
 
-- Keyboard/controller focus is visible and follows a coherent order.
-- Every route has an obvious semantic back/escape action.
-- Touch targets, safe areas, scroll affordances, and portrait layouts remain usable.
-- Input modality changes do not strand focus, retain stale hover, or activate twice.
+- Keyboard and controller focus is visible and moves in a sensible order.
+- Every route has an obvious back or escape action.
+- Changing input mode does not strand focus, keep a stale hover or activate twice.
+- Prompts name the key or button the player's current input and bindings use.
 
 ## Design-system use
 
-Compare call sites with the live implementation in `src/presentation/ui*.ts` and `docs/DESIGN_SYSTEM.md`. Prefer existing tokens/components; add a reusable component when interface chrome repeats. Allow direct drawing for in-world art and specialized visual effects when it does not duplicate interface chrome.
+Compare call sites with the live components in `src/presentation/ui.ts`. Prefer an existing token or
+component. When interface chrome repeats, add one shared component and move the existing copies onto it in
+the same change. Direct drawing is fine for in-world art and special effects that do not repeat chrome.
 
-Report concrete file/state evidence and separate automated defects from subjective polish recommendations.
+Report with file and state, and keep defects apart from polish suggestions.

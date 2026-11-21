@@ -1,6 +1,6 @@
 ---
 name: tear-change-gate
-description: Select, run, and explain the smallest relevant canonical Tear repository gates. Use after changing Tear source, tests, content, UI, persistence, audio, platform adapters, packaging, PWA, Cloudflare, or release configuration; when diagnosing a failing Tear gate; and before making a release-readiness claim.
+description: Choose, run and read the checks a Tear change needs. Use after changing source, tests, content, UI, saves, audio, platform adapters, builds, tooling or docs; when a check fails locally or in CI; before opening or updating a pull request; and before saying a change or a release is ready.
 ---
 
 # tear-change-gate (Claude Code pointer)

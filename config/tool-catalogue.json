@@ -160,7 +160,7 @@
       "duration": "under-a-minute"
     },
     "test:agent-skills": {
-      "purpose": "Checks .claude/skills pointers mirror the .agents/skills sources",
+      "purpose": "Checks skill pointers mirror their sources and that every path, link and script a skill cites exists",
       "effects": [
         "read-only"
       ],

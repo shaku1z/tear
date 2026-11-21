@@ -1,55 +1,65 @@
 ---
 name: tear-autonomous-playtester
-description: Select, run, interpret, and report credible Tear gameplay evidence with TearBench. Use for gameplay changes or defects, deterministic scenarios, State Setup states, autonomous journeys, branch comparisons, and CI evidence selection; also use when deciding whether tests actually establish gameplay behavior.
+description: Play Tear headless to measure it or to prove a behaviour, and read the result. Use for balance and difficulty questions, a gameplay change or defect that needs numbers before and after, comparing a branch with main, running or adding a TearBench scenario, and judging whether existing tests really establish a gameplay claim.
 ---
 
-# Tear Autonomous Playtester
+# Tear playtest evidence
 
-Use the repository CLI and canonical gates as the authority. Do not equate unrelated unit tests with gameplay evidence.
+Two tools play the real game without a person. They answer different questions; pick by the question.
 
-## Workflow
+| Question | Tool | Result |
+| --- | --- | --- |
+| How does the game play: clear rates, time to kill, damage taken, what never appears? | `pnpm playtest` | Tables. It never passes or fails. |
+| Does this named situation still behave correctly? | `pnpm tearbench run <scenario id>` | `PASS` or `FAIL`, and a run file under `artifacts/tearbench/runs/` |
+| Does this rule hold? | A unit or property test | See `tear-combat-scenarios` |
 
-Own gameplay evidence selection, interpretation, narrowing and scenario claims.
-Report claims no command established as gaps rather than claiming them.
+`pnpm playtest` is the direction of travel: [the playtest tool plan](../../../plans/active/PLAYTEST_TOOL_PLAN.md)
+folds the TearBench scenarios into it. Until that lands, [docs/TEARBENCH.md](../../../docs/TEARBENCH.md)
+describes what runs. Do not add new TearBench machinery.
 
-1. Read `package.json`, `docs/ARCHITECTURE.md`, and the relevant diff.
-2. Put changed file paths in a newline-delimited file and run:
+## Measuring with `pnpm playtest`
 
-   ```text
-   pnpm tearbench select --files-from <path> --artifact artifacts/tearbench/evidence-selection.json
-   ```
+1. Choose the report: `bosses`, `sweep`, `waves --stage <id>`, `runs`, `enemies` or `coverage`. The usage
+   text at the top of `scripts/playtest.mjs` lists every option. Do not pass `--help`.
+2. Fix the set: weapon, difficulty, seed and scripted player. The same set on the same code gives the same
+   numbers.
+3. For a change, compare on identical seeds: `pnpm playtest <report> <options> --compare <commit>` plays
+   the same set on that commit's game and prints only the measures that differ.
+4. Queue the big sets: `pnpm queue -- pnpm playtest runs`, and the same for `coverage` and a full `sweep`.
+5. Put the numbers in the pull request under "Measured", with the set that produced them.
 
-3. Inspect the selection. It must name deterministic scenarios, a journey checkpoint, a base comparison, and affected interaction matrices.
-4. Run the focused evidence:
+A scripted player is not a person. Report what it measured, and say plainly that feel, fairness and fun
+still need a human playtest.
 
-   ```text
-   pnpm tearbench ci --files-from <path>
-   ```
+## Proving with TearBench
 
-5. For a single scenario, use `pnpm tearbench run <scenario-id> --seed <seed>`. Preserve its JSON artifact. Use `pnpm tearbench rerun --artifact <path>` before narrowing the reproduction or attributing it.
-6. If behavior diverges, establish the first material tick, narrow the reproduction by hand only while it still fails on repeated runs, keep the smallest reproduction as a permanent scenario or unit test (see `tear-combat-scenarios`), and report product, policy, infrastructure, or inconclusive ownership.
-7. If the change affects browser-visible behavior, run the selected journey and relevant browser/input/platform matrix. A headless or unit result cannot substitute for this.
-8. Before release-readiness claims, hand off to `tear-change-gate` using its [evidence handoff](../tear-change-gate/references/evidence-handoff.md). The coordinator must establish the full `pnpm check` obligation for the final intended source and the preservation corpus. Do not independently repeat the final gate or treat gameplay-only evidence as release proof.
+1. `pnpm tearbench list` prints the scenarios. `pnpm tearbench run <id>` builds the test build and plays
+   one; `--seed` and `--repeat` vary it; `pnpm tearbench rerun --artifact <file>` replays a written run.
+2. Eight scenarios also run without a browser: `pnpm test:headless:current-gameplay-scenarios`.
+3. To add a scenario, follow "How to add one" in [docs/TEARBENCH.md](../../../docs/TEARBENCH.md).
+4. `pnpm tearbench select --files-from <file>` lists the scenarios routed to a set of changed files
+   ([docs/CHANGE_IMPACT.md](../../../docs/CHANGE_IMPACT.md)). No workflow depends on it and it selects
+   nothing the required check does not already run, so use it to find an area's scenarios, not as proof.
 
-Read [references/evidence-contract.md](references/evidence-contract.md) when interpreting selection fields, choosing observation classes, or writing the final report.
+## When behaviour diverges
 
-## Guardrails
+1. Reproduce from the written run or the same seed. One run is the verdict; do not rerun hoping it passes.
+2. Find the first tick where state differs, and separate it from what follows from it.
+3. Shrink the reproduction while it still fails, then keep it as a permanent test through
+   `tear-combat-scenarios`.
+4. Say what owns the failure: the game, the scripted player, the test or its environment, or not yet known.
 
-- Treat semantic actions, fixed ticks, named RNG streams, and versioned state/event contracts as authoritative.
-- Keep Class A introspective, Class B physical-action/structured-observation, and Class C pixel-only evidence labels explicit.
-- Never claim Class C autonomy without an actual Class C run artifact.
-- Preserve Ghost V1/V2 degradation labels and unsupported historical-runtime verdicts.
-- Never mutate production state through TearBench; use the test-only composition root.
-- Never deploy, publish, upload, or contact a live service as part of evidence gathering.
+## Rules
+
+- Evidence comes from the commands above on a named revision. Unrelated passing unit tests are not gameplay
+  evidence.
+- A headless result does not cover what only a browser shows (rendering, device input, lifecycle): run the
+  browser check `tear-change-gate` routes to.
+- These tools use the test build and the headless environment only. Never deploy, publish or contact a
+  live service to gather evidence.
+- Keep reports and run files outside the repository unless a test reads them.
 
 ## Report
 
-Lead with pass, fail, or incomplete. Name:
-
-- scenario and seed;
-- observation class;
-- first material divergence, if any;
-- selected base-comparison evidence;
-- journey and interaction matrices actually run;
-- artifact paths;
-- commands that failed, passed, or were intentionally not run.
+Lead with pass, fail or incomplete. Name the command, the set (weapon, difficulty, seed, player), the
+revisions compared, the first divergence if any, where the output is, and what was not run.

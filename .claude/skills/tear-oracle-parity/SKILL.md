@@ -1,6 +1,6 @@
 ---
 name: tear-oracle-parity
-description: Restore or verify Tear behavior, feel, and look against the pre-redesign oracle commit ee5e931 (the js/ monolith source of truth). Use when a redesign screen, input, timing, physics, UI, or reward flow "doesn't match the source", when porting legacy js/ behavior into the typed src/ architecture, when investigating feel regressions, or when producing parity evidence.
+description: Compare Tear with the pre-redesign oracle commit ee5e931 and restore behaviour, feel or look that drifted from it. Use when something "doesn't match the old game", when porting an old js/ behaviour into src/, when a feel regression needs a first-divergence measurement, and when producing parity evidence. Not for content rebuilt on purpose since the redesign.
 ---
 
 # tear-oracle-parity (Claude Code pointer)
