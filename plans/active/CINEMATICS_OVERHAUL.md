@@ -459,6 +459,34 @@ to the catalog.
 Each pull request leaves `main` shippable: every fight is winnable, every boss reaches every phase,
 and Adventure plays from Chapter I to the finale.
 
+### Where it stands (handoff, 2026-11-21)
+
+This section is the handoff. Whoever picks the overhaul up, with or without the earlier sessions'
+notes, starts here.
+
+- **Merged:** PR 0 (#340), PR 1 (#350), PR 2 (#357) and PR 3 (#367, Aldric, ruleset v18).
+- **In review:** the intro-clock slice (#374, ruleset v19), on branch `codex/cinematics-intro-clock`.
+  The lead approved it. It merges alone, after #373, which resumes preview deploys.
+  - Before it merges, run `git merge origin/main` on the branch.
+  - If #366 has landed, move the cinematics position edit into the cinematics area's file under
+    `config/position/` and run `pnpm position:render`.
+  - If main took a ruleset step in the meantime, #374 takes the next free number. #372 (replay)
+    plans to take v20 after it.
+  - If main changed the determinism corpus in the meantime, regenerate
+    `tests/fixtures/canonical-hash-stream.json`. Run it twice: the two runs must give the same
+    hashes. A pinned boss seed that no longer survives is re-picked by the rule in
+    `tests/support/hash-stream-corpus.ts` (the first surviving seed in the fixed list), and the
+    counts there are updated.
+- **Preview card:** the in-game card for #367 is on the ledger as `visuals/cinematics-aldric-preview`, posted
+  2026-11-21 against preview main b9c31197. It gives the preview link, the quickest route to Aldric (`/dev/`,
+  PLAY, Boss Test, Aldric), what to watch in the crownfall and the revive, and two test-build frames.
+  **Owed:** once #374 is on the preview, add it to that card: the boss arrival counts game ticks and
+  should feel as before (1.4 s). This is a new picture or a note on the same document, never a new card.
+- **Next slice:** PR 4, the Source (below). Its first step is a fresh `pnpm playtest bosses --boss
+  source` run, whose numbers set the Unmake timings. The fall-forever regression test comes next.
+- **After it:** PR 5 waits for Rootbound's pull request (see "Coordination"). PRs 6-8 draw new art
+  on the owner-approved look board.
+
 ### PR 0: this plan (docs only)
 
 The plan, its row in `plans/README.md`, and a cinematics area in `config/position/cinematics.json`.
@@ -518,6 +546,16 @@ Approved by the lead on 2026-11-21, after PR 3. It narrows replay's frame-clock 
 - One ruleset step, at the next free number.
 - The lead is copied on the pull request, and the replay overhaul gets its number.
 - PR 6 later restyles the arrival on this tick clock.
+- Done in the slice's pull request:
+  - Ruleset v19. The detached step's frame-clock exception now covers cinematics only.
+  - On a frame where a tick ran, the arrival's progress equals the frame clock's. Between ticks it
+    holds, so its fades step at 30 Hz, as the bodies in the arrival already did.
+  - A headless world (replay verify, the headless playtest) used to play the arrival as 168
+    full-speed ticks; it now plays 42, as live play does. The determinism corpus's fixed-cadence
+    boss script had leaned on that free window: about half its boss seeds died before their horizon.
+    The boss streams now play with the boss playtest's tell-avoiding player, each on a pinned seed.
+  - **Named gap:** per-weapon Phase II is not covered by an 18 s boss stream. Phase changes are
+    covered per boss, with the sword only, and nothing covers them per weapon (docs/PITFALLS.md).
 
 ### PR 4: the Source's Unmake and true form
 

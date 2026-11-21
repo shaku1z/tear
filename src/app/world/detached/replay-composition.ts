@@ -74,7 +74,8 @@ import {
 import { rebaseEnvironmentSnapshot } from "../../../gameplay/snapshot/environment-codec";
 import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "../../../gameplay/snapshot/authored-environment-validation";
 import { readGhostRecordedOpeningPermit, type GhostRecordedOpeningPermit } from "../../../ghost/replay-admission";
-import { advanceFramePrelude, commitBossIntroSnapshot, type MutableFramePreludeState } from "../../shell/frame-runtime";
+import { advanceFramePrelude, type MutableFramePreludeState } from "../../shell/frame-runtime";
+import { bossIntroPlaying } from "../../../gameplay/run/boss-encounter";
 import { clamp, lerp } from "../../../domain/geometry";
 import {
   createGhostApplicationClockPlayback,
@@ -968,19 +969,6 @@ export function createProductionGhostReplayComposition(options: ProductionGhostR
             bannerTime: transient.feel.bannerSeconds,
             stageBannerSeconds: transient.feel.bannerSeconds,
             rankPopTime: transient.feel.rankPopupSeconds,
-            bossIntro:
-              intro === null
-                ? null
-                : {
-                    ...intro,
-                    boss: {
-                      hp: intro.boss.hp,
-                      maxHp: intro.boss.maxHp,
-                      dead: intro.boss.dead,
-                      dying: intro.boss.dying,
-                      introT: intro.boss.introT ?? 0,
-                    },
-                  },
             bossBeat: beat === null ? null : { t: beat.t },
           };
           advanceFramePrelude({
@@ -989,6 +977,7 @@ export function createProductionGhostReplayComposition(options: ProductionGhostR
             parrySlowScale: replay.configuration.value.juice.parrySlowScale,
             cinemaActive: replay.world.context.cinema.active,
             playgroundSlow: (replay.world.state.run() as { pg?: { slow?: boolean } } | null)?.pg?.slow === true,
+            bossArrivalPlaying: bossIntroPlaying(intro),
             introScale: replay.configuration.value.bossTheater.introScale,
             lerp,
             clamp,
@@ -1002,7 +991,6 @@ export function createProductionGhostReplayComposition(options: ProductionGhostR
             bannerSeconds: frame.bannerTime,
             rankPopupSeconds: frame.rankPopTime,
           });
-          replay.world.state.setBossIntro(commitBossIntroSnapshot(intro, frame.bossIntro));
           if (frame.bossBeat === null) replay.world.state.setBossBeat(null);
           else if (beat !== null) replay.world.state.setBossBeat({ ...beat, t: frame.bossBeat.t });
         },
