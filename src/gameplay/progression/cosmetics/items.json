@@ -141,7 +141,7 @@
   {
     "id": "title_rootcutter",
     "slot": "title",
-    "name": "Rootbound Master",
+    "name": "Root Collector",
     "tier": "epic",
     "acquire": [
       {
@@ -150,7 +150,7 @@
       }
     ],
     "look": {
-      "text": "ROOTBOUND MASTER"
+      "text": "ROOT COLLECTOR"
     },
     "collection": "rootbound"
   },
