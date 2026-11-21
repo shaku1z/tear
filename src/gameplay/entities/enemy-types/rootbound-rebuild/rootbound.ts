@@ -22,7 +22,8 @@ import { BRAMBLE_ROWS_TICKS, RootboundZones } from "./rootbound-zones";
  * The new Rootbound (plans/active/VERDANT_PALE_REBUILD.md, 2.1): a body with a move table, built the way
  * Aldric, the Colossus and the Echo are. It walks at the player, burrows to them, vaults up to them and
  * crowds them back. From Phase II it swings twice and plants its vine to drive a Root Seam, lights Bramble
- * Rows and Mends when the player stands back. Every move is a `state`; lengths are ticks, counted one per
+ * Rows and Mends when the player stands back; in Phase III it is faster and Spring Surges from the arena's
+ * centre. Every move is a `state`; lengths are ticks, counted one per
  * update (`stateT` is what is left, `stateLen` the whole). Each phase change is a move of its own (Uproot,
  * Last Bloom), so nothing stops the fight.
  *
@@ -32,10 +33,17 @@ import { BRAMBLE_ROWS_TICKS, RootboundZones } from "./rootbound-zones";
 /** Under the floor: no body to hit, touch or push against. */
 const UNDER_STATES: ReadonlySet<string> = new Set(["burrow", "resurface", "uprootunder", "bloomunder"]);
 /**
- * Open: it takes more damage (a parried swing or a cut vine, a Surface Strike's and a Thorn Burst's recovery,
- * kneeling through its Bramble Rows, and a broken Mend).
+ * Open: it takes more damage (a parried swing or a cut vine, a Surface Strike's, a Thorn Burst's and a Spring
+ * Surge's recovery, kneeling through its Bramble Rows, and a broken Mend).
  */
-const OPEN_STATES: ReadonlySet<string> = new Set(["staggered", "split", "burstrecover", "bramble", "mendsplit"]);
+const OPEN_STATES: ReadonlySet<string> = new Set([
+  "staggered",
+  "split",
+  "burstrecover",
+  "bramble",
+  "mendsplit",
+  "springslam",
+]);
 /** The phase changes: moves of their own, which the practice runtime waits out. */
 const CHANGE_STATES: ReadonlySet<string> = new Set(["uprootsink", "uprootunder", "bloomsink", "bloomunder"]);
 /** The swings the vine can be parried in, the first and Phase II's second. */
@@ -82,6 +90,9 @@ export function createRootboundRebuildType(
     /** The parry window of the vine, while it swings. */
     batonStrike = 0;
     brambleCd = 0;
+    springCd = 0;
+    /** Where Spring Surge left from. */
+    springFromX = 0;
     /** Ticks since the player last hurt it, and its health a tick ago, for Mend. */
     quietT = 0;
     lastHp = 0;
@@ -290,13 +301,14 @@ export function createRootboundRebuildType(
         playerFeet = player.y + player.hh;
       const level = Math.abs(playerFeet - feet) < ROOTBOUND_CADENCE.level;
       const dir = dx < ROOTBOUND_CADENCE.spacing ? -this.facing : this.facing;
-      this.vx = dir * this.speed;
+      this.vx = (dir * this.speed * this.byPhase(ROOTBOUND_CADENCE.walkSpeeds)) / ROOTBOUND_BODY.speed;
       this.state = Math.abs(this.vx) > 1 ? "walk" : "idle";
       this.attackT -= 1;
       this.burrowCd -= 1;
       this.vaultCd -= 1;
       this.burstCd -= 1;
       this.brambleCd -= 1;
+      this.springCd -= 1;
       this.aboveT = playerFeet < feet - M.canopyVault.above ? this.aboveT + 1 : Math.max(0, this.aboveT - 2);
       this.crowdT = dx < M.thornBurst.crowd && Math.abs(player.y - this.y) < this.hh + 60 ? this.crowdT + 1 : 0;
       this.integrate(dt, platforms);
@@ -316,6 +328,10 @@ export function createRootboundRebuildType(
         return;
       }
       if (this.attackT > 0) return;
+      if (this.enteredPhase >= 3 && this.springCd <= 0) {
+        this.startSpring();
+        return;
+      }
       const onFloor = playerFeet >= CONFIG.world.groundY - 8;
       if (this.enteredPhase >= 2 && this.brambleCd <= 0 && onFloor) {
         this.startBramble();
@@ -332,6 +348,11 @@ export function createRootboundRebuildType(
       if (dx >= M.seedThrow.minRange) this.startThrow();
     }
 
+    /** A move's windup in ticks, scaled for the phase it has entered. */
+    windup(ticks: number): number {
+      return Math.round(ticks * this.byPhase(ROOTBOUND_CADENCE.windupScales));
+    }
+
     attacked(): void {
       this.attackT = this.byPhase(ROOTBOUND_CADENCE.attackCooldowns);
       this.vx = 0;
@@ -340,13 +361,13 @@ export function createRootboundRebuildType(
     startSwing(): void {
       this.attacked();
       this.hitSpent = false;
-      this.go("swingwind", M.vineSwing.windup);
+      this.go("swingwind", this.windup(M.vineSwing.windup));
       bossFeedback(this, "windup", { quiet: true });
     }
 
     startThrow(): void {
       this.attacked();
-      this.go("throwwind", M.seedThrow.windup);
+      this.go("throwwind", this.windup(M.seedThrow.windup));
       bossFeedback(this, "windup", { quiet: true });
     }
 
@@ -354,13 +375,22 @@ export function createRootboundRebuildType(
       this.attacked();
       this.burrowCd = M.burrow.cooldown;
       this.surfacesLeft = this.byPhase(ROOTBOUND_CADENCE.surfaces);
-      this.go("sink", M.burrow.sink);
+      this.go("sink", this.windup(M.burrow.sink));
     }
 
     startBramble(): void {
       this.attacked();
       this.brambleCd = M.brambleRows.cooldown;
-      this.go("bramblewind", M.brambleRows.windup);
+      this.go("bramblewind", this.windup(M.brambleRows.windup));
+      bossFeedback(this, "windup", { quiet: true });
+    }
+
+    startSpring(): void {
+      this.attacked();
+      this.springCd = M.springSurge.cooldown;
+      this.springFromX = this.x;
+      this.go("springwind", M.springSurge.windup);
+      perilPing(this);
       bossFeedback(this, "windup", { quiet: true });
     }
 
@@ -376,7 +406,7 @@ export function createRootboundRebuildType(
       this.burstCd = M.thornBurst.cooldown;
       this.crowdT = 0;
       this.hitSpent = false;
-      this.go("swell", M.thornBurst.windup);
+      this.go("swell", this.windup(M.thornBurst.windup));
       perilPing(this);
     }
 
@@ -389,7 +419,7 @@ export function createRootboundRebuildType(
       this.vaultFromY = this.y;
       this.vaultToX = clamp(player.x, target.x + this.hw + 10, target.x + target.w - this.hw - 10);
       this.vaultToY = target.y - this.hh;
-      this.go("vaultwind", M.canopyVault.windup);
+      this.go("vaultwind", this.windup(M.canopyVault.windup));
       perilPing(this);
       bossFeedback(this, "windup", { quiet: true });
     }
@@ -470,6 +500,10 @@ export function createRootboundRebuildType(
           this.vaultFlight(player);
           if (done) this.land(player);
           return;
+        case "springwind":
+          this.springFlight();
+          if (done) this.springSlam(projectiles);
+          return;
         case "swell":
           this.vx = 0;
           if (done) {
@@ -484,7 +518,7 @@ export function createRootboundRebuildType(
         default:
           if (!this.movePhaseTwo(done, player)) {
             // swingrecover, throwrecover, split, vaultrecover, burstrecover, staggered, planted, bramblerecover,
-            // mendsplit
+            // mendsplit, springslam
             this.vx = 0;
             if (done) this.go("idle", 0);
           }
@@ -532,7 +566,7 @@ export function createRootboundRebuildType(
     startSecondSwing(player: EnemyPlayerPort): void {
       this.facing = Math.sign(player.x - this.x) || this.facing;
       this.hitSpent = false;
-      this.go("swing2wind", M.secondSwing.windup);
+      this.go("swing2wind", this.windup(M.secondSwing.windup));
       bossFeedback(this, "windup", { quiet: true });
     }
 
@@ -586,7 +620,8 @@ export function createRootboundRebuildType(
       this.facing = this.facing || 1;
       this.hitSpent = false;
       this.blooming = this.state === "bloomunder";
-      this.go("rise", M.surfaceStrike.windup);
+      // Last Bloom's rise is the phase change's, not a Phase III windup.
+      this.go("rise", this.blooming ? M.surfaceStrike.windup : this.windup(M.surfaceStrike.windup));
       perilPing(this);
       bossFeedback(this, "windup", { quiet: true });
     }
@@ -641,6 +676,53 @@ export function createRootboundRebuildType(
       p.owner = this;
       projectiles.push(p);
       bossFeedback(this, "launch", { quiet: true });
+    }
+
+    /** Spring Surge's windup: up and over to the arena's centre, down on its last tick. */
+    springFlight(): void {
+      const k = this.progress(),
+        smooth = k * k * (3 - 2 * k);
+      this.x = this.springFromX + (CONFIG.view.w / 2 - this.springFromX) * smooth;
+      this.y = CONFIG.world.groundY - this.hh - Math.sin(k * Math.PI) * M.springSurge.rise;
+      this.vx = 0;
+      this.vy = 0;
+      this.onGround = false;
+    }
+
+    /** Spring Surge lands: a root wave each way along the floor, and the seed pods arcing out. Open after. */
+    springSlam(projectiles: EnemyProjectile[]): void {
+      const S = M.springSurge,
+        foot = CONFIG.world.groundY;
+      this.x = CONFIG.view.w / 2;
+      this.y = foot - this.hh;
+      this.onGround = true;
+      for (const dir of [-1, 1]) {
+        const wave = new Projectile(this.x + dir * this.hw * 0.7, foot - S.waveRadius, dir * S.waveSpeed, 0);
+        wave.setFamily("groundShock");
+        wave.r = S.waveRadius;
+        wave.dmg = S.waveDamage;
+        wave.life = S.waveLife;
+        wave.owner = this;
+        wave.tint = LEAF;
+        projectiles.push(wave);
+      }
+      for (let index = 0; index < S.pods; index += 1) {
+        const angle = Math.PI + ((index + 0.5) / S.pods) * Math.PI;
+        const pod = new Projectile(this.x, this.y - this.hh * 0.4, Math.cos(angle) * S.podSpeed, 0);
+        pod.vy = Math.sin(angle) * S.podSpeed - S.podLift;
+        pod.gravity = S.podGravity;
+        pod.dmg = S.podDamage;
+        pod.r = S.podRadius;
+        pod.kind = "orb";
+        pod.tint = LEAF;
+        pod.deflectDmg = S.deflectDamage;
+        pod.life = 2;
+        pod.owner = this;
+        projectiles.push(pod);
+      }
+      FX.burst(this.x, foot, 0, -1, 14, LEAF);
+      bossFeedback(this, "contact", { quiet: true });
+      this.go("springslam", S.recover);
     }
 
     vaultFlight(player: EnemyPlayerPort): void {

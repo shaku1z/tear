@@ -14,7 +14,8 @@ import type { RenderInstance } from "./enemy-renderer-types";
 /**
  * The new Rootbound (plans/active/VERDANT_PALE_REBUILD.md, 2.1) drawn with the approved figure. The body and
  * its vine are the tells; the only marks are the Surface Strike column and the Canopy Vault landing, both
- * through the shared helpers, and the shared peril diamond on the moves that can't be parried. Its Root Seam
+ * through the shared helpers, and the shared peril diamond on the moves that can't be parried (Spring Surge's
+ * rise is its own tell: the waves run the whole floor, so no mark says where). Its Root Seam
  * and Bramble Rows are boss zones, which the shared zone renderer draws.
  */
 
@@ -52,6 +53,8 @@ export const ROOTBOUND_REBUILD_STATE_POSES: Readonly<Record<string, readonly [po
   mendwind: ["kneel", "in"],
   mend: ["kneel", "hold"],
   mendsplit: ["split", "hold"],
+  springwind: ["stretch", "in"],
+  springslam: ["slam", "hold"],
 };
 
 type Ink = Readonly<{ stem: string; edge: string; thorn: string; earth: string; vine: string; mark: string }>;
