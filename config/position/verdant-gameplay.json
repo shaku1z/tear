@@ -1,15 +1,16 @@
 {
   "id": "verdant-gameplay",
   "name": "Verdant Sanctum gameplay",
-  "state": "In progress: slice 2 of 7 (the new Rootbound Phase I and Uproot, engineering channel) in review",
+  "state": "In progress: slice 3 of 7 merged; the pace comparison re-based (plan only) in review",
   "summary": "The owner rejected the Verdant gameplay a third time on 2026-11-20: the shared Verdant base is slop, move visuals linger after the move, and Verdant leans on tells far more than any other boss. Verdant's boss, enemies and stage are rebuilt from scratch in the pattern of Aldric, the Echo and the Colossus, keeping only the approved Rootbound seed-pod figure and the drawn background. Measured on main 6fb1a7cd: a scripted player takes 2.8, 1.1 and 0 hits per 10 s from today's Rootbound across its three phases, against 4 to 7 from the reference bosses; its Phase III does not move; its two phase cinematics block 12.9 s of a 37 s fight; it draws 16 tell marks against Aldric's 6. The plan adds two rules over every boss and enemy (nothing outlives its move, tell weight) and builds the new Verdant on the engineering channel until the owner approves it on preview.",
-  "next": "Slice 1 merged as #354 (ruleset v17). Slice 2 merges as #381: the new Rootbound Phase I and Uproot in Boss Test on the engineering channel, held to both rules with no exemption, ruleset v20. Then slice 3, its Phase II; the plan's 6.1 is the handoff.",
+  "next": "Slice 3 merged as #385 (ruleset v22). The tuning step re-based plan 2.4: Phase I compared like for like in whole fights puts the new Rootbound among the references, so no boss change. Phases II and III are measured once the playtest's practice can open an engineering-only boss; then slice 4, its Phase III. The plan's 6.1 is the handoff.",
   "owner_action": "",
   "evidence": [
     "plans/active/VERDANT_PALE_REBUILD.md",
     "tests/unit/move-visual-lifetime.test.ts",
     "tests/unit/boss-tell-weight.test.ts",
     "tests/unit/rootbound-rebuild.test.ts",
-    "plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md"
+    "plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md",
+    "tests/unit/held-blade-collision-runtime.test.ts"
   ]
 }

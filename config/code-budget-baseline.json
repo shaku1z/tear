@@ -27,7 +27,7 @@
       "chars": 30503
     },
     "src/gameplay/combat/held-blade-collision-runtime.ts": {
-      "largestFunctionStatements": 171
+      "largestFunctionStatements": 167
     },
     "src/gameplay/entities/blade.ts": {
       "chars": 25484
@@ -146,7 +146,7 @@
       "largestFunctionStatements": 89
     },
     "src/presentation/world/scene-effects.ts": {
-      "largestFunctionStatements": 167
+      "largestFunctionStatements": 147
     },
     "src/presentation/world/status-debug.ts": {
       "largestFunctionStatements": 86

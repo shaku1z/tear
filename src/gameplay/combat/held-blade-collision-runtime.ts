@@ -27,19 +27,7 @@ export function resolveHeldBladeEnemyCollisions(input: HeldBladeCollisionInput):
     }
   }
 
-  for (const enemy of enemies) {
-    if (!enemy.dead && enemy.trySeverSiphon?.(blade)) {
-      const x = (blade.x + blade.tipX) / 2,
-        y = (blade.y + blade.tipY) / 2;
-      fx.burst(x, y, blade.tipVX, blade.tipVY, 13, t.colors.perfect);
-      fx.ring(x, y, 16, t.colors.perfect);
-      fx.floater(x, y - 22, "SIPHON SEVERED", true, t.colors.perfect);
-      fx.style("parry");
-      fx.sound("deflect");
-      hitStop = Math.max(hitStop, t.hitStop.small);
-      fx.shake(t.juice.shakeBig);
-    }
-  }
+  for (const enemy of enemies) if (severSiphon(input, enemy)) hitStop = Math.max(hitStop, t.hitStop.small);
 
   for (const enemy of enemies) {
     if (
@@ -50,6 +38,10 @@ export function resolveHeldBladeEnemyCollisions(input: HeldBladeCollisionInput):
       (blade.canHitHeldEnemy && !blade.canHitHeldEnemy(enemy))
     )
       continue;
+    if (baseDamage > 0 && cutBossPart(input, enemy)) {
+      hitStop = Math.max(hitStop, t.hitStop.small);
+      continue;
+    }
     const liveWeapon = enemy.parryBaton && (enemy.batonStrike ?? 0) > 0 ? (enemy.batonSegment?.() ?? null) : null;
     const weaponContact = liveWeapon
       ? input.weaponSegmentContact(liveWeapon, segment.x1, segment.y1, segment.x2, segment.y2)
@@ -330,6 +322,35 @@ export function resolveHeldBladeEnemyCollisions(input: HeldBladeCollisionInput):
     }
   }
   return { hitStop };
+}
+
+/** The blade severs a siphon tether it crosses (`trySeverSiphon`). */
+function severSiphon(input: HeldBladeCollisionInput, enemy: HeldBladeEnemy): boolean {
+  const { blade, tuning: t, effects: fx } = input;
+  if (enemy.dead || enemy.trySeverSiphon?.(blade) !== true) return false;
+  const x = (blade.x + blade.tipX) / 2,
+    y = (blade.y + blade.tipY) / 2;
+  fx.burst(x, y, blade.tipVX, blade.tipVY, 13, t.colors.perfect);
+  fx.ring(x, y, 16, t.colors.perfect);
+  fx.floater(x, y - 22, "SIPHON SEVERED", true, t.colors.perfect);
+  fx.style("parry");
+  fx.sound("deflect");
+  fx.shake(t.juice.shakeBig);
+  return true;
+}
+
+/** The blade cuts a boss part it crosses (`cutPoint`, `cutPart`), instead of reaching the body. */
+function cutBossPart(input: HeldBladeCollisionInput, enemy: HeldBladeEnemy): boolean {
+  const { blade, segment, effects: fx } = input;
+  const cut = enemy.cutPoint?.() ?? null;
+  if (cut === null || !input.segmentCircle(segment, cut.x, cut.y, cut.r + segment.pad)) return false;
+  if (enemy.cutPart?.() !== true) return false;
+  fx.burst(cut.x, cut.y, blade.tipVX, blade.tipVY, 10, enemy.color);
+  fx.floater(cut.x, cut.y - 20, "CUT", true, enemy.color);
+  fx.style("parry");
+  fx.sound("deflect");
+  enemy.hitCd = 0.14;
+  return true;
 }
 
 function applyWeaponEffect(

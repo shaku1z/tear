@@ -128,6 +128,20 @@ describe("the replay record", () => {
       });
   });
 
+  it("admits a Boss Test run on a released boss and refuses one on an engineering-only boss", () => {
+    const record = validRecord();
+    const onBoss = (boss: string) => ({
+      ...record,
+      run: { ...record.run, start: { ...record.run.start, mode: "bossonly", boss } },
+    });
+    expect(readReplayRecord(onBoss("warden"))).toMatchObject({ ok: true });
+    expect(readReplayRecord(onBoss("rootbound-rebuild"))).toMatchObject({
+      ok: false,
+      reason: "malformed",
+      message: MALFORMED_MESSAGE,
+    });
+  });
+
   it("refuses to record actions out of tick or number order", () => {
     const recorder = createReplayRecorder({
       ruleset: "rules",
