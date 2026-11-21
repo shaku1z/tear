@@ -121,7 +121,7 @@ frozen evidence record.
   grounded body placed deterministically by the shared boss placement planner
   from the canonical boss height rather than a duplicate registry. Its production
   encounter now uses the shared intro/fight-clock/arena swap and living-platform
-  fracture/reform lifecycle with `verdant-rootstone`; app-layer selection consumes
+  fracture/reform lifecycle; app-layer selection consumes
   the source-owned boss identity predicate instead of a stale five-boss copy. Its
   base body now owns canonical boss HP/collision, intro protection, legal damage,
   monotonic phase ordinals, and a deterministic attack-free idle/recovery loop.
@@ -367,8 +367,7 @@ frozen evidence record.
   explicitly non-publishable pending Pale and authorized seven-stage integration.
 - [x] Verdant C9 presentation slice (engineering-only) — stable stage-ID
   dispatch now renders the pale-jade canopy opening, sanctuary tree, flooded
-  cloisters, framing roots, bounded pollen, restrained water bands, and
-  verdant-rootstone platform states. Immutable presentation snapshots drive
+  cloisters, framing roots, bounded pollen and restrained water bands. Immutable presentation snapshots drive
   Bloom, link, Graft/Regrowth, and boss-warning rendering; reduced-motion,
   high-contrast, flash-scale, and low-graphics settings preserve canonical
   environment hashes. Bounded cache/light metrics, true viewport-bleed tests,

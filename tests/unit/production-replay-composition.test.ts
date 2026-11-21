@@ -900,7 +900,7 @@ describe("production replay composition", () => {
     assertUnchanged();
   });
 
-  it("continues a restored boss intro through explicit application frames and resumes real boss AI", () => {
+  it("continues a restored boss intro on simulation ticks and resumes real boss AI", () => {
     const composition = createProductionGhostReplayComposition({
       runSeed: scenarioRunSeed("replay-boss-intro"),
       mode: "bossonly",
@@ -933,31 +933,28 @@ describe("production replay composition", () => {
     const restoredBoss = restored.replay.world.state.enemies()[0] as (typeof boss & { state: string }) | undefined;
     if (restoredBoss === undefined) throw new Error("restored boss missing");
     expect(restored.replay.world.state.bossIntro()?.boss).toBe(restoredBoss);
-    // Physics steps must not substitute for the unrecorded application clock.
-    restored.simulation.advanceOne([]);
-    expect(restoredBoss.introT).toBe(1.4);
-    expect(restoredBoss.state).toBe("intro");
-    const seconds = restored.replay.world.context.services.clock.seconds(),
-      tick = restored.simulation.scheduler.tick;
-    restored.waveReward.restoreScreen("paused");
+    // An application frame plays the arrival at its time scale but does not advance it; the simulation
+    // tick does (the intro-clock slice of plans/active/CINEMATICS_OVERHAUL.md).
     restored.advanceApplicationFrame(0.1);
     expect(restored.replay.world.state.bossIntro()).toMatchObject({ delay: 0.15, t: 0 });
-    restored.waveReward.restoreScreen("playing");
     expect(() => {
       restored.advanceApplicationFrame(0.101);
     }).toThrow(/bounded finite seconds/);
-    restored.advanceApplicationFrame(0.1);
-    expect(restored.replay.world.state.bossIntro()?.t).toBe(0);
-    restored.advanceApplicationFrame(0.1);
+    // 0.15 s of delay at full speed is 18 ticks; then the 1.4 s arrival at time scale 0.25 is 42 ticks.
+    let ticks = 0;
+    while (ticks < 18) {
+      restored.simulation.advanceOne([]);
+      ticks += 1;
+      expect(restoredBoss.introT).toBe(1.4);
+      expect(restoredBoss.state).toBe("intro");
+    }
     expect(restored.replay.world.state.bossIntro()).toMatchObject({ delay: 0, t: 0 });
-    restored.advanceApplicationFrame(0.1);
-    expect(restored.replay.world.state.bossIntro()?.t).toBe(0.1);
-    for (let frame = 0; frame < 20 && restored.replay.world.state.bossIntro() !== null; frame += 1)
-      restored.advanceApplicationFrame(0.1);
-    expect(restored.replay.world.state.bossIntro()).toBeNull();
+    while (ticks < 200 && restored.replay.world.state.bossIntro() !== null) {
+      restored.simulation.advanceOne([]);
+      ticks += 1;
+    }
+    expect(ticks).toBe(18 + 42);
     expect(restoredBoss.introT).toBe(0);
-    expect(restored.simulation.scheduler.tick).toBe(tick);
-    expect(restored.replay.world.context.services.clock.seconds()).toBe(seconds);
     for (let index = 0; index < 120 && restoredBoss.state === "intro"; index += 1) restored.simulation.advanceOne([]);
     expect(restoredBoss.state).not.toBe("intro");
     expect(restoredBoss.dead).toBe(false);
@@ -966,7 +963,7 @@ describe("production replay composition", () => {
         actor = cancelled.replay.world.state.enemies()[0];
       if (actor === undefined) throw new Error("cancelled boss missing");
       actor[disposition] = true;
-      cancelled.advanceApplicationFrame(0.01);
+      cancelled.simulation.advanceOne([]);
       expect(cancelled.replay.world.state.bossIntro()).toBeNull();
       expect(actor.introT).toBe(0);
     }

@@ -241,7 +241,10 @@ export function resolveHeldBladeEnemyCollisions(input: HeldBladeCollisionInput):
 
     const presentedAttack = emitHeldAttackPresentation(input, enemy, point, weaponEffect, attackId, quality);
     if (!presentedAttack)
-      fx.burst(point.px, point.py, blade.tipVX, blade.tipVY, t.juice.sparkCount, enemy.color, "blade-hit");
+      fx.burst(point.px, point.py, blade.tipVX, blade.tipVY, t.juice.sparkCount, enemy.color, {
+        kind: "blade-hit",
+        by: blade,
+      });
     if (strike.slam || strike.empoweredLaunch) fx.ring(enemy.x, enemy.y, strike.empoweredSlam ? 13 : 8, t.colors.slam);
     const tag = strike.spike
       ? "▼"

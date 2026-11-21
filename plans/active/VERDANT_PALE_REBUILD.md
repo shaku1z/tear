@@ -245,7 +245,7 @@ the player. "Landed" counts ticks in which the boss lost health. Travel is boss 
 ### 2.1 Rootbound: the keeper that will not let go
 
 **Body.**
-- It gets its own `CONFIG.rootbound` row: 118 × 118 px (the approved figure's frame), 3800 health
+- It gets its own body row (`ROOTBOUND_BODY` in `rootbound-moves.ts`, beside the move table, so `game-config.ts` stays within its code budget): 118 × 118 px (the approved figure's frame), 3800 health
   (between Aldric's 4300 and the Echo's 3000; tuned by the pace targets in 2.4), 120 px/s walk,
   contact 20, knockback taken 0.4.
 - Its body hurts while it walks, idles and winds up, like Aldric's row in `boss-body-contact.ts`.
@@ -490,6 +490,7 @@ The brief listed five hooks. Measured:
   - `ROOTBOUND_MOVE_POSES` (l.269-279) is re-keyed to the new move ids. The pose names don't change.
   - The owner approved how it looks. Slice 2 posts a before-and-after capture of the figure to the
     ledger's To look at section, to show the Graft marks are the only change.
+    - The owner approved it on 2026-11-21.
 - **The approved background's guard** (`tests/browser-verdant-presentation.js`, 8,803).
   - It is the check that `config/stage-readability.json` l.16 lists for verdant-sanctum, and
     `tests/unit/stage-art.test.ts` l.129-133 requires that check file to exist.
@@ -523,6 +524,10 @@ The brief listed five hooks. Measured:
   framework. Verdant mechanic names leave its scans.
 - `config/architecture-layers.json`, `architecture-baseline.json` and `change-impact-defaults.json`
   have no Verdant entries.
+- `src/gameplay/training/arena-rules.ts`: `createBossArena` maps `rootbound` to the arena material
+  `verdant-rootstone` and sets the floor's `arenaMaterial` to it. After PR 369 (stage drawing) nothing
+  draws that name, so the switch removes it, with the assertion at `tests/unit/rootbound-foundation.test.ts`
+  l.336. Pale's rebuild removes `pale-ice` the same way (`white-hart-foundation.test.ts` l.132).
 - **Tutorial gold.** `TUTORIAL_GOLD_ROOTS` names none of these files, but its fingerprint reaches 46
   of them through other imports. The first build after the switch reruns the gold test. The gold is
   committed again only if its output changes.
@@ -540,6 +545,11 @@ The brief listed five hooks. Measured:
   they don't change what a released mode plays.
   - Slice 2 checks whether a run on the engineering channel can be recorded. If it can, every slice
     that changes the new boss's behaviour steps the ruleset too, and says so in its pull request.
+  - **Found in slice 2:** it can. A Boss Test run opens fresh on a boss (`freshBossOpening` in
+    `src/ghost/replay-admission.ts`), so it is recordable, and the new boss is a new entity kind, which
+    changes the replay content hash (`ENTITY_KIND_REGISTRY`). Slice 2 stepped the ruleset to v20. The cinematics slices took v18 and v19 first.
+    Slices 3 to 5 step it again unless replay admission refuses runs with an engineering-only boss;
+    that is proposed to the replay-overhaul owner, not done here.
 - **Old replays.**
   - A replay plays only under the ruleset it was recorded with (replay overhaul plan, "Stored and
     published replays when the format or ruleset changes", rule 1).
@@ -726,12 +736,26 @@ the exemption list.
   - The Echo is not measured: the mirror presentation draws it without the shared marks, so this
     harness would read 0. Slice 2 measures it through the mirror presentation, when the new Rootbound
     is first held to the cap. The cap is final from then.
+    - **Slice 2:** still not measured. The mirror presentation calls no shared helper, so the pair count
+      is 0 by construction; a real count needs the Echo's tells drawn through the helpers, which is Echo
+      work this plan leaves alone. The cap stays 9, measured over the four references.
   - The Rootbinder is drawn by the environment layer. Slice 5 rebuilds it on the shared helpers and
     measures it.
 - **Measured by.** The table it prints: boss, mark count and the cap.
   - The Rootbound and the White Hart start on the exemption list. Both read 0 under this harness,
     because their renderers call no shared helper. The new Rootbound is measured from slice 2 and must
     be at 4 or under when it leaves the list in the switch slice.
+    - **Slice 2:** the new Rootbound is not exempt and measures 3 pairs in the harness fight: (rise,
+      dangerColumn), (rise, drawPeril) and (swell, drawPeril). The harness never puts the player above
+      it, so Canopy Vault's two pairs (vaultwind with dangerReticle and with drawPeril) don't show; with
+      them it is 5.
+    - **Lead's call (2026-11-21):** there is one definition, what the player reads. The peril
+      diamond counts. The harness is the measure, and the vault counts in it, so "4 or under" means
+      harness pairs, and the budget stays 4.
+    - At 5 with the vault the new Rootbound is over, and that is fixed before the switch, not in
+      slice 2.
+    - Two things are owed before the switch: the harness fight must reach the vault (a player
+      above the boss), and the boss must read 4 or under with it.
   - The White Hart leaves the list with Pale.
 - **What it replaces.** `tests/unit/boss-tell-rules.test.ts` and its per-hit minimum lead go, with
   `boss-tells.ts` (see 3). There is no per-hit tell contract and no "untold hits" target.
@@ -768,8 +792,64 @@ feature id added to `SURFACE_CHANNEL` in `src/domain/surface-availability.ts`.
 | 3 | Phase II: Second Swing, Root Seam and its cut, Bramble Rows, Mend; and Last Bloom | Phase II pace meets 2.4. Seams and rows end on the phase tick and at death (5.1 green for it). |
 | 4 | Phase III: Spring Surge, the Phase III cadence, and the death | All three phases meet 2.4. 0 blocking ticks. 4 marks. The lead asks the owner to play it on preview. |
 | 5 | New Rootbinder, engineering channel only | Its moves match 2.2. `pnpm playtest enemies --enemy rootbinder` numbers sit beside the ranged enemy's in the PR. |
-| 6 | **The switch**, after the owner approves the new Verdant on preview | Campaign, Endless and Gauntlet use the new Rootbound and Rootbinder. Every file in 3 marked "switch" is deleted. The `rebuild` folder is moved to the final names. The ruleset steps (4.1). The save test (4.3) is green. The Rootbound leaves both exemption lists. The waves are measured again. The approved background's guard still runs (3). Architecture and code-budget baselines shrink and never grow. `config/position.json` is updated. |
+| 6 | **The switch**, after the owner approves the new Verdant on preview | Campaign, Endless and Gauntlet use the new Rootbound and Rootbinder. Every file in 3 marked "switch" is deleted. The `rebuild` folder is moved to the final names. The ruleset steps (4.1). The save test (4.3) is green. The Rootbound leaves both exemption lists. The waves are measured again. The approved background's guard still runs (3). Architecture and code-budget baselines shrink and never grow. The area files under `config/position/` are updated. |
 | 7 | Verdant leftovers: anything the switch could not delete because Pale still imports it moves to Pale's side, or stays listed for Pale's plan | Nothing in `src/` names a Verdant stage feature. The delete list's "Pale" rows are the only stage-feature code left. |
+
+### 6.1 Where it stands, and how to take the next slice
+
+This section is the handoff. Keep it current in every slice's pull request: a reader with only the
+repository must be able to take the next slice from here.
+
+| Slice | State |
+| --- | --- |
+| 0 | Approved by the lead (D1-D4 approved). |
+| 1 | Merged, #354 (95a34063), ruleset v17. |
+| 2 | In review, #381 (branch `codex/verdant-rootbound-phase1`), ruleset v20, merging alone right after #374 (v19). Merge it before slice 3 starts. |
+| 3-7 | Not started. |
+
+**What slice 2 left in place** (read these first):
+- The boss: `src/gameplay/entities/enemy-types/rootbound-rebuild/rootbound-moves.ts` holds the move
+  table, cadence and body. `rootbound.ts` in the same folder is the state machine. Phases II and III
+  currently reuse Phase I's moves.
+- The renderer: `src/presentation/enemies/renderers/rootbound-rebuild-renderer.ts`. It has the
+  state-to-pose table and draws marks only through the shared helpers (`dangerColumn`,
+  `dangerReticle`, `drawPeril`). Props go through the prop helpers (`drawRootVine`, `drawBossFigure`).
+- The test: `tests/unit/rootbound-rebuild.test.ts`, which steps one update per tick. Add Phase II's
+  moves there in the same way.
+- How it is reached: the Boss Test picker (`BOSS_TEST_ROSTER` in `content-director.ts`, engineering
+  only). It fights on Verdant through `stageOf`.
+- The playtest command, run by every slice:
+  `pnpm playtest bosses --boss rootbound-rebuild,aldric,colossus,echo --seed 1,2 --json <file>`.
+  Practice admits only published bosses, so `--phase` can't reach the new one yet.
+
+**Slice 3, exactly.** Phase II from 2.1:
+- Second Swing; Root Seam and its cut; Bramble Rows; Mend; and Last Bloom.
+- Rows in the move table, states in `rootbound.ts`, poses in the renderer table.
+- Seams and rows are stage objects that must end on the phase tick and at death (5.1).
+- Done when: Phase II pace meets 2.4, measured with the playtest command above against the three
+  references.
+- Phase I's pace gap is re-measured there too. It stood at 2.9 hits per 10 s and 78 px/s after
+  slice 2, under the band.
+- Any change to the new boss changes the replay content hash, so the slice steps the ruleset
+  (`RULESET_STEPS` in `ruleset-version.ts`, the refusal strings in `gauntlet-records.test.ts`,
+  `config/campaign-publication-boundary.json`). It also regenerates the tutorial gold hashes and
+  the two production-headless fixtures. The exception is if the replay-admission proposal below
+  lands first.
+
+**Open decisions.**
+- **Figure before and after (3.4):** the owner approved `rootbound-figure-before-after` on the
+  ledger on 2026-11-21. The rebuild renderer keeps the approved figure, and no owner verdict is
+  owed for it. The new Rootbound's figure is settled, and slice 3 builds on it.
+- **Tell weight over budget (decided 2026-11-21, 5.2):** the new Rootbound reads 5 harness pairs
+  with the vault against a budget of 4. Fix it before the switch, not in slice 2.
+- **Replay admission:** refuse to record runs with an engineering-only boss, so that slices stop
+  stepping the ruleset (4.1). The lead approved it in principle on 2026-11-21 and routes it to the
+  replay session after #372. Not built in slice 2.
+- **Pace under the 4-7 band:** accepted by the lead as a named gap for slice 3.
+- **Named gaps to keep carrying:**
+  - The Echo's tell weight is not measured (5.2).
+  - The playtest "open" column reads declared `tells()`, which the new boss does not declare.
+  - The "no tell" column belongs to the playtest tool.
 
 **Measured before and after, in the pull requests that change them:**
 - slices 2-4 and 6: `pnpm playtest bosses` for the Rootbound against Aldric, the Colossus and the

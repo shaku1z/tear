@@ -366,7 +366,8 @@ describe("Ghost application-frame evidence", () => {
         },
       );
       replay.seek(3);
-      expect(current?.replay.world.state.bossIntro()?.t).toBeCloseTo(0.4, 12);
+      // The arrival advances on the simulation tick, a tick being 1/120 s at its 0.25 time scale; the frames do not.
+      expect(current?.replay.world.state.bossIntro()?.t).toBeCloseTo(3 / 120 / 0.25, 12);
       expect(current?.simulation.scheduler.tick).toBe(3);
       expect(current?.replay.world.context.services.clock.seconds()).toBeCloseTo(3 / 120, 12);
     }

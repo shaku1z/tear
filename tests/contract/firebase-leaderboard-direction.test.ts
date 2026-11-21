@@ -1,81 +1,59 @@
 import { describe, expect, it } from "vitest";
 import type { LeaderboardRef } from "../../src/domain/leaderboards";
-import { createFirebaseCloudCompatibility, type FirebaseCompatSdk } from "../../src/platform/firebase-cloud";
-import { FIREBASE_CONFIG } from "../../src/platform/firebase-config";
+import {
+  SERVER_TIME,
+  createFirebaseCloudCompatibility,
+  type FirebaseServices,
+  type FirebaseUser,
+} from "../../src/platform/firebase-cloud";
 
 type Data = Record<string, unknown>;
 
+/** The server's clock in these tests, which a SERVER_TIME field is written as. */
+const SERVER_NOW = 2000;
+
 /**
- * An in-memory Firestore holding documents by path, enough for the leaderboard calls: get, set (with
- * merge), and a collection query ordered by one numeric field. Nothing here reaches a live service.
+ * An in-memory Firestore holding documents by path, enough for the leaderboard calls: read, write (merged or
+ * replacing) and a collection listed in order of one numeric field. Nothing here reaches a live service.
  */
-function memoryFirestore(store: Map<string, Data>): FirebaseCompatSdk {
-  const user = {
-    uid: "me",
-    isAnonymous: true,
-    displayName: null,
-    photoURL: null,
-    linkWithPopup: () => Promise.reject(new Error("not used")),
-  };
-  const collection = (path: string) => ({
-    doc: (id: string) => document(`${path}/${id}`),
-    add: () => Promise.resolve(),
-    orderBy: (field: string, direction: "asc" | "desc") => {
-      let count = Number.POSITIVE_INFINITY;
-      const query = {
-        limit(next: number) {
-          count = next;
-          return query;
-        },
-        get() {
-          const rows = [...store.entries()]
-            .filter(([key]) => key.startsWith(`${path}/`) && !key.slice(path.length + 1).includes("/"))
-            .map(([, data]) => data)
-            .filter((data) => typeof data[field] === "number")
-            .sort((a, b) => ((a[field] as number) - (b[field] as number)) * (direction === "asc" ? 1 : -1))
-            .slice(0, count);
-          return Promise.resolve({ docs: rows.map((data) => ({ exists: true, data: () => data })) });
-        },
-      };
-      return query;
-    },
-  });
-  const document = (path: string) => ({
-    get: () => Promise.resolve({ exists: store.has(path), data: () => store.get(path) }),
-    set: (data: Data, options?: Readonly<{ merge: boolean }>) => {
-      store.set(path, options?.merge === true ? { ...store.get(path), ...data } : { ...data });
-      return Promise.resolve();
-    },
-    collection: (name: string) => collection(`${path}/${name}`),
-  });
-  const auth = {
-    currentUser: user,
-    onAuthStateChanged: (listener: (next: typeof user) => void) => {
-      listener(user);
-      return () => undefined;
-    },
-    signInAnonymously: () => Promise.resolve({ user }),
-    signInWithPopup: () => Promise.resolve({ user }),
-    signOut: () => Promise.resolve(),
-  };
-  class GoogleProvider {
-    readonly kind = "google";
-  }
+function memoryServices(store: Map<string, Data>): FirebaseServices {
+  const user: FirebaseUser = { uid: "me", isAnonymous: true, displayName: null, photoURL: null };
+  const stamped = (data: Data): Data =>
+    Object.fromEntries(Object.entries(data).map(([key, value]) => [key, value === SERVER_TIME ? SERVER_NOW : value]));
   return {
-    initializeApp: () => ({}),
-    auth: Object.assign(() => auth, { GoogleAuthProvider: GoogleProvider }),
-    firestore: () => ({ collection, settings: () => undefined }),
+    auth: {
+      current: () => user,
+      onChange: (listener) => {
+        void listener(user);
+        return () => undefined;
+      },
+      signInAnonymously: () => Promise.resolve(user),
+      signInWithGoogle: () => Promise.resolve(user),
+      linkGoogle: () => Promise.reject(new Error("not used")),
+      signOut: () => Promise.resolve(),
+    },
+    store: {
+      read: (path) => Promise.resolve(store.get(path) ?? null),
+      write: (path, data, merge) => {
+        store.set(path, merge ? { ...store.get(path), ...stamped(data) } : stamped(data));
+        return Promise.resolve();
+      },
+      append: () => Promise.resolve(),
+      list: (path, field, direction, limit) => {
+        const rows = [...store.entries()]
+          .filter(([key]) => key.startsWith(`${path}/`) && !key.slice(path.length + 1).includes("/"))
+          .filter(([, data]) => typeof data[field] === "number")
+          .sort(([, a], [, b]) => ((a[field] as number) - (b[field] as number)) * (direction === "asc" ? 1 : -1))
+          .slice(0, limit);
+        return Promise.resolve(rows.map(([key, data]) => ({ id: key.slice(path.length + 1), data })));
+      },
+    },
   };
 }
 
 function sharedCloud(store: Map<string, Data>) {
-  return createFirebaseCloudCompatibility({
-    config: FIREBASE_CONFIG,
-    getSdk: () => memoryFirestore(store),
-    loadScript: () => Promise.resolve(),
-    remote: {},
-    now: () => 1000,
-  }).shared;
+  return createFirebaseCloudCompatibility({ services: () => Promise.resolve(memoryServices(store)), now: () => 1000 })
+    .shared;
 }
 
 const ENDLESS: LeaderboardRef = { kind: "score", mode: "endless", difficulty: "normal" };
@@ -139,7 +117,15 @@ describe("Firebase leaderboards read and write in the board's direction", () => 
     const shared = sharedCloud(store);
     await expect(shared.submitScore(CLEAR, { name: "Me", score: 80_000, wave: 6, time: 667 })).resolves.toBe(true);
     // Until this run's replay is published and linked, the entry names no replay rather than the slower run's.
-    expect(store.get(path)).toEqual({ name: "Me", score: 80_000, wave: 6, time: 667, uid: "me", ts: 1000 });
+    expect(store.get(path)).toEqual({
+      name: "Me",
+      score: 80_000,
+      wave: 6,
+      time: 667,
+      uid: "me",
+      ts: 1000,
+      at: SERVER_NOW,
+    });
     await expect(shared.linkReplay(CLEAR, "lb_gauntletclear_hard_me")).resolves.toBe(true);
     expect(store.get(path)).toMatchObject({ score: 80_000, replayId: "lb_gauntletclear_hard_me" });
   });

@@ -4,31 +4,74 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import {
-  POSITION_DOCUMENT_PATH,
-  POSITION_SOURCE_PATH,
+  POSITION_DOCUMENT_DIRECTORY,
+  POSITION_INDEX_DOCUMENT_PATH,
+  POSITION_INDEX_SOURCE_PATH,
+  POSITION_PRODUCTION_DOCUMENT_PATH,
+  POSITION_PRODUCTION_SOURCE_PATH,
+  POSITION_SOURCE_DIRECTORY,
+  areaDocumentPath,
+  areaFiles,
+  areaSourcePath,
   checkPosition,
+  readPosition,
   renderPosition,
   validatePosition,
+  writePosition,
 } from "../../scripts/position.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const source = JSON.parse(fs.readFileSync(path.join(root, POSITION_SOURCE_PATH), "utf8"));
+const source = readPosition(root).position;
 const fixtures = [];
 
-function fixture(position = source, document = renderPosition(position)) {
+function writeFile(directory, relativePath, content) {
+  fs.mkdirSync(path.dirname(path.join(directory, relativePath)), { recursive: true });
+  fs.writeFileSync(path.join(directory, relativePath), content);
+}
+
+function sourceFiles(position) {
+  const files = new Map([
+    [POSITION_INDEX_SOURCE_PATH, position.index],
+    [POSITION_PRODUCTION_SOURCE_PATH, position.production],
+  ]);
+  for (const area of position.areas) files.set(areaSourcePath(area.id), area);
+  return files;
+}
+
+/** A repository with the given position source, the evidence it names and, unless told otherwise, its render. */
+function fixture(position = source, { rendered = true } = {}) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "tear-position-"));
   fixtures.push(directory);
-  for (const area of position.areas ?? [])
-    for (const entry of area.evidence ?? []) {
-      if (entry.startsWith("https://")) continue;
-      fs.mkdirSync(path.dirname(path.join(directory, entry)), { recursive: true });
-      fs.writeFileSync(path.join(directory, entry), "");
-    }
-  fs.mkdirSync(path.join(directory, "config"), { recursive: true });
-  fs.mkdirSync(path.join(directory, "docs"), { recursive: true });
-  fs.writeFileSync(path.join(directory, POSITION_SOURCE_PATH), JSON.stringify(position));
-  if (document !== null) fs.writeFileSync(path.join(directory, POSITION_DOCUMENT_PATH), document);
+  for (const area of position.areas)
+    for (const entry of area.evidence ?? []) if (!entry.startsWith("https://")) writeFile(directory, entry, "");
+  for (const [relativePath, value] of sourceFiles(position))
+    writeFile(directory, relativePath, `${JSON.stringify(value, null, 2)}\n`);
+  if (rendered) for (const [relativePath, page] of renderPosition(position)) writeFile(directory, relativePath, page);
   return directory;
+}
+
+/** Every position file under a fixture, by repository path, so two states of it can be compared. */
+function snapshot(directory) {
+  const files = new Map();
+  for (const folder of [POSITION_SOURCE_DIRECTORY, POSITION_DOCUMENT_DIRECTORY])
+    for (const name of fs.readdirSync(path.join(directory, folder)))
+      files.set(`${folder}/${name}`, fs.readFileSync(path.join(directory, folder, name), "utf8"));
+  return files;
+}
+
+/** What a pull request would touch: edit the source the way `change` says, render, and list the files that differ. */
+function filesTouchedBy(change) {
+  const directory = fixture();
+  const before = snapshot(directory);
+  const position = structuredClone(source);
+  change(position);
+  for (const [relativePath, value] of sourceFiles(position))
+    writeFile(directory, relativePath, `${JSON.stringify(value, null, 2)}\n`);
+  const reread = readPosition(directory);
+  expect(reread.errors).toEqual([]);
+  writePosition(directory, reread.position);
+  const after = snapshot(directory);
+  return [...new Set([...before.keys(), ...after.keys()])].filter((key) => before.get(key) !== after.get(key)).sort();
 }
 
 afterEach(() => {
@@ -36,47 +79,157 @@ afterEach(() => {
 });
 
 describe("generated position", () => {
-  it("the tracked POSITION.md is the current render of config/position.json", () => {
+  it("the tracked docs/position pages are the current render of config/position", () => {
     expect(checkPosition(root).errors).toEqual([]);
   });
 
-  it("fails when POSITION.md was edited by hand", () => {
-    const edited = renderPosition(source).replace("In progress", "Done");
-    expect(checkPosition(fixture(source, edited)).errors[0]).toMatch(/stale or was edited by hand/u);
+  it("fails when a page was edited by hand", () => {
+    const directory = fixture();
+    const page = areaDocumentPath(source.areas[0].id);
+    writeFile(directory, page, `${fs.readFileSync(path.join(directory, page), "utf8")}\nDone.\n`);
+    expect(checkPosition(directory).errors).toEqual([
+      expect.stringMatching(/^docs\/position\/.+ is stale or was edited by hand/u),
+    ]);
   });
 
-  it("fails when POSITION.md is missing", () => {
-    expect(checkPosition(fixture(source, null)).errors[0]).toMatch(/is missing; run pnpm position:render/u);
+  it("fails when a page is missing, and when a page has no source area", () => {
+    const directory = fixture(source, { rendered: false });
+    expect(checkPosition(directory).errors).toContain(
+      `${POSITION_INDEX_DOCUMENT_PATH} is missing; run pnpm position:render`,
+    );
+    writePosition(directory, source);
+    writeFile(directory, areaDocumentPath("gone"), "# Gone\n");
+    expect(checkPosition(directory).errors).toEqual([
+      `${areaDocumentPath("gone")} has no source area; run pnpm position:render`,
+    ]);
+  });
+
+  it("fails when an area file is not listed in the index, or a listed one is missing", () => {
+    const directory = fixture();
+    writeFile(directory, areaSourcePath("stray"), "{}");
+    expect(checkPosition(directory).errors).toEqual([
+      `${areaSourcePath("stray")} is not listed in ${POSITION_INDEX_SOURCE_PATH}`,
+    ]);
+    fs.rmSync(path.join(directory, areaSourcePath("stray")));
+    fs.rmSync(path.join(directory, areaSourcePath(source.areas[0].id)));
+    expect(checkPosition(directory).errors).toEqual([`${areaSourcePath(source.areas[0].id)} is missing`]);
   });
 
   it("accepts a CRLF checkout of an otherwise current render", () => {
-    const crlf = renderPosition(source).replaceAll("\n", "\r\n");
-    expect(checkPosition(fixture(source, crlf)).errors).toEqual([]);
+    const directory = fixture();
+    for (const [relativePath, page] of renderPosition(source))
+      writeFile(directory, relativePath, page.replaceAll("\n", "\r\n"));
+    expect(checkPosition(directory).errors).toEqual([]);
   });
 
   it("rejects evidence paths that do not exist", () => {
     const position = structuredClone(source);
     position.areas[0].evidence = ["docs/NO_SUCH_FILE.md"];
-    const directory = fixture({ ...position, areas: [] }, null);
-    expect(validatePosition(position, directory)).toContain('areas[0].evidence "docs/NO_SUCH_FILE.md" does not exist');
+    const directory = fixture({ ...source, areas: [] }, { rendered: false });
+    expect(validatePosition(position, directory)).toContain(
+      `${areaSourcePath(position.areas[0].id)}: evidence "docs/NO_SUCH_FILE.md" does not exist`,
+    );
   });
 
-  it("rejects duplicate ids, unknown fields, multi-line text and empty evidence", () => {
+  it("rejects an id that is not the file name, unknown fields, multi-line text and empty evidence", () => {
     const position = structuredClone(source);
-    position.areas[1].id = position.areas[0].id;
+    const [first, second, third] = position.index.areas;
+    position.areas[1].id = first;
     position.areas[0].status = "done";
     position.areas[0].summary = "two\nlines";
     position.areas[2].evidence = [];
     const errors = validatePosition(position, root);
-    expect(errors).toContain(`areas[1].id duplicates "${position.areas[0].id}"`);
-    expect(errors).toContain("areas[0] has unknown fields: status");
-    expect(errors.some((error) => error.startsWith("areas[0].summary"))).toBe(true);
-    expect(errors).toContain("areas[2].evidence must list at least one path or pull request link");
+    expect(errors).toContain(`${areaSourcePath(second)} is missing or its id is not "${second}"`);
+    expect(errors).toContain(`${areaSourcePath(first)}: has unknown fields: status`);
+    expect(errors.some((error) => error.startsWith(`${areaSourcePath(first)}: summary`))).toBe(true);
+    expect(errors).toContain(`${areaSourcePath(third)}: evidence must list at least one path or pull request link`);
   });
 
-  it("renders deterministically and lists every area once", () => {
-    const rendered = renderPosition(source);
-    expect(renderPosition(structuredClone(source))).toBe(rendered);
-    for (const area of source.areas) expect(rendered.split(`<a id="${area.id}"></a>`)).toHaveLength(2);
+  it("rejects an index that lists an area twice or uses a reserved name", () => {
+    const position = structuredClone(source);
+    position.index.areas.push(position.index.areas[0], "production");
+    const errors = validatePosition(position, root);
+    expect(errors).toContain(`${POSITION_INDEX_SOURCE_PATH}: areas lists "${position.index.areas[0]}" twice`);
+    expect(errors.some((error) => error.includes('areas entry "production"'))).toBe(true);
+  });
+
+  it("renders deterministically, one page per area plus the index and production", () => {
+    const pages = renderPosition(source);
+    expect([...renderPosition(structuredClone(source))]).toEqual([...pages]);
+    expect([...pages.keys()].sort()).toEqual(
+      [
+        POSITION_INDEX_DOCUMENT_PATH,
+        POSITION_PRODUCTION_DOCUMENT_PATH,
+        ...source.areas.map((area) => areaDocumentPath(area.id)),
+      ].sort(),
+    );
+  });
+});
+
+// Two pull requests conflict only in files both touch. Each area's change must stay inside its own two files.
+describe("position changes in different areas touch disjoint files", () => {
+  const touched = new Map(
+    source.areas.map((area) => [
+      area.id,
+      filesTouchedBy((position) => {
+        const target = position.areas.find((entry) => entry.id === area.id);
+        target.state = `${target.state} (changed)`;
+        target.summary = `${target.summary} Changed.`;
+        target.next = `${target.next} Changed.`;
+        target.owner_action = "Changed.";
+        target.evidence = [...target.evidence, "https://github.com/shaku1z/tear/pull/1"];
+      }),
+    ]),
+  );
+
+  it("changing every field of one area's state touches that area's source and page and nothing else", () => {
+    for (const area of source.areas) expect(touched.get(area.id)).toEqual(areaFiles(area.id).sort());
+  });
+
+  it("no file is touched by two different areas, and none of them is the index", () => {
+    const owners = new Map();
+    for (const [id, files] of touched)
+      for (const file of files) {
+        expect(owners.get(file)).toBeUndefined();
+        owners.set(file, id);
+      }
+    expect(owners.size).toBe(source.areas.length * 2);
+    expect(owners.has(POSITION_INDEX_SOURCE_PATH)).toBe(false);
+    expect(owners.has(POSITION_INDEX_DOCUMENT_PATH)).toBe(false);
+  });
+
+  it("a deploy touches production's two files only", () => {
+    expect(
+      filesTouchedBy((position) => {
+        position.production.commit = "0".repeat(40);
+        position.production.since = "2027-01-01";
+        position.production.note = "Changed.";
+      }),
+    ).toEqual([POSITION_PRODUCTION_SOURCE_PATH, POSITION_PRODUCTION_DOCUMENT_PATH].sort());
+  });
+
+  it("adding or removing an area touches the index and that area's files only", () => {
+    const added = { ...structuredClone(source.areas[0]), id: "new-area", name: "New area" };
+    expect(
+      filesTouchedBy((position) => {
+        position.index.areas.push(added.id);
+        position.areas.push(added);
+      }),
+    ).toEqual([POSITION_INDEX_SOURCE_PATH, POSITION_INDEX_DOCUMENT_PATH, ...areaFiles(added.id)].sort());
+    const removed = source.areas.at(-1).id;
+    const directory = fixture();
+    const position = structuredClone(source);
+    position.index.areas.pop();
+    position.areas.pop();
+    writeFile(directory, POSITION_INDEX_SOURCE_PATH, JSON.stringify(position.index));
+    fs.rmSync(path.join(directory, areaSourcePath(removed)));
+    // Before the render, the removed area's page is still there with no source: the check names it.
+    expect(checkPosition(directory).errors).toContain(
+      `${areaDocumentPath(removed)} has no source area; run pnpm position:render`,
+    );
+    expect(writePosition(directory, readPosition(directory).position)).toEqual(
+      [POSITION_INDEX_DOCUMENT_PATH, areaDocumentPath(removed)].sort(),
+    );
+    expect(checkPosition(directory).errors).toEqual([]);
   });
 });

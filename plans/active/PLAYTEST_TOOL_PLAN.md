@@ -7,7 +7,7 @@
 - **Closure condition:** Every "done when" line of stages 1 to 6 holds, `pnpm check` passes from the final commit, and no file, command or document is still named TearBench.
 
 Started 2026-11-16. This is the one planning document for the playtest tool. It is edited in
-place as stages land; status lives in `config/position.json`.
+place as stages land; status lives in `config/position/playtest-tool.json`.
 
 ## Why
 
@@ -459,6 +459,45 @@ history. Checked by hand: `enemies --compare HEAD` prints "nothing changed"; Ver
 the commit before the wave change of pull request 316 print both situations as changed, with the affixes that
 went. Tests: `tests/unit/playtest-compare.test.ts` (failure mode 3: one enemy's health doubled, its time to
 kill flagged and nothing else).
+
+Built seventh (2026-11-21): the headless player decides from the live game's own observation. Headless runs
+ended at waves 5 to 8 where the same scripted player in the browser reached wave 60. The cause was not a
+revive (the standalone game has no continue screen: it is the rewarded-advert continue, and there are no
+adverts). The headless player was given a second, poorer observation: no walls, no enemy attack states, and
+enemy names that were list positions and moved when an enemy died. The scripted player turns off a wall only
+when it is told where the walls are, so a Riftlock player backed into the left wall and stayed. Now
+`headless/production-policy-observation.ts` hands the headless world to the live projection
+(`projectLiveTearObservation`), so there is one observation for both, with the game's own enemy ids. Measured
+on the easy Adventure with Riftlock, seeds "117" and "1" to "5": headless runs ended at waves 5 to 8 before,
+and at 60 (won), 10, 8, 9, 60 (won) and 18 after; the browser player on the same six runs ended at 60, 60, 18,
+9, 60 and 10. The two do not match run for run (one known difference is the pause below), but they spread
+the same. Three things came with it. A run that beat the last boss
+sat in the closing scene to its time limit: `skipFinale` in `headless/chapter.ts` holds confirm through it, as
+a player does, to the win screen. With real attack states the player gives way to an enemy winding up, and it
+would not go to a target standing at a wall; `MovementModule` in `src/agents/scripted-policy.ts` now lets it
+approach one (this is also the browser player's rule). And the recorded scripted fights in
+`tests/fixtures/canonical-hash-stream.json` change, because the player decides differently; the game's rules
+do not. Not fixed, not this tool's code: the headless world keeps stepping while a screen pauses the game
+(600 paused ticks cost the player 33 health), and `--seed` is hashed, so headless seed "117" is the browser's
+seed 1714819488. Tests: `tests/unit/scripted-player-walls.test.ts`, `tests/unit/playtest-finale.test.ts`.
+
+Open after it, for whoever picks this up (pull request 377):
+- The fixture. `tests/fixtures/canonical-hash-stream.json` was re-recorded in pull request 377
+  (`TEAR_HASH_STREAM_WRITE=1 pnpm test:determinism`). Pull request 372 (replay) and the cinematics intro-clock
+  change regenerate the same file. Whichever lands later merges main and regenerates on the merged tree.
+- Pinned boss seeds. The cinematics change pins boss seeds in `tests/support/hash-stream-corpus.ts`
+  (`BOSS_SEED_INDEX`), chosen with the old observation. If one then fails its coverage fact, re-pick it as
+  cinematics did (the first seed in the fixed list that survives), update its comment with the counts, and tell
+  the lead and the cinematics owner.
+- The Chainblade player. Against a lone herald it takes 41.6 s (the other weapons take 1 to 5 s); the bound in
+  `tests/unit/scripted-player-pursuit.test.ts` is 60 s of simulation. It gives way to every enemy that winds up
+  and loses the herald. This belongs to stage 3; bring the bound back down when it is faster.
+- Test limits. A test of simulated play is bounded in simulation ticks; a wall-clock limit is only a hang guard
+  with its reason. Done for the pursuit test; the other playtest tests still pass `60_000` with no reason.
+- The `playRun` closing-scene branch has no test of its own (one hand run: seed "4", won at 155,468 ticks).
+- The default `runs` tables in this plan are from before this change; replay them when quoting numbers.
+- The headless pause above is with the replay owner. The scripted player pauses only when its safety check
+  rejects an observation, never in play.
 
 Done when:
 - [ ] Every boss phase, every wave of each biome and every enemy kind is a row that starts directly, in under 1 s each.

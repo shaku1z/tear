@@ -1,19 +1,18 @@
-// The game's Firebase adapter (src/platform/firebase-cloud.ts) against the emulators with firestore.rules
-// loaded: every write the game makes is one the rules allow, and every read gets back what was written.
+// The game's Firebase adapter (src/platform/firebase-cloud.ts) on the SDK the standalone build ships
+// (src/platform/firebase-sdk.ts), against the emulators with firestore.rules loaded: every write the game
+// makes is one the rules allow, and every read gets back what was written.
 // Run with `pnpm test:rules`. The rules on their own, allowed and refused writes, are in
 // tests/rules/firestore-rules.test.ts.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { initializeTestEnvironment, type RulesTestEnvironment } from "@firebase/rules-unit-testing";
-import firebase from "firebase/compat/app";
-import "firebase/compat/auth";
-import "firebase/compat/firestore";
-import { collection, getDocs } from "firebase/firestore";
+import { Timestamp, collection, doc, getDocs, setDoc, type Firestore } from "firebase/firestore";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import type { LeaderboardRef } from "../../src/domain/leaderboards";
+import { leaderboardId, type LeaderboardRef } from "../../src/domain/leaderboards";
 import type { AccountContext, CloudStatus, CloudUser } from "../../src/platform/cloud";
-import { createFirebaseCloudCompatibility, type FirebaseCompatSdk } from "../../src/platform/firebase-cloud";
+import { createFirebaseCloudCompatibility } from "../../src/platform/firebase-cloud";
 import type { FirebaseClientConfig } from "../../src/platform/firebase-config";
+import { createFirebaseServices } from "../../src/platform/firebase-sdk";
 import { rulesTestProject } from "./rules-test-project";
 
 const projectId = rulesTestProject();
@@ -36,11 +35,14 @@ const context: AccountContext = {
   },
   sync: () => Promise.resolve(),
 };
+const [firestoreHost = "127.0.0.1", firestorePort = "8189"] = (process.env.FIRESTORE_EMULATOR_HOST ?? "").split(":");
+const emulators = {
+  authUrl: `http://${process.env.FIREBASE_AUTH_EMULATOR_HOST ?? "127.0.0.1:9199"}`,
+  firestoreHost,
+  firestorePort: Number(firestorePort),
+};
 const cloud = createFirebaseCloudCompatibility({
-  config,
-  getSdk: () => firebase as unknown as FirebaseCompatSdk,
-  loadScript: () => Promise.reject(new Error("the SDK is already loaded")),
-  remote: {},
+  services: () => Promise.resolve(createFirebaseServices(config, emulators)),
   now: () => Date.now() + clockOffset,
 });
 
@@ -58,11 +60,6 @@ beforeAll(async () => {
     projectId,
     firestore: { rules: readFileSync(resolve(import.meta.dirname, "../../firestore.rules"), "utf8") },
   });
-  // The adapter's own initializeApp then finds the app already there, as it allows for.
-  firebase.initializeApp(config);
-  firebase.auth().useEmulator(`http://${process.env.FIREBASE_AUTH_EMULATOR_HOST ?? "127.0.0.1:9199"}`);
-  const [host = "127.0.0.1", port = "8189"] = (process.env.FIRESTORE_EMULATOR_HOST ?? "").split(":");
-  firebase.firestore().useEmulator(host, Number(port));
   await cloud.account.init(context);
   // init reports the local guest first, then the anonymous Firebase account once it is signed in.
   await until(() => (signedIn !== undefined && signedIn.user.id !== "local" ? signedIn : undefined), "the sign-in");
@@ -73,13 +70,22 @@ beforeEach(async () => {
 });
 afterAll(async () => {
   cloud.account.dispose?.();
-  await firebase.app().delete();
   await env.cleanup();
 });
 
 const uid = (): string => signedIn?.user.id ?? "";
 const ENDLESS_HARD: LeaderboardRef = { kind: "score", mode: "endless", difficulty: "hard" };
 const CLEAR_HARD: LeaderboardRef = { kind: "gauntlet-clear", mode: "gauntlet", difficulty: "hard" };
+const anyNumber = expect.any(Number) as number;
+
+/** Moves this player's row on a board 11 s into the past, server time included, instead of waiting. */
+async function writtenEarlier(board: LeaderboardRef): Promise<void> {
+  await env.withSecurityRulesDisabled(async (admin) => {
+    const earlier = Date.now() - 11_000;
+    const row = doc(admin.firestore() as unknown as Firestore, `leaderboards/${leaderboardId(board)}/scores/${uid()}`);
+    await setDoc(row, { at: Timestamp.fromMillis(earlier), ts: earlier }, { merge: true });
+  });
+}
 const recording = (size: number) => ({
   mode: "endless",
   diff: "hard",
@@ -109,13 +115,17 @@ describe("the game's Firebase adapter under firestore.rules", () => {
     const entry = (score: number) => ({ name: "Guest", score, wave: 5, time: 120.4 });
     await expect(cloud.shared.submitScore(ENDLESS_HARD, entry(1500))).resolves.toBe(true);
     await expect(cloud.shared.submitScore(ENDLESS_HARD, entry(900))).resolves.toBe(false);
-    // A higher score within 10 s of the last is refused by the rules' write-rate limit.
+    // A higher score within 10 s of the last is refused by the rules' write-rate limit, which goes by the
+    // server's clock: moving the client's clock on does not get past it.
     await expect(cloud.shared.submitScore(ENDLESS_HARD, entry(1600))).resolves.toBe(false);
     clockOffset = 11_000;
+    await expect(cloud.shared.submitScore(ENDLESS_HARD, entry(1600))).resolves.toBe(false);
+    clockOffset = 0;
+    await writtenEarlier(ENDLESS_HARD);
     await expect(cloud.shared.submitScore(ENDLESS_HARD, entry(1700))).resolves.toBe(true);
     const board = await cloud.shared.topScores(ENDLESS_HARD, 25);
     expect(board).toEqual([
-      { name: "Guest", score: 1700, wave: 5, time: 120, uid: uid(), ts: expect.any(Number) as number },
+      { name: "Guest", score: 1700, wave: 5, time: 120, uid: uid(), ts: anyNumber, at: anyNumber },
     ]);
   });
 
@@ -142,14 +152,15 @@ describe("the game's Firebase adapter under firestore.rules", () => {
     expect(shareId).toBe(`lb_gauntletclear_hard_${uid()}`);
     await expect(cloud.shared.linkReplay(CLEAR_HARD, shareId ?? "")).resolves.toBe(true);
     expect((await cloud.shared.topScores(CLEAR_HARD, 25))?.[0]?.replayId).toBe(shareId);
-    clockOffset = 11_000;
+    await writtenEarlier(CLEAR_HARD);
     // A slower clear stays out on the client; one under the rules' 30 s floor is refused by the server.
     await expect(cloud.shared.submitScore(CLEAR_HARD, clear(95_000))).resolves.toBe(false);
     await expect(cloud.shared.submitScore(CLEAR_HARD, clear(3_599))).resolves.toBe(false);
-    // A faster clear replaces the row: exactly the six fields, the slower run's replay link gone.
+    // A faster clear replaces the row: exactly the six fields and the server's time, the slower run's
+    // replay link gone.
     await expect(cloud.shared.submitScore(CLEAR_HARD, clear(80_000))).resolves.toBe(true);
     await expect(cloud.shared.topScores(CLEAR_HARD, 25)).resolves.toEqual([
-      { name: "Guest", score: 80_000, wave: 6, time: 667, uid: uid(), ts: expect.any(Number) as number },
+      { name: "Guest", score: 80_000, wave: 6, time: 667, uid: uid(), ts: anyNumber, at: anyNumber },
     ]);
   });
 

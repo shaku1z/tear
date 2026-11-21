@@ -7,7 +7,7 @@ import { TEAR_SIMULATION_TICKS_PER_SECOND } from "../tearbench/simulation-profil
 import { agentView } from "./boss-fight";
 import { BOSS_PLAYER_IDS, createBossPlayer, type BossPlayer, type BossPlayerId } from "./boss-player";
 import { readBoss, readPlayerBox } from "./boss-view";
-import { chapterHolds, skipChapter } from "./headless/chapter";
+import { chapterHolds, finaleHolds, skipChapter, skipFinale } from "./headless/chapter";
 import { createProductionHeadlessEnvironment } from "./headless/production-headless-environment";
 import { requireProductionHeadlessScenario } from "./headless/production-headless-scenario";
 import { kindOf } from "./wave-play";
@@ -139,6 +139,16 @@ export function playRun(request: RunRequest, player: BossPlayer = createBossPlay
           reason = `the story chapter before wave ${String(run().wave)} did not end`;
           break;
         }
+      // The Adventure closes with a scene after its last boss; a player holds confirm through it to the win.
+      if (finaleHolds(environment)) {
+        const before = environment.policyObservation().tick;
+        const ended = skipFinale(environment);
+        ticks += environment.policyObservation().tick - before;
+        const screen = environment.policyUiObservation().screen;
+        end = ended && screen === "win" ? "won" : "broken";
+        if (end === "broken") reason = `the closing scene did not end the run (${screen} screen)`;
+        break;
+      }
       const view = agentView(environment, request.weapon);
       const health = view.state.player.hp;
       const wave = run().wave;

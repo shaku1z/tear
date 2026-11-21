@@ -133,10 +133,14 @@ export interface CosmeticState {
 }
 
 /**
- * What a particle burst shows, when a cosmetic may restyle it. Gameplay tags the burst; presentation decides
- * the look. Untagged bursts are never restyled.
+ * Where a particle burst comes from, when a cosmetic may restyle it: a blade striking (`by` is that blade, the
+ * object its owner's loadout is worn on). Gameplay names the source; presentation decides the look, so each
+ * wearer's hits wear their own spark. Bursts without a source are never restyled.
  */
-export type BurstKind = "blade-hit";
+export interface BurstSource {
+  readonly kind: "blade-hit";
+  readonly by: object;
+}
 
 /** A pure step from one cosmetic record to the next (equip, a loadout change), or null when it does not apply. */
 export type CosmeticChange = (catalog: CosmeticCatalog, state: CosmeticState, now: number) => CosmeticState | null;

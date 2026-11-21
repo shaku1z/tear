@@ -497,6 +497,9 @@ export function createDetachedCombatPhases(detached: DetachedWorld, options: Det
 
   const opening = {
     config,
+    // The harness plays no boss arrival: the production composition owns that record.
+    bossIntro: () => null,
+    endBossIntro: () => undefined,
     get player() {
       return player();
     },
@@ -1388,7 +1391,12 @@ export function createDetachedWaveRuntime(
   // The same shared placement the live content composition uses; a restated
   // copy here is exactly how a detached world silently diverges.
   const makeBoss = (id: string) => {
-    const placement = planBossPlacement(id, config.view.w, config);
+    const placement = planBossPlacement(
+      id,
+      config.view.w,
+      config,
+      (world.state.player() as { x?: number } | undefined)?.x ?? config.view.w / 2,
+    );
     return world.entities.createEnemy(placement.factoryId, placement.x, placement.y, run() as never) as never;
   };
   const content = createLiveContentRuntime({

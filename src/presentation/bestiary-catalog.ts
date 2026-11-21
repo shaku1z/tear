@@ -120,6 +120,8 @@ export const BOSS_BESTIARY_COPY: Readonly<Record<BossId, string>> = Object.freez
   echo: "You. Mirrors your last trick on a delay; repeat yourself and it anticipates. Splits in two, then vanishes in a blinding white-out.",
   source:
     "The tear itself. Withdraws behind the route, manifests attacks on your plane, then breaches forward — that breach is your window.",
+  "rootbound-rebuild":
+    "Keeper of the last mercy, rebuilt. Swings its vine, burrows to you and vaults up after you — parry the vine and punish it split open.",
 });
 
 export interface BestiaryEntry {

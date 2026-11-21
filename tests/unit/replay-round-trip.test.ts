@@ -21,7 +21,7 @@ import { createReplayRecorder } from "../../src/replay/recorder";
 import { verifyReplay } from "../../src/replay/verify";
 import { createDetachedReplayWorld } from "../../src/app/replay/detached-replay-world";
 import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
-import { SPECS, corpusActions, scenarioContract, type StreamSpec } from "../support/hash-stream-corpus";
+import { SPECS, createCorpusPlayer, scenarioContract, type StreamSpec } from "../support/hash-stream-corpus";
 
 const DETERMINISM = JSON.parse(readFileSync("tests/fixtures/canonical-hash-stream.json", "utf8")) as {
   readonly sampleEvery: number;
@@ -56,8 +56,9 @@ function recordCorpusStream(spec: StreamSpec): ReplayRecord {
     let id = 0;
     let last: CanonicalGameplayState | undefined;
     let lastTick = 0;
+    const player = createCorpusPlayer(spec);
     for (let tick = 1; tick <= spec.ticks; tick += 1) {
-      const actions = corpusActions(environment, spec.plan, tick);
+      const actions = player(environment, tick);
       const transition = environment.step(actions);
       const observation = transition.observation;
       const applied = actions.map((action) => {

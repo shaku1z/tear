@@ -252,6 +252,7 @@ export function createProductionHeadlessEnvironment(
       value.replay,
       value.simulation.simulationRuntime.scheduler.tick,
       value.waveReward.screen(),
+      (enemy) => value.simulation.combatEntityRuntime.id(enemy, "enemy"),
     );
   const compose = (
     scenario: TearScenarioV1,

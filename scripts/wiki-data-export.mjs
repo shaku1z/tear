@@ -38,7 +38,7 @@ export async function encodeWikiData(server, reference, { modeModule, variantMod
   const bossIds = reference.collections.bosses.items.map((boss) => boss.id);
   const bodies = Object.fromEntries([
     ...director.PUBLISHED_ENEMY_IDENTITY_IDS.map((id) => [id, measure(id)]),
-    ...bossIds.map((id) => [id, measure(planBossPlacement(id, CONFIG.view.w, CONFIG).factoryId)]),
+    ...bossIds.map((id) => [id, measure(planBossPlacement(id, CONFIG.view.w, CONFIG, CONFIG.view.w / 2).factoryId)]),
   ]);
 
   // Shop: the real item list and cost formula, evaluated at every level.

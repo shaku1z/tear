@@ -1,0 +1,11 @@
+{
+  "id": "replays",
+  "name": "Replays",
+  "state": "In progress: PRs 1 to 4 and 5a merged (hidden replay features, replay extras and REPAIR removed; snapshot codecs in src/gameplay/snapshot; the detached world in src/app/world/detached; the record, recorder and verify, with the round-trip check over the determinism corpus); PR 5b-1 open (one seed type, one start record and one run start for live play and detached worlds)",
+  "summary": "Players reach two replay systems today: Ghost 2 (position samples in localStorage, used by the REPLAYS tab, the feed and leaderboard links) and the Ghost V3 capsules (re-simulated, in IndexedDB, used by VAULT, CAREER and the Theater). The plan replaces both with one versioned record and five plain modules (record, store, watch, share, verify), moves the replay world and snapshot codecs out of TearBench, and deletes src/ghost (118 replay modules and about 800,000 characters today).",
+  "next": "Merge PR 5b-1 (#372; after #374, #381 and #377, at ruleset v21). Then the small PR that refuses engineering-only bosses in replays, so their rebuilds stop forcing a ruleset step. Then 5b-2: reward picks and rerolls as actions, the Cinematics settings hint (a change applies from the next run), and a paused screen holding detached and headless worlds. Then 5b-3: the named frame-clock exception (cinematics only) and browser evidence that a live run verifies from its seed. Then PR 5c: the live recorder behind a lazy slot, recording a seed race's ranks as its start. The plan's hand-over section has the exact steps.",
+  "owner_action": "Deploy the Firestore chunk-write rules from the merged rules PR.",
+  "evidence": [
+    "plans/active/REPLAY_OVERHAUL_PLAN.md"
+  ]
+}
