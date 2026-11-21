@@ -1,0 +1,12 @@
+{
+  "id": "repository-structure",
+  "name": "Repository structure and workflow",
+  "state": "In progress",
+  "summary": "Porting the structure patterns recommended by the comparison with the owner's OFFSLCT project. Merged: this generated position file, decisions and pitfalls, the repository map with size caps, the pull request and task card templates, the tool catalogue with pnpm who, change-impact completeness and release compatibility fixtures. Open: the owner guard hooks and merge helper moving into scripts/governance/.",
+  "next": "After the hooks pull request merges, run pnpm setup:hooks in the canonical checkout on main (scripts/governance/README.md).",
+  "owner_action": "",
+  "evidence": [
+    "AGENTS.md",
+    "docs/README.md"
+  ]
+}

@@ -11,7 +11,7 @@ where the decision is recorded. An entry marked **Inferred** was reconstructed f
 plans or pull requests rather than from a recorded decision; confirm it before relying on
 it, and remove the mark once it is confirmed.
 
-Where each workstream stands now is in [POSITION.md](POSITION.md), not here.
+Where each workstream stands now is in [position/](position/README.md), not here.
 
 | ID | Date | Decision | Status |
 | --- | --- | --- | --- |
@@ -159,7 +159,7 @@ Where each workstream stands now is in [POSITION.md](POSITION.md), not here.
 - **Decision:** preview deploys go ahead under D-006; a production deploy of unreviewed visual
   changes waits for the owner's playtest.
 - **Alternatives:** deploy as soon as `main` is green, as D-006 allows.
-- **Consequences:** production still runs `9e7d6a70` (see [POSITION.md](POSITION.md)).
+- **Consequences:** production still runs `9e7d6a70` (see [position/production.md](position/production.md)).
 - **Amended 2026-11-13:** the owner played `main` and production moved to `84761549`
   ([D-013](#d-013)). The hold still applies to later visual work.
 - **Source:** the release lead's record of decisions taken under the delegation.
@@ -218,11 +218,15 @@ Where each workstream stands now is in [POSITION.md](POSITION.md), not here.
 - **Trigger:** the comparison with the owner's OFFSLCT project: Tear's status was spread over a
   103 KB handoff plan, a program-state file pinned to 2026-08-30 and plan phase tables that went
   stale when pull request 85 merged.
-- **Decision:** `config/position.json` is the curated source and [POSITION.md](POSITION.md) is
+- **Decision:** `config/position/` is the curated source and [position/](position/README.md) is
   rendered from it; `check:docs` fails on a stale or hand-edited render. Decisions live here,
   traps and their guards in [PITFALLS.md](PITFALLS.md).
 - **Alternatives:** keep status in the plans (rejected: the phase tables did not follow the merges).
-- **Consequences:** a pull request that changes an area's state edits `config/position.json`.
+- **Consequences:** a pull request that changes an area's state edits that area's file,
+  `config/position/<area>.json`. Until 2026-11-21 the source was one file, `config/position.json`,
+  rendered to one page, so any two pull requests that changed an area conflicted in both; it is
+  now one source file and one page per area, and `tests/unit/position.test.mjs` proves that
+  changes to different areas touch disjoint files.
 - **Source:** this repository-structure work.
 
 <a id="d-013"></a>

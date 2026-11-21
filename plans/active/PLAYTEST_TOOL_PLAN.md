@@ -7,7 +7,7 @@
 - **Closure condition:** Every "done when" line of stages 1 to 6 holds, `pnpm check` passes from the final commit, and no file, command or document is still named TearBench.
 
 Started 2026-11-16. This is the one planning document for the playtest tool. It is edited in
-place as stages land; status lives in `config/position.json`.
+place as stages land; status lives in `config/position/playtest-tool.json`.
 
 ## Why
 

@@ -547,7 +547,7 @@ The brief listed five hooks. Measured:
     that changes the new boss's behaviour steps the ruleset too, and says so in its pull request.
   - **Found in slice 2:** it can. A Boss Test run opens fresh on a boss (`freshBossOpening` in
     `src/ghost/replay-admission.ts`), so it is recordable, and the new boss is a new entity kind, which
-    changes the replay content hash (`ENTITY_KIND_REGISTRY`). Slice 2 stepped the ruleset to v19 (cinematics PR 3 took v18).
+    changes the replay content hash (`ENTITY_KIND_REGISTRY`). Slice 2 stepped the ruleset to v20. The cinematics slices took v18 and v19 first.
     Slices 3 to 5 step it again unless replay admission refuses runs with an engineering-only boss;
     that is proposed to the replay-overhaul owner, not done here.
 - **Old replays.**
@@ -792,7 +792,7 @@ feature id added to `SURFACE_CHANNEL` in `src/domain/surface-availability.ts`.
 | 3 | Phase II: Second Swing, Root Seam and its cut, Bramble Rows, Mend; and Last Bloom | Phase II pace meets 2.4. Seams and rows end on the phase tick and at death (5.1 green for it). |
 | 4 | Phase III: Spring Surge, the Phase III cadence, and the death | All three phases meet 2.4. 0 blocking ticks. 4 marks. The lead asks the owner to play it on preview. |
 | 5 | New Rootbinder, engineering channel only | Its moves match 2.2. `pnpm playtest enemies --enemy rootbinder` numbers sit beside the ranged enemy's in the PR. |
-| 6 | **The switch**, after the owner approves the new Verdant on preview | Campaign, Endless and Gauntlet use the new Rootbound and Rootbinder. Every file in 3 marked "switch" is deleted. The `rebuild` folder is moved to the final names. The ruleset steps (4.1). The save test (4.3) is green. The Rootbound leaves both exemption lists. The waves are measured again. The approved background's guard still runs (3). Architecture and code-budget baselines shrink and never grow. `config/position.json` is updated. |
+| 6 | **The switch**, after the owner approves the new Verdant on preview | Campaign, Endless and Gauntlet use the new Rootbound and Rootbinder. Every file in 3 marked "switch" is deleted. The `rebuild` folder is moved to the final names. The ruleset steps (4.1). The save test (4.3) is green. The Rootbound leaves both exemption lists. The waves are measured again. The approved background's guard still runs (3). Architecture and code-budget baselines shrink and never grow. The area files under `config/position/` are updated. |
 | 7 | Verdant leftovers: anything the switch could not delete because Pale still imports it moves to Pale's side, or stays listed for Pale's plan | Nothing in `src/` names a Verdant stage feature. The delete list's "Pale" rows are the only stage-feature code left. |
 
 ### 6.1 Where it stands, and how to take the next slice
@@ -804,7 +804,7 @@ repository must be able to take the next slice from here.
 | --- | --- |
 | 0 | Approved by the lead (D1-D4 approved). |
 | 1 | Merged, #354 (95a34063), ruleset v17. |
-| 2 | In review, #381 (branch `codex/verdant-rootbound-phase1`), ruleset v19. Merge it before slice 3 starts. |
+| 2 | In review, #381 (branch `codex/verdant-rootbound-phase1`), ruleset v20, merging alone right after #374 (v19). Merge it before slice 3 starts. |
 | 3-7 | Not started. |
 
 **What slice 2 left in place** (read these first):
@@ -839,7 +839,7 @@ repository must be able to take the next slice from here.
 **Open decisions.**
 - **Figure before and after (3.4):** the owner approved `rootbound-figure-before-after` on the
   ledger on 2026-11-21. The rebuild renderer keeps the approved figure, and no owner verdict is
-  owed for it.
+  owed for it. The new Rootbound's figure is settled, and slice 3 builds on it.
 - **Tell weight over budget (decided 2026-11-21, 5.2):** the new Rootbound reads 5 harness pairs
   with the vault against a budget of 4. Fix it before the switch, not in slice 2.
 - **Replay admission:** refuse to record runs with an engineering-only boss, so that slices stop

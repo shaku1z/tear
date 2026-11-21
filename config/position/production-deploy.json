@@ -1,0 +1,12 @@
+{
+  "id": "production-deploy",
+  "name": "Production deploy",
+  "state": "Deployed 2026-11-13",
+  "summary": "tearblade.com runs main commit 84761549; the owner played the build and said it is good (D-013). Preview deploys continue under the 2026-11-12 standing delegation.",
+  "next": "The next production deploy follows the Verdant, Tutorial and music work.",
+  "owner_action": "",
+  "evidence": [
+    "docs/RELEASE_AUTHORITY.md",
+    "DEPLOYMENT.md"
+  ]
+}

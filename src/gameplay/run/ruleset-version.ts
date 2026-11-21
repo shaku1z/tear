@@ -19,12 +19,18 @@
  * (plans/active/CINEMATICS_OVERHAUL.md, PR 2). v17: a boss's live move and its zones end on the tick its
  * phase changes and when its death starts (`endMove` in enemy-base.ts). v18: Aldric's crownfall and revive
  * happen in the fight: the crown flies onto the platform below and cracks it, and the revive starts with the
- * vault (plans/active/CINEMATICS_OVERHAUL.md, PR 3). v19: the new Rootbound, fought in Boss Test on the
- * engineering channel, is a new entity kind (plans/active/VERDANT_PALE_REBUILD.md, 4.1).
+ * vault (plans/active/CINEMATICS_OVERHAUL.md, PR 3). v19: the boss arrival counts simulation ticks (42 at its
+ * 0.25 time scale), so a world with no frame clock (replay verify, the headless playtest) plays it as live
+ * play does; it used to run 168 full-speed ticks there (plans/active/CINEMATICS_OVERHAUL.md, the intro-clock
+ * slice). v20: the new Rootbound, fought in Boss Test on the engineering channel, is a new entity kind
+ * (plans/active/VERDANT_PALE_REBUILD.md, 4.1).
  */
-export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v19";
+export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v20";
 
 /** The identity before the new Rootbound could be fought in Boss Test; historical replays only. */
+export const SIX_BIOME_PALE_PREVIEW_V19_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v19";
+
+/** The identity while the boss arrival ran on frame seconds; historical replays only. */
 export const SIX_BIOME_PALE_PREVIEW_V18_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v18";
 
 /** The identity while Aldric stopped the fight for his crownfall and revive; historical replays only. */
@@ -137,6 +143,10 @@ export const RULESET_STEPS: readonly RulesetStep[] = Object.freeze(
     {
       version: SIX_BIOME_PALE_PREVIEW_V18_RULESET_VERSION,
       change: "Aldric began his crownfall and revive in the fight",
+    },
+    {
+      version: SIX_BIOME_PALE_PREVIEW_V19_RULESET_VERSION,
+      change: "the boss arrival began counting simulation ticks",
     },
     { version: CURRENT_RULESET_VERSION, change: "the new Rootbound joined Boss Test" },
   ].map((step) => Object.freeze(step)),

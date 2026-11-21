@@ -497,6 +497,9 @@ export function createDetachedCombatPhases(detached: DetachedWorld, options: Det
 
   const opening = {
     config,
+    // The harness plays no boss arrival: the production composition owns that record.
+    bossIntro: () => null,
+    endBossIntro: () => undefined,
     get player() {
       return player();
     },
