@@ -240,6 +240,8 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
       installAvailable: services.installPrompt.available,
       update: d.PwaUpdate.snapshot(),
       buildLabel: formatBuildLabel(d.build),
+      // Settings opens from the pause screen during a run, and from the menu otherwise.
+      duringRun: d.APP.snapshot().back === "paused",
       privacy: {
         privacyLink: d.privacy.stance.privacyUrl !== null,
         termsLink: d.privacy.stance.termsUrl !== null,
