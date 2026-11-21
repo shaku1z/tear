@@ -652,7 +652,7 @@ change, an entity's renderer draws nothing that belongs to the old move.
 
   The bosses as they are pass. `pnpm test:determinism` also plays two Phase III practice fights through
   the production game (the Colossus, who dies, and Aldric). Emptying `endMove()` makes the Colossus
-  stream diverge at tick 2,160, after its death starts at 2,091. At its two phase-change ticks the
+  stream diverge at tick 2,580, after its death starts at 2,533. At its two phase-change ticks the
   Colossus is between moves, so the phase-change end is proven by the unit test above, not by the
   stream.
 
@@ -672,8 +672,8 @@ change, an entity's renderer draws nothing that belongs to the old move.
 - The renderer runtime hides every shared mark while the entity is stunned or dying. The peril diamond
   (`drawPeril`) shows only during the move state that rang it, not for a fixed 0.6 s: before, it ran on
   into the Colossus's grab and recovery, the Warden's lunge and the Source's next move.
-- This changes what bosses do in released modes, so the ruleset steps (v16, after cinematics PR 1's
-  v14 and the flyer fix's v15).
+- This changes what bosses do in released modes, so the ruleset steps (v17, after cinematics PR 1's
+  v14, the flyer fix's v15 and cinematics PR 2's v16).
 
 **Measured by.** The number of offending ticks per entity, by rule. It is 0 for every entity not on
 the exemption list.

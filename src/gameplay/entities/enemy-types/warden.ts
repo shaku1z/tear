@@ -12,6 +12,9 @@ import type { EnemyBaseConstructor } from "./enemy-base";
 import type { BossRuntime } from "./boss-runtime";
 import { bossPhaseMarks } from "../../run/boss-definitions";
 
+/** UNCHAINED: how long the staff is raised before the slam that starts the lockdown. */
+const PHASE_SLAM_WIND = 0.3;
+
 export function createWardenType(
   dependencies: EnemyDependencies,
   Enemy: EnemyBaseConstructor,
@@ -20,7 +23,7 @@ export function createWardenType(
   const { CONFIG, FX, GAME_RANDOM, Projectile, SFX, clamp, len, lerp } = dependencies;
   const {
     bossFeedback,
-    bossTransformation,
+    bossPhaseBeat,
     perilPing,
     springWeapon,
     wardstaffPose,
@@ -141,16 +144,19 @@ export function createWardenType(
       return Object.freeze({
         phase,
         targetPhase: this.phase,
-        ready: this.state !== "fakedeath" && this.introT <= 0 && this.cinematicT <= 0 && this.cinematicRequest === null,
-        stage:
-          this.introT > 0
-            ? "opening"
-            : this.cinematicRequest !== null || this.cinematicT > 0
-              ? "transition"
-              : this.state === "fakedeath"
-                ? "transition"
-                : "combat",
+        ready: !this._inPhaseMove() && this.introT <= 0,
+        stage: this.introT > 0 ? "opening" : this._inPhaseMove() ? "transition" : "combat",
       });
+    }
+    /** How long the current windup lasts; the windup tell is drawn against it. */
+    windupLength() {
+      const Wc = CONFIG.warden;
+      if (this.pendingAtk === "phaseSlam") return PHASE_SLAM_WIND;
+      return this.pendingAtk === "volley" ? Wc.batonWindup * 1.25 : Wc.batonWindup;
+    }
+    /** The phase change's own move: the staff raised for the slam, or the fake death. */
+    _inPhaseMove() {
+      return this.state === "fakedeath" || (this.state === "windup" && this.pendingAtk === "phaseSlam");
     }
     get phase() {
       const f = this.hp / this.maxHp,
@@ -288,31 +294,18 @@ export function createWardenType(
       this.mortarTargets = [];
     }
 
+    // A phase change is a move in the fight, never a scene that stops it
+    // (plans/active/CINEMATICS_OVERHAUL.md). Phase II raises the staff for the slam that
+    // starts the lockdown; Phase III drops straight into the fake death. The banner names
+    // each phase with its tag.
     _enterPhase(ph: number, platforms: EnemyPlatform[]) {
-      const Wc = CONFIG.warden;
       if (ph === 2) {
         this.phaseTag = "UNCHAINED";
-        this.searchlights = [];
-        for (let i = 0; i < Wc.zoneCount; i++)
-          this.searchlights.push({
-            kind: "searchlight",
-            x: 260 + (i * (CONFIG.view.w - 520)) / Math.max(1, Wc.zoneCount - 1),
-            w: Wc.zoneW * 0.72,
-            phase: i * 2.1,
-            fullHeight: true,
-            dmg: Wc.zoneTick,
-            tickCd: Wc.zoneTickCd,
-            on: true,
-          });
-        this._startLockdown();
-        bossTransformation(this, {
-          id: "warden-unchained",
-          title: "THE WARDEN UNCHAINS",
-          pose: "wardenRule",
-          line: "THE RULES ARE ALL THAT REMAIN.",
-          color: this.color,
-          sfx: "wardenLockdown",
-        });
+        this.state = "windup";
+        this.pendingAtk = "phaseSlam";
+        this.stateT = this.windupLength();
+        this.batonStrike = 0;
+        bossPhaseBeat(this, this.phaseTag, this.color);
       } else if (ph === 3) {
         this.phaseTag = "NOTHING LEFT";
         this.searchlights = [];
@@ -321,21 +314,36 @@ export function createWardenType(
         this._syncZones();
         this.state = "fakedeath";
         this.stateT = 2.2; // The Fake: slump, then rise
-        bossTransformation(this, {
-          id: "warden-nothing-left",
-          title: "NOTHING LEFT TO GUARD",
-          pose: "wardenBreak",
-          line: "THERE IS NOTHING LEFT TO GUARD.",
-          color: CONFIG.colors.charger,
-          sfx: "wardenLockdown",
-          brief: true,
-        });
+        bossPhaseBeat(this, this.phaseTag, CONFIG.colors.charger);
         // Phase violence enters the same readable fracture lifecycle as standing.
         // Miniboss arenas have no metadata, so this safely becomes a no-op.
         const ow = platforms.filter((p) => p.arenaPlatId && !p.floor && p.arenaState !== "warning");
         const selected = ow[Math.floor(GAME_RANDOM.next() * ow.length)];
         if (selected) selected.arenaFractureRequest = { color: CONFIG.colors.charger, reason: "wardenPhase" };
       }
+    }
+
+    // UNCHAINED lands: the staff hits the floor, the searchlights come on and the first
+    // lockdown cages rise at both walls.
+    _phaseSlam() {
+      const Wc = CONFIG.warden;
+      this.batonStrike = 0.18;
+      this.batonAV += this.facing * 9;
+      FX.shockwave(this.x, this.y + this.hh, 10, this.color, 220, 5);
+      bossFeedback(this, "launch", { color: this.color });
+      this.searchlights = [];
+      for (let i = 0; i < Wc.zoneCount; i++)
+        this.searchlights.push({
+          kind: "searchlight",
+          x: 260 + (i * (CONFIG.view.w - 520)) / Math.max(1, Wc.zoneCount - 1),
+          w: Wc.zoneW * 0.72,
+          phase: i * 2.1,
+          fullHeight: true,
+          dmg: Wc.zoneTick,
+          tickCd: Wc.zoneTickCd,
+          on: true,
+        });
+      this._startLockdown();
     }
 
     override _deathLocked() {
@@ -352,8 +360,6 @@ export function createWardenType(
         this._enterPhase(ph, platforms);
         this.phaseMarker = ph;
       }
-      if (this.cinematicRequest) return;
-
       // Searchlights sweep instead of teleporting. Lockdown bars and burning dive seams
       // share the generic zone contract consumed by game.js.
       if (this.searchlights.length) {
@@ -484,7 +490,8 @@ export function createWardenType(
         this.vx = lerp(this.vx, 0, clamp(8 * dt, 0, 1));
         this.stateT -= dt;
         if (this.stateT <= 0) {
-          this._fire(player, projectiles, footY, Wc);
+          if (this.pendingAtk === "phaseSlam") this._phaseSlam();
+          else this._fire(player, projectiles, footY, Wc);
           this.state = "idle";
           this.atkT = Wc.batonCd / (1 + (ph - 1) * 0.3);
         }
@@ -499,7 +506,7 @@ export function createWardenType(
           const pl = this.campPlat;
           this.pendingAtk = "volley";
           this.state = "windup";
-          this.stateT = Wc.batonWindup * 1.25;
+          this.stateT = this.windupLength();
           this.mortarTargets = [-1, 0, 1].map((i) =>
             clamp(pl.x + pl.w / 2 + i * Math.min(95, pl.w / 3), pl.x + 16, pl.x + pl.w - 16),
           );
@@ -528,7 +535,7 @@ export function createWardenType(
           } else {
             this.pendingAtk = "mortar";
             this.state = "windup";
-            this.stateT = Wc.batonWindup;
+            this.stateT = this.windupLength();
             this.mortarTargets = [-1, 0, 1].map((i) => clamp(player.x + i * 180, 60, CONFIG.view.w - 60));
           }
         }

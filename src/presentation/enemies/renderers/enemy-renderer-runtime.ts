@@ -103,38 +103,7 @@ export function createEnemyRendererRuntime(dependencies: EnemyPresentationDepend
     ctx.strokeStyle = telegraphInk(col);
     ctx.fillStyle = col;
     ctx.lineCap = "round";
-    if (boss.cinematicPose === "wardenRule" || boss.cinematicPose === "wardenBreak") {
-      ctx.globalAlpha = 0.2 + pulse * 0.18;
-      ctx.lineWidth = 5;
-      for (let i = -2; i <= 2; i++) {
-        const x = boss.x + i * 42;
-        ctx.beginPath();
-        ctx.moveTo(x, boss.y - boss.hh - 90);
-        ctx.lineTo(x + (boss.cinematicPose === "wardenBreak" ? i * 7 * p : 0), boss.y + boss.hh + 35);
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 0.82;
-      ctx.lineWidth = 9;
-      ctx.beginPath();
-      ctx.moveTo(boss.x - boss.facing * 42, boss.y + 8);
-      ctx.lineTo(boss.x + boss.facing * (150 + p * 52), boss.y - 44);
-      ctx.stroke();
-      weaponGlint(ctx, boss.x + boss.facing * (150 + p * 52), boss.y - 44, col, pulse);
-    } else if (boss.cinematicPose === "colossusContainment" || boss.cinematicPose === "colossusCore") {
-      ctx.translate(boss.x, boss.y);
-      ctx.lineWidth = 4;
-      for (let i = 0; i < 4; i++) {
-        if (i < Math.floor(p * 4) && boss.cinematicPose === "colossusCore") continue;
-        const r = boss.hw + 22 + i * 19;
-        ctx.globalAlpha = 0.22 + i * 0.09;
-        ctx.strokeRect(-r, -r * 0.78, r * 2, r * 1.56);
-      }
-      ctx.globalAlpha = 0.45 + pulse * 0.35;
-      ctx.fillStyle = boss.cinematicPose === "colossusCore" ? CONFIG.colors.slam : CONFIG.colors.armoredShield;
-      ctx.beginPath();
-      ctx.arc(0, -4, 15 + pulse * 8, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (boss.cinematicPose === "aldricCrownfall" || boss.cinematicPose === "aldricFeral") {
+    if (boss.cinematicPose === "aldricCrownfall" || boss.cinematicPose === "aldricFeral") {
       ctx.globalAlpha = 0.28 + pulse * 0.22;
       ctx.lineWidth = 5;
       ctx.beginPath();

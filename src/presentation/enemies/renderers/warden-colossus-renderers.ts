@@ -117,7 +117,7 @@ export function installWardenColossusRenderers(types: EnemyTypes, runtime: Enemy
       // wind-up telegraph
       if (this.state === "windup") {
         const gy = this.y + this.hh;
-        const wk = 1 - clamp(this.stateT / (CONFIG.warden.batonWindup || 0.5), 0, 1);
+        const wk = 1 - clamp(this.stateT / this.windupLength(), 0, 1);
         ctx.strokeStyle = CONFIG.colors.slam;
         ctx.globalAlpha = 0.65;
         ctx.lineWidth = 4;
@@ -294,7 +294,7 @@ export function installWardenColossusRenderers(types: EnemyTypes, runtime: Enemy
       // wind-up telegraph
       if (this.state === "windup") {
         const gy = this.y + this.hh,
-          k = 1 - clamp(this.stateT / (this.pendingAtk === "charge" ? this.cfg.chargeWindup : this.cfg.windup), 0, 1);
+          k = 1 - clamp(this.stateT / this.windupLength(), 0, 1);
         if (this.pendingAtk === "charge") {
           dangerLane(ctx, this.x, this.y - this.hh, CONFIG.view.w, this.hh * 2, this.facing, CONFIG.colors.slam, k);
           chargeTelegraph(ctx, this.x, this.y, this.hh, this.facing, k, CONFIG.colors.slam);

@@ -1,5 +1,6 @@
 import { isRecord } from "../domain/records";
 import type { TearScoreReplayMetadata } from "../domain/tear-score-replay";
+import { REPLAY_FORMAT } from "./record";
 import { migrateVisualRecording, verifyVisualReplayPacket, type VisualRecordingV2 } from "./visual-replay";
 
 export function stringValue(value: unknown, fallback = ""): string {
@@ -18,8 +19,8 @@ export function arrayValue<T>(values: readonly T[], index: number): T {
 
 function isCanonicalPacket(value: unknown): boolean {
   if (!isRecord(value)) return false;
-  if (value.format === "tear-replay") return true;
-  return value.schema === "tear.replay" && isRecord(value.recording) && value.recording.format === "tear-replay";
+  if (value.format === REPLAY_FORMAT) return true;
+  return value.schema === "tear.replay" && isRecord(value.recording) && value.recording.format === REPLAY_FORMAT;
 }
 
 export function acceptedRecording(value: unknown): VisualRecordingV2 | null {
