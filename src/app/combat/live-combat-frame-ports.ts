@@ -1,3 +1,4 @@
+import type { LiveReplayTapSeams } from "../replay/live-replay-tap-slot";
 import type { LiveCampaignTrainingAssembly } from "../campaign/live-campaign-training-assembly";
 import { createLiveMusicObservation, projectLiveMusicRun } from "../interface/music-observation-adapter";
 import type { LiveScreenNavigation } from "../interface/live-screen-navigation";
@@ -34,7 +35,9 @@ export interface LiveCombatFramePortsOptions {
   readonly run: () => GameRun;
   readonly player: () => GamePlayer;
   readonly blade: () => GameBlade;
+  readonly replayTap: Pick<LiveReplayTapSeams, "sealed" | "stepped">;
   /** Collaborators constructed after the combat host. */
+  readonly stateHash: () => string;
   readonly ghostCapture: () => Pick<LiveGhostCapture, "recordKeyframe">;
 }
 
@@ -138,6 +141,7 @@ export function createLiveCombatFramePorts(options: LiveCombatFramePortsOptions)
     recordSealedActions: (_tick, actions) => {
       ghostDna.beforeTick(_tick);
       for (const action of actions) ghostV3?.record("commands", action.tick, action);
+      options.replayTap.sealed(_tick, actions);
       if (__TEAR_TEST_BUILD__) canonicalTickStartedAt = performance.now();
     },
     ...(__TEAR_TEST_BUILD__
@@ -156,6 +160,7 @@ export function createLiveCombatFramePorts(options: LiveCombatFramePortsOptions)
         canonicalTickStartedAt = null;
       }
       ghostDna.afterTick(tick);
+      options.replayTap.stepped(tick, options.stateHash);
       options.chase.observe();
       void dependencies.practiceEncounterPersistence
         ?.observe({

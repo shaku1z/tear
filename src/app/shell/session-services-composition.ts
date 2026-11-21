@@ -1,3 +1,4 @@
+import type { LiveReplayTapSeams } from "../replay/live-replay-tap-slot";
 import { createLiveSeedRace } from "../replay/seed-race-composition";
 import type { PreparedVictory } from "../../gameplay/run/outcome-planner";
 import { BestScoreRepository } from "../../gameplay/scoring/best-scores";
@@ -18,6 +19,7 @@ export interface LiveSessionServicesOptions {
     "dependencies" | "run" | "player" | "blade" | "resetRewards"
   >;
   readonly dependencies: GameRuntimeDependencies;
+  readonly replayTap: Pick<LiveReplayTapSeams, "decision">;
   readonly run: () => GameRun;
   readonly player: () => GamePlayer;
   readonly blade: () => GameBlade;
@@ -73,6 +75,7 @@ export function createLiveSessionServices(options: LiveSessionServicesOptions) {
             before: Parameters<ReturnType<typeof createLiveSeedRace>["recordDecision"]>[1],
           ) => seedRace.recordDecision(decision, before),
         }),
+    observeDecision: options.replayTap.decision,
     run: options.run,
     roll: (request) =>
       d.rollUpgrades(request.count, options.run().mods, {
