@@ -1,13 +1,51 @@
 import type { BossPresentationActor, Point, WeaponActor, WeaponPose } from "../../../gameplay/entities/enemy-contracts";
 import type {
   CrownRenderPose,
+  EnemyMarkHelper,
   EnemyPresentationDependencies,
+  EnemyPropHelper,
   EnemyRendererColor,
   RenderInstance,
 } from "./enemy-renderer-types";
 
 export function createEnemyRendererRuntime(dependencies: EnemyPresentationDependencies) {
-  const { A11Y, CLOCK, GFX, THEME, UI, clamp, len, lerp, policy: CONFIG } = dependencies;
+  const { A11Y, CLOCK, GFX, THEME, UI, clamp, len, lerp, policy: CONFIG, markObserver } = dependencies;
+  /** True while drawing an entity whose marks hide: it is stunned (its move waits) or its death has started. */
+  let marksHidden = false;
+  /** Draws one entity. Every boss and enemy draw runs through this (enemy-presentation.ts). */
+  function drawEntity(entity: Readonly<{ stun?: number; dying?: boolean }>, draw: () => void): void {
+    const outer = marksHidden;
+    marksHidden = (entity.stun ?? 0) > 0 || entity.dying === true;
+    try {
+      draw();
+    } finally {
+      marksHidden = outer;
+    }
+  }
+  /** A prop helper as renderers call it: the observer sees it start and finish. A prop never hides. */
+  function prop<Args extends unknown[]>(helper: EnemyPropHelper, draw: (...args: Args) => void) {
+    if (markObserver === undefined) return draw;
+    return (...args: Args): void => {
+      markObserver.enter(helper);
+      try {
+        draw(...args);
+      } finally {
+        markObserver.exit(helper);
+      }
+    };
+  }
+  /** A mark helper as renderers call it: nothing while marks hide, and the observer sees it start and finish. */
+  function observed<Args extends unknown[]>(helper: EnemyMarkHelper, draw: (...args: Args) => void) {
+    return (...args: Args): void => {
+      if (marksHidden) return;
+      markObserver?.enter(helper);
+      try {
+        draw(...args);
+      } finally {
+        markObserver?.exit(helper);
+      }
+    };
+  }
   const CHIMERA_MOVE_COLOR: Record<string, EnemyRendererColor> = {
     charger: "charger",
     brawler: "charger",
@@ -279,7 +317,8 @@ export function createEnemyRendererRuntime(dependencies: EnemyPresentationDepend
 
   function drawPeril(ctx: CanvasRenderingContext2D, boss: RenderInstance<"Enemy">) {
     const left = (boss._perilUntil || 0) - CLOCK.sim;
-    if (left <= 0) return;
+    // The diamond belongs to the move that rang it: it does not linger once the boss is back at rest.
+    if (left <= 0 || boss.liveMove() === null) return;
     const k = left / 0.6,
       s = 13 + (1 - k) * 8,
       high = A11Y.highContrast;
@@ -514,18 +553,19 @@ export function createEnemyRendererRuntime(dependencies: EnemyPresentationDepend
     len,
     lerp,
     CHIMERA_MOVE_COLOR,
-    chargeTelegraph,
-    dangerColumn,
-    dangerLane,
-    dangerReticle,
-    drawAldricCrown,
+    chargeTelegraph: observed("chargeTelegraph", chargeTelegraph),
+    dangerColumn: observed("dangerColumn", dangerColumn),
+    dangerLane: observed("dangerLane", dangerLane),
+    dangerReticle: observed("dangerReticle", dangerReticle),
+    drawAldricCrown: prop("drawAldricCrown", drawAldricCrown),
     drawBossTransformationWorld,
-    drawGreatCleaver,
-    drawPeril,
-    drawWardstaff,
+    drawEntity,
+    drawGreatCleaver: prop("drawGreatCleaver", drawGreatCleaver),
+    drawPeril: observed("drawPeril", drawPeril),
+    drawWardstaff: prop("drawWardstaff", drawWardstaff),
     telegraphInk,
     traceWeaponPolygon,
-    weaponGlint,
+    weaponGlint: observed("weaponGlint", weaponGlint),
   });
 }
 

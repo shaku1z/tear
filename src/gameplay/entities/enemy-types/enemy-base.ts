@@ -8,6 +8,7 @@ import type {
   EnemyProjectile,
 } from "../enemy-contracts";
 import { bossBodyHurts, type BossBodyContactRow } from "../boss-body-contact";
+import { liveMoveOf, type MoveEndReason } from "../move-lifetime";
 import type { BossRuntime } from "./boss-runtime";
 
 export function createEnemyBase(dependencies: EnemyDependencies, bossRuntime: BossRuntime) {
@@ -318,6 +319,41 @@ export function createEnemyBase(dependencies: EnemyDependencies, bossRuntime: Bo
     onDeathStart(): void {
       return;
     }
+    /** The move this entity is in, or null at rest (move-lifetime.ts). A boss with parallel moves overrides it. */
+    liveMove(): string | null {
+      return liveMoveOf(this);
+    }
+    /** The phase seen on the last step, so the step can end the live move on the tick the phase changes. */
+    movePhase: number | null = null;
+    /** Run by the step before each update. On the tick a boss's phase changes, its live move ends. */
+    noticePhase(): void {
+      const phase = (this as { phase?: unknown }).phase;
+      if (typeof phase !== "number") return;
+      if (this.movePhase !== null && phase !== this.movePhase) this.endMove("phase");
+      this.movePhase = phase;
+    }
+    /**
+     * Ends the live move and the zones it left, when death starts and when the phase changes, for every
+     * entity. A stun does not call it: the move waits out the stun and resumes, and its marks hide meanwhile.
+     */
+    endMove(reason: MoveEndReason): void {
+      const self = this as { state?: unknown; stateT?: unknown };
+      this.atk = "idle";
+      this.atkT = 0;
+      this.feint = false;
+      if (typeof self.state === "string") {
+        self.state = "idle";
+        self.stateT = 0;
+      }
+      this._perilUntil = 0;
+      this.endMoveZones(reason);
+    }
+    /** Clears the zones the entity's moves left. A boss that keeps its zones in its own lists overrides it. */
+    endMoveZones(reason: MoveEndReason): void {
+      void reason;
+      const self = this as { zones?: unknown };
+      if (Array.isArray(self.zones)) self.zones = [];
+    }
     _beginDeath(cause = "") {
       if (this.dead || this.dying) return;
       if (this.isBoss && !this.isMiniBoss) {
@@ -329,6 +365,7 @@ export function createEnemyBase(dependencies: EnemyDependencies, bossRuntime: Bo
         this.vx = 0;
         this.vy = 0;
         bossFeedback(this, "death");
+        this.endMove("death");
         this.onDeathStart();
       } else {
         this.dead = true;

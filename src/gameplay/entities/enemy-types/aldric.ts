@@ -254,7 +254,8 @@ export function createAldricType(
     _syncZones() {
       this.zones = this.fireZones.concat(this.seams);
     }
-    override onDeathStart() {
+    /** His seams and throne fire end with the move, on the phase-change tick and when death starts. */
+    override endMoveZones() {
       clearThroneFire(this, true);
       this.seams = [];
       this._syncZones();
