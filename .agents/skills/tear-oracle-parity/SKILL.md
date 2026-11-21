@@ -14,7 +14,7 @@ off" to the first frame, field, token or pixel that differs.
 
 The oracle is the reference for what the redesign was meant to preserve. It is not the reference for work
 the owner has since had rebuilt, such as the Verdant and Pale rebuilds, the cinematics overhaul, the
-Gauntlet as trials and the Shards work. Check [docs/POSITION.md](../../../docs/POSITION.md),
+Gauntlet as trials and the Shards work. Check [docs/position/](../../../docs/position/README.md),
 [docs/DECISIONS.md](../../../docs/DECISIONS.md) and the plan under `plans/active/` before calling a
 difference a bug. When neither the parity contract nor a plan covers it, ask the lead.
 

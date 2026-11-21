@@ -15,7 +15,7 @@ says which to run when; it defines no check of its own.
 | --- | --- | --- |
 | One file | `pnpm exec vitest run <test file>` or `pnpm test:related <changed src files>` | While iterating. A new test file must be in git's index first (`git add -N <file>`). |
 | Format | `pnpm format` | Before every hand-off. It rewrites files. |
-| Fast group | `pnpm check:quick` | Before pushing; the pre-push hook runs it too. Format, docs, terminology, repository guards, architecture, code budget, typecheck, lint of changed files. |
+| Fast group | `pnpm check:quick` | Before pushing. Nothing runs it for you: the pre-push hook checks commits and branch names only. Format, docs, terminology, repository guards, architecture, code budget, typecheck, lint of changed files. |
 | Required check | CI's Validate workflow on the pull request | Always. It runs the `static`, `unit`, `build` and `browser` groups on the change merged with current `main`. |
 | The same list locally | `pnpm check` (`pnpm check:functional` is the same command) | Rarely: it holds the machine for a long time. Prefer one group, `node scripts/run-checks.mjs <group>`, or let CI run it. |
 | Docs only | `pnpm check:docs`, `pnpm test:docs`, `pnpm check:terminology` | A change to documents only. CI runs these plus `pnpm test:terminology` and `pnpm wiki:test` in place of the game checks. |

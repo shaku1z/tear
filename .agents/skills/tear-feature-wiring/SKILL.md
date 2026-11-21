@@ -15,7 +15,7 @@ starts and what "fully wired" means.
 1. Answer the engineering standard's six design-check questions in the plan before writing code. They go
    in the pull request too.
 2. Read [docs/ARCHITECTURE.md](../../../docs/ARCHITECTURE.md) for the layers, and the area's row in
-   [docs/POSITION.md](../../../docs/POSITION.md) and its plan under `plans/active/` for what is coming next.
+   [docs/position/](../../../docs/position/README.md) and its plan under `plans/active/` for what is coming next.
 3. Find how the existing instances of this kind are defined, and read only the matching reference:
    - weapon, ability, enemy, boss, stage, mode: [references/gameplay-content.md](references/gameplay-content.md)
    - screen: [references/screens.md](references/screens.md)
@@ -31,7 +31,7 @@ starts and what "fully wired" means.
    - a new script: `config/tool-catalogue.json`;
    - a new top-level folder or config file: `docs/REPOSITORY_MAP.md`;
    - a name players see: `config/terminology-registry.json`;
-   - a changed workstream state: `config/position.json`, then `pnpm position:render`;
+   - a changed workstream state: the area's file under `config/position/`, then `pnpm position:render`;
    - a preserved feature: its entry in `docs/FEATURE_INVENTORY.md`.
 7. If the change alters what a recorded run would do, bump the ruleset version (see `tear-change-gate`,
    `references/generated-files.md`).

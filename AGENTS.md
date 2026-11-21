@@ -185,6 +185,40 @@ Docs-only changes: `pnpm check:docs`, `pnpm test:docs`,
   Cloudflare, or any other service; the owner must name each one.
 - Keep scratch files, logs and screenshots outside the repository.
 
+## Containment
+
+Before the cleanup of 2026-11-11 the repository held themed systems nobody asked for, 43 worktrees,
+62 branches and ten weeks of unpushed work. Each way that happened has a line here with what stops it
+now. "Rule only" means nothing fails when it is broken, so it is yours to keep.
+
+| What went wrong | What stops it |
+| --- | --- |
+| Themed names over over-built systems | `pnpm check:containment`: a word from its list (`config/containment.json`) in a new path, or more of them in a file than its baseline, fails. `pnpm check:terminology` refuses the old names in player and document text. A new file under `src/` fails `tests/unit/change-impact.test.mjs` until it has an evidence route, and a new top-level folder fails `pnpm check:docs` until it has a row in docs/REPOSITORY_MAP.md. |
+| Too many scripts and tests | Every script needs a `config/tool-catalogue.json` entry (`tests/unit/tool-catalogue.test.mjs`). `pnpm check:containment` reports growth in the number of package scripts and script files (observe mode until the lead enforces it). Tests: rule only, add the smallest test that fails without the change. |
+| Worktree and branch sprawl, stranded work | `pnpm check:containment` reports worktree and local branch counts over the limit (observe mode until the backlog is cleared). `pnpm who` flags `no-pr`, `stale` and `merged-or-empty`; `pnpm leftovers` lists merged branches. Removal is manual. |
+| Developer surfaces in a release build | The build drops developer code (`vite.config.ts`), `scripts/check-production-test-isolation.mjs` refuses test globals in release output, and the browser check `release-has-no-engineering-surfaces` looks at the built game. |
+| Half-finished work | One task, one branch, one pull request. A task over several pull requests has a card in `plans/active/` with "done when" lines; `pnpm check:docs` fails on a plan that is not registered. Unused code fails lint. Rule only: do not merge a system whose first user is not in the same pull request. |
+| One-off fixes | The six-question design check in every pull request; `pnpm merge:ready` refuses a missing or empty answer. Content-wide rule tests judge every boss, move and stage, not one. Rule only: no branch on a content id where a definition field would do. |
+| Drift from the original game | [docs/PARITY.md](docs/PARITY.md) and the `pnpm parity:*` commands against the locked oracle; `pnpm test:determinism` for a refactor that claims no behaviour change. Rule only: an existing fight, screen or feel gets no visual or behaviour change the task did not ask for. |
+| Flaky tests made green by retries | `tests/unit/pitfall-guards.test.mjs` fails on a retry setting anywhere; the browser-wait lint rules refuse unnamed time waits. One run is the verdict. |
+| Private data in a public repository | Rule only: no email, account name, token or private file content in a commit, description or comment. The ledger folder is never committed. |
+| Editing the canonical checkout or Tear-oracle | The commit guard refuses a commit on `main` and on an oracle or legacy branch (`scripts/governance/`, `pnpm check:hooks`). Rule only for uncommitted edits. |
+| Pictures that do not show the game | Rule only: a picture for the owner comes from a production or preview build, with no debug overlay and no test hook visible. |
+
+### When no lead is reviewing
+
+These hold for any agent, with or without a lead session:
+
+- Work only from a plan in `plans/active/`, a task card or the owner's written request. No new system,
+  top-level folder, tool, package script or screen without one that names it.
+- A design choice the plan does not settle is the owner's: stop and ask, with your recommendation.
+- Nothing merges unless `pnpm merge:ready <pr>` says READY, through the merge helper. Never around it.
+- A change to a gate file (`config/gate-files.json`) needs a second reader who did not write it: the
+  lead, or the owner when there is no lead. Do not clear your own.
+- The design check is answered for every pull request. "n/a" needs its reason.
+- Before starting new work, run `pnpm who` and finish, hand over or remove what is yours.
+- `--update` lowers a baseline. Raising one (`--allow-increase`) is never yours to approve alone.
+
 ## Known traps
 
 Each trap below is also a row in [docs/PITFALLS.md](docs/PITFALLS.md) with the check that

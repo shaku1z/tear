@@ -899,6 +899,13 @@
       ],
       "duration": "seconds"
     },
+    "check:containment": {
+      "purpose": "Refuses new themed names, and reports tool-count and worktree-count growth, against config/containment.json",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
     "check:active-roster": {
       "purpose": "Checks the active weapon and enemy roster names against the registry",
       "effects": [
@@ -1198,6 +1205,16 @@
       "duration": "seconds",
       "via": [
         "check:terminology"
+      ]
+    },
+    "scripts/check-containment.mjs": {
+      "purpose": "Containment rules: plain names, tool count, worktree and branch count; --update lowers the baselines in config/containment.json",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [
+        "check:containment"
       ]
     },
     "scripts/export-game-reference.mjs": {

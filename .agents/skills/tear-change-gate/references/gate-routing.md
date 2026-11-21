@@ -22,7 +22,7 @@ start. Run builds, browser tests and whole suites through `pnpm queue -- <comman
 | Cloudflare configuration | `pnpm build:standalone` | `pnpm check:cloudflare` (a dry run) |
 | Architecture or code-budget rules | `pnpm test:architecture`, `pnpm test:code-budget` | These are gate files: the lead reviews them |
 | Git hooks, guard, merge helper (`scripts/governance/`) | `pnpm exec vitest run tests/unit/governance-guard.test.mjs tests/unit/governance-merge-helper.test.mjs tests/unit/governance-setup.test.mjs` | Behaviour may only stay the same or get stricter |
-| A workstream's state | Edit `config/position.json`, then `pnpm position:render` | `pnpm check:docs` fails on a stale or hand-edited `docs/POSITION.md` |
+| A workstream's state | Edit the area's file under `config/position/`, then `pnpm position:render` | `pnpm check:docs` fails on a stale or hand-edited page under `docs/position/` |
 | Documents, plans, skills | `pnpm check:docs`, `pnpm test:docs`, `pnpm check:terminology` | `pnpm test:agent-skills` for anything under `.agents/skills` or `.claude/skills` |
 
 Prettier owns formatting (`.prettierrc.json`; targets in `scripts/format.mjs`; exclusions in

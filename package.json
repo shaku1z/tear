@@ -127,6 +127,7 @@
     "setup:hooks": "node scripts/governance/setup-hooks.mjs",
     "check:hooks": "node scripts/governance/setup-hooks.mjs --check",
     "check:terminology": "node scripts/check-terminology.mjs",
+    "check:containment": "node scripts/check-containment.mjs",
     "check:active-roster": "node scripts/check-active-roster.mjs",
     "check:game-reference": "node scripts/check-game-reference.mjs",
     "check:publication-boundary": "node --test tests/campaign-publication-boundary.test.mjs tests/release-preflight.test.mjs",

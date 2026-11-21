@@ -33,8 +33,8 @@ Where this skill and those disagree, they win.
   (`- **Cause:** …`). "n/a" needs a reason after it. `pnpm merge:ready` refuses a missing or empty answer.
 - A draft does not run the required check. Open as a draft to publish work in progress, and mark it ready
   when it should be checked.
-- If the change moves a workstream's state, edit `config/position.json` and run `pnpm position:render` in
-  the same pull request.
+- If the change moves a workstream's state, edit that area's file under `config/position/` and run
+  `pnpm position:render` in the same pull request.
 
 ## 4. Keep it current
 
@@ -64,6 +64,9 @@ Where this skill and those disagree, they win.
   once; `--status`, `--merge <branch> --authorize-owner-merge`, `--verify` and `--prune` follow it up.
 - Two stacked pull requests that must land together are not two batch members: a squash of the first can break
   the second. Merge the first, take `main` into the second, then merge it.
+- A pull request that changes `src/gameplay/run/ruleset-version.ts` merges alone, never in a batch, and in
+  the order the lead fixes: two of them each bump from the same number, and the second must take `main` and
+  bump again.
 - Never `gh pr merge` directly, and never `--admin` or `--auto`.
 - Who merges is a working arrangement, not a rule of this skill: when a lead reviews and a merge desk
   merges, hand over the pull request link and head instead of merging your own.
