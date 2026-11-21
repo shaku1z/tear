@@ -90,12 +90,12 @@ describe("C23 State Setup exit matrix", () => {
     });
   });
 
-  it("declares all twenty-one boss phases and all thirty-nine one-frame boundary positions", () => {
+  it("declares every boss phase (eight bosses, the rebuilt Rootbound last) and all thirty-nine one-frame boundary positions", () => {
     const bosses = createBossPhaseLaunchMatrix();
     const boundaries = createOneFrameBoundaryLaunchMatrix();
-    expect(bosses).toHaveLength(21);
-    expect(new Set(bosses.map((entry) => entry.boss))).toHaveLength(7);
-    expect(bosses.filter((entry) => entry.phase === 3)).toHaveLength(7);
+    expect(bosses).toHaveLength(24);
+    expect(new Set(bosses.map((entry) => entry.boss))).toHaveLength(8);
+    expect(bosses.filter((entry) => entry.phase === 3)).toHaveLength(8);
     expect(bosses.filter((entry) => entry.boss === "rootbound").map((entry) => entry.phase)).toEqual([1, 2, 3]);
     expect(bosses.filter((entry) => entry.boss === "rootbound").map((entry) => entry.attack)).toEqual([
       "opening-commit",

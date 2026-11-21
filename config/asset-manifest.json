@@ -252,6 +252,15 @@
       ]
     },
     {
+      "id": "boss_rootbound_rebuild",
+      "category": "bosses",
+      "subject": "rootbound-rebuild",
+      "sources": [
+        "src/presentation/enemies/renderers/rootbound-rebuild-renderer.ts",
+        "src/presentation/enemies/figures/rootbound-figure.ts"
+      ]
+    },
+    {
       "id": "boss_white_hart",
       "category": "bosses",
       "subject": "white-hart",

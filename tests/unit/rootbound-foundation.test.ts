@@ -88,7 +88,7 @@ describe("Rootbound production foundation", () => {
 
   it("constructs through the approved enemy family with only implemented attacks declared", () => {
     const harness = createEnemyHarness();
-    const placement = planBossPlacement("rootbound", CONFIG.view.w, CONFIG);
+    const placement = planBossPlacement("rootbound", CONFIG.view.w, CONFIG, CONFIG.view.w / 2);
     const boss = new harness.types.Rootbound(placement.x, placement.y);
 
     expect(placement.factoryId).toBe("rootbound");
@@ -290,7 +290,7 @@ describe("Rootbound production foundation", () => {
   });
 
   it("places the grounded Rootbound body through the shared boss placement authority", () => {
-    const placement = planBossPlacement("rootbound", CONFIG.view.w, CONFIG);
+    const placement = planBossPlacement("rootbound", CONFIG.view.w, CONFIG, CONFIG.view.w / 2);
 
     expect(placement).toEqual({
       factoryId: "rootbound",
@@ -298,7 +298,7 @@ describe("Rootbound production foundation", () => {
       y: CONFIG.world.groundY - CONFIG.boss.h / 2,
     });
     expect(Object.isFrozen(placement)).toBe(true);
-    expect(planBossPlacement("rootbound", CONFIG.view.w, CONFIG)).toEqual(placement);
+    expect(planBossPlacement("rootbound", CONFIG.view.w, CONFIG, CONFIG.view.w / 2)).toEqual(placement);
   });
 
   it("starts Rootbound through the shared encounter and living-arena lifecycle", () => {

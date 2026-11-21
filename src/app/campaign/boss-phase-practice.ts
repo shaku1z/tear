@@ -30,7 +30,10 @@ export function isPracticeBossActor(actor: object): actor is BossActor {
 /** Shared host adapter. All entry decisions stay in the actor/runtime owners. */
 export function createLiveBossPhasePractice(options: {
   config: typeof CONFIG;
-  state: Pick<LiveGameHostState, "run" | "enemies" | "setEnemies" | "setProjectiles" | "setBossIntro" | "setBossBeat">;
+  state: Pick<
+    LiveGameHostState,
+    "run" | "player" | "enemies" | "setEnemies" | "setProjectiles" | "setBossIntro" | "setBossBeat"
+  >;
   stage: { index: number; platforms: unknown[] };
   selectStage(index: number): void;
   resetEnvironment(): void;
@@ -86,7 +89,12 @@ export function createLiveBossPhasePractice(options: {
       );
       Reflect.set(active, "_biomeIdx", options.stage.index);
       options.stage.platforms = stagePlatforms(options.stage.index, options.config);
-      const placement = planBossPlacement(request.bossId, options.config.view.w, options.config);
+      const placement = planBossPlacement(
+        request.bossId,
+        options.config.view.w,
+        options.config,
+        options.state.player()?.x ?? options.config.view.w / 2,
+      );
       const actor = options.createEnemy(placement.factoryId, placement.x, placement.y, active);
       if (!isPracticeBossActor(actor)) throw new RangeError("Boss lacks authored practice entry");
       actor.bossId = request.bossId;

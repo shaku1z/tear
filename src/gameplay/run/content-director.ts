@@ -34,10 +34,18 @@ const publishedBossDefinitions = Object.freeze(
 ) as unknown as PublishedBossDefinitions;
 export const BOSS_ROSTER = Object.freeze(projectBossRoster(publishedBossDefinitions));
 export const AUTHORED_BOSS_ROSTER = Object.freeze(projectBossRoster(BOSS_DEFINITIONS));
+/**
+ * Boss Test's picker (an engineering surface): the published roster, then every boss being rebuilt for a stage
+ * (`stageOf`), so a rebuild can be fought before it replaces the boss it rebuilds.
+ */
+export const BOSS_TEST_ROSTER = Object.freeze([
+  ...BOSS_ROSTER,
+  ...projectBossRoster(BOSS_DEFINITIONS.filter((definition: BossDefinition) => definition.stageOf !== undefined)),
+]);
 
 export type BossId = (typeof BOSS_IDENTITY_IDS)[number];
-/** Campaign-only or factory-unavailable bosses cannot enter the mini-boss selector. */
-export type MiniBossId = Exclude<BossId, "source" | "rootbound" | "white-hart">;
+/** Campaign-only, factory-unavailable or engineering-only bosses cannot enter the mini-boss selector. */
+export type MiniBossId = Exclude<BossId, "source" | "rootbound" | "white-hart" | "rootbound-rebuild">;
 export const ENEMY_KIND_IDS = Object.freeze([
   "charger",
   "ranged",

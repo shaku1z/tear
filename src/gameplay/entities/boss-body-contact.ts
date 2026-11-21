@@ -6,8 +6,10 @@
  *
  * The bosses built before the move table keep the contact they have always had. Each is a row here that
  * lists what its body is doing when touching it hurts, so the rule is written in one place for every boss.
- * `BOSS_BODY_CONTACT_OLD_ROWS` names those rows and may only shrink: a boss leaves it when it moves onto
- * the move table, and no new boss may join it (tests/unit/boss-body-contact.test.ts).
+ * `BOSS_BODY_CONTACT_OLD_ROWS` names every row whose body hurts outside a declared move. A boss leaves it
+ * when it moves onto the move table. The one boss that may join it is a rebuild whose body is meant to hurt
+ * (plans/active/VERDANT_PALE_REBUILD.md, decision D1: the new Rootbound); the test lists them
+ * (tests/unit/boss-body-contact.test.ts).
  */
 
 export interface BossBodyContactRow {
@@ -52,11 +54,17 @@ export const BOSS_BODY_CONTACT = Object.freeze({
   echo: row("any", false),
   // The Source labels its body by plane and breach: see `bodyContactLabel` in source-core.ts.
   source: row(["front", "breach-drift"], false),
+  // The new Rootbound (plans/active/VERDANT_PALE_REBUILD.md, decision D1): its body hurts while it walks,
+  // stands and winds up, like Aldric's. Under the floor and rising out of it, it is not there to touch.
+  "rootbound-rebuild": row(
+    ["idle", "walk", "swingwind", "throwwind", "sink", "uprootsink", "vaultwind", "swell"],
+    false,
+  ),
 });
 
 export type BossBodyContactId = keyof typeof BOSS_BODY_CONTACT;
 
-/** The bosses whose body still hurts outside a declared move. This list may only shrink. */
+/** The bosses whose body hurts outside a declared move: the old bosses, and the rebuilds D1 allows. */
 export const BOSS_BODY_CONTACT_OLD_ROWS: readonly BossBodyContactId[] = Object.freeze(
   (Object.keys(BOSS_BODY_CONTACT) as BossBodyContactId[]).filter((id) => BOSS_BODY_CONTACT[id].hurtsIn !== "never"),
 );

@@ -54,7 +54,7 @@ describe("White Hart production foundation", () => {
 
   it("constructs a damageable low body with monotonic phases and no placeholder attacks", () => {
     const harness = createEnemyHarness();
-    const placement = planBossPlacement("white-hart", CONFIG.view.w, CONFIG);
+    const placement = planBossPlacement("white-hart", CONFIG.view.w, CONFIG, CONFIG.view.w / 2);
     const boss = new harness.types.WhiteHart(placement.x, placement.y);
 
     expect(placement).toEqual({

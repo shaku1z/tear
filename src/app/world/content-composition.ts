@@ -80,7 +80,7 @@ export function createLiveContentComposition(options: LiveContentCompositionOpti
       // Spawn placement is canonical world state, so it is shared rather than
       // restated: a detached, replay, or headless world must place bosses
       // identically or its trace diverges on the first boss tick.
-      const placement = planBossPlacement(id, options.width, d.CONFIG);
+      const placement = planBossPlacement(id, options.width, d.CONFIG, options.player().x);
       return options.entities.createEnemy(placement.factoryId, placement.x, placement.y, options.run());
     },
     applyPreset: (enemy, preset) => {

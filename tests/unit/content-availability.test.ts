@@ -59,6 +59,8 @@ describe("published content availability", () => {
       ...OFFICIAL_BOSSES.slice(0, 4),
       "white-hart",
       ...OFFICIAL_BOSSES.slice(4),
+      // The rebuilt Rootbound, authored last and fought only in engineering Boss Test until the switch.
+      "rootbound-rebuild",
     ]);
     expect(PUBLISHED_ENEMY_IDENTITY_IDS).toEqual(ENEMY_IDENTITY_IDS.filter((id) => id !== "rimehound"));
     expect(variantIdsAvailableOn("published")).not.toEqual(expect.arrayContaining([...PALE_VARIANT_IDS]));

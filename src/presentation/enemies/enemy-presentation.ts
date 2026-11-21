@@ -9,6 +9,7 @@ import { createEnemyRendererRuntime } from "./renderers/enemy-renderer-runtime";
 import type { EnemyPresentationDependencies } from "./renderers/enemy-renderer-types";
 import { installSourceRenderer } from "./renderers/source-renderer";
 import { installRootboundRenderer } from "./renderers/rootbound-renderer";
+import { installRootboundRebuildRenderer } from "./renderers/rootbound-rebuild-renderer";
 import { installRimehoundRenderer } from "./renderers/rimehound-renderer";
 import { installWhiteHartRenderer } from "./renderers/white-hart-renderer";
 import { installStandardEnemyRenderers } from "./renderers/standard-renderers";
@@ -49,6 +50,7 @@ export function createEnemyPresentation(dependencies: EnemyPresentationDependenc
     installAldricEchoRenderers(types, runtime);
     installSourceRenderer(types, runtime);
     installRootboundRenderer(types, runtime);
+    installRootboundRebuildRenderer(types, runtime);
     installRimehoundRenderer(types, runtime);
     installWhiteHartRenderer(types, runtime);
     for (const type of Object.values(types)) drawThroughRuntime(type, runtime);

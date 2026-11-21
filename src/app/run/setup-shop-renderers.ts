@@ -1,4 +1,4 @@
-import { BOSS_ROSTER } from "../../gameplay/run/content-director";
+import { BOSS_TEST_ROSTER } from "../../gameplay/run/content-director";
 import { buildSetupSnapshot } from "../../presentation/menu-setup-snapshots";
 import { firstRunProfileFacts, isFirstRunProfile } from "../../gameplay/progression/first-run-guidance";
 import { hasOwnKey, ownValue } from "../../domain/records";
@@ -105,7 +105,7 @@ export function createLiveSetupShopRenderers(state: MenuScreenState, services: M
           modes: d.CONFIG.modes,
           difficulties: d.CONFIG.difficulties,
           weapons: d.WEAPONS,
-          bosses: BOSS_ROSTER,
+          bosses: BOSS_TEST_ROSTER,
           ...(bounties === undefined ? {} : { bounties }),
           surfaces: d.surfaces,
           best: services.getBest(selected.mode, selected.difficulty),

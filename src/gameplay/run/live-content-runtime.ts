@@ -1,4 +1,5 @@
 import type { RandomSource } from "../../domain/random";
+import { bossStageOwner } from "./boss-definitions";
 import { shuffledBossRoster, type BossId } from "./content-director";
 import { gauntletTrialOrder } from "./gauntlet-trials";
 import { bossIdsAvailableOn } from "../stages";
@@ -94,7 +95,7 @@ export function createLiveContentRuntime<TEnemy extends LiveSpawnEnemy>(
     bossBiome: (id: string) =>
       Math.max(
         0,
-        (options.bossBiomeStages ?? options.stages).findIndex((stage) => stage.boss === id),
+        (options.bossBiomeStages ?? options.stages).findIndex((stage) => stage.boss === bossStageOwner(id)),
       ),
     makeBoss,
     spawn: (spec: LiveWaveSpawnSpec) => {
