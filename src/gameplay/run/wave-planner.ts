@@ -340,7 +340,7 @@ export function planNextWave(options: PlanNextWaveOptions): PlannedWave {
     curBoss = bossOrder[bossIdx] ?? null;
     if (curBoss === null) throw new Error("boss roster must not be empty");
     bossIdx += 1;
-    const home = curBoss === null ? null : bossStageOwner(curBoss);
+    const home = bossStageOwner(curBoss);
     const homeBiome = (options.bossOnlyStages ?? options.stages).findIndex((candidate) => candidate.boss === home);
     stage = homeBiome < 0 ? 0 : homeBiome;
     if (wave > 1) intents.push({ type: "begin-wipe" });

@@ -232,12 +232,24 @@ export function createRootboundRebuildType(
       if (!this.onGround) return;
       const target =
         this.aboveT >= M.canopyVault.track && this.vaultCd <= 0 ? this.vaultTargetFor(player, platforms) : null;
-      if (target !== null) return this.startVault(target, player);
-      if (this.crowdT >= M.thornBurst.track && this.burstCd <= 0) return this.startBurst();
+      if (target !== null) {
+        this.startVault(target, player);
+        return;
+      }
+      if (this.crowdT >= M.thornBurst.track && this.burstCd <= 0) {
+        this.startBurst();
+        return;
+      }
       if (this.attackT > 0) return;
-      if (dx > M.burrow.farRange || this.burrowCd <= 0) return this.startBurrow();
-      if (dx <= M.vineSwing.range && level) return this.startSwing();
-      if (dx >= M.seedThrow.minRange) return this.startThrow();
+      if (dx > M.burrow.farRange || this.burrowCd <= 0) {
+        this.startBurrow();
+        return;
+      }
+      if (dx <= M.vineSwing.range && level) {
+        this.startSwing();
+        return;
+      }
+      if (dx >= M.seedThrow.minRange) this.startThrow();
     }
 
     attacked(): void {
@@ -445,7 +457,10 @@ export function createRootboundRebuildType(
 
     vaultFlight(player: EnemyPlayerPort): void {
       const target = this.vaultTarget;
-      if (target === null) return this.go("idle", 0);
+      if (target === null) {
+        this.go("idle", 0);
+        return;
+      }
       const k = this.progress(),
         smooth = k * k * (3 - 2 * k);
       this.vaultToX = clamp(
@@ -463,7 +478,10 @@ export function createRootboundRebuildType(
     land(player: EnemyPlayerPort): void {
       const target = this.vaultTarget;
       this.vaultTarget = null;
-      if (target === null) return this.go("idle", 0);
+      if (target === null) {
+        this.go("idle", 0);
+        return;
+      }
       this.x = this.vaultToX;
       this.y = target.y - this.hh;
       this.onGround = true;
