@@ -9,13 +9,12 @@ import {
   TUTORIAL_GOLD_LESSONS,
   bindTutorialGoldCorpus,
   tutorialGoldContactEdges,
-  projectTutorialGoldFrame,
   type TutorialGoldBinding,
   type TutorialGoldCorpus,
   type TutorialGoldReference,
   type TutorialGoldFrame,
-  type TutorialGoldFrameSource,
 } from "../gameplay/training/tutorial-gold-reference";
+import { projectTutorialGoldFrame, type TutorialGoldFrameSource } from "../gameplay/training/tutorial-gold-frame";
 import { replayEngine, type ReplayEngine } from "../ghost/replay-engine";
 import { applyWeapon } from "../gameplay/weapons";
 import { driveTutorialCourse, type TutorialDriverObservation, type TutorialDriverPort } from "./tutorial-course-driver";
