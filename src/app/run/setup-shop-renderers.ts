@@ -1,14 +1,20 @@
 import { BOSS_ROSTER } from "../../gameplay/run/content-director";
 import { buildSetupSnapshot } from "../../presentation/menu-setup-snapshots";
 import { firstRunProfileFacts, isFirstRunProfile } from "../../gameplay/progression/first-run-guidance";
-import { hasOwnKey } from "../../domain/records";
+import { hasOwnKey, ownValue } from "../../domain/records";
 import { CONDITION_NAMES } from "../../gameplay/progression/condition-names";
 import { COSMETIC_CATALOG } from "../../gameplay/progression/cosmetic-catalog";
 import { buildShardShelves } from "../../presentation/shard-shelves-snapshot";
 import { buildShopSnapshot, SHOP_TABS } from "../../presentation/shop-snapshot";
 import type { MenuScreenServices, MenuScreenState } from "../screens/menu-screen-adapters";
 import { createArmedConfirm } from "../interface/armed-confirm";
-import { deleteLoadout, loadoutSummaries, MIN_LOADOUT_NAME, renameLoadout } from "../../domain/cosmetic-loadouts";
+import {
+  deleteLoadout,
+  loadoutIdentity,
+  loadoutSummaries,
+  MIN_LOADOUT_NAME,
+  renameLoadout,
+} from "../../domain/cosmetic-loadouts";
 import { MAX_LOADOUT_NAME, type CosmeticChange } from "../../domain/cosmetic-types";
 import type { NameTarget } from "../../domain/display-names";
 
@@ -21,6 +27,11 @@ export function createLiveSetupShopRenderers(state: MenuScreenState, services: M
   let freshItems: ReadonlySet<string> = new Set();
   /** DELETE's question; any other change to the cosmetics, a tab change or leaving the Shop withdraws it. */
   const deleteConfirm = createArmedConfirm(() => performance.now());
+  /** DELETE asks about a loadout, not a place: a merge that moves another loadout there withdraws the question. */
+  const loadoutAt = (id: string): string => {
+    const loadout = ownValue(d.PROFILE.cosmetics().loadouts, id);
+    return loadout ? loadoutIdentity(id, loadout) : id;
+  };
   const changeCosmetics = (change: CosmeticChange): void => {
     deleteConfirm.cancel();
     void d.PROFILE.changeCosmetics(change).then((result) => {
@@ -37,7 +48,8 @@ export function createLiveSetupShopRenderers(state: MenuScreenState, services: M
       collectionName,
       newItems: freshItems,
       deleteArmed:
-        loadoutSummaries(d.PROFILE.cosmetics()).find((loadout) => deleteConfirm.view(loadout.id).armed)?.id ?? null,
+        loadoutSummaries(d.PROFILE.cosmetics()).find((loadout) => deleteConfirm.view(loadoutAt(loadout.id)).armed)
+          ?.id ?? null,
     });
   /** Grants anything already earned, then badges and marks as seen what the player holds but has not seen. */
   const openShards = async (): Promise<void> => {
@@ -145,7 +157,8 @@ export function createLiveSetupShopRenderers(state: MenuScreenState, services: M
       deleteConfirm.cancel();
     },
     pressDeleteLoadout(id: string): void {
-      if (deleteConfirm.press(id)) changeCosmetics((_catalog, cosmetics, now) => deleteLoadout(cosmetics, id, now));
+      if (deleteConfirm.press(loadoutAt(id)))
+        changeCosmetics((_catalog, cosmetics, now) => deleteLoadout(cosmetics, id, now));
       else d.SFX.ui();
     },
     loadoutNameTarget(id: string): NameTarget | null {

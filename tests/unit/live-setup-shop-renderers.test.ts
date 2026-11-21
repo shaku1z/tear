@@ -60,10 +60,12 @@ describe("live setup shop renderers", () => {
     expect(setShop).toHaveBeenCalledWith({ tab: "upgrades", displayedCoins: 20, flash: { id: "maxed", time: 5 } });
   });
 
-  it("withdraws a loadout DELETE question on another change, a tab change and leaving the Shop", () => {
+  it("withdraws a loadout DELETE question on another change, a tab change, leaving the Shop or a move", () => {
     let clock = 0;
     vi.spyOn(performance, "now").mockImplementation(() => clock);
     let shop = { tab: "shards", displayedCoins: 0, flash: null };
+    const loadout = (createdAt: number) => ({ name: "X", nameAt: 0, createdAt, slots: {} });
+    let loadouts = { loadout_2: loadout(1) };
     const changeCosmetics = vi.fn(() => Promise.resolve("refused"));
     const renderers = createLiveSetupShopRenderers(
       {
@@ -81,7 +83,7 @@ describe("live setup shop renderers", () => {
           PROFILE: {
             changeCosmetics,
             claimCosmeticGrants: () => Promise.resolve(),
-            cosmetics: () => ({ owned: {}, seen: {} }),
+            cosmetics: () => ({ owned: {}, seen: {}, loadouts }),
             markCosmeticsSeen: () => Promise.resolve(),
           },
           SFX: { ui: vi.fn() },
@@ -105,6 +107,12 @@ describe("live setup shop renderers", () => {
     expect(askThen(() => renderers.leaveShop())).toBe(false);
     expect(askThen(() => renderers.selectShopTab("upgrades"))).toBe(false);
     expect(askThen(() => renderers.changeCosmetics(() => null))).toBe(false);
+    // A merge put another loadout in that place while DELETE was asking.
+    expect(
+      askThen(() => {
+        loadouts = { loadout_2: loadout(2) };
+      }),
+    ).toBe(false);
     vi.restoreAllMocks();
   });
 });
