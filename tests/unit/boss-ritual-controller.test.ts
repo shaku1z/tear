@@ -93,9 +93,8 @@ describe("BossRitualController", () => {
     const started = controller.begin(
       owner,
       {
-        id: "warden-break",
-        pose: "wardenBreak",
-        after: "throwShield",
+        id: "aldric-witnessed",
+        pose: "aldricFeral",
         firstVertical: true,
       },
       configured,
@@ -104,9 +103,8 @@ describe("BossRitualController", () => {
     controller.start(started.context, configured);
     expect(controller.enterBeat(started.context, "declaration")).toEqual([{ type: "sound", cue: "warden" }]);
     expect(controller.complete(started.context, false)).toEqual([
-      { type: "throw-shield" },
       { type: "resolve-first-vertical" },
-      { type: "store-seen", key: "tear.cinematic.warden-break" },
+      { type: "store-seen", key: "tear.cinematic.aldric-witnessed" },
       { type: "music-duck", amount: 1, duration: 0.55 },
     ]);
     expect(owner).toMatchObject({ cinematicPose: null, cinematicColor: null, cinematicT: 0 });
