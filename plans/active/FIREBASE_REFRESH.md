@@ -72,3 +72,9 @@ The owner approved this refresh on 2026-11-20. It stays on the free tier. Consol
   - Sizes: the SDK chunk is 219,880 B raw / 66,303 B gzip. Before, the four 10.12.2 compat scripts from gstatic were 539,470 / 158,763 B.
   - The chunk is not precached (precache 46/46 entries, 2,625,576 → 2,623,912 B), and startup grows by 25 B.
   - Remote Config is no longer fetched. Its only template (version 1, 2026-07-04) kept all four multipliers at 1, so nothing changes. PR 4 deletes `REMOTE` and its readers.
+- 2026-11-20 PR 3: App Check in monitor mode, in the SDK chunk.
+  - `createFirebaseServices` starts it before Auth and Firestore, using `FIREBASE_APP_CHECK_SITE_KEY` (empty until the owner registers a key, so it stays off).
+  - A provider that never gives a token still lets the adapter sign in, save and submit under the rules (`tests/rules/firebase-app-check.test.ts`).
+  - Its own chunk would have split the SDK core into a shared chunk that the precache took (47 entries, over the 46 budget). So it ships inside the SDK chunk: 66.3 → 71.9 KB gzip, precache still 46/46.
+  - Past reCAPTCHA's free 10,000 monthly assessments, with no billing account, tokens stop and nothing is charged; enforcement off means nobody is refused.
+  - `tests/unit/privacy-page.test.ts` fails until the change that sets the key also names reCAPTCHA on the privacy page.

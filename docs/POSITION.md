@@ -24,7 +24,7 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 | [Repository structure and workflow](#repository-structure) | In progress | After the hooks pull request merges, run pnpm setup:hooks in the canonical checkout on main (scripts/governance/README.md). | — |
 | [Playtest tool](#playtest-tool) | Stage 2 under way: stage 1 is done (pnpm playtest bosses and sweep); pnpm playtest waves opens any Adventure wave directly, runs plays whole runs from wave 1, enemies meets each enemy kind alone, and coverage lists what the game defines that no report brought into play | --compare: the same situations and seeds on another commit, printing only what changed. | — |
 | [Replays](#replays) | In progress: PR 1, PR 2, PR 2b and PR 3 merged (hidden replay features, replay extras and REPAIR removed; snapshot codecs in src/gameplay/snapshot); PR 4 open (the detached world moves to src/app/world/detached) | Merge PR 4, then PR 5 (one replay record: record.ts, recorder.ts and verify.ts, with the round-trip check). | Deploy the Firestore chunk-write rules from the merged rules PR. |
-| [Firebase](#firebase) | In progress: PR 1 (rules tests, hardened rules) and PR 2 (modular SDK) open | Merge PR 1, then PR 2; then PR 3, App Check in monitor mode. | Deploy the rules from PR 1 once it merges. |
+| [Firebase](#firebase) | In progress: PR 1 (rules tests, hardened rules) open; PR 2 (modular SDK) and PR 3 (App Check) follow it | Merge PR 1, then PR 2, then PR 3; then set the site key with the privacy text, and PR 4 removes Remote Config. | Deploy the rules from PR 1 once it merges; register App Check with a reCAPTCHA v3 key, enforcement off (steps in PR 3). |
 | [Mobile, touch and phone layouts](#mobile) | Paused by the owner 2026-11-19; out of the release builds | Nothing until the owner resumes mobile; plans/MOBILE_LATER.md says how to turn it back on. | Mark the CrazyGames listing desktop only. Say when mobile resumes. |
 
 <a id="release-readiness"></a>
@@ -131,10 +131,10 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 ### Firebase
 
-**In progress: PR 1 (rules tests, hardened rules) and PR 2 (modular SDK) open.** Firestore rules for saves, leaderboards (score boards and Gauntlet clear boards), statistics and replays are tested under the local emulator, allowed and refused writes both, and the game's own adapter runs against them on the SDK it ships. The standalone build bundles the modular SDK (Auth and Firestore Lite) in one on-demand chunk of 66 KB gzip, where the gstatic compat scripts were 159 KB; the CrazyGames build has no Firebase code. Remote Config is no longer fetched (its only template kept every value at 1). App Check is not wired yet.
+**In progress: PR 1 (rules tests, hardened rules) open; PR 2 (modular SDK) and PR 3 (App Check) follow it.** Firestore rules for saves, leaderboards (score boards and Gauntlet clear boards), statistics and replays are tested under the local emulator, allowed and refused writes both, and the game's own adapter runs against them on the SDK it ships. The standalone build bundles the modular SDK (Auth, Firestore Lite and App Check) in one on-demand chunk of 72 KB gzip, where the gstatic compat scripts were 159 KB; the CrazyGames build has no Firebase code. Remote Config is no longer fetched (its only template kept every value at 1). App Check is wired in monitor mode and stays off until the owner registers a reCAPTCHA v3 site key.
 
-- Next: Merge PR 1, then PR 2; then PR 3, App Check in monitor mode.
-- Owner action: Deploy the rules from PR 1 once it merges.
+- Next: Merge PR 1, then PR 2, then PR 3; then set the site key with the privacy text, and PR 4 removes Remote Config.
+- Owner action: Deploy the rules from PR 1 once it merges; register App Check with a reCAPTCHA v3 key, enforcement off (steps in PR 3).
 - Evidence: [plans/active/FIREBASE_REFRESH.md](../plans/active/FIREBASE_REFRESH.md), [tests/rules/firestore-rules.test.ts](../tests/rules/firestore-rules.test.ts), [tests/rules/firebase-adapter.test.ts](../tests/rules/firebase-adapter.test.ts), [#349](https://github.com/shaku1z/tear/pull/349)
 
 <a id="mobile"></a>

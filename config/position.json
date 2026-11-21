@@ -136,10 +136,10 @@
     {
       "id": "firebase",
       "name": "Firebase",
-      "state": "In progress: PR 1 (rules tests, hardened rules) and PR 2 (modular SDK) open",
-      "summary": "Firestore rules for saves, leaderboards (score boards and Gauntlet clear boards), statistics and replays are tested under the local emulator, allowed and refused writes both, and the game's own adapter runs against them on the SDK it ships. The standalone build bundles the modular SDK (Auth and Firestore Lite) in one on-demand chunk of 66 KB gzip, where the gstatic compat scripts were 159 KB; the CrazyGames build has no Firebase code. Remote Config is no longer fetched (its only template kept every value at 1). App Check is not wired yet.",
-      "next": "Merge PR 1, then PR 2; then PR 3, App Check in monitor mode.",
-      "owner_action": "Deploy the rules from PR 1 once it merges.",
+      "state": "In progress: PR 1 (rules tests, hardened rules) open; PR 2 (modular SDK) and PR 3 (App Check) follow it",
+      "summary": "Firestore rules for saves, leaderboards (score boards and Gauntlet clear boards), statistics and replays are tested under the local emulator, allowed and refused writes both, and the game's own adapter runs against them on the SDK it ships. The standalone build bundles the modular SDK (Auth, Firestore Lite and App Check) in one on-demand chunk of 72 KB gzip, where the gstatic compat scripts were 159 KB; the CrazyGames build has no Firebase code. Remote Config is no longer fetched (its only template kept every value at 1). App Check is wired in monitor mode and stays off until the owner registers a reCAPTCHA v3 site key.",
+      "next": "Merge PR 1, then PR 2, then PR 3; then set the site key with the privacy text, and PR 4 removes Remote Config.",
+      "owner_action": "Deploy the rules from PR 1 once it merges; register App Check with a reCAPTCHA v3 key, enforcement off (steps in PR 3).",
       "evidence": [
         "plans/active/FIREBASE_REFRESH.md",
         "tests/rules/firestore-rules.test.ts",
