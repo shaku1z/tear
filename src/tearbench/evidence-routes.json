@@ -85,6 +85,7 @@
     "prefixes": [
       "src/persistence/",
       "src/domain/gauntlet-records.ts",
+      "src/domain/leaderboards.ts",
       "src/platform/",
       "src/ghost/",
       "wrangler.jsonc",

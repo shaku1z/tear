@@ -500,7 +500,7 @@ const rankedView = {
   status: "ready" as const,
   message: "",
   ownRank: "YOUR BEST · #42 · 123,456",
-  modes: ["ADVENTURE", "ENDLESS", "GAUNTLET"].map((label, index) => ({
+  boards: ["ADVENTURE", "ENDLESS", "GAUNTLET"].map((label, index) => ({
     id: label.toLowerCase(),
     label,
     selected: index === 0,
