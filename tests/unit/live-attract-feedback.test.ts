@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createLiveAttractFeedback } from "../../src/app/interface/attract-feedback";
 import { createAttract } from "../../src/presentation/attract-runtime";
-import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
+import { createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
 import { STAGES } from "../../src/gameplay/stages";
 import { aabbOverlap, clamp, len } from "../../src/domain/geometry";
 

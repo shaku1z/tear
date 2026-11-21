@@ -187,6 +187,14 @@
       ],
       "duration": "long"
     },
+    "test:rules": {
+      "purpose": "Firestore rules tests and the game's Firebase adapter under local emulators; the first run downloads the emulator",
+      "effects": [
+        "starts-server",
+        "network"
+      ],
+      "duration": "under-a-minute"
+    },
     "playtest": {
       "purpose": "Plays the real game headless: `bosses`, `sweep`, `waves`, `runs`, `enemies` reports, `coverage`; --compare <commit> prints what changed (queue the big sets)",
       "effects": [
@@ -1337,6 +1345,28 @@
         ".github/workflows/nightly.yml"
       ]
     },
+    "scripts/gate-files.mjs": {
+      "purpose": "The gate file list (config/gate-files.json): flags changed gate files in Validate; merge:ready reads it",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [],
+      "runBy": [
+        ".github/workflows/ci.yml"
+      ]
+    },
+    "scripts/ci-main-gate.sh": {
+      "purpose": "Every Validate job's gate loader, run as main's copy: puts main's fromMain files in $RUNNER_TEMP/gate, sets TEAR_GATE in $GITHUB_ENV",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "seconds",
+      "via": [],
+      "runBy": [
+        ".github/workflows/ci.yml"
+      ]
+    },
     "scripts/ci-verdict.mjs": {
       "purpose": "Validate's required check: fails unless every needed job ended as it should",
       "effects": [
@@ -1500,6 +1530,17 @@
       "duration": "minutes",
       "via": [
         "tearbench"
+      ]
+    },
+    "scripts/test-firestore-rules.mjs": {
+      "purpose": "Runs tests/rules/ against local Firebase Auth and Firestore emulators (demo- project, no credentials); needs Java 21+",
+      "effects": [
+        "starts-server",
+        "network"
+      ],
+      "duration": "under-a-minute",
+      "via": [
+        "test:rules"
       ]
     },
     "scripts/verify-release-artifact.mjs": {
@@ -1670,7 +1711,8 @@
     "scripts/test-files.mjs": [
       "tests/unit/pitfall-guards.test.mjs",
       "vitest.config.ts",
-      "vitest.endurance.config.ts"
+      "vitest.endurance.config.ts",
+      "vitest.rules.config.ts"
     ],
     "scripts/wiki-data-export.mjs": [
       "scripts/export-game-reference.mjs"

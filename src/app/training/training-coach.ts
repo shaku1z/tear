@@ -1,4 +1,11 @@
-import { CoachQueue, coachMarkAlpha, type CoachMark, type CoachPoint } from "../../presentation/coach/coach-marks";
+import {
+  CoachQueue,
+  coachMarkAlpha,
+  type CoachMark,
+  type CoachPoint,
+  type CoachRect,
+  type CoachTone,
+} from "../../presentation/coach/coach-marks";
 import {
   promptAvailable,
   promptDevice,
@@ -18,6 +25,30 @@ export const COACH_HELP_SECONDS = 8;
 export const COACH_STEP_SECONDS = 1;
 /** How long the "learned" line shows when an exercise completes. */
 export const COACH_LEARNED_SECONDS = 3;
+/** How long a call-out (a spawned enemy's name, CLEARED, a save notice) stays. */
+export const COACH_CALLOUT_SECONDS = 1.2;
+
+/** A short training call-out, drawn as a plated coach mark beside what it names. */
+export interface TrainingCallout {
+  readonly text: string;
+  readonly tone: Extract<CoachTone, "info" | "success" | "nudge">;
+  /** What it names in the world (a spawned enemy: centre and half extents); the player when absent. */
+  readonly target?: Readonly<{ x: number; y: number; hw: number; hh: number }>;
+}
+
+/** Carries call-outs from the training rules that post them to the coach that draws them. */
+export function createTrainingCallouts() {
+  const pending: TrainingCallout[] = [];
+  return Object.freeze({
+    post(callout: TrainingCallout): void {
+      pending.push(callout);
+    },
+    drain(): readonly TrainingCallout[] {
+      return pending.splice(0);
+    },
+  });
+}
+export type TrainingCallouts = ReturnType<typeof createTrainingCallouts>;
 
 export interface TutorialCoachInput {
   /** Changes whenever the active exercise changes (lesson, weapon step, opponent). */
@@ -43,6 +74,8 @@ export interface TrainingCoachFrame {
   readonly tutorial?: TutorialCoachInput;
   /** Present while a Playground run is on screen; the help returns for a new run or a new arena. */
   readonly playground?: Readonly<{ runKey: unknown; arena?: number }>;
+  /** Call-outs posted since the last frame, anchored on screen (undefined: at the player). */
+  readonly callouts?: readonly Readonly<{ text: string; tone: TrainingCallout["tone"]; target?: CoachRect }>[];
 }
 
 /**
@@ -61,11 +94,14 @@ export class TrainingCoach {
   #idle = 0;
   #playgroundKey: unknown = undefined;
   #playgroundArena: number | undefined = undefined;
+  /** Counts showings: each new arena, run or call-out is its own occasion and starts its time again. */
+  #occasions = 0;
 
   step(frame: TrainingCoachFrame): readonly Readonly<{ mark: CoachMark; alpha: number }>[] {
     const device = promptDevice(frame.inputMode);
     this.#tutorial(frame, device);
     this.#playground(frame, device);
+    this.#callout(frame);
     this.#queue.step(frame.deltaSeconds);
     return this.#queue
       .visible()
@@ -148,6 +184,28 @@ export class TrainingCoach {
     };
   }
 
+  /** Each call-out replaces the last: the newest thing named is the one worth reading. */
+  #callout(frame: TrainingCoachFrame): void {
+    for (const callout of frame.callouts ?? []) {
+      const target = callout.target,
+        anchor = target ? { x: target.x + target.w / 2, y: target.y } : frame.player;
+      this.#queue.offer({
+        id: "callout",
+        occasion: String(++this.#occasions),
+        channel: "callout",
+        tone: callout.tone,
+        title: callout.text,
+        text: "",
+        keys: [],
+        ...(anchor ? { anchor } : {}),
+        ...(target ? { target } : {}),
+        backing: "plate",
+        priority: 2,
+        seconds: COACH_CALLOUT_SECONDS,
+      });
+    }
+  }
+
   #playground(frame: TrainingCoachFrame, device: PromptDevice): void {
     const playground = frame.playground;
     if (playground === undefined) {
@@ -158,18 +216,27 @@ export class TrainingCoach {
     if (playground.runKey === this.#playgroundKey && playground.arena === this.#playgroundArena) return;
     this.#playgroundKey = playground.runKey;
     this.#playgroundArena = playground.arena;
-    // Keyboard names its shortcuts; touch and controller reach the same menu through pause.
-    const shortcuts = (["playground-menu", "abilities", "quick-spawn"] as const).filter((action) =>
+    // Keyboard and controller name their shortcuts; touch reaches the same menu through pause.
+    const names = {
+      "playground-menu": "menu",
+      heal: "heal",
+      "clear-enemies": "clear",
+      "spawn-dummy": "dummy",
+      "repeat-spawn": "repeat",
+    } as const;
+    const shortcuts = (Object.keys(names) as (keyof typeof names)[]).filter((action) =>
       promptAvailable(action, device),
     );
-    const names = { "playground-menu": "menu", abilities: "abilities", "quick-spawn": "spawn" } as const;
     const pause = promptLabel("pause", device, frame.padLabel);
     const text =
       shortcuts.length > 0
-        ? shortcuts.map((action) => `${promptLabel(action, device) ?? ""} ${names[action]}`).join("  ·  ")
+        ? shortcuts
+            .map((action) => `${promptLabel(action, device, frame.padLabel) ?? ""} ${names[action]}`)
+            .join("  ·  ")
         : "Pause for the Playground menu.";
     this.#queue.offer({
       id: "playground:help",
+      occasion: String(++this.#occasions),
       channel: "help",
       tone: "info",
       title: "PLAYGROUND",

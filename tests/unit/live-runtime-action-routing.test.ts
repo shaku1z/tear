@@ -3,7 +3,7 @@ import {
   liveRewardChoiceIds,
   routeLiveTearBenchAction,
   type TearBenchActionRouting,
-} from "../../src/tearbench/live-runtime-action-routing";
+} from "../../src/app/world/detached/action-routing";
 
 function routingFixture(initialScreen = "draft") {
   let screen = initialScreen;

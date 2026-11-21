@@ -104,15 +104,24 @@ export function rebindKey(remap: KeyboardRemap, action: RebindableAction, code: 
 }
 
 /**
- * A remap read from storage: unknown actions and malformed codes are dropped, and a remap
- * that would give one key two meanings on a screen is dropped whole (the defaults stand).
+ * A remap read from storage: unknown actions and malformed codes are dropped. An entry on a key
+ * that a fixed binding holds (a key reserved since the save was written, such as a Playground
+ * shortcut) is dropped alone, so the player's other keys stand. A remap whose own entries still
+ * give one key two meanings on a screen is dropped whole (the defaults stand).
  */
 export function sanitizeKeyboardRemap(value: unknown): KeyboardRemap {
   if (!isRecord(value)) return Object.freeze({});
   const kept: Partial<Record<RebindableAction, string>> = {};
   for (const [action, code] of Object.entries(value))
     if (isRebindableAction(action) && typeof code === "string" && KEY_CODE.test(code)) kept[action] = code;
-  const remap = trimmed(kept);
+  const onFixedKey = new Set(
+    keyboardCollisions(remappedBindings(trimmed(kept)))
+      .filter((collision) => collision.actions.some((action) => !isRebindableAction(action)))
+      .flatMap((collision) =>
+        collision.actions.filter((action) => kept[action as RebindableAction] === collision.code),
+      ),
+  );
+  const remap = trimmed(Object.fromEntries(Object.entries(kept).filter(([action]) => !onFixedKey.has(action))));
   return keyboardCollisions(remappedBindings(remap)).length === 0 ? remap : Object.freeze({});
 }
 

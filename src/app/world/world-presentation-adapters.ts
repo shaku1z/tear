@@ -39,6 +39,7 @@ import { padPromptLabel } from "../../presentation/world/tutorial-input-prompts"
 import { promptDevice, promptLabels } from "../../domain/prompt-vocabulary";
 import { trainingExercise } from "../../gameplay/training/training-exercises";
 import { createTrainingCoachPresentation } from "./training-coach-presentation";
+import type { TrainingCallouts } from "../training/training-coach";
 import { isSheetScreen } from "../../domain/screen-catalog";
 import { isObject } from "../../domain/records";
 import type { EnvironmentSnapshot } from "../../gameplay/environment/environment-contracts";
@@ -123,6 +124,8 @@ export interface WorldPresentationServices {
   readonly world: WorldRendererRegistry;
   readonly stage: { index: number; current: Stage; platforms: Platforms; bannerSeconds: number; name: string };
   readonly tutorial: LiveTutorialRuntime;
+  /** Training call-outs (spawned enemies' names, save notices), drawn as coach marks. */
+  readonly trainingCallouts: TrainingCallouts;
   readonly finale: () => Finale | null;
   readonly achievementToast: AchievementToastController;
   /** The first-touch coaching; null in a build without touch. */
@@ -418,10 +421,12 @@ export function createLiveWorldPresentationAdapters(
       padLabel: padPromptLabel(d.PAD),
       camera: lastCamera,
       player: state.player(),
+      enemies: state.enemies().filter((enemy) => !enemy.dead),
       bladeReach: d.CONFIG.blade.aimRadius + d.CONFIG.blade.length,
       ...(exercise ? { exercise } : {}),
       lessonCard,
       touchLayout: d.Input.touchActive() ? d.Input.touchLayout() : undefined,
+      callouts: services.trainingCallouts.drain(),
     });
     world.coachMarks(frame);
   };

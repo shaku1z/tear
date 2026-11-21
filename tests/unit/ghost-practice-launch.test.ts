@@ -7,7 +7,7 @@ const captured = vi.hoisted(() => ({ restore: vi.fn() }));
 vi.mock("../../src/tearbench/live-runtime-snapshots", () => ({
   createLiveStateSetupRestoreFactory: vi.fn(() => ({})),
 }));
-vi.mock("../../src/tearbench/live-state-snapshot", () => ({
+vi.mock("../../src/gameplay/snapshot/live-restore", () => ({
   restoreSnapshotIntoLiveWorld: captured.restore,
 }));
 

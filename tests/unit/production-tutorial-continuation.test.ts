@@ -7,14 +7,15 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { CONFIG } from "../../src/config/game-config";
 import { TUTORIAL_LESSON_IDS } from "../../src/gameplay/training/tutorial-lesson-ids";
-import { TutorialController, type TutorialSessionCheckpoint } from "../../src/gameplay/training/tutorial-controller";
+import { TutorialController } from "../../src/gameplay/training/tutorial-controller";
+import type { TutorialSessionCheckpoint } from "../../src/gameplay/training/tutorial-session-checkpoint";
 import { createTutorialArena } from "../../src/gameplay/training/tutorial-arenas";
 import { projectCanonicalGameplayState } from "../../src/gameplay/runtime/canonical-state";
 import { stableVerificationHash } from "../../src/domain/hash";
 import {
   captureProductionReplayCheckpoint,
   createProductionGhostReplayComposition,
-} from "../../src/tearbench/production-replay-composition";
+} from "../../src/app/world/detached/replay-composition";
 import {
   createProductionHeadlessEnvironment,
   type ProductionHeadlessCheckpoint,
@@ -23,10 +24,10 @@ import {
 import type { TearScenarioV1 } from "../../src/tearbench/contracts";
 import type { TearSnapshotV1 } from "../../src/gameplay/snapshot/snapshot-contract";
 import {
-  firstProductionC27AHashDivergence,
-  replayProductionC27ATrace,
-  type ProductionC27ATrace,
-} from "../../src/tearbench/production-c27a-matrix";
+  firstLiveDetachedParityHashDivergence,
+  replayLiveDetachedParityTrace,
+  type LiveDetachedParityTrace,
+} from "../../src/tearbench/live-detached-parity-matrix";
 import { runLiveCollisionPhase } from "../../src/gameplay/combat/live-collision-phase";
 import { WEAPON_IDS } from "../../src/gameplay/weapon-selection";
 import type { createBlade } from "../../src/gameplay/entities/blade";
@@ -774,11 +775,11 @@ describe("production tutorial reconstructed-byte continuation", () => {
     () => {
       const path = process.env.TEAR_TUTORIAL_CONTINUATION_TRACE;
       if (path === undefined) throw new Error("actual live tutorial trace path is required");
-      const trace = JSON.parse(readFileSync(path, "utf8")) as ProductionC27ATrace;
+      const trace = JSON.parse(readFileSync(path, "utf8")) as LiveDetachedParityTrace;
       expect(trace.originInput).toBeDefined();
       expect(trace.hashes.length).toBeGreaterThan(0);
-      const replay = replayProductionC27ATrace(trace);
-      const divergence = firstProductionC27AHashDivergence(trace, replay);
+      const replay = replayLiveDetachedParityTrace(trace);
+      const divergence = firstLiveDetachedParityHashDivergence(trace, replay);
       if (divergence !== null) {
         expect(
           replay.hashes.find((entry) => entry.tick === divergence.tick)?.state,

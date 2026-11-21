@@ -23,11 +23,11 @@ export interface PlaygroundRuntimeEnemy {
   contactDmg?: number;
   x: number;
   y: number;
+  hw: number;
   hh: number;
   stun: number;
   hp: number;
   maxHp: number;
-  isMirrorBoss?: boolean;
 }
 
 export interface PlaygroundRuntimeRun {
@@ -37,8 +37,6 @@ export interface PlaygroundRuntimeRun {
   diffCount: number;
   coinMod: number;
   scoreMod: number;
-  bossIdx: number;
-  bossOrder: string[];
   curBoss: string | null;
   pgArena?: number;
 }
@@ -46,7 +44,6 @@ export interface PlaygroundRuntimeRun {
 export interface PlaygroundRuntimeDependencies {
   readonly controller: PlaygroundController;
   readonly difficulties: readonly PlaygroundDifficulty[];
-  readonly colors: Readonly<Record<string, string>>;
   readonly stageNames: readonly string[];
   readonly groundY: number;
   readonly viewportWidth: number;
@@ -58,11 +55,11 @@ export interface PlaygroundRuntimeDependencies {
   scalePlayerDamage(ratio: number): void;
   clearProjectiles(): void;
   spawn(kind: string, hpScale: number): PlaygroundRuntimeEnemy | undefined;
-  announce(text: string, emphasis: boolean, color: string): void;
+  /** A call-out; `at` is the world point it sits above (the enemy it names), else the player. */
+  announce(text: string, target?: Readonly<{ x: number; y: number; hw: number; hh: number }>): void;
   navigate(screen: "pgmenu" | "pglab" | "playing"): void;
   releasePointer(): void;
   requestPointer(): void;
-  dismissMirror(): void;
   selectArena(arena: number): void;
   wipe(): void;
   resetRun(): void;
@@ -130,9 +127,13 @@ export function createPlaygroundRuntimeBridge(dependencies: PlaygroundRuntimeDep
     );
 
   function execute(intents: readonly PlaygroundIntent[]): void {
+    // The enemy a spawn intent just made: the announce after it names that enemy.
+    let spawned: PlaygroundRuntimeEnemy | undefined;
     for (const intent of intents) {
-      if (intent.type === "announce") dependencies.announce(intent.text, intent.emphasis, intent.color);
-      else if (intent.type === "apply-difficulty") {
+      if (intent.type === "announce") {
+        dependencies.announce(intent.text, spawned && { x: spawned.x, y: spawned.y, hw: spawned.hw, hh: spawned.hh });
+        spawned = undefined;
+      } else if (intent.type === "apply-difficulty") {
         dependencies.scalePlayerDamage(intent.damageRatio);
         dependencies.run.diffDmg *= intent.damageRatio;
         dependencies.run.diff = intent.id;
@@ -142,14 +143,11 @@ export function createPlaygroundRuntimeBridge(dependencies: PlaygroundRuntimeDep
         dependencies.run.scoreMod = intent.score;
         dependencies.player.oneHit = intent.oneHit;
         const difficulty = dependencies.difficulties.find((entry) => entry.id === intent.id);
-        dependencies.announce(
-          (difficulty?.label ?? intent.id).toUpperCase(),
-          true,
-          dependencies.colors.perfect ?? "#fff",
-        );
+        dependencies.announce((difficulty?.label ?? intent.id).toUpperCase());
       } else if (intent.type === "spawn") {
         for (let index = 0; index < intent.count; index++) {
           const enemy = dependencies.spawn(intent.role === "boss" ? "boss" : intent.kind, intent.hpScale);
+          spawned = enemy ?? spawned;
           if (enemy && intent.role === "dummy") {
             enemy.tutDummy = true;
             enemy.affixCount = 0;
@@ -164,18 +162,10 @@ export function createPlaygroundRuntimeBridge(dependencies: PlaygroundRuntimeDep
           enemy.stun = Math.max(enemy.stun, intent.minimumStun);
           if (enemy.hp < intent.healBelow) enemy.hp = enemy.maxHp;
         }
-      } else if (intent.type === "summon-boss") {
-        dependencies.run.curBoss = intent.bossId;
-        dependencies.run.bossIdx = intent.nextBossIndex;
-        dependencies.spawn("boss", 1);
       } else if (intent.type === "clear-enemies") {
         for (const enemy of dependencies.enemies) enemy.dead = true;
       } else if (intent.type === "clear-projectiles") dependencies.clearProjectiles();
-      else if (intent.type === "dismiss-mirror") {
-        const enemy = dependencies.enemies[Number(intent.enemyId)];
-        if (enemy) enemy.dead = true;
-        dependencies.dismissMirror();
-      } else if (intent.type === "heal-player") dependencies.player.hp = dependencies.player.maxHp;
+      else if (intent.type === "heal-player") dependencies.player.hp = dependencies.player.maxHp;
       else if (intent.type === "navigate") dependencies.navigate(intent.screen);
       else if (intent.type === "release-pointer") dependencies.releasePointer();
       else if (intent.type === "request-pointer") dependencies.requestPointer();
@@ -191,28 +181,18 @@ export function createPlaygroundRuntimeBridge(dependencies: PlaygroundRuntimeDep
 
   function step(): void {
     execute(
-      controller.update(
-        {
-          pressed: dependencies.pressed,
-          player: dependencies.player,
-          run: {
-            difficulty: dependencies.run.diff,
-            difficultyDamage: dependencies.run.diffDmg || 1,
-            bossIndex: dependencies.run.bossIdx,
-            bossOrder: dependencies.run.bossOrder,
-          },
-          enemies: dependencies.enemies.map((enemy, index) => ({
-            id: String(index),
-            dead: enemy.dead,
-            tutorialDummy: !!enemy.tutDummy,
-            mirrorBoss: !!enemy.isMirrorBoss,
-            hp: enemy.hp,
-            maxHp: enemy.maxHp,
-          })),
-          viewportWidth: dependencies.viewportWidth,
-        },
-        dependencies.colors,
-      ),
+      controller.update({
+        pressed: dependencies.pressed,
+        player: dependencies.player,
+        enemies: dependencies.enemies.map((enemy, index) => ({
+          id: String(index),
+          dead: enemy.dead,
+          tutorialDummy: !!enemy.tutDummy,
+          hp: enemy.hp,
+          maxHp: enemy.maxHp,
+        })),
+        viewportWidth: dependencies.viewportWidth,
+      }),
     );
   }
 
@@ -222,6 +202,10 @@ export function createPlaygroundRuntimeBridge(dependencies: PlaygroundRuntimeDep
     const [kind = "", value = ""] = id.split(":");
     if (kind === "spawn") {
       execute([controller.spawn(value)]);
+      actions.playUi();
+    } else if (kind === "repeat") {
+      const last = controller.lastSpawn;
+      if (last !== null) execute([last]);
       actions.playUi();
     } else if (kind === "dummy") {
       execute([controller.spawnDummy(dependencies.player, dependencies.viewportWidth)]);

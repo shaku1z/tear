@@ -1,7 +1,7 @@
 import type { CoachMarkSceneSnapshot, WorldRenderContext } from "./contracts";
 import { bossHudTop, hudFrame, hudType } from "./hud";
 import { cssToLogical, INTERFACE_ACCESSIBILITY } from "../../domain/interface-accessibility";
-import { placeCoachMark, type CoachMark, type CoachPlacement, type CoachRect } from "../coach/coach-marks";
+import { COACH_PLATE, placeCoachMark, type CoachMark, type CoachPlacement, type CoachRect } from "../coach/coach-marks";
 
 /** The widest a mark may grow, in logical pixels, before its line wraps. */
 const MAX_MARK_WIDTH = 520;
@@ -22,12 +22,14 @@ export function hudAvoidRects(context: WorldRenderContext): readonly CoachRect[]
 }
 
 /**
- * Coach marks: plate-less text in the live ink beside a short accent rule (no plates,
- * outlines, halos or shadows), keys as the shared key caps, placed by the pure solver
- * so they never sit on the player, the HUD, the touch controls or each other. As on the
- * HUD, the title is a value drawn in the ink at full opacity and the line under it is
- * secondary at `alpha.soft`; the tone's colour is the rule beside them, never the text,
- * because an accent over the stage's own props can fall below contrast.
+ * Coach marks: text in the live ink beside a short accent rule, keys as the shared key
+ * caps, placed by the pure solver so they never sit on the player, the HUD, the touch
+ * controls or each other. As on the HUD, the title is a value drawn in the ink at full
+ * opacity and the line under it is secondary at `alpha.soft`; the tone's colour is the
+ * rule beside them, never the text, because an accent over the stage's own props can fall
+ * below contrast. Marks over the stage's empty sky are plate-less; a mark drawn over the
+ * action (`backing: "plate"`, the training call-outs) sits on the dark `COACH_PLATE` in its
+ * light ink, which meets one contrast rule against every sky (`coachPlateContrast`).
  */
 /**
  * Mark type sizes: the HUD roles, raised on a touch screen to the touch text floor
@@ -49,7 +51,9 @@ export function createCoachMarkRenderer(context: WorldRenderContext) {
       type = coachMarkType(context);
     canvas.font = ui.font(type.label, true);
     const titleWidth = mark.title ? canvas.measureText(mark.title).width : 0;
+    // A call-out is a title alone: no body line under it.
     const body = ui.textBox(canvas, mark.text, 0, 0, maxWidth, { size: type.caption, measureOnly: true, maxLines: 3 });
+    const bodyHeight = mark.text === "" ? 0 : body.height;
     const bodyWidth = Math.max(
       0,
       ...body.lines.map((line) => {
@@ -61,32 +65,46 @@ export function createCoachMarkRenderer(context: WorldRenderContext) {
     const capsWidth = caps.reduce((sum, cap) => sum + cap.w, 0) + Math.max(0, caps.length - 1) * t.space.sm;
     const capsHeight = Math.max(0, ...caps.map((cap) => cap.h));
     const rule = 4 + t.space.sm;
-    const width = rule + Math.min(maxWidth, Math.max(titleWidth, bodyWidth, capsWidth));
+    const pad = mark.backing === "plate" ? { x: t.space.sm, y: t.space.xs + 2 } : { x: 0, y: 0 };
+    const width = pad.x * 2 + rule + Math.min(maxWidth, Math.max(titleWidth, bodyWidth, capsWidth));
     const height =
-      (mark.title ? type.label + t.space.xs : 0) + body.height + (caps.length ? t.space.sm + capsHeight : 0);
-    return { width, height, rule, body, capsHeight };
+      pad.y * 2 +
+      (mark.title ? type.label + (bodyHeight > 0 ? t.space.xs : 0) : 0) +
+      bodyHeight +
+      (caps.length ? t.space.sm + capsHeight : 0);
+    return { width, height, rule, pad, body, bodyHeight, capsHeight };
   }
 
   function draw(mark: CoachMark, rect: CoachPlacement, alpha: number, metrics: ReturnType<typeof measure>): void {
     const t = ui.t,
       type = coachMarkType(context);
+    const plated = mark.backing === "plate",
+      ink = plated ? COACH_PLATE.ink : ui.ink;
     canvas.save();
+    if (plated) {
+      canvas.globalAlpha = alpha * COACH_PLATE.alpha;
+      canvas.fillStyle = COACH_PLATE.fill;
+      canvas.fillRect(rect.x, rect.y, rect.w, rect.h);
+    }
     canvas.globalAlpha = alpha;
-    canvas.fillStyle = mark.tone === "info" ? ui.ink : t.color.accent;
-    canvas.fillRect(rect.x, rect.y, 4, rect.h);
-    const left = rect.x + metrics.rule;
-    let y = rect.y;
+    const { pad } = metrics;
+    canvas.fillStyle = mark.tone === "info" ? ink : t.color.accent;
+    canvas.fillRect(rect.x + pad.x, rect.y + pad.y, 4, rect.h - pad.y * 2);
+    const left = rect.x + pad.x + metrics.rule;
+    let y = rect.y + pad.y;
     if (mark.title) {
       y += type.label;
-      ui.tag(canvas, mark.title, left, y, ui.ink, "left", type.label);
+      ui.tag(canvas, mark.title, left, y, ink, "left", type.label);
       y += t.space.xs;
     }
-    ui.textBox(canvas, mark.text, left, y + metrics.body.lineHeight * 0.8, rect.w - metrics.rule, {
-      size: type.caption,
-      maxLines: 3,
-      alpha: t.alpha.soft * alpha,
-    });
-    y += metrics.body.height;
+    if (metrics.bodyHeight > 0)
+      ui.textBox(canvas, mark.text, left, y + metrics.body.lineHeight * 0.8, rect.w - metrics.rule - pad.x * 2, {
+        size: type.caption,
+        maxLines: 3,
+        alpha: t.alpha.soft * alpha,
+        color: ink,
+      });
+    y += metrics.bodyHeight;
     if (mark.keys.length) {
       let x = left;
       const baseline = y + t.space.sm + metrics.capsHeight - 5;
@@ -120,6 +138,7 @@ export function createCoachMarkRenderer(context: WorldRenderContext) {
         bounds,
         avoid,
         gap: t.space.md,
+        ...(mark.target ? { target: mark.target } : {}),
       });
       draw(mark, rect, alpha, metrics);
       placed.push(rect);

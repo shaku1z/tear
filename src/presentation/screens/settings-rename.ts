@@ -1,8 +1,18 @@
 import type { RenameScreenView, ScreenRenderContext, SettingsScreenView } from "./contracts";
 import { clipBody, page, pageFooter, tabs } from "./screen-primitives";
 import { RENAME_FIELD } from "../rename-field";
+import { MIN_PLAYER_NAME, type NameSubject } from "../../domain/display-names";
 
 export const SETTINGS_LIST_TOP = 214;
+/** The name-entry screen's title and line for each thing it names. */
+const NAME_ENTRY_COPY: Readonly<Record<NameSubject, { firstTitle: string; title: string; subtitle: string }>> = {
+  player: {
+    firstTitle: "CHOOSE YOUR NAME",
+    title: "CHANGE NAME",
+    subtitle: "how you appear on leaderboards & replays",
+  },
+  loadout: { firstTitle: "NAME THIS LOADOUT", title: "NAME THIS LOADOUT", subtitle: "a name only you see" },
+};
 type SettingsRow = SettingsScreenView["sections"][number]["rows"][number];
 
 export function createSettingsRenameRenderers(context: ScreenRenderContext) {
@@ -170,16 +180,9 @@ export function createSettingsRenameRenderers(context: ScreenRenderContext) {
     // The renderer runs with the light modal ink, so UI.dim fades toward the dark scrim:
     // title, copy and field are a guaranteed-contrast pair on every biome.
     ui.dim(canvas, width, height, ui.t.alpha.modalDim ?? 0.9);
-    ui.title(canvas, view.firstRun ? "CHOOSE YOUR NAME" : "CHANGE NAME", width / 2, 210, ui.t.type.display);
-    ui.text(
-      canvas,
-      "how you appear on leaderboards & replays",
-      width / 2,
-      258,
-      ui.t.type.body,
-      "center",
-      ui.t.alpha.soft,
-    );
+    const copy = NAME_ENTRY_COPY[view.subject ?? "player"];
+    ui.title(canvas, view.firstRun ? copy.firstTitle : copy.title, width / 2, 210, ui.t.type.display);
+    ui.text(canvas, copy.subtitle, width / 2, 258, ui.t.type.body, "center", ui.t.alpha.soft);
     const field = RENAME_FIELD;
     canvas.save();
     canvas.fillStyle = "#12141c";
@@ -213,7 +216,7 @@ export function createSettingsRenameRenderers(context: ScreenRenderContext) {
     else {
       ui.text(
         canvas,
-        `${String(view.minLength ?? 3)}–${String(view.maxLength)} characters · letters, numbers, spaces, _ -`,
+        `${String(view.minLength ?? MIN_PLAYER_NAME)}–${String(view.maxLength)} characters · letters, numbers, spaces, _ -`,
         width / 2,
         404,
         ui.t.type.caption,
@@ -221,7 +224,7 @@ export function createSettingsRenameRenderers(context: ScreenRenderContext) {
         ui.t.alpha.soft,
       );
     }
-    const valid = view.length >= (view.minLength ?? 3) && view.length <= view.maxLength;
+    const valid = view.length >= (view.minLength ?? MIN_PLAYER_NAME) && view.length <= view.maxLength;
     context.enqueue({
       x: width / 2 - 180,
       y: 444,

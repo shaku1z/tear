@@ -8,8 +8,8 @@ import {
   validateCosmeticCatalog,
   worstCaseStateSize,
 } from "../../src/domain/cosmetic-validation";
+import { activeLoadout } from "../../src/domain/cosmetic-loadouts";
 import {
-  activeLoadout,
   claimableGrants,
   emptyCosmeticState,
   equipCosmetic,
@@ -83,7 +83,7 @@ describe("cosmetic data files", () => {
       "mix_preset",
     ]);
     const ready = COSMETIC_CATALOG.slots.filter((slot) => slot.hook === "ready").map((slot) => slot.id);
-    expect(ready).toEqual(["blade", "trail", "spark"]);
+    expect(ready).toEqual(["blade", "trail", "spark", "title", "banner"]);
     const notYet = COSMETIC_CATALOG.slots.filter((slot) => slot.hook === "not yet").map((slot) => slot.id);
     expect(notYet).toHaveLength(COSMETIC_CATALOG.slots.length - ready.length);
   });
@@ -310,14 +310,15 @@ describe("cosmetic state", () => {
       owned: { trail_dusk: 25, spark_orchid: 25 },
       loadouts: {
         main: { name: "My Main", nameAt: 5, slots: { trail: { id: "trail_dusk", at: 6 } } },
-        alt: { name: "ALT", nameAt: 7, deletedAt: 20, slots: {} },
+        loadout_2: { name: "ALT", nameAt: 7, deletedAt: 20, slots: {} },
       },
-      active: { id: "alt", at: 8 },
+      active: { id: "loadout_2", at: 8 },
     });
     const next = equipCosmetic(COSMETIC_CATALOG, state, "spark", "spark_orchid", 30);
     expect(next?.loadouts.main).toEqual({
       name: "My Main",
       nameAt: 5,
+      createdAt: 0,
       slots: { trail: { id: "trail_dusk", at: 6 }, spark: { id: "spark_orchid", at: 30 } },
     });
     expect(next && loadoutOf(COSMETIC_CATALOG, next)).toEqual({ trail: "trail_dusk", spark: "spark_orchid" });
@@ -326,11 +327,13 @@ describe("cosmetic state", () => {
       owned: { spark_orchid: 25 },
       loadouts: { main: { name: "My Main", nameAt: 5, deletedAt: 9, slots: { trail: { id: "trail_dusk", at: 6 } } } },
     });
+    // MAIN cannot be deleted, so a record that marks it deleted keeps it as it is.
     const remade = equipCosmetic(COSMETIC_CATALOG, deletedMain, "spark", "spark_orchid", 3);
     expect(remade?.loadouts.main).toEqual({
-      name: "MAIN",
-      nameAt: 3,
-      slots: { spark: { id: "spark_orchid", at: 10 } },
+      name: "My Main",
+      nameAt: 5,
+      createdAt: 0,
+      slots: { trail: { id: "trail_dusk", at: 6 }, spark: { id: "spark_orchid", at: 3 } },
     });
     expect(remade && activeLoadout(remade)).toBe(remade?.loadouts.main);
   });
@@ -383,9 +386,9 @@ describe("cosmetic state", () => {
       counters: { k: 7 },
       loadouts: {
         main: { name: "B", nameAt: 4, slots: { trail: { id: "z", at: 9 } } },
-        alt: { name: "ALT", nameAt: 2, slots: {} },
+        loadout_2: { name: "ALT", nameAt: 2, slots: {} },
       },
-      active: { id: "alt", at: 6 },
+      active: { id: "loadout_2", at: 6 },
     });
     const c = normalizeCosmeticState({
       v: 1,
@@ -399,23 +402,25 @@ describe("cosmetic state", () => {
     expect(ab.counters).toEqual({ k: 7 });
     expect(ab.loadouts.main?.slots.trail).toEqual({ id: "z", at: 9 });
     expect(ab.loadouts.main?.name).toBe("B");
-    expect(ab.active).toEqual({ id: "alt", at: 6 });
+    expect(ab.active).toEqual({ id: "loadout_2_2", at: 6 });
     expect(mergeCosmeticStates(ab, ab)).toEqual(ab);
     expect(mergeCosmeticStates(mergeCosmeticStates(a, b), c)).toEqual(
       mergeCosmeticStates(a, mergeCosmeticStates(b, c)),
     );
   });
 
-  it("lets a delete win over an older edit and lose to a newer one", () => {
-    const base = { name: "ALT", nameAt: 1, slots: { trail: { id: "x", at: 5 } } };
-    const deleted = normalizeCosmeticState({ v: 1, loadouts: { alt: { ...base, deletedAt: 8 } } });
-    const older = normalizeCosmeticState({ v: 1, loadouts: { alt: base } });
+  it("lets a delete win over an older edit and over a newer one: only a create makes a loadout", () => {
+    const base = { name: "ALT", nameAt: 1, createdAt: 1, slots: { trail: { id: "x", at: 5 } } };
+    const deleted = normalizeCosmeticState({ v: 1, loadouts: { loadout_2: { ...base, deletedAt: 8 } } });
+    const older = normalizeCosmeticState({ v: 1, loadouts: { loadout_2: base } });
     const newerEdit = normalizeCosmeticState({
       v: 1,
-      loadouts: { alt: { ...base, slots: { trail: { id: "y", at: 12 } } } },
+      loadouts: { loadout_2: { ...base, slots: { trail: { id: "y", at: 12 } } } },
     });
-    const pointAtAlt = (state: ReturnType<typeof mergeCosmeticStates>) => ({ ...state, active: { id: "alt", at: 1 } });
-    expect(activeLoadout(pointAtAlt(mergeCosmeticStates(deleted, older)))).toBeUndefined();
-    expect(activeLoadout(pointAtAlt(mergeCosmeticStates(deleted, newerEdit)))?.slots.trail?.id).toBe("y");
+    for (const edit of [older, newerEdit]) {
+      const merged = mergeCosmeticStates(deleted, edit);
+      expect(merged.loadouts.loadout_2).toBeUndefined();
+      expect(activeLoadout({ ...merged, active: { id: "loadout_2_1", at: 20 } })).toBeUndefined();
+    }
   });
 });

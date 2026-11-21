@@ -3,15 +3,16 @@ import { PlaygroundController } from "../../src/gameplay/training/playground-con
 import {
   createPlaygroundRuntimeBridge,
   type PlaygroundRuntimeDependencies,
+  type PlaygroundRuntimeEnemy,
 } from "../../src/gameplay/training/runtime-bridge";
 
-function bridge() {
+function bridge(spawned?: PlaygroundRuntimeEnemy) {
   const opened: string[] = [];
   const screens: string[] = [];
+  const announced: { text: string; target?: Readonly<{ x: number; y: number; hw: number; hh: number }> }[] = [];
   const dependencies: PlaygroundRuntimeDependencies = {
     controller: new PlaygroundController(),
     difficulties: [],
-    colors: {},
     stageNames: [],
     groundY: 800,
     viewportWidth: 1600,
@@ -25,21 +26,20 @@ function bridge() {
       diffCount: 1,
       coinMod: 1,
       scoreMod: 1,
-      bossIdx: 0,
-      bossOrder: [],
       curBoss: null,
     },
     enemies: [],
     scalePlayerDamage: () => undefined,
     clearProjectiles: () => undefined,
-    spawn: () => undefined,
-    announce: () => undefined,
+    spawn: () => spawned,
+    announce: (text, target) => {
+      announced.push(target ? { text, target } : { text });
+    },
     navigate: (screen) => {
       screens.push(screen);
     },
     releasePointer: () => undefined,
     requestPointer: () => undefined,
-    dismissMirror: () => undefined,
     selectArena: () => undefined,
     wipe: () => undefined,
     resetRun: () => undefined,
@@ -58,7 +58,7 @@ function bridge() {
       playRankUp: () => undefined,
     },
   };
-  return { runtime: createPlaygroundRuntimeBridge(dependencies), opened, screens };
+  return { runtime: createPlaygroundRuntimeBridge(dependencies), opened, screens, announced };
 }
 
 describe("Playground runtime bridge", () => {
@@ -74,5 +74,20 @@ describe("Playground runtime bridge", () => {
     expect(unoffered.opened).toEqual([]);
     expect(unoffered.runtime.tab).not.toBe("abilities");
     expect(unoffered.screens).toEqual([]);
+  });
+
+  it("names the enemy a spawn just made, and anything else at the player", () => {
+    const enemy: PlaygroundRuntimeEnemy = { dead: false, x: 1200, y: 760, hw: 20, hh: 40, stun: 0, hp: 10, maxHp: 10 };
+    const playground = bridge(enemy);
+    playground.runtime.execute([
+      { type: "spawn", kind: "grunt", count: 1, hpScale: 1 },
+      { type: "announce", text: "GRUNT" },
+      { type: "heal-player" },
+      { type: "announce", text: "HEALED" },
+    ]);
+    expect(playground.announced).toEqual([
+      { text: "GRUNT", target: { x: 1200, y: 760, hw: 20, hh: 40 } },
+      { text: "HEALED" },
+    ]);
   });
 });

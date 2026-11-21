@@ -29,6 +29,14 @@ draft screens, and reaches one of the game's own ends with no page error and no 
 the menu with status `completed`; a defeat ends on the game-over screen with reason `terminal-gameover`. Any
 other stop (a watchdog, an invariant, the batch limit) still fails it.
 
+**Since 2026-11-20 the journey runs `normal`, not `easy`, and is bounded by game ticks.** Weekly run 44785591399
+met the 600-second journey ceiling at wave 21 on `easy`. A local probe of the same build showed that easy has no
+end: the player reached wave 24 at tick 54,221 and was still there, one enemy left and HP unchanged, at tick
+498,887. A normal run with seed 117 ends in a game over at wave 8, tick 17,104, the same tick on a repeat. The
+journey now fails by name if no game end comes within 30,000 ticks, and its ceiling (480 s) is set from the CI
+cost per tick; both numbers and their sources are in the journey's header. The easy goal below is still
+tracked headless.
+
 **Open goal: the scripted player finishes an easy `riftlock` campaign.** Where it stands, headless, competent
 profile, 2026-11-18. "Before" is the player that only backs away; "after" is the player that closes in when its
 attacks have landed nothing for 6 seconds (`PURSUE_AFTER_TICKS` in `src/agents/scripted-policy.ts`):
