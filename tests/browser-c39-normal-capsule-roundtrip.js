@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { createHash } = require("node:crypto");
 const { withJourney } = require("./browser-journey-harness");
-const { STATE_WAIT_MS, holdFor, pollEvery } = require("./browser-waits");
+const { STATE_WAIT_MS, holdFor, pollEvery, waitForSetup } = require("./browser-waits");
 
 // This consumer is deliberately separate from unit fixtures. Every producer and
 // consumer below owns a fresh browser process; only the normal download survives.
@@ -272,11 +272,11 @@ async function main() {
     await waitScreen("menu");
     await clickAndWait(260, 360, "setup");
     await page.mouse.click(430, 255);
-    await page.waitForFunction(() => window.__PANTHEON_TEST.state().setup.mode === "endless");
+    await waitForSetup(page, { mode: "endless" });
     await page.mouse.click(820, 435);
-    await page.waitForFunction(() => window.__PANTHEON_TEST.state().setup.difficulty === "onehit");
+    await waitForSetup(page, { difficulty: "onehit" });
     await page.mouse.click(1180, 376);
-    await page.waitForFunction(() => window.__PANTHEON_TEST.state().setup.weapon === "chainblade");
+    await waitForSetup(page, { weapon: "chainblade" });
     save("A-settings", {
       buildInfo,
       actualSetup: await page.evaluate(() => window.__PANTHEON_TEST.state().setup),
