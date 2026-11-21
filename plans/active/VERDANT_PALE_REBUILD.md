@@ -280,7 +280,7 @@ Colossus's Phase III multiplier).
 | Root Seam | II, III | the hit of every Vine Swing | - | the vine stays planted for 120 ticks and drives a root seam along the floor in the swing's direction: a boss zone 110 px wide, 300 px/s, at most 240 ticks, 7 damage per 48 ticks (Aldric's seams) | - | 7 every 48 ticks | - | none: the seam is the hit |
 | Bramble Rows | II, III | cooldown 9 s, player on the floor | 60 (kneel) | three floor sections light in turn: each warns for 36 ticks, then burns for 84; the next starts 48 ticks after the last. It stays kneeling and open the whole time (about 360 ticks) | 48 (rise) | 12 per 48 ticks | - | 3: the zone warning, through the shared zone renderer |
 | Mend | II | player hasn't hit it for 480 ticks and is more than 500 px away | 24 (kneel) | heals 1.5 % of its full health a second for up to 240 ticks, never above the health it entered Phase II with; any hit ends it | 72 (split), open, after a hit | - | - | none: the kneel is the tell |
-| Spring Surge | III | cooldown 7.5 s | 102 (spring): rises at the arena centre | 1: two root waves run along the floor both ways (jumpable ground shocks, 760 px/s, 16) and five seed pods arc out (deflectable, 12) | 66 (slam), open | 16 / 12 | pods deflect | 4: the centre column (Aldric's Crownfire) |
+| Spring Surge | III | cooldown 7.5 s | 102 (spring): rises at the arena centre | 1: two root waves run along the floor both ways (jumpable ground shocks, 760 px/s, 16) and five seed pods arc out (deflectable, 12) | 66 (slam), open | 16 / 12 | pods deflect | the peril diamond only: the rise is the tell (slice 4 dropped the centre column, 5.2) |
 
 **Cadence by phase.**
 
@@ -537,6 +537,27 @@ new Rootbound plays all six seeds identically.
   Rootbound, Aldric and the Colossus play six seeds identically, and only the Echo varies. A dial sweep is
   then one sample per setting and can't tell a dial's effect from chance. Tuning waits for a measurement
   that varies the fight, which is the lead's to route.
+
+**Slice 4, Phase III built: one-path numbers** (normal, Sword, seeds 1 to 6 through practice, main
+fbadb5fc plus slice 4). Every seed plays the same fight (tool gap 5), so each cell is one path, not a
+sample. Hits pool every fight that reached the phase, as above.
+
+| Phase | Scripted hits per 10 s | Target | Avoids-tells clear | Target | Boss travel, scripted / avoids-tells |
+| --- | --- | --- | --- | --- | --- |
+| I | 1.0 | 2.2-3.9 | 53.2 s | 8.6-17.8 s | 101 / 118 px/s |
+| II | 1.6 | 4.7-8.2 | 4.8 s | 8.7-17.3 s | 95 / 81 px/s |
+| III | 4.5 (Phase II's moves: 4.3) | 4.6-8.1 | 7.7 s (5.1) | 17.0-32.0 s | 75 / 161 px/s |
+
+- Phases I and II read exactly as they did at #393, so slice 4 changed nothing before Phase III.
+- Phase III's hits sit at the target's floor. Its clear is under half the target: the players clear it
+  in 7.7 s at the 20 % health practice enters it with.
+- **Blocking ticks:** 0 in every fight (`cinematicTicks`), practice, whole fights and the easy fight.
+- **The easy full fight** (`--difficulty easy --seed 1,2,3 --player scripted`): the boss wins on all
+  three seeds, in 138.7 s.
+- **Whole fights on normal** (seeds 1 and 2): no headless player reaches Phase III; the boss wins
+  every fight in Phase II.
+- Nothing is tuned from these numbers (the lead, 2026-11-21): Phases I to III are tuned together once
+  gap 5 lets the playtest vary a fight for a boss that draws no random numbers.
 
 - **Mend, how often it fires** (Phase II, normal, seeds 1 and 2; Mend is its only healing, so the
   playtest's `bossHealed` counts it):
@@ -892,6 +913,11 @@ the exemption list.
       slice 2.
     - Two things are owed before the switch: the harness fight must reach the vault (a player
       above the boss), and the boss must read 4 or under with it.
+    - **Slice 4:** 4 pairs in the harness fight, 6 with the vault. Spring Surge adds one,
+      (springwind, drawPeril). 2.1 gave it a fourth mark, a column at the arena's centre. Slice 4 left
+      it out: the root waves run the whole floor both ways, so a column at the landing point marks the
+      wrong place, and the body rising into the air is the tell. With the column it would be 5 pairs,
+      7 with the vault.
   - The White Hart leaves the list with Pale.
 - **What it replaces.** `tests/unit/boss-tell-rules.test.ts` and its per-hit minimum lead go, with
   `boss-tells.ts` (see 3). There is no per-hit tell contract and no "untold hits" target.
@@ -926,7 +952,7 @@ feature id added to `SURFACE_CHANNEL` in `src/domain/surface-availability.ts`.
 | 1 | The two rules (5.1, 5.2) over every boss and enemy, and the shared `endMove()` in the enemy base | Both tests are green, with the exemption list holding only Rootbound, White Hart and Rimehound. `pnpm test:determinism` is green, or the ruleset steps if a boss zone now ends earlier in a released mode. |
 | 2 | New Rootbound Phase I and Uproot, engineering channel only | Phase I's moves match 2.1. Playtest numbers against the four bosses are in the PR. Its marks count 2. The owner can play it at `/dev/`. |
 | 3 | Phase II: Second Swing, Root Seam and its cut, Bramble Rows, Mend; and Last Bloom | Phase II pace meets 2.4. Seams and rows end on the phase tick and at death (5.1 green for it). |
-| 4 | Phase III: Spring Surge, the Phase III cadence, and the death | All three phases meet 2.4. 0 blocking ticks. 4 marks. The lead asks the owner to play it on preview. |
+| 4 | Phase III: Spring Surge, the Phase III cadence, and the death | All three phases measured against 2.4 (tuned together once tool gap 5 lands). 0 blocking ticks. 3 marks (2.1's fourth left out, 5.2). The lead asks the owner to play it on preview. |
 | 5 | New Rootbinder, engineering channel only | Its moves match 2.2. `pnpm playtest enemies --enemy rootbinder` numbers sit beside the ranged enemy's in the PR. |
 | 6 | **The switch**, after the owner approves the new Verdant on preview | Campaign, Endless and Gauntlet use the new Rootbound and Rootbinder. Every file in 3 marked "switch" is deleted. The `rebuild` folder is moved to the final names. The ruleset steps (4.1). The save test (4.3) is green. The Rootbound leaves both exemption lists. The waves are measured again. The approved background's guard still runs (3). Architecture and code-budget baselines shrink and never grow. The area files under `config/position/` are updated. |
 | 7 | Verdant leftovers: anything the switch could not delete because Pale still imports it moves to Pale's side, or stays listed for Pale's plan | Nothing in `src/` names a Verdant stage feature. The delete list's "Pale" rows are the only stage-feature code left. |
@@ -943,8 +969,9 @@ repository must be able to take the next slice from here.
 | 2 | Merged, #381 (b7260214), ruleset v20. |
 | 3 | Merged, #385 (b23d7348), ruleset v22. |
 | Tuning | Merged, #387 (3c567bf8): plan only. 2.4 re-based, no boss change. |
-| Parry | In review (branch `codex/verdant-rootbound-parry`): only a perfect touch parries the Vine Swing, with a cooldown. Rebuild-only code and data, so no ruleset step. |
-| 4-7 | Not started. |
+| Parry | Merged, #393 (fbadb5fc): only a perfect touch parries the Vine Swing, with a cooldown. No ruleset step. |
+| 4 | In review (branch `codex/verdant-rootbound-phase3`): Phase III. Rebuild-only code and data, so no ruleset step. |
+| 5-7 | Not started. |
 
 **What slice 2 left in place** (read these first):
 - The boss: `src/gameplay/entities/enemy-types/rootbound-rebuild/rootbound-moves.ts` holds the move
@@ -992,13 +1019,34 @@ repository must be able to take the next slice from here.
 - The live TearBench observation gives a rebuild its owner's home stage
   (`live-observation-actors.ts`). After #377 the playtest refused the new boss without it.
 
-**Slice 4, exactly.** Phase III from 2.1:
-- Spring Surge: rows in the move table, states in `rootbound.ts`, poses in the renderer table.
-- The Phase III cadence: ÷1.6 attack cooldown, 160 px/s walk and every windup ×0.85. Burrow surfaces
-  three times, 48 ticks apart: the third entries of the cadence lists.
-- The death: every vine, seam, row and mound ends on the tick it starts (5.1 already checks it).
-- Done when: all three phases are measured with the commands above, with 0 blocking ticks and 4
-  marks, and the lead asks the owner to play it on preview.
+**What slice 4 added:**
+- Spring Surge: the `springSurge` row in `rootbound-moves.ts`, the states `springwind` (the leap to
+  the arena's centre) and `springslam` (open) in `rootbound.ts`, and their poses in the renderer table.
+  It fires from Phase III on its own 900-tick cooldown, ahead of the other moves when it is ready.
+  - The landing sends two `groundShock` projectiles along the floor both ways and five orb pods in an
+    upward fan. Pods deflect, as the Seed Throw's do. The world ends them at death, as it does every
+    projectile (5.1).
+  - The leap does no contact damage (`boss-body-contact.ts` leaves it out, as it does the vault's flight).
+- The Phase III cadence, as the third entries of the cadence lists: attack cooldown 112, Burrow
+  surfacing three times, 48 ticks apart, and two new lists, `walkSpeeds` (120, 120, 160) and
+  `windupScales` (1, 1, 0.85). `windup()` applies the scale to every windup except Spring Surge's and
+  Last Bloom's rise, which belong to the phase change.
+- How slice 4 read 2.1, where it left a choice, or departed from it:
+  - Spring Surge draws no centre column (5.2 gives the reason); only the peril diamond shows.
+  - The pods' arc: an even fan over the upper half circle, 560 px/s, lifted 120 px/s, under 520 px/s²
+    gravity.
+- The death needed no new code: the zones and the vine already end at death, and 5.1 checks it.
+
+**Slice 5, exactly.** The new Rootbinder from 2.2, on the engineering channel only:
+- A new enemy beside the boss in `src/gameplay/entities/enemy-types/rootbound-rebuild/`, with its move
+  table (Walk, Plant, Root Run, Uproot) and body from 2.2, reached through Enemy Test by one feature id
+  in `SURFACE_CHANNEL`.
+- Its renderer draws through the shared helpers, so 5.2 measures it (it draws no marks).
+- Its Root Run is a `groundShock` projectile, as Spring Surge's waves are.
+- Done when: its moves match 2.2, `pnpm playtest enemies --enemy rootbinder` numbers sit beside the
+  ranged enemy's in the pull request, and 5.1 and 5.2 are green for it.
+- Rebuild-only, so no ruleset step, unless it adds an entity kind (that moves the content hash: the
+  tutorial gold hashes and the two production-headless fixtures).
 - **Ruleset (the lead, 2026-11-21):** since #386, replays refuse engineering-only bosses and the replay
   content hash leaves them out.
   - A change confined to the new Rootbound's own code and data needs no ruleset step.
@@ -1013,13 +1061,14 @@ repository must be able to take the next slice from here.
 - **Figure before and after (3.4):** the owner approved `rootbound-figure-before-after` on the
   ledger on 2026-11-21. The rebuild renderer keeps the approved figure, and no owner verdict is
   owed for it. The new Rootbound's figure is settled, and slice 3 builds on it.
-- **Tell weight over budget (decided 2026-11-21, 5.2):** the new Rootbound reads 5 harness pairs
-  with the vault against a budget of 4. Fix it before the switch, not in slice 2.
+- **Tell weight over budget (decided 2026-11-21, 5.2):** the new Rootbound reads 6 harness pairs
+  with the vault after slice 4 (4 without it) against a budget of 4. Fix it before the switch.
 - **Replay admission:** built by the replay session as #386 (cleared, merging after #385). Replays then
   refuse engineering-only bosses (4.1), and slices that touch only the new Rootbound stop stepping the
   ruleset.
 - **Pace:** measured in practice since #390 (2.4). With the perfect parry the new Rootbound is under the
   hits targets in Phases I and II, its Phase I clear is far over its target, and Phase II's is under it.
+  Phase III (slice 4) sits at its hits floor, and its clear is under half its target. All one-path.
   - The cooldowns don't move the hits. The step back moves the clear times, but each setting is one
     deterministic path (tool gap 5), so no dial is tuned until the measurement varies the fight. The lead
     routes that.
