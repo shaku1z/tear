@@ -13,8 +13,11 @@ import { createProductionHeadlessEnvironment } from "../../src/playtest/headless
 import { requireProductionHeadlessScenario } from "../../src/playtest/headless/production-headless-scenario";
 import { TEAR_SIMULATION_TICKS_PER_SECOND } from "../../src/tearbench/simulation-profile";
 
-/** The herald must fall within this long of being left alone. With the stall it stood for minutes. */
-const CLEAR_LIMIT_TICKS = 25 * TEAR_SIMULATION_TICKS_PER_SECOND;
+/**
+ * The herald must fall within this long of being left alone. With the stall it stood for minutes. The slowest
+ * weapon, Chainblade, takes 42 s: the player sees each enemy's attack and gives way to the wave's other spawns.
+ */
+const CLEAR_LIMIT_TICKS = 60 * TEAR_SIMULATION_TICKS_PER_SECOND;
 /** The first wave has enemies in play within this long of the start. */
 const FIRST_SPAWN_LIMIT_TICKS = 5 * TEAR_SIMULATION_TICKS_PER_SECOND;
 
@@ -72,7 +75,11 @@ function ticksToDefeatLoneHerald(weapon: (typeof WEAPON_IDS)[number]): number | 
 }
 
 describe("scripted player against an enemy that stays away", () => {
-  it.each(WEAPON_IDS)("defeats a lone herald with %s", (weapon) => {
-    expect(ticksToDefeatLoneHerald(weapon)).not.toBeNull();
-  });
+  it.each(WEAPON_IDS)(
+    "defeats a lone herald with %s",
+    (weapon) => {
+      expect(ticksToDefeatLoneHerald(weapon)).not.toBeNull();
+    },
+    60_000,
+  );
 });

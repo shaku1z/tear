@@ -25,7 +25,8 @@ const report = {
 
 describe("a run played headless from wave 1", () => {
   it("plays an Endless run to the player's defeat and measures every wave from the running game", () => {
-    const result = playRun(run());
+    // Normal difficulty: the scripted player's easy runs outlast any limit a test should wait for.
+    const result = playRun(run({ difficulty: "normal" }));
     expect(result.end).toBe("player defeated");
     // Every wave from the first to the one the run ended in, in order, each cleared but the last.
     expect(result.waves.map((wave) => wave.wave)).toEqual(

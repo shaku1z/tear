@@ -78,7 +78,7 @@ describe("the coverage list", () => {
   it("counts what played results brought into play: a run's enemies and offered upgrades, a meeting's enemy", () => {
     const run = playRun({
       mode: "endless",
-      difficulty: "easy",
+      difficulty: "normal",
       weapon: "sword",
       seed: "1",
       player: "scripted",
