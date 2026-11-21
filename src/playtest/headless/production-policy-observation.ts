@@ -12,7 +12,7 @@ import {
   canonicalObservationEnemyKind,
   canonicalObservationStage,
 } from "../../tearbench/observation-identity";
-import type { ProductionReplayWorld } from "../../tearbench/production-world-factory";
+import type { ProductionReplayWorld } from "../../app/world/detached/world-factory";
 
 /** What a scripted player is given each tick: the player, blade, enemies, projectiles and run of this exact world. */
 export function projectProductionPolicyObservation(

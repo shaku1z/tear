@@ -3,10 +3,10 @@ import { applyWeapon } from "../../src/gameplay/weapons";
 import { CONFIG } from "../../src/config/game-config";
 import { createLiveTutorialRuntime } from "../../src/gameplay/training/live-tutorial-runtime";
 import { createLiveTrainingHandoff } from "../../src/app/training/training-handoff";
-import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
-import { createProductionCombatSimulation } from "../../src/tearbench/production-combat-simulation";
-import { createProductionWaveRewardRuntime } from "../../src/tearbench/production-wave-reward-runtime";
-import { projectProductionReplayCanonicalState } from "../../src/tearbench/production-replay-composition";
+import { createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
+import { createProductionCombatSimulation } from "../../src/app/world/detached/combat-simulation";
+import { createProductionWaveRewardRuntime } from "../../src/app/world/detached/wave-reward-runtime";
+import { projectProductionReplayCanonicalState } from "../../src/app/world/detached/replay-composition";
 import { createLiveTutorialSessionActions } from "../../src/app/training/tutorial-session-actions";
 import { loadShippingTutorialGold } from "../../src/gameplay/training/tutorial-gold-shipping";
 

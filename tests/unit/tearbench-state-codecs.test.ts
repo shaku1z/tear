@@ -18,7 +18,7 @@ import {
   type TearCodecWorld,
   type TearWorldFactory,
 } from "../../src/gameplay/snapshot/state-codec";
-import { restoreSnapshotIntoLiveWorld } from "../../src/tearbench";
+import { restoreSnapshotIntoLiveWorld } from "../../src/gameplay/snapshot/live-restore";
 
 function world(): TearCodecWorld {
   return { components: new Map(), references: new Map(), entityIds: new Set(["player", "blade"]) };

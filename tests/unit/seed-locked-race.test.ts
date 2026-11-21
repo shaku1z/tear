@@ -7,12 +7,12 @@ import { RewardSelectionController } from "../../src/gameplay/run/reward-selecti
 import { rollSeedLockedDraft, seedRaceCatalogHash } from "../../src/gameplay/run/seed-locked-draft";
 import { UPGRADES } from "../../src/gameplay/upgrades";
 import { captureLiveRewardSelection } from "../../src/app/engineering/state-setup-adapter";
-import { hydrateRewardCodecPayload } from "../../src/tearbench/reward-codec-hydrator";
+import { hydrateRewardCodecPayload } from "../../src/app/world/detached/reward-hydrator";
 import {
   createProductionGhostReplayComposition,
   captureProductionReplayCheckpoint,
   restoreProductionReplaySnapshot,
-} from "../../src/tearbench/production-replay-composition";
+} from "../../src/app/world/detached/replay-composition";
 import { declareSeedRace, readSeedRaceRun, seedRaceInitialBuildHash } from "../../src/gameplay/run/seed-race-contract";
 import { stableVerificationHash } from "../../src/domain/hash";
 import { legalSeedRaceUpgrade, type SeedRaceRun } from "../../src/gameplay/run/seed-locked-draft";

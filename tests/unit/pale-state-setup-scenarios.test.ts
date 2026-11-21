@@ -3,7 +3,7 @@ import { PALE_VARIANT_IDS } from "../../src/gameplay/variants";
 import {
   captureProductionReplayCheckpoint,
   createProductionGhostReplayComposition,
-} from "../../src/tearbench/production-replay-composition";
+} from "../../src/app/world/detached/replay-composition";
 import {
   PALE_AURORA_TRACK_SETUP_TEARSDL,
   PALE_RIMEHOUND_PACK_SETUP_TEARSDL,

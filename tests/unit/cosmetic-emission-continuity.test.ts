@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { createCosmeticEmissionRandom } from "../../src/domain/cosmetic-emission-random";
 import { createParticleSystem } from "../../src/presentation/particles";
-import { createLiveParticlePresentationState } from "../../src/tearbench/particle-presentation-state";
-import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
-import { createProductionCombatPhases } from "../../src/tearbench/production-combat-phases";
+import { createLiveParticlePresentationState } from "../../src/app/world/detached/particle-state";
+import { createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
+import { createProductionCombatPhases } from "../../src/app/world/detached/combat-phases";
 import { createMirrorRenderer } from "../../src/presentation/entities/mirror-renderer";
 import { clamp } from "../../src/domain/geometry";
 import { createLiveCombatActions } from "../../src/app/combat/combat-actions";
@@ -12,7 +12,7 @@ import { stepEnemyStatuses } from "../../src/gameplay/combat/enemy-step-runtime"
 import {
   captureProductionReplayCheckpoint,
   createProductionGhostReplayComposition,
-} from "../../src/tearbench/production-replay-composition";
+} from "../../src/app/world/detached/replay-composition";
 import { LiveKillRuntime } from "../../src/gameplay/combat/live-kill-runtime";
 import { runLiveCollisionPhase } from "../../src/gameplay/combat/live-collision-phase";
 import { runLiveOpeningPhase } from "../../src/gameplay/combat/live-opening-phase";

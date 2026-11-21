@@ -21,7 +21,7 @@ import { createEnemyPresentation } from "../../src/presentation/enemies/enemy-pr
 import { buildSetupSnapshot } from "../../src/presentation/menu-setup-snapshots";
 import { createSurfaceAvailability } from "../../src/domain/surface-availability";
 import { projectLiveBossObservation } from "../../src/tearbench/live-observation-actors";
-import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
+import { createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
 import { WHITE_HART_ATTACK_IDS } from "../../src/gameplay/entities/enemy-types/white-hart";
 
 function recordingCanvas(calls: string[]): CanvasRenderingContext2D {

@@ -10,7 +10,7 @@ import { launchResolvedLiveState } from "../../src/tearbench/live-state-setup-sc
 import {
   captureProductionReplayCheckpoint,
   createProductionGhostReplayComposition,
-} from "../../src/tearbench/production-replay-composition";
+} from "../../src/app/world/detached/replay-composition";
 import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-setup-live-compiler";
 import { PALE_STAGE_ENGINEERING_TEARSDL } from "../../src/tearbench/pale-stage-engineering-scenario";
 import { resolveTearSdl } from "../../src/tearbench/tearsdl";

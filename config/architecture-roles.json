@@ -109,9 +109,13 @@
       "purpose": "The generic world bootstrap, which receives base configuration from its caller.",
       "include": ["src/gameplay/runtime/tear-world-bootstrap.ts"]
     },
-    "tearbench.detached-world": {
-      "purpose": "Detached TearBench world hydration and runtime, portable outside the browser app.",
-      "include": ["src/tearbench/detached-world-hydrator.ts"]
+    "app.detached-world": {
+      "purpose": "The detached production world (watch, verify, race and the playtest headless environment run it without the browser app); the one part of src/app the playtest layer may import.",
+      "include": ["src/app/world/detached/**"]
+    },
+    "app.detached-world-hydrator": {
+      "purpose": "Detached world hydration (restoring a snapshot into a world), portable outside the browser app.",
+      "include": ["src/app/world/detached/world-hydrator.ts"]
     },
     "tearbench.production-headless-entry": {
       "purpose": "The production headless environment entry, run outside any browser.",
@@ -119,7 +123,7 @@
     },
     "tearbench.portable-live-runtime": {
       "purpose": "Portable live TearBench environment and action routing.",
-      "include": ["src/tearbench/live-runtime-environment.ts", "src/tearbench/live-runtime-action-routing.ts"]
+      "include": ["src/tearbench/live-runtime-environment.ts", "src/app/world/detached/action-routing.ts"]
     },
     "tearbench.browser-adapters": {
       "purpose": "Browser-facing TearBench adapters and developer UI.",
@@ -226,16 +230,23 @@
       "include": ["src/app/world/world-composition.ts"]
     },
     "app.world-construction-owners": {
-      "purpose": "The production-world roots (the live root and the detached TearBench replay world, which share the one world constructor) and the session/composition modules they construct.",
-      "include": ["src/app/shell/production-world.ts", "src/app/world/world-composition.ts", "src/app/world/world-session-state.ts", "src/tearbench/production-world-factory.ts"]
+      "purpose": "The production-world roots (the live root and the detached replay world, which share the one world constructor) and the session/composition modules they construct.",
+      "include": ["src/app/shell/production-world.ts", "src/app/world/world-composition.ts", "src/app/world/world-session-state.ts", "src/app/world/detached/world-factory.ts"]
     },
     "progress.direct-profile-writers": {
       "purpose": "Modules that still write PROFILE directly instead of through a composition-owned persistence adapter. Ratchet target: empty (plan step 12).",
       "include": ["src/app/screens/menu-screen-adapters-runtime.ts", "src/app/run/run-start-host.ts"]
     },
     "release.developer-only": {
-      "purpose": "Developer and test code that no release build may contain: the scripted test player, the playtest tool, TearBench's browser and test-support modules and the debug harness. Other code may load it only through a dynamic import guarded by a build constant, and a release build fails when one of these modules contributes code to a bundle (scripts/release-developer-code.mjs).",
-      "include": ["@tearbench.developer-surfaces", "src/agents/**", "src/playtest/**", "src/app/engineering/debug-*.ts"],
+      "purpose": "Developer and test code that no release build may contain: the scripted test player, the playtest tool, TearBench's browser and test-support modules, the tutorial gold generator and the live-detached parity matrix (both call the eager replay engine) and the debug harness. Other code may load it only through a dynamic import guarded by a build constant, and a release build fails when one of these modules contributes code to a bundle (scripts/release-developer-code.mjs).",
+      "include": [
+        "@tearbench.developer-surfaces",
+        "src/agents/**",
+        "src/playtest/**",
+        "src/app/engineering/debug-*.ts",
+        "src/tearbench/live-detached-parity-matrix.ts",
+        "src/tearbench/tutorial-gold-generation.ts"
+      ],
       "anticipate": ["src/app/engineering/*-channel-entry.ts"]
     },
     "release.mobile-only": {

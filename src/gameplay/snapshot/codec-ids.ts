@@ -1,4 +1,6 @@
 import { createStableRegistry } from "../../domain/stable-registry";
+import { BOSS_IDENTITY_IDS } from "../run/boss-definitions";
+import { ENEMY_IDENTITY_IDS } from "../run/content-director";
 
 /** The state codecs a snapshot carries, one per part of the game state. */
 export const CODEC_IDS = Object.freeze([
@@ -19,3 +21,18 @@ export const CODEC_IDS = Object.freeze([
 ] as const);
 export const CODEC_REGISTRY = createStableRegistry("codec", CODEC_IDS);
 export type TearCodecId = (typeof CODEC_IDS)[number];
+
+/** The kinds of entity a snapshot names. */
+export const ENTITY_KIND_IDS = Object.freeze([
+  "player",
+  "blade",
+  "projectile",
+  "platform",
+  "hazard",
+  ...ENEMY_IDENTITY_IDS,
+  "reflection",
+  "void-wisp",
+  ...BOSS_IDENTITY_IDS,
+] as const);
+export const ENTITY_KIND_REGISTRY = createStableRegistry("entity kind", ENTITY_KIND_IDS);
+export type TearEntityKindId = (typeof ENTITY_KIND_IDS)[number];

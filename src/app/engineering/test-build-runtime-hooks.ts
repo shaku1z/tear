@@ -13,7 +13,7 @@ import type { GhostLiveRecorder } from "../../ghost/live-recorder";
 import { verifyGhostCapsuleOpeningContinuation } from "../../ghost/production-replay-verification";
 import type { GameAction } from "../../input/game-action";
 import { emitLiveTearBenchPhysicalInput } from "../../tearbench/browser/live-physical-input";
-import { liveRewardChoiceIds, routeLiveTearBenchAction } from "../../tearbench/live-runtime-action-routing";
+import { liveRewardChoiceIds, routeLiveTearBenchAction } from "../world/detached/action-routing";
 import type { LiveCampaignTrainingAssembly } from "../campaign/live-campaign-training-assembly";
 import type { LiveCanonicalCombatHost, LiveCanonicalStateCapture } from "../combat/live-canonical-state";
 import type { LiveInterfaceComposition } from "../interface/interface-composition";

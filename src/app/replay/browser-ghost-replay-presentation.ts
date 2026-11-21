@@ -23,8 +23,8 @@ import {
   createLiveWorldSimulationPresentationAdapter,
   type LiveWorldSimulationPresentationAdapterOptions,
 } from "../world/world-simulation-factories";
-import type { ProductionReplayPresentationContext } from "../../tearbench/production-world-factory";
-import type { ProductionGhostReplayCompositionOptions } from "../../tearbench/production-replay-composition";
+import type { ProductionReplayPresentationContext } from "../world/detached/world-factory";
+import type { ProductionGhostReplayCompositionOptions } from "../world/detached/replay-composition";
 
 type Ui = LiveWorldSimulationPresentationAdapterOptions["ui"] & CinematicUiPort & WorldUiPort;
 /** The parts of a drawn replay frame a caller may leave out. */

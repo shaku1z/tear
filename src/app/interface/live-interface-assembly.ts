@@ -428,6 +428,7 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
         debug: PANTHEON_DEBUG,
         stage: stageRuntime,
         tutorial: TUT,
+        trainingCallouts: campaignTraining.training.callouts,
         finale: () => story.finale,
         formatTime: fmtTime,
         trickColor,

@@ -15,7 +15,7 @@ export async function encodeWikiData(server, reference, { modeModule, variantMod
   const { CONFIG } = await load("/src/config/game-config.ts");
   const bestiary = await load("/src/presentation/bestiary-catalog.ts");
   const director = await load("/src/gameplay/run/content-director.ts");
-  const { createProductionReplayWorld } = await load("/src/tearbench/production-world-factory.ts");
+  const { createProductionReplayWorld } = await load("/src/app/world/detached/world-factory.ts");
   const { buildCodexGuide } = await load("/src/presentation/codex-snapshots.ts");
   const { SHOP_CATEGORIES } = await load("/src/presentation/shop-snapshot.ts");
   const { createMetaProgression } = await load("/src/gameplay/progression/meta.ts");

@@ -1,4 +1,4 @@
-import type { TearLiveWorldAdapter } from "../../tearbench/live-state-snapshot";
+import type { TearLiveWorldAdapter } from "../../gameplay/snapshot/live-restore";
 import type { BrowserInput } from "../../input/browser-input-contracts";
 import type { LiveScreenNavigation } from "../interface/live-screen-navigation";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
