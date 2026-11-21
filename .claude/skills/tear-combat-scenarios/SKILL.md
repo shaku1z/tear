@@ -1,6 +1,6 @@
 ---
 name: tear-combat-scenarios
-description: Convert Tear combat, movement, weapon, enemy, boss, timing, collision, death, cinematic, or deterministic replay bugs into minimal permanent regression scenarios. Use when implementing gameplay behavior, reproducing a gameplay defect, choosing a Tear test layer, or reviewing whether a fix has credible deterministic evidence.
+description: Turn a Tear combat, movement, weapon, enemy, boss, timing, collision, death, wave or replay behaviour into the smallest permanent deterministic test. Use when implementing gameplay, reproducing a gameplay defect, choosing which test layer a fix belongs in, or reviewing whether a fix has a test that fails without it.
 ---
 
 # tear-combat-scenarios (Claude Code pointer)

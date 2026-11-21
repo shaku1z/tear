@@ -38,7 +38,9 @@ paired screenshots plus input journeys for UI. A difference is acceptable only
 when it is required by an approved feature, fixes a demonstrated defect, or is
 recorded above. Otherwise the oracle wins.
 
-The local oracle worktree convention is `../Tear-oracle`. Debug snapshots expose
+The oracle is the locked checkout `C:\Users\realm\Desktop\game\Tear-oracle`: never edit, commit in or
+recreate it. The parity commands look for `../Tear-oracle` beside the repository root, which is only right
+from the canonical checkout; from a worktree, set `TEAR_ORACLE_ROOT` to that path. Debug snapshots expose
 simulation time, 120 Hz tick, player, blade, and enemy traces so parity checks do
 not depend on visual estimation alone.
 

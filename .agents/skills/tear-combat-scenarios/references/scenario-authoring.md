@@ -1,28 +1,32 @@
-# Scenario authoring
+# Writing the scenario
 
-## Minimize the fixture
+## Keep it minimal
 
-Describe a scenario as:
+A scenario is:
 
-- Initial authoritative state and only required entities.
-- Stable entity IDs and authored content IDs.
-- Seed or injected deterministic random sequence.
-- Semantic actions or domain events at explicit ticks.
-- Fixed number of 60 Hz steps.
-- Expected state transition, event, damage/timer value, cleanup, or verification hash.
+- the start state, with only the entities it needs, by stable entity and content ids;
+- a seed, or an injected deterministic random sequence;
+- semantic actions or domain events at named ticks;
+- a fixed number of simulation ticks (120 a second);
+- the expected transition, event, damage or timer value, cleanup, or hash.
 
-Prefer one cause and one primary assertion. Add supporting assertions only when they explain the same contract.
+One cause and one main assertion. Add another only when it explains the same rule.
 
-## Use live primitives
+## Use the live pieces
 
-- Time: `src/simulation/fixed-step.ts` and authoritative step/runtime controllers.
-- Randomness: `src/domain/random.ts` and injected `RandomSource`.
-- Input: `GameAction`, semantic buffer, and command envelopes.
-- Determinism: canonical gameplay projection, replay hash, authoritative replay contracts.
-- Actors: existing enemy/mirror harnesses and typed combat/entity ports.
+- **Time:** `src/simulation/fixed-step.ts` and the step controllers under `src/gameplay/runtime/`.
+- **Randomness:** `src/domain/random.ts`.
+- **Input:** `GameAction` in `src/input/game-action.ts`.
+- **A whole fight or run without a browser:** the headless environment in `src/playtest/headless/`; see
+  `tests/unit/current-headless-gameplay-scenarios.test.ts` for how a test starts one.
+- **Actors:** `tests/unit/enemy-test-harness.ts`, `tests/unit/mirror-test-harness.ts` and
+  `tests/unit/detached-world-harness.ts`.
+- **Many inputs:** `checkProperty` from `tests/unit/property-harness.ts` (`README.md`, "Property tests").
 
-Do not call renderer clocks, wall time, DOM input, SDKs, audio backends, or storage from a simulation fixture.
+A simulation test never reads a render clock, wall time, DOM input, an SDK, audio or storage.
 
-## Prove the regression
+## Prove it
 
-Run the new test against the pre-fix behavior when practical and confirm it fails on the intended assertion. After the fix, run the exact test, its containing suite, and any conformance/browser gate owning the affected public behavior.
+Run the new test on the code before the fix and confirm it fails on the intended assertion. A new test
+file must be in git's index before Vitest sees it (`git add -N <file>`). After the fix, run the test, the
+file's suite and whatever `tear-change-gate` routes to.
