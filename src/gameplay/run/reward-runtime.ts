@@ -106,7 +106,8 @@ export interface RewardRuntime<TChoice extends RewardChoice> {
 }
 
 export interface RewardRuntimeOptions<TChoice extends RewardChoice> {
-  readonly beforeDecision?: (decision: RewardDecision, before: RewardSelectionSnapshot<TChoice>) => number;
+  /** Sees each decision before it applies; a number fixes its sequence (a seed race), undefined keeps the next one. */
+  readonly beforeDecision?: (decision: RewardDecision, before: RewardSelectionSnapshot<TChoice>) => number | undefined;
   readonly run: () => RewardRuntimeRun<TChoice>;
   readonly roll: DraftRoller<TChoice>;
   readonly transitionPorts: RewardTransitionPorts<TChoice>;

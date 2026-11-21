@@ -1,3 +1,5 @@
+import { installReplayTapInspector } from "./replay-tap-inspector";
+import type { LiveReplayTapSlot } from "../replay/live-replay-tap";
 import type { CommandEnvelope } from "../../domain/envelopes";
 import type { TearWorldConfiguration } from "../../gameplay/runtime/tear-world-configuration";
 import {
@@ -43,6 +45,7 @@ import { createStageRestFrame } from "./stage-rest-frame";
 /** The runtime owners that test-build inspection hooks observe and drive. */
 export interface LiveTestBuildHookSources {
   readonly dependencies: GameRuntimeDependencies;
+  readonly replayTap: LiveReplayTapSlot;
   readonly configuration: TearWorldConfiguration<GameRuntimeDependencies["CONFIG"]>;
   readonly browser: LiveBrowserRuntime;
   readonly world: LiveWorldComposition;
@@ -146,6 +149,7 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
     failure: () => ghostV3?.failure ?? null,
   });
   installGhostVaultConditionalCommitInspector(browserWindow);
+  installReplayTapInspector(browserWindow, sources.replayTap, () => authoritativeStep.lastResult?.state.run ?? null);
   const consumedActions: CommandEnvelope<GameAction>[] = [];
   Input.semantic.subscribe((entry) => {
     consumedActions.push(entry);

@@ -48,6 +48,7 @@ import type { GameBlade, GamePlayer, GameRun } from "../../gameplay/runtime/game
 import { createLiveProductionWorld } from "./production-world";
 import { RuntimeFrameDriver } from "./runtime-frame-driver";
 import { createLiveSessionServices } from "./session-services-composition";
+import { createLiveReplayTapSlot, withReplayTapFrames } from "../replay/live-replay-tap";
 
 /**
  * Composes the live game: browser surface, Ghost V3 sidecar, session services,
@@ -105,6 +106,8 @@ export function startLiveGame(
     bossIntroActive: () => hostState.bossIntro() !== null,
   });
   const { session: ghostV3Session, recorder: ghostV3, career, frames: ghostFrames } = ghostRecording;
+  const replayTap = createLiveReplayTapSlot();
+  GAMEPLAY_EVENTS.subscribe(replayTap.observe);
   observeLiveGhostRecordingBoundaries(ghostRecording, {
     ghost: GHOST,
     run: liveRun,
@@ -142,6 +145,7 @@ export function startLiveGame(
   const interfaceInteraction = createLiveInterfaceInteractionState();
   const sessionServices = createLiveSessionServices({
     dependencies,
+    replayTap,
     run: liveRun,
     player: livePlayer,
     blade: liveBlade,
@@ -307,6 +311,7 @@ export function startLiveGame(
   });
   const orchestration = assembleLiveRunOrchestration({
     dependencies,
+    replayTap,
     world,
     session,
     services: sessionServices,
@@ -410,9 +415,15 @@ export function startLiveGame(
     player: livePlayer,
     blade: liveBlade,
     ghostCapture: () => ghostCapture,
+    replayTap,
+    stateHash: () => combatHost.authoritativeStep.lastResult?.stateHash ?? "",
   });
   const coordinatorContext = {
-    applicationFrameRecording: ghostFrames,
+    applicationFrameRecording: withReplayTapFrames(
+      ghostFrames,
+      replayTap,
+      () => combatHost.simulationRuntime.scheduler.tick,
+    ),
     now: () => performance.now(),
     state: () => navigation.screen(),
     setState: (screen) => {
@@ -588,6 +599,7 @@ export function startLiveGame(
   });
   const testBuildHookSources = {
     dependencies,
+    replayTap,
     configuration,
     browser: browserRuntime,
     world,

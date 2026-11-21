@@ -30,6 +30,8 @@ export interface LiveOpeningCaptureBoundary {
 
 interface RunStartHostContext extends Omit<RunStartWorldContext, "dependencies" | "hooks" | "race"> {
   readonly runInstalled?: (run: GameRun) => void;
+  /** A run started with these choices: the live replay tap records from here (src/app/replay/live-replay-tap.ts). */
+  readonly runStarted?: (start: RunStartChoices) => void;
   readonly dependencies: GameRuntimeDependencies;
   readonly applySettings: () => void;
   readonly race?: Readonly<{
@@ -314,7 +316,8 @@ export function createLiveRunStartHost(
         context.achievementCheck();
       }
     },
-    startRecording: (runId, seed) => {
+    startRecording: (runId, start) => {
+      const seed = start.runSeed;
       // Canonical device input is the live simulation's normal route, not a
       // Ghost 2-only observation feature.  Start it before the optional visual
       // recorder so the very first live tick (and its V3 sidecar) sees the
@@ -322,6 +325,7 @@ export function createLiveRunStartHost(
       context.race?.finalize();
       Input.startSemanticRecording();
       Input.syncSemanticMovement();
+      context.runStarted?.(start);
       if (context.achievementTracking() || context.race?.active()) {
         const record = () => {
           GHOST.startRec({

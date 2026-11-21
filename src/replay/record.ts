@@ -69,6 +69,25 @@ export function replayStartChoices(run: Pick<ReplayRun, "seed" | "start">): RunS
   return Object.freeze({ ...start, boss: boss ?? "shuffle", runSeed: run.seed });
 }
 
+/** The record seed and start of a run started with these choices; null for a run that is never recorded. */
+export function replayStartOf(choices: RunStartChoices): Pick<ReplayRun, "seed" | "start"> | null {
+  const { runSeed, boss, mode, difficulty, weapon, ...rest } = choices;
+  if (
+    !RECORDED_MODE_IDS.some((id) => id === mode) ||
+    !DIFFICULTY_IDS.some((id) => id === difficulty) ||
+    !isWeaponId(weapon)
+  )
+    return null;
+  const start: ReplayStart = {
+    ...rest,
+    mode,
+    difficulty,
+    weapon,
+    ...(boss === "shuffle" ? {} : { boss }),
+  };
+  return Object.freeze({ seed: runSeed, start: Object.freeze(start) });
+}
+
 export interface ReplayCheckpoint {
   readonly tick: number;
   readonly hash: string;
