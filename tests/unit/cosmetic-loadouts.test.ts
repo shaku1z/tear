@@ -164,6 +164,17 @@ describe("named loadouts across two devices", () => {
     }
   });
 
+  it("names a loadout the player never named for the place it sits in, and keeps a name the player gave", () => {
+    const boss = rename(must(createLoadout(owned, 100)), "loadout_2", "Boss", 101);
+    const plain = must(createLoadout(owned, 105));
+    const merged = merge(boss, plain);
+    expect(names(merged)).toEqual(["MAIN", "Boss", "LOADOUT 3*"]);
+    // Boss goes, the unnamed loadout moves home and reads LOADOUT 2 again; a moved, named one keeps its name.
+    expect(names(merge(merged, must(deleteLoadout(boss, "loadout_2", 300))))).toEqual(["MAIN*", "LOADOUT 2"]);
+    const daily = rename(plain, "loadout_2", "Daily", 106);
+    expect(names(merge(boss, daily))).toEqual(["MAIN", "Boss", "Daily*"]);
+  });
+
   it("keeps both loadouts two devices made at once, each with its own name and items", () => {
     const boss = equip(rename(must(createLoadout(owned, 100)), "loadout_2", "Boss", 101), "trail", "trail_dusk", 102);
     const daily = rename(must(createLoadout(owned, 105)), "loadout_2", "Daily", 106);

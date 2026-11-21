@@ -149,20 +149,20 @@ describe("C24 hierarchical scripted agent core", () => {
   it("remembers the final operational batch used by repeated-input detection", () => {
     const policy = new TearHierarchicalAgentOrchestrator("competent", {
       transitionTicks: 100,
-      noProgressTicks: 100,
+      replanAfterTicks: 100,
       repeatedInputLimit: 2,
       loadingTicks: 100,
     });
     const finalActions = [{ type: "move", x: 321, y: 0 }] as const;
     const shadowWouldChange = [
-      observation(1, { signals: { progressToken: "same" } }),
+      observation(1, { signals: { steeringToken: "same" } }),
       observation(2, {
         state: state(2, [actor("other-shadow-target", 900)]),
-        signals: { progressToken: "same" },
+        signals: { steeringToken: "same" },
       }),
       observation(3, {
         state: state(3, [actor("third-shadow-target", 150)]),
-        signals: { progressToken: "same" },
+        signals: { steeringToken: "same" },
       }),
     ];
     const decisions = shadowWouldChange.map((input) => policy.decide(input, operational(finalActions)));
@@ -178,14 +178,14 @@ describe("C24 hierarchical scripted agent core", () => {
   it("lets a fatal watchdog incident arbitrate over the operational batch", () => {
     const policy = new TearHierarchicalAgentOrchestrator("competent", {
       transitionTicks: 100,
-      noProgressTicks: 1,
+      replanAfterTicks: 1,
       repeatedInputLimit: 100,
       loadingTicks: 100,
     });
     const finalActions = [{ type: "move", x: 321, y: 0 }] as const;
     policy.decide(
       observation(0, {
-        signals: { progressToken: "stalled" },
+        signals: { steeringToken: "stalled" },
       }),
       operational(finalActions),
     );
@@ -195,11 +195,11 @@ describe("C24 hierarchical scripted agent core", () => {
           ...state(2),
           diagnostics: { softlockLimitTicks: 1 },
         },
-        signals: { progressToken: "stalled" },
+        signals: { steeringToken: "stalled" },
       }),
       operational(finalActions),
     );
-    expect(fatal.intent.watchdog.map((entry) => entry.kind)).toEqual(["no-progress", "softlock"]);
+    expect(fatal.intent.watchdog.map((entry) => entry.kind)).toEqual(["steering-unchanged", "steering-stuck"]);
     expect(fatal.intent.objective).toBe("recover-runtime");
     expect(fatal.intent.maneuver).toBe("recover");
     expect(fatal.intent.confidence).toBe(0);
@@ -209,15 +209,15 @@ describe("C24 hierarchical scripted agent core", () => {
 
   it("detects transition, progress, loading, repeated-input, pause, softlock, and terminal incidents", () => {
     const memory = new TearLongHorizonMemory();
-    const contract = { transitionTicks: 2, noProgressTicks: 2, repeatedInputLimit: 2, loadingTicks: 2 };
+    const contract = { transitionTicks: 2, replanAfterTicks: 2, repeatedInputLimit: 2, loadingTicks: 2 };
     const watchdog = new TearAgentWatchdog(contract);
-    const initial = observation(0, { ui: { screen: "setup" }, signals: { loading: true, progressToken: "same" } });
+    const initial = observation(0, { ui: { screen: "setup" }, signals: { loading: true, steeringToken: "same" } });
     memory.observe(initial);
     memory.rememberDecision([{ type: "confirm" }], undefined, false);
     memory.rememberDecision([{ type: "confirm" }], undefined, false);
     const stalled = observation(3, {
       ui: { screen: "setup" },
-      signals: { loading: true, terminal: true, progressToken: "same" },
+      signals: { loading: true, terminal: true, steeringToken: "same" },
       state: { ...state(3), diagnostics: { paused: true, softlockLimitTicks: 2 } },
     });
     memory.observe(stalled);
@@ -227,8 +227,8 @@ describe("C24 hierarchical scripted agent core", () => {
       "paused",
       "loading-stall",
       "transition-stall",
-      "no-progress",
-      "softlock",
+      "steering-unchanged",
+      "steering-stuck",
       "repeated-input",
     ]);
   });
@@ -241,7 +241,7 @@ describe("C24 hierarchical scripted agent core", () => {
     expect(memory.snapshot()).toMatchObject({
       decisions: 1,
       lastTick: 5,
-      lastProgressTick: 5,
+      lastSteeringChangeTick: 5,
       recoveryAttempts: 0,
       repeatedActions: 0,
     });

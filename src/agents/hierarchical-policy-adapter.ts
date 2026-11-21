@@ -19,14 +19,15 @@ function operationalObservation(observation: TearAgentObservation): TearHierarch
       focused: true,
       deviceConnected: true,
       terminal: screen === "win" || screen === "gameover",
-      progressToken: [
+      steeringToken: [
         screen,
         observation.state.run.wave,
         observation.state.run.score,
         Math.round(observation.state.player.hp),
         observation.state.entities.length,
-        // Damage to an enemy is progress. Without it a fight where nothing scores (Playground boss practice)
-        // reads as a softlock after the no-progress limit, and the watchdog pauses the game.
+        // Damage to an enemy changes the token. Without it a fight where nothing scores (Playground boss practice)
+        // reads as stuck after the re-plan limit, and the player pauses the game. This token is what the player
+        // steers by, not run progress: TearProgressMeter measures that.
         Math.round(100 * observation.state.entities.reduce((total, entity) => total + (entity.hpRatio ?? 0), 0)),
       ].join(":"),
     }),

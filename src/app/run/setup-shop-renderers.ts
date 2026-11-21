@@ -11,11 +11,17 @@ import { createArmedConfirm } from "../interface/armed-confirm";
 import {
   deleteLoadout,
   loadoutIdentity,
+  loadoutPlace,
   loadoutSummaries,
   MIN_LOADOUT_NAME,
   renameLoadout,
 } from "../../domain/cosmetic-loadouts";
-import { MAX_LOADOUT_NAME, type CosmeticChange } from "../../domain/cosmetic-types";
+import {
+  MAX_LOADOUT_NAME,
+  type CosmeticCatalog,
+  type CosmeticChange,
+  type CosmeticState,
+} from "../../domain/cosmetic-types";
 import type { NameTarget } from "../../domain/display-names";
 
 const collectionName = (id: string): string =>
@@ -32,6 +38,16 @@ export function createLiveSetupShopRenderers(state: MenuScreenState, services: M
     const loadout = ownValue(d.PROFILE.cosmetics().loadouts, id);
     return loadout ? loadoutIdentity(id, loadout) : id;
   };
+  /**
+   * A change to the loadout `identity` names, made where it sits when the change commits, so a merge or delete
+   * that moves loadouts in the meantime cannot point it at another. Nothing changes once it is gone.
+   */
+  const toLoadout =
+    (identity: string, change: (cosmetics: CosmeticState, id: string, now: number) => CosmeticState | null) =>
+    (_catalog: CosmeticCatalog, cosmetics: CosmeticState, now: number): CosmeticState | null => {
+      const id = loadoutPlace(cosmetics, identity);
+      return id === undefined ? null : change(cosmetics, id, now);
+    };
   const changeCosmetics = (change: CosmeticChange): void => {
     deleteConfirm.cancel();
     void d.PROFILE.changeCosmetics(change).then((result) => {
@@ -157,20 +173,21 @@ export function createLiveSetupShopRenderers(state: MenuScreenState, services: M
       deleteConfirm.cancel();
     },
     pressDeleteLoadout(id: string): void {
-      if (deleteConfirm.press(loadoutAt(id)))
-        changeCosmetics((_catalog, cosmetics, now) => deleteLoadout(cosmetics, id, now));
+      const identity = loadoutAt(id);
+      if (deleteConfirm.press(identity)) changeCosmetics(toLoadout(identity, deleteLoadout));
       else d.SFX.ui();
     },
     loadoutNameTarget(id: string): NameTarget | null {
       const loadout = loadoutSummaries(d.PROFILE.cosmetics()).find((entry) => entry.id === id);
       if (!loadout) return null;
+      const identity = loadoutAt(id);
       return {
         subject: "loadout",
         initial: loadout.name,
         minLength: MIN_LOADOUT_NAME,
         maxLength: MAX_LOADOUT_NAME,
         commit: (name) => {
-          changeCosmetics((_catalog, cosmetics, now) => renameLoadout(cosmetics, id, name, now));
+          changeCosmetics(toLoadout(identity, (cosmetics, at, now) => renameLoadout(cosmetics, at, name, now)));
         },
       };
     },

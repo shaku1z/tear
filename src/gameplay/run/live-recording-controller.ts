@@ -1,5 +1,7 @@
+import { leaderboardId, type LeaderboardRef } from "../../domain/leaderboards";
 import {
   buildRecordingSummary,
+  runLeaderboardEntries,
   type OutcomeRunState,
   type RecordingLoadoutEntry,
   type RecordingSummary,
@@ -25,12 +27,11 @@ export interface LiveRecordingPort<TReplay extends RecordedReplay> {
   readonly recordingStopped: (replay: TReplay | null) => void;
   readonly replayStored: (vaultId: string | null) => void;
   readonly submitScore: (
-    mode: OutcomeRunState["mode"],
-    difficulty: OutcomeRunState["diff"],
+    board: LeaderboardRef,
     score: Readonly<{ score: number; wave: number; time: number }>,
   ) => Promise<boolean>;
   readonly publishReplay: (replay: TReplay, board: string) => Promise<string | null>;
-  readonly linkReplay: (mode: OutcomeRunState["mode"], difficulty: OutcomeRunState["diff"], shareId: string) => void;
+  readonly linkReplay: (board: LeaderboardRef, shareId: string) => void;
   readonly attachShareId: (vaultId: string, shareId: string) => void;
 }
 
@@ -67,19 +68,16 @@ export class LiveRecordingController<TReplay extends RecordedReplay> {
       readGhostRunAssistance(run.ghostAssistance) !== undefined
     )
       return replay;
-    const board = `lb_${run.mode}_${run.diff}`;
-    void this.#port
-      .submitScore(run.mode, run.diff, {
-        score: run.score,
-        wave: run.wave,
-        time: run.runTime,
-      })
-      .then((accepted) => {
+    // Each board the run beats gets its own published replay (one per board per player), so a
+    // later best on one board never swaps the replay another board links to.
+    for (const { board, entry, vaultShare } of runLeaderboardEntries(run))
+      void this.#port.submitScore(board, entry).then((accepted) => {
         if (!accepted || replay === null) return;
-        void this.#port.publishReplay(replay, board).then((shareId) => {
+        void this.#port.publishReplay(replay, `lb_${leaderboardId(board)}`).then((shareId) => {
           if (shareId === null || shareId === "") return;
-          this.#port.linkReplay(run.mode, run.diff, shareId);
-          if (vaultId !== null && vaultId !== "") this.#port.attachShareId(vaultId, shareId);
+          this.#port.linkReplay(board, shareId);
+          // Only the run's own board names the vault copy's share id, not whichever publish ends last.
+          if (vaultShare && vaultId !== null && vaultId !== "") this.#port.attachShareId(vaultId, shareId);
         });
       });
     return replay;

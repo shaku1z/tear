@@ -20,13 +20,19 @@ function count(value: unknown): number | null {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
 }
 
-/** A stored clear, or null when it is malformed. A clear takes at least one tick. */
+/** A clear time in ticks, or null when it is not one: a clear takes a whole number of ticks, at least one. */
+export function clearTicks(value: unknown): number | null {
+  const ticks = count(value);
+  return ticks === null || ticks === 0 ? null : ticks;
+}
+
+/** A stored clear, or null when it is malformed. */
 export function gauntletClear(value: unknown): GauntletClear | null {
   const record = asRecord(value);
   if (record === undefined) return null;
-  const ticks = count(record.ticks),
+  const ticks = clearTicks(record.ticks),
     hits = count(record.hits);
-  return ticks === null || hits === null || ticks === 0 ? null : Object.freeze({ ticks, hits });
+  return ticks === null || hits === null ? null : Object.freeze({ ticks, hits });
 }
 
 /** Stored bests with malformed entries dropped; anything that is not an object reads as none. */

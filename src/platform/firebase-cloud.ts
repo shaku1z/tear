@@ -1,3 +1,4 @@
+import { leaderboardId, leaderboardKind, scoreBeats } from "../domain/leaderboards";
 import { asRecord } from "../domain/records";
 import type { AccountProvider, CloudSavePayload, CloudUser, SharedCloudService, SignInResult } from "./cloud";
 import type { FirebaseClientConfig } from "./firebase-config";
@@ -133,6 +134,46 @@ function authUser(user: AuthUser): CloudUser {
 
 function currentAuthUser(auth: Auth): AuthUser | null {
   return auth.currentUser;
+}
+
+/** At most this many chunks per replay, as firestore.rules allows. */
+const REPLAY_MAX_CHUNKS = 6;
+/** The characters firestore.rules allows in one chunk. */
+const REPLAY_CHUNK_CHARS = 500_000;
+/** UTF-8 bytes per chunk: under Firestore's 1 MiB document limit, with room for the path and field name. */
+const REPLAY_CHUNK_BYTES = 1_000_000;
+
+/**
+ * Splits a recording's JSON into chunk strings that each fit both limits: the rules' characters and Firestore's
+ * bytes (a character outside ASCII takes 2 to 4 bytes). A cut never falls inside a surrogate pair.
+ */
+export function replayChunks(json: string): string[] {
+  const chunks: string[] = [];
+  let start = 0;
+  let bytes = 0;
+  for (let index = 0; index < json.length;) {
+    const code = json.codePointAt(index) ?? 0;
+    const units = code > 0xffff ? 2 : 1;
+    const size = code < 0x80 ? 1 : code < 0x800 ? 2 : code <= 0xffff ? 3 : 4;
+    if (index + units - start > REPLAY_CHUNK_CHARS || bytes + size > REPLAY_CHUNK_BYTES) {
+      chunks.push(json.slice(start, index));
+      start = index;
+      bytes = 0;
+    }
+    bytes += size;
+    index += units;
+  }
+  if (start < json.length || chunks.length === 0) chunks.push(json.slice(start));
+  return chunks;
+}
+
+/** The thumbnail when it is the small JPEG data URL firestore.rules accepts; anything else publishes without one. */
+export function replayThumb(value: unknown): string | null {
+  return typeof value === "string" &&
+    value.length <= 32_768 &&
+    /^data:image\/jpeg;base64,[A-Za-z0-9+/]+=*$/u.test(value)
+    ? value
+    : null;
 }
 
 export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions): FirebaseCloudCompatibility {
@@ -363,46 +404,45 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
 
   const shared: SharedCloudService = {
     available: typeof options.config.apiKey === "string" && options.config.apiKey.length > 0,
-    async submitScore(mode, difficulty, entry) {
+    // A Firestore query orders a board either way, so every direction is ranked.
+    ranks: () => true,
+    async submitScore(board, entry) {
       const session = await passport();
       if (!session) return false;
-      const ref = session.db
-        .collection("leaderboards")
-        .doc(`${mode}_${difficulty}`)
-        .collection("scores")
-        .doc(session.uid);
+      const kind = leaderboardKind(board);
+      const ref = session.db.collection("leaderboards").doc(leaderboardId(board)).collection("scores").doc(session.uid);
       try {
         const current = await race(ref.get());
         const currentData = current.exists ? asRecord(current.data()) : null;
-        if (number(currentData?.score) >= entry.score) return false;
+        if (!scoreBeats(kind, Math.trunc(entry.score), currentData?.score)) return false;
+        // A new best replaces the whole entry, so the earlier run's replay link goes with it;
+        // linkReplay adds this run's link once its replay is published.
         await race(
-          ref.set(
-            {
-              name: string(entry.name, "Player"),
-              score: Math.trunc(entry.score),
-              wave: Math.trunc(number(entry.wave)),
-              time: Math.round(number(entry.time)),
-              uid: session.uid,
-              ts: now(),
-            },
-            { merge: true },
-          ),
+          ref.set({
+            name: string(entry.name, "Player"),
+            score: Math.trunc(entry.score),
+            wave: Math.trunc(number(entry.wave)),
+            time: Math.round(number(entry.time)),
+            uid: session.uid,
+            ts: now(),
+          }),
         );
         return true;
       } catch {
         return false;
       }
     },
-    async topScores(mode, difficulty, limit) {
+    async topScores(board, limit) {
       const session = await passport();
       if (!session) return null;
+      const { direction } = leaderboardKind(board);
       try {
         const snapshot = await race(
           session.db
             .collection("leaderboards")
-            .doc(`${mode}_${difficulty}`)
+            .doc(leaderboardId(board))
             .collection("scores")
-            .orderBy("score", "desc")
+            .orderBy("score", direction === "higher" ? "desc" : "asc")
             .limit(limit || 25)
             .get(),
         );
@@ -431,8 +471,8 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
           : `r${now().toString(36)}${random().toString(36).slice(2, 8)}`;
         const json = JSON.stringify(recording);
         if (json.length > 3_000_000) return null;
-        const chunks: string[] = [];
-        for (let offset = 0; offset < json.length; offset += 500_000) chunks.push(json.slice(offset, offset + 500_000));
+        const chunks = replayChunks(json);
+        if (chunks.length > REPLAY_MAX_CHUNKS) return null;
         const replaySummary: DataRecord = {
           ...(summary ?? {}),
           ownerUid: session.uid,
@@ -440,14 +480,14 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
           chunkCount: chunks.length,
           mode: recording.mode ?? "",
           diff: recording.diff ?? "",
-          wave: number(recording.wave),
-          score: number(recording.score),
+          wave: Math.trunc(number(recording.wave)),
+          score: Math.trunc(number(recording.score)),
           time: number(recording.time),
           won: recording.won === true,
-          kills: number(recording.kills),
-          peak: number(recording.peak, 1),
+          kills: Math.trunc(number(recording.kills)),
+          peak: Math.trunc(number(recording.peak, 1)),
           name: string(recording.name, "Player"),
-          thumb: recording.thumb ?? null,
+          thumb: replayThumb(recording.thumb),
           lb: fixedIdPrefix !== undefined,
         };
         const ref = session.db.collection("replays").doc(shareId);
@@ -510,14 +550,14 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
         return null;
       }
     },
-    async linkReplay(mode, difficulty, shareId) {
+    async linkReplay(board, shareId) {
       const session = await passport();
       if (!session) return false;
       try {
         await race(
           session.db
             .collection("leaderboards")
-            .doc(`${mode}_${difficulty}`)
+            .doc(leaderboardId(board))
             .collection("scores")
             .doc(session.uid)
             .set({ replayId: shareId }, { merge: true }),
