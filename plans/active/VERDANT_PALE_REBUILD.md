@@ -417,6 +417,53 @@ Measured with `pnpm playtest bosses --boss rootbound,aldric,colossus,echo --seed
 
 The health (3800) and the cooldowns are the dials, in this order.
 
+**Re-derived on #377's headless player (slice 3, 2026-11-21; the lead's call).** #377 changed the
+scripted players, and every reference's numbers moved, so the table above no longer describes the
+target. These replace its hit and clear-time targets. Tuning against them is its own step, after
+slice 3.
+
+- **Method:** each bound is scaled by the change in the references' median.
+  - The references are Aldric, the Colossus and the Echo, as in 1.5: normal, Sword, seeds 1 and 2,
+    each phase opened through practice (`--phase 1`, `--phase 2`, `--phase 3`).
+  - For each phase: new bound = old bound × (median of the three references now ÷ their median in
+    1.5).
+  - That keeps the band where it sat among the references.
+  - Clear times take the median over the fights the avoids-tells player cleared.
+  - Measured on slice 3's branch: Phases I and II on main ce0e258c, Phase III on main 59bab68d (after #372).
+
+| Phase | Scripted hits per 10 s, references now (Aldric / Colossus / Echo) | Median, 1.5 → now | Target, old → new |
+| --- | --- | --- | --- |
+| I | 2.8 / 1.5 / 2.2 | 4.7 → 2.2 | 4-7 → **1.9-3.3** |
+| II | 8.6 / 5.6 / 2.6 | 4.8 → 5.6 | 4-7 → **4.7-8.2** |
+| III | 7.0 / 6.6 / 4.7 | 5.7 → 6.6 | 4-7 → **4.6-8.1** |
+
+| Phase | Avoids-tells clears now | Median, 1.5 → now | Target, old → new |
+| --- | --- | --- | --- |
+| I | Aldric 14.3, 14.3 s; the Colossus and the Echo were not cleared | 20.8 → 14.3 s | 12-25 → **8.2-17.2 s** |
+| II | the Colossus 5.8, 5.8 s; the Echo 10.0, 24.3 s; Aldric was not cleared | 9.2 → 7.9 s | 10-20 → **8.6-17.3 s** |
+| III | the Colossus 6.6, 6.6 s; Aldric and the Echo were not cleared | 4.2 → 6.6 s | 8-15 → **12.6-23.6 s** |
+
+- Phase I's and Phase III's clear-time targets each rest on one reference's clears, so they are thin.
+  Phase II's rests on two.
+- **The new Rootbound against the new band** (whole fights from Phase I, slice 3):
+  - Phase I: 0.7 hits per 10 s, under 1.9-3.3. Avoids-tells does not clear it within 37 s.
+  - Phase II: 3.4 hits per 10 s, under 4.7-8.2. Avoids-tells is in it for 42 s and dies there,
+    against 8.6-17.3 s.
+- **Mend, how often it fires** (Phase II, normal, seeds 1 and 2; Mend is its only healing, so the
+  playtest's `bossHealed` counts it):
+
+| Player | Reaches Phase II | Healed per fight | Mends per fight |
+| --- | --- | --- | --- |
+| scripted | yes | 0 | 0 |
+| avoids-tells | yes | 82 | about 1 |
+| cuts-objects | yes | 82 | about 1 |
+| no-dodge, still, walker | no | - | - |
+
+  - A full Mend heals 128 at normal's 4256 health (1.5 % a second for 240 ticks). 82 is one Mend
+    ended early by a hit or by its cap.
+  - It fires about once per fight for the two players who stand back, so it is not under once per
+    fight for every player. By the lead's rule, the tuning step leaves its trigger distance as it is.
+
 ## 3. Delete list
 
 **How it was measured.**
@@ -874,13 +921,11 @@ repository must be able to take the next slice from here.
 - **Replay admission:** refuse to record runs with an engineering-only boss, so that slices stop
   stepping the ruleset (4.1). The lead approved it in principle on 2026-11-21 and routes it to the
   replay session after #372. Not built in slice 2.
-- **Pace under the 4-7 band:** the lead accepted it as a named gap for slice 3.
-  - Slice 3's numbers (PR) are under the band again in Phase II.
-  - #377's headless player moved the references too. In Phase I a scripted player now takes 1.5-2.8
-    hits per 10 s from them, against 4-7 when 2.4 was written.
-  - The lead decides whether 2.4's band is re-measured on the new player before more tuning.
-- **Mend hardly ever happens:** the keeper walks at the player, so a player 500 px away for 480 ticks
-  is rare. The harness fight never reaches it.
+- **Pace:** 2.4's band was re-derived on #377's player in slice 3. The new Rootbound is under it in
+  Phase I and II.
+  - The next step, after slice 3, tunes against the new band: health first, then cooldowns.
+- **Mend** fires about once per fight for the players who stand back, and never for the scripted
+  player (2.4). Its trigger stays as 2.1 has it.
 - **Named gaps to keep carrying:**
   - The Echo's tell weight is not measured (5.2).
   - The playtest "open" column reads declared `tells()`, which the new boss does not declare.
