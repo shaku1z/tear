@@ -9,7 +9,10 @@ import { createProductionGhostReplayComposition } from "../world/detached/replay
 const NO_RUN = Object.freeze({ score: 0, wave: 0, time: 0 });
 
 /** Starts a recorded run in the detached production world from its seed and start choices. */
-function startDetachedReplay(run: ReplayRun, observe: Parameters<ReplayWorld["start"]>[1]): ReplayWorldRun {
+function startDetachedReplay(
+  run: Pick<ReplayRun, "seed" | "start">,
+  observe: Parameters<ReplayWorld["start"]>[1],
+): ReplayWorldRun {
   const events = new TearGameplayEventBus();
   const unsubscribe = events.subscribe(observe);
   const start = replayStartChoices(run);
@@ -26,8 +29,8 @@ function startDetachedReplay(run: ReplayRun, observe: Parameters<ReplayWorld["st
   // The last step's result; its state is captured only when asked for.
   let last: AuthoritativeStepResult<CanonicalGameplayState> | undefined;
   return Object.freeze<ReplayWorldRun>({
-    step(actions) {
-      const result = stepDetachedWorld(session, actions);
+    step(actions, frames) {
+      const result = stepDetachedWorld(session, actions, frames);
       last = result;
       return Object.freeze({
         tick: result.tick,
