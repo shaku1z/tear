@@ -1,13 +1,24 @@
-# Data and platform routes
+# Saved fields and platform capabilities
 
-## Persistence field
+## Saved field
 
-Choose settings, profile, or replay ownership. Update the versioned envelope, validation, pure migration, typed consumers, and adapter serialization. Add previous-version, malformed-input, current round-trip, and relevant cross-subsystem fixtures. Invoke `$tear-save-cloud-contract` for the full invariant workflow.
+Decide whether the field is a setting, profile progress or part of a replay. Update the versioned envelope
+under `src/persistence/`, its validation, a pure migration from the previous shape, the typed readers and
+the adapters. Add fixtures for the previous version, malformed input and a current round trip. What a
+build promises about earlier releases' saves is in
+[docs/RELEASE_COMPATIBILITY.md](../../../../docs/RELEASE_COMPATIBILITY.md). Use `tear-save-cloud-contract`
+for the whole procedure.
 
 ## Platform capability
 
-Start at `src/platform/contracts.ts`. Extend the typed capability only when the behavior is genuinely host-provided. Implement each affected target adapter and composition root; return an explicit unavailable result where unsupported. Keep browser/portal globals and SDK types out of gameplay and screens.
+Start at `src/platform/contracts.ts`. Add a capability only when the host really provides the behaviour.
+Implement it in each affected target and return an explicit unavailable result elsewhere. Browser and
+portal globals and SDK types stay out of gameplay and screens.
 
-Cover adapter contracts, initialization failure, lifecycle, identity/storage/cloud behavior, unavailable fallback, and applicable built-target browser evidence. Update `docs/RELEASE_MATRIX.md` when target expectations change.
+Targets are defined once, in `config/build-targets.json`: standalone, CrazyGames and itch, plus the test
+builds. Cover the adapter contract tests under `tests/contract/`, failed initialization, lifecycle, the
+unavailable fallback and the built-target browser checks. Update
+[docs/RELEASE_MATRIX.md](../../../../docs/RELEASE_MATRIX.md) when what a target promises changes.
 
-Do not create a separate platform skill until Steam implementation begins. Until then, keep target-specific guidance here and in `$tear-change-gate`.
+Phone and touch work is paused (`plans/MOBILE_LATER.md`): mobile modules are left out of release builds.
+Do not delete them, and do not add to them without the owner's word.

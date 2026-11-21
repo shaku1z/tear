@@ -1,36 +1,43 @@
-# Porting Contract
+# Porting oracle behaviour
 
-How oracle behavior enters the redesign: verbatim behavior, redesigned plumbing.
+The behaviour is kept exactly. The plumbing is the redesign's.
 
-## Do port verbatim
+## Port exactly
 
-- Constants, thresholds, timing windows, easing curves, spring math, guarantee math (e.g. draft `specialsOffered` / `specialBlock` windows), layout geometry, strings, colors, animation timings.
-- Frame-order semantics: what is read/written before vs after physics, per-frame vs latched state, exact transition side effects.
-- Renderer craft: the Phase-2 card renderer was re-ported *verbatim* from oracle `choiceCard` (deal-in, hover lift/scale, fitTitle, tier pips, normalRow) into a screen renderer — that is the model. Extend `ScreenRenderContext` (it already carries `enterSeconds`/`deltaSeconds`/`mouse`) rather than dumbing the effect down.
+- Constants, thresholds, timing windows, easing curves, spring math, layout geometry, strings, colours and
+  animation timings.
+- Frame order: what is read or written before and after physics, what is per-frame and what is held, and
+  the side effects of each transition.
+- Renderer craft. Extend `ScreenRenderContext` (`src/presentation/screens/contracts.ts`) when an effect
+  needs time or pointer position; do not flatten the effect.
 
-## Do NOT port
+## Do not port
 
-- Writable shared globals, classic-script load order, global discovery.
-- Direct DOM / canvas / Web Audio / Firebase / CrazyGames / storage / wall-clock reads inside domain or simulation code — route through the existing typed ports.
-- `Math.random()` — use the injected seeded RandomSource.
-- `?v=` query strings, handwritten cache versions, manual service-worker shell lists.
-- Device key codes in gameplay — oracle key handling maps to semantic `GameAction`s at the input layer.
+- Writable shared globals, script load order, global discovery.
+- DOM, canvas, Web Audio, Firebase, CrazyGames, storage or wall-clock reads inside rules code. Use the
+  typed ports.
+- `Math.random()`. Use the injected random source.
+- `?v=` query strings, hand-written cache versions, hand-kept service-worker lists.
+- Key codes in gameplay. Oracle key handling maps to a `GameAction` at the input layer.
 
-## Placement map (oracle → redesign)
+## Where it goes
 
-| Oracle | Redesign home |
+| Oracle | Now |
 | --- | --- |
-| `js/game.js` state machine + transitions | `src/app/` state machine, screen controllers |
-| `js/game.js` screen drawing | `src/presentation/screens/` renderers (pure, snapshot-driven) |
-| `js/ui.js` UI.t + components | `src/presentation/ui*.ts` |
-| `js/input.js` pointer-lock / mode / delta | `src/input/` adapters + cursor-contract + `src/app/shell/frame-runtime.ts` |
-| `js/config.js` tuning | `src/config/*` immutable definitions |
-| `js/player.js` / `js/enemy.js` / `js/mirror.js` | `src/gameplay/**` (deterministic, port-fed) |
-| oracle side effects at transitions | the ONE owning adapter/controller — enumerate oracle call sites and match 1:1 |
+| `js/game.js` state machine and transitions | `src/app/` |
+| `js/game.js` screen drawing | `src/presentation/screens/`, drawn from snapshots |
+| `js/ui.js` tokens and components | `src/presentation/ui.ts`, `src/presentation/ui-tokens.ts` |
+| `js/input.js` pointer lock, mode, movement | `src/input/`, `src/presentation/cursor-contract.ts` |
+| `js/config.js` tuning | `src/config/` |
+| `js/player.js`, `js/enemy.js`, `js/mirror.js` | `src/gameplay/` |
+| A side effect at a transition | The one controller or adapter that owns it |
 
-## Evidence expectations
+A ported value gets one home. If the same number already exists elsewhere in `src/`, import it.
 
-- Behavior parity → oracle-conformance fixture: seed + initial state + semantic actions + tick count, expected values generated from the oracle build (via `$tear-combat-scenarios`).
-- Screen parity → deterministic journey screenshot compared against the oracle capture (via `$tear-ui-regression`); no pixel-perfect baselines unless the user adopts that contract.
-- Feel parity → twin-serve A/B plus trace differ where available; explicitly report any feel check owed to the user (e.g. blade aim playtests) as unverified.
-- Always finish with `$tear-change-gate`.
+## Evidence
+
+- **Behaviour:** a test with a seed, start state, actions and tick count whose expected values came from
+  the oracle, or a parity fixture under `tests/parity/`.
+- **Screen:** a journey screenshot compared with the oracle capture. No pixel-exact baselines.
+- **Feel:** a side-by-side session and a paired trace. Report any feel check owed to a person as
+  unverified.
