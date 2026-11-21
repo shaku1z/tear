@@ -332,7 +332,7 @@ export interface TutorialCardSnapshot {
 
 export interface CoachMarkSceneSnapshot {
   readonly marks: readonly Readonly<{ mark: CoachMark; alpha: number }>[];
-  /** Live screen rectangles a mark must keep clear of (player, touch controls, lesson card). */
+  /** Live screen rectangles a mark must keep clear of (player, blade reach, enemies, touch controls, lesson card). */
   readonly avoid: readonly CoachRect[];
 }
 

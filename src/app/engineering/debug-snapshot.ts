@@ -2,6 +2,7 @@ import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies
 import type { LiveGameHostState } from "../world/game-host-state";
 import type { AppScreen } from "../../domain/screen-catalog";
 import { anyKeyIn } from "../../domain/keyboard-bindings";
+import { nameProblem } from "../../domain/display-names";
 
 interface DebugCinemaSnapshot {
   readonly id: string | undefined;
@@ -20,6 +21,8 @@ interface DebugRewardSnapshot {
 interface DebugRenameSnapshot {
   readonly active: boolean;
   readonly previous: string;
+  readonly minLength: number;
+  readonly maxLength: number;
 }
 
 interface DebugSettingsSnapshot {
@@ -80,7 +83,6 @@ export function createLiveDebugSnapshot(options: LiveDebugSnapshotOptions): obje
   const { dependencies: d, state } = options;
   const input = document.getElementById("nameInput");
   const nameValue = input instanceof HTMLInputElement ? input.value.trim() : "";
-  const renameValid = nameValue.length >= 3 && nameValue.length <= 16 && /^[a-zA-Z0-9 _-]+$/.test(nameValue);
   const run = state.run(),
     player = state.player(),
     blade = state.blade(),
@@ -128,7 +130,12 @@ export function createLiveDebugSnapshot(options: LiveDebugSnapshotOptions): obje
         : null,
     replay: options.replay,
     rename: rename.active
-      ? { value: nameValue, length: nameValue.length, valid: renameValid, returnTo: rename.previous }
+      ? {
+          value: nameValue,
+          length: nameValue.length,
+          valid: nameProblem(nameValue, rename.minLength, rename.maxLength) === null,
+          returnTo: rename.previous,
+        }
       : null,
     reducedMotion: d.A11Y.reducedMotion,
     highContrast: d.A11Y.highContrast,

@@ -445,7 +445,11 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
   const leaveCareer = () => {
     libraryAdapters.careerAction("suspend");
   };
-  navigation.bind({ cancelPendingReplayOpen: replayAdapters.cancelPendingOpen, leaveCareer });
+  navigation.bind({
+    cancelPendingReplayOpen: replayAdapters.cancelPendingOpen,
+    leaveCareer,
+    leaveShop: screenComposition.leaveShop,
+  });
   browserWindow.addEventListener("pagehide", leaveCareer);
   return interfaceComposition;
 }
