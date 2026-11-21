@@ -18,7 +18,8 @@ import { applyWeapon } from "../../src/gameplay/weapons";
 import { createLiveHudFeedbackState } from "../../src/app/interface/hud-feedback-state";
 import { createLiveParticlePresentationState } from "../../src/app/world/detached/particle-state";
 
-import { TutorialController, parseTutorialSessionCheckpoint } from "../../src/gameplay/training/tutorial-controller";
+import { TutorialController } from "../../src/gameplay/training/tutorial-controller";
+import { parseTutorialSessionCheckpoint } from "../../src/gameplay/training/tutorial-session-checkpoint";
 
 type Failure = "clear" | "replace" | "late" | "runtime";
 interface BossFacts {
