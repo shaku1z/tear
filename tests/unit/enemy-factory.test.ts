@@ -99,6 +99,7 @@ describe("enemy factory", () => {
         "Rimehound",
         "Rootbinder",
         "Rootbound",
+        "RootboundRebuild",
         "Source",
         "Support",
         "VoidWisp",

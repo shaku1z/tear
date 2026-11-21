@@ -523,6 +523,10 @@ The brief listed five hooks. Measured:
   framework. Verdant mechanic names leave its scans.
 - `config/architecture-layers.json`, `architecture-baseline.json` and `change-impact-defaults.json`
   have no Verdant entries.
+- `src/gameplay/training/arena-rules.ts`: `createBossArena` maps `rootbound` to the arena material
+  `verdant-rootstone` and sets the floor's `arenaMaterial` to it. After PR 369 (stage drawing) nothing
+  draws that name, so the switch removes it, with the assertion at `tests/unit/rootbound-foundation.test.ts`
+  l.336. Pale's rebuild removes `pale-ice` the same way (`white-hart-foundation.test.ts` l.132).
 - **Tutorial gold.** `TUTORIAL_GOLD_ROOTS` names none of these files, but its fingerprint reaches 46
   of them through other imports. The first build after the switch reruns the gold test. The gold is
   committed again only if its output changes.
