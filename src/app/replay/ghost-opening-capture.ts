@@ -5,7 +5,7 @@ import {
 } from "../../ghost/replay-admission";
 import type { VisualReplayProvenance } from "../../replay/visual-replay";
 import type { TearCausalEventV1 } from "../../tearbench/contracts";
-import { ENTITY_KIND_REGISTRY } from "../../gameplay/snapshot/codec-ids";
+import { REPLAY_CONTENT_HASH } from "../../gameplay/snapshot/codec-ids";
 import { stableVerificationHash } from "../../domain/hash";
 import type { LiveOpeningCaptureBoundary } from "../run/run-start-host";
 
@@ -72,7 +72,7 @@ export function createLiveGhostOpeningCapture(ports: OpeningCapturePorts) {
           revision: context.build.revision,
           target: context.build.target,
           rulesetVersion: context.rulesetVersion,
-          contentHash: stableVerificationHash(ENTITY_KIND_REGISTRY.ids),
+          contentHash: REPLAY_CONTENT_HASH,
           configHash: stableVerificationHash(configuration),
         },
         rng,

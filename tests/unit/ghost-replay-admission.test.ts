@@ -62,13 +62,17 @@ function replayContextInput(overrides: Partial<GhostReplayRunContextInput> = {})
   };
 }
 
-function bootstrapSnapshot(context: ReturnType<typeof createGhostReplayRunContext>): TearSnapshotV1 {
+function bootstrapSnapshot(
+  context: ReturnType<typeof createGhostReplayRunContext>,
+  run: Readonly<Record<string, unknown>> = {},
+): TearSnapshotV1 {
   const world: TearCodecWorld = {
     components: new Map<TearCodecId, TearCodecValue>(),
     references: new Map(),
     entityIds: new Set(),
   };
   for (const id of CODEC_REGISTRY.ids) world.components.set(id, {});
+  world.components.set("tear.run.v1", run as never);
   world.components.set("tear.configuration.v1", CONFIGURATION);
   world.components.set("tear.cinematic.v1", INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 as never);
   world.components.set(
@@ -129,7 +133,10 @@ function bootstrapSnapshot(context: ReturnType<typeof createGhostReplayRunContex
   return snapshot;
 }
 
-async function completeCapsule(provenance: Readonly<Record<string, unknown>>) {
+async function completeCapsule(
+  provenance: Readonly<Record<string, unknown>>,
+  run: Readonly<Record<string, unknown>> = {},
+) {
   const context = readGhostReplayRunContext(provenance);
   if (context === undefined) throw new TypeError("test capsule requires a valid replay context");
   const vault = new GhostLocalVault(createMemoryGhostVaultBackend());
@@ -147,7 +154,7 @@ async function completeCapsule(provenance: Readonly<Record<string, unknown>>) {
     tick: 0,
     value: createLiveGhostBootstrapEvent("replay-admission-run", provenance),
   });
-  await recorder.append({ kind: "keyframes", tick: 0, value: bootstrapSnapshot(context) });
+  await recorder.append({ kind: "keyframes", tick: 0, value: bootstrapSnapshot(context, run) });
   await recorder.append({ kind: "commands", tick: 1, value: { command: { type: "jump", phase: "pressed" } } });
   await recorder.finalize("2026-07-30T00:00:01.000Z");
   return new GhostCapsuleReader(vault).read("replay-admission-run");
@@ -358,6 +365,20 @@ describe("Ghost V3 replay admission", () => {
       build: { ...context.build, revision: "other-revision" },
     });
     expect(assessGhostReplayAdmission(capsule, mismatch)).toMatchObject({ status: "unavailable" });
+  });
+
+  it("refuses a capsule that opens on an engineering-only boss", async () => {
+    const context = createGhostReplayRunContext(replayContextInput({ mode: "bossonly" }));
+    const registry = new GhostReplayRuntimeRegistry();
+    registry.register({ id: "detached-unit-runtime", ticksPerSecond: 120, build: context.build });
+    const opening = (curBoss: string) =>
+      completeCapsule({ [GHOST_REPLAY_CONTEXT_PROVENANCE_KEY]: context }, { curBoss, bossOrder: [curBoss, "warden"] });
+
+    expect(assessGhostReplayAdmission(await opening("echo"), registry)).toMatchObject({ status: "compatible" });
+    expect(assessGhostReplayAdmission(await opening("rootbound-rebuild"), registry)).toMatchObject({
+      status: "rejected",
+      reason: "capsule opens on an engineering-only boss, which replays refuse",
+    });
   });
 
   it("fails closed for incomplete, tampered, or context-less capsules", async () => {

@@ -10,32 +10,18 @@
 
 Written so that someone with only this repository can continue. The decision log at the end has the history.
 
-- **Merged:** PRs 1, 2, 2b, 3, 4 and 5a (#361: `src/replay/record.ts`, `recorder.ts`, `verify.ts`, the round-trip check).
-- **Open: PR 5b-1, #372** (branch `codex/replay-live-start`): one seed type, one start record and one run start for live play and detached worlds. The lead approved the design.
-  - Done on the branch: merged `origin/main` after #374 (v19), #381 (v20), #366 and #377; stepped the ruleset to v21, with v20 kept as #381's history line; the position edit is in `config/position/replays.json`.
-  - The determinism corpus keeps #374's pinned boss seeds (`BOSS_SEED_INDEX`) and tell-avoiding boss player. `STREAM_BOSSES` names the boss each pinned seed fought on main. Regenerated on the merged tree: every stream's play facts equal main's, and no seed moved.
-  - Left: CI green, the lead's review, and the merge (it merges alone). If main takes another ruleset step first, merge `origin/main`, take the next number, regenerate (`TEAR_HASH_STREAM_WRITE=1 pnpm test:determinism`, `TEAR_TUTORIAL_GOLD_WRITE=1 pnpm exec vitest run tests/unit/tutorial-production-ghost.test.ts`) and check the play facts again. A boss stream that fails its coverage fact is re-picked from `hash-stream:<weapon>:boss`, then `:1` to `:9`, first that passes (the probe is in the lead's shared notes folder, `boss-seed-probe/`).
-  - The PR body keeps its first-run failure record.
-- **Next, a small PR after #372: engineering-only bosses leave replay identity** (the lead approved it in principle, 2026-11-21).
-  - **Problem:** A rebuild slice for a boss that only engineering surfaces can reach (a `BossDefinition` with `stageOf`; today the new Rootbound, in Boss Test) changes gameplay identity, so by the rule above it takes a ruleset step. That step retires every replay, although no player run can contain that boss.
-  - **Admission:** `readReplayRecord` refuses a record whose start names an engineering-only boss, and `verifyReplay` refuses a run whose world spawns one (a boss event or the boss order). One list, read from the boss definitions, decides which bosses are engineering-only.
-  - **Ruleset identity:** Nothing in code forces a step today; the step is the rule above, judged by the determinism and tutorial gold fixtures. Once admission refuses engineering-only bosses, the rule can read "a step changes what an admitted record can contain". A change confined to engineering-only definitions then needs no step. A fixture stream that covers an engineering-only boss is listed as outside replay identity, so its regeneration alone does not count as a step. To confirm after #381 lands:
-    - whether `stageOf` is the field that marks engineering-only;
-    - whether any released path (Gauntlet trials, Boss Rush rosters, the Codex) can reach such a boss;
-    - which determinism streams cover one.
-  - **Done when:**
-    - a record or a verified run with an engineering-only boss is refused, with a test;
-    - the rule and the list of streams outside replay identity are written in `src/gameplay/run/ruleset-version.ts`;
-    - a test fails if an engineering-only boss becomes reachable from a released mode without leaving the list.
-- **Next: PR 5b-2, picks as actions.**
-  - Draft, reserve and tier-up picks and rerolls become GameActions the UI dispatches, so a record holds them at their ticks.
-  - In the same PR:
-    - **Cinematics hint:** the Settings row for Cinematics says, during a run, that a change applies from the next run.
-    - **Paused-world hold:** a paused screen holds a detached or headless world as it holds live play. Today 600 paused ticks cost the player 33 health. Prove it by pausing for a number of ticks in `tests/unit/run-start-parity.test.ts` and comparing. Tell playtest-tool when it lands.
-- **Then: PR 5b-3.**
-  - The named frame-clock exception with its test. After #374 it covers cinematics only: the boss intro advances on ticks. Cinematics PR 8 ends it.
+- **Merged:** PRs 1, 2, 2b, 3, 4, 5a (#361: `src/replay/record.ts`, `recorder.ts`, `verify.ts`, the round-trip check), 5b-1 (#372, ruleset v21: one seed type, one start record and one run start for live play and detached worlds) and the engineering-only boss rule (#386).
+  - **#386:** `ENGINEERING_ONLY_BOSS_IDS` (`src/gameplay/run/boss-definitions.ts`, read from `stageOf`) lists the bosses only engineering surfaces reach. Replay admission refuses them, and the replay content hash (`REPLAY_CONTENT_HASH`, `src/gameplay/snapshot/codec-ids.ts`) leaves them out. `src/gameplay/run/ruleset-version.ts` says when to step: a change to what an admitted replay contains or how it plays; a change confined to an engineering-only boss needs none. The switch slice that makes a rebuild the real boss removes `stageOf` and steps.
+- **Open: PR 5b-2, picks as actions (#388, branch `codex/replay-picks-as-actions`; the lead cleared it, it merges in the next batch).**
+  - A held screen holds a detached world: `stepDetachedWorld` (`src/app/world/detached/detached-step.ts`) routes the tick's actions, then returns the last result without advancing unless the screen is `playing`, as live play does. The headless `maxTicks` also bounds held steps in a row. Proof: the pause case in `tests/unit/run-start-parity.test.ts`.
+  - Reward decisions are actions: `rewardDecisionAction` (`src/app/world/detached/action-routing.ts`) maps a `RewardDecision` to its GameAction by choice id, and `routeLiveTearBenchAction` maps it back; `draft-reroll` is new. Live picks still go to the reward runtime directly; 5c records at its decision seam (`RewardRuntime.decide` and its `beforeDecision` hook).
+  - Settings opened from pause says "A CHANGE APPLIES FROM THE NEXT RUN" on the story-scene row.
+  - No ruleset step: no stream, gold or round-trip fixture moved.
+- **Next: PR 5b-3.**
+  - The named frame-clock exception with its test. #374 (merged) moved the boss intro to simulation ticks, so the exception covers cinematics only. Cinematics PR 8 ends it.
   - Browser evidence, on a built test target, that a live run with a draft, a boss intro and a chapter verifies from its seed alone, with no keyframes.
 - **Then: PR 5c, the live recorder.** Its content is in the PR 5 section below.
+  - It records reward decisions at the reward runtime's decision seam, as GameActions from `rewardDecisionAction`, at the tick that consumes them.
   - A seed race records the race's ranks as the start's `metaRanks`. The owner keeps seed races, so they are recorded, not refused.
   - Capsules from before are refused with a player-facing line in the terminology registry's names.
 - **Agreed with Shards (for PR 10):**
