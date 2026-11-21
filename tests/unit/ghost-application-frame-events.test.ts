@@ -35,6 +35,7 @@ import { createGameplayCausalEvent } from "../../src/tearbench/gameplay-causal-e
 import { stableVerificationHash } from "../../src/domain/hash";
 import { prepareGhostLiveReference } from "../../src/ghost/live-ghost-reference";
 import type { ReplayActionEnvelope } from "../../src/replay/envelope";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 const trident: GhostReplayTrident = {
   command: {
@@ -74,7 +75,10 @@ const end = (sequence: number, ordinal: number, beginSequence: number, beforeTic
   });
 
 function fixture() {
-  const composition = createProductionGhostReplayComposition({ seed: "clock-fixture", mode: "bossonly" });
+  const composition = createProductionGhostReplayComposition({
+    runSeed: scenarioRunSeed("clock-fixture"),
+    mode: "bossonly",
+  });
   const source = composition.create(undefined),
     world = source.replay.world;
   const boss = world.entities.createEnemy("rootbound", 800, 520, world.state.run() as never);
@@ -152,7 +156,7 @@ describe("Ghost application-frame evidence", () => {
           );
       });
       const source = createProductionGhostReplayComposition({
-        seed: "draft-tail-source",
+        runSeed: scenarioRunSeed("draft-tail-source"),
         mode: "endless",
         gameplayEvents: bus,
       }).create(undefined);
@@ -288,7 +292,7 @@ describe("Ghost application-frame evidence", () => {
       } else {
         const mapped = mapGhostCapsuleToReplayEnvelope(capsule);
         const composition = createProductionGhostReplayComposition({
-          seed: origin.snapshot.seed,
+          runSeed: scenarioRunSeed(origin.snapshot.seed),
           raceDecisions: readSeedRaceDecisions(capsule, runId),
           inputSnapshots: new Map([[0, origin.input]]),
         });
@@ -339,7 +343,7 @@ describe("Ghost application-frame evidence", () => {
     if (schedule === undefined) throw new Error("clock schedule missing");
     for (const snapshots of [[value.origin], [value.origin, value.middle]]) {
       const composition = createProductionGhostReplayComposition({
-        seed: "clock-fixture",
+        runSeed: scenarioRunSeed("clock-fixture"),
         mode: "bossonly",
         applicationClock: schedule,
       });

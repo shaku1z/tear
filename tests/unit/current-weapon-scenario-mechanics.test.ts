@@ -8,6 +8,7 @@ import { CANONICAL_ENGINEERING_SCENARIOS } from "../../src/tearbench";
 import { createProductionCombatSimulation } from "../../src/app/world/detached/combat-simulation";
 import { createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
 import { createProductionCombatPhases } from "../../src/app/world/detached/combat-phases";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 interface Blade {
   x: number;
@@ -49,7 +50,7 @@ interface Enemy {
 
 function replayWithCharger(weaponId: WeaponId) {
   return createProductionReplayWorld({
-    seed: `current-weapon-${weaponId}`,
+    runSeed: scenarioRunSeed(`current-weapon-${weaponId}`),
     weaponId,
     enemies: [{ id: "charger", x: 540, y: CONFIG.world.groundY - CONFIG.enemy.h / 2 }],
   });
@@ -63,7 +64,9 @@ describe("source-owned current weapon scenario mechanics", () => {
     expect(scenario?.id).toContain(weaponId);
     expect(scenario?.start.weapon).toBe(weaponId);
     expect(getWeapon(weaponId).id).toBe(weaponId);
-    expect(createProductionReplayWorld({ seed: `binding-${weaponId}`, weaponId }).run.weaponId).toBe(weaponId);
+    expect(
+      createProductionReplayWorld({ runSeed: scenarioRunSeed(`binding-${weaponId}`), weaponId }).run.weaponId,
+    ).toBe(weaponId);
   });
 
   it.each(WEAPON_IDS)("executes the actual %s mechanic against production state", (weaponId) => {

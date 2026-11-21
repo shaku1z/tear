@@ -10,6 +10,7 @@ import { createGhostV3, type GhostReplayTrident } from "../../src/ghost/truth-ke
 import { CONFIG } from "../../src/config/game-config";
 import { createProductionCombatSimulation } from "../../src/app/world/detached/combat-simulation";
 import { createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 const trident: GhostReplayTrident = {
   command: {
@@ -29,7 +30,7 @@ function productionComposition(created: unknown[]) {
     create(snapshot: undefined) {
       expect(snapshot).toBeUndefined();
       const detached = createProductionReplayWorld({
-        seed: "c29-production-replay",
+        runSeed: scenarioRunSeed("c29-production-replay"),
         enemies: [{ id: "charger", x: 760, y: CONFIG.world.groundY - CONFIG.enemy.h / 2 }],
       });
       const core = createProductionCombatSimulation<Record<string, unknown>>(detached, {
@@ -214,10 +215,13 @@ describe("Ghost production replay world", () => {
     });
     const headless = new GhostProductionReplayWorld(
       ghost,
-      createProductionGhostReplayComposition({ seed: "draw-seed" }),
+      createProductionGhostReplayComposition({ runSeed: scenarioRunSeed("draw-seed") }),
     );
     let owner: ReturnType<ReturnType<typeof createProductionGhostReplayComposition>["create"]> | undefined;
-    const composition = createProductionGhostReplayComposition({ seed: "draw-seed", ...presentation });
+    const composition = createProductionGhostReplayComposition({
+      runSeed: scenarioRunSeed("draw-seed"),
+      ...presentation,
+    });
     const replay = new GhostProductionReplayWorld(ghost, {
       create(snapshot) {
         owner = composition.create(snapshot);
@@ -268,7 +272,10 @@ describe("Ghost production replay world", () => {
       events: [],
     });
     let owner: ReturnType<ReturnType<typeof createProductionGhostReplayComposition>["create"]> | undefined;
-    const composition = createProductionGhostReplayComposition({ seed: "draw-seed", ...replayPresentation(calls) });
+    const composition = createProductionGhostReplayComposition({
+      runSeed: scenarioRunSeed("draw-seed"),
+      ...replayPresentation(calls),
+    });
     const replay = new GhostProductionReplayWorld(ghost, {
       create(snapshot) {
         owner = composition.create(snapshot);

@@ -20,6 +20,7 @@ import {
 import { createGhostColdRestoreBrowserPort } from "../../src/ghost/browser-cold-restore";
 import { createGhostVaultLibraryController } from "../../src/app/library/ghost-vault-library-controller";
 import { prepareGhostCapsuleProtection } from "../../src/ghost/capsule-protection";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 const encode = (value: unknown) => new TextEncoder().encode(JSON.stringify(value));
 const text = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
@@ -33,7 +34,10 @@ const stores = async (b: GhostVaultBackend) =>
 // Constructed linkage/transport fixture, not a natural Campaign or scored-prefix playback claim.
 async function fixture() {
   const vault = new GhostLocalVault(createMemoryGhostVaultBackend());
-  const source = createProductionGhostReplayComposition({ seed: "portable-pair", mode: "campaign" }).create(undefined);
+  const source = createProductionGhostReplayComposition({
+    runSeed: scenarioRunSeed("portable-pair"),
+    mode: "campaign",
+  }).create(undefined);
   source.replay.world.context.cinema.complete();
   source.replay.finale.runtime.start();
   source.simulation.advanceOne([]);

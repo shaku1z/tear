@@ -7,6 +7,7 @@ import type { TearScenarioV1 } from "./contracts";
 import type { TearSnapshotV1 } from "../gameplay/snapshot/snapshot-contract";
 import { projectGameplayEventForParity, type TearSemanticEngineEventV1 } from "./gameplay-causal-events";
 import { replayEngine, type ReplayEngine } from "../ghost/replay-engine";
+import { scenarioRunSeed } from "../gameplay/run/run-start-choices";
 
 export interface LiveDetachedParityHashReceipt {
   readonly tick: number;
@@ -109,7 +110,7 @@ export function replayLiveDetachedParityTrace(trace: LiveDetachedParityTrace): L
   const composed = replayEngine
     .loaded()
     .createProductionGhostReplayComposition({
-      seed: trace.origin.seed,
+      runSeed: scenarioRunSeed(trace.origin.seed),
       mode: trace.scenario.start.mode,
       weaponId: trace.scenario.start.weapon,
       gameplayEvents,

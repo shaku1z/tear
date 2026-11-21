@@ -16,6 +16,7 @@ import { environmentHash } from "../../src/gameplay/snapshot/environment-codec";
 import { EnvelopeSequencer } from "../../src/domain/envelopes";
 import { createProductionCombatSimulation } from "../../src/app/world/detached/combat-simulation";
 import { createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 function track(state: "warning" | "active" | "cooldown" = "active"): AuroraTrackFieldState {
   return Object.freeze({
@@ -185,7 +186,7 @@ describe("Pale Aurora fixed-step runtime", () => {
 
   it("uses the same Aurora source port in the detached production combat world", () => {
     const run = (withTrack: boolean) => {
-      const replay = createProductionReplayWorld({ seed: "pale-aurora-detached" });
+      const replay = createProductionReplayWorld({ runSeed: scenarioRunSeed("pale-aurora-detached") });
       const core = createProductionCombatSimulation<{ tick: number }>(replay, { snapshot: (tick) => ({ tick }) });
       const environment = replay.world.context.environment;
       environment.setStage("pale-traverse", "restore");

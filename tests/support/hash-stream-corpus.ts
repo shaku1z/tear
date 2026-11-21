@@ -25,12 +25,27 @@ export const PLANS = Object.freeze({
 });
 export type PlanId = keyof typeof PLANS;
 
+/**
+ * The boss each boss stream fights, named rather than drawn: the run start draws Boss Rush order from
+ * the run's random streams, so a change to what the start draws first would otherwise move a stream to
+ * another boss and change what the corpus covers.
+ */
+const STREAM_BOSSES: Readonly<Record<WeaponId, string>> = Object.freeze({
+  sword: "source",
+  hammer: "warden",
+  greatsword: "aldric",
+  chainblade: "echo",
+  riftlock: "aldric",
+});
+
 export interface StreamSpec {
   readonly id: string;
   readonly weapon: WeaponId;
   readonly plan: PlanId;
   readonly seed: string;
   readonly mode: string;
+  /** The boss a boss stream fights; absent for the wave streams. */
+  readonly boss?: string;
   readonly difficulty: "easy";
   readonly ticks: number;
 }
@@ -44,6 +59,7 @@ export const SPECS: readonly StreamSpec[] = WEAPON_IDS.flatMap((weapon) =>
     // their horizon grew by the same); a boss wave has no grace, so the boss streams keep their first seed.
     seed: plan === "boss" ? `hash-stream:${weapon}:${plan}` : `hash-stream:${weapon}:${plan}:grace`,
     mode: PLANS[plan].mode,
+    ...(plan === "boss" ? { boss: STREAM_BOSSES[weapon] } : {}),
     difficulty: "easy" as const,
     ticks: PLANS[plan].ticks,
   })),
@@ -60,7 +76,12 @@ export function scenarioContract(spec: StreamSpec): TearScenarioV1 {
     stateClass: "recorded-canonical",
     executionClass: "training",
     seed: spec.seed,
-    start: { mode: spec.mode, difficulty: spec.difficulty, weapon: spec.weapon },
+    start: {
+      mode: spec.mode,
+      difficulty: spec.difficulty,
+      weapon: spec.weapon,
+      ...(spec.boss === undefined ? {} : { boss: spec.boss }),
+    },
     maxTicks: spec.ticks,
     assertions: ["runtime.finite-state"],
     tags: ["determinism", "hash-stream"],

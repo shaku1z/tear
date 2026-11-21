@@ -15,6 +15,7 @@ import {
 } from "../../src/tearbench";
 import { createProductionGhostReplayComposition } from "../../src/app/world/detached/replay-composition";
 import { createProductionHeadlessEnvironment } from "../../src/playtest/headless/production-headless-environment";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 const REPLAY_TRIDENT: GhostReplayTrident = {
   command: {
@@ -145,7 +146,7 @@ function exerciseCurrentHeadlessWeapon(weaponId: WeaponId) {
     const replay = new GhostProductionReplayWorld(
       ghost,
       createProductionGhostReplayComposition({
-        seed: builtSnapshot.seed,
+        runSeed: scenarioRunSeed(builtSnapshot.seed),
         weaponId,
         inputSnapshots: new Map([[builtSnapshot.tick, source.input]]),
         gameplayEvents,

@@ -17,6 +17,7 @@ import {
   type GhostSeekResult,
   type GhostReplayRenderView,
 } from "./replay-world";
+import { scenarioRunSeed } from "../gameplay/run/run-start-choices";
 
 export interface GhostVerifiedReplayRenderView extends GhostReplayRenderView {
   readonly sourceId: string;
@@ -107,7 +108,7 @@ export function createGhostProductionReplaySession(
   const composition = replayEngine.loaded().createProductionGhostReplayComposition({
     ...presentation,
     ...(forkOrigin === undefined ? {} : { forkOrigin }),
-    seed: mapped.ghost.snapshots[0]?.seed ?? "unknown",
+    runSeed: scenarioRunSeed(mapped.ghost.snapshots[0]?.seed ?? "unknown"),
     inputSnapshots: inputs,
     raceDecisions: readSeedRaceDecisions(capsule, context?.run.id ?? ""),
     requireRecordedApplicationFrames: true,

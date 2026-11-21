@@ -15,6 +15,7 @@ import {
   captureProductionReplayCheckpoint,
   createProductionGhostReplayComposition,
 } from "../../src/app/world/detached/replay-composition";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 function fixture() {
   const CLOCK = createTearWorldClock();
@@ -404,7 +405,10 @@ describe("Rimehound", () => {
   });
 
   it("round-trips committed Rimehound state through the production State Setup transaction", () => {
-    const composition = createProductionGhostReplayComposition({ seed: "pale-rimehound-restore", mode: "endless" });
+    const composition = createProductionGhostReplayComposition({
+      runSeed: scenarioRunSeed("pale-rimehound-restore"),
+      mode: "endless",
+    });
     const source = composition.create(undefined);
     const hound = source.replay.world.entities.createEnemy(
       "rimehound",

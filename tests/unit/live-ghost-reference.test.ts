@@ -9,6 +9,7 @@ import {
 } from "../../src/app/replay/ghost-reference-controller";
 import type { GhostLiveReference, GhostReferenceFrame } from "../../src/ghost/live-ghost-reference-data";
 import { readGhostRunAssistance } from "../../src/gameplay/run/ghost-assistance";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 // Pure controller values. Actual actor/physics custody is exercised by the existing recorded-source control.
 function fixture(): GhostLiveReference {
@@ -77,7 +78,7 @@ describe("live Chase reference ownership", () => {
       .spyOn(browserReference, "createBrowserLiveGhostReference")
       .mockReturnValue({ prepare: () => prepare, current: () => Promise.resolve(true) });
     try {
-      const replay = createProductionReplayWorld({ seed: "pending-reference-message" }),
+      const replay = createProductionReplayWorld({ runSeed: scenarioRunSeed("pending-reference-message") }),
         run = replay.world.state.run(),
         player = replay.world.state.player();
       if (!run || !player) throw new Error("view fixture actors missing");

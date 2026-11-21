@@ -63,15 +63,8 @@ import type {
   TearRuntimeEnvironmentMetrics,
   TearStructuredRuntimeEnvironment,
 } from "./live-runtime-contracts";
+import { scenarioRunSeed } from "../gameplay/run/run-start-choices";
 export type * from "./live-runtime-contracts";
-function numericSeed(seed: string): number {
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < seed.length; index += 1) {
-    hash ^= seed.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return hash >>> 0 || 1;
-}
 function genericEnvironmentSetup(
   kind: "field" | "combat-object",
   environment: TearStructuredRuntimeEnvironment,
@@ -477,7 +470,7 @@ export function createLiveTearRuntimeEnvironment(
       // lifetime. Physical pointer sampling remains available only to the
       // visible Class-C/manual route.
       context.setSemanticInputAuthority(true);
-      context.setRunSeed(numericSeed(nextScenario.seed));
+      context.setRunSeed(scenarioRunSeed(nextScenario.seed));
       context.selectWeapon(nextScenario.start.weapon);
       scenario = nextScenario;
       paused = false;
