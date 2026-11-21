@@ -1,37 +1,47 @@
 ---
 name: tear-combat-scenarios
-description: Convert Tear combat, movement, weapon, enemy, boss, timing, collision, death, cinematic, or deterministic replay bugs into minimal permanent regression scenarios. Use when implementing gameplay behavior, reproducing a gameplay defect, choosing a Tear test layer, or reviewing whether a fix has credible deterministic evidence.
+description: Turn a Tear combat, movement, weapon, enemy, boss, timing, collision, death, wave or replay behaviour into the smallest permanent deterministic test. Use when implementing gameplay, reproducing a gameplay defect, choosing which test layer a fix belongs in, or reviewing whether a fix has a test that fails without it.
 ---
 
-# Tear Combat Scenarios
+# Tear combat scenarios
 
-Build on Tear's Vitest suites, fixed-step simulation (120 Hz, per the ee5e931 oracle), injected seeded randomness, semantic actions, canonical state, and existing harnesses. Never instrument a temporary copy of the old game.
+Every gameplay fix adds the smallest permanent check that fails without it
+([docs/ENGINEERING_STANDARD.md](../../../docs/ENGINEERING_STANDARD.md), section 4). Build it on the fixed-step
+simulation, injected seeded randomness, semantic actions and the existing harnesses.
 
 ## Workflow
 
-1. State the behavioral contract and the exact failure before editing production code.
-2. Read [references/scenario-authoring.md](references/scenario-authoring.md) and reduce the reproduction to seed, initial state, semantic actions/events, ticks, and observable assertions.
-3. Read [references/suite-routing.md](references/suite-routing.md) and place the fixture in the narrowest permanent unit, contract, or conformance suite. Use a browser journey only when composition, rendering, device input, or a real production artifact is part of the contract.
-4. Reuse the real fixed-step, random, action, entity, weapon, enemy, mirror, boss, and replay harnesses. Extend a shared harness only when multiple scenarios need the same public setup seam.
-5. Make the regression fail for the intended reason, implement the fix, then prove the new test and neighboring suite pass.
-6. Add cross-render-rate, serialization, or verification-hash assertions when determinism or replay compatibility is implicated.
-7. Consult [references/historical-regressions.md](references/historical-regressions.md) for adjacent bug families worth covering without expanding the scenario beyond its contract.
-8. Invoke `$tear-change-gate` for the relevant broader gates.
+1. State the rule and the exact failure before editing game code.
+2. Reduce the reproduction to a seed, a start state, actions at ticks, a tick count and what must be
+   observed: [references/scenario-authoring.md](references/scenario-authoring.md).
+3. Put it in the narrowest permanent place: [references/suite-routing.md](references/suite-routing.md).
+   Use a browser check only when rendering, device input or a built file is part of the rule.
+4. Reuse the real harnesses. Extend a shared harness only when several tests need the same setup.
+5. Run the test and see it fail for the intended reason. Then fix the cause, for every case that shares it,
+   in the shared layer; no branch keyed to one boss, enemy or weapon id.
+6. Run the test and its neighbours. Run `pnpm test:determinism`: it must still pass for a refactor, and it
+   is regenerated only when simulation results were meant to change (see `tear-change-gate`,
+   `references/generated-files.md`, which also covers the ruleset version).
+7. Look at [references/historical-regressions.md](references/historical-regressions.md) for a neighbouring
+   bug family worth one more assertion.
+8. Choose the wider checks with `tear-change-gate`.
 
 ## Rules
 
-- Use `GameAction`/command envelopes for player intent; never test device key codes in simulation tests.
-- Use `SeededRandom` or an injected `RandomSource`; never monkey-patch global randomness.
-- Advance authoritative behavior in fixed ticks at the repository's current sim rate (120 Hz since the parity restoration — verify in `src/app/shell/frame-runtime.ts`, don't assume). Render rate must not change the result.
-- When expected behavior is "what the pre-redesign game did", derive expected values from oracle `ee5e931` via `$tear-oracle-parity` instead of guessing from the current build.
-- Assert semantic state, events, damage, timers, ownership, cleanup, or canonical hashes—not private call order unless it is the contract.
-- Keep fixtures deterministic, minimal, named after behavior, and diagnosable from their failure output.
-- Do not leave a reproduction in a scratch file when it belongs in a permanent suite.
+- Player intent is a `GameAction` (`src/input/game-action.ts`), never a key code.
+- Randomness is `SeededRandom` or an injected `RandomSource` (`src/domain/random.ts`). ESLint rejects
+  `Math.random`, `Date.now` and browser globals in rules code.
+- The simulation runs 120 ticks a second (`TEAR_SIMULATION_TICKS_PER_SECOND` in
+  `src/tearbench/simulation-profile.ts`). Import the constant; do not write the number. Render rate must
+  not change a result.
+- Assert state, events, damage, timers, ownership, cleanup or a canonical hash. Do not assert private call
+  order, and never wait on wall-clock time: wait on a game state.
+- One run is the verdict. A test that passes on a second try is a failing test.
+- Expected values for "what the old game did" come from the oracle through `tear-oracle-parity`, not from
+  the current build.
+- Name the test after the behaviour. Leave no reproduction in a scratch file.
 
-## Completion
+## Report
 
-Own permanent fail-first fixtures and canonical scenario packets. Hand their claims,
-commands, evidence and gaps to `tear-change-gate` using the shared [evidence handoff](../tear-change-gate/references/evidence-handoff.md), and leave final
-full-gate coordination to it.
-
-Report the original failure, chosen suite, seed/actions/ticks, assertions, determinism scope, production fix, and exact commands run.
+The original failure, the suite chosen, the seed, actions and ticks, what is asserted, the fix and where it
+lives, and the exact commands with their results.

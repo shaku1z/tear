@@ -1,6 +1,6 @@
 ---
 name: tear-save-cloud-contract
-description: Implement, migrate, review, and test Tear settings, profile, currency, identity, cloud-save, leaderboard, and replay persistence across standalone, Firebase, shared-cloud, and CrazyGames adapters. Use when changing versioned envelopes, persisted fields, migrations, merge/conflict behavior, account flows, replay formats, adapter storage, malformed-data handling, or unavailable-service fallbacks.
+description: Change, migrate, review and test anything Tear stores or syncs. Use for settings, profile progress, coins and shards, cosmetics, identity and accounts, cloud saves, leaderboards, Firestore rules and replay formats across the standalone, Firebase, shared-cloud, CrazyGames and itch adapters, including malformed data and unavailable services.
 ---
 
 # tear-save-cloud-contract (Claude Code pointer)

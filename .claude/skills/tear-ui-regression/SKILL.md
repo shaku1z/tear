@@ -1,6 +1,6 @@
 ---
 name: tear-ui-regression
-description: Implement, review, and validate Tear canvas UI, screens, HUD, menus, overlays, responsive layout, focus, scrolling, keyboard, touch, and controller behavior. Use for changes under src/presentation/ui*.ts or src/presentation/screens, screen state/actions, visual snapshots, browser journeys, input matrices, responsive behavior, accessibility, or visual craft review.
+description: Build, review and check Tear canvas UI. Use for screens, HUD, menus, overlays, layout, focus, scrolling, keyboard, controller and touch behaviour, changes under src/presentation or to screen state and actions, browser journeys, input and responsive checks, screenshots for review, and visual craft review.
 ---
 
 # tear-ui-regression (Claude Code pointer)

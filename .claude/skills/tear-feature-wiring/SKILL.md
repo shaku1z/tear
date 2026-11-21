@@ -1,6 +1,6 @@
 ---
 name: tear-feature-wiring
-description: Author or revise Tear features through the redesigned typed modules, ports, definitions, controllers, presentation, and evidence. Use for a Tear weapon, enemy, boss, ability, mode, screen, audio event, persistence field, or platform capability, including reviewing incomplete feature integration.
+description: Add or change a Tear feature so it is wired through every layer it needs. Use for a weapon, ability, enemy, boss, boss move, stage, stage object, biome, mode, screen, audio event, saved field or platform capability, for planning such a change, and for reviewing a feature that is only partly wired.
 ---
 
 # tear-feature-wiring (Claude Code pointer)

@@ -1,6 +1,6 @@
 ---
 name: tear-autonomous-playtester
-description: Select, run, interpret, and report credible Tear gameplay evidence with TearBench. Use for gameplay changes or defects, deterministic scenarios, State Setup states, autonomous journeys, branch comparisons, and CI evidence selection; also use when deciding whether tests actually establish gameplay behavior.
+description: Play Tear headless to measure it or to prove a behaviour, and read the result. Use for balance and difficulty questions, a gameplay change or defect that needs numbers before and after, comparing a branch with main, running or adding a TearBench scenario, and judging whether existing tests really establish a gameplay claim.
 ---
 
 # tear-autonomous-playtester (Claude Code pointer)

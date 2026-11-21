@@ -1,38 +1,28 @@
-# TearBench Evidence Contract
-
-## Evidence ladder
+# What each kind of evidence establishes
 
 | Evidence | Establishes | Does not establish |
-|---|---|---|
-| Unit/contract | Local rule or schema behavior | Real gameplay integration |
-| Deterministic scenario | Behavior under a named state, seed, actions, and invariants | Full menu-to-menu journey |
-| Base comparison | Candidate differs or matches at the first material tick | Visual or physical parity unless observed |
-| Journey checkpoint | Transitions and runtime wiring reach a visible checkpoint | Pixel-only autonomy unless Class C |
-| Interaction matrix | The tested browser/input/platform/viewport/network boundary | Untested matrix cells |
-| `pnpm check` | Repository release gate from the current worktree | Live-service health or undeployed cloud resources |
+| --- | --- | --- |
+| Unit or contract test | One rule or one stored format | That the pieces work together in a run |
+| Property test | A rule over many generated inputs | Behaviour outside the generator's range |
+| `pnpm test:determinism` | Scripted runs give the committed state hashes | That the behaviour is right, only that it did not change |
+| TearBench scenario | Behaviour in a named start, with given actions and seed | A whole journey from menu to menu |
+| `pnpm playtest` report | Measured outcomes for scripted players on fixed seeds | How the game feels to a person |
+| Browser journey, input or responsive check | Real routes through built files for the cells it covers | Cells it does not cover (devices, viewports, real hardware) |
+| The required check (`pnpm check`) | Every check in `config/checks.json` passed on that revision | Live-service health, performance on the release host |
 
-## Selection fields
+## Reading a selection
 
-- `scenarios`: canonical entries from `src/tearbench/canonical-scenarios.json`.
-- `journeyCheckpoints`: browser-visible integration stops that must be observed.
-- `baseComparisons`: oracle or current-base behavior comparisons.
-- `interactionMatrices`: affected rows from the browser, input, platform, viewport, frame-rate, network, interruption, performance, and long-run matrices.
+`pnpm tearbench select` and `pnpm tearbench ci` write a selection with these fields:
 
-If no prefix matches, `shared-runtime` is selected deliberately. Do not return an empty evidence plan.
+- `routes`: the entries of `src/tearbench/evidence-routes.json` the changed files matched. `shared-runtime`
+  is the fallback when a file matches none.
+- `scenarios`: ids from `src/tearbench/canonical-scenarios.json`.
+- `journeyCheckpoints`, `baseComparisons`, `interactionMatrices`: the browser journey, the comparison and
+  the matrices each matched route names.
 
-## Failure interpretation
+A selection is a list of what an area's evidence is. It is not a result until the commands it names have run.
 
-1. Reproduce from the emitted artifact.
-2. Separate the first material divergence from downstream effects.
-3. Confirm stability across repeated runs.
-4. Narrow actions, timeline, and state by hand while the failure still reproduces; keep the result as a permanent scenario or unit test.
-5. Compare candidate and base using the same scenario, seed, observation class, and build inputs.
-6. Attribute only when evidence distinguishes:
-   - product behavior;
-   - agent/policy behavior;
-   - test or infrastructure;
-   - inconclusive evidence.
+## Comparing two builds
 
-## Release reporting
-
-A release-readiness claim requires all named evidence groups, full journeys, directly affected arbitrary states, and a golden cross-version replay corpus. Unsupported historical builds remain unsupported; visual-only legacy playback must not be described as exact verification.
+Use the same report, set, seed and scripted player on both, and name both revisions. Old run files are not
+upgraded by hand to a newer format; play the run again.

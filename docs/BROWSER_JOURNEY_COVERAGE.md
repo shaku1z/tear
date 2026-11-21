@@ -1,6 +1,6 @@
 # Built-artifact browser journey coverage
 
-These gates run the production standalone artifact with `?test=1&bossdebug=1`. Debug hooks may only prepare valid canonical state; all navigation and screen actions after preparation use real pointer or keyboard input.
+These gates run the standalone test build (`dist/test-standalone`, from `pnpm build:test:standalone`) with `?test=1&bossdebug=1`. A production build has no debug hooks. Debug hooks may only prepare valid canonical state; all navigation and screen actions after preparation use real pointer or keyboard input.
 
 Run all four route/progression/playground/result journeys with `pnpm test:browser:journeys`. The full `pnpm check` also runs `browser-input-matrix.js`, which uses real touch events and an emulated standard gamepad to verify touch movement/release, Square/X direct setup start, controller movement/jump, and disconnect-to-pause behavior in the same built artifact.
 

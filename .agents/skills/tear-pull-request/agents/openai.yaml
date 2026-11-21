@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tear Pull Request"
+  short_description: "Take a Tear change from a worktree to main"
+  default_prompt: "Use $tear-pull-request to open, update and merge the pull request for this Tear change."
