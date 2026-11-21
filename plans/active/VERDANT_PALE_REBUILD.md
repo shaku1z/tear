@@ -490,6 +490,7 @@ The brief listed five hooks. Measured:
   - `ROOTBOUND_MOVE_POSES` (l.269-279) is re-keyed to the new move ids. The pose names don't change.
   - The owner approved how it looks. Slice 2 posts a before-and-after capture of the figure to the
     ledger's To look at section, to show the Graft marks are the only change.
+    - The owner approved it on 2026-11-21.
 - **The approved background's guard** (`tests/browser-verdant-presentation.js`, 8,803).
   - It is the check that `config/stage-readability.json` l.16 lists for verdant-sanctum, and
     `tests/unit/stage-art.test.ts` l.129-133 requires that check file to exist.
@@ -836,8 +837,9 @@ repository must be able to take the next slice from here.
   lands first.
 
 **Open decisions.**
-- **Owner verdict owed:** `rootbound-figure-before-after` on the ledger's To look at section. It
-  compares the approved figure before and after the rebuild at 1:1.
+- **Figure before and after (3.4):** the owner approved `rootbound-figure-before-after` on the
+  ledger on 2026-11-21. The rebuild renderer keeps the approved figure, and no owner verdict is
+  owed for it.
 - **Tell weight over budget (decided 2026-11-21, 5.2):** the new Rootbound reads 5 harness pairs
   with the vault against a budget of 4. Fix it before the switch, not in slice 2.
 - **Replay admission:** refuse to record runs with an engineering-only boss, so that slices stop
