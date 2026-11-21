@@ -1,0 +1,13 @@
+{
+  "id": "firebase",
+  "name": "Firebase",
+  "state": "In progress: PR 1 merged and its rules deployed (2026-11-21); PR 2a (leaderboard spacing by the server's clock, rules only) open; PR 2 (modular SDK) and PR 3 (App Check) follow",
+  "summary": "Firestore rules for saves, leaderboards (score boards and Gauntlet clear boards), statistics and replays are tested under the local emulator, allowed and refused writes both, and the game's own adapter runs against them; they are live on tear-682cf. The game still loads the 10.12.2 compat SDK from gstatic; App Check is not wired; Remote Config v1 is still read.",
+  "next": "Merge PR 2a and have the owner deploy its rules; then PR 2, the modular SDK, which writes the server's clock on each best.",
+  "owner_action": "Deploy the rules from PR 2a once it merges, before the PR 2 build reaches players.",
+  "evidence": [
+    "plans/active/FIREBASE_REFRESH.md",
+    "tests/rules/firestore-rules.test.ts",
+    "https://github.com/shaku1z/tear/pull/349"
+  ]
+}

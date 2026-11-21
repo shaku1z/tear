@@ -261,7 +261,7 @@ request 305 and the owner's reference illustration:
 - **Changes:** `src/gameplay/environment` (Aurora and the shared field rules), `src/gameplay/entities`
   (the boss move layer, the Rimehound, the White Hart), `src/gameplay/run` (Pale's curve, composition
   and waves), `src/gameplay/variants.ts` (Pale rows), the Pale renderers and presentation facts under
-  `src/presentation`, their tests, `docs/HOW_TO_ADD_A_BIOME.md`, `config/position.json`.
+  `src/presentation`, their tests, `docs/HOW_TO_ADD_A_BIOME.md`, `config/position/pale-traverse.json`.
 - **Does not change:** platform collision in `src/gameplay/stages.ts` (without the lead), the
   painted backgrounds (the stage drawing session), the publication boundary (the owner), anything
   for phones or touch (mobile is paused; follow-ups go to `plans/MOBILE_LATER.md`), the music and
