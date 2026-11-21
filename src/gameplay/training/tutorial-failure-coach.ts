@@ -1,6 +1,11 @@
 import type { GameAction } from "../../input/game-action";
 import type { TutorialGoldFrame } from "./tutorial-gold-reference";
-import { requireRecord } from "../../domain/records";
+import {
+  parseTutorialFailures,
+  type Cause,
+  type FailureVariant,
+  type TutorialFailureCheckpoint,
+} from "./tutorial-coach-checkpoint";
 
 /** Facts are emitted by the real contact/transport owners, never reconstructed geometry. */
 export type TutorialAttemptFact =
@@ -14,31 +19,11 @@ export type TutorialAttemptFact =
     }>
   | Readonly<{ kind: "recall"; result: "too-far" }>
   | Readonly<{ kind: "projectile"; event: "expired" | "deflected"; projectileId: string }>;
-type Cause =
-  "slow" | "grounded" | "recall-range" | "no-contact" | "wrong-strike" | "shot-missed" | "transfer" | "unknown";
-interface FailureVariant {
-  key: string;
-  failures: number;
-  cause: Cause;
-  demoShown: boolean;
-}
-type FailureVariantData = { readonly [Key in keyof FailureVariant]: FailureVariant[Key] };
-export type TutorialFailureCheckpoint = Readonly<{ version: 1; variants: readonly FailureVariantData[] }>;
 export interface TutorialFailureView {
   readonly failures: number;
   readonly nudge: string | undefined;
   readonly assistOffered: boolean;
 }
-const causes: readonly Cause[] = [
-  "slow",
-  "grounded",
-  "recall-range",
-  "no-contact",
-  "wrong-strike",
-  "shot-missed",
-  "transfer",
-  "unknown",
-];
 const messages: Readonly<Record<Cause, string>> = {
   slow: "Too slow to count. Swing faster through the target.",
   grounded: "That hit was on the ground. Try it in the air.",
@@ -49,38 +34,6 @@ const messages: Readonly<Record<Cause, string>> = {
   transfer: "Same hit again. Follow the next step of the lesson.",
   unknown: "Not quite. Pause and choose SHOW DEMO to watch it done.",
 };
-export function parseTutorialFailures(value: unknown): TutorialFailureCheckpoint {
-  const data = requireRecord(value, "Invalid tutorial failures");
-  if (
-    data.version !== 1 ||
-    Object.keys(data).some((key) => !["version", "variants"].includes(key)) ||
-    !Array.isArray(data.variants) ||
-    data.variants.length > 28
-  )
-    throw new TypeError("Invalid tutorial failure ledger");
-  const keys = new Set<string>();
-  for (const raw of data.variants as readonly unknown[]) {
-    const entry = requireRecord(raw, "Invalid tutorial failure variant");
-    if (
-      Object.keys(entry).some((key) => !["key", "failures", "cause", "demoShown"].includes(key)) ||
-      typeof entry.key !== "string" ||
-      !/^(move|jump|dash|cut|launch|juggle|slam|power-slam|updraft|throw|parry|read-the-charge|field-test):(charger|mixed)$/.test(
-        entry.key,
-      ) ||
-      keys.has(entry.key) ||
-      typeof entry.failures !== "number" ||
-      !Number.isSafeInteger(entry.failures) ||
-      entry.failures < 0 ||
-      entry.failures > 100 ||
-      !causes.includes(entry.cause as Cause) ||
-      typeof entry.demoShown !== "boolean"
-    )
-      throw new TypeError("Invalid tutorial failure variant");
-    keys.add(entry.key);
-  }
-  return structuredClone(value) as TutorialFailureCheckpoint;
-}
-
 /** Bounded presentation assistance. Only a resolved relevant action can add a failure. */
 export class TutorialFailureCoach {
   constructor(private readonly minimumHitSpeed: number) {}

@@ -7,7 +7,7 @@ import {
   projectCanonicalGameplayState,
   type RuntimeEnemyState,
 } from "../../src/gameplay/runtime/canonical-state";
-import type { TutorialSessionCheckpoint } from "../../src/gameplay/training/tutorial-controller";
+import type { TutorialSessionCheckpoint } from "../../src/gameplay/training/tutorial-session-checkpoint";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 import { stableVerificationHash } from "../../src/domain/hash";
 

@@ -3,11 +3,9 @@ import { CONFIG } from "../../src/config/game-config";
 
 import { BossArenaRules, SourceVoidController, createBossArena } from "../../src/gameplay/training/arena-rules";
 import { PlaygroundController, trainingPlatforms } from "../../src/gameplay/training/playground-controller";
-import {
-  TUTORIAL_LESSONS,
-  TutorialController,
-  parseTutorialSessionCheckpoint,
-} from "../../src/gameplay/training/tutorial-controller";
+import { TUTORIAL_ARENAS } from "../../src/gameplay/training/tutorial-arenas";
+import { TUTORIAL_LESSONS, TutorialController } from "../../src/gameplay/training/tutorial-controller";
+import { parseTutorialSessionCheckpoint } from "../../src/gameplay/training/tutorial-session-checkpoint";
 
 const neutralTutorialFrame = {
   dt: 0,
@@ -797,5 +795,10 @@ describe("arena rules", () => {
     const rescueIntents = controller.updateHazards(first, 0, hazardPlayer, 0);
     expect(rescueIntents.some((intent) => intent.type === "rescue-player" && intent.damage === 20)).toBe(true);
     expect(first.rescueCooldown).toBe(0.8);
+  });
+
+  it("accepts a pending arena exactly when a lesson uses it: the checkpoint reader checks the arena table, not the lessons", () => {
+    const lessonArenas = new Set(TUTORIAL_LESSONS.map((lesson) => lesson.arena));
+    expect(lessonArenas).toEqual(new Set(TUTORIAL_ARENAS.map((arena) => arena.id)));
   });
 });
