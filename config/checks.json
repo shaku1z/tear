@@ -298,6 +298,11 @@
         "seconds": 13
       },
       {
+        "id": "replay-live-verify",
+        "run": "node tests/browser-replay-live-verify.js",
+        "seconds": 30
+      },
+      {
         "id": "framerate-determinism",
         "run": "node tests/browser-tear-runtime-environment.js",
         "seconds": 45
