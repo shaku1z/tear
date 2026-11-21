@@ -804,8 +804,9 @@ repository must be able to take the next slice from here.
 | --- | --- |
 | 0 | Approved by the lead (D1-D4 approved). |
 | 1 | Merged, #354 (95a34063), ruleset v17. |
-| 2 | In review, #381 (branch `codex/verdant-rootbound-phase1`), ruleset v20, merging alone right after #374 (v19). Merge it before slice 3 starts. |
-| 3-7 | Not started. |
+| 2 | Merged, #381 (b7260214), ruleset v20. |
+| 3 | In review (branch `codex/verdant-rootbound-phase2`), ruleset v21. Its place in the order against #372 (also v21) is the lead's; the later one steps again. Merge it before slice 4 starts. |
+| 4-7 | Not started. |
 
 **What slice 2 left in place** (read these first):
 - The boss: `src/gameplay/entities/enemy-types/rootbound-rebuild/rootbound-moves.ts` holds the move
@@ -818,23 +819,51 @@ repository must be able to take the next slice from here.
   moves there in the same way.
 - How it is reached: the Boss Test picker (`BOSS_TEST_ROSTER` in `content-director.ts`, engineering
   only). It fights on Verdant through `stageOf`.
-- The playtest command, run by every slice:
-  `pnpm playtest bosses --boss rootbound-rebuild,aldric,colossus,echo --seed 1,2 --json <file>`.
-  Practice admits only published bosses, so `--phase` can't reach the new one yet.
+- The playtest commands, run by every slice:
+  - the new boss, whole fights from Phase I (its Phase II and III numbers are the phases a player
+    reaches): `pnpm playtest bosses --boss rootbound-rebuild --seed 1,2 --seconds 300 --json <file>`;
+  - the references, each phase opened through practice:
+    `pnpm playtest bosses --boss aldric,colossus,echo --seed 1,2 --phase 1,2 --json <file>`.
+  - Practice admits only published bosses, so `--phase` can't reach the new one yet.
 
-**Slice 3, exactly.** Phase II from 2.1:
-- Second Swing; Root Seam and its cut; Bramble Rows; Mend; and Last Bloom.
-- Rows in the move table, states in `rootbound.ts`, poses in the renderer table.
-- Seams and rows are stage objects that must end on the phase tick and at death (5.1).
-- Done when: Phase II pace meets 2.4, measured with the playtest command above against the three
-  references.
-- Phase I's pace gap is re-measured there too. It stood at 2.9 hits per 10 s and 78 px/s after
-  slice 2, under the band.
-- Any change to the new boss changes the replay content hash, so the slice steps the ruleset
-  (`RULESET_STEPS` in `ruleset-version.ts`, the refusal strings in `gauntlet-records.test.ts`,
-  `config/campaign-publication-boundary.json`). It also regenerates the tutorial gold hashes and
-  the two production-headless fixtures. The exception is if the replay-admission proposal below
-  lands first.
+**What slice 3 added:**
+- Phase II's rows in `rootbound-moves.ts` (Second Swing, Root Seam, Bramble Rows, Mend, Last Bloom),
+  and per-phase lists with three entries: attack cooldown, surfaces per Burrow, ticks under between
+  them. Slice 4 sets the third entry of each.
+- `rootbound-zones.ts`: the zones the boss owns (the Root Seam and the Bramble Rows). The world
+  damages through them and the shared zone renderer draws them (`scene-effects.ts`, kinds `seam` and
+  `bramble`, in the boss's zone colour). They end with the move, on the phase change and at death.
+- A cut contract for any boss part a blade cuts, held or thrown: `cutPoint()` and `cutPart()` on the
+  enemy, read by `held-blade-collision-runtime.ts` and `thrown-collision-runtime.ts`. The planted
+  vine is its first user.
+- How slice 3 read 2.1, where it left a choice:
+  - **Root Seam:** the last swing of the chain plants the vine, because a vine in the floor can't
+    swing again. In Phase I that is the Vine Swing, which plants nothing; from Phase II it is the
+    Second Swing.
+    - The keeper holds the planted vine for 120 ticks (state `planted`), not open. A cut staggers it,
+      open.
+    - The seam runs on alone up to its 240 ticks, or until it reaches a wall.
+  - **Bramble Rows:** each row starts warning 48 ticks after the one before starts burning, so rows
+    start 84 ticks apart. The rows take 288 ticks; with the 60-tick kneel that is 348, the "about
+    360" of 2.1.
+    - The order is the player's third first, then the other two, farthest from the keeper first.
+  - **Last Bloom's rise** draws no column, because it ends in a ring. Only the peril diamond shows,
+    so it adds no tell-weight pair.
+- The live TearBench observation gives a rebuild its owner's home stage
+  (`live-observation-actors.ts`). After #377 the playtest refused the new boss without it.
+
+**Slice 4, exactly.** Phase III from 2.1:
+- Spring Surge: rows in the move table, states in `rootbound.ts`, poses in the renderer table.
+- The Phase III cadence: ÷1.6 attack cooldown, 160 px/s walk and every windup ×0.85. Burrow surfaces
+  three times, 48 ticks apart: the third entries of the cadence lists.
+- The death: every vine, seam, row and mound ends on the tick it starts (5.1 already checks it).
+- Done when: all three phases are measured with the commands above, with 0 blocking ticks and 4
+  marks, and the lead asks the owner to play it on preview.
+- Any change to the new boss steps the ruleset (`RULESET_STEPS` in `ruleset-version.ts`, the refusal
+  strings in `gauntlet-records.test.ts`, `config/campaign-publication-boundary.json`). The exception
+  is if the replay-admission proposal below lands first.
+  - A change to the entity kinds also moves the content hash: the tutorial gold hashes and the two
+    production-headless fixtures. Slice 3 added no kind, so it changed neither.
 
 **Open decisions.**
 - **Figure before and after (3.4):** the owner approved `rootbound-figure-before-after` on the
@@ -845,7 +874,13 @@ repository must be able to take the next slice from here.
 - **Replay admission:** refuse to record runs with an engineering-only boss, so that slices stop
   stepping the ruleset (4.1). The lead approved it in principle on 2026-11-21 and routes it to the
   replay session after #372. Not built in slice 2.
-- **Pace under the 4-7 band:** accepted by the lead as a named gap for slice 3.
+- **Pace under the 4-7 band:** the lead accepted it as a named gap for slice 3.
+  - Slice 3's numbers (PR) are under the band again in Phase II.
+  - #377's headless player moved the references too. In Phase I a scripted player now takes 1.5-2.8
+    hits per 10 s from them, against 4-7 when 2.4 was written.
+  - The lead decides whether 2.4's band is re-measured on the new player before more tuning.
+- **Mend hardly ever happens:** the keeper walks at the player, so a player 500 px away for 480 ticks
+  is rare. The harness fight never reaches it.
 - **Named gaps to keep carrying:**
   - The Echo's tell weight is not measured (5.2).
   - The playtest "open" column reads declared `tells()`, which the new boss does not declare.
