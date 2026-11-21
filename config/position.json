@@ -55,7 +55,7 @@
       "name": "Verdant Sanctum gameplay",
       "state": "In progress: slice 2 of 7 (the new Rootbound Phase I and Uproot, engineering channel) in review",
       "summary": "The owner rejected the Verdant gameplay a third time on 2026-11-20: the shared Verdant base is slop, move visuals linger after the move, and Verdant leans on tells far more than any other boss. Verdant's boss, enemies and stage are rebuilt from scratch in the pattern of Aldric, the Echo and the Colossus, keeping only the approved Rootbound seed-pod figure and the drawn background. Measured on main 6fb1a7cd: a scripted player takes 2.8, 1.1 and 0 hits per 10 s from today's Rootbound across its three phases, against 4 to 7 from the reference bosses; its Phase III does not move; its two phase cinematics block 12.9 s of a 37 s fight; it draws 16 tell marks against Aldric's 6. The plan adds two rules over every boss and enemy (nothing outlives its move, tell weight) and builds the new Verdant on the engineering channel until the owner approves it on preview.",
-      "next": "Slice 1 merged as #354 (ruleset v17). Slice 2 merges: the new Rootbound Phase I and Uproot in Boss Test on the engineering channel, held to both rules with no exemption, ruleset v18. Then slice 3, its Phase II.",
+      "next": "Slice 1 merged as #354 (ruleset v17). Slice 2 merges as #381: the new Rootbound Phase I and Uproot in Boss Test on the engineering channel, held to both rules with no exemption, ruleset v19. Then slice 3, its Phase II; the plan's 6.1 is the handoff.",
       "owner_action": "",
       "evidence": [
         "plans/active/VERDANT_PALE_REBUILD.md",
