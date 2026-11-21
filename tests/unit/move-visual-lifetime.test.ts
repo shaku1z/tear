@@ -110,8 +110,10 @@ function offences(fight: Fight): Offences {
           result.moveOverPhaseChange += 1;
       }
     }
+    // The tick a stun runs out is held too: the stun is spent at the start of the step, before the update.
+    const held = record.stunned || previous?.stunned === true;
     for (const zone of record.zones) {
-      const ticks = (age.get(zone) ?? 0) + (record.stunned ? 0 : 1);
+      const ticks = (age.get(zone) ?? 0) + (held ? 0 : 1);
       age.set(zone, ticks);
       if ((zone.maxLife ?? 0) > 0 && ticks > Math.ceil((zone.maxLife ?? 0) / DT) + 2) result.zonePastItsLength += 1;
     }

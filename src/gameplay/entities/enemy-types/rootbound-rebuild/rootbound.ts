@@ -117,7 +117,7 @@ export function createRootboundRebuildType(
     blooming = false;
     /** Where the planted vine's root is in the floor. */
     rootX = 0;
-    readonly field = new RootboundZones(CONFIG.view.w);
+    readonly field = new RootboundZones(CONFIG.view.w, CONFIG.world.groundY);
     /** What the world damages through and the shared zone renderer draws. */
     zones: ArenaZone[] = [];
     zoneColor = LEAF;
@@ -251,9 +251,15 @@ export function createRootboundRebuildType(
     /**
      * What it is about to strike, as the shared tell data (boss-tells.ts), in seconds: the Vine Swing and the
      * Second Swing threaten the box the vine sweeps from where they aimed to stand; any other windup marks its body.
-     * Nothing draws these; the playtest players read them.
+     * Its zones follow (the seam, the rows and the lingering patches), from the field that owns them. Nothing draws
+     * these; the playtest players read them.
      */
     tells(): readonly BossTell[] {
+      return [...this.moveTells(), ...this.field.tells()];
+    }
+
+    /** The tell of the move it is winding up, if any. */
+    moveTells(): readonly BossTell[] {
       if (!/(?:wind|windup|aim)$/u.test(this.state)) return [];
       const leadSeconds = this.stateLen / 120,
         remainingSeconds = Math.max(0, this.stateT) / 120;
@@ -320,6 +326,7 @@ export function createRootboundRebuildType(
       this.parryCd = Math.max(0, this.parryCd - 1);
       if (REST_STATES.has(this.state)) this.rest(dt, platforms, player);
       else this.move(dt, platforms, player, projectiles);
+      this.field.patchCap = this.byPhase(M.lingeringBramble.caps);
       this.field.step(dt);
       this.zones = this.field.list;
       this.lastHp = this.hp;
@@ -575,7 +582,7 @@ export function createRootboundRebuildType(
           break;
         default:
           if (!this.movePhaseTwo(done, player)) {
-            // swingrecover, throwrecover, split, vaultrecover, burstrecover, staggered, planted, bramblerecover,
+            // swingrecover, throwrecover, split, vaultrecover, burstrecover, staggered, bramblerecover,
             // mendsplit, springslam
             this.vx = 0;
             if (done) this.go("idle", 0);
@@ -599,6 +606,14 @@ export function createRootboundRebuildType(
         case "swing2":
           this.swingHits(player);
           if (done) this.plant();
+          return true;
+        case "planted":
+          // The vine's time in the floor ran out (a cut ends it as a stagger instead): bramble grows at its root.
+          this.vx = 0;
+          if (done) {
+            this.field.growPatch(this.rootX);
+            this.go("idle", 0);
+          }
           return true;
         case "bramblewind":
           this.vx = 0;

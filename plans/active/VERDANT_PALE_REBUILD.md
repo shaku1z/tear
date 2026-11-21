@@ -279,6 +279,7 @@ Colossus's Phase III multiplier).
 | Thorn Burst | I, II, III | player within 130 px for 48 ticks; cooldown 3 s | 34 (swell) | 12: a ring of 150 px | 54 (burst), open | 16 | no (peril) | none: the swell is the tell |
 | Root Seam | II, III | the hit of every Vine Swing | - | the vine stays planted for 120 ticks and drives a root seam along the floor in the swing's direction: a boss zone 110 px wide, 300 px/s, at most 240 ticks, 7 damage per 48 ticks (Aldric's seams) | - | 7 every 48 ticks | - | none: the seam is the hit |
 | Bramble Rows | II, III | cooldown 9 s, player on the floor | 60 (kneel) | three floor sections light in turn: each warns for 36 ticks, then burns for 84; the next starts 48 ticks after the last. It stays kneeling and open the whole time (about 360 ticks) | 48 (rise) | 12 per 48 ticks | - | 3: the zone warning, through the shared zone renderer |
+| Lingering bramble | II, III | the Root Seam every 160 px it runs; each Bramble Row as it burns out (at its centre); the planted vine when its 120 ticks run out (a cut vine leaves none) | 54 (grows), never under the shared tell minimum | a patch of floor bramble 120 px wide stays live for 1200 ticks; at most 3 (Phase II) or 4 (Phase III) at once, and the oldest withers first; one that would overlap a patch renews it in place | - | 8 per 48 ticks, on the floor only | - | none new: the shared zone renderer's bramble, warning while it grows |
 | Mend | II | player hasn't hit it for 480 ticks and is more than 500 px away | 24 (kneel) | heals 1.5 % of its full health a second for up to 240 ticks, never above the health it entered Phase II with; any hit ends it | 72 (split), open, after a hit | - | - | none: the kneel is the tell |
 | Spring Surge | III | cooldown 7.5 s | 102 (spring): rises at the arena centre | 1: two root waves run along the floor both ways (jumpable ground shocks, 760 px/s, 16) and five seed pods arc out (deflectable, 12) | 66 (slam), open | 16 / 12 | pods deflect | the peril diamond only: the rise is the tell (slice 4 dropped the centre column, 5.2: a departure from this table the lead confirmed, 2026-11-21) |
 
@@ -300,8 +301,10 @@ Colossus's Phase III multiplier).
   hit stops it.
 
 **Arena control (the owner's "arena controller").**
-- Root Seams and Bramble Rows are zones the boss owns, like Aldric's seams and the Colossus's panels.
-- They end when the move ends, on a phase change and when its death starts.
+- Root Seams, Bramble Rows and the lingering bramble are zones the boss owns, like Aldric's seams and the
+  Colossus's panels, all on one field (`rootbound-zones.ts`).
+- Seams and rows end when the move ends; the bramble outlasts the move that left it, up to its length. All of
+  them end on a phase change and when its death starts.
 - Vault landings stress platforms through the shared arena rule. Nothing is placed in the stage.
 
 **Phase changes inside the fight.** These were proposed to the cinematics-overhaul session on
@@ -640,6 +643,38 @@ that splits each hit by its call stack, tool gap in plans/active/PLAYTEST_TOOL_P
   than the dash's 18, and lands on 28 % of its uses. The new boss fired 22 projectiles in Phase I, and its
   zones live 88-129 ticks.
 - Body contact is about 2 per 10 s at the Colossus and Aldric and 1.1 at the new boss.
+
+**Pressure: the lingering bramble** (the lead's design of 2026-11-21, from the table above: the references hit
+through things that outlast a dash, and the new boss's moves were all short windows). The seam, the rows and,
+from Phase II, the planted vine leave bramble that stays (2.1). Practice on normal, Sword, seeds 1 to 12,
+main 55beb59b plus this step, health 3000 unchanged:
+
+| Phase | Scripted hits per 10 s | Target (refs' median) | Avoids-tells clear | Target | Blocking ticks |
+| --- | --- | --- | --- | --- | --- |
+| I | 1.5 | 2.5-4.4 (3.0) | 14.0 s (9 of 12 cleared) | 10.4-21.6 s | 0 |
+| II | 3.4 (was 1.2) | 3.4-6.0 (4.1) | 15.0 s | 8.4-16.9 s | 0 |
+| III | 2.9 (was 1.9) | 3.4-6.0 (4.9) | 6.4 s | 5.3-12.9 s | 0 |
+
+- **Where the hits come from now** (the scratch probe): Phase II 2.7 per 10 s over the phase's own fights:
+  patches 1.2, Root Seam 0.8, Bramble Rows 0.4, body 0.3. Phase III 3.0: body 1.2, pods 0.6, moves 0.5,
+  patches 0.4, rows 0.2.
+- **The dials, measured:** a seed every 240 px and 96 px wide gave 3.2 and 2.5; a seed every 160 px gave 3.3
+  and 2.8; 120 px wide, 3.2 and 2.6; caps of 4 and 5, 3.2 and 2.4 (the cap never binds); 160 px and 120 px
+  together, 3.4 and 2.9, taken.
+- **The floor stays open:** in no tick of any of the 12 seeds is the floor without a gap the player's width,
+  live zones or growing ones. The most of the floor live patches cover at once is 22.5 %; every live zone
+  together, 55.8 %; every zone, growing ones included, 85 %.
+- **The avoids-tells player** takes patch hits: in Phase II 29 with no hit before them and 7 within its 0.9 s
+  of invulnerability plus 0.25 s (knocked), 0 in Phase III. Every one is on a patch already live, which it
+  crossed airborne or dashing while its scripted base chased the boss; none grew under it. Aldric's throne
+  fire hits the same player 5.0 per 10 s in Phase II for the same reason: tool gap in
+  plans/active/PLAYTEST_TOOL_PLAN.md (it reads a tell only within 28 px and has no rule for standing floor
+  zones).
+- **The easy full fight** (`--difficulty easy --seed 1,2,3,4,5,6 --player scripted --seconds 300`): the boss
+  wins all six, 0 blocking ticks.
+- **Open, for the lead:** Phase III is under its band and Phase I unchanged. Phase I has no source: the seam,
+  the rows and the planted vine are Phase II moves. Phase III starts on an empty floor (5.1 ends zones on the
+  phase tick) and its clear is 6.4 s, so patches do not build up in it.
 
 ## 3. Delete list
 
@@ -1038,8 +1073,9 @@ repository must be able to take the next slice from here.
 | Tuning | Merged, #387 (3c567bf8): plan only. 2.4 re-based, no boss change. |
 | Parry | Merged, #393 (fbadb5fc): only a perfect touch parries the Vine Swing, with a cooldown. No ruleset step. |
 | 4 | Merged, #395 (e1cb6f1e): Phase III. Rebuild-only, no ruleset step. |
-| Tuning on the seeded sample | In review (branch `codex/verdant-rootbound-pace`): the Second Swing aims (`move-aim.ts`), the new boss declares its tells, health 3000, Phase III's clear target re-based (2.4). The hits stay open. Rebuild-only, no ruleset step. |
-| 5 | Built on branch `codex/verdant-rootbinder-rebuild` (the Rootbinder); its pull request opens after the tuning one merges. |
+| Tuning on the seeded sample | Merged, #397 (55beb59b): the Second Swing aims (`move-aim.ts`), the new boss declares its tells, health 3000, Phase III's clear target re-based (2.4). Rebuild-only, no ruleset step. |
+| Pressure | In review (branch `codex/verdant-bramble-pressure`): the lingering bramble (2.1, 2.4). Phase II's hits reach their band; Phase I and Phase III stay open for the lead. Rebuild-only, no ruleset step. |
+| 5 | Built on branch `codex/verdant-rootbinder-rebuild` (the Rootbinder); its pull request opens after the pressure one. |
 | 6-7 | Not started. |
 
 **What slice 2 left in place** (read these first):
