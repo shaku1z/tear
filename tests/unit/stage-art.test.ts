@@ -13,15 +13,13 @@ import type { ScenePaintPorts } from "../../src/presentation/scenes/scene-librar
 import { PAINTED_STAGES } from "../../src/presentation/scenes/scene-registry";
 import type { SceneBitmap, SceneCanvas } from "../../src/presentation/scenes/scene-renderer";
 import { paintedStage } from "../../src/presentation/stage-art/painted-stage";
-import { PALE_TRAVERSE_ART } from "../../src/presentation/stage-art/recipes/pale-traverse";
+import { STAGE_ART_RECIPES as RECIPES } from "../../src/presentation/stage-art/recipes";
 import { VERDANT_SANCTUM_ART } from "../../src/presentation/stage-art/recipes/verdant-sanctum";
 import { STAGE_ART_LIMITS, type StageArtRecipe } from "../../src/presentation/stage-art/stage-art-contract";
 import { stageArtLayerRect } from "../../src/presentation/stage-art/stage-art-painter";
 import { StageArtError, validateStageArt } from "../../src/presentation/stage-art/stage-art-validate";
 
 const WORLD = { width: 1600, height: 900, groundY: 800 };
-/** Every drawn stage; the registry test below fails when one is missing here. */
-const RECIPES: readonly StageArtRecipe[] = [VERDANT_SANCTUM_ART, PALE_TRAVERSE_ART];
 /** Time limit for the one test that paints the whole stage twice. */
 const TWO_BAKES_MS = 30_000;
 

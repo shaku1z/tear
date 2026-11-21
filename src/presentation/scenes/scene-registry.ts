@@ -1,17 +1,22 @@
-import type { StageArtRecipe } from "../stage-art/stage-art-contract";
+import type { StageId } from "../../gameplay/stages";
 import type { PaintedStageLoaders } from "./scene-library";
 
-/** A stage the game paints from its recipe; the painter and recipe load lazily together. */
-const painted = (recipe: () => Promise<StageArtRecipe>) => async () => {
-  const [{ paintedStage }, art] = await Promise.all([import("../stage-art/painted-stage"), recipe()]);
-  return paintedStage(art);
-};
+/**
+ * The stages the game draws from a recipe. The recipes themselves are listed in
+ * `stage-art/recipes/index.ts`; a unit test keeps the two lists the same.
+ */
+const DRAWN_STAGES: readonly StageId[] = ["verdant-sanctum", "pale-traverse"];
 
 /**
- * Stage id -> lazy loader of the stage's painter and recipe. Each recipe and
- * the painter are separate chunks, so no stage art reaches the startup scripts.
+ * Stage id -> lazy loader of the stage's painter and recipe. The painter and
+ * every recipe are one lazily imported chunk, so no stage art reaches the
+ * startup scripts and a new drawn stage adds no file to download.
  */
-export const PAINTED_STAGES: PaintedStageLoaders = Object.freeze({
-  "verdant-sanctum": painted(async () => (await import("../stage-art/recipes/verdant-sanctum")).VERDANT_SANCTUM_ART),
-  "pale-traverse": painted(async () => (await import("../stage-art/recipes/pale-traverse")).PALE_TRAVERSE_ART),
-});
+export const PAINTED_STAGES: PaintedStageLoaders = Object.freeze(
+  Object.fromEntries(
+    DRAWN_STAGES.map((stageId) => [
+      stageId,
+      async () => (await import("../stage-art/painted-stage")).drawnStage(stageId),
+    ]),
+  ),
+);

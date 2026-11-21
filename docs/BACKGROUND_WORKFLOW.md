@@ -42,9 +42,9 @@ procedural backdrop.
 | `src/presentation/stage-art/stage-art-validate.ts` | Checks a recipe before it paints: ramps exist, colours parse, numbers in range, brushwork within the limits. |
 | `src/presentation/stage-art/stage-art-painter.ts` | Paints a recipe into layer canvases in short slices and returns the scene layout. |
 | `src/presentation/stage-art/strokes-*.ts`, `paint-kit.ts` | One routine per stroke kind, and the brush, ramp and noise helpers they share. |
-| `src/presentation/stage-art/recipes/<stage>.ts` | A stage's recipe. |
+| `src/presentation/stage-art/recipes/<stage>.ts`, `recipes/index.ts` | A stage's recipe, and the list of every recipe. |
 | `src/presentation/stage-art/painted-stage.ts` | Binds a recipe to the stage's own paper. |
-| `src/presentation/scenes/scene-registry.ts` | `stageId -> lazy loader`. One line per drawn stage. |
+| `src/presentation/scenes/scene-registry.ts` | The ids of the drawn stages, each with a lazy loader. |
 | `src/presentation/scenes/scene-library.ts` | When a stage paints, the fade-in, the fallback to the procedural backdrop, release of stages a run has left. |
 | `src/presentation/stage-art/stage-art-live.ts` | Turns a recipe's water and motes into the tables drawn each frame; all their randomness is spent here, from the entry's seed. |
 | `src/presentation/scenes/scene-renderer.ts` | Draws the layers with parallax. |
@@ -120,8 +120,9 @@ Rules that hold for every kind:
   background draws every stage in turn and never paints one; it keeps the
   procedural look. Only `show` (the world is drawing the stage) and `prefetch`
   (the run reaches it next) in the scene library start a load.
-- The painter and each recipe are separate lazily imported chunks, so stage art
-  adds nothing to the startup scripts.
+- The painter and every recipe are one lazily imported chunk, so stage art
+  adds nothing to the startup scripts and a new drawn stage adds no file to
+  download or precache.
 - Painting is sliced: the painter hands the thread back after at most 4 ms and
   runs one slice per frame, after the frame has drawn. The diagnostics gauge
   `stageArtSlices` counts slices, and the frame-time scenarios report how many
@@ -188,7 +189,8 @@ brushwork.
    new kind (contract, one routine, one case in the painter, its cost in the
    validator) only for a form no existing kind can draw. Add a `live` list
    for what moves once the still picture is approved.
-3. **Register.** One line in `scene-registry.ts`, and the stage with its
+3. **Register.** The recipe in `recipes/index.ts`, the stage id in
+   `scene-registry.ts`, and the stage with its
    browser check in `config/stage-readability.json`.
 4. **Readability.** Run the stage's browser check on a test build
    (`pnpm build:test:standalone`). Below a floor, change values in the recipe
