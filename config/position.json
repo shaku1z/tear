@@ -149,6 +149,20 @@
       ]
     },
     {
+      "id": "performance",
+      "name": "Performance and storefront builds",
+      "state": "Paused for the weekly budget (2026-11-21); measuring and gates are in place",
+      "summary": "The startup set is split and guarded by the bundle and load budgets; the load profile counts requests to every origin (Firebase's SDK included) and caps them per target. The preview lives at preview.tearblade.com with the default Cloudflare subdomains off in both Wrangler configs. Firebase slice 2 (modular SDK, PR 371) cuts cross-origin scripts from 160,421 bytes to none and adds one 66.5 KB same-origin chunk; the first frame is unchanged and laptop music ready is not faster (about 10% slower, inconclusive).",
+      "next": "Verify the preview deploy after PR 373; set the tick budget from five hosted nightlies; measure startup before and after replay overhaul PR 5; settle the laptop music-ready question on the nightly; investigate the boot stall if it appears in a hosted nightly.",
+      "owner_action": "Say when the next production deploy happens: the production Worker's default Cloudflare address stops serving then and must be checked. Decide whether the load profile may keep making real anonymous Firebase calls against the production project. Run the CrazyGames live-session check.",
+      "evidence": [
+        "plans/active/PERFORMANCE_PLATFORMS_PLAN.md",
+        "docs/PERFORMANCE_BUDGETS.md",
+        "https://github.com/shaku1z/tear/pull/362",
+        "https://github.com/shaku1z/tear/pull/373"
+      ]
+    },
+    {
       "id": "cinematics",
       "name": "Cinematics",
       "state": "PRs 1-2 merged (a rule over every boss fight; no boss event slows time; the Warden and the Colossus change phase in the fight). PR 3 (Aldric) in review. The owner approved the look board (2026-11-21)",
