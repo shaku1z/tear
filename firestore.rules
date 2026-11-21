@@ -60,8 +60,9 @@ service cloud.firestore {
     //    drop fields (the replay link of a slower run, fields of older builds) but sets only the row fields;
     //  - the replay link: only replayId, naming a replay this player owns.
     // A row is never deleted, so "better than the row holds" and the 10 s spacing cannot be reset. The spacing
-    // is between the rows' own clock readings, each within 10 minutes of the server's: a client can bunch at
-    // most ~120 writes into one burst, and no more than one per 10 s over any longer time.
+    // is by the server's clock: `at` is the write's serverTimestamp(), and a row that has one takes the next best
+    // only 10 s later. Rows written before `at` existed carry none; they are spaced by their own clock readings
+    // (`ts`, within 10 minutes of the server's) until their next best adds it, and a row that has `at` keeps it.
     // Score boards, one per mode the LEADERBOARDS screen lists times DIFFICULTY_IDS, keep the highest
     // score. Gauntlet clear boards, one per difficulty, keep the fastest clear: score is the clear time in
     // simulation ticks (120 a second), wave the trials cleared. The rules test fails when the game's
@@ -86,11 +87,13 @@ service cloud.firestore {
           && nearNow(row.ts);
     }
     function isRowWrite() {
-      return setKeys().hasOnly(['name', 'score', 'wave', 'time', 'uid', 'ts'])
-          && incoming().keys().hasAll(['name', 'score', 'wave', 'time', 'uid', 'ts']);
+      return setKeys().hasOnly(['name', 'score', 'wave', 'time', 'uid', 'ts', 'at'])
+          && incoming().keys().hasAll(['name', 'score', 'wave', 'time', 'uid', 'ts'])
+          && ('at' in incoming() ? incoming().at == request.time : resource == null || !('at' in resource.data));
     }
     function afterLastWrite() {
-      return incoming().ts >= resource.data.get('ts', 0) + 10000;
+      return incoming().ts >= resource.data.get('ts', 0) + 10000
+          && (!('at' in resource.data) || request.time >= resource.data.at + duration.value(10, 's'));
     }
     function isNewBest(uid) {
       return isRowWrite() && isRow(incoming(), uid)
