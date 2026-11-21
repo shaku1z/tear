@@ -60,7 +60,13 @@ The owner approved this refresh on 2026-11-20. It stays on the free tier. Consol
   - PR 1 hardens the rules, with tests under the emulator.
   - The Gauntlet clear boards (lower is better) were agreed with the keys-gauntlet session.
   - The replay limits (6 chunks, owner-only ids) were agreed with the replay overhaul session.
-- 2026-11-20 PR 1 opened as [#349](https://github.com/shaku1z/tear/pull/349).
+- 2026-11-20 PR 1 opened as [#349](https://github.com/shaku1z/tear/pull/349). After the lead's review:
+  - Replay summaries are held to the game's values: a known mode and difficulty, bounded ints, `won` a bool, `lb` true exactly for an `lb_` id, and a thumbnail that is null or a JPEG data URL of at most 32 KB (an outside link would send every viewer's address to that site). Only a leaderboard replay is written over, and its date moves only forward.
+  - Leaderboard rows are never deleted, so a delete cannot reset "must beat" or the 10 s spacing. A new best may replace the row outright and drop a slower run's replay link (the Gauntlet rework writes it so).
+  - The `run_end` statistic has a key allow-list and a type and range for each value.
+  - The adapter cuts replay chunks by UTF-8 bytes as well as characters (Firestore's 1 MiB document limit), never inside a surrogate pair. It publishes without a thumbnail that is not one.
+  - CI restores the emulator jar from the Actions cache, keyed on the firebase-tools version.
+  - Rules cannot cap how many documents a player creates (replays per player, orphaned chunks). App Check (PR 3) is the answer to scripted writes.
 - 2026-11-20 PR 2: the modular SDK. The adapter moved onto two small ports (Auth, Firestore paths), and
   `src/platform/firebase-sdk.ts` implements them with Auth and Firestore Lite.
   - Sizes: the SDK chunk is 219,880 B raw / 66,303 B gzip. Before, the four 10.12.2 compat scripts from gstatic were 539,470 / 158,763 B.

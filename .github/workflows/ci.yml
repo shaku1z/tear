@@ -197,6 +197,15 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
+      # The emulators' Firestore jar (about 70 MB) is downloaded once per firebase-tools version and then
+      # restored, so the gate does not fetch it on every run.
+      - name: Read the firebase-tools version
+        id: firebase-tools
+        run: echo "version=$(node -p "require('./package.json').devDependencies['firebase-tools']")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ runner.os }}-${{ steps.firebase-tools.outputs.version }}
       - name: Unit tests
         run: node "$TEAR_GATE/run-checks.mjs" unit
       # Read by .github/actions/check-results on a re-run of this job (to report flaky checks), which

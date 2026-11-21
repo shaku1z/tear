@@ -17,6 +17,12 @@ service cloud.firestore {
     function changedKeys() {
       return resource == null ? incoming().keys() : incoming().diff(resource.data).affectedKeys();
     }
+    // The keys this write adds or changes, leaving out the ones it removes.
+    function setKeys() {
+      return resource == null
+          ? incoming().keys()
+          : incoming().diff(resource.data).addedKeys().union(incoming().diff(resource.data).changedKeys());
+    }
     function intIn(value, low, high) {
       return value is int && value >= low && value <= high;
     }
@@ -26,6 +32,16 @@ service cloud.firestore {
     // A client clock reading (Date.now()) within ten minutes of the server's.
     function nearNow(ms) {
       return ms is int && ms > request.time.toMillis() - 600000 && ms < request.time.toMillis() + 600000;
+    }
+    function numberIn(value, low, high) {
+      return value is number && value >= low && value <= high;
+    }
+    // The game's mode and difficulty ids (MODE_CATALOG, DIFFICULTY_IDS); the rules test compares them.
+    function isMode(mode) {
+      return mode in ['bossonly', 'campaign', 'endless', 'gauntlet', 'playground', 'sandbox', 'tutorial'];
+    }
+    function isDifficulty(difficulty) {
+      return difficulty in ['easy', 'extreme', 'hard', 'normal', 'onehit'];
     }
 
     // Each player owns their cloud save: exactly a profile blob and a meta blob. The display name lives
@@ -40,8 +56,12 @@ service cloud.firestore {
     }
 
     // Public leaderboards. A player writes only their own row, and only two kinds of write:
-    //  - a new best: every row field, a better value than the row holds, at least 10 s after the last;
-    //  - the replay link: only replayId, naming a replay this player owns (so the value stays as it was).
+    //  - a new best: every row field, a better value than the row holds, at least 10 s after the last. It may
+    //    drop fields (the replay link of a slower run, fields of older builds) but sets only the row fields;
+    //  - the replay link: only replayId, naming a replay this player owns.
+    // A row is never deleted, so "better than the row holds" and the 10 s spacing cannot be reset. The spacing
+    // is between the rows' own clock readings, each within 10 minutes of the server's: a client can bunch at
+    // most ~120 writes into one burst, and no more than one per 10 s over any longer time.
     // Score boards, one per mode the LEADERBOARDS screen lists times DIFFICULTY_IDS, keep the highest
     // score. Gauntlet clear boards, one per difficulty, keep the fastest clear: score is the clear time in
     // simulation ticks (120 a second), wave the trials cleared. The rules test fails when the game's
@@ -66,8 +86,8 @@ service cloud.firestore {
           && nearNow(row.ts);
     }
     function isRowWrite() {
-      return changedKeys().hasOnly(['name', 'score', 'wave', 'time', 'uid', 'ts'])
-          && (resource != null || incoming().keys().hasAll(['name', 'score', 'wave', 'time', 'uid', 'ts']));
+      return setKeys().hasOnly(['name', 'score', 'wave', 'time', 'uid', 'ts'])
+          && incoming().keys().hasAll(['name', 'score', 'wave', 'time', 'uid', 'ts']);
     }
     function afterLastWrite() {
       return incoming().ts >= resource.data.get('ts', 0) + 10000;
@@ -97,16 +117,36 @@ service cloud.firestore {
                             && ((isBoard(board) && isNewBest(uid))
                                 || (isClearBoard(board) && isNewFastest(uid))
                                 || ((isBoard(board) || isClearBoard(board)) && isReplayLink(uid)));
-      allow delete: if isUser(uid);
+      allow delete: if false;
     }
 
     // Append-only balancing statistics, anonymous by construction (no account id). The developer reads
-    // them in the console. Only the events the game sends, a clock reading and a bounded number of fields.
+    // them in the console. Only the run_end statistic the game sends (src/gameplay/run/outcome-planner.ts,
+    // src/app/run/outcome-composition.ts, and the economy figures of src/gameplay/scoring/live-economy-runtime.ts),
+    // each field of its own type and range; every field but the event and the clock reading is optional.
+    function isRunEnd(data) {
+      return data.keys().hasOnly(['event', 'ts', 'mode', 'diff', 'wave', 'score', 'time', 'peak', 'died', 'won',
+                                  'campaign', 'earned', 'wallet', 'coinMagnet', 'fortune', 'bounty', 'shopRanks'])
+          && data.event == 'run_end'
+          && nearNow(data.ts)
+          && isMode(data.get('mode', 'endless'))
+          && isDifficulty(data.get('diff', 'normal'))
+          && numberIn(data.get('wave', 0), 0, 100000)
+          && numberIn(data.get('score', 0), 0, 1000000000)
+          && numberIn(data.get('time', 0), 0, 10000000)
+          && numberIn(data.get('peak', 0), 0, 100000)
+          && data.get('died', false) is bool
+          && data.get('won', false) is bool
+          && data.get('campaign', false) is bool
+          && numberIn(data.get('earned', 0), 0, 1000000000)
+          && numberIn(data.get('wallet', 0), 0, 1000000000000)
+          && numberIn(data.get('coinMagnet', 0), 0, 1000)
+          && numberIn(data.get('fortune', 0), 0, 1000)
+          && numberIn(data.get('bounty', 0), 0, 1000)
+          && numberIn(data.get('shopRanks', 0), 0, 100000);
+    }
     match /telemetry/{doc} {
-      allow create: if signedIn()
-                    && incoming().event in ['run_end']
-                    && nearNow(incoming().ts)
-                    && incoming().size() <= 32;
+      allow create: if signedIn() && isRunEnd(incoming());
       allow read, update, delete: if false;
     }
 
@@ -121,23 +161,44 @@ service cloud.firestore {
     // owner (the Replay Passport uid) writes. A leaderboard replay has the fixed id
     // lb_<board>_<difficulty>_<uid>, so only that player can hold it, and re-publishing replaces it with
     // set(); chunks from a longer earlier copy stay at or above the new chunkCount, unread and unwritable.
-    // Any other replay id is r followed by base-36 characters.
+    // Any other replay id is r followed by base-36 characters, new on every publish. So only a leaderboard
+    // replay is ever written over, and its date then moves forward, to the new publish.
     function isReplayId(id) {
       return id.matches('lb_[a-z]+_[a-z]+_' + request.auth.uid) || id.matches('r[0-9a-z]{1,32}');
     }
-    // The fields publishReplay writes (src/platform/firebase-cloud.ts).
-    function isReplaySummary() {
+    // The feed draws the thumbnail as an image, so it is a small JPEG inside the document, never a link that
+    // would send every viewer's address to another site or taint the canvas it is drawn on.
+    function isThumb(thumb) {
+      return thumb == null
+          || (stringIn(thumb, 24, 32768) && thumb.matches('data:image/jpeg;base64,[A-Za-z0-9+/]+=*'));
+    }
+    // Exactly the fields publishReplay writes (src/platform/firebase-cloud.ts), each of its type and range.
+    function isReplaySummary(id) {
       return incoming().keys().hasOnly(['ownerUid', 'createdAt', 'chunkCount', 'mode', 'diff', 'wave', 'score',
                                         'time', 'won', 'kills', 'peak', 'name', 'thumb', 'lb'])
+          && incoming().keys().hasAll(['ownerUid', 'createdAt', 'chunkCount', 'mode', 'diff', 'wave', 'score',
+                                       'time', 'won', 'kills', 'peak', 'name', 'thumb', 'lb'])
           && incoming().ownerUid == request.auth.uid
           && intIn(incoming().chunkCount, 1, 6)
+          && isMode(incoming().mode)
+          && isDifficulty(incoming().diff)
+          && intIn(incoming().wave, 0, 100000)
+          && intIn(incoming().score, 0, 1000000000)
+          && numberIn(incoming().time, 0, 10000000)
+          && incoming().won is bool
+          && intIn(incoming().kills, 0, 10000000)
+          && intIn(incoming().peak, 0, 100000)
           && stringIn(incoming().name, 1, 32)
+          && isThumb(incoming().thumb)
+          && incoming().lb == id.matches('lb_.*')
           && nearNow(incoming().createdAt);
     }
     match /replays/{id} {
       allow read: if true;
-      allow create: if signedIn() && isReplayId(id) && isReplaySummary();
-      allow update: if signedIn() && resource.data.ownerUid == request.auth.uid && isReplaySummary();
+      allow create: if signedIn() && isReplayId(id) && isReplaySummary(id);
+      allow update: if signedIn() && resource.data.ownerUid == request.auth.uid
+                    && id.matches('lb_.*') && isReplaySummary(id)
+                    && incoming().createdAt > resource.data.createdAt;
       allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
       match /chunks/{n} {
         allow read: if true;

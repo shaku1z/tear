@@ -27,14 +27,15 @@ import {
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { CONFIG } from "../../src/config/game-config";
 import { DIFFICULTY_IDS } from "../../src/gameplay/run/difficulty-catalog";
+import { MODE_CATALOG } from "../../src/gameplay/run/mode-catalog";
 import { rulesTestProject } from "./rules-test-project";
 
 const rulesText = readFileSync(resolve(import.meta.dirname, "../../firestore.rules"), "utf8");
 let env: RulesTestEnvironment;
 
-/** The board ids a rules function such as isBoard lists, sorted. */
+/** The ids a rules function such as isBoard or isMode lists, sorted. */
 function listedBoards(name: string): string[] {
-  const start = rulesText.indexOf(`function ${name}(board)`);
+  const start = rulesText.indexOf(`function ${name}(`);
   const list = start < 0 ? "" : rulesText.slice(rulesText.indexOf("[", start), rulesText.indexOf("]", start));
   return [...list.matchAll(/'([a-z_]+)'/gu)].map((match) => match[1] ?? "").sort();
 }
@@ -138,7 +139,24 @@ describe("leaderboards/{board}/scores/{uid}", () => {
     await assertFails(setDoc(doc(anonymous(), path("alice")), row("alice")));
     await seed(path("alice"), row("alice"));
     await assertFails(deleteDoc(doc(as("bob"), path("alice"))));
-    await assertSucceeds(deleteDoc(doc(as("alice"), path("alice"))));
+  });
+
+  it("never deletes a row, so deleting first cannot bring back a lower score or skip the 10 s spacing", async () => {
+    await seed(path("alice"), row("alice", { score: 5000, ts: Date.now() - 60_000 }));
+    await assertFails(deleteDoc(doc(as("alice"), path("alice"))));
+    await assertFails(setDoc(doc(as("alice"), path("alice")), row("alice", { score: 10 })));
+  });
+
+  it("takes a new best that replaces the row outright, dropping a slower run's replay link", async () => {
+    // The Gauntlet rework (pull request 347) writes every best with set() and no merge.
+    const db = as("alice");
+    await seed(path("alice"), row("alice", { ts: Date.now() - 60_000, replayId: "lb_endless_hard_alice", old: 1 }));
+    await assertFails(setDoc(doc(db, path("alice")), row("alice", { score: 1300, replayId: "lb_endless_hard_bob" })));
+    await assertSucceeds(setDoc(doc(db, path("alice")), row("alice", { score: 1300 })));
+    await env.withSecurityRulesDisabled(async (context) => {
+      const stored = (await getDoc(doc(context.firestore(), path("alice")))).data() ?? {};
+      expect(Object.keys(stored).sort()).toEqual(["name", "score", "time", "ts", "uid", "wave"]);
+    });
   });
 
   it("refuses a row with a missing, extra or out-of-bounds field", async () => {
@@ -278,16 +296,40 @@ describe("telemetry/{doc}: anonymous statistics", () => {
     ...extra,
   });
 
-  it("lets a signed-in player add the run_end event", async () => {
-    await assertSucceeds(addDoc(collection(as("alice"), "telemetry"), runEnd()));
+  it("lets a signed-in player add the run_end event of a defeat, of a victory, and with fields missing", async () => {
+    const telemetry = collection(as("alice"), "telemetry");
+    await assertSucceeds(addDoc(telemetry, runEnd()));
+    await assertSucceeds(
+      addDoc(telemetry, {
+        ...Object.fromEntries(Object.entries(runEnd()).filter(([key]) => key !== "died")),
+        won: true,
+        campaign: true,
+        time: 210.5,
+      }),
+    );
+    await assertSucceeds(addDoc(telemetry, { event: "run_end", ts: Date.now() }));
   });
 
-  it("refuses a signed-out write, another event, a stale clock and an oversized document", async () => {
+  it("refuses a signed-out write, another event, a stale clock, another field and a value of the wrong kind", async () => {
+    const telemetry = collection(as("alice"), "telemetry");
     await assertFails(addDoc(collection(anonymous(), "telemetry"), runEnd()));
-    await assertFails(addDoc(collection(as("alice"), "telemetry"), runEnd({ event: "admin" })));
-    await assertFails(addDoc(collection(as("alice"), "telemetry"), runEnd({ ts: Date.now() - 11 * 60_000 })));
-    const wide = Object.fromEntries(Array.from({ length: 20 }, (_, index) => [`extra${String(index)}`, index]));
-    await assertFails(addDoc(collection(as("alice"), "telemetry"), runEnd(wide)));
+    const refused: DocumentData[] = [
+      { event: "admin" },
+      { ts: Date.now() - 11 * 60_000 },
+      { uid: "alice" },
+      { note: "x".repeat(1000) },
+      { mode: "x" },
+      { diff: "nightmare" },
+      { wave: "7" },
+      { wave: -1 },
+      { score: 1e10 },
+      { died: "yes" },
+      { won: 1 },
+      { campaign: "true" },
+      { wallet: { coins: 1 } },
+      { shopRanks: 100_001 },
+    ];
+    for (const extra of refused) await assertFails(addDoc(telemetry, runEnd(extra)));
   });
 
   it("refuses every read, update and delete", async () => {
@@ -345,16 +387,76 @@ describe("replays/{id} and their chunks", () => {
     await assertFails(setDoc(doc(anonymous(), "replays/rabc"), summary("alice")));
   });
 
-  it("refuses a summary with an extra field or bounds the game never writes", async () => {
+  it("names exactly the game's modes and difficulties", () => {
+    expect(listedBoards("isMode")).toEqual(MODE_CATALOG.map((mode) => mode.id).sort());
+    expect(listedBoards("isDifficulty")).toEqual([...DIFFICULTY_IDS].sort());
+  });
+
+  it("refuses a summary with a missing or extra field, or a value the game never writes", async () => {
     const db = as("alice");
-    for (const extra of [{ admin: true }, { chunkCount: 0 }, { chunkCount: 7 }, { chunkCount: 1.5 }, { name: "" }])
-      await assertFails(setDoc(doc(db, "replays/rabc"), summary("alice", extra)));
-    await assertFails(setDoc(doc(db, "replays/rabc"), summary("alice", { name: "x".repeat(33) })));
-    await assertFails(setDoc(doc(db, "replays/rabc"), summary("alice", { createdAt: Date.now() - 11 * 60_000 })));
+    const refused: DocumentData[] = [
+      { admin: true },
+      { chunkCount: 0 },
+      { chunkCount: 7 },
+      { chunkCount: 1.5 },
+      { name: "" },
+      { name: "x".repeat(33) },
+      { createdAt: Date.now() - 11 * 60_000 },
+      { mode: "x" },
+      { mode: "" },
+      { diff: "nightmare" },
+      { wave: -1 },
+      { wave: 7.5 },
+      { score: 1.5 },
+      { score: 1_000_000_001 },
+      { time: "210" },
+      { won: "yes" },
+      { kills: 10_000_001 },
+      { peak: -1 },
+      // A random id is never a leaderboard replay.
+      { lb: true },
+      { lb: "false" },
+    ];
+    for (const extra of refused)
+      await assertFails(setDoc(doc(db, "replays/rabc"), summary("alice", { lb: false, ...extra })));
+    const withoutThumb = Object.fromEntries(
+      Object.entries(summary("alice", { lb: false })).filter(([key]) => key !== "thumb"),
+    );
+    await assertFails(setDoc(doc(db, "replays/rabc"), withoutThumb));
+    // A leaderboard id is always one.
+    await assertFails(setDoc(doc(db, "replays/lb_endless_hard_alice"), summary("alice", { lb: false })));
+  });
+
+  it("takes a thumbnail only as a small JPEG inside the document", async () => {
+    const db = as("alice");
+    const jpeg = `data:image/jpeg;base64,${"/9j/4AAQ".repeat(500)}`;
+    for (const thumb of [
+      "https://example.com/pixel.png",
+      "//example.com/pixel.png",
+      "data:image/png;base64,iVBORw0KGgo=",
+      "data:image/svg+xml;base64,PHN2Zy8+",
+      `${jpeg}"onerror="x`,
+      `data:image/jpeg;base64,${"A".repeat(32_768)}`,
+      7,
+    ])
+      await assertFails(setDoc(doc(db, "replays/rabc"), summary("alice", { lb: false, thumb })));
+    await assertSucceeds(setDoc(doc(db, "replays/rabc"), summary("alice", { lb: false, thumb: jpeg })));
+  });
+
+  it("re-dates only a leaderboard replay, and only forward", async () => {
+    const earlier = Date.now() - 60_000;
+    await seed("replays/rabc", summary("alice", { lb: false, createdAt: earlier }));
+    await assertFails(setDoc(doc(as("alice"), "replays/rabc"), summary("alice", { lb: false })));
+    await seed("replays/lb_endless_hard_alice", summary("alice", { createdAt: earlier }));
+    const republish = (createdAt: number) =>
+      setDoc(doc(as("alice"), "replays/lb_endless_hard_alice"), summary("alice", { createdAt }));
+    await assertFails(republish(earlier));
+    await assertFails(republish(earlier - 1_000));
+    await assertSucceeds(republish(Date.now()));
   });
 
   it("lets only the owner replace or delete a replay, and never hand it to someone else", async () => {
-    await seed("replays/lb_endless_hard_alice", summary("alice"));
+    await seed("replays/lb_endless_hard_alice", summary("alice", { createdAt: Date.now() - 60_000 }));
     await assertSucceeds(setDoc(doc(as("alice"), "replays/lb_endless_hard_alice"), summary("alice", { score: 5000 })));
     await assertFails(setDoc(doc(as("alice"), "replays/lb_endless_hard_alice"), summary("bob")));
     await assertFails(setDoc(doc(as("bob"), "replays/lb_endless_hard_alice"), summary("bob")));
@@ -374,6 +476,9 @@ describe("replays/{id} and their chunks", () => {
     await assertFails(chunk("6", { d: "{}" }));
     await assertFails(chunk("01", { d: "{}" }));
     await assertFails(chunk("0", { d: "x".repeat(500_001) }));
+    // The limit counts characters, not bytes: 500,000 two-byte characters fit, one more does not.
+    await assertSucceeds(chunk("0", { d: "\u00b7".repeat(500_000) }));
+    await assertFails(chunk("0", { d: "\u00b7".repeat(500_001) }));
     await assertFails(chunk("0", { d: 5 }));
     await assertFails(chunk("0", { d: "{}", extra: 1 }));
     await assertFails(chunk("0", { d: "{}" }, "bob"));

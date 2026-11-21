@@ -111,6 +111,25 @@ describe("the game's Firebase adapter under firestore.rules", () => {
     await expect(cloud.shared.loadReplay(shareId ?? "")).resolves.toEqual(recording(100));
   });
 
+  it("publishes a recording of multibyte text in chunks under Firestore's document size and plays it back", async () => {
+    // 3 and 4 bytes a character in UTF-8: 500,000 characters of either would be over the 1 MiB document limit,
+    // and a cut inside a surrogate pair would come back as a replacement character.
+    const published = { ...recording(0), frames: `${"★".repeat(400_000)}${"\u{1F600}".repeat(300_000)}` };
+    const shareId = await cloud.shared.publishReplay(published, null);
+    expect(shareId).not.toBeNull();
+    await expect(cloud.shared.loadReplay(shareId ?? "")).resolves.toEqual(published);
+  });
+
+  it("publishes without a thumbnail that is not a small JPEG, which the feed would otherwise fetch", async () => {
+    const shareId = await cloud.shared.publishReplay(
+      { ...recording(10), thumb: "https://example.com/pixel.png" },
+      null,
+    );
+    expect(shareId).not.toBeNull();
+    const feed = await cloud.shared.replayFeed(20);
+    expect(feed?.find((entry) => entry.shareId === shareId)?.thumb).toBeNull();
+  });
+
   it("sends the run_end statistic", async () => {
     cloud.shared.logEvent("run_end", { mode: "endless", diff: "hard", wave: 7, score: 4200, died: true });
     const events = await until(async () => {
