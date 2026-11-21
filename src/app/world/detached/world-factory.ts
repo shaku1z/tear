@@ -1,3 +1,4 @@
+import type { PracticeBossAdmission } from "../../../gameplay/training/boss-phase-practice-runtime";
 import { createProductionFinaleRuntime } from "./finale-runtime";
 import type { TearGameplayEventPort } from "../../../gameplay/runtime/gameplay-events";
 import { deriveVoidSeed } from "../../../gameplay/run/live-run-start-controller";
@@ -66,6 +67,8 @@ export interface ProductionReplayWorldOptions {
   readonly tutorialHandoff?: () => void;
   /** Who wears which cosmetics in this world; the game's own look when absent. Never read by the simulation. */
   readonly looks?: CosmeticLooks;
+  /** The bosses this world's phase practice opens; the published roster when absent (headless engineering only). */
+  readonly practiceBosses?: PracticeBossAdmission;
 }
 
 /** Ground plus a one-way ledge, owned by each detached production world. */
@@ -399,6 +402,7 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
   const tutorial = createLiveTutorialRuntime({
     weaponId: () => world.state.run()?.weaponId ?? "sword",
     config,
+    ...(options.practiceBosses === undefined ? {} : { practiceBosses: options.practiceBosses }),
     viewportWidth: config.view.w,
     groundY: () => config.world.groundY,
     skipPressed: () => false,
@@ -458,6 +462,7 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
   });
   const bossPractice = createLiveBossPhasePractice({
     config,
+    ...(options.practiceBosses === undefined ? {} : { practiceBosses: options.practiceBosses }),
     state: state,
     stage,
     selectStage: (index) => {

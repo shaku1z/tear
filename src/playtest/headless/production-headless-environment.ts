@@ -36,7 +36,8 @@ import {
   type ProductionHeadlessCheckpoint,
 } from "./production-headless-checkpoint";
 import { beginProductionBossPractice } from "./production-boss-practice-start";
-import type { PracticeBossId, PracticeBossPhase } from "../../gameplay/training/boss-phase-practice-runtime";
+import type { PracticeBossPhase } from "../../gameplay/training/boss-phase-practice-runtime";
+import { opensHeadlessPractice, type HeadlessPracticeBossId } from "./production-boss-practice-start";
 import { projectProductionPolicyObservation } from "./production-policy-observation";
 import { createGameplayCausalEvent } from "../../tearbench/gameplay-causal-events";
 import { assertTearSimulationStepSeconds } from "../../tearbench/simulation-profile";
@@ -150,7 +151,7 @@ export interface ProductionHeadlessEnvironment extends TearHeadlessEnvironment<
   /** A new episode from caller-supplied identity, never an inferred historical next-run seed. */
   continueTutorialPractice(nextScenario: TearScenarioV1): CanonicalGameplayState;
   /** In a fresh tutorial episode: Playground boss practice at a chosen phase. Returns a reader of its lifecycle. */
-  practiceBoss(bossId: PracticeBossId, phase: PracticeBossPhase): ReturnType<typeof beginProductionBossPractice>;
+  practiceBoss(bossId: HeadlessPracticeBossId, phase: PracticeBossPhase): ReturnType<typeof beginProductionBossPractice>;
   /** Replaces the enemies in play with these, made by the game's own factory, for a playtest of chosen enemies. */
   replaceEnemies(spawns: readonly Readonly<{ id: string; x: number; y: number }>[]): void;
   /** Puts one enemy of this kind in play through the game's own spawner, which chooses where it arrives. */
@@ -273,6 +274,7 @@ export function createProductionHeadlessEnvironment(
       weaponId: scenario.start.weapon,
       difficulty: scenario.start.difficulty,
       ...(scenario.start.boss === undefined ? {} : { firstBoss: scenario.start.boss }),
+      practiceBosses: opensHeadlessPractice,
       ...(scenario.start.wave === undefined
         ? {}
         : {
@@ -370,7 +372,7 @@ export function createProductionHeadlessEnvironment(
       requireCore().advanceApplicationFrame(seconds, confirm);
     },
     tutorialHandoff: () => requireCore().replay.tutorialHandoff(),
-    practiceBoss: (bossId: PracticeBossId, phase: PracticeBossPhase) => {
+    practiceBoss: (bossId: HeadlessPracticeBossId, phase: PracticeBossPhase) => {
       const current = requireCore();
       return beginProductionBossPractice(
         current.replay,

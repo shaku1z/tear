@@ -2,6 +2,7 @@ import { sourceDescentActor } from "../../gameplay/campaign/cinematic-launch-run
 import type { CONFIG } from "../../config/game-config";
 import { createBossArena } from "../../gameplay/training/arena-rules";
 import { beginBossEncounter, cleanupBossEncounterActors } from "../../gameplay/run/boss-encounter";
+import { bossStageOwner } from "../../gameplay/run/boss-definitions";
 import { planBossPlacement } from "../../gameplay/run/boss-placement";
 import { STAGES, stagePlatforms } from "../../gameplay/stages";
 import {
@@ -9,6 +10,7 @@ import {
   validateBossPhasePracticeState,
   type BossPhasePracticeActor,
   type BossPhasePracticeState,
+  type PracticeBossAdmission,
   type BossPhasePracticeWorld,
 } from "../../gameplay/training/boss-phase-practice-runtime";
 import type { BossPracticePort } from "../../gameplay/training/practice-boss-catalog";
@@ -40,6 +42,8 @@ export function createLiveBossPhasePractice(options: {
   createEnemy(id: string, x: number, y: number, run: GameRun): GameEnemy;
   cinematicActive(): boolean;
   cancelCinema(): void;
+  /** The bosses this world's phase practice opens; the published roster when absent. */
+  practiceBosses?: PracticeBossAdmission;
 }): BossPracticePort {
   const run = (): PracticeRun => {
     const value = options.state.run();
@@ -75,7 +79,8 @@ export function createLiveBossPhasePractice(options: {
       (active.voidScroll.active || active.voidScroll.frozen) &&
       active.voidScroll.platforms === options.stage.platforms &&
       (phase !== 3 || active.voidScroll.frozen));
-  const runtime = createBossPhasePracticeRuntime({
+  const runtime = createBossPhasePracticeRuntime(
+    {
     createEncounter(request, generation, encounterId) {
       const active = run();
       if (active.mode !== "tutorial" || active.weaponId !== "sword" || active.diff !== "normal")
@@ -84,7 +89,8 @@ export function createLiveBossPhasePractice(options: {
       options.selectStage(
         Math.max(
           0,
-          STAGES.findIndex((stage) => stage.boss === request.bossId),
+          // A boss being rebuilt is practised on the stage of the boss it rebuilds.
+          STAGES.findIndex((stage) => stage.boss === bossStageOwner(request.bossId)),
         ),
       );
       Reflect.set(active, "_biomeIdx", options.stage.index);
@@ -134,7 +140,9 @@ export function createLiveBossPhasePractice(options: {
       Reflect.set(active, "voidDescent", null);
       original = undefined;
     },
-  });
+    },
+    options.practiceBosses,
+  );
   return {
     begin(request) {
       const result = runtime.begin({ ...request, seed: String(run().runSeed) });
@@ -171,7 +179,7 @@ export function createLiveBossPhasePractice(options: {
       }
       const candidateWorld = world(active, [...actors], cinema);
       if (!candidateWorld) throw new RangeError("Boss practice candidate actor missing");
-      validateBossPhasePracticeState(selected.runtime, candidateWorld);
+      validateBossPhasePracticeState(selected.runtime, candidateWorld, options.practiceBosses);
     },
     restore(selected) {
       if (!selected) {
