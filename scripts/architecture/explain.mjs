@@ -1,4 +1,4 @@
-import { ruleApplies, formatFinding } from "./evaluate.mjs";
+import { ruleApplies, formatFinding, targetSelected } from "./evaluate.mjs";
 
 function describeRule(rule) {
   const edges =
@@ -49,7 +49,7 @@ export function explainFile(file, analysis) {
     ...section(
       "rules protecting it as an import target",
       rules
-        .filter((rule) => rule.kind === "import" && resolver.matchesAny(rule.to, file))
+        .filter((rule) => rule.kind === "import" && targetSelected(rule, file, resolver))
         .map(
           (rule) =>
             `${rule.id}: not from ${rule.in.join(", ")}${rule.except === undefined ? "" : ` (except ${rule.except.join(", ")})`}`,

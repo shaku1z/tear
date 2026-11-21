@@ -16,7 +16,7 @@ import { stableVerificationHash } from "../../src/domain/hash";
 import {
   captureProductionReplayCheckpoint,
   createProductionGhostReplayComposition,
-} from "../../src/tearbench/production-replay-composition";
+} from "../../src/app/world/detached/replay-composition";
 import { createGhostColdRestoreBrowserPort } from "../../src/ghost/browser-cold-restore";
 import { createGhostVaultLibraryController } from "../../src/app/library/ghost-vault-library-controller";
 import { prepareGhostCapsuleProtection } from "../../src/ghost/capsule-protection";

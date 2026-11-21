@@ -1,34 +1,34 @@
-import { isObject } from "../domain/records";
-import { createLiveCollisionGameplayBindings } from "../gameplay/combat/live-collision-gameplay-bindings";
-import type { LiveStyleAchievementOptions } from "../gameplay/scoring/live-style-achievement-runtime";
-import { bindRunDnaShot, runDnaObserver } from "../gameplay/runtime/run-dna-observer";
-import { aabbOverlap, clamp, len, lerp, segCircle, segPointDist } from "../domain/geometry";
-import { GFX, THEME } from "../config/game-config";
+import { isObject } from "../../../domain/records";
+import { createLiveCollisionGameplayBindings } from "../../../gameplay/combat/live-collision-gameplay-bindings";
+import type { LiveStyleAchievementOptions } from "../../../gameplay/scoring/live-style-achievement-runtime";
+import { bindRunDnaShot, runDnaObserver } from "../../../gameplay/runtime/run-dna-observer";
+import { aabbOverlap, clamp, len, lerp, segCircle, segPointDist } from "../../../domain/geometry";
+import { GFX, THEME } from "../../../config/game-config";
 import {
   CombatEntityRuntime,
   type CombatEntityRuntimeHooks,
   type LiveCombatEntity,
-} from "../gameplay/combat/combat-entity-runtime";
+} from "../../../gameplay/combat/combat-entity-runtime";
 import {
   createLiveWeaponRuntime,
   type LiveWeaponEnemy,
   type LiveWeaponEvent,
-} from "../gameplay/combat/live-weapon-runtime";
-import { bindLiveHammerMeteor } from "../gameplay/combat/live-hammer-meteor";
-import { runLiveCollisionPhase, type LiveCollisionPhaseHost } from "../gameplay/combat/live-collision-phase";
-import type { LiveKillHost } from "../gameplay/combat/live-kill-runtime";
-import { runLiveOpeningPhase, type LiveOpeningPhaseHost } from "../gameplay/combat/live-opening-phase";
-import { updateMirrorCombat } from "../gameplay/combat/mirror-combat-feedback";
-import { addKillScore, invokeWeaponHook } from "../gameplay/combat/weapon-runtime-coordinator";
-import { tracksAchievements } from "../gameplay/progression/achievement-runtime";
-import { createLiveStyleAchievementRuntime } from "../gameplay/scoring/live-style-achievement-runtime";
-import { BossArenaRules, type ArenaActor, type ArenaPlatform } from "../gameplay/training/arena-rules";
-import { createBossArenaRuntimeBridge } from "../gameplay/training/arena-runtime-bridge";
-import { isTutorialMark } from "../gameplay/training/tutorial-marks";
-import type { TearGameplayEventPort } from "../gameplay/runtime/gameplay-events";
-import type { BladeWeaponEvent } from "../gameplay/entities/blade-contracts";
-import { STAGES, stageAt } from "../gameplay/stages";
-import type { ProductionReplayWorld } from "./production-world-factory";
+} from "../../../gameplay/combat/live-weapon-runtime";
+import { bindLiveHammerMeteor } from "../../../gameplay/combat/live-hammer-meteor";
+import { runLiveCollisionPhase, type LiveCollisionPhaseHost } from "../../../gameplay/combat/live-collision-phase";
+import type { LiveKillHost } from "../../../gameplay/combat/live-kill-runtime";
+import { runLiveOpeningPhase, type LiveOpeningPhaseHost } from "../../../gameplay/combat/live-opening-phase";
+import { updateMirrorCombat } from "../../../gameplay/combat/mirror-combat-feedback";
+import { addKillScore, invokeWeaponHook } from "../../../gameplay/combat/weapon-runtime-coordinator";
+import { tracksAchievements } from "../../../gameplay/progression/achievement-runtime";
+import { createLiveStyleAchievementRuntime } from "../../../gameplay/scoring/live-style-achievement-runtime";
+import { BossArenaRules, type ArenaActor, type ArenaPlatform } from "../../../gameplay/training/arena-rules";
+import { createBossArenaRuntimeBridge } from "../../../gameplay/training/arena-runtime-bridge";
+import { isTutorialMark } from "../../../gameplay/training/tutorial-marks";
+import type { TearGameplayEventPort } from "../../../gameplay/runtime/gameplay-events";
+import type { BladeWeaponEvent } from "../../../gameplay/entities/blade-contracts";
+import { STAGES, stageAt } from "../../../gameplay/stages";
+import type { ProductionReplayWorld } from "./world-factory";
 
 /**
  * The C27A combat adapter assembled over a source-owned replay world. It

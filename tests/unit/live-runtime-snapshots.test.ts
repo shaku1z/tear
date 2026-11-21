@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { stableVerificationHash } from "../../src/domain/hash";
-import { captureLiveStateSetupSnapshot } from "../../src/tearbench/live-runtime-snapshots";
+import { captureLiveStateSetupSnapshot } from "../../src/gameplay/snapshot/live-capture";
 import { CODEC_REGISTRY, type TearCodecId } from "../../src/gameplay/snapshot/codec-ids";
 import {
   createDefaultStateCodecRegistry,

@@ -639,19 +639,14 @@ describe("playground controller", () => {
   it("runs the number-row shortcuts: heal, clear, dummy, repeat the last spawn, and the two rules", () => {
     const controller = new PlaygroundController({ hpMultiplier: 3, count: 5 });
     const press = (...codes: string[]) =>
-      controller.update(
-        {
-          pressed: new Set(codes),
-          viewportWidth: 1600,
-          player: { x: 800, y: 700, facing: 1, hp: 100, maxHp: 100, oneHit: false },
-          enemies: [],
-        },
-        { charger: "red", perfect: "cyan" },
-      );
+      controller.update({
+        pressed: new Set(codes),
+        viewportWidth: 1600,
+        player: { x: 800, y: 700, facing: 1, hp: 100, maxHp: 100, oneHit: false },
+        enemies: [],
+      });
     // Nothing to repeat before the first spawn from the menu.
-    expect(press("Digit4")).toEqual([
-      { type: "announce", text: "SPAWN ONE FROM THE MENU FIRST", emphasis: false, color: "#888" },
-    ]);
+    expect(press("Digit4")).toEqual([{ type: "announce", text: "SPAWN ONE FROM THE MENU FIRST" }]);
     expect(controller.spawn("charger")).toEqual({ type: "spawn", kind: "charger", count: 5, hpScale: 3 });
     expect(press("Digit4")).toContainEqual({ type: "spawn", kind: "charger", count: 5, hpScale: 3 });
     expect(press("Digit1")).toContainEqual({ type: "heal-player" });

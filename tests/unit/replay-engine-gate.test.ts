@@ -3,7 +3,7 @@ import { LazyModuleUnavailable, lazyModuleReady, lazySlot } from "../../src/doma
 import { GhostCapsuleReader, type GhostCapsuleContents } from "../../src/ghost/capsule-reader";
 import { createGhostProductionReplaySession } from "../../src/ghost/production-replay-session";
 import { replayEngine, type ReplayEngine } from "../../src/ghost/replay-engine";
-import type * as ProductionReplayComposition from "../../src/tearbench/production-replay-composition";
+import type * as ProductionReplayComposition from "../../src/app/world/detached/replay-composition";
 
 describe("replay engine gate", () => {
   it("waits for the engine before a capsule is read, and fails with a plain message when it cannot load", async () => {

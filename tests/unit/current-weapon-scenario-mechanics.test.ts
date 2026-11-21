@@ -4,12 +4,10 @@ import { CONFIG } from "../../src/config/game-config";
 import { getWeapon } from "../../src/gameplay/weapons";
 import { WEAPON_IDS, type WeaponId } from "../../src/gameplay/weapon-selection";
 import { runLiveCollisionPhase } from "../../src/gameplay/combat/live-collision-phase";
-import {
-  CANONICAL_ENGINEERING_SCENARIOS,
-  createProductionCombatSimulation,
-  createProductionReplayWorld,
-} from "../../src/tearbench";
-import { createProductionCombatPhases } from "../../src/tearbench/production-combat-phases";
+import { CANONICAL_ENGINEERING_SCENARIOS } from "../../src/tearbench";
+import { createProductionCombatSimulation } from "../../src/app/world/detached/combat-simulation";
+import { createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
+import { createProductionCombatPhases } from "../../src/app/world/detached/combat-phases";
 
 interface Blade {
   x: number;

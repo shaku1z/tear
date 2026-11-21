@@ -1,5 +1,5 @@
 // Gives `ReplayEngine` (src/ghost/replay-engine.ts) its members: the engine module's own exports.
-import type * as Engine from "../../tearbench/production-replay-composition";
+import type * as Engine from "../world/detached/replay-composition";
 
 declare module "../../ghost/replay-engine" {
   interface ReplayEngine {

@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createGhostV3, type GhostReplayTrident } from "../../src/ghost/truth-kernel";
 import { GhostProductionReplayWorld } from "../../src/ghost/replay-world";
 import { stableVerificationHash } from "../../src/domain/hash";
-import { captureProductionReplayCheckpoint } from "../../src/tearbench/production-replay-composition";
+import { captureProductionReplayCheckpoint } from "../../src/app/world/detached/replay-composition";
 import type { GameAction } from "../../src/input/game-action";
 import {
   createProductionHeadlessEnvironment,
@@ -14,8 +14,8 @@ import {
   type ProductionHeadlessCheckpoint,
   type ProductionHeadlessTerminalArtifact,
 } from "../../src/playtest/headless/production-headless-environment";
+import { createProductionGhostReplayComposition } from "../../src/app/world/detached/replay-composition";
 import {
-  createProductionGhostReplayComposition,
   BoundedArtifactSampler,
   createOneFrameBoundaryLaunchMatrix,
   TearHeadlessRunner,
