@@ -26,6 +26,7 @@ export const TEAR_WORLD_ENTITY_FACTORY_IDS = Object.freeze([
   "anchor",
   "rootbinder",
   "rimehound",
+  "rootbound-rebuild",
 ] as const);
 
 export type TearWorldEntityFactoryId = (typeof TEAR_WORLD_ENTITY_FACTORY_IDS)[number];

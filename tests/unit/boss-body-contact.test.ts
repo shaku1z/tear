@@ -20,8 +20,11 @@ import { createMirrorTestHarness } from "./mirror-test-harness";
 const ARENA = 1600;
 const DT = 1 / 120;
 
-/** The bosses whose body may still hurt outside a declared move. A boss may leave this list; none may join. */
-const OLD_ROWS_ALLOWED = ["warden", "aldric", "colossus", "echo", "source"];
+/**
+ * The bosses whose body may hurt outside a declared move: the old bosses, which may leave this list, and the
+ * new Rootbound, whose body hurts by decision D1 (plans/active/VERDANT_PALE_REBUILD.md). No other may join.
+ */
+const OLD_ROWS_ALLOWED = ["warden", "aldric", "colossus", "echo", "source", "rootbound-rebuild"];
 
 function overlaps(ax: number, ay: number, ahw: number, ahh: number, bx: number, by: number, bhw: number, bhh: number) {
   return Math.abs(ax - bx) < ahw + bhw && Math.abs(ay - by) < ahh + bhh;
@@ -180,6 +183,20 @@ describe("each boss answers contact by its row", () => {
     expect(hart.contactDamageEnabled()).toBe(false);
     expect(rootbound.bodyBlocks()).toBe(true);
     expect(hart.bodyBlocks()).toBe(false);
+  });
+
+  it("the new Rootbound's body hurts while it stands, walks and winds up, and not under the floor or striking", () => {
+    const keeper = new harness.types.RootboundRebuild(...at);
+    keeper.introT = 0;
+    for (const state of ["idle", "walk", "swingwind", "throwwind", "vaultwind", "swell"]) {
+      keeper.state = state;
+      expect(keeper.contactDamageEnabled(), state).toBe(true);
+    }
+    for (const state of ["swing", "burrow", "uprootunder", "rise", "surface", "split", "vault", "burst", "staggered"]) {
+      keeper.state = state;
+      expect(keeper.contactDamageEnabled(), state).toBe(false);
+    }
+    expect(keeper.bodyBlocks()).toBe(false);
   });
 
   it("an ordinary enemy has no row and its body always hurts", () => {

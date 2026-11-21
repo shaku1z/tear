@@ -143,6 +143,7 @@ export interface GameRuntimeDependencies {
   readonly Rimehound: EnemyTypes["Rimehound"];
   readonly Rootbinder: EnemyTypes["Rootbinder"];
   readonly Rootbound: EnemyTypes["Rootbound"];
+  readonly RootboundRebuild: EnemyTypes["RootboundRebuild"];
   readonly Source: EnemyTypes["Source"];
   readonly Support: EnemyTypes["Support"];
   readonly THEME: typeof THEME;

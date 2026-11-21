@@ -64,6 +64,7 @@ function fixtureDependencies(calls: ConstructorCall[]): LiveWorldEntityDependenc
     Colossus: enemy("colossus"),
     Aldric: enemy("aldric"),
     Rootbound: enemy("rootbound"),
+    RootboundRebuild: enemy("rootbound-rebuild"),
     WhiteHart: enemy("white-hart"),
     Rimehound: enemy("rimehound"),
     MirrorHost: enemy("echo"),
@@ -114,6 +115,7 @@ describe("live world entity factory", () => {
       "support",
       "rootbinder",
       "rimehound",
+      "rootbound-rebuild",
     ]);
     expect(calls.every((call) => call.x === 40 && call.y === 50)).toBe(true);
     expect(calls.find((call) => call.kind === "echo")?.extra).toEqual([initialRun.mods]);

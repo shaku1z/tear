@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { skipOpeningChapter } from "./headless-opening-chapter";
 import scenarioCatalog from "../../src/tearbench/canonical-scenarios.json";
-import { BOSS_IDENTITY_IDS } from "../../src/gameplay/run/boss-definitions";
+import { BOSS_IDENTITY_IDS, bossStageOwner } from "../../src/gameplay/run/boss-definitions";
 import { DIFFICULTY_IDS as GAME_DIFFICULTY_IDS } from "../../src/gameplay/run/difficulty-catalog";
 import { MODE_IDS as GAME_MODE_IDS } from "../../src/gameplay/run/mode-catalog";
 import {
@@ -189,7 +189,9 @@ describe("TearBench current-game catalog authority", () => {
     );
 
     expect(() => {
-      assertProductionOwnerCoverage("boss", [...BOSS_IDS, "future-boss"], Object.values(STAGE_BOSS_HOME));
+      // Each stage's own boss; a rebuild fights on the stage of the boss it rebuilds (`stageOf`).
+      const stageBosses = BOSS_IDS.filter((id) => bossStageOwner(id) === id);
+      assertProductionOwnerCoverage("boss", [...stageBosses, "future-boss"], Object.values(STAGE_BOSS_HOME));
     }).toThrow(/missing future-boss/u);
     expect(() => {
       assertProductionOwnerCoverage("stage", [...GAME_STAGE_IDS, "future-stage"], Object.keys(STAGE_BOSS_HOME));
