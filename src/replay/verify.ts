@@ -1,6 +1,13 @@
 /**
  * Re-simulates a record and compares every checkpoint, the result and the summary. It names the first
- * tick that differs. The world is a port: the app builds the detached production world behind it
+ * tick that differs.
+ *
+ * What a "verified" verdict proves: the detached world, started from the record's seed and start
+ * choices and given its actions at their ticks, reaches the same state hashes again. It does not prove
+ * that a live run in the browser would replay: until the live start is the detached start (replay PR
+ * 5b), only records made in a detached or headless world are known to verify.
+ *
+ * The world is a port: the app builds the detached production world behind it
  * (src/app/replay/detached-replay-world.ts), and verify sees only `ReplayRecord["run"]` through it, so
  * names, cosmetics and music cannot reach the simulation.
  */

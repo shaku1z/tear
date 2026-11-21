@@ -29,7 +29,7 @@ const DETERMINISM = JSON.parse(readFileSync("tests/fixtures/canonical-hash-strea
 const BUILD = Object.freeze({ version: "0.1.0", revision: "round-trip", target: "test" });
 const LOOK = Object.freeze({ playerName: "Player", cosmetics: {}, music: null, recordedAt: "2026-11-21T00:00:00Z" });
 
-/** Plays a corpus stream headless and records it, as the live recorder will. */
+/** Plays a corpus stream in the headless environment and records it. */
 function recordCorpusStream(spec: StreamSpec): ReplayRecord {
   const environment = createProductionHeadlessEnvironment({ captureSourceTracks: true });
   try {
