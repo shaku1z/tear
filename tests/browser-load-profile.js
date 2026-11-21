@@ -227,6 +227,68 @@ function installTextObserver() {
   };
 }
 
+/**
+ * Every request the page makes to an origin other than the one serving the build (Firebase's SDK and API calls, a
+ * portal SDK, fonts or analytics from a third party), taken from CDP network events because Resource Timing
+ * hides cross-origin sizes. This is the rule for every origin, not a list of known ones: a new origin or a new
+ * script from one shows up here without anyone adding a case for it.
+ */
+function watchCrossOrigin(cdp, serverOrigin) {
+  const requests = new Map();
+  let startedAt = null;
+  cdp.on("Network.requestWillBeSent", (event) => {
+    let url;
+    try {
+      url = new URL(event.request.url);
+    } catch {
+      return;
+    }
+    if (!/^https?:$/u.test(url.protocol)) return;
+    if (url.origin === serverOrigin) {
+      if (event.type === "Document" && startedAt === null) startedAt = event.timestamp;
+      return;
+    }
+    requests.set(event.requestId, {
+      origin: url.origin,
+      type: event.type ?? "Other",
+      startedAt: event.timestamp,
+      bytes: 0,
+      failed: false,
+    });
+  });
+  cdp.on("Network.loadingFinished", (event) => {
+    const request = requests.get(event.requestId);
+    if (request) request.bytes = event.encodedDataLength;
+  });
+  cdp.on("Network.loadingFailed", (event) => {
+    const request = requests.get(event.requestId);
+    if (request) request.failed = true;
+  });
+  /** A copy of what has happened so far; later requests (the warm load) do not change it. */
+  return () => {
+    const origins = {};
+    for (const request of requests.values()) {
+      const origin = (origins[request.origin] ??= { requests: 0, bytes: 0, firstRequestMs: null, byType: {} });
+      const type = (origin.byType[request.type] ??= { requests: 0, bytes: 0 });
+      origin.requests += 1;
+      origin.bytes += request.bytes;
+      type.requests += 1;
+      type.bytes += request.bytes;
+      const at = startedAt === null ? null : Math.round((request.startedAt - startedAt) * 1000);
+      if (at !== null && (origin.firstRequestMs === null || at < origin.firstRequestMs)) origin.firstRequestMs = at;
+    }
+    const all = [...requests.values()];
+    const scripts = all.filter((request) => request.type === "Script");
+    return {
+      origins,
+      requests: all.length,
+      bytes: all.reduce((sum, request) => sum + request.bytes, 0),
+      scriptRequests: scripts.length,
+      scriptBytes: scripts.reduce((sum, request) => sum + request.bytes, 0),
+    };
+  };
+}
+
 const median = (values) => {
   const sorted = values.filter((value) => typeof value === "number").sort((a, b) => a - b);
   return sorted.length === 0 ? null : sorted[Math.floor((sorted.length - 1) / 2)];
@@ -365,6 +427,7 @@ async function measureLoad(browser, target, profileId, server) {
   page.on("requestfailed", (request) => failedRequests.push(`${request.url()} (${request.failure()?.errorText})`));
   const cdp = await context.newCDPSession(page);
   await cdp.send("Network.enable");
+  const crossOriginSoFar = watchCrossOrigin(cdp, server.origin);
   // Playwright routing would disable the HTTP cache and void the warm load, so the
   // portal SDK stub is served through CDP request interception of that one URL.
   if (TARGETS[target].sdk) {
@@ -469,6 +532,7 @@ async function measureLoad(browser, target, profileId, server) {
     toPlaying: span(coldTimeline, coldTimeline.playing),
     duringStart: pressedMs === null ? null : span(coldTimeline, coldTimeline.playing, pressedMs),
     resources: coldTimeline.resources.map((entry) => ({ ...entry, end: round(entry.end) })),
+    crossOrigin: crossOriginSoFar(),
   };
   // The returning player: on standalone the service worker has installed and controls the next load.
   if (TARGETS[target].serviceWorker)
@@ -501,6 +565,8 @@ function summarize(runs) {
       toMenu: first.cold.toMenu,
       toPlaying: first.cold.toPlaying,
       duringStart: first.cold.duringStart,
+      crossOrigin: first.cold.crossOrigin,
+      crossOriginOrigins: [...new Set(runs.flatMap((run) => Object.keys(run.cold.crossOrigin.origins)))].sort(),
     },
     warm: {
       firstFrameMs: take("warm", "firstFrameMs"),
@@ -539,12 +605,25 @@ function enforce(report) {
         measured.warm.toFirstFrame?.networkRequests,
         limits.warmNetworkRequestsToFirstFrame,
       ],
+      // Requests to other origins up to the end of the cold run. Script counts are deterministic for a pinned
+      // SDK; the API calls that follow (sign-in, saves) depend on the network, so they are reported, not capped.
+      [
+        "cold cross-origin script requests",
+        measured.cold.crossOrigin?.scriptRequests,
+        limits.coldCrossOriginScriptRequests,
+      ],
+      ["cold cross-origin script bytes", measured.cold.crossOrigin?.scriptBytes, limits.coldCrossOriginScriptBytes],
     ];
     for (const [name, value, limit] of checks) {
       if (limit === undefined) continue;
       if (typeof value !== "number") failures.push(`${target}: ${name} was not measured`);
       else if (value > limit) failures.push(`${target}: ${name} ${String(value)} > ${String(limit)}`);
     }
+    // Any origin outside the list is a new third-party dependency of the startup path: add it here on purpose.
+    if (limits.crossOriginOrigins !== undefined)
+      for (const origin of measured.cold.crossOriginOrigins ?? [])
+        if (!limits.crossOriginOrigins.includes(origin))
+          failures.push(`${target}: the cold run requested ${origin}, which is not in crossOriginOrigins`);
   }
   return failures;
 }
@@ -586,6 +665,12 @@ async function main() {
               coldBytesToFirstFrame: summary.cold.toFirstFrame?.bytes,
               coldRequestsToFirstFrame: summary.cold.toFirstFrame?.requests,
               coldBytesToPlaying: summary.cold.toPlaying?.bytes,
+              coldCrossOrigin: {
+                origins: summary.cold.crossOriginOrigins,
+                requests: summary.cold.crossOrigin.requests,
+                scriptRequests: summary.cold.crossOrigin.scriptRequests,
+                scriptBytes: summary.cold.crossOrigin.scriptBytes,
+              },
               warmNetworkRequestsToFirstFrame: summary.warm.toFirstFrame?.networkRequests,
             }),
           );

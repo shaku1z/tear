@@ -21,6 +21,11 @@ The lead's decision (brief of 2026-11-20) is binding:
   click or hold to continue.
 - Scenes outside fights are cut hard, restyled to the current look, skippable, and never trap input.
 - One plain system remains; the blocking paths are deleted.
+- **Slow motion (lead ruling, 2026-11-20).** No boss-side event slows time: not a phase change, a
+  death, a stagger or a strike. The one source left is the player's own parry,
+  `CONFIG.juice.parrySlowmo` 0.18 s at time scale 0.28 (`blade-parry-runtime.ts`,
+  `live-collision-phase.ts`). It is the player's move, not the fight stopping. Until PR 6, the boss
+  arrival still runs at time scale 0.25 (`introScale`); PR 6 removes it with the letterbox.
 - A rule over every boss proves that no tick blocks input or the combat step.
 
 This plan covers what exists, what each piece becomes, what is deleted, the in-fight phase change of
@@ -463,13 +468,17 @@ style, the chapter card, the epilogue card) and wait for the owner's verdict on 
 
 ### PR 1: the rule over every boss, and no slow motion
 
-- The rule test lands, with its allowlist of the 11 phase changes that still block.
+- The rule test lands, with its allowlist of the 10 phase changes that still block (this plan first
+  counted 11; the rule measured 10: two each for the Warden, the Colossus, Aldric, Rootbound and the
+  Source).
 - Slow motion goes from:
   - every `phaseTransition` and `death` preset;
   - Echo's phase change;
   - `resolveBossDeath`.
-- The plan gains the list of combat slow motion outside beats (stagger, parry, move bursts), each
-  with its source and duration, marked out of scope.
+- Slow motion also goes from every boss stagger preset (0.30-0.35 s) and from boss strikes and
+  counters: Aldric's Crownfire 0.38 s and Overhead 0.35 s; the Colossus's CORE EXPOSED 0.42 s,
+  Meltdown Slam 0.40 s and smash landing 0.36 s; the Source's MEMORY COLLAPSED 0.38 s and IT TOOK YOUR
+  BLADE 0.35 s (lead ruling). The boss feedback types lose their slow-motion field.
 - Ruleset step.
 - Done when the rule's data check passes for every boss and `pnpm test:determinism` passes.
 
@@ -486,7 +495,7 @@ style, the chapter card, the epilogue card) and wait for the owner's verdict on 
 
 - Crownfall and revive become the moves above.
 - The crown is a world object that fractures the platform it lands on.
-- Three entries leave the allowlist. Ruleset step.
+- Two entries leave the allowlist (crownfall and the revive). Ruleset step.
 - Done when the rule passes for Aldric, and the existing kneel, witness and anger tests pass
   unchanged.
 
@@ -604,10 +613,8 @@ Waits for the owner's verdict on the look board (the epilogue card).
 ## Not in scope
 
 - Boss move sets beyond their phase-change beat.
-- Combat slow motion that is not a beat: stagger (0.30-0.35 s), parry, and move bursts such as
-  Colossus's smash (0.36 s) and Aldric's crownfire (0.38 s). The lead ruled it out of scope on
-  2026-11-20. PR 1 adds the full list, each one with its source and duration, so the owner can see
-  them.
+- The player's parry slow motion (0.18 s at time scale 0.28). It stays: it is the player's own move
+  (lead ruling, 2026-11-20).
 - Music, the wiki, mobile, and any outside service.
 - White Hart and Pale (covered by the rule only).
 - Deleting the legacy `Echo` class.

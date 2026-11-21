@@ -41,7 +41,6 @@ export interface BossRitualCue {
   readonly crownFall?: boolean;
   readonly pose?: string;
   readonly sfx?: string;
-  readonly after?: "throwShield";
   readonly firstVertical?: boolean;
   readonly speaker?: string;
   readonly line?: string;
@@ -87,7 +86,6 @@ export type BossRitualIntent =
   | Readonly<{ type: "clear-boss-projectiles" }>
   | Readonly<{ type: "music-duck"; amount: number; duration: number }>
   | Readonly<{ type: "sound"; cue: string }>
-  | Readonly<{ type: "throw-shield" }>
   | Readonly<{ type: "resolve-first-vertical" }>
   | Readonly<{ type: "store-seen"; key: string }>;
 
@@ -103,10 +101,6 @@ const timings: Readonly<Record<string, Readonly<{ anticipation: number; reveal: 
   Object.freeze({
     aldricCrownfall: { anticipation: 0.34, reveal: 0.78, resolve: 0.86 },
     aldricFeral: { anticipation: 0.34, reveal: 0.78, resolve: 0.86 },
-    wardenRule: { anticipation: 0.34, reveal: 0.66, resolve: 0.6 },
-    wardenBreak: { anticipation: 0.34, reveal: 0.66, resolve: 0.6 },
-    colossusContainment: { anticipation: 0.3, reveal: 0.72, resolve: 0.62 },
-    colossusCore: { anticipation: 0.3, reveal: 0.72, resolve: 0.62 },
     echoMirror: { anticipation: 0.28, reveal: 0.66, resolve: 0.55 },
     sourceTrue: { anticipation: 0.36, reveal: 0.9, resolve: 0.72 },
     rootboundGraft: { anticipation: 0.32, reveal: 0.7, resolve: 0.66 },
@@ -218,7 +212,6 @@ export class BossRitualController {
     context.owner.cinematicPose = null;
     context.owner.cinematicColor = null;
     context.owner.cinematicT = 0;
-    if (context.cue.after === "throwShield") intents.push({ type: "throw-shield" });
     if (context.cue.firstVertical) intents.push({ type: "resolve-first-vertical" });
     intents.push(
       { type: "store-seen", key: `tear.cinematic.${context.cue.id}` },

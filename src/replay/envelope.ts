@@ -6,8 +6,10 @@ import { FINAL_FIVE_WEAPON_SCHEMA_VERSION, isWeaponId, type WeaponId } from "../
 import type { GameAction } from "../input/game-action";
 import { normalizeGameAction } from "../input/game-action";
 import { stableVerificationHash } from "../domain/hash";
+import { REPLAY_FORMAT } from "./record";
 
-export const REPLAY_FORMAT = "tear-replay";
+/** The Ghost 2 packet (visual-replay.ts) and its envelope. Both go with Ghost 2; the record is record.ts. */
+export { REPLAY_FORMAT };
 export const CURRENT_REPLAY_SCHEMA_VERSION = 2;
 
 export interface ReplayBuildMetadata {
