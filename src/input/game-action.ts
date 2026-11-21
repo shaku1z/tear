@@ -26,7 +26,9 @@ export type GameAction =
   | Readonly<{ type: "cancel" }>
   | Readonly<{ type: "draft-choice"; choiceId: string }>
   | Readonly<{ type: "reserve-choice"; choiceId: string }>
-  | Readonly<{ type: "tier-up-choice"; choiceId: string }>;
+  | Readonly<{ type: "tier-up-choice"; choiceId: string }>
+  /** Reroll the draft on offer (one of the run's draft rerolls). */
+  | Readonly<{ type: "draft-reroll" }>;
 
 export type GameActionNormalizationResult =
   Readonly<{ ok: true; action: GameAction }> | Readonly<{ ok: false; reason: string }>;
@@ -115,6 +117,7 @@ export function normalizeGameAction(candidate: unknown): GameActionNormalization
     case "resume":
     case "confirm":
     case "cancel":
+    case "draft-reroll":
       return success({ type: candidate.type });
     default:
       return failure(`unknown action type: ${candidate.type}`);

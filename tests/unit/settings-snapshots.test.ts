@@ -61,6 +61,14 @@ describe("settings snapshots", () => {
         ?.value,
     ).toBe("FULL");
   });
+  it("says during a run that a story-scene change applies from the next run", () => {
+    const row = (duringRun: boolean) =>
+      buildSettingsSections("accessibility", settings, { ...environment, duringRun })[0]?.rows.find(
+        (entry) => entry.key === "cinematics",
+      );
+    expect(row(true)?.note).toBe("A CHANGE APPLIES FROM THE NEXT RUN");
+    expect(row(false)?.note).toBeUndefined();
+  });
   it("ends the general list with the build as a read-only row, even when install and update rows show", () => {
     const rows = (env: typeof environment) => buildSettingsSections("general", settings, env)[0]?.rows ?? [];
     expect(rows(environment).at(-1)).toEqual({
