@@ -101,6 +101,23 @@ describe("the progress meter", () => {
     expect(longestQuiet).toBe(19_999);
   });
 
+  it("counts health only as a net loss, so healing and being hit again in a loop is not progress", () => {
+    const meter = new TearProgressMeter();
+    const at = (hp: number, enemyHealth: number) =>
+      meter.observe(observed([enemy("enemy:1", enemyHealth)], { hp }), "playing");
+    at(100, 1);
+    // A player who regenerates against a hazard: down once, then up and down between the same two values.
+    expect([90, 95, 90, 95, 90].map((hp) => at(hp, 1))).toEqual([true, false, false, false, false]);
+    expect(at(89, 1), "worn down further").toBe(true);
+    // An enemy that heals back what it loses.
+    expect([0.8, 0.9, 0.8, 0.9, 0.8].map((health) => at(89, health))).toEqual([true, false, false, false, false]);
+    expect(at(89, 0.79), "worn down further").toBe(true);
+    // Health the player won back counts again once the run has progressed some other way.
+    at(120, 0.79);
+    expect(at(120, 0.7)).toBe(true);
+    expect(at(110, 0.7)).toBe(true);
+  });
+
   it("starts over after a reset", () => {
     const meter = new TearProgressMeter();
     meter.observe(observed([enemy("enemy:1")]), "playing");
