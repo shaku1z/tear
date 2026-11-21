@@ -1,3 +1,5 @@
+import type { MoveAim } from "../../move-aim";
+
 /**
  * The new Rootbound's moves, as plain rows its own state machine reads (plans/active/VERDANT_PALE_REBUILD.md,
  * 2.1). Every length is in simulation ticks: the boss counts one tick per update, so no row repeats the tick
@@ -22,8 +24,18 @@ export const ROOTBOUND_MOVES = Object.freeze({
     stagger: 72,
     parryCooldown: 26,
   }),
-  /** Phase II on: straight after the Vine Swing's sweep, a second one, which plants the vine (Root Seam). */
-  secondSwing: Object.freeze({ windup: 32, hit: 22 }),
+  /**
+   * Phase II on: straight after the Vine Swing's sweep, a second one, which plants the vine (Root Seam). It aims
+   * once, at where the player is when its tell starts (after a dash through the first sweep has landed), and
+   * steps toward that point through the tell. `windup` is its own tell; the aim rule raises any aimed tell to
+   * minAimedTellTicks (84: a dash spent as the tell starts is back in time), Phase III's quicker windups
+   * included (move-aim.ts).
+   */
+  secondSwing: Object.freeze({
+    windup: 54,
+    hit: 22,
+    aim: Object.freeze({ at: "player-at-tell", reachShare: 0.6, maxStep: 200 } satisfies MoveAim),
+  }),
   /**
    * The vine the last swing planted stays in the floor for `planted` ticks and drives a seam along the floor in
    * the swing's direction: a boss zone `width` wide at `speed`, for at most `life` ticks, `damage` every
@@ -126,11 +138,11 @@ export const ROOTBOUND_MOVES = Object.freeze({
   lastBloom: Object.freeze({ sink: 24, under: 72, radius: 180, banner: "NOTHING HERE DIES" }),
 });
 
-/** Its body: the approved figure's 118 px frame (the old Rootbound's), 3800 health, a 120 px/s walk. */
+/** Its body: the approved figure's 118 px frame (the old Rootbound's), 3000 health, a 120 px/s walk. */
 export const ROOTBOUND_BODY = Object.freeze({
   w: 118,
   h: 118,
-  hp: 3800,
+  hp: 3000,
   speed: 120,
   contactDmg: 20,
   knockbackTaken: 0.4,

@@ -245,7 +245,7 @@ the player. "Landed" counts ticks in which the boss lost health. Travel is boss 
 ### 2.1 Rootbound: the keeper that will not let go
 
 **Body.**
-- It gets its own body row (`ROOTBOUND_BODY` in `rootbound-moves.ts`, beside the move table, so `game-config.ts` stays within its code budget): 118 × 118 px (the approved figure's frame), 3800 health
+- It gets its own body row (`ROOTBOUND_BODY` in `rootbound-moves.ts`, beside the move table, so `game-config.ts` stays within its code budget): 118 × 118 px (the approved figure's frame), 3800 health (3000 since the seeded tuning, 2.4)
   (between Aldric's 4300 and the Echo's 3000; tuned by the pace targets in 2.4), 120 px/s walk,
   contact 20, knockback taken 0.4.
 - Its body hurts while it walks, idles and winds up, like Aldric's row in `boss-body-contact.ts`.
@@ -271,7 +271,7 @@ Colossus's Phase III multiplier).
 | Move | Phases | Chosen when | Windup (pose) | Hit | Recover (pose) | Damage | Parry | Drawn mark |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Vine Swing | I, II, III | player within 300 px and level | 54 (coil) | 22: a 280 px arc in front, as the figure's vine already draws | 42 (lunge) | 18 | yes; a parry staggers it 72 ticks, open | none: the coil is the tell |
-| Second Swing | II, III | straight after a Vine Swing | 32 (coil) | 22 | 42 | 18 | yes | none |
+| Second Swing | II, III | straight after a Vine Swing | 54, raised to the aimed tell, 84 (coil): it aims once as the coil starts (2.4) | 22 | 42 | 18 | yes | none |
 | Seed Throw | I, II, III | player 300-700 px away | 54 (coil) | a seed pod thrown on an arc, deflectable (Aldric's Cleaver Arc) | 42 | 14 | deflect | none |
 | Burrow | I, II, III | player beyond 700 px, or 4 s cooldown | 30 (sink) | under the floor at 900 px/s to the player's x, at most 96 ticks; it can't be hit (it is under the floor) | goes into Surface Strike | - | - | none: the moving mound is the body |
 | Surface Strike | I, II, III | end of Burrow | 42 (rise), the mound swells where it will come up | 14: a column 144 px wide and 180 px high | 54 (split), open | 20 | no (peril) | 1: the surface reticle |
@@ -280,7 +280,7 @@ Colossus's Phase III multiplier).
 | Root Seam | II, III | the hit of every Vine Swing | - | the vine stays planted for 120 ticks and drives a root seam along the floor in the swing's direction: a boss zone 110 px wide, 300 px/s, at most 240 ticks, 7 damage per 48 ticks (Aldric's seams) | - | 7 every 48 ticks | - | none: the seam is the hit |
 | Bramble Rows | II, III | cooldown 9 s, player on the floor | 60 (kneel) | three floor sections light in turn: each warns for 36 ticks, then burns for 84; the next starts 48 ticks after the last. It stays kneeling and open the whole time (about 360 ticks) | 48 (rise) | 12 per 48 ticks | - | 3: the zone warning, through the shared zone renderer |
 | Mend | II | player hasn't hit it for 480 ticks and is more than 500 px away | 24 (kneel) | heals 1.5 % of its full health a second for up to 240 ticks, never above the health it entered Phase II with; any hit ends it | 72 (split), open, after a hit | - | - | none: the kneel is the tell |
-| Spring Surge | III | cooldown 7.5 s | 102 (spring): rises at the arena centre | 1: two root waves run along the floor both ways (jumpable ground shocks, 760 px/s, 16) and five seed pods arc out (deflectable, 12) | 66 (slam), open | 16 / 12 | pods deflect | the peril diamond only: the rise is the tell (slice 4 dropped the centre column, 5.2) |
+| Spring Surge | III | cooldown 7.5 s | 102 (spring): rises at the arena centre | 1: two root waves run along the floor both ways (jumpable ground shocks, 760 px/s, 16) and five seed pods arc out (deflectable, 12) | 66 (slam), open | 16 / 12 | pods deflect | the peril diamond only: the rise is the tell (slice 4 dropped the centre column, 5.2: a departure from this table the lead confirmed, 2026-11-21) |
 
 **Cadence by phase.**
 
@@ -415,7 +415,7 @@ Measured with `pnpm playtest bosses --boss rootbound,aldric,colossus,echo --seed
 | Blocking ticks in a fight | 0 | references block in their phase changes today | 1548 |
 | Drawn marks | at most the largest reference (Aldric's 6) | 2-6 | 16 |
 
-The health (3800) and the cooldowns are the dials, in this order, once the new boss and the references
+The health (3800; 3000 since the seeded tuning) and the cooldowns are the dials, in this order, once the new boss and the references
 are measured the same way (below).
 
 **Re-derived on #377's headless player (2026-11-21; the lead's calls).** #377 changed the scripted
@@ -573,6 +573,73 @@ sample. Hits pool every fight that reached the phase, as above.
     ended early by a hit or by its cap.
   - It fires about once per fight for the two players who stand back, so it is not under once per
     fight for every player. By the lead's rule, the tuning step leaves its trigger distance as it is.
+
+**Tuning on the seeded sample** (since #394 the seed varies the headless player, so twelve seeds are twelve
+fights; normal, Sword, seeds 1 to 12 through practice, main 66877cba plus this change). Targets by the method
+above: each reference's median, then the median across the references.
+
+- **Phase III's clear target, re-based (the lead, 2026-11-21):** taken directly from the references, not
+  scaled from 1.5. The Colossus clears it in 5.3 s and the Echo in 12.9 s (medians over the fights each
+  cleared); Aldric never clears it. The median across them is 9.1 s; the range they span, 5.3-12.9 s, is
+  the band. The scaled band (17.3-32.4 s) came from 1.5's 4.2 s, a Phase III today's Rootbound never moves
+  in, so it measured nothing the references do.
+- **Spacing is not the lever.** A seeded sweep of the Phase I step back (60-190 px) left the scripted hits
+  at 0.9-1.3 per 10 s. It stays 190.
+- **The Second Swing aims** (`src/gameplay/entities/move-aim.ts`, a field on the move's row; Pale's moves are
+  its next user). It reads the player once, as its coil starts, after any dash through the first sweep has
+  landed, and eases to 0.6 of the vine's reach short of that point, at most 200 px. Its tell is the row's own
+  windup raised to `minAimedTellTicks`: the shared 0.45 s minimum or the dash's cooldown and invulnerability
+  together (66 + 18 = 84 ticks), whichever is longer, so a dash spent as the tell starts is back in time.
+  - With a 54-tick tell, an aimed swing hit the avoids-tells player on seeds 3, 7 and 8, each time because
+    the dash it had spent as the coil started was still cooling.
+  - The avoids-tells player now takes no Second Swing hit on any of the twelve seeds. The Vine Swing, which
+    does not aim and keeps its 54-tick tell, hit it once (seed 5, Phase I). Body touches during the tells are
+    counted apart: 5, 3 and 1 across Phases I to III.
+  - The Vine Swing does not aim (the lead held it, 2026-11-21): aiming the Second Swing did not raise the
+    scripted hits, so nothing says aiming the first would.
+- **The new boss declares its tells** (`tells()`, the shared `BossTell` data in seconds). Without them the
+  playtest read its windups from the state timer as seconds, as it does the references', but this boss
+  counts ticks: the avoids-tells player saw every windup land 120 times later than it did and never used
+  its own avoidance here. A swing declares `sweepBox`, built from the vine its hit test reads (the shoulder,
+  the sweep's two angles and the hit's 10 px pad), from where it will stand; any other windup marks the body.
+  A test fails if the declared box and the sweep's reach drift apart. Nothing draws them, so the marks and the
+  tell weight are unchanged.
+- **Health 3800 to 3000**, the plan's health dial, for the Phase I clear (seeded sweep):
+
+| Health | Phase I clear | Cleared | Phase II clear | Phase III clear |
+| --- | --- | --- | --- | --- |
+| 3800 | 20.6 s | 6 of 12 | 11.4 s | 6.9 s |
+| 3300 | 14.6 s | 7 of 12 | 10.8 s | 6.5 s |
+| 3000 | 14.0 s | 9 of 12 | 10.4 s | 6.5 s |
+
+**After the step** (health 3000):
+
+| Phase | Scripted hits per 10 s | Target | Avoids-tells clear | Target | Blocking ticks |
+| --- | --- | --- | --- | --- | --- |
+| I | 1.5 | 2.5-4.4 | 14.0 s (9 of 12 cleared) | 10.4-21.6 s | 0 |
+| II | 1.2 | 3.4-6.0 | 10.4 s | 8.4-16.9 s | 0 |
+| III | 1.9 | 3.4-6.0 | 6.5 s | 5.3-12.9 s (re-based) | 0 |
+
+- **The easy full fight** (`--difficulty easy --seed 1,2,3,4,5,6 --player scripted --seconds 300`): the
+  boss wins all six, as every reference does.
+- **Open, not accepted: the hits in all three phases.** Cause as measured so far: the scripted player dashes
+  through the swings (in Phase II it was dash-invulnerable for 51 of 52 sweeps, before the aim and after it).
+  The lead decides the design from the source split below. Phase III's moves are untouched until then.
+
+**Where the references' hits come from** (scripted player, practice, the same twelve seeds; a scratch probe
+that splits each hit by its call stack, tool gap in plans/active/PLAYTEST_TOOL_PLAN.md):
+
+| Phase | Aldric | Colossus | Echo | New Rootbound |
+| --- | --- | --- | --- | --- |
+| I | 3.3: body 2.2, Lunge 1.0 | 2.5: body 2.1, darts 0.3 | 2.5: mirror strikes 1.9, body 0.6 | 1.5: body 1.1, moves 0.4 |
+| II | 7.1: throne fire 5.3, body 1.4, Lunge 0.4 | 4.0: body 2.9, darts 1.0 | 4.0: strikes 3.0, body 0.6, crescents 0.3 | 1.7: Root Seam 0.9, Bramble Rows 0.4, body 0.4 |
+| III | 6.4: throne fire 4.5, body 1.2, Lunge 0.5 | 4.7: panels 2.3, body 2.1, darts 0.3 | 3.7: strikes 3.2, body 0.4 | 2.4: body 1.2, pods 0.5, swings 0.3, rows 0.2 |
+
+- What outlasts a dash: Aldric's throne fire stays live for thousands of ticks; the Colossus fires darts all
+  phase (815 in Phase I, 146 ticks each) and its panels stay live; Aldric's Lunge is live 31 ticks, longer
+  than the dash's 18, and lands on 28 % of its uses. The new boss fired 22 projectiles in Phase I, and its
+  zones live 88-129 ticks.
+- Body contact is about 2 per 10 s at the Colossus and Aldric and 1.1 at the new boss.
 
 ## 3. Delete list
 
@@ -970,8 +1037,10 @@ repository must be able to take the next slice from here.
 | 3 | Merged, #385 (b23d7348), ruleset v22. |
 | Tuning | Merged, #387 (3c567bf8): plan only. 2.4 re-based, no boss change. |
 | Parry | Merged, #393 (fbadb5fc): only a perfect touch parries the Vine Swing, with a cooldown. No ruleset step. |
-| 4 | In review (branch `codex/verdant-rootbound-phase3`): Phase III. Rebuild-only code and data, so no ruleset step. |
-| 5-7 | Not started. |
+| 4 | Merged, #395 (e1cb6f1e): Phase III. Rebuild-only, no ruleset step. |
+| Tuning on the seeded sample | In review (branch `codex/verdant-rootbound-pace`): the Second Swing aims (`move-aim.ts`), the new boss declares its tells, health 3000, Phase III's clear target re-based (2.4). The hits stay open. Rebuild-only, no ruleset step. |
+| 5 | Built on branch `codex/verdant-rootbinder-rebuild` (the Rootbinder); its pull request opens after the tuning one merges. |
+| 6-7 | Not started. |
 
 **What slice 2 left in place** (read these first):
 - The boss: `src/gameplay/entities/enemy-types/rootbound-rebuild/rootbound-moves.ts` holds the move
@@ -1032,7 +1101,8 @@ repository must be able to take the next slice from here.
   `windupScales` (1, 1, 0.85). `windup()` applies the scale to every windup except Spring Surge's and
   Last Bloom's rise, which belong to the phase change.
 - How slice 4 read 2.1, where it left a choice, or departed from it:
-  - Spring Surge draws no centre column (5.2 gives the reason); only the peril diamond shows.
+  - Spring Surge draws no centre column (5.2 gives the reason); only the peril diamond shows. The lead
+    confirmed this departure from 2.1 (2026-11-21).
   - The pods' arc: an even fan over the upper half circle, 560 px/s, lifted 120 px/s, under 520 px/s²
     gravity.
 - The death needed no new code: the zones and the vine already end at death, and 5.1 checks it.

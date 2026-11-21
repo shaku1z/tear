@@ -12,6 +12,8 @@ import type {
   EnemyProjectile,
 } from "../../enemy-contracts";
 import type { MoveEndReason } from "../../move-lifetime";
+import type { BossTell } from "../../boss-tells";
+import { aimedStandX, aimedTellTicks, aimedTellX, type MoveAim } from "../../move-aim";
 import type { EnemyBaseConstructor } from "../enemy-base";
 import type { BossRuntime } from "../boss-runtime";
 import { ROOTBOUND_REBUILD_DEFINITION } from "../../../run/boss-definitions";
@@ -48,6 +50,11 @@ const OPEN_STATES: ReadonlySet<string> = new Set([
 const CHANGE_STATES: ReadonlySet<string> = new Set(["uprootsink", "uprootunder", "bloomsink", "bloomunder"]);
 /** The swings the vine can be parried in, the first and Phase II's second. */
 const SWING_STATES: ReadonlySet<string> = new Set(["swing", "swing2"]);
+/** The vine's angle from the facing direction: drawn back and up at the end of the coil, and at the follow-through. */
+const VINE_COIL_ANGLE = -1.25;
+const VINE_FOLLOW_ANGLE = 0.4;
+/** How far past the vine's segment the swing still strikes, beyond the player's own half extent (px). */
+const VINE_HIT_PAD = 10;
 /** One second of ticks, for the per-second rates. */
 const TICKS_PER_SECOND = 120;
 /** What it does at rest: walking at the player or stepping back to keep its reach. */
@@ -76,6 +83,9 @@ export function createRootboundRebuildType(
     burrowCd: number = M.burrow.cooldown;
     vaultCd = 0;
     burstCd = 0;
+    /** Where the swing's tell started and where it stands to strike (its aim, read once). */
+    aimFromX = 0;
+    aimToX = 0;
     /** Ticks the player has stood above it, and crowded it. */
     aboveT = 0;
     crowdT = 0;
@@ -238,16 +248,52 @@ export function createRootboundRebuildType(
       this.zones = this.field.list;
     }
 
+    /**
+     * What it is about to strike, as the shared tell data (boss-tells.ts), in seconds: the Vine Swing and the
+     * Second Swing threaten the box the vine sweeps from where they aimed to stand; any other windup marks its body.
+     * Nothing draws these; the playtest players read them.
+     */
+    tells(): readonly BossTell[] {
+      if (!/(?:wind|windup|aim)$/u.test(this.state)) return [];
+      const leadSeconds = this.stateLen / 120,
+        remainingSeconds = Math.max(0, this.stateT) / 120;
+      const tell = { attackId: this.state, stage: "warning" as const, leadSeconds, remainingSeconds, damaging: true };
+      if (this.state !== "swingwind" && this.state !== "swing2wind")
+        return [{ ...tell, id: this.state, mark: "self", x: this.x, y: this.y, hw: this.hw, hh: this.hh }];
+      return [{ ...tell, id: "vine-swing", mark: "box", ...this.sweepBox(this.aimToX) }];
+    }
+
+    /**
+     * Everything the swinging vine can strike from a stand at `x`, for the tells: the box its shoulder-to-tip
+     * segment covers over the sweep's angles, padded by the hit's own reach past the segment (`swingHits`).
+     */
+    sweepBox(x: number): { x: number; y: number; hw: number; hh: number } {
+      const s = this.vineShoulderAt(x),
+        reach = M.vineSwing.reach,
+        top = s.y + Math.sin(VINE_COIL_ANGLE) * reach - VINE_HIT_PAD,
+        bottom = s.y + Math.sin(VINE_FOLLOW_ANGLE) * reach + VINE_HIT_PAD;
+      return {
+        x: s.x + (this.facing * reach) / 2,
+        y: (top + bottom) / 2,
+        hw: reach / 2 + VINE_HIT_PAD,
+        hh: (bottom - top) / 2,
+      };
+    }
+
     vineShoulder() {
-      return { x: this.x + this.facing * this.hw * 0.5, y: this.y - this.hh * 0.3 };
+      return this.vineShoulderAt(this.x);
+    }
+
+    vineShoulderAt(x: number) {
+      return { x: x + this.facing * this.hw * 0.5, y: this.y - this.hh * 0.3 };
     }
 
     /** The vine's angle from the facing direction: drawn back and up in the coil, swept down through the swing. */
     vineAngle(): number {
       const k = this.progress();
-      if (this.state === "swingwind" || this.state === "swing2wind") return -1.25 * k;
-      if (SWING_STATES.has(this.state)) return -1.25 + 1.65 * k;
-      return 0.4;
+      if (this.state === "swingwind" || this.state === "swing2wind") return VINE_COIL_ANGLE * k;
+      if (SWING_STATES.has(this.state)) return VINE_COIL_ANGLE + (VINE_FOLLOW_ANGLE - VINE_COIL_ANGLE) * k;
+      return VINE_FOLLOW_ANGLE;
     }
 
     vineTip() {
@@ -371,6 +417,8 @@ export function createRootboundRebuildType(
     startSwing(): void {
       this.attacked();
       this.hitSpent = false;
+      this.aimFromX = this.x;
+      this.aimToX = this.x;
       this.go("swingwind", this.windup(M.vineSwing.windup));
       bossFeedback(this, "windup", { quiet: true });
     }
@@ -545,6 +593,7 @@ export function createRootboundRebuildType(
       switch (this.state) {
         case "swing2wind":
           this.vx = 0;
+          this.x = aimedTellX(this.aimFromX, this.aimToX, this.progress());
           if (done) this.go("swing2", M.secondSwing.hit);
           return true;
         case "swing2":
@@ -572,12 +621,19 @@ export function createRootboundRebuildType(
       }
     }
 
-    /** Phase II on: a second sweep straight after the first, toward where the player is now. */
+    /** Phase II on: a second sweep straight after the first, aimed once at where the player is now. */
     startSecondSwing(player: EnemyPlayerPort): void {
       this.facing = Math.sign(player.x - this.x) || this.facing;
       this.hitSpent = false;
-      this.go("swing2wind", this.windup(M.secondSwing.windup));
+      this.aimAt(M.secondSwing.aim, player);
+      this.go("swing2wind", aimedTellTicks(this.windup(M.secondSwing.windup), CONFIG.dash));
       bossFeedback(this, "windup", { quiet: true });
+    }
+
+    /** A swing's aim, read once as its tell starts: where it starts and where it stands to strike the player. */
+    aimAt(aim: MoveAim, player: EnemyPlayerPort): void {
+      this.aimFromX = this.x;
+      this.aimToX = aimedStandX(aim, this.x, player.x, M.vineSwing.reach, this.hw, CONFIG.view.w);
     }
 
     /** The last swing's vine stays in the floor and drives a Root Seam in the swing's direction. */
@@ -641,7 +697,7 @@ export function createRootboundRebuildType(
       const s = this.vineShoulder(),
         t = this.vineTip();
       const near = segPointDist(s.x, s.y, t.x, t.y, player.x, player.y);
-      if (near.dist > Math.max(player.hw, player.hh) + 10) return;
+      if (near.dist > Math.max(player.hw, player.hh) + VINE_HIT_PAD) return;
       this.hitSpent = true;
       player.takeDamage(M.vineSwing.damage, this.x, this);
       bossFeedback(this, "contact", { quiet: true });

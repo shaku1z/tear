@@ -508,6 +508,13 @@ decides when; nobody fixes them now:
 - No boss declares `tells()`, so the tell-avoiding players read only state names ending in wind, windup or
   aim (`bossTells`). Boss zones (rows, seams) warn the screen but not the player, and their hits count as
   unmarked.
+  - Since the seeded tuning step, the new Rootbound declares them. The fallback also reads `stateT` as
+    seconds, which every reference counts in; a boss that counts ticks and declares no `tells()` is read as
+    striking 120 times later than it does.
+- The boss report counts hits taken but not their source. The seeded tuning step split them with a scratch
+  probe (the call stack of the player's `takeDamage`: body contact, a boss move, a projectile, a boss zone, a
+  stage object). It can't name the Echo's moves: the mirror's move (`mv`) is not on any actor in the world's
+  enemy list, so its strikes are one source.
 
 Done from that step's list (its fix 1, 2026-11-21): `--phase` opens an engineering-only boss, the way it opens a
 published one. The game's boss practice takes the bosses it opens (`PracticeBossAdmission`, the published roster
