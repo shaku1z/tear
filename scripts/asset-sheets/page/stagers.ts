@@ -97,7 +97,7 @@ function placeUnpublishedBoss(session: Session, scene: SheetScene, bossId: strin
   const config = replay.configuration.value;
   const run = replay.world.state.run();
   if (run === null) throw new Error(`${bossId}: the detached world has no run`);
-  const placement = planBossPlacement(bossId, config.view.w, config);
+  const placement = planBossPlacement(bossId, config.view.w, config, config.view.w / 2);
   const boss = replay.world.entities.createEnemy(placement.factoryId, placement.x, placement.y, run) as Actor;
   Reflect.set(boss, "bossId", bossId);
   Reflect.set(run, "curBoss", bossId);

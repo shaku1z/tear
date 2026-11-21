@@ -85,6 +85,7 @@ describe("authored boss reference", () => {
       "white-hart": harness.types.WhiteHart,
       echo: harness.types.Echo,
       source: harness.types.Source,
+      "rootbound-rebuild": harness.types.RootboundRebuild,
     } as const;
     for (const definition of BOSS_DEFINITIONS) {
       const Boss = constructors[definition.id];

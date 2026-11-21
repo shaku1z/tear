@@ -392,6 +392,7 @@ const BOSS_CONSTRUCTORS = {
   rootbound: "Rootbound",
   "white-hart": "WhiteHart",
   source: "Source",
+  "rootbound-rebuild": "RootboundRebuild",
 } as const satisfies Record<HarnessBossId, string>;
 
 export function createBossSubject(id: HarnessBossId): Subject & { readonly phaseMarks: readonly number[] } {

@@ -292,6 +292,9 @@ const CONFIG = {
   },
   // boss: large, multi-phase (very heavy -> barely flinchable)
   boss: { w: 118, h: 118, hp: 2500, speed: 70, contactDmg: 20, knockbackTaken: 0.6, weight: 6, fireBase: 2.0 },
+  // The new Rootbound's body (plans/active/VERDANT_PALE_REBUILD.md, 2.1); its moves are its move table
+  // (enemy-types/rootbound-rebuild/rootbound-moves.ts). The approved figure's 118 px frame.
+  rootbound: { w: 118, h: 118, hp: 3800, speed: 120, contactDmg: 20, knockbackTaken: 0.4, weight: 6 },
   // White Hart: low quadruped foundation; PT3-C7 owns its route-first attack tuning.
   whiteHart: { w: 190, h: 104, hp: 2500, speed: 190, contactDmg: 20, knockbackTaken: 0.6, weight: 6 },
 

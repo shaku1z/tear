@@ -7,6 +7,7 @@ export const BOSS_IDENTITY_IDS = Object.freeze([
   "white-hart",
   "echo",
   "source",
+  "rootbound-rebuild",
 ] as const);
 export type BossDefinitionId = (typeof BOSS_IDENTITY_IDS)[number];
 
@@ -15,7 +16,7 @@ export function isBossDefinitionId(value: string): value is BossDefinitionId {
 }
 
 /** A body in the game config whose height sets a boss's spawn height. */
-export type BossSpawnBody = "boss" | "whiteHart" | "echo" | "aldric" | "colossus";
+export type BossSpawnBody = "boss" | "rootbound" | "whiteHart" | "echo" | "aldric" | "colossus";
 
 /** Where a boss enters the arena (read by `planBossPlacement`). */
 export interface BossSpawn {
@@ -23,6 +24,8 @@ export interface BossSpawn {
   readonly factoryId: string;
   /** How far above the ground the boss's centre starts: a fixed distance, or half a config body's height. */
   readonly lift: number | BossSpawnBody;
+  /** The least distance between its centre and the player's when it enters; absent: the arena's centre. */
+  readonly startGap?: number;
 }
 
 export interface BossDefinition {
@@ -31,6 +34,8 @@ export interface BossDefinition {
   readonly phaseMarks: readonly [number, number];
   /** Engine placement data; the game reference leaves it out (src/game-reference/boss-reference.ts). */
   readonly spawn: BossSpawn;
+  /** A boss that fights on another boss's stage until it replaces it (the rebuild below). */
+  readonly stageOf?: BossDefinitionId;
 }
 
 /** Canonical Rootbound identity and phase thresholds. */
@@ -48,6 +53,19 @@ export const WHITE_HART_DEFINITION = Object.freeze({
   name: "The White Hart",
   phaseMarks: Object.freeze([0.65, 0.28] as const),
   spawn: Object.freeze({ factoryId: "white-hart", lift: "whiteHart" }),
+} as const satisfies BossDefinition);
+
+/**
+ * The new Rootbound (plans/active/VERDANT_PALE_REBUILD.md, slices 2-5), on the engineering channel only: Boss
+ * Test offers it, on the Verdant stage. The switch slice gives the Rootbound this body and removes this id.
+ */
+export const ROOTBOUND_REBUILD_DEFINITION = Object.freeze({
+  id: "rootbound-rebuild",
+  name: "The Rootbound (rebuild)",
+  phaseMarks: Object.freeze([0.65, 0.28] as const),
+  // It never enters inside the player (decision D1 in the plan).
+  spawn: Object.freeze({ factoryId: "rootbound-rebuild", lift: "rootbound", startGap: 360 }),
+  stageOf: "rootbound",
 } as const satisfies BossDefinition);
 
 export const BOSS_DEFINITIONS = Object.freeze([
@@ -83,6 +101,7 @@ export const BOSS_DEFINITIONS = Object.freeze([
     phaseMarks: Object.freeze([0.58, 0.28] as const),
     spawn: Object.freeze({ factoryId: "source", lift: 300 }),
   }),
+  ROOTBOUND_REBUILD_DEFINITION,
 ] as const satisfies readonly BossDefinition[]);
 
 /** Source-derived display projection; boss IDs and names remain definition-owned. */
@@ -101,6 +120,11 @@ export function bossDefinition(id: BossDefinitionId): BossDefinition {
   const definition = BOSS_DEFINITIONS.find((candidate) => candidate.id === id);
   if (definition === undefined) throw new Error(`unknown boss definition ${id}`);
   return definition;
+}
+
+/** The boss whose stage this boss fights on: its own, or the one it is rebuilding. Any other id is itself. */
+export function bossStageOwner(id: string): string {
+  return isBossDefinitionId(id) ? (bossDefinition(id).stageOf ?? id) : id;
 }
 
 export function bossPhaseMarks(id: BossDefinitionId): readonly [number, number] {

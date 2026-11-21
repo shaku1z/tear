@@ -3,6 +3,7 @@ import type {
   BossPresentationActor,
   BossTransformationSpec,
   EnemyDependencies,
+  EnemyPlatform,
   Point,
   WeaponActor,
   WeaponPose,
@@ -426,6 +427,14 @@ export function createBossRuntime(dependencies: EnemyDependencies) {
     );
     return d <= (cap.radius ?? 0);
   }
+  /**
+   * The shared arena rule for a boss landing on a platform: it takes `amount` of stress, never more than it
+   * stands before warning, and its drain waits.
+   */
+  function stressArenaPlatform(platform: EnemyPlatform, amount: number) {
+    platform.stress = Math.min(CONFIG.bossArena.standBeforeWarn, (platform.stress ?? 0) + amount);
+    platform.stressDelay = CONFIG.bossArena.stressDrainDelay;
+  }
   function weaponDebugGeometry(pose: WeaponPose | null | undefined) {
     return pose
       ? pose.sweptAttackHull.segments.map((s) => ({ a: s.a, b: s.b, radius: pose.sweptAttackHull.radius }))
@@ -439,6 +448,7 @@ export function createBossRuntime(dependencies: EnemyDependencies) {
     bossTransformation,
     perilPing,
     springWeapon,
+    stressArenaPlatform,
     wardstaffPose,
     greatCleaverPose,
     weaponHullHitsTarget,

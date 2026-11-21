@@ -27,6 +27,7 @@ export function createAldricType(
     bossTransformation,
     perilPing,
     springWeapon,
+    stressArenaPlatform,
     greatCleaverPose,
     weaponHullHitsTarget,
     weaponDebugGeometry,
@@ -363,11 +364,7 @@ export function createAldricType(
       )
         player.takeDamage(dmg, this.x, this);
       if (p.arenaPlatId) {
-        p.stress = Math.min(
-          CONFIG.bossArena.standBeforeWarn,
-          (p.stress ?? 0) + (hard ? CONFIG.bossArena.standBeforeWarn : C.vaultStress),
-        );
-        p.stressDelay = CONFIG.bossArena.stressDrainDelay;
+        stressArenaPlatform(p, hard ? CONFIG.bossArena.standBeforeWarn : C.vaultStress);
         if (hard) p.arenaFractureRequest = { reason: "thronefall", color: CONFIG.colors.bomber };
       }
       FX.shockwave(this.x, p.y, 12, CONFIG.colors.bomber, hard ? 300 : 205, hard ? 7 : 5);
@@ -441,8 +438,7 @@ export function createAldricType(
             this.vx = 0;
             this.vy = 0;
             this.onGround = true;
-            p.stress = Math.min(CONFIG.bossArena.standBeforeWarn, (p.stress ?? 0) + C.vaultStress * 0.45);
-            p.stressDelay = CONFIG.bossArena.stressDrainDelay;
+            stressArenaPlatform(p, C.vaultStress * 0.45);
             this.state = "recover";
             this.stateT = C.ascendRecover;
             bossFeedback(this, "contact", { quiet: true, color: CONFIG.colors.bomber });

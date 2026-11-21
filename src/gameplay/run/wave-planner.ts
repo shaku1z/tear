@@ -11,6 +11,7 @@ import {
   type EnemyKind,
   type MiniBossId,
 } from "./content-director";
+import { bossStageOwner } from "./boss-definitions";
 import type { RunMode } from "./session";
 import type { StageId } from "../stages";
 import { campaignStageCurve } from "./campaign-stage-curve";
@@ -339,7 +340,8 @@ export function planNextWave(options: PlanNextWaveOptions): PlannedWave {
     curBoss = bossOrder[bossIdx] ?? null;
     if (curBoss === null) throw new Error("boss roster must not be empty");
     bossIdx += 1;
-    const homeBiome = (options.bossOnlyStages ?? options.stages).findIndex((candidate) => candidate.boss === curBoss);
+    const home = curBoss === null ? null : bossStageOwner(curBoss);
+    const homeBiome = (options.bossOnlyStages ?? options.stages).findIndex((candidate) => candidate.boss === home);
     stage = homeBiome < 0 ? 0 : homeBiome;
     if (wave > 1) intents.push({ type: "begin-wipe" });
     intents.push(

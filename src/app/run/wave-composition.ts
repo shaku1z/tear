@@ -1,6 +1,6 @@
 import { releasePointerLock } from "../../platform/browser-pointer-lock";
 import type { BossId } from "../../gameplay/run/content-director";
-import { isBossDefinitionId } from "../../gameplay/run/boss-definitions";
+import { bossStageOwner, isBossDefinitionId } from "../../gameplay/run/boss-definitions";
 import type { PreparedVictory } from "../../gameplay/run/outcome-planner";
 import type { RunLifecycleController } from "../../gameplay/run/lifecycle";
 import { eligibleTierChoices } from "../../gameplay/run/reward-selection";
@@ -59,7 +59,7 @@ export function startingStageId(
   selectedBoss: string,
   stages: readonly Readonly<{ id: string; boss?: string }>[],
 ): string | undefined {
-  if (mode === "bossonly") return stages.find((stage) => stage.boss === selectedBoss)?.id;
+  if (mode === "bossonly") return stages.find((stage) => stage.boss === bossStageOwner(selectedBoss))?.id;
   return stageIdAfterWave(mode, 0, stages);
 }
 

@@ -29,7 +29,8 @@ const MIN_LEAD = BOSS_TELL_MIN_LEAD_SECONDS.normal;
 const TICK_SLACK = 2 * DT;
 const PHASES = [1, 2, 3] as const;
 type Phase = (typeof PHASES)[number];
-type HarnessBossId = Exclude<BossDefinitionId, "echo">;
+// The new Rootbound is held to the move rules and tell weight instead (move-visual-lifetime, boss-tell-weight).
+type HarnessBossId = Exclude<BossDefinitionId, "echo" | "rootbound-rebuild">;
 const HARNESS_BOSSES: readonly HarnessBossId[] = ["warden", "colossus", "aldric", "rootbound", "white-hart", "source"];
 
 type Boss = BehaviorActor & {

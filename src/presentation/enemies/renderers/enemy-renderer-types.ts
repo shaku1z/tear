@@ -64,7 +64,12 @@ export const ENEMY_MARK_HELPERS = Object.freeze([
 ] as const);
 export type EnemyMarkHelper = (typeof ENEMY_MARK_HELPERS)[number];
 /** The shared helpers that draw a prop: a weapon or a dropped crown, which may reach far from the body. */
-export const ENEMY_PROP_HELPERS = Object.freeze(["drawAldricCrown", "drawGreatCleaver", "drawWardstaff"] as const);
+export const ENEMY_PROP_HELPERS = Object.freeze([
+  "drawAldricCrown",
+  "drawGreatCleaver",
+  "drawRootVine",
+  "drawWardstaff",
+] as const);
 export type EnemyPropHelper = (typeof ENEMY_PROP_HELPERS)[number];
 
 /** Told when a mark or prop helper starts and finishes drawing. Only tests pass one. */
@@ -117,6 +122,7 @@ export type EnemyClassName =
   | "VoidWisp"
   | "Source"
   | "Rootbound"
+  | "RootboundRebuild"
   | "WhiteHart";
 type EnemyInstance<K extends EnemyClassName> = InstanceType<EnemyTypes[K]>;
 interface RenderMethods {

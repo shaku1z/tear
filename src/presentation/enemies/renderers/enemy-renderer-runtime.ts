@@ -1,4 +1,5 @@
 import type { BossPresentationActor, Point, WeaponActor, WeaponPose } from "../../../gameplay/entities/enemy-contracts";
+import { traceStem } from "../figures/boss-figure";
 import type {
   CrownRenderPose,
   EnemyMarkHelper,
@@ -305,6 +306,43 @@ export function createEnemyRendererRuntime(dependencies: EnemyPresentationDepend
     ctx.restore();
   }
 
+  /**
+   * The Rootbound's vine, a weapon like the cleaver: a stem from the shoulder to a thorned tip, bowed up by
+   * `lift` and thinning from `width`. It may reach far from the body, so it is a prop, not a mark.
+   */
+  function drawRootVine(
+    ctx: CanvasRenderingContext2D,
+    from: Point,
+    to: Point,
+    lift: number,
+    width: number,
+    colors: Readonly<{ stem: string; edge: string; thorn: string }>,
+  ) {
+    const control: [number, number] = [(from.x + to.x) / 2, Math.min(from.y, to.y) - lift];
+    ctx.save();
+    traceStem(ctx, [from.x, from.y], control, [to.x, to.y], [width, 1.6]);
+    ctx.fillStyle = colors.stem;
+    ctx.fill();
+    ctx.strokeStyle = colors.edge;
+    ctx.lineWidth = A11Y.highContrast ? 3 : 2;
+    ctx.lineJoin = "round";
+    ctx.stroke();
+    const dx = to.x - control[0],
+      dy = to.y - control[1],
+      length = Math.hypot(dx, dy) || 1;
+    const ux = dx / length,
+      uy = dy / length;
+    ctx.fillStyle = colors.thorn;
+    ctx.beginPath();
+    ctx.moveTo(to.x + ux * 12, to.y + uy * 12);
+    ctx.lineTo(to.x - ux * 10 - uy * 9, to.y - uy * 10 + ux * 9);
+    ctx.lineTo(to.x - ux * 10 + uy * 9, to.y - uy * 10 - ux * 9);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
   function traceWeaponPolygon(ctx: CanvasRenderingContext2D, points: readonly Point[]) {
     if (!points.length) return;
     const first = points[0];
@@ -532,6 +570,7 @@ export function createEnemyRendererRuntime(dependencies: EnemyPresentationDepend
     drawEntity,
     drawGreatCleaver: prop("drawGreatCleaver", drawGreatCleaver),
     drawPeril: observed("drawPeril", drawPeril),
+    drawRootVine: prop("drawRootVine", drawRootVine),
     drawWardstaff: prop("drawWardstaff", drawWardstaff),
     telegraphInk,
     traceWeaponPolygon,

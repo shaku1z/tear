@@ -52,6 +52,9 @@ export const BOSS_BODY_CONTACT = Object.freeze({
   echo: row("any", false),
   // The Source labels its body by plane and breach: see `bodyContactLabel` in source-core.ts.
   source: row(["front", "breach-drift"], false),
+  // The new Rootbound (plans/active/VERDANT_PALE_REBUILD.md, decision D1): its body hurts while it walks,
+  // stands and winds up, like Aldric's. Under the floor and rising out of it, it is not there to touch.
+  "rootbound-rebuild": row(["idle", "walk", "swingwind", "throwwind", "sink", "uprootsink", "vaultwind", "swell"], false),
 });
 
 export type BossBodyContactId = keyof typeof BOSS_BODY_CONTACT;
