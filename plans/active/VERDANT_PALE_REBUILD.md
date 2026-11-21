@@ -500,6 +500,44 @@ avoids-tells / scripted; measured with a probe on the playtest's own fight loop)
 
 Gaps 2 to 4 are named in plans/active/PLAYTEST_TOOL_PLAN.md. Nobody fixes them now.
 
+**All three phases in practice, after tool fix 1** (#390; normal, Sword, seeds 1 to 6, main 041a078f). The
+new Rootbound plays all six seeds identically.
+
+| Phase | Scripted hits per 10 s: at #390 → with the perfect parry | Target | Avoids-tells clear: at #390 → with the perfect parry | Target |
+| --- | --- | --- | --- | --- |
+| I | 0.0 → 1.0 | 2.2-3.9 | 16.4 → 53.2 s | 8.6-17.8 s |
+| II | 2.1 → 1.6 | 4.7-8.2 | 3.7 → 4.8 s | 8.7-17.3 s |
+| III | 1.5 → 4.3 | 4.6-8.1 | 5.3 → 5.1 s | 17.0-32.0 s |
+
+- Phase III still fights with Phase II's moves, so its row is not tuned before slice 4 builds them.
+- **The cause at #390** (the probe, seed 1, share of Phase I's ticks): the boss was staggered 11 % of the
+  phase, from about 4 parries against about 5 Vine Swings. Nearly every swing was parried and never landed,
+  and the stagger was the main opening the player hit into. In Phase II it was open 28 %.
+  - The boss's `parryBaton` ignored the `perfect` flag that the shared held-blade collision passes in (tip
+    speed at least 2.2 times the least damaging speed). Any damaging touch anywhere on the 280 px vine
+    during the 22-tick sweep was a parry. The headless blade is fast 77 % of the time, as a momentum
+    player's is, so it parried by accident.
+- **The change (the lead's call, 2026-11-21):** only a perfect touch parries. Any touch of the swinging
+  vine starts a 26-tick parry cooldown, the Warden's 0.22 s, so the first touch of a sweep decides. A touch
+  that is not perfect clashes, and the swing lands.
+  - The same rule is in the Warden's `parryBaton`, which is a released boss. Share it when the rebuild
+    replaces the Rootbound (the next-instance note).
+- **Tuning after it:** the dials were swept on seed 1, one value at a time.
+  - Attack cooldowns at ×0.75, ×0.5 and ×0.35 left Phase I at 0.9-1.6 scripted hits per 10 s.
+  - The attack waiting on a player in the air or out of line takes 1-5 % of Phase I, so it is not the gap.
+  - The step back (`spacing`) moves the clear times, but not in order. At 150 px both players clear
+    Phase I in 16.7-16.8 s and Phase II in 10.4-14.6 s, all inside the targets. At 140, 160 and 170 px,
+    one of the four is far outside: the scripted player does not clear Phase I at 140, the avoids-tells
+    player clears Phase II in 5.9 s at 160, and the avoids-tells Phase I takes 54.2 s at 170.
+  - Each setting is one deterministic path for each player, because the seed varies nothing in this fight.
+    A value chosen from them would be fitted to that path, so none was chosen (tool gap 5 below).
+- **The easy full fight** with the perfect parry: the boss wins on all three seeds (144 s each), as every
+  reference does.
+- **Tool gap 5:** for a boss that draws no random numbers, the playtest's seeds play one fight. The new
+  Rootbound, Aldric and the Colossus play six seeds identically, and only the Echo varies. A dial sweep is
+  then one sample per setting and can't tell a dial's effect from chance. Tuning waits for a measurement
+  that varies the fight, which is the lead's to route.
+
 - **Mend, how often it fires** (Phase II, normal, seeds 1 and 2; Mend is its only healing, so the
   playtest's `bossHealed` counts it):
 
@@ -904,7 +942,8 @@ repository must be able to take the next slice from here.
 | 1 | Merged, #354 (95a34063), ruleset v17. |
 | 2 | Merged, #381 (b7260214), ruleset v20. |
 | 3 | Merged, #385 (b23d7348), ruleset v22. |
-| Tuning | In review (branch `codex/verdant-rootbound-tuning`): plan only. 2.4 re-based, no boss change. |
+| Tuning | Merged, #387 (3c567bf8): plan only. 2.4 re-based, no boss change. |
+| Parry | In review (branch `codex/verdant-rootbound-parry`): only a perfect touch parries the Vine Swing, with a cooldown. Rebuild-only code and data, so no ruleset step. |
 | 4-7 | Not started. |
 
 **What slice 2 left in place** (read these first):
@@ -919,13 +958,13 @@ repository must be able to take the next slice from here.
 - How it is reached: the Boss Test picker (`BOSS_TEST_ROSTER` in `content-director.ts`, engineering
   only). It fights on Verdant through `stageOf`.
 - The playtest commands, run by every slice:
-  - the new boss, whole fights from Phase I (its Phase II and III numbers are the phases a player
-    reaches): `pnpm playtest bosses --boss rootbound-rebuild --seed 1,2 --seconds 300 --json <file>`;
+  - the new boss, each phase opened through practice as the references are (since #390):
+    `pnpm playtest bosses --boss rootbound-rebuild --seed 1,2,3,4,5,6 --phase 1,2,3 --json <file>`;
   - the references, each phase opened through practice:
     `pnpm playtest bosses --boss aldric,colossus,echo --seed 1,2,3,4,5,6 --phase 1,2,3 --json <file>`;
   - the references in whole fights from Phase I, which is how the new boss compares today:
     `pnpm playtest bosses --boss aldric,colossus,echo --seed 1,2,3,4,5,6 --seconds 300 --json <file>`.
-  - Practice admits only published bosses, so `--phase` can't reach the new one until tool fix 1 (2.4).
+  - The easy full fight: `pnpm playtest bosses --boss rootbound-rebuild,aldric,colossus,echo --difficulty easy --seed 1,2,3 --player scripted --seconds 300 --json <file>`.
 
 **What slice 3 added:**
 - Phase II's rows in `rootbound-moves.ts` (Second Swing, Root Seam, Bramble Rows, Mend, Last Bloom),
@@ -979,11 +1018,11 @@ repository must be able to take the next slice from here.
 - **Replay admission:** built by the replay session as #386 (cleared, merging after #385). Replays then
   refuse engineering-only bosses (4.1), and slices that touch only the new Rootbound stop stepping the
   ruleset.
-- **Pace:** 2.4 is re-based on six seeds. In Phase I, compared like for like in whole fights, the new
-  Rootbound sits among the references, with one small gap: the avoids-tells player takes fewer hits.
-  - Phases II and III wait for tool fix 1 (practice for an engineering-only boss), which the lead has
-    brought back to the playtest tool. Then all three phases are measured against the practice targets
-    and any tuning is decided.
+- **Pace:** measured in practice since #390 (2.4). With the perfect parry the new Rootbound is under the
+  hits targets in Phases I and II, its Phase I clear is far over its target, and Phase II's is under it.
+  - The cooldowns don't move the hits. The step back moves the clear times, but each setting is one
+    deterministic path (tool gap 5), so no dial is tuned until the measurement varies the fight. The lead
+    routes that.
 - **Mend** fires about once per fight for the players who stand back, and never for the scripted
   player (2.4). Its trigger stays as 2.1 has it.
 - **Named gaps to keep carrying:**
