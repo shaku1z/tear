@@ -481,6 +481,24 @@ do not. Not fixed, not this tool's code: the headless world keeps stepping while
 (600 paused ticks cost the player 33 health), and `--seed` is hashed, so headless seed "117" is the browser's
 seed 1714819488. Tests: `tests/unit/scripted-player-walls.test.ts`, `tests/unit/playtest-finale.test.ts`.
 
+Open after it, for whoever picks this up (pull request 377):
+- The fixture. `tests/fixtures/canonical-hash-stream.json` was re-recorded in pull request 377
+  (`TEAR_HASH_STREAM_WRITE=1 pnpm test:determinism`). Pull request 372 (replay) and the cinematics intro-clock
+  change regenerate the same file. Whichever lands later merges main and regenerates on the merged tree.
+- Pinned boss seeds. The cinematics change pins boss seeds in `tests/support/hash-stream-corpus.ts`
+  (`BOSS_SEED_INDEX`), chosen with the old observation. If one then fails its coverage fact, re-pick it as
+  cinematics did (the first seed in the fixed list that survives), update its comment with the counts, and tell
+  the lead and the cinematics owner.
+- The Chainblade player. Against a lone herald it takes 41.6 s (the other weapons take 1 to 5 s); the bound in
+  `tests/unit/scripted-player-pursuit.test.ts` is 60 s of simulation. It gives way to every enemy that winds up
+  and loses the herald. This belongs to stage 3; bring the bound back down when it is faster.
+- Test limits. A test of simulated play is bounded in simulation ticks; a wall-clock limit is only a hang guard
+  with its reason. Done for the pursuit test; the other playtest tests still pass `60_000` with no reason.
+- The `playRun` closing-scene branch has no test of its own (one hand run: seed "4", won at 155,468 ticks).
+- The default `runs` tables in this plan are from before this change; replay them when quoting numbers.
+- The headless pause above is with the replay owner. The scripted player pauses only when its safety check
+  rejects an observation, never in play.
+
 Done when:
 - [ ] Every boss phase, every wave of each biome and every enemy kind is a row that starts directly, in under 1 s each.
 - [x] `pnpm playtest runs` reports where runs end and per-wave time and health cost for 3 modes, 3 difficulties and 5 weapons.
