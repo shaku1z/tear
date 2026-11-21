@@ -7,10 +7,8 @@ import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies
 import type { GameBlade, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
 import { LiveRunStartController } from "../../gameplay/run/live-run-start-controller";
-import { planRunStart, type RunStartPlan } from "../../gameplay/run/run-start-plan";
 import { RunReplacementGuard } from "../../gameplay/run/run-replacement";
 import type { BossId } from "../../gameplay/run/content-director";
-import { isBossDefinitionId } from "../../gameplay/run/boss-definitions";
 import { admittedRunMode, tracksModeProgress } from "../../gameplay/run/mode-catalog";
 import type { RunDifficulty, RunMode } from "../../gameplay/run/session";
 import type { RunLifecycleSnapshot } from "../../gameplay/run/lifecycle";
@@ -21,10 +19,9 @@ import type { TearWorldServices } from "../../gameplay/runtime/tear-world-contex
 import type { RunRandomStreamName, RunRandomStreamsSnapshot } from "../../simulation/run-random";
 import type { EnvironmentRuntimeState } from "../../gameplay/environment/environment-contracts";
 import { resolveDiscoveredVariantIds } from "../../gameplay/variants";
-import { cleanupBossEncounterActors } from "../../gameplay/run/boss-encounter";
 import { CURRENT_RULESET_VERSION } from "../../gameplay/run/ruleset-version";
 import type { RunStartChoices } from "../../gameplay/run/run-start-choices";
-import { applyMetaRanks } from "../../gameplay/progression/meta";
+import { createRunStartWorldPort } from "./run-start-world";
 
 interface MutableWorldState {
   resetTransient(): void;
@@ -132,8 +129,7 @@ export function createLiveRunStartHost(
   context: RunStartHostContext,
 ): LiveRunStartController<ReturnType<GameRuntimeDependencies["newMods"]>> {
   const { dependencies, state } = context;
-  const { CONFIG, REMOTE, GHOST, PROFILE, META, SHOP, SFX, GAMEPLAY_EVENTS, Input, createRunSeed, newMods, COSMETICS } =
-    dependencies;
+  const { GHOST, PROFILE, META, SHOP, SFX, GAMEPLAY_EVENTS, Input, createRunSeed, COSMETICS } = dependencies;
   const replacement = new RunReplacementGuard({
     recording: () => GHOST.recording(),
     stopInterruptedRecording: () => {
@@ -161,11 +157,35 @@ export function createLiveRunStartHost(
       }
     },
   });
-  let startingPlan: RunStartPlan | null = null;
   /** Saved progress before this run's first stage marks its biome as reached. */
   let musicProgress: ProgressSource | null = null;
+  const world = createRunStartWorldPort({
+    ...context,
+    hooks: {
+      beforeReset: () => {
+        context.clearPracticeSession?.();
+      },
+      configured: (weaponId) => {
+        state.setSelectedWeapon(weaponId);
+        context.applySettings();
+        try {
+          SFX.setVoidDescent(0, 0.05);
+          SFX.setMusicDuck(1, 0.12);
+        } catch {
+          /* optional audio backend */
+        }
+      },
+      dressBlade: (blade) => {
+        COSMETICS.wear(blade, loadoutOf(COSMETIC_CATALOG, PROFILE.cosmetics()));
+      },
+      reset: () => {
+        musicProgress = snapshotProgress(PROFILE.data);
+      },
+    },
+  });
 
   const controller = new LiveRunStartController({
+    ...world,
     replaceActiveRun: () => {
       context.discardOpeningCapture?.();
       try {
@@ -189,82 +209,6 @@ export function createLiveRunStartHost(
         achievementSnapshot: Object.freeze(Object.keys(PROFILE.data.ach)),
         restoredTrail: Boolean(PROFILE.data.rewards?.restoredBladeTrail),
       });
-    },
-    initializeWorld: (start) => {
-      context.clearPracticeSession?.();
-      cleanupBossEncounterActors(state.enemies(), "reset");
-      context.environment.clear("new-run");
-      context.prepareWorld();
-      context.resetCombatIdentity();
-      context.lifecycle.reset();
-      context.services.mirror.reset();
-      context.services.bossFeedback.clear();
-      context.services.configuration.resetToBase();
-      const weaponId = start.weapon;
-      state.setSelectedWeapon(weaponId);
-      context.applySettings();
-      try {
-        SFX.setVoidDescent(0, 0.05);
-        SFX.setMusicDuck(1, 0.12);
-      } catch {
-        /* optional audio backend */
-      }
-      const difficulties = CONFIG.difficulties.flatMap((definition) =>
-        isRunDifficulty(definition.id)
-          ? [{ id: definition.id, oneHit: definition.oneHit === true, mods: definition.mods }]
-          : [],
-      );
-      startingPlan = planRunStart(start.difficulty, difficulties, REMOTE);
-      CONFIG.player.dmgTakenMult *= startingPlan.playerDamageMultiplier;
-      const player = context.createPlayer(context.width * 0.5, CONFIG.world.groundY - 60);
-      player.oneHit = startingPlan.oneHit;
-      const blade = context.createBlade();
-      context.configureBlade(blade, weaponId);
-      blade.restoredTrail = start.restoredTrail;
-      COSMETICS.wear(blade, loadoutOf(COSMETIC_CATALOG, PROFILE.cosmetics()));
-      state.setPlayer(player);
-      state.setBlade(blade);
-      state.setEnemies([]);
-      state.setProjectiles([]);
-      state.setFloaters([]);
-      context.world.resetTransient();
-      context.services.effects.resetWorld();
-      context.services.clock.reset();
-      musicProgress = snapshotProgress(PROFILE.data);
-      return {
-        weaponId,
-        mods: newMods(),
-        scaling: startingPlan.scaling,
-        achievementSnapshot: [...start.achievementSnapshot],
-        variantDiscovery: [...start.variantDiscovery],
-      };
-    },
-    resetAuthoritativeClocks: context.resetAuthoritativeClocks,
-    finishWorldReset: () => {
-      context.world.finishReset();
-      context.loadStage(0);
-      context.stage.resetBanner();
-      context.story.resetChapter();
-    },
-    resetRunRandom: (seed) => {
-      context.services.random.resetRun(seed);
-    },
-    installSession: (session) => {
-      const run: GameRun = {
-        ...session,
-        diffDmg: 1,
-        bossIdx: 0,
-        bossOrder: [],
-        curBoss: null,
-        voidScroll: null,
-        pg: {},
-        reservedUpgrade: null,
-      };
-      context.installRun(run);
-      context.runInstalled?.(run);
-    },
-    startLifecycle: (sessionId) => {
-      context.lifecycle.start(sessionId);
     },
     exposeDebugState: () => {
       // The weapon inspector is an engineering global: never installed in release builds.
@@ -450,79 +394,11 @@ export function createLiveRunStartHost(
     },
     publishRunStarted: (session, runId) => {
       try {
-        GAMEPLAY_EVENTS.emit({
-          kind: "run",
-          transition: "started",
-          runId,
-          mode: session.mode,
-          difficulty: session.diff,
-          weaponId: session.weaponId,
-          wave: session.wave,
-          score: session.score,
-          runTimeSeconds: session.runTime,
-        });
+        world.publishRunStarted(session, runId);
       } catch (error) {
         context.discardOpeningCapture?.();
         throw error;
       }
-    },
-    configureMode: ({ mode, boss: selected }) => {
-      const run = requireRun(state);
-      if (mode === "bossonly") {
-        const order = context.shuffledRoster();
-        if (selected !== "shuffle" && isBossId(selected)) {
-          // The production selector can only supply policy-published IDs. A
-          // test-build engineering launch may explicitly supply an authored
-          // preview boss, which remains absent from every ordinary roster.
-          const index = order.indexOf(selected);
-          if (index >= 0) order.splice(index, 1);
-          order.unshift(selected);
-        }
-        const first = order[0];
-        if (first === undefined) throw new Error("Boss-only mode requires a boss roster");
-        run.bossOrder = order;
-        run.bossIdx = 0;
-        run.bossesBeaten = 0;
-        run.curBoss = first;
-        // Remove the reset stage before activating the selected boss biome so
-        // its authored environment fields survive the replacement boundary.
-        context.environment.clear("boss-encounter-replacement");
-        context.loadStage(context.bossBiome(first));
-      } else if (mode === "gauntlet") {
-        run.bossOrder = context.gauntletTrials();
-        run.bossIdx = 0;
-        run.bossesBeaten = 0;
-      }
-    },
-    applyMetaProgression: (start) => {
-      const run = requireRun(state);
-      if (!tutorialUsesBaselineLoadout(run.mode) && context.baselinePractice?.() !== true) {
-        if (context.race?.apply() !== true)
-          applyMetaRanks(SHOP, start.metaRanks, {
-            player: requirePlayer(state),
-            blade: requireBlade(state),
-            mods: run.mods,
-          });
-      }
-      context.resetRewards();
-    },
-    activateOpeningContent: (mode) => {
-      const run = requireRun(state);
-      if (mode !== "tutorial" && mode !== "playground") {
-        context.startNextWave();
-        return;
-      }
-      context.stage.platforms = context.trainingPlatforms();
-      run.wave = 1;
-      context.lifecycle.activateTraining();
-      run.diffDmg = requirePlan(startingPlan).playerDamageMultiplier;
-      if (mode === "playground") {
-        context.playground.reset();
-        run.bossOrder = context.shuffledRoster();
-        run.bossIdx = 0;
-        run.pg = context.playground.state;
-        context.playground.enterArena();
-      } else context.tutorial.start();
     },
     enterPlayingState: (sessionId) => {
       try {
@@ -591,17 +467,6 @@ function requireBlade(state: LiveGameHostState): GameBlade {
   if (blade === undefined) throw new Error("Run start host requires a blade");
   return blade;
 }
-
-function requirePlan(plan: RunStartPlan | null): RunStartPlan {
-  if (plan === null) throw new Error("Run start plan was not initialized");
-  return plan;
-}
-
-function isRunDifficulty(value: string): value is RunDifficulty {
-  return value === "easy" || value === "normal" || value === "hard" || value === "extreme" || value === "onehit";
-}
-
-const isBossId = isBossDefinitionId satisfies (value: string) => value is BossId;
 
 function musicProgressField(progress: ProgressSource | null): { progress?: ProgressSource } {
   return progress === null ? {} : { progress };
