@@ -1,4 +1,4 @@
-import { projectTutorialGoldFrame } from "../../gameplay/training/tutorial-gold-reference";
+import { projectTutorialGoldFrame } from "../../gameplay/training/tutorial-gold-frame";
 import type { LiveTutorialRuntime } from "../../gameplay/training/live-tutorial-runtime";
 import type { LiveGameHostState } from "../world/game-host-state";
 

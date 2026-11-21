@@ -1,9 +1,10 @@
+import { ARMED_CONFIRM_DELAY_MS, ARMED_CONFIRM_EXPIRY_MS, createArmedConfirm } from "../interface/armed-confirm";
 import type { ProgressResetOutcome } from "./progress-reset";
 
-/** Presses on the armed button are ignored for this long, so a double press cannot confirm what it just asked. */
-export const RESET_CONFIRM_DELAY_MS = 800;
-/** An armed reset disarms after this long, so a confirmation left on screen is never one press from erasing. */
-export const RESET_ARMED_EXPIRY_MS = 10_000;
+/** The shared armed-button delay: a press this soon after arming does not erase. */
+export const RESET_CONFIRM_DELAY_MS = ARMED_CONFIRM_DELAY_MS;
+/** The shared armed-button expiry: an armed reset disarms after this long. */
+export const RESET_ARMED_EXPIRY_MS = ARMED_CONFIRM_EXPIRY_MS;
 
 export type ResetStage = "idle" | "armed" | "working";
 
@@ -38,28 +39,20 @@ export interface ResetProgressFlow {
  * confirmation open cannot leave a loaded button behind.
  */
 export function createResetProgressFlow(ports: ResetProgressFlowPorts): ResetProgressFlow {
-  let stage: ResetStage = "idle";
-  let armedAt = 0;
+  const confirm = createArmedConfirm(ports.now);
+  let working = false;
   let failure: ResetFailure | null = null;
-  const expire = (): void => {
-    if (stage === "armed" && ports.now() - armedAt > RESET_ARMED_EXPIRY_MS) stage = "idle";
-  };
   return {
     view() {
-      expire();
-      return { stage, confirmable: stage === "armed" && ports.now() - armedAt >= RESET_CONFIRM_DELAY_MS, failure };
+      if (working) return { stage: "working", confirmable: false, failure };
+      const button = confirm.view();
+      return { stage: button.armed ? "armed" : "idle", confirmable: button.confirmable, failure };
     },
     press() {
-      expire();
-      if (stage === "working") return;
-      if (stage === "idle") {
-        stage = "armed";
-        armedAt = ports.now();
-        failure = null;
-        return;
-      }
-      if (ports.now() - armedAt < RESET_CONFIRM_DELAY_MS) return;
-      stage = "working";
+      if (working) return;
+      if (!confirm.view().armed) failure = null;
+      if (!confirm.press()) return;
+      working = true;
       void ports.reset().then(
         (outcome) => {
           if (outcome === "erased") {
@@ -67,16 +60,16 @@ export function createResetProgressFlow(ports: ResetProgressFlowPorts): ResetPro
             return;
           }
           failure = outcome;
-          stage = "idle";
+          working = false;
         },
         () => {
           failure = "device-failed";
-          stage = "idle";
+          working = false;
         },
       );
     },
     cancel() {
-      if (stage === "armed") stage = "idle";
+      confirm.cancel();
     },
   };
 }

@@ -1356,6 +1356,17 @@
         ".github/workflows/ci.yml"
       ]
     },
+    "scripts/ci-main-gate.sh": {
+      "purpose": "Every Validate job's gate loader, run as main's copy: puts main's fromMain files in $RUNNER_TEMP/gate, sets TEAR_GATE in $GITHUB_ENV",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "seconds",
+      "via": [],
+      "runBy": [
+        ".github/workflows/ci.yml"
+      ]
+    },
     "scripts/ci-verdict.mjs": {
       "purpose": "Validate's required check: fails unless every needed job ended as it should",
       "effects": [

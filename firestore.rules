@@ -98,10 +98,12 @@ service cloud.firestore {
           && intIn(incoming().wave, 0, 100000)
           && (resource == null || (incoming().score > resource.data.get('score', 0) && afterLastWrite()));
     }
-    // A clear takes at least a minute (7,200 ticks) and at most four hours (1,728,000 ticks).
+    // A clear takes at least 30 s (3,600 ticks) and at most four hours (1,728,000 ticks). The floor is set well below
+    // the fastest clear the Gauntlet session could estimate (about 75 s with a strong build): refusing a real
+    // record is worse than accepting a forged one, which any value above the floor would be anyway.
     function isNewFastest(uid) {
       return isRowWrite() && isRow(incoming(), uid)
-          && intIn(incoming().score, 7200, 1728000)
+          && intIn(incoming().score, 3600, 1728000)
           && intIn(incoming().wave, 1, 32)
           && (resource == null || (incoming().score < resource.data.get('score', 1728001) && afterLastWrite()));
     }

@@ -191,7 +191,6 @@ export interface MirrorJuice {
   color?: string;
   hitstop?: number;
   zoom?: number;
-  slowmo?: number;
   quiet?: boolean;
 }
 

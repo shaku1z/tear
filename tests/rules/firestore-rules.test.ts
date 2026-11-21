@@ -240,7 +240,7 @@ describe("leaderboards/gauntletclear_<difficulty>: fastest Gauntlet clears", () 
       await assertSucceeds(setDoc(doc(db, path("alice", difficulty)), clear("alice")));
     await env.clearFirestore();
     const refused: DocumentData[] = [
-      clear("alice", { score: 7_199 }),
+      clear("alice", { score: 3_599 }),
       clear("alice", { score: 1_728_001 }),
       clear("alice", { score: 70_000.5 }),
       clear("alice", { wave: 0 }),
@@ -252,7 +252,7 @@ describe("leaderboards/gauntletclear_<difficulty>: fastest Gauntlet clears", () 
     for (const data of refused) await assertFails(setDoc(doc(db, path("alice")), data));
     await assertFails(setDoc(doc(as("bob"), path("alice")), clear("alice")));
     await assertFails(setDoc(doc(db, "leaderboards/gauntletclear_nightmare/scores/alice"), clear("alice")));
-    await assertSucceeds(setDoc(doc(db, path("alice")), clear("alice", { score: 7_200, wave: 1 })));
+    await assertSucceeds(setDoc(doc(db, path("alice")), clear("alice", { score: 3_600, wave: 1 })));
   });
 
   it("takes a new clear only when it is faster and at least 10 seconds after the last", async () => {
@@ -271,7 +271,7 @@ describe("leaderboards/gauntletclear_<difficulty>: fastest Gauntlet clears", () 
     await seed("replays/lb_gauntletclear_hard_alice", { ownerUid: "alice" });
     const db = as("alice");
     const link = { replayId: "lb_gauntletclear_hard_alice" };
-    await assertFails(setDoc(doc(db, path("alice")), { ...link, score: 7_200 }, { merge: true }));
+    await assertFails(setDoc(doc(db, path("alice")), { ...link, score: 3_600 }, { merge: true }));
     await assertSucceeds(setDoc(doc(db, path("alice")), link, { merge: true }));
   });
 });

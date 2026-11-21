@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import { CONFIG } from "../../src/config/game-config";
 import binding from "../../src/gameplay/training/tutorial-gold-binding.json";
 import { loadTutorialGoldCorpus, type TutorialGoldCorpus } from "../../src/gameplay/training/tutorial-gold-reference";
-import { TutorialGhostCoach, type TutorialCoachCheckpoint } from "../../src/gameplay/training/tutorial-ghost-coach";
+import type { TutorialCoachCheckpoint } from "../../src/gameplay/training/tutorial-coach-checkpoint";
+import { TutorialGhostCoach } from "../../src/gameplay/training/tutorial-ghost-coach";
 import { loadShippingTutorialGold } from "../../src/gameplay/training/tutorial-gold-shipping";
 import committedGold from "../support/tutorial-gold-data-from-disk";
 
