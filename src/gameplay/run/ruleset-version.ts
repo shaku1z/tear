@@ -17,11 +17,18 @@
  * v15: a flyer launched upward mid-dive breaks its dive and hovers again (it used to stay in the dive for good).
  * v16: the Warden and the Colossus change phase in the fight, with a move instead of a scene
  * (plans/active/CINEMATICS_OVERHAUL.md, PR 2). v17: a boss's live move and its zones end on the tick its
- * phase changes and when its death starts (`endMove` in enemy-base.ts).
+ * phase changes and when its death starts (`endMove` in enemy-base.ts). v18: Aldric's crownfall and revive
+ * happen in the fight: the crown flies onto the platform below and cracks it, and the revive starts with the
+ * vault (plans/active/CINEMATICS_OVERHAUL.md, PR 3). v19: a run starts the same way live and in its replay,
+ * from one record of its start choices, and keeps the cinematics setting it started with
+ * (plans/active/REPLAY_OVERHAUL_PLAN.md, PR 5b-1).
  */
-export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v18";
+export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v19";
 
 /** The identity while a replay started its run apart from the live game's start; historical replays only. */
+export const SIX_BIOME_PALE_PREVIEW_V18_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v18";
+
+/** The identity while Aldric stopped the fight for his crownfall and revive; historical replays only. */
 export const SIX_BIOME_PALE_PREVIEW_V17_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v17";
 
 /** The identity while a boss's move and zones carried over its phase change and into its death; historical replays only. */
@@ -127,6 +134,10 @@ export const RULESET_STEPS: readonly RulesetStep[] = Object.freeze(
     {
       version: SIX_BIOME_PALE_PREVIEW_V17_RULESET_VERSION,
       change: "a boss's moves and zones began ending at its phase changes and death",
+    },
+    {
+      version: SIX_BIOME_PALE_PREVIEW_V18_RULESET_VERSION,
+      change: "Aldric began his crownfall and revive in the fight",
     },
     {
       version: CURRENT_RULESET_VERSION,

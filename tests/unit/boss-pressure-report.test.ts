@@ -156,10 +156,12 @@ const BOSS_PRESSURE_RECORD: Readonly<Record<BossId, Measured>> = {
     [87, 9, 184, 0],
     [126, 8, 172, 0],
   ],
+  // Phase III: the crownfall and the revive are moves, so the revive opens with the vault on its tick; it was
+  // [464, 30, 540, 0] while the revive's first vault waited for a ritual this harness never plays.
   aldric: [
     [200, 8, 144, 0],
     [511, 30, 540, 0],
-    [464, 30, 540, 0],
+    [463, 26, 468, 0],
   ],
   "white-hart": [
     [226, 6, 134, 0],

@@ -361,23 +361,28 @@ describe("production tutorial reconstructed-byte continuation", () => {
    * The entry/cinematic cases step the whole production world through the boss's entry, then two
    * worlds in lockstep for 900 ticks, and for Source its phase-3 fight to the kill. Stepping is the
    * cost: comparing state hashes instead of whole states saved nothing. Measured alone on one machine
-   * (2026-11-20): Aldric 1.1 to 2.1 s, Source 2.3 to 3.3 s; Source took 5.4 s while other sessions'
+   * (2026-11-20): Aldric 1.1 to 2.1 s, Source 2.3 to 3.3 s (Aldric's case now saves mid-crownfall); Source took 5.4 s while other sessions'
    * tests ran beside it, past the 5 s default. 20 s holds a three- to four-fold slowdown and still
    * fails a hang well before the run's own limits.
    */
   const ENTRY_CONTINUATION_BUDGET_MS = 20_000;
-  it.each(["source", "aldric"] as const)(
+  it.each(["source", "aldric", "rootbound"] as const)(
     "continues %s authored entry/cinematic against decoded owners without replaying launch",
     (bossId) => {
       const source = bossAttempt(bossId, bossId === "source" ? 2 : 3);
       for (let tick = 1; tick <= 10000; tick++) {
         bossStep(source, tick);
         const cinema = source.replay.world.context.cinema;
+        // Aldric's crownfall is a move in the fight: save while the thrown crown is in the air.
+        const crown = Reflect.get(source.replay.world.state.enemies().find((actor) => actor.isBoss) ?? {}, "crown") as
+          { state?: string } | null | undefined;
         if (
-          cinema.active &&
-          cinema.beatId === "reveal" &&
-          cinema.progress > 0.15 &&
-          (bossId === "source" || cinema.id === "aldric-crownfall")
+          bossId === "aldric"
+            ? crown?.state === "airborne"
+            : cinema.active &&
+              cinema.beatId === "reveal" &&
+              cinema.progress > 0.15 &&
+              (bossId === "source" || cinema.id === "rootbound-nothing-here-dies")
         )
           break;
         if (tick === 10000) throw new Error(`Actual ${bossId} entry did not reach its reveal`);
@@ -405,7 +410,7 @@ describe("production tutorial reconstructed-byte continuation", () => {
         });
       }).toThrow(/binding mismatch/);
       expect(restored.replay.tutorial.captureSession()).toEqual(before);
-      if (bossId === "aldric") {
+      if (bossId === "rootbound") {
         restored.replay.world.context.cinema.start({
           id: "unrelated-future-scene",
           beats: [{ id: "wait", duration: 1, completion: "timed" }],
@@ -463,15 +468,15 @@ describe("production tutorial reconstructed-byte continuation", () => {
     ENTRY_CONTINUATION_BUDGET_MS,
   );
   it("refuses a portable boss ritual whose cue differs from its authored transition", () => {
-    const source = bossAttempt("aldric", 3);
-    for (let tick = 1; tick <= 3000 && source.replay.world.context.cinema.id !== "aldric-crownfall"; tick++)
+    const source = bossAttempt("rootbound", 3);
+    for (let tick = 1; tick <= 3000 && source.replay.world.context.cinema.id !== "rootbound-nothing-here-dies"; tick++)
       bossStep(source, tick);
-    expect(source.replay.world.context.cinema.id).toBe("aldric-crownfall");
+    expect(source.replay.world.context.cinema.id).toBe("rootbound-nothing-here-dies");
     const altered = JSON.parse(JSON.stringify(capture(source).snapshot)) as TearSnapshotV1;
     const runtime = (altered.state["tear.world.v1"] as Record<string, unknown>).runtime as {
-      bossCinematicBinding: { context: { cue: { crownFall?: boolean } } };
+      bossCinematicBinding: { context: { cue: { line?: string } } };
     };
-    delete runtime.bossCinematicBinding.context.cue.crownFall;
+    runtime.bossCinematicBinding.context.cue.line = "AN UNAUTHORED LINE.";
     expect(() => composition().create(altered)).toThrow(/authored boss transition/);
   });
   it("captures actual boss defeat/removal as a finished portable attempt and restarts without course effects", () => {
