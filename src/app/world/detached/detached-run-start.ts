@@ -152,6 +152,7 @@ export function startDetachedRun(start: DetachedRunStart): void {
     ...world,
     replaceActiveRun: nothing,
     resolveStart: () => choices,
+    openReplayRecord: nothing,
     exposeDebugState: nothing,
     updateProgressionTracking: nothing,
     startRecording: nothing,

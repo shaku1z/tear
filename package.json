@@ -68,6 +68,7 @@
     "test:browser:ghost-v3-storage-fault": "node tests/browser-ghost-v3-storage-fault.js",
     "test:browser:ghost-vault-library": "node tests/browser-ghost-vault-library.js",
     "test:browser:replay-engine-cold": "node tests/browser-replay-engine-cold.js",
+    "test:browser:replay-live-verify": "node tests/browser-replay-live-verify.js",
     "test:browser:ghost-vault-conditional-commit": "node tests/browser-ghost-vault-conditional-commit.js",
     "test:browser:ghost-vault-interrupted-recovery": "node tests/browser-ghost-vault-interrupted-recovery.js",
     "test:browser:ghost-vault-physical-quota": "node tests/browser-ghost-vault-physical-quota.js",

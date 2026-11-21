@@ -69,6 +69,26 @@ export function replayStartChoices(run: Pick<ReplayRun, "seed" | "start">): RunS
   return Object.freeze({ ...start, boss: boss ?? "shuffle", runSeed: run.seed });
 }
 
+/** The record seed and start of a run started with these choices; null for a run that is never recorded. */
+export function replayStartOf(choices: RunStartChoices): Pick<ReplayRun, "seed" | "start"> | null {
+  const { runSeed, boss, mode, difficulty, weapon, ...rest } = choices;
+  if (
+    !RECORDED_MODE_IDS.some((id) => id === mode) ||
+    !DIFFICULTY_IDS.some((id) => id === difficulty) ||
+    !isWeaponId(weapon) ||
+    (boss !== "shuffle" && bossRefusal(boss) !== null)
+  )
+    return null;
+  const start: ReplayStart = {
+    ...rest,
+    mode,
+    difficulty,
+    weapon,
+    ...(boss === "shuffle" ? {} : { boss }),
+  };
+  return Object.freeze({ seed: runSeed, start: Object.freeze(start) });
+}
+
 export interface ReplayCheckpoint {
   readonly tick: number;
   readonly hash: string;
@@ -226,14 +246,24 @@ function readChapters(value: unknown, path: string): readonly number[] {
   return Object.freeze(chapters);
 }
 
+/**
+ * Why a start's boss cannot be in a record, or null when it can: the one rule the writer
+ * (`replayStartOf`) and the reader (`readStart`) share. Engineering-only bosses stay outside replay
+ * identity (ENGINEERING_ONLY_BOSS_IDS).
+ */
+function bossRefusal(boss: string): string | null {
+  if (!isBossDefinitionId(boss)) return "is not a boss";
+  if (isEngineeringOnlyBoss(boss)) return "is an engineering-only boss";
+  return null;
+}
+
 function readStart(value: unknown): ReplayStart {
   const start = object(value, "run.start");
   const weapon = text(start.weapon, "run.start.weapon");
   if (!isWeaponId(weapon)) fail("run.start.weapon", "is not a weapon");
   const boss = start.boss === undefined ? undefined : text(start.boss, "run.start.boss");
-  if (boss !== undefined && !isBossDefinitionId(boss)) fail("run.start.boss", "is not a boss");
-  // Engineering-only bosses stay outside replay identity (ENGINEERING_ONLY_BOSS_IDS).
-  if (boss !== undefined && isEngineeringOnlyBoss(boss)) fail("run.start.boss", "is an engineering-only boss");
+  const refusal = boss === undefined ? null : bossRefusal(boss);
+  if (refusal !== null) fail("run.start.boss", refusal);
   if (typeof start.restoredTrail !== "boolean") fail("run.start.restoredTrail", "must be true or false");
   return Object.freeze({
     mode: oneOf(start.mode, RECORDED_MODE_IDS, "run.start.mode"),
