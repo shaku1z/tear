@@ -17,9 +17,13 @@
  * v15: a flyer launched upward mid-dive breaks its dive and hovers again (it used to stay in the dive for good).
  * v16: the Warden and the Colossus change phase in the fight, with a move instead of a scene
  * (plans/active/CINEMATICS_OVERHAUL.md, PR 2). v17: a boss's live move and its zones end on the tick its
- * phase changes and when its death starts (`endMove` in enemy-base.ts).
+ * phase changes and when its death starts (`endMove` in enemy-base.ts). v18: the new Rootbound, fought in
+ * Boss Test on the engineering channel, is a new entity kind (plans/active/VERDANT_PALE_REBUILD.md, 4.1).
  */
-export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v17";
+export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v18";
+
+/** The identity before the new Rootbound could be fought in Boss Test; historical replays only. */
+export const SIX_BIOME_PALE_PREVIEW_V17_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v17";
 
 /** The identity while a boss's move and zones carried over its phase change and into its death; historical replays only. */
 export const SIX_BIOME_PALE_PREVIEW_V16_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v16";
@@ -122,9 +126,10 @@ export const RULESET_STEPS: readonly RulesetStep[] = Object.freeze(
       change: "the Warden and the Colossus began changing phase in the fight",
     },
     {
-      version: CURRENT_RULESET_VERSION,
+      version: SIX_BIOME_PALE_PREVIEW_V17_RULESET_VERSION,
       change: "a boss's moves and zones began ending at its phase changes and death",
     },
+    { version: CURRENT_RULESET_VERSION, change: "the new Rootbound joined Boss Test" },
   ].map((step) => Object.freeze(step)),
 );
 
