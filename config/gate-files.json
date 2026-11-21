@@ -1,5 +1,5 @@
 {
-  "about": "The files that decide a verdict. `fromMain` is the gate's definition: every Validate job runs main's copy of these against the change (.github/actions/main-gate), so a change is judged by main's checks plus the checks only it adds, matched by group and id (judgedChecks in scripts/run-checks.mjs). `files` are every gate file, as exact paths or prefixes ending in / or -: the scope job warns when a change touches one, and pnpm merge:ready refuses it until it carries the gate-reviewed label, which the merge desk adds only when the lead names the pull request and head. Every script a config/checks.json command runs directly, and every script those import from scripts/, is a gate file too: loadGateList adds the ones this list does not name (checkedScripts in scripts/gate-files.mjs), so a new checker or helper is covered without an entry. Tests are not gate files: a change may add and change its own tests.",
+  "about": "The files that decide a verdict. `fromMain` is the gate's definition: every Validate job runs main's copy of these against the change (.github/actions/main-gate), so a change is judged by main's checks plus the checks only it adds, matched by group and id (judgedChecks in scripts/run-checks.mjs). `files` are every gate file, as exact paths or prefixes ending in / or -: the scope job warns when a change touches one, and pnpm merge:ready refuses it until it carries the gate-reviewed label, which the merge desk adds only when the lead names the pull request and head. Every script a config/checks.json command runs directly, every config file a check's tool reads by default or by a config flag (vitest, tsc with the tsconfigs it extends and references, playwright), and every script those import from scripts/, is a gate file too: loadGateList adds the ones this list does not name (checkedScripts in scripts/gate-files.mjs), so a new checker or helper is covered without an entry. Tests are not gate files: a change may add and change its own tests.",
   "fromMain": [
     "config/checks.json",
     "scripts/run-checks.mjs",
@@ -26,6 +26,7 @@
     { "path": "config/bundle-budgets.json", "why": "bundle size budgets" },
     { "path": "config/load-budgets.json", "why": "load time budgets" },
     { "path": "config/browser-performance-budgets.json", "why": "browser performance budgets" },
+    { "path": "vite.config.ts", "why": "what every build contains: read by `vite build`, which scripts/build-target.mjs starts (no check command names it, so the config rule cannot reach it)" },
     { "path": "eslint.config.mjs", "why": "lint rules" },
     { "path": "scripts/eslint-rules/", "why": "the repository's own lint rules" },
     { "path": ".prettierrc.json", "why": "formatting rules" },
