@@ -223,6 +223,10 @@ describe("position changes in different areas touch disjoint files", () => {
     position.areas.pop();
     writeFile(directory, POSITION_INDEX_SOURCE_PATH, JSON.stringify(position.index));
     fs.rmSync(path.join(directory, areaSourcePath(removed)));
+    // Before the render, the removed area's page is still there with no source: the check names it.
+    expect(checkPosition(directory).errors).toContain(
+      `${areaDocumentPath(removed)} has no source area; run pnpm position:render`,
+    );
     expect(writePosition(directory, readPosition(directory).position)).toEqual(
       [POSITION_INDEX_DOCUMENT_PATH, areaDocumentPath(removed)].sort(),
     );
