@@ -16,6 +16,7 @@ export async function encodeWikiData(server, reference, { modeModule, variantMod
   const bestiary = await load("/src/presentation/bestiary-catalog.ts");
   const director = await load("/src/gameplay/run/content-director.ts");
   const { createProductionReplayWorld } = await load("/src/app/world/detached/world-factory.ts");
+  const { scenarioRunSeed } = await load("/src/gameplay/run/run-start-choices.ts");
   const { buildCodexGuide } = await load("/src/presentation/codex-snapshots.ts");
   const { SHOP_CATEGORIES } = await load("/src/presentation/shop-snapshot.ts");
   const { createMetaProgression } = await load("/src/gameplay/progression/meta.ts");
@@ -26,7 +27,7 @@ export async function encodeWikiData(server, reference, { modeModule, variantMod
   // Base stats: build every published enemy and boss through the game's own
   // by-id entity factory (the one the live world uses), over every enemy type
   // the game defines, and read the constructed instance.
-  const world = createProductionReplayWorld({ seed: "wiki" });
+  const world = createProductionReplayWorld({ runSeed: scenarioRunSeed("wiki") });
   const { createLiveWorldEntityFactory } = await load("/src/app/world/world-entity-factory.ts");
   const { planBossPlacement } = await load("/src/gameplay/run/boss-placement.ts");
   const entities = createLiveWorldEntityFactory({ ...world.factories.enemyTypes, ...world.factories.mirrorTypes });

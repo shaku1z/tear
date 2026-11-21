@@ -38,6 +38,7 @@ import { DEFAULT_COSMETIC_LOOKS } from "../../../presentation/cosmetic-defaults"
 import type { CosmeticLooks } from "../../../presentation/cosmetic-styles";
 import { StageRuntimeState } from "../stage-runtime-state";
 import { createRunStageController, loadRunStage } from "../run-stage";
+import { isRunSeed } from "../../../gameplay/run/run-start-choices";
 
 type FactoryOptions = TearWorldSimulationFactoryOptions;
 
@@ -191,6 +192,8 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
   const { configuration, clock, random } = createTearWorldBootstrap(CONFIG);
   const config = configuration.value;
   const { runSeed } = options;
+  // Untyped callers (scripts) reach here too: a text seed or none is refused here, not deep in the random source.
+  if (!isRunSeed(runSeed)) throw new RangeError("a detached world needs a runSeed: a non-zero unsigned 32-bit integer");
   const cosmeticEmissionRandom = createCosmeticEmissionRandom();
   const effects = createParticleSystem({
     looks: options.looks ?? DEFAULT_COSMETIC_LOOKS,
