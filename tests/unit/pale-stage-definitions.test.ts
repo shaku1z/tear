@@ -3,15 +3,8 @@ import { describe, expect, it } from "vitest";
 import { activateStageEnvironment } from "../../src/gameplay/environment/stage-environment-activation";
 import { stageEnvironmentDefinition } from "../../src/gameplay/environment/stage-environment-definitions";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
-import { stagePresentationDefinition } from "../../src/presentation/stage-presentation-definitions";
 
 describe("Pale typed stage environment", () => {
-  it("routes the stable Pale identity to its bounded presentation policies", () => {
-    expect(stagePresentationDefinition("pale-traverse")).toEqual({
-      platformMaterialId: "pale-ice",
-    });
-  });
-
   it("installs bounded directional Aurora Tracks and clears them on exit", () => {
     expect(stageEnvironmentDefinition("pale-traverse")).toMatchObject({
       id: "pale-traverse-environment",

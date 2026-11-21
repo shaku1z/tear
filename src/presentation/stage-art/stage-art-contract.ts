@@ -192,6 +192,41 @@ export interface ScatterStroke extends Seeded {
   readonly center: string;
 }
 
+/**
+ * A ridgeline across the whole layer, filled down to `base`: mountains with a wide `span`, hills with a low
+ * `sharp`, a treeline with `teeth`. Faces turned to the key light are lighter, and the foot settles into shade.
+ */
+export interface RidgeStroke extends Seeded, Hazed {
+  readonly kind: "ridge";
+  /** The row the crest wanders around, and the row the form is filled down to. */
+  readonly crest: number;
+  readonly base: number;
+  /** How far the crest rises above and dips below its row, world px. */
+  readonly relief: number;
+  /** Width of one rise and fall, world px. */
+  readonly span: number;
+  /** 0 rolling .. 1 pointed. */
+  readonly sharp: number;
+  readonly ramp: string;
+  /** Named summits: centre column, half-width and rise above the crest, world px. */
+  readonly peaks?: readonly (readonly [x: number, width: number, rise: number])[];
+  /** Pointed tips standing along the crest (fir tops), world px. */
+  readonly teeth?: { readonly spacing: number; readonly height: number };
+}
+
+/**
+ * A curtain of light hanging in the sky (aurora): rays standing on a path, brightest just above their feet.
+ * Each path point's width is the curtain's height there. The ramp runs from the foot of a ray to its top.
+ */
+export interface RibbonStroke extends Seeded {
+  readonly kind: "ribbon";
+  readonly path: readonly SplinePoint[];
+  readonly ramp: string;
+  readonly alpha: number;
+  /** Rays per 100 world px of path. */
+  readonly rays: number;
+}
+
 export type StageArtStroke =
   | SkyStroke
   | GlowStroke
@@ -204,7 +239,9 @@ export type StageArtStroke =
   | FallsStroke
   | ShaftsStroke
   | VignetteStroke
-  | ScatterStroke;
+  | ScatterStroke
+  | RidgeStroke
+  | RibbonStroke;
 
 export type StrokeKind = StageArtStroke["kind"];
 
@@ -296,17 +333,6 @@ export interface LivePart {
   readonly breathe?: { readonly low: number; readonly period: number };
 }
 
-/** Surface strip painted for platforms: lit top edge at row 0. */
-export interface StageArtSurface {
-  readonly width: number;
-  readonly height: number;
-  readonly ramp: string;
-  readonly mossRamp: string;
-  readonly scale: number;
-  readonly fill: string;
-  readonly shadow: { readonly color: string; readonly opacity: number; readonly length: number };
-}
-
 export interface StageArtRecipe {
   readonly stageId: StageId;
   readonly seed: number;
@@ -323,16 +349,14 @@ export interface StageArtRecipe {
   readonly ramps: Readonly<Record<string, readonly string[]>>;
   /** Colour shown where a camera outruns the art. */
   readonly edge: string;
-  readonly surface: StageArtSurface;
   readonly layers: readonly StageArtLayer[];
   /** What moves; omitted, the stage is still. */
   readonly live?: readonly StageArtLive[];
 }
 
-/** What the stage itself defines and the painted scene must keep: HUD paper and platform material. */
+/** What the stage itself defines and the painted scene must keep: the HUD paper. */
 export interface StageArtIdentity {
   readonly paper: string;
-  readonly platformMaterial: string;
 }
 
 /** Hard bounds that keep any recipe's bake short and its memory small. */

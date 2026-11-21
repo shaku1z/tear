@@ -1,5 +1,5 @@
-/** Built forms: ruined arcades and the platform surface. */
-import type { ArcadeStroke, StageArtSurface } from "./stage-art-contract";
+/** Built forms: ruined arcades. */
+import type { ArcadeStroke } from "./stage-art-contract";
 import {
   BRUSH_OPERATIONS_PER_YIELD,
   clamp01,
@@ -418,73 +418,4 @@ export function* paintArcade(kit: PaintKit, stroke: ArcadeStroke): Generator<voi
   for (let level = 0; level < stroke.levels; level += 1) yield* storey(kit, stroke, level, random);
   paintBaseMist(kit, stroke);
   yield* paintWading(kit, stroke, random);
-}
-
-/** Share of the strip's height under solid moss, and how far the hanging tufts reach. */
-const MOSS_BAND = 0.34;
-const MOSS_REACH = 0.7;
-const MOSS_TUFTS_PER_PX = 2.6;
-
-/**
- * Platform surface strip, lit top edge at row 0, seamless when repeated across:
- * a bright moss band over a dark stone body, so a platform reads as a light
- * edge on a dark bar against any painted scene. Painted in strip px.
- */
-export function* paintSurface(kit: PaintKit, surface: StageArtSurface): Generator<void> {
-  const { context } = kit;
-  const random = seededRandom(surface.width * 31 + surface.height);
-  const stone = ramp(kit, surface.ramp),
-    moss = ramp(kit, surface.mossRamp);
-  const { width, height } = surface;
-  const body = context.createLinearGradient(0, 0, 0, height);
-  body.addColorStop(0, rgba(sampleRamp(stone, 0.34)));
-  body.addColorStop(1, rgba(sampleRamp(stone, 0.1)));
-  context.fillStyle = body;
-  context.fillRect(0, 0, width, height);
-  // Draws at x and its wrapped twin so the strip tiles without a seam.
-  const wrapped = (x: number, draw: (at: number) => void) => {
-    draw(x);
-    if (x < width * 0.1) draw(x + width);
-    if (x > width * 0.9) draw(x - width);
-  };
-  const block = height * 0.32;
-  context.strokeStyle = rgba(sampleRamp(stone, 0), 0.6);
-  context.lineWidth = 1;
-  for (let row = 0; row * block < height; row += 1) {
-    const y = height * 0.18 + row * block;
-    context.beginPath();
-    context.moveTo(0, y);
-    context.lineTo(width, y);
-    context.stroke();
-    for (let x = (row % 2) * block; x < width; x += block * 1.6) {
-      context.beginPath();
-      context.moveTo(x, y);
-      context.lineTo(x, y + block);
-      context.stroke();
-    }
-  }
-  yield;
-  for (let index = 0; index < width * height * 0.02; index += 1) {
-    const x = random() * width,
-      y = random() * height;
-    wrapped(x, (at) => {
-      dab(context, at, y, 1 + random() * 3, 0, sampleRamp(stone, random() * 0.4), 0.25, 1);
-    });
-  }
-  const band = context.createLinearGradient(0, 0, 0, height * MOSS_BAND);
-  band.addColorStop(0, rgba(sampleRamp(moss, 0.95)));
-  band.addColorStop(1, rgba(sampleRamp(moss, 0.5)));
-  context.fillStyle = band;
-  context.fillRect(0, 0, width, height * MOSS_BAND);
-  for (let index = 0; index < width * MOSS_TUFTS_PER_PX; index += 1) {
-    if (index % BRUSH_OPERATIONS_PER_YIELD === 0) yield;
-    const x = random() * width,
-      y = Math.pow(random(), 2) * height * MOSS_REACH;
-    const value = clamp01(1 - y / (height * MOSS_REACH) + (random() - 0.5) * 0.4);
-    wrapped(x, (at) => {
-      dab(context, at, y, 1.5 + random() * 2.5, random() * 3, sampleRamp(moss, value), 0.95);
-    });
-  }
-  context.fillStyle = rgba(sampleRamp(moss, 1), 0.8);
-  context.fillRect(0, 0, width, 2);
 }
