@@ -509,6 +509,14 @@ decides when; nobody fixes them now:
   aim (`bossTells`). Boss zones (rows, seams) warn the screen but not the player, and their hits count as
   unmarked.
 
+Done from that step's list (its fix 1, 2026-11-21): `--phase` opens an engineering-only boss, the way it opens a
+published one. The game's boss practice takes the bosses it opens (`PracticeBossAdmission`, the published roster
+unless told otherwise); only a headless world is given more, every boss in `ENGINEERING_ONLY_BOSS_IDS`, so the
+next rebuild is opened with no edit. It is practised on the stage of the boss it rebuilds. The Practice list, the
+Codex and a saved selection still refuse one (`tests/unit/practice-engineering-boss.test.ts`).
+`pnpm playtest bosses --boss rootbound-rebuild --phase 2` runs. A practice of one cannot be restored from a
+checkpoint: a restored state is checked against the published roster.
+
 Done when:
 - [ ] Every boss phase, every wave of each biome and every enemy kind is a row that starts directly, in under 1 s each.
 - [x] `pnpm playtest runs` reports where runs end and per-wave time and health cost for 3 modes, 3 difficulties and 5 weapons.

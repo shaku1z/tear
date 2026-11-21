@@ -2,7 +2,8 @@ import { buildWatchChoiceScore } from "../agents/watch-build-choice";
 import { bossDefinition } from "../gameplay/run/boss-definitions";
 import type { BossId } from "../gameplay/run/content-director";
 import type { RunDifficulty } from "../gameplay/run/session";
-import { isPracticeBossId, isPracticeBossPhase } from "../gameplay/training/boss-phase-practice-runtime";
+import { isPracticeBossPhase } from "../gameplay/training/boss-phase-practice-runtime";
+import { opensHeadlessPractice } from "./headless/production-boss-practice-start";
 import type { WeaponId } from "../gameplay/weapon-selection";
 import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "../gameplay/snapshot/snapshot-contract";
 import type { TearScenarioV1 } from "../tearbench/contracts";
@@ -110,7 +111,7 @@ export function bossFightScenario(request: BossFightRequest): TearScenarioV1 {
     const phases = bossPhaseCount(request.boss);
     if (!Number.isInteger(request.phase) || request.phase < 1 || request.phase > phases)
       throw new RangeError(`${request.boss} has phases 1 to ${String(phases)}, not ${String(request.phase)}`);
-    if (!isPracticeBossId(request.boss) || !isPracticeBossPhase(request.phase))
+    if (!opensHeadlessPractice(request.boss) || !isPracticeBossPhase(request.phase))
       throw new RangeError(`${request.boss} has no phase practice in the game`);
     if (request.weapon !== "sword" || request.difficulty !== "normal")
       throw new RangeError("a chosen phase uses the game's boss practice, which runs only with Sword on Normal");
@@ -194,7 +195,8 @@ function bringToChosenPhase(
   environment: ReturnType<typeof createProductionHeadlessEnvironment>,
   request: BossFightRequest,
 ): Readonly<{ setupTicks: number; reached: boolean }> {
-  if (!isPracticeBossId(request.boss) || !isPracticeBossPhase(request.phase)) return { setupTicks: 0, reached: true };
+  if (!opensHeadlessPractice(request.boss) || !isPracticeBossPhase(request.phase))
+    return { setupTicks: 0, reached: true };
   const practice = environment.practiceBoss(request.boss, request.phase);
   let setupTicks = 0;
   while (practice() !== "active" && setupTicks < PRACTICE_SETUP_LIMIT_TICKS) {

@@ -104,6 +104,8 @@ export interface ProductionGhostReplayCompositionOptions {
   readonly weaponId?: string;
   readonly difficulty?: RunDifficulty;
   readonly firstBoss?: string;
+  /** The bosses the world's phase practice opens; the published roster when absent (headless engineering only). */
+  readonly practiceBosses?: ProductionReplayWorldOptions["practiceBosses"];
   /** The saved progress and settings a fresh run starts with; a new player's when absent. */
   readonly saved?: SavedRunStart;
   readonly opening?: ProductionRunOpening;
@@ -739,6 +741,7 @@ export function createProductionGhostReplayComposition(options: ProductionGhostR
           "difficulty",
           "firstBoss",
           "looks",
+          "practiceBosses",
         ]),
         runSeed: snapshot === undefined ? options.runSeed : scenarioRunSeed(snapshot.seed),
         tutorialHandoff: () => {

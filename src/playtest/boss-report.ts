@@ -1,5 +1,5 @@
 import { AUTHORED_BOSS_ROSTER } from "../gameplay/run/content-director";
-import { isPracticeBossId } from "../gameplay/training/boss-phase-practice-runtime";
+import { opensHeadlessPractice } from "./headless/production-boss-practice-start";
 import { BOSS_PLAYER_IDS, PRESSURE_PHASE_TICKS, TELL_AVOIDANCE, type BossPlayerId } from "./boss-player";
 import {
   bossFightScenario,
@@ -28,8 +28,8 @@ export interface BossReportRequest {
 export const REPORT_BOSSES: readonly BossFightRequest["boss"][] = Object.freeze(
   AUTHORED_BOSS_ROSTER.map(({ id }) => id),
 );
-/** With chosen start phases: every boss the game's boss practice accepts. */
-export const PRACTICE_REPORT_BOSSES = Object.freeze(REPORT_BOSSES.filter(isPracticeBossId));
+/** With chosen start phases: every boss a headless world's boss practice opens, rebuilds included. */
+export const PRACTICE_REPORT_BOSSES = Object.freeze(REPORT_BOSSES.filter(opensHeadlessPractice));
 
 /** The players reported when none is named: every one. */
 export const REPORT_PLAYERS: readonly BossPlayerId[] = BOSS_PLAYER_IDS;
