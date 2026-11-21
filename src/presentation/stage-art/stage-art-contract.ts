@@ -333,17 +333,6 @@ export interface LivePart {
   readonly breathe?: { readonly low: number; readonly period: number };
 }
 
-/** Surface strip painted for platforms: lit top edge at row 0. */
-export interface StageArtSurface {
-  readonly width: number;
-  readonly height: number;
-  readonly ramp: string;
-  readonly mossRamp: string;
-  readonly scale: number;
-  readonly fill: string;
-  readonly shadow: { readonly color: string; readonly opacity: number; readonly length: number };
-}
-
 export interface StageArtRecipe {
   readonly stageId: StageId;
   readonly seed: number;
@@ -360,16 +349,14 @@ export interface StageArtRecipe {
   readonly ramps: Readonly<Record<string, readonly string[]>>;
   /** Colour shown where a camera outruns the art. */
   readonly edge: string;
-  readonly surface: StageArtSurface;
   readonly layers: readonly StageArtLayer[];
   /** What moves; omitted, the stage is still. */
   readonly live?: readonly StageArtLive[];
 }
 
-/** What the stage itself defines and the painted scene must keep: HUD paper and platform material. */
+/** What the stage itself defines and the painted scene must keep: the HUD paper. */
 export interface StageArtIdentity {
   readonly paper: string;
-  readonly platformMaterial: string;
 }
 
 /** Hard bounds that keep any recipe's bake short and its memory small. */

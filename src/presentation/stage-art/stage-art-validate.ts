@@ -182,8 +182,7 @@ function validateLive(recipe: StageArtRecipe, layerIds: ReadonlySet<string>): nu
     if (entry.kind === "water") checkWater(entry, path);
     else if (entry.kind === "motes") checkMotes(entry, path);
     else {
-      if (layerIds.has(entry.id) || partIds.has(entry.id) || entry.id === "surface")
-        fail(path, `duplicate or reserved id "${entry.id}"`);
+      if (layerIds.has(entry.id) || partIds.has(entry.id)) fail(path, `duplicate or reserved id "${entry.id}"`);
       partIds.add(entry.id);
       pixels += checkPart(recipe, entry, path);
       for (const stroke of entry.strokes) operations += strokeOperations(stroke, entry.area[2] * entry.area[3]);
@@ -206,12 +205,8 @@ export function validateStageArt(recipe: StageArtRecipe): void {
   colour(recipe.light.glow, "light.glow");
   colour(recipe.atmosphere.haze, "atmosphere.haze");
   colour(recipe.edge, "edge");
-  colour(recipe.surface.fill, "surface.fill");
   within(recipe.atmosphere.warmth, 0, 1, "atmosphere.warmth");
   within(recipe.light.reach, 1, 1e4, "light.reach");
-  for (const name of [recipe.surface.ramp, recipe.surface.mossRamp]) {
-    if (!Object.hasOwn(recipe.ramps, name)) fail("surface", `unknown ramp "${name}"`);
-  }
   if (recipe.layers.length === 0 || recipe.layers.length > STAGE_ART_LIMITS.layers) {
     fail("layers", `expected 1..${String(STAGE_ART_LIMITS.layers)} layers`);
   }
@@ -219,7 +214,7 @@ export function validateStageArt(recipe: StageArtRecipe): void {
   let operations = 0;
   recipe.layers.forEach((layer, layerIndex) => {
     const path = `layers[${String(layerIndex)}]`;
-    if (ids.has(layer.id) || layer.id === "surface") fail(path, `duplicate or reserved id "${layer.id}"`);
+    if (ids.has(layer.id)) fail(path, `duplicate id "${layer.id}"`);
     ids.add(layer.id);
     within(layer.scale, STAGE_ART_LIMITS.minScale, STAGE_ART_LIMITS.maxScale, `${path}.scale`);
     within(layer.depth, 0, 2, `${path}.depth`);

@@ -22,29 +22,6 @@ export interface SceneLayer {
   readonly covers: boolean;
 }
 
-/**
- * How the game draws this stage's platforms and floor. Platforms are never part
- * of the painted layers: the stage's platform material draws them from the real
- * collision geometry, above the back plane and below actors. The scene only
- * binds that material and gives it a texture and contact shadows.
- */
-export interface ScenePlatformBinding {
-  /** Platform material id, from the stage's presentation definition. */
-  readonly material: string;
-  /**
-   * Surface strip (lit top edge at row 0), anchored to each surface's top and
-   * repeated horizontally in world space, so it never stretches with a
-   * platform's width or swims with the camera.
-   */
-  readonly texture: string;
-  /** World px per texture px. */
-  readonly scale: number;
-  /** Fill below the strip (the floor body down to the view edge). */
-  readonly fill: string;
-  /** Soft contact shadow cast onto the back plane below each platform. */
-  readonly shadow: { readonly color: string; readonly opacity: number; readonly length: number };
-}
-
 export interface SceneCameraContract {
   /** World px a depth-0 layer slides across as the player crosses the arena. */
   readonly playerShift: number;
@@ -70,7 +47,6 @@ export interface SceneLayout {
   readonly layers: readonly SceneLayer[];
   /** What moves, in drawing order within each layer. */
   readonly live: readonly SceneLive[];
-  readonly platforms: ScenePlatformBinding;
 }
 
 /** Camera state the renderer receives from the world frame. */

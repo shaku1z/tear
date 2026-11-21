@@ -13,4 +13,5 @@ const painted = (recipe: () => Promise<StageArtRecipe>) => async () => {
  */
 export const PAINTED_STAGES: PaintedStageLoaders = Object.freeze({
   "verdant-sanctum": painted(async () => (await import("../stage-art/recipes/verdant-sanctum")).VERDANT_SANCTUM_ART),
+  "pale-traverse": painted(async () => (await import("../stage-art/recipes/pale-traverse")).PALE_TRAVERSE_ART),
 });

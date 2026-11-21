@@ -16,7 +16,7 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 | --- | --- | --- | --- |
 | [Release readiness](#release-readiness) | Merged to main | Production deploy, after the owner has played the build. | — |
 | [Production deploy](#production-deploy) | Deployed 2026-11-13 | The next production deploy follows the Verdant, Tutorial and music work. | — |
-| [Verdant Sanctum visuals](#verdant-visuals) | In progress | The owner judges the moving stage; then Pale Traverse from a recipe, with its own live list. | Judge the drawn look against the reference illustration: the owner's taste decides visual work. |
+| [Drawn stage backgrounds (Verdant, Pale)](#verdant-visuals) | In progress | The owner judges Pale and the plain platforms in the game; then the remaining stages, one recipe each. | Judge Pale Traverse and the plain platforms on Verdant and Pale in the game: the owner's taste decides visual work. |
 | [Verdant Sanctum gameplay](#verdant-gameplay) | In progress: rebuild from scratch, plan under the lead's review | The lead reviews the plan; then slice 1, the two rules over every boss and enemy. | — |
 | [Tutorial and Playground experience](#training-ux) | In progress | One source of names for the drilled weapon moves (this pull request, then its floaters), then the release tutorial flow and menu fixes. | — |
 | [Pale Traverse rework](#pale-traverse) | In progress | Waits for the Verdant rebuild: Pale is replanned on what Verdant proves (plans/active/VERDANT_PALE_REBUILD.md). | — |
@@ -50,13 +50,13 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 <a id="verdant-visuals"></a>
 
-### Verdant Sanctum visuals
+### Drawn stage backgrounds (Verdant, Pale)
 
-**In progress.** The game draws Verdant itself at load from a stage art recipe (src/presentation/stage-art): a key light, an atmosphere, colour ramps and layers of shared strokes (foliage, trunks, ruined arcades, water, light), painted in short slices into layers the scene renderer composes. The painted image package is gone. Any biome reaches the same look with a recipe; Pale Traverse is next. Boss warnings and strikes on Verdant are drawn as roots and thorns rising from the floor, from a table on the stage's presentation definition that any biome can supply. The stage also moves, from a `live` list in the same recipe: water rows that ripple and glint, drifting pollen, vines that sway and light shafts that fade in and out, all bounded by limits and by a measured ceiling in config/stage-readability.json, and all held still by reduced motion and low graphics.
+**In progress.** The game draws Verdant itself at load from a stage art recipe (src/presentation/stage-art): a key light, an atmosphere, colour ramps and layers of shared strokes (foliage, trunks, ruined arcades, water, light), painted in short slices into layers the scene renderer composes. The painted image package is gone. Any biome reaches the same look with a recipe. Pale Traverse is drawn the same way from the board the owner picked (a frozen lake under stepped ranges, aurora overhead), with two stroke kinds any stage can use: ridgelines and ribbons of light. Platforms on both stages are now drawn like every other stage's; their own rootstone and ice materials and the painted surface strip are gone. Boss warnings and strikes on Verdant are drawn as roots and thorns rising from the floor, from a table on the stage's presentation definition that any biome can supply. The stage also moves, from a `live` list in the same recipe: water rows that ripple and glint, drifting pollen, vines that sway and light shafts that fade in and out, all bounded by limits and by a measured ceiling in config/stage-readability.json, and all held still by reduced motion and low graphics.
 
-- Next: The owner judges the moving stage; then Pale Traverse from a recipe, with its own live list.
-- Owner action: Judge the drawn look against the reference illustration: the owner's taste decides visual work.
-- Evidence: [docs/BACKGROUND_WORKFLOW.md](BACKGROUND_WORKFLOW.md), [tests/unit/stage-art.test.ts](../tests/unit/stage-art.test.ts), [tests/unit/stage-live.test.ts](../tests/unit/stage-live.test.ts), [tests/unit/scene-library.test.ts](../tests/unit/scene-library.test.ts), [tests/unit/boss-tell-skin.test.ts](../tests/unit/boss-tell-skin.test.ts), [plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md)
+- Next: The owner judges Pale and the plain platforms in the game; then the remaining stages, one recipe each.
+- Owner action: Judge Pale Traverse and the plain platforms on Verdant and Pale in the game: the owner's taste decides visual work.
+- Evidence: [docs/BACKGROUND_WORKFLOW.md](BACKGROUND_WORKFLOW.md), [tests/unit/stage-art.test.ts](../tests/unit/stage-art.test.ts), [tests/unit/stage-land.test.ts](../tests/unit/stage-land.test.ts), [tests/unit/stage-live.test.ts](../tests/unit/stage-live.test.ts), [tests/unit/scene-library.test.ts](../tests/unit/scene-library.test.ts), [tests/unit/boss-tell-skin.test.ts](../tests/unit/boss-tell-skin.test.ts), [plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md)
 
 <a id="verdant-gameplay"></a>
 

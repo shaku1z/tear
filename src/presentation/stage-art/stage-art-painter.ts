@@ -21,7 +21,7 @@ import type { LivePart, StageArtIdentity, StageArtLayer, StageArtRecipe, StageAr
 import { compileMotes, compileWater } from "./stage-art-live";
 import { paintRibbon, paintRidge } from "./strokes-land";
 import { StageArtError, validateStageArt } from "./stage-art-validate";
-import { paintArcade, paintSurface } from "./strokes-built";
+import { paintArcade } from "./strokes-built";
 import { paintMass, paintScatter, paintStrands, paintTrunk } from "./strokes-growth";
 import { paintFalls, paintGlow, paintHaze, paintShafts, paintSky, paintVignette, paintWater } from "./strokes-light";
 
@@ -220,26 +220,7 @@ export async function paintStageArt(
       if (layer.plane === "back" && entry.breathe === undefined) backdrop.push({ rect: entry.area, canvas: part });
     }
   }
-  const surface = recipe.surface;
-  const strip = ports.createCanvas(Math.ceil(surface.width), Math.ceil(surface.height));
-  const stripBounds: Rect = [0, 0, surface.width, surface.height];
-  await run(
-    paintSurface(
-      {
-        context: context2d(strip),
-        light,
-        atmosphere,
-        ramps,
-        noise,
-        detail: ports.detail,
-        behind: () => undefined,
-        bounds: stripBounds,
-      },
-      surface,
-    ),
-  );
   const images = new Map<string, SceneBitmap>(painted.map((entry) => [entry.layer.id, entry.canvas]));
-  images.set("surface", strip);
   for (const [id, part] of parts) images.set(id, part);
   const live = compileLive(recipe, painted, light.core);
   const layers: SceneLayer[] = painted.map(({ layer, rect }) =>
@@ -260,13 +241,6 @@ export async function paintStageArt(
     theme: Object.freeze({ paper: identity.paper }),
     layers: Object.freeze(layers),
     live: Object.freeze(live),
-    platforms: Object.freeze({
-      material: identity.platformMaterial,
-      texture: "surface",
-      scale: surface.scale,
-      fill: surface.fill,
-      shadow: surface.shadow,
-    }),
   });
   return Object.freeze({ scene, images });
 }
