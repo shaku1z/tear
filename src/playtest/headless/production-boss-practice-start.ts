@@ -1,10 +1,24 @@
-import type {
-  BossPhasePracticeState,
-  PracticeBossId,
-  PracticeBossPhase,
+import { isEngineeringOnlyBoss, type BossDefinitionId } from "../../gameplay/run/boss-definitions";
+import {
+  isPracticeBossId,
+  type BossPhasePracticeState,
+  type PracticeBossId,
+  type PracticeBossPhase,
 } from "../../gameplay/training/boss-phase-practice-runtime";
 import type { PracticeBossState } from "../../gameplay/training/practice-boss-catalog";
 import type { ProductionReplayWorld } from "../../app/world/detached/world-factory";
+
+/** A boss a headless world's phase practice opens: a published one, or one still being rebuilt. */
+export type HeadlessPracticeBossId = PracticeBossId | BossDefinitionId;
+
+/**
+ * The bosses a headless world's phase practice opens: the published roster, as in the game, and every
+ * engineering-only boss (`ENGINEERING_ONLY_BOSS_IDS`: each rebuild fought on another boss's stage). A rebuild
+ * added to the boss definitions is opened here with no edit. No world a player reaches is given this.
+ */
+export function opensHeadlessPractice(bossId: unknown): bossId is HeadlessPracticeBossId {
+  return isPracticeBossId(bossId) || (typeof bossId === "string" && isEngineeringOnlyBoss(bossId));
+}
 
 /**
  * Starts Playground boss practice at a chosen phase in a fresh tutorial episode, the way the Playground's boss list
@@ -15,7 +29,7 @@ import type { ProductionReplayWorld } from "../../app/world/detached/world-facto
 export function beginProductionBossPractice(
   replay: Pick<ProductionReplayWorld, "tutorial" | "world">,
   tick: number,
-  bossId: PracticeBossId,
+  bossId: HeadlessPracticeBossId,
   phase: PracticeBossPhase,
 ): () => BossPhasePracticeState["lifecycle"] | null {
   const run = replay.world.state.run();
@@ -24,14 +38,16 @@ export function beginProductionBossPractice(
   const encounterId = `boss-practice:1:${bossId}:${String(phase)}:${String(run.runSeed)}`;
   // The selection a profile holds for a phase the player has met. The runtime fields are the runtime's own opening
   // values; the practice runtime replaces them (and the seed) when it begins the encounter.
+  // The selection's type names the published roster; this world's practice opens `opensHeadlessPractice`.
+  const selected = bossId as PracticeBossId;
   const known: PracticeBossState = {
-    bossId,
+    bossId: selected,
     phase,
     knowledge: "encountered-phase",
     defeated: false,
     runtime: {
       version: 1,
-      bossId,
+      bossId: selected,
       phase,
       seed: String(run.runSeed),
       generation: 1,
