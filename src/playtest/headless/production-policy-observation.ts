@@ -1,4 +1,3 @@
-import { CONFIG } from "../../config/game-config";
 import type { TearObservationV1 } from "../../tearbench/contracts";
 import { projectLiveTearObservation } from "../../tearbench/live-runtime-environment";
 import { canonicalObservationActions } from "../../tearbench/observation-identity";
@@ -23,13 +22,14 @@ export function projectProductionPolicyObservation(
   if (run === null || state.player() === undefined || state.blade() === undefined) {
     throw new Error("production policy observation requires an active source world");
   }
+  const { view } = replay.configuration.value;
   const source = {
     state,
     stage: () => ({ name: "", index: replay.stage.index }),
     lifecycle: () => replay.world.lifecycle.snapshot(),
     screen: () => screen,
-    width: CONFIG.view.w,
-    height: CONFIG.view.h,
+    width: view.w,
+    height: view.h,
     actorId,
     choiceIds: () => [],
     platforms: () => replay.stage.platforms,
