@@ -152,6 +152,9 @@
     "release:preflight": "node scripts/release-preflight.mjs",
     "release:verify-artifact": "node scripts/verify-release-artifact.mjs standalone"
   },
+  "dependencies": {
+    "firebase": "13.2.0"
+  },
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@firebase/rules-unit-testing": "6.0.0",
@@ -161,7 +164,6 @@
     "@vitest/coverage-v8": "4.1.10",
     "eslint": "10.7.0",
     "fast-check": "4.10.2",
-    "firebase": "13.2.0",
     "firebase-tools": "15.35.0",
     "globals": "17.7.0",
     "marked": "18.1.0",
