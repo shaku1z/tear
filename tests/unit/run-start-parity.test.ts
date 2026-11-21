@@ -11,7 +11,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createLiveRunStartHost } from "../../src/app/run/run-start-host";
-import { stepDetachedWorld } from "../../src/app/world/detached/detached-step";
+import { detachedSceneFrames, stepDetachedWorld } from "../../src/app/world/detached/detached-step";
 import { detachedRunStartWorld } from "../../src/app/world/detached/detached-run-start";
 import {
   captureProductionReplayCheckpoint,
@@ -214,6 +214,7 @@ describe("a held screen holds a detached world, as live play does", () => {
       stepDetachedWorld(
         world,
         commands.map((command): CommandEnvelope<GameAction> => ({ kind: "command", id: ++id, tick: 0, command })),
+        detachedSceneFrames(world),
       );
     for (let tick = 1; tick <= 60; tick += 1) step(paused);
     const before = step(paused, [{ type: "pause" }]);

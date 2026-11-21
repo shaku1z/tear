@@ -58,6 +58,7 @@ function recordCorpusStream(spec: StreamSpec): ReplayRecord {
     let lastTick = 0;
     const player = createCorpusPlayer(spec);
     for (let tick = 1; tick <= spec.ticks; tick += 1) {
+      for (const frame of environment.sceneFrames()) recorder.frame(tick - 1, frame.seconds, frame.confirm);
       const actions = player(environment, tick);
       const transition = environment.step(actions);
       const observation = transition.observation;

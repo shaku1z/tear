@@ -41,7 +41,11 @@ import { opensHeadlessPractice, type HeadlessPracticeBossId } from "./production
 import { projectProductionPolicyObservation } from "./production-policy-observation";
 import { createGameplayCausalEvent } from "../../tearbench/gameplay-causal-events";
 import { assertTearSimulationStepSeconds } from "../../tearbench/simulation-profile";
-import { stepDetachedWorld } from "../../app/world/detached/detached-step";
+import {
+  detachedSceneFrames,
+  stepDetachedWorld,
+  type DetachedSceneFrame,
+} from "../../app/world/detached/detached-step";
 import { scenarioRunSeed } from "../../gameplay/run/run-start-choices";
 
 type ProductionHeadlessCore = Readonly<{
@@ -54,6 +58,7 @@ type ProductionHeadlessCore = Readonly<{
   advanceApplicationFrame: (seconds: number, confirm?: ProductionApplicationFrameConfirm) => void;
   /** One simulation tick of the detached world, through the one detached step. */
   step: (envelopes: readonly CommandEnvelope<GameAction>[]) => ReturnType<typeof stepDetachedWorld>;
+  sceneFrames: () => readonly DetachedSceneFrame[];
   nativeEvents: TearGameplayEvent[];
   sourceTracks?: ProductionHeadlessSourceTrackState;
 }>;
@@ -143,6 +148,8 @@ export interface ProductionHeadlessEnvironment extends TearHeadlessEnvironment<
   stageObjects(): ReturnType<ProductionReplayWorld["world"]["context"]["environment"]["snapshot"]>;
   /** True while a cinematic (a boss phase change, a chapter page) holds the simulation. */
   cinematicActive(): boolean;
+  /** The scene frames the next step plays first (one tick-length frame while a scene holds the fight); a recorder records them. */
+  sceneFrames(): readonly DetachedSceneFrame[];
   /** Build provenance remains available outside checkpointable lifecycle states. */
   sourceBuild(): ProductionReplayBootstrap["build"];
   /** Before the associated fixed step; no implicit cadence or confirm policy. */
@@ -324,7 +331,9 @@ export function createProductionHeadlessEnvironment(
       scenario,
       routeAction: composed.routeAction,
       advanceApplicationFrame: composed.advanceApplicationFrame,
-      step: (envelopes: readonly CommandEnvelope<GameAction>[]) => stepDetachedWorld(composed, envelopes),
+      step: (envelopes: readonly CommandEnvelope<GameAction>[]) =>
+        stepDetachedWorld(composed, envelopes, detachedSceneFrames(composed)),
+      sceneFrames: () => detachedSceneFrames(composed),
       nativeEvents,
       ...(sourceTracks === undefined ? {} : { sourceTracks }),
     });
@@ -373,6 +382,7 @@ export function createProductionHeadlessEnvironment(
     world: () => requireCore().replay.world.state,
     stageObjects: () => requireCore().replay.world.context.environment.snapshot(),
     cinematicActive: () => requireCore().replay.world.context.cinema.active,
+    sceneFrames: () => requireCore().sceneFrames(),
     sourceBuild: () => Object.freeze({ ...requireCore().bootstrap.build }),
     advanceApplicationFrame: (seconds: number, confirm?: ProductionApplicationFrameConfirm) => {
       requireCore().advanceApplicationFrame(seconds, confirm);
