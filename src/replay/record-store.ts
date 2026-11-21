@@ -22,11 +22,12 @@ const STORE = "records";
 const INDEX_KEY = "index";
 
 /**
- * 20 records and 25 MB. A live minute records about 356 KB as JSON (the 5b-3b browser legs), so the
- * byte cap holds about 70 minutes of play: twenty runs of three or four minutes, or a few long ones.
- * 25 MB is a small share of the origin quota browsers grant (Chrome gives an origin a share of free
- * disk measured in GB; Safari asks past 1 GB), and leaves room for the player's save and the V3 vault
- * until PR 8 removes it.
+ * 20 records and 25 MB. A live minute records about 700 KB as plain JSON (the 5c-1 browser legs: 356 KB
+ * for a 30-second campaign run, 123 KB for 11 seconds of Endless), so the byte cap holds about 35 minutes
+ * of play: the last several runs, or one long one. Replay PR 6 changes the encoding inside this store, and
+ * a smaller encoding fits more records under the same cap. 25 MB is a small share of the origin quota
+ * browsers grant (Chrome gives an origin a share of free disk measured in GB; Safari asks past 1 GB), and
+ * leaves room for the player's save and the V3 vault until PR 8 removes it.
  */
 export const REPLAY_RECORD_LIMITS = Object.freeze({ count: 20, bytes: 25 * 1024 * 1024 });
 
