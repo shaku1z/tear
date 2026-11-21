@@ -20,6 +20,11 @@ const slot = (id: string) => {
   return found;
 };
 const familyCalm = (id: string): Look => catalog.families.find((family) => family.id === slot(id).family)?.calm ?? {};
+/** An item's authored colours, read from the catalog. */
+const colorsOf = (id: string): string[] => {
+  const look: unknown = catalog.items.find((entry) => entry.id === id)?.look.colors;
+  return Array.isArray(look) ? look.filter((color): color is string => typeof color === "string") : [];
+};
 const styleOf = (styles: CosmeticStyles, id: keyof typeof COSMETIC_DRAW_HOOKS): Readonly<Record<string, unknown>> =>
   Object.fromEntries(Object.entries(styles[id]));
 
@@ -86,7 +91,7 @@ describe("cosmetic wardrobe", () => {
     const wardrobe = createCosmeticWardrobe(catalog, () => calm);
     const wearer = {},
       other = {};
-    expect(wardrobe.worn()).toBe(wardrobe.defaults);
+    expect(wardrobe.of(wearer)).toBe(wardrobe.defaults);
     wardrobe.wear(wearer, { spark: "spark_glacier" });
     expect(wardrobe.of(other)).toBe(wardrobe.defaults);
     expect(wardrobe.of(wearer).spark.countScale).toBe(1.2);
@@ -96,6 +101,21 @@ describe("cosmetic wardrobe", () => {
     expect(wardrobe.of(wearer)).toBe(wardrobe.defaults);
     wardrobe.authored(false);
     expect(wardrobe.of(wearer).spark.worn).toBe(true);
+  });
+
+  it("keeps each wearer's own loadout, so a recorded racer and the player each show theirs", () => {
+    const wardrobe = createCosmeticWardrobe(catalog, () => false);
+    const player = {},
+      racer = {};
+    wardrobe.wear(player, { spark: "spark_orchid" });
+    wardrobe.wear(racer, { spark: "spark_glacier", trail: "trail_dusk" });
+    expect(wardrobe.of(player).spark.colors).toEqual(colorsOf("spark_orchid"));
+    expect(wardrobe.of(player).trail.worn).toBe(false);
+    expect(wardrobe.of(racer).spark.colors).toEqual(colorsOf("spark_glacier"));
+    expect(wardrobe.of(racer).trail.colors).toEqual(colorsOf("trail_dusk"));
+    wardrobe.wear(racer, {});
+    expect(wardrobe.of(racer).spark.worn).toBe(false);
+    expect(wardrobe.of(player).spark.colors).toEqual(colorsOf("spark_orchid"));
   });
 });
 
@@ -117,19 +137,18 @@ describe("blade-hit sparks", () => {
   it("emits exactly the untagged burst while nothing is worn", () => {
     const tagged = system(DEFAULT_COSMETIC_LOOKS),
       plain = system(DEFAULT_COSMETIC_LOOKS);
-    const receipt = tagged.burst(10, 20, 1, 0, 6, "#abcdef", "blade-hit");
+    const receipt = tagged.burst(10, 20, 1, 0, 6, "#abcdef", { kind: "blade-hit", by: {} });
     expect(receipt).toEqual(plain.burst(10, 20, 1, 0, 6, "#abcdef"));
     expect(tagged.list).toEqual(plain.list);
   });
 
   it("wears the spark's colours in turn and scales the count, for tagged bursts only", () => {
     const wardrobe = createCosmeticWardrobe(catalog, () => false);
-    wardrobe.wear({}, { spark: "spark_glacier" });
+    const blade = {};
+    wardrobe.wear(blade, { spark: "spark_glacier" });
     const effects = system(wardrobe);
-    effects.burst(0, 0, 1, 0, 5, "#abcdef", "blade-hit");
-    const item = catalog.items.find((entry) => entry.id === "spark_glacier");
-    const look: unknown = item?.look.colors;
-    const worn = Array.isArray(look) ? look.filter((color): color is string => typeof color === "string") : [];
+    effects.burst(0, 0, 1, 0, 5, "#abcdef", { kind: "blade-hit", by: blade });
+    const worn = colorsOf("spark_glacier");
     const colours = effects.list.map((particle) => particle.col);
     expect(worn.length).toBe(2);
     expect(colours).toEqual(colours.map((_, index) => worn[index % worn.length]));
@@ -137,5 +156,23 @@ describe("blade-hit sparks", () => {
     effects.reset();
     effects.burst(0, 0, 1, 0, 5, "#abcdef");
     expect(effects.list.map((particle) => particle.col)).toEqual(Array(5).fill("#abcdef"));
+  });
+
+  it("dresses each blade's hits in its own owner's spark, and an undressed blade's in the hit colour", () => {
+    const wardrobe = createCosmeticWardrobe(catalog, () => false);
+    const player = {},
+      racer = {},
+      stranger = {};
+    wardrobe.wear(player, { spark: "spark_orchid" });
+    wardrobe.wear(racer, { spark: "spark_glacier" });
+    const effects = system(wardrobe);
+    const colours = (by: object): string[] => {
+      effects.reset();
+      effects.burst(0, 0, 1, 0, 4, "#abcdef", { kind: "blade-hit", by });
+      return [...new Set(effects.list.map((particle) => particle.col))];
+    };
+    expect(colours(player)).toEqual(colorsOf("spark_orchid"));
+    expect(colours(racer)).toEqual(colorsOf("spark_glacier"));
+    expect(colours(stranger)).toEqual(["#abcdef"]);
   });
 });
