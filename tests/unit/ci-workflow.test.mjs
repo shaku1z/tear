@@ -648,14 +648,16 @@ describe("Cloudflare deploy configs", () => {
   });
 
   // The default Cloudflare subdomain of a Worker contains the account name, and this repository is public.
-  it("keep the Worker's default Cloudflare subdomain and per-version preview addresses off", () => {
-    expect(read("wrangler.jsonc")).toMatch(/"workers_dev":\s*false/u);
-    const preview = read("wrangler.preview.jsonc");
-    expect(preview).toMatch(/"workers_dev":\s*false/u);
-    expect(preview).toMatch(/"preview_urls":\s*false/u);
-    expect(preview).toMatch(
-      /"routes":\s*\[\s*\{\s*"pattern":\s*"preview\.tearblade\.com",\s*"custom_domain":\s*true\s*\}\s*\]/u,
-    );
+  // Both targets follow one rule: no routes in the file (the domain is attached once in the dashboard; with a route
+  // and workers_dev off, Wrangler reads the zone's routes before every deploy and the preview token cannot), and
+  // no default subdomain. See DEPLOYMENT.md, Domains.
+  it("keep the Worker's default Cloudflare subdomain and per-version preview addresses off, and declare no routes", () => {
+    for (const file of ["wrangler.jsonc", "wrangler.preview.jsonc"]) {
+      const config = read(file).replace(/^\s*\/\/.*$/gmu, "");
+      expect(config, file).toMatch(/"workers_dev":\s*false/u);
+      expect(config, file).not.toMatch(/"routes?":/u);
+    }
+    expect(read("wrangler.preview.jsonc")).toMatch(/"preview_urls":\s*false/u);
   });
 
   it("leave no workers address and no account name in any tracked text file", () => {
