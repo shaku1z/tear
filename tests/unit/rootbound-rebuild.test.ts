@@ -1,7 +1,7 @@
 /**
- * The new Rootbound's Phase I and Uproot (plans/active/VERDANT_PALE_REBUILD.md, 2.1), stepped one update per
- * tick: when each move is chosen, how long each part of it lasts, what it deals, when it can't be hit, and
- * that the phase change is a move of its own that ends the move in progress.
+ * The new Rootbound's three phases, Uproot and Last Bloom (plans/active/VERDANT_PALE_REBUILD.md, 2.1), stepped
+ * one update per tick: when each move is chosen, how long each part of it lasts, what it deals, when it can't be
+ * hit, and that each phase change is a move of its own that ends the move in progress.
  */
 import { describe, expect, it } from "vitest";
 
@@ -335,5 +335,66 @@ describe("Last Bloom, the change into Phase III", () => {
     expect(boss.ringRadius).toBe(M.lastBloom.radius);
     until("burstrecover");
     expect(player.damage.at(-1)?.amount).toBe(M.thornBurst.damage);
+  });
+});
+
+/** The keeper in Phase III, as Last Bloom leaves it. */
+function phaseThree(bossX: number, player: Partial<TestPlayer> = {}) {
+  const fight = phaseTwo(bossX, player);
+  fight.boss.enteredPhase = 3;
+  fight.boss.hp = fight.boss.maxHp * 0.2;
+  fight.boss.lastHp = fight.boss.hp;
+  return fight;
+}
+
+describe("Phase III", () => {
+  it("is faster: a 112-tick attack cooldown, a 160 px/s walk and every windup ×0.85", () => {
+    const { boss, step, until } = phaseThree(300, levelAt(1100));
+    boss.attackT = 999;
+    boss.burrowCd = 9999;
+    step();
+    expect(boss.state).toBe("walk");
+    expect(Math.abs(boss.vx)).toBeCloseTo(ROOTBOUND_CADENCE.walkSpeeds[2], 5);
+    boss.startSwing();
+    expect(boss.attackT).toBe(ROOTBOUND_CADENCE.attackCooldowns[2]);
+    expect(until("swing")).toBe(Math.round(M.vineSwing.windup * 0.85));
+  });
+
+  it("Burrow surfaces three times, under the floor 48 ticks between the strikes", () => {
+    const { boss, player, until } = phaseThree(300, levelAt(800));
+    boss.startBurrow();
+    until("surface");
+    until("resurface");
+    expect(until("rise")).toBe(ROOTBOUND_CADENCE.resurfaceUnder[2]);
+    until("resurface");
+    until("split");
+    expect(player.damage.map((hit) => hit.amount)).toEqual(Array(3).fill(M.surfaceStrike.damage));
+  });
+
+  it("Spring Surge: 102 up and over to the centre, root waves both ways and five pods, then open for 66", () => {
+    const { boss, projectiles, step, until } = phaseThree(300, levelAt(1100));
+    boss.attackT = 1;
+    expect(until("springwind")).toBe(1);
+    expect(boss.springCd).toBe(M.springSurge.cooldown);
+    for (let tick = 0; tick < M.springSurge.windup / 2; tick += 1) step();
+    expect(boss.y).toBeLessThan(GROUND - ROOTBOUND_BODY.h / 2 - M.springSurge.rise / 2);
+    expect(until("springslam")).toBe(M.springSurge.windup / 2);
+    expect(boss.x).toBe(CONFIG.view.w / 2);
+    const waves = projectiles.filter((shot) => shot.family === "groundShock");
+    expect(waves.map((wave) => Math.sign(wave.vx)).sort()).toEqual([-1, 1]);
+    expect(waves.every((wave) => wave.dmg === M.springSurge.waveDamage)).toBe(true);
+    const pods = projectiles.filter((shot) => shot.family !== "groundShock");
+    expect(pods).toHaveLength(M.springSurge.pods);
+    expect(pods.every((pod) => pod.dmg === M.springSurge.podDamage && pod.deflectDmg > 0)).toBe(true);
+    expect(boss.damageTakenMult()).toBe(ROOTBOUND_CADENCE.openDamageTaken);
+    expect(until("idle")).toBe(M.springSurge.recover);
+  });
+
+  it("only from Phase III", () => {
+    const { boss, step } = phaseTwo(300, levelAt(1100));
+    boss.attackT = 1;
+    boss.brambleCd = 9999;
+    step();
+    expect(boss.state).not.toBe("springwind");
   });
 });
