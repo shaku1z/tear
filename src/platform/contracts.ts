@@ -1,3 +1,5 @@
+import type { ScoreDirection } from "../domain/leaderboards";
+
 export type Unsubscribe = () => void;
 
 export type Capability<T> = Readonly<{ available: true; service: T }> | Readonly<{ available: false; reason: string }>;
@@ -67,6 +69,11 @@ export interface LeaderboardEntry {
 }
 
 export interface LeaderboardsService {
+  /**
+   * The score directions this provider ranks (see `LEADERBOARD_KINDS`). A board whose direction is
+   * not listed is not offered on this target: it is hidden, never ranked the wrong way.
+   */
+  readonly ranks: readonly ScoreDirection[];
   submit(board: string, score: number, replayId?: string): Promise<void>;
   entries(board: string, limit: number): Promise<readonly LeaderboardEntry[]>;
   publishReplay(value: string): Promise<string>;

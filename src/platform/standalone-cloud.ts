@@ -48,6 +48,8 @@ export const createStandaloneCloud: CloudFactory = (options) => {
   };
   const shared: SharedCloudService = {
     available: true,
+    // Firebase (loaded on first use) orders a board either way, so every direction is ranked.
+    ranks: () => true,
     async submitScore(...args) {
       return (await load()).shared.submitScore(...args);
     },

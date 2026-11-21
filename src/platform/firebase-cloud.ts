@@ -1,3 +1,4 @@
+import { leaderboardId, leaderboardKind, scoreBeats } from "../domain/leaderboards";
 import { asRecord } from "../domain/records";
 import type { AccountProvider, CloudSavePayload, CloudUser, SharedCloudService, SignInResult } from "./cloud";
 import type { FirebaseClientConfig } from "./firebase-config";
@@ -403,46 +404,45 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
 
   const shared: SharedCloudService = {
     available: typeof options.config.apiKey === "string" && options.config.apiKey.length > 0,
-    async submitScore(mode, difficulty, entry) {
+    // A Firestore query orders a board either way, so every direction is ranked.
+    ranks: () => true,
+    async submitScore(board, entry) {
       const session = await passport();
       if (!session) return false;
-      const ref = session.db
-        .collection("leaderboards")
-        .doc(`${mode}_${difficulty}`)
-        .collection("scores")
-        .doc(session.uid);
+      const kind = leaderboardKind(board);
+      const ref = session.db.collection("leaderboards").doc(leaderboardId(board)).collection("scores").doc(session.uid);
       try {
         const current = await race(ref.get());
         const currentData = current.exists ? asRecord(current.data()) : null;
-        if (number(currentData?.score) >= entry.score) return false;
+        if (!scoreBeats(kind, Math.trunc(entry.score), currentData?.score)) return false;
+        // A new best replaces the whole entry, so the earlier run's replay link goes with it;
+        // linkReplay adds this run's link once its replay is published.
         await race(
-          ref.set(
-            {
-              name: string(entry.name, "Player"),
-              score: Math.trunc(entry.score),
-              wave: Math.trunc(number(entry.wave)),
-              time: Math.round(number(entry.time)),
-              uid: session.uid,
-              ts: now(),
-            },
-            { merge: true },
-          ),
+          ref.set({
+            name: string(entry.name, "Player"),
+            score: Math.trunc(entry.score),
+            wave: Math.trunc(number(entry.wave)),
+            time: Math.round(number(entry.time)),
+            uid: session.uid,
+            ts: now(),
+          }),
         );
         return true;
       } catch {
         return false;
       }
     },
-    async topScores(mode, difficulty, limit) {
+    async topScores(board, limit) {
       const session = await passport();
       if (!session) return null;
+      const { direction } = leaderboardKind(board);
       try {
         const snapshot = await race(
           session.db
             .collection("leaderboards")
-            .doc(`${mode}_${difficulty}`)
+            .doc(leaderboardId(board))
             .collection("scores")
-            .orderBy("score", "desc")
+            .orderBy("score", direction === "higher" ? "desc" : "asc")
             .limit(limit || 25)
             .get(),
         );
@@ -550,14 +550,14 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
         return null;
       }
     },
-    async linkReplay(mode, difficulty, shareId) {
+    async linkReplay(board, shareId) {
       const session = await passport();
       if (!session) return false;
       try {
         await race(
           session.db
             .collection("leaderboards")
-            .doc(`${mode}_${difficulty}`)
+            .doc(leaderboardId(board))
             .collection("scores")
             .doc(session.uid)
             .set({ replayId: shareId }, { merge: true }),

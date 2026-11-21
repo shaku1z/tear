@@ -339,8 +339,8 @@ with the count of `src` importers and test files that import it. The target colu
 
 | Module | Users | Disposition | Reason |
 | --- | --- | --- | --- |
-| `application-frame-events.ts` | players; 15 src, 3 tests | delete (PR 5) | Application frame clocks for the finale, challenges and clips; the record keeps actions at ticks only |
-| `authoritative-receipt.ts` | players; 13, 6 | merge into `record.ts` (PR 5) | A state hash beside a keyframe is a checkpoint hash |
+| `application-frame-events.ts` | players; 15 src, 3 tests | delete with its last consumer (PRs 6 to 9) | Application frame clocks for the finale, challenges and clips; the record keeps actions at ticks only |
+| `authoritative-receipt.ts` | players; 13, 6 | merge into `record.ts`; goes with its last consumer (PRs 6 to 9) | A state hash beside a keyframe is a checkpoint hash |
 | `boss-memory-origin.ts` | hidden; 8, 1 | delete (PR 1) | Boss Memory, an unfinished engineering feature |
 | `boss-memory.ts` | hidden; 5, 1 | delete (PR 1) | Same |
 | `browser-capsule-vault.ts` | players; 5, 2 | merge into `store.ts` and `app/replay/replay-library.ts` (PR 6) | Browser facade over list, read, repair, verify, seek, fork |
@@ -382,7 +382,7 @@ with the count of `src` importers and test files that import it. The target colu
 | `production-replay-verification.ts` | players; 8, 3 | rename to `replay/verify.ts` (PR 5) | Re-simulate and compare |
 | `recorded-challenge.ts` | players; 5, 2 | delete (PR 2) | Recorded challenges |
 | `recording-profiles.ts` | players; 5, 0 | delete (PR 5) | Four profiles become one constant set in the record (live play uses `coaching`) |
-| `replay-admission.ts` | players; 21, 11 | merge into `record.ts` (header) and `verify.ts` (ruleset and build check) (PR 5) | 26,698 characters of run context, fingerprints, random state and opening permits |
+| `replay-admission.ts` | players; 21, 11 | merge into `record.ts` (header) and `verify.ts` (ruleset and build check); goes with its last consumer (PRs 6 to 9) | 26,698 characters of run context, fingerprints, random state and opening permits |
 | `replay-cut-list.ts` | hidden; 3, 1 | merge into clip export as one tick range (PR 7) | The Replay Editor's cut list |
 | `replay-world.ts` | players; 15, 4 | merge into `watch.ts` (world port) (PR 7) | World, session and practice types |
 | `run-dna-theater.ts` | players; 2, 3 | delete (PR 8) | The RUN DNA panel went in PR 2; CAREER still reads the projection until it folds into the list |
@@ -391,14 +391,14 @@ with the count of `src` importers and test files that import it. The target colu
 | `streaming-recorder.ts` | players; 4, 7 | merge into `recorder.ts` (PR 5) | Keep its chunk-commit order (#286) |
 | `theater-open-result.ts` | players; 5, 2 | merge into `watch.ts` (open result and refusal reasons) (PR 7) | Plain refusal reasons stay |
 | `theater.ts` | players; 3, 0 | delete (PR 2); its transport state goes to `watch.ts` (PR 7) | Lenses, trajectory diffs, event alignment exist for COMPARE |
-| `truth-kernel.ts` | players; 10, 4 | delete (PR 5); any constant still read moves to `record.ts` | "Trident" precedence, quality cards, profile negotiation |
+| `truth-kernel.ts` | players; 10, 4 | delete with its last consumer (PRs 6 to 9); any constant still read moves to `record.ts` | "Trident" precedence, quality cards, profile negotiation |
 | `vault-maintenance.ts` | players; 2, 0 | merge budget and retention into `store.ts`; delete repair upkeep (PR 6) | Quota, index rebuild, verified reads |
 
 ### `src/replay/` (5 modules, 39,739 characters)
 
 | Module | Users | Disposition | Reason |
 | --- | --- | --- | --- |
-| `envelope.ts` | players; 7, 6 | merge into `record.ts` (PR 5) | Its format id `tear-replay` and version line continue as v3 |
+| `envelope.ts` | players; 7, 6 | keep until Ghost 2 goes (PR 8); `record.ts` owns the format id from PR 5a | The Ghost 2 packet (`visual-replay.ts`) still uses it |
 | `index.ts` | none; 0, 0 | delete (PR 1) | Unused barrel |
 | `legacy-compat.ts` | players; 3, 5 | delete (PR 8) | Ghost 2: `LegacyGhostEngine` and `LegacyReplayVault` (the REPLAYS tab and published replays) |
 | `legacy-compat-validation.ts` | players; 1, 0 | delete (PR 8) | Same |
@@ -577,7 +577,13 @@ before this PR are refused as "recorded before this update".
 - **The next one:** A new field is one line in `record.ts` and one migration step if it changes the version.
 - **Cause:** The capsule contract, truth kernel, admission context, receipts and envelope each described part of a replay.
 - **Measured:** Record bytes per minute of play on the determinism corpus, against V3 capsule bytes for the same runs; live recording frame cost (p95, desktop).
-- **Removed:** `capsule-contract`, `truth-kernel`, `recording-profiles`, `replay-admission`, `authoritative-receipt`, `live-recorder`, `streaming-recorder`, `live-causal-events`, `application-frame-events`, `envelope`, `ghost-frame-recording`, the recording session state and their tests.
+- **Removed:** `capsule-contract`, `recording-profiles`, `live-recorder`, `streaming-recorder`, `live-causal-events`, `ghost-frame-recording`, the recording session state and their tests (PR 5c). `envelope`, `replay-admission`, `authoritative-receipt`, `application-frame-events` and `truth-kernel` go with their last consumer (PRs 6 to 9; see the inventory).
+
+PR 5 lands in three pull requests (the replay owner, 2026-11-21). A seed and actions record cannot replay a live run until the live run starts the way the detached world does, so the parity work is its own step:
+
+- **5a, the record and verify (pure addition, no live change).** `src/replay/record.ts` (the record type, `readReplayRecord`, the summary counter), `recorder.ts` (actions at ticks, a checkpoint hash every 120 ticks, the result), `verify.ts` (re-simulate from the seed on a world port and compare every checkpoint, the result and the summary) and `app/replay/detached-replay-world.ts` (that port over the detached world). `app/world/detached/detached-step.ts` is the one way a detached world steps a tick without a recorded frame clock. The round-trip check runs over the determinism corpus; `tests/unit/replay-record.test.ts` holds the malformed corpus, the old-format refusals and the format guard. Measured: the record as plain JSON is about 387 KB for an 18-second corpus run (about 1.3 MB a minute, because the scripted policy sends a move and an aim every tick); the stored encoding is PR 6's and reports its bytes against this. V3 capsule bytes for the same runs were not measured: the headless runs have no V3 capsule.
+- **5b, live start parity.** The live run records and the detached world replays the same start: the run seed as the record's seed, the meta progression and opening content as start choices, reward picks and rerolls as actions at ticks, and the cinematic and boss-intro frame clock recorded as the one exception until the cinematics overhaul makes those scenes stop nothing. A browser test records a live run (a draft, a boss intro and a chapter) and verifies it from its seed.
+- **5c, the live recorder.** The live sidecar records the new record behind a lazily loaded slot (a deferred-modules row, fetched ahead on an idle menu, ensured at run start, with a chunk test that it stays out of the startup chunks); the HUD checkpoint parser moves to the HUD's owner and seed-race composition goes behind the slot; the Theater opens the new record; capsules from before are refused; the V3 recorder modules with no consumer left are deleted.
 
 ### PR 6: one store (`store.ts`, `indexeddb-chunk-storage.ts`, `share.ts` file encoding)
 
@@ -810,3 +816,4 @@ writes are closed. Deploying the rules is the owner's step.
 - 2026-11-20 PR 2b (`codex/replay-repair`): REPAIR removed, with the repair-copy writer, `ghost-doctor.ts` and `corrupt-capsule-records.ts`. The health scan and index rebuild moved into `vault-maintenance.ts`. A damaged capsule shows CAN'T PLAY; deleting it waits for PR 6, because the Vault has no delete today.
 - 2026-11-20 PR 3 (`codex/replay-snapshot`): the snapshot codecs, the snapshot contract, the codec and factory ids, the checkpoint parsers and `seed-race-contract.ts` moved to `src/gameplay/snapshot/` and `src/gameplay/run/`, as agreed with the lead and playtest-tool. The two hydrators move in PR 4. The layer allowlist went from 37 to 32 edges.
 - 2026-11-20 PR 4 (`codex/replay-detached-world`): the detached world moved to `src/app/world/detached/`, its own `detached-world` layer, so the one new edge is `playtest -> detached-world`. No `tearbench -> app` or `ghost -> app` edge; the layer allowlist went from 32 to 18 edges. The remaining ghost cycle (7 files) goes with `src/ghost` in PRs 5 to 8.
+- 2026-11-21 PR 5 split into 5a (record, recorder and verify over the detached world, and the round-trip check), 5b (live start parity) and 5c (the live recorder behind a lazy slot). `envelope.ts` stays with Ghost 2 until PR 8; `replay-admission`, `authoritative-receipt`, `application-frame-events` and `truth-kernel` go with their last consumer. 5a: every stream of the determinism corpus records, reads back and verifies from its seed, and each checkpoint equals the pinned determinism hash.

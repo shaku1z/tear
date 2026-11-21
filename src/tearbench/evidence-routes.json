@@ -85,6 +85,7 @@
     "prefixes": [
       "src/persistence/",
       "src/domain/gauntlet-records.ts",
+      "src/domain/leaderboards.ts",
       "src/platform/",
       "src/ghost/",
       "wrangler.jsonc",
@@ -1013,7 +1014,9 @@
     "owner": "production-replay-headless-composition",
     "reducedDisposition": "subject-specific-backend-required",
     "prefixes": [
+      "src/app/replay/detached-replay-world.ts",
       "src/app/world/detached/combat-phases.ts",
+      "src/app/world/detached/detached-step.ts",
       "src/app/world/detached/replay-composition.ts",
       "src/playtest/headless/production-headless-environment.ts",
       "src/playtest/headless/production-policy-observation.ts"
