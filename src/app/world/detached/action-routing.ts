@@ -1,3 +1,4 @@
+import type { RewardDecision } from "../../../gameplay/run/reward-runtime";
 import type { GameAction } from "../../../input/game-action";
 
 interface Choice {
@@ -24,6 +25,7 @@ export interface TearBenchActionRouting {
   readonly chooseUpgrade: (index: number) => void;
   readonly chooseReserve: (index: number) => void;
   readonly chooseTier: (index: number) => void;
+  readonly rerollDraft: () => void;
   readonly dispatchPlayground: (abilityId: string) => void;
   readonly renderControls: () => void;
   readonly controls: () => readonly RuntimeControl[];
@@ -36,6 +38,19 @@ export function liveRewardChoiceIds(context: TearBenchActionRouting): readonly s
   if (screen === "reserve") return reward?.reserveChoices.map((choice) => choice.id) ?? [];
   if (screen === "draft" || screen === "tierup") return reward?.choices.map((choice) => choice.id) ?? [];
   return [];
+}
+
+/**
+ * The action a reward decision is, by the choice's id: what a record holds, and what `routeLiveTearBenchAction`
+ * turns back into the same decision. Undefined for an index the reward does not offer.
+ */
+export function rewardDecisionAction(decision: RewardDecision, reward: RewardSnapshot): GameAction | undefined {
+  if (decision.kind === "reroll") return { type: "draft-reroll" };
+  const choice = (decision.kind === "reserve" ? reward.reserveChoices : reward.choices)[decision.index];
+  if (choice === undefined) return undefined;
+  const type =
+    decision.kind === "draft" ? "draft-choice" : decision.kind === "reserve" ? "reserve-choice" : "tier-up-choice";
+  return { type, choiceId: choice.id };
 }
 
 /** Routes a semantic action without reading or producing browser events. */
@@ -66,6 +81,10 @@ export function routeLiveTearBenchAction(context: TearBenchActionRouting, action
   }
   if (action.type === "tier-up-choice" && screen === "tierup" && index >= 0) {
     context.chooseTier(index);
+    return true;
+  }
+  if (action.type === "draft-reroll" && screen === "draft") {
+    context.rerollDraft();
     return true;
   }
   if (action.type === "confirm" || action.type === "interact") {

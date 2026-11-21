@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   liveRewardChoiceIds,
+  rewardDecisionAction,
   routeLiveTearBenchAction,
   type TearBenchActionRouting,
 } from "../../src/app/world/detached/action-routing";
@@ -26,6 +27,7 @@ function routingFixture(initialScreen = "draft") {
     chooseUpgrade: (index) => calls.push(`draft:${String(index)}`),
     chooseReserve: (index) => calls.push(`reserve:${String(index)}`),
     chooseTier: (index) => calls.push(`tier:${String(index)}`),
+    rerollDraft: () => calls.push("reroll"),
     dispatchPlayground: (id) => calls.push(`ability:${id}`),
     renderControls: () => calls.push("render"),
     controls: () => controls,
@@ -47,6 +49,27 @@ function routingFixture(initialScreen = "draft") {
 }
 
 describe("live runtime action routing", () => {
+  it("turns each reward decision into an action that routes back to the same decision", () => {
+    const cases = [
+      { screen: "draft", decision: { kind: "draft", index: 1 }, call: "draft:1" },
+      { screen: "draft", decision: { kind: "reroll" }, call: "reroll" },
+      { screen: "reserve", decision: { kind: "reserve", index: 0 }, call: "reserve:0" },
+      { screen: "tierup", decision: { kind: "tier", index: 0 }, call: "tier:0" },
+    ] as const;
+    for (const { screen, decision, call } of cases) {
+      const fixture = routingFixture(screen);
+      const reward = fixture.routing.reward();
+      if (reward === null) throw new Error("fixture offers a reward");
+      const action = rewardDecisionAction(decision, reward);
+      if (action === undefined) throw new Error(`no action for ${decision.kind}`);
+      expect(routeLiveTearBenchAction(fixture.routing, action), decision.kind).toBe(true);
+      expect(fixture.calls).toEqual([call]);
+    }
+    expect(rewardDecisionAction({ kind: "draft", index: 5 }, { choices: [], reserveChoices: [] })).toBeUndefined();
+    const playing = routingFixture("playing");
+    expect(routeLiveTearBenchAction(playing.routing, { type: "draft-reroll" })).toBe(false);
+  });
+
   it("exposes only choices valid for the active reward screen", () => {
     const fixture = routingFixture("draft");
     expect(liveRewardChoiceIds(fixture.routing)).toEqual(["draft-a", "draft-b"]);

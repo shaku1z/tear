@@ -160,6 +160,7 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
     chooseUpgrade: screenComposition.chooseUpgrade,
     chooseReserve: screenComposition.chooseReserve,
     chooseTier: screenComposition.chooseTier,
+    rerollDraft: screenComposition.rerollDraft,
     dispatchPlayground: dispatchPlaygroundAction,
     renderControls: () => {
       presentationHost.render();
