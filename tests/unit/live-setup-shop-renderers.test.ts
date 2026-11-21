@@ -5,7 +5,11 @@ import { ARMED_CONFIRM_DELAY_MS } from "../../src/app/interface/armed-confirm";
 import { createLiveScreenNavigation } from "../../src/app/interface/live-screen-navigation";
 import { createLiveSetupShopRenderers } from "../../src/app/run/setup-shop-renderers";
 import type { LiveShopFeedbackSnapshot } from "../../src/app/run/shop-feedback-state";
+import { createLoadout, deleteLoadout, loadoutSummaries, renameLoadout } from "../../src/domain/cosmetic-loadouts";
+import type { CosmeticChange, CosmeticState } from "../../src/domain/cosmetic-types";
+import { emptyCosmeticState, mergeCosmeticStates } from "../../src/domain/cosmetics";
 import { createSurfaceAvailability } from "../../src/domain/surface-availability";
+import { COSMETIC_CATALOG } from "../../src/gameplay/progression/cosmetic-catalog";
 
 describe("live setup shop renderers", () => {
   it("keeps purchase feedback and achievement checking around the progress adapter", () => {
@@ -127,6 +131,50 @@ describe("live setup shop renderers", () => {
       }),
     ).toBe(false);
     vi.restoreAllMocks();
+  });
+
+  it("renames the loadout the name screen was opened for, wherever a merge moved it meanwhile", () => {
+    const must = (state: CosmeticState | null): CosmeticState => {
+      if (state === null) throw new Error("the operation was refused");
+      return state;
+    };
+    // Two devices each made a loadout before they met: Boss keeps loadout_2, Daily moved to loadout_3.
+    const boss = must(renameLoadout(must(createLoadout(emptyCosmeticState(), 100)), "loadout_2", "Boss", 101));
+    const daily = must(renameLoadout(must(createLoadout(emptyCosmeticState(), 105)), "loadout_2", "Daily", 106));
+    let cosmetics = mergeCosmeticStates(boss, daily, COSMETIC_CATALOG);
+    const renderers = createLiveSetupShopRenderers(
+      {
+        selection: () => ({ mode: "endless", difficulty: "normal", weapon: "sword", boss: "" }),
+        scroll: () => 0,
+        setScroll: vi.fn(),
+        time: () => 0,
+        shop: () => ({ tab: "shards", displayedCoins: 0, flash: null }),
+        setShop: vi.fn(),
+      },
+      {
+        dependencies: {
+          PROFILE: {
+            cosmetics: () => cosmetics,
+            changeCosmetics: (change: CosmeticChange) => {
+              cosmetics = change(COSMETIC_CATALOG, cosmetics, 500) ?? cosmetics;
+              return Promise.resolve("committed");
+            },
+          },
+          SFX: { ui: vi.fn() },
+        },
+        renderers: {},
+      } as never,
+    );
+    const names = () => loadoutSummaries(cosmetics).map((entry) => entry.name);
+    const renameBoss = renderers.loadoutNameTarget("loadout_2");
+    const renameDaily = renderers.loadoutNameTarget("loadout_3");
+    // While both name screens are open, the other device's delete of Boss arrives and Daily moves to loadout_2.
+    cosmetics = mergeCosmeticStates(cosmetics, must(deleteLoadout(boss, "loadout_2", 300)), COSMETIC_CATALOG);
+    expect(names()).toEqual(["MAIN", "Daily"]);
+    renameBoss?.commit("Weekly");
+    expect(names()).toEqual(["MAIN", "Daily"]);
+    renameDaily?.commit("Weekly");
+    expect(names()).toEqual(["MAIN", "Weekly"]);
   });
 });
 
