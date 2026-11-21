@@ -32,6 +32,7 @@ export const CANONICAL_ACTIVE_PLAN_PATHS = Object.freeze([
   "plans/active/DRILLED_MOVE_NAMES.md",
   "plans/active/PALE_GAMEPLAY_REBUILD.md",
   "plans/active/REPLAY_OVERHAUL_PLAN.md",
+  "plans/active/CINEMATICS_OVERHAUL.md",
   "plans/active/VERDANT_PALE_REBUILD.md",
 ]);
 
