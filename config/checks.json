@@ -120,7 +120,7 @@
       },
       {
         "id": "firestore-rules",
-        "run": "node scripts/test-firestore-rules.mjs",
+        "run": "node scripts/test-firestore-rules.mjs node_modules/vitest/vitest.mjs run --config vitest.rules.config.ts",
         "seconds": 60
       }
     ],
