@@ -24,7 +24,6 @@ export function createAldricType(
   const {
     bossFeedback,
     bossPhaseBeat,
-    bossTransformation,
     perilPing,
     springWeapon,
     stressArenaPlatform,
@@ -35,6 +34,35 @@ export function createAldricType(
   const { clearThroneFire, startThroneFire, tickThroneFire } = throneFireRuntime;
   interface CrownPose extends Point {
     rot: number;
+  }
+  /** CROWNFALL: the crown leaves the head with this upward speed (px/s). */
+  const CROWN_THROW_VY = -420;
+  /** The platform under the falling crown: the nearest floor or one-way platform below it. */
+  function crownLandingPlatform(platforms: readonly EnemyPlatform[], crown: Point): EnemyPlatform | null {
+    return (
+      platforms
+        .filter(
+          (platform) =>
+            (platform.oneway === true || platform.floor === true) &&
+            crown.x >= platform.x &&
+            crown.x <= platform.x + platform.w &&
+            platform.y >= crown.y,
+        )
+        .sort((a, b) => a.y - b.y)[0] ?? null
+    );
+  }
+  /** Where on that platform the crown comes to rest: a step ahead of Aldric, kept on the platform. */
+  function crownLandingPoint(platform: EnemyPlatform | null, crown: Point, facing: number): Point {
+    const ahead = crown.x + facing * 42;
+    if (!platform) return { x: ahead, y: CONFIG.world.groundY - 10 };
+    return { x: clamp(ahead, platform.x + 18, platform.x + platform.w - 18), y: platform.y - 10 };
+  }
+  /** The sideways speed that carries the crown, thrown up at CROWN_THROW_VY, onto its landing point. */
+  function crownThrowSpeed(crown: Point, landing: Point): number {
+    const g = CONFIG.world.gravity,
+      drop = Math.max(0, landing.y - crown.y);
+    const flight = (-CROWN_THROW_VY + Math.sqrt(CROWN_THROW_VY * CROWN_THROW_VY + 2 * g * drop)) / g;
+    return (landing.x - crown.x) / flight;
   }
 
   class Aldric extends Enemy {
@@ -174,15 +202,8 @@ export function createAldricType(
       return Object.freeze({
         phase,
         targetPhase: this.phase,
-        ready: this.introT <= 0 && this.cinematicT <= 0 && this.cinematicRequest === null,
-        stage:
-          this.introT > 0
-            ? "opening"
-            : this.cinematicRequest !== null || this.cinematicT > 0
-              ? "transition"
-              : this.mode === "downed"
-                ? "kneel"
-                : "combat",
+        ready: this.introT <= 0,
+        stage: this.introT > 0 ? "opening" : this.mode === "downed" ? "kneel" : "combat",
       });
     }
     get phase() {
@@ -471,14 +492,14 @@ export function createAldricType(
         bossPhaseBeat(this, "THE THRONE BURNS", CONFIG.colors.bomber);
       }
       if (this.mode === "fire" && f < ALDRIC_FAKE_TIER && !this.faked) {
-        this._enterDowned();
+        this._enterDowned(platforms);
       }
-      if (this.cinematicRequest) return;
       tickThroneFire(this, dt);
       for (const z of this.seams) z.life = (z.life ?? 0) - dt;
       this.seams = this.seams.filter((z) => (z.life ?? 0) > 0);
       this._syncZones();
-      if (this.crown) {
+      // A CROWNFALL crown that lands this tick comes to rest on the platform it was thrown onto (`_crownLands`).
+      if (this.crown && !this._crownLands(platforms)) {
         const rest = this.crown.restPlatform;
         if (this.crown.state === "fallen" && rest && platforms.includes(rest)) {
           this.crown.y = rest.y - 10;
@@ -520,7 +541,7 @@ export function createAldricType(
         this.hp = Math.min(this.reviveCap, this.hp + this.maxHp * regen * dt);
         this.kneelT -= dt;
         this.integrate(dt, platforms);
-        if (this.kneelT <= 0) this.revive(!this.kneelStruck);
+        if (this.kneelT <= 0) this.revive(!this.kneelStruck, platforms, player);
         return;
       }
 
@@ -792,7 +813,11 @@ export function createAldricType(
         /* audio feedback is best-effort */
       } // the cleaver tears the air
     }
-    _enterDowned() {
+    // A phase change is a move in the fight, never a scene that stops it
+    // (plans/active/CINEMATICS_OVERHAUL.md). CROWNFALL: the phase-breaking hit knocks the crown
+    // off and Aldric drops to his kneel on the same tick. The crown flies under gravity onto the
+    // platform below it, which shows its crack from the moment the crown is airborne.
+    _enterDowned(platforms: readonly EnemyPlatform[]) {
       const C = CONFIG.aldric;
       const crownPose = this._wornCrownPose();
       this.mode = "downed";
@@ -810,27 +835,37 @@ export function createAldricType(
       clearThroneFire(this, true);
       this._syncZones();
       this.crownWorn = false;
+      const below = crownLandingPlatform(platforms, crownPose);
+      const landing = crownLandingPoint(below, crownPose, this.facing);
       this.crown = {
         x: crownPose.x,
         y: crownPose.y,
-        vx: this.facing * 330,
-        vy: -420,
+        vx: crownThrowSpeed(crownPose, landing),
+        vy: CROWN_THROW_VY,
         rot: crownPose.rot,
         state: "airborne",
         heat: this.crownHeat,
+        restPlatform: below,
       };
+      if (below?.arenaPlatId) below.arenaFractureRequest = { reason: "crownfall", color: CONFIG.colors.bomber };
       this.phaseTag = "THE KNEEL";
-      bossTransformation(this, {
-        id: "aldric-crownfall",
-        title: "THE CROWN FALLS",
-        pose: "aldricCrownfall",
-        line: "A THRONE IS ONLY WOOD.",
-        color: CONFIG.colors.bomber,
-        sfx: "aldricIgnite",
-        crownFall: true,
-      });
+      bossPhaseBeat(this, "CROWNFALL", CONFIG.colors.bomber);
     }
-    revive(witnessed = false) {
+    /** The thrown crown lands on its platform while that platform still stands. */
+    _crownLands(platforms: readonly EnemyPlatform[]) {
+      const crown = this.crown,
+        target = crown?.restPlatform;
+      if (crown?.state !== "airborne" || !target || crown.vy <= 0 || !platforms.includes(target)) return false;
+      if (crown.y < target.y - 10 || crown.x < target.x || crown.x > target.x + target.w) return false;
+      crown.y = target.y - 10;
+      crown.vx = 0;
+      crown.vy = 0;
+      crown.state = "fallen";
+      if (SFX.aldricCrownFall) SFX.aldricCrownFall();
+      return true;
+    }
+    // The revive is a move in the fight too: frenzy starts, and its first move is the vertical vault.
+    revive(witnessed = false, platforms: readonly EnemyPlatform[] = [], player: EnemyPlayerPort | null = null) {
       this.mode = "frenzy";
       this.faked = true;
       this.state = "idle";
@@ -849,16 +884,13 @@ export function createAldricType(
         this.contactDmg *= CONFIG.aldric.angerDamageMult;
       }
       this._lightFire(true);
-      bossTransformation(this, {
-        id: witnessed ? "aldric-witnessed" : "aldric-angered",
-        title: witnessed ? "THE LAST CROWN RISES" : "THE BEAST AWAKES",
-        pose: "aldricFeral",
-        line: witnessed ? "A KING NEEDS NO THRONE." : "YOU CHOSE THE BEAST.",
-        color: CONFIG.colors.bomber,
-        sfx: "aldricIgnite",
-        brief: true,
-        firstVertical: true,
-      });
+      bossPhaseBeat(this, witnessed ? "WITNESSED" : "THE BEAST", CONFIG.colors.bomber);
+      const target = player ? this._chooseVerticalTarget(player, platforms) : null;
+      if (target && player) this._startVertical("vault", target, player);
+      else {
+        this.verticalCd = 0;
+        this.verticalTrackT = CONFIG.aldric.verticalResponse;
+      }
     }
     _animWeapon(dt: number) {
       let wt = -0.6,

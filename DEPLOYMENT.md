@@ -58,10 +58,18 @@ The only publisher is the protected GitHub Actions workflow, described fully in 
 
 1. Merge the change into protected `main` through a pull request.
 2. Wait for the `Validate` run on that `main` commit to succeed. It uploads the built targets as `tear-release-targets-<sha>`, kept for 14 days.
-3. Optionally run `Rehearse Cloudflare Release` with that Validate run ID. It publishes the same artifact to the separate `tear-preview` Worker.
+3. Optionally run `Rehearse Cloudflare Release` with that Validate run ID. It publishes the same artifact to the separate `tear-preview` Worker, served at https://preview.tearblade.com (see Domains below).
 4. Run `Deploy Cloudflare Production` with the Validate run ID and approve the protected `Production` environment. The workflow verifies and publishes the stored artifact; it does not rebuild.
 
 The Worker name, current compatibility date, observability and the generated-assets boundary live in `wrangler.jsonc`. Cloudflare API tokens belong in GitHub Actions secrets, never in this repository or Wrangler variables.
+
+## Domains
+
+Each Worker is served from its own custom domain, attached to the Worker in the Cloudflare dashboard, not by the Wrangler configuration: the `tear` Worker at tearblade.com and the `tear-preview` Worker at https://preview.tearblade.com. Neither `wrangler.jsonc` nor `wrangler.preview.jsonc` has routes, and both set `workers_dev` to `false` (the preview also sets `preview_urls` to `false`), so the Worker's default Cloudflare subdomain and per-version preview addresses, which carry the account name, serve nothing. A test in `tests/unit/ci-workflow.test.mjs` pins that and fails on any tracked text that holds such an address.
+
+Why no routes: with `workers_dev` off and a route in the configuration, Wrangler lists the zone's routes (`GET /zones/<zone>/workers/routes`) before every deploy. The preview token cannot read them, so every preview deploy after the first failed there (Rehearse Cloudflare Release run 44913103522, "No access to the specified resource"; the first deploy, run 44893747001, skipped the check because the default subdomain was still on). Attaching the domain once and leaving it out of the configuration needs no extra token permission.
+
+If a domain is ever detached: in the Cloudflare dashboard open Workers & Pages, the Worker (`tear` or `tear-preview`), Settings, Domains & Routes, Add, Custom domain, and enter the host name. Nothing else changes; the next deploy keeps it.
 
 ## Rollback
 

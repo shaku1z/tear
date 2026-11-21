@@ -4,6 +4,9 @@
   "compatibility_date": "2026-07-21",
   // Production receives the exact standalone artifact that passed Validate.
   // Wrangler must never rebuild a different tree during publication.
+  // tearblade.com stays attached as it is (no routes here, see DEPLOYMENT.md, Domains). The Worker's default Cloudflare subdomain is off:
+  // it would show the account name to anyone with the link.
+  "workers_dev": false,
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1

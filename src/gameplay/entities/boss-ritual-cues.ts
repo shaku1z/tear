@@ -14,41 +14,10 @@ const cues: Readonly<
       sfx: string;
       speaker?: string;
       anchor: string;
-      crownFall?: boolean;
-      firstVertical?: boolean;
       brief?: boolean;
     }>
   >
 > = {
-  "aldric-crownfall": {
-    bossId: "aldric",
-    phase: 3,
-    pose: "aldricCrownfall",
-    line: "A THRONE IS ONLY WOOD.",
-    sfx: "aldricIgnite",
-    anchor: "lower-right",
-    crownFall: true,
-  },
-  "aldric-witnessed": {
-    bossId: "aldric",
-    phase: 3,
-    pose: "aldricFeral",
-    line: "A KING NEEDS NO THRONE.",
-    sfx: "aldricIgnite",
-    anchor: "lower-right",
-    brief: true,
-    firstVertical: true,
-  },
-  "aldric-angered": {
-    bossId: "aldric",
-    phase: 3,
-    pose: "aldricFeral",
-    line: "YOU CHOSE THE BEAST.",
-    sfx: "aldricIgnite",
-    anchor: "lower-right",
-    brief: true,
-    firstVertical: true,
-  },
   "rootbound-garden-remembers": {
     bossId: "rootbound",
     phase: 2,
@@ -81,11 +50,6 @@ export function canonicalBossRitualCue(owner: BossRitualActor, cue: BossRitualCu
       ? (owner as BossRitualActor & BossPhasePracticeActor).practicePhaseEntry()
       : null;
   if (
-    (cue.id === "aldric-witnessed" && Reflect.get(owner, "witnessEarned") !== true) ||
-    (cue.id === "aldric-angered" && Reflect.get(owner, "anger") !== true)
-  )
-    throw new RangeError("Ritual cue does not match the earned Aldric branch");
-  if (
     !expected ||
     cue.pose !== owner.cinematicPose ||
     !isObject(status) ||
@@ -93,8 +57,6 @@ export function canonicalBossRitualCue(owner: BossRitualActor, cue: BossRitualCu
     status.phase !== expected.phase ||
     expected.bossId !== owner.bossId ||
     cue.pose !== expected.pose ||
-    Boolean(cue.crownFall) !== Boolean(expected.crownFall) ||
-    Boolean(cue.firstVertical) !== Boolean(expected.firstVertical) ||
     Boolean(cue.brief) !== Boolean(expected.brief) ||
     cue.line !== expected.line ||
     cue.sfx !== expected.sfx ||

@@ -13,11 +13,11 @@ export function installAldricEchoRenderers(types: EnemyTypes, runtime: EnemyRend
     lerp,
     chargeTelegraph,
     dangerColumn,
+    dangerArc,
     dangerReticle,
     drawAldricCrown,
     drawGreatCleaver,
     drawPeril,
-    telegraphInk,
     weaponGlint,
   } = runtime;
   Object.assign(types.Aldric.prototype, {
@@ -160,24 +160,19 @@ export function installAldricEchoRenderers(types: EnemyTypes, runtime: EnemyRend
         dangerReticle(ctx, tx, ty, this.state === "thronewind" ? 34 : 23, k, CONFIG.colors.bomber);
         if (this.state === "ascendwind")
           dangerColumn(ctx, tx, CONFIG.aldric.ascendHalfW * 2, ty - 18, this.y + this.hh, CONFIG.colors.bomber, k);
-        else {
-          ctx.save();
-          ctx.strokeStyle = telegraphInk(CONFIG.colors.bomber);
-          ctx.globalAlpha = 0.34 + k * 0.45;
-          ctx.lineWidth = 2.5;
-          ctx.setLineDash([12, 9]);
-          ctx.beginPath();
-          ctx.moveTo(this.verticalStartX, this.verticalStartY);
-          ctx.quadraticCurveTo(
+        else
+          dangerArc(
+            ctx,
+            this.verticalStartX,
+            this.verticalStartY,
             lerp(this.verticalStartX, tx, 0.5),
             Math.min(this.verticalStartY, ty) -
               (this.state === "thronewind" ? CONFIG.aldric.thronefallRise : CONFIG.aldric.vaultArc),
             tx,
             ty,
+            CONFIG.colors.bomber,
+            k,
           );
-          ctx.stroke();
-          ctx.restore();
-        }
         weaponGlint(ctx, cleaverPose.tip.x, cleaverPose.tip.y, CONFIG.colors.bomber, k);
         drawPeril(ctx, this);
       }

@@ -546,7 +546,7 @@ The brief listed five hooks. Measured:
     that changes the new boss's behaviour steps the ruleset too, and says so in its pull request.
   - **Found in slice 2:** it can. A Boss Test run opens fresh on a boss (`freshBossOpening` in
     `src/ghost/replay-admission.ts`), so it is recordable, and the new boss is a new entity kind, which
-    changes the replay content hash (`ENTITY_KIND_REGISTRY`). Slice 2 stepped the ruleset to v18.
+    changes the replay content hash (`ENTITY_KIND_REGISTRY`). Slice 2 stepped the ruleset to v19 (cinematics PR 3 took v18).
     Slices 3 to 5 step it again unless replay admission refuses runs with an engineering-only boss;
     that is proposed to the replay-overhaul owner, not done here.
 - **Old replays.**

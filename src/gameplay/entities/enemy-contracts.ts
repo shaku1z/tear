@@ -141,6 +141,7 @@ export interface EnemySoundPort {
   aldricFireWarn?(step: number): void;
   aldricIgnite?(): void;
   aldricCleaverBury?(): void;
+  aldricCrownFall?(): void;
   aldricCleaverWhoosh?(): void;
   sourceDepthPrepare(kind: string): void;
   sourceDepthSnap(kind: string): void;
@@ -264,8 +265,6 @@ export interface BossTransformationSpec {
   brief?: boolean | undefined;
   speaker?: string | undefined;
   after?: string | undefined;
-  crownFall?: boolean | undefined;
-  firstVertical?: boolean | undefined;
 }
 
 export interface BossPresentationActor extends ProjectileOwnerPort {

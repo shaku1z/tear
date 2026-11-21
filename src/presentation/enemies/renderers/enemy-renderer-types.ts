@@ -56,6 +56,7 @@ export interface EnemyPresentationPolicy {
  */
 export const ENEMY_MARK_HELPERS = Object.freeze([
   "chargeTelegraph",
+  "dangerArc",
   "dangerLane",
   "dangerColumn",
   "dangerReticle",
