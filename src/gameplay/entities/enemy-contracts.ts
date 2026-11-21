@@ -141,6 +141,7 @@ export interface EnemySoundPort {
   aldricFireWarn?(step: number): void;
   aldricIgnite?(): void;
   aldricCleaverBury?(): void;
+  aldricCrownFall?(): void;
   aldricCleaverWhoosh?(): void;
   sourceDepthPrepare(kind: string): void;
   sourceDepthSnap(kind: string): void;
