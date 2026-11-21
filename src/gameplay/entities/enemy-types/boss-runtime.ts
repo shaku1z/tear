@@ -34,7 +34,6 @@ export const BOSS_PRESENTATION: Readonly<Record<string, Readonly<Record<string, 
     stagger: {
       shake: 11,
       flash: 0.22,
-      slowmo: 0.35,
       zoom: 0.055,
       hitstop: 0.075,
       cue: "colossusStagger",
@@ -57,7 +56,7 @@ export const BOSS_PRESENTATION: Readonly<Record<string, Readonly<Record<string, 
     launch: { shake: 3, cue: "aldricCleaver", priority: 3 },
     contact: { shake: 7, hitstop: 0.045, cue: "aldricCleaver", priority: 6 },
     counter: { shake: 5, hitstop: 0.04, cue: "aldricCleaver", priority: 6 },
-    stagger: { shake: 8, flash: 0.18, slowmo: 0.3, cue: "aldricCleaver", priority: 8 },
+    stagger: { shake: 8, flash: 0.18, cue: "aldricCleaver", priority: 8 },
     phaseTransition: { shake: 8, flash: 0.3, zoom: 0.045, cue: "aldricIgnite", priority: 9 },
     platformBreak: { shake: 4, cue: "aldricCleaver", priority: 3 },
     platformRebuild: { shake: 1, cue: "platformRebuild", priority: 1 },
@@ -68,7 +67,7 @@ export const BOSS_PRESENTATION: Readonly<Record<string, Readonly<Record<string, 
     launch: { shake: 3, cue: "slam", priority: 3 },
     contact: { shake: 7, hitstop: 0.045, cue: "slam", priority: 6 },
     counter: { shake: 5, hitstop: 0.04, cue: "slam", priority: 6 },
-    stagger: { shake: 8, flash: 0.2, slowmo: 0.3, cue: "wardenGuardBreak", priority: 8 },
+    stagger: { shake: 8, flash: 0.2, cue: "wardenGuardBreak", priority: 8 },
     phaseTransition: { shake: 8, flash: 0.3, zoom: 0.045, cue: "boom", priority: 9 },
     platformBreak: { shake: 4, cue: "slam", priority: 3 },
     platformRebuild: { shake: 1, cue: "platformRebuild", priority: 1 },
@@ -79,7 +78,7 @@ export const BOSS_PRESENTATION: Readonly<Record<string, Readonly<Record<string, 
     launch: { shake: 3, priority: 3 },
     contact: { shake: 7, hitstop: 0.045, priority: 6 },
     counter: { shake: 5, flash: 0.12, hitstop: 0.04, priority: 7 },
-    stagger: { shake: 8, flash: 0.2, slowmo: 0.32, priority: 8 },
+    stagger: { shake: 8, flash: 0.2, priority: 8 },
     phaseTransition: { shake: 7, flash: 0.28, zoom: 0.04, priority: 9 },
     platformBreak: { shake: 3, priority: 3 },
     platformRebuild: { shake: 1, cue: "platformRebuild", priority: 1 },
@@ -90,7 +89,7 @@ export const BOSS_PRESENTATION: Readonly<Record<string, Readonly<Record<string, 
     launch: { shake: 2, cue: "echoResonance", priority: 3 },
     contact: { shake: 4, hitstop: 0.035, cue: "echoResonance", priority: 5 },
     counter: { shake: 3, flash: 0.1, cue: "echoResonance", priority: 6 },
-    stagger: { shake: 5, flash: 0.16, slowmo: 0.3, cue: "echoResonance", priority: 8 },
+    stagger: { shake: 5, flash: 0.16, cue: "echoResonance", priority: 8 },
     phaseTransition: { shake: 4, flash: 0.24, zoom: 0.03, cue: "echoResonance", priority: 9 },
     platformBreak: { shake: 1, cue: "echoResonance", priority: 2 },
     platformRebuild: { shake: 0, cue: "echoResonance", priority: 1 },
@@ -101,7 +100,7 @@ export const BOSS_PRESENTATION: Readonly<Record<string, Readonly<Record<string, 
     launch: { shake: 3, cue: "sourceCross", priority: 3 },
     contact: { shake: 6, hitstop: 0.04, cue: "sourceFracture", priority: 6 },
     counter: { shake: 5, flash: 0.12, hitstop: 0.045, cue: "sourceRepel", priority: 7 },
-    stagger: { shake: 7, flash: 0.2, slowmo: 0.34, cue: "sourceFracture", priority: 8 },
+    stagger: { shake: 7, flash: 0.2, cue: "sourceFracture", priority: 8 },
     phaseTransition: { shake: 7, flash: 0.32, zoom: 0.045, cue: "sourceCross", priority: 9 },
     platformBreak: { shake: 2, cue: "sourceFracture", priority: 3 },
     platformRebuild: { shake: 0, cue: "voidTransfer", priority: 1 },
@@ -114,7 +113,8 @@ export function createBossRuntime(dependencies: EnemyDependencies) {
   // ====================================================================================
   //  BOSS THEATER — the shared ceremony layer every boss speaks through.
   //  BOSSFX mirrors the Echo's fxq (drained generically in game.js): any boss can push
-  //  {shake, flash, hitstop, slowmo, zoom, txt, x, y, big, color, quiet} beats.
+  //  {shake, flash, hitstop, zoom, txt, x, y, big, color, quiet} beats. No boss
+  //  event slows time: the fight never stops (plans/active/CINEMATICS_OVERHAUL.md).
   // ====================================================================================
   interface BossFxQueue {
     q: BossFxEvent[];
@@ -136,7 +136,7 @@ export function createBossRuntime(dependencies: EnemyDependencies) {
       if (!this.q.length) return [];
       const requests = this.q.splice(0),
         out: BossFxEvent = { priority: -1, quiet: true },
-        numeric = ["shake", "flash", "hitstop", "slowmo", "zoom"] as const;
+        numeric = ["shake", "flash", "hitstop", "zoom"] as const;
       let cuePriority = -1,
         textPriority = -1;
       for (const ev of requests) {

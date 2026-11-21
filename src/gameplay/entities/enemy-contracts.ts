@@ -244,7 +244,6 @@ export interface BossFxEvent {
   shake?: number | undefined;
   flash?: number | undefined;
   hitstop?: number | undefined;
-  slowmo?: number | undefined;
   zoom?: number | undefined;
   cue?: string | undefined;
   banner?: string | undefined;

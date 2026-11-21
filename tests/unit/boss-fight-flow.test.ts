@@ -192,11 +192,13 @@ describe("boss fight flow: nothing in a boss fight stops the fight", { timeout: 
     return found;
   };
 
-  it("no phase-change or death preset slows time, and no preset holds a hit-stop above the cap", () => {
+  // No boss-side event slows time. The boss and Echo feedback types have no slow-motion field, so a boss
+  // push that asks for it does not compile; these checks hold the data and Echo's queue to the same rule.
+  it("no boss preset slows time, and no preset holds a hit-stop above the cap", () => {
     for (const [boss, presets] of Object.entries(BOSS_PRESENTATION)) {
       for (const [event, preset] of Object.entries(presets)) {
         expect(preset.hitstop ?? 0, `${boss}.${event} hit-stop`).toBeLessThanOrEqual(HIT_STOP_CAP_SECONDS);
-        if (event === "phaseTransition" || event === "death") expect(preset.slowmo, `${boss}.${event}`).toBeUndefined();
+        expect(Object.keys(preset), `${boss}.${event}`).not.toContain("slowmo");
       }
     }
     expect(CONFIG.hitStop.big).toBeLessThanOrEqual(HIT_STOP_CAP_SECONDS);
@@ -204,17 +206,17 @@ describe("boss fight flow: nothing in a boss fight stops the fight", { timeout: 
 
   it("Echo's own phase changes never slow time and keep the hit-stop under the cap", () => {
     const { Mirror, host } = createMirrorTestHarness();
-    const feedback: { slowmo?: number; hitstop?: number }[] = [];
+    const feedback: { readonly hitstop?: number }[] = [];
     for (const mark of bossPhaseMarks("echo")) {
       host.hp = Math.floor(host.maxHp * mark) - 1;
       Mirror.fxq.length = 0;
       Mirror._updatePhase();
-      feedback.push(...(Mirror.fxq as { slowmo?: number; hitstop?: number }[]));
+      feedback.push(...Mirror.fxq);
     }
     expect(Mirror.phase).toBe(3);
     expect(feedback.length).toBeGreaterThan(0);
     for (const event of feedback) {
-      expect(event.slowmo).toBeUndefined();
+      expect(Object.keys(event)).not.toContain("slowmo");
       expect(event.hitstop ?? 0).toBeLessThanOrEqual(HIT_STOP_CAP_SECONDS);
     }
   });

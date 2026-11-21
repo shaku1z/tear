@@ -1,6 +1,7 @@
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 const { STATE_WAIT_MS, holdFor } = require("./browser-waits");
+const { rulesetVersion: PUBLISHED_RULESET_VERSION } = require("../config/campaign-publication-boundary.json");
 
 function scenario() {
   return {
@@ -172,7 +173,8 @@ withJourney({ name: "C27 Ghost V3 physical live capture", tutorialSkipped: true 
     capsule.tracks.keyframes.find((entry) => entry.tick === 0)?.value?.state?.["tear.ui.v1"]?.screen,
     "setup",
   );
-  assert.equal(admission.context.build.rulesetVersion, "tear-rules-six-biome-verdant-r3-pale-preview-v14");
+  // The published ruleset, which tests/unit/verdant-publication-boundary.test.ts holds equal to CURRENT_RULESET_VERSION.
+  assert.equal(admission.context.build.rulesetVersion, PUBLISHED_RULESET_VERSION);
   assert.ok(admission.context.build.contentHash.length > 0);
   assert.ok(admission.context.build.configHash.length > 0);
   const stateKeyframes = capsule.tracks.keyframes.filter((entry) => entry.value?.kind === "snapshot");

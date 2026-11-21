@@ -122,7 +122,7 @@ describe("ruleset steps", () => {
   it("admits only the current ruleset, in every mode, and names the first change an older recording missed", () => {
     expect(rulesetRefusal(CURRENT_RULESET_VERSION)).toBeNull();
     expect(rulesetRefusal(SIX_BIOME_PALE_PREVIEW_V13_RULESET_VERSION)).toBe(
-      "recorded before boss phase changes and deaths stopped slowing time",
+      "recorded before bosses stopped slowing time",
     );
     expect(rulesetRefusal(SIX_BIOME_PALE_PREVIEW_V12_RULESET_VERSION)).toBe(
       "recorded before the listed enemies of a wave began arriving without affixes",
