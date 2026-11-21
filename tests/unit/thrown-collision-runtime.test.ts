@@ -106,6 +106,25 @@ const player: ThrownPlayer = { x: 0, y: 0, hp: 10, maxHp: 10, tempoT: 0, tempoSt
 const run: ThrownRun = { weaponId: "tear", mods: {}, weaponStats: { throwHits: 0 } };
 
 describe("thrown collision runtime", () => {
+  it("cuts a boss part it crosses instead of hitting the body, and stops the enemy pass", () => {
+    const weapon = blade();
+    const hit = vi.fn(() => 10);
+    const cutPart = vi.fn(() => true);
+    const foe = enemy({ isBoss: true, hit, cutPoint: () => ({ x: 10, y: 0, r: 4 }), cutPart });
+    resolveThrownCollisions(weapon, player, [foe], [], run, tuning, hooks());
+    expect(cutPart).toHaveBeenCalledOnce();
+    expect(hit).not.toHaveBeenCalled();
+    expect(weapon.pierced.has(foe)).toBe(true);
+  });
+
+  it("hits the body as before when the boss has no part to cut", () => {
+    const hit = vi.fn(() => 10);
+    const cutPart = vi.fn(() => true);
+    resolveThrownCollisions(blade(), player, [enemy({ hit, cutPoint: () => null, cutPart })], [], run, tuning, hooks());
+    expect(cutPart).not.toHaveBeenCalled();
+    expect(hit).toHaveBeenCalledOnce();
+  });
+
   it("lets a duelist parry before damage and immediately recalls the weapon", () => {
     const weapon = blade();
     const hit = vi.fn(() => 10);

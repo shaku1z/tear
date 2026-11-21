@@ -1,5 +1,5 @@
 import type { TearRuntimeAccessClass } from "./live-runtime-contracts";
-import { bossDefinition, isBossDefinitionId } from "../gameplay/run/boss-definitions";
+import { bossDefinition, bossStageOwner, isBossDefinitionId } from "../gameplay/run/boss-definitions";
 import { STAGE_BOSS_HOME, type StageId } from "../gameplay/stages";
 
 export interface LiveBossObservation {
@@ -26,7 +26,9 @@ export function projectLiveBossObservation(
   );
   const rawPhase = typeof actor.phase === "number" || typeof actor.phase === "string" ? String(actor.phase) : "";
   const phase = validPhases.includes(rawPhase) ? rawPhase : (validPhases[0] ?? "1");
-  const home = Object.entries(STAGE_BOSS_HOME).find(([, bossId]) => bossId === rawId)?.[0] as StageId | undefined;
+  // A rebuild fights on the stage of the boss it rebuilds (`stageOf`).
+  const owner = bossStageOwner(rawId);
+  const home = Object.entries(STAGE_BOSS_HOME).find(([, bossId]) => bossId === owner)?.[0] as StageId | undefined;
   if (home === undefined) throw new RangeError(`boss ${rawId} has no source-owned home stage`);
   return Object.freeze({ id: rawId, phase, validPhases, homeStage: home });
 }

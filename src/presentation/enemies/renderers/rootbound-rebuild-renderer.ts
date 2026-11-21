@@ -14,7 +14,8 @@ import type { RenderInstance } from "./enemy-renderer-types";
 /**
  * The new Rootbound (plans/active/VERDANT_PALE_REBUILD.md, 2.1) drawn with the approved figure. The body and
  * its vine are the tells; the only marks are the Surface Strike column and the Canopy Vault landing, both
- * through the shared helpers, and the shared peril diamond on the moves that can't be parried.
+ * through the shared helpers, and the shared peril diamond on the moves that can't be parried. Its Root Seam
+ * and Bramble Rows are boss zones, which the shared zone renderer draws.
  */
 
 type Boss = RenderInstance<"RootboundRebuild">;
@@ -27,11 +28,15 @@ export const ROOTBOUND_REBUILD_STATE_POSES: Readonly<Record<string, readonly [po
   swingwind: ["coil", "in"],
   swing: ["lunge", "hold"],
   swingrecover: ["lunge", "out"],
+  swing2wind: ["coil", "in"],
+  swing2: ["lunge", "hold"],
+  planted: ["lunge", "hold"],
   staggered: ["split", "hold"],
   throwwind: ["coil", "in"],
   throwrecover: ["lunge", "out"],
   sink: ["sink", "in"],
   uprootsink: ["sink", "in"],
+  bloomsink: ["sink", "in"],
   rise: ["rise", "out"],
   surface: ["stretch", "hold"],
   split: ["split", "hold"],
@@ -41,6 +46,12 @@ export const ROOTBOUND_REBUILD_STATE_POSES: Readonly<Record<string, readonly [po
   swell: ["swell", "in"],
   burst: ["burst", "hold"],
   burstrecover: ["burst", "hold"],
+  bramblewind: ["kneel", "in"],
+  bramble: ["kneel", "hold"],
+  bramblerecover: ["rise", "out"],
+  mendwind: ["kneel", "in"],
+  mend: ["kneel", "hold"],
+  mendsplit: ["split", "hold"],
 };
 
 type Ink = Readonly<{ stem: string; edge: string; thorn: string; earth: string; vine: string; mark: string }>;
@@ -137,14 +148,22 @@ function drawStrike(ctx: CanvasRenderingContext2D, boss: Boss, ink: Ink, ground:
   }
 }
 
-/** The vine, a prop: rearing through the coil, swept through the swing, drawn back after it. */
+/**
+ * The vine, a prop: rearing through the coil, swept through the swing, drawn back after it, or planted in the
+ * floor where it drives the Root Seam.
+ */
 function drawVine(runtime: EnemyRendererRuntime, ctx: CanvasRenderingContext2D, boss: Boss, ink: Ink) {
   const k = boss.progress();
   const reach = ROOTBOUND_MOVES.vineSwing.reach;
   const shoulder = boss.vineShoulder();
+  if (boss.state === "planted") {
+    runtime.drawRootVine(ctx, shoulder, { x: boss.rootX, y: runtime.CONFIG.world.groundY }, 40, 8, ink);
+    return;
+  }
   let angle: number, length: number;
-  if (boss.state === "swingwind") [angle, length] = [boss.vineAngle(), reach * (0.5 + 0.5 * k)];
-  else if (boss.state === "swing") [angle, length] = [boss.vineAngle(), reach];
+  if (boss.state === "swingwind" || boss.state === "swing2wind")
+    [angle, length] = [boss.vineAngle(), reach * (0.5 + 0.5 * k)];
+  else if (boss.state === "swing" || boss.state === "swing2") [angle, length] = [boss.vineAngle(), reach];
   else if (boss.state === "swingrecover") [angle, length] = [0.4, reach * (1 - k)];
   else if (boss.state === "throwwind") [angle, length] = [-1.25 * k, 90];
   else return;
@@ -153,8 +172,8 @@ function drawVine(runtime: EnemyRendererRuntime, ctx: CanvasRenderingContext2D, 
     x: shoulder.x + boss.facing * Math.cos(angle) * length,
     y: shoulder.y + Math.sin(angle) * length,
   };
-  const width = boss.state === "swing" ? 8 : 5;
-  runtime.drawRootVine(ctx, shoulder, tip, boss.state === "swing" ? 30 : 50, width, ink);
+  const sweeping = boss.state === "swing" || boss.state === "swing2";
+  runtime.drawRootVine(ctx, shoulder, tip, sweeping ? 30 : 50, sweeping ? 8 : 5, ink);
 }
 
 export function installRootboundRebuildRenderer(types: EnemyTypes, runtime: EnemyRendererRuntime): void {
@@ -183,8 +202,9 @@ export function installRootboundRebuildRenderer(types: EnemyTypes, runtime: Enem
             mark: palette.mark,
           };
       const k = this.progress();
-      // The two marks, through the shared helpers: where the column comes up, and where the vault lands.
-      if (this.state === "rise") {
+      // The two marks, through the shared helpers: where the column comes up, and where the vault lands. Last
+      // Bloom's rise ends in a Thorn Burst ring, not the column, so it draws no column.
+      if (this.state === "rise" && !this.blooming) {
         const { width, height } = ROOTBOUND_MOVES.surfaceStrike;
         runtime.dangerColumn(ctx, this.x, width, ground - height, ground, ink.mark, k);
       }
@@ -203,7 +223,8 @@ export function installRootboundRebuildRenderer(types: EnemyTypes, runtime: Enem
         this.drawHpBar(ctx);
         return;
       }
-      if (this.state === "sink" || this.state === "uprootsink") mound(ctx, ink, this.x, ground, k);
+      if (this.state === "sink" || this.state === "uprootsink" || this.state === "bloomsink")
+        mound(ctx, ink, this.x, ground, k);
       if (this.state === "rise") mound(ctx, ink, this.x, ground, 1 - k * 0.5);
       ctx.save();
       ctx.translate(this.x, this.y + this.hh);
