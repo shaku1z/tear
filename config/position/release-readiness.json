@@ -1,0 +1,13 @@
+{
+  "id": "release-readiness",
+  "name": "Release readiness",
+  "state": "Merged to main",
+  "summary": "Pull request 85 merged the release-readiness line on 2026-11-13 (developer surfaces gated out of release builds, menu UI rebuilt, startup payload 4.13 MB to 2.10 MB, offline cache 14.77 MB to 6.74 MB, new code-budget, determinism and architecture gates). Follow-ups 86, 87 and 89 to 92 merged the same day (runtime split, one world constructor, Prettier). The phase table in the plan still shows the pre-merge states.",
+  "next": "Production deploy, after the owner has played the build.",
+  "owner_action": "",
+  "evidence": [
+    "plans/active/RELEASE_READINESS_PLAN.md",
+    "https://github.com/shaku1z/tear/pull/85",
+    "https://github.com/shaku1z/tear/pull/91"
+  ]
+}

@@ -4,11 +4,7 @@ import { COSMETIC_CATALOG } from "../../src/gameplay/progression/cosmetic-catalo
 import type { GameAction } from "../../src/input/game-action";
 import { createProductionHeadlessEnvironment } from "../../src/playtest/headless/production-headless-environment";
 import { DEFAULT_COSMETIC_LOOKS } from "../../src/presentation/cosmetic-defaults";
-import {
-  COSMETIC_DRAW_HOOKS,
-  createCosmeticWardrobe,
-  type CosmeticLooks,
-} from "../../src/presentation/cosmetic-styles";
+import { COSMETIC_DRAW_HOOKS, resolveCosmeticStyles, type CosmeticLooks } from "../../src/presentation/cosmetic-styles";
 import type { TearObservationV1, TearScenarioV1 } from "../../src/tearbench/contracts";
 
 /**
@@ -69,7 +65,6 @@ describe("cosmetics and the simulation", () => {
   it(
     "leaves every tick's authoritative hash unchanged with every ready slot equipped",
     () => {
-      const wardrobe = createCosmeticWardrobe(COSMETIC_CATALOG, () => false);
       const everything = Object.fromEntries(
         Object.keys(COSMETIC_DRAW_HOOKS).flatMap((slot) => {
           const item = COSMETIC_CATALOG.items.find((entry) => entry.slot === slot);
@@ -77,18 +72,18 @@ describe("cosmetics and the simulation", () => {
         }),
       );
       expect(Object.keys(everything).sort()).toEqual(Object.keys(COSMETIC_DRAW_HOOKS).sort());
-      wardrobe.wear({}, everything);
-      let wornSparks = 0;
+      // Every owner in the fight wears everything, so every blade hit wears the spark.
+      const worn = resolveCosmeticStyles(COSMETIC_CATALOG, everything, false);
+      let dressedLookups = 0;
       const counting: CosmeticLooks = {
-        defaults: wardrobe.defaults,
-        of: (owner) => wardrobe.of(owner),
-        worn: () => {
-          wornSparks += 1;
-          return wardrobe.worn();
+        defaults: DEFAULT_COSMETIC_LOOKS.defaults,
+        of: () => {
+          dressedLookups += 1;
+          return worn;
         },
       };
       const dressed = hashes(counting);
-      expect(wornSparks, "the fight must land blade hits that wear the spark").toBeGreaterThan(0);
+      expect(dressedLookups, "the fight must land blade hits that wear the spark").toBeGreaterThan(0);
       expect(dressed).toEqual(hashes(DEFAULT_COSMETIC_LOOKS));
     },
     TIMEOUT_MS,

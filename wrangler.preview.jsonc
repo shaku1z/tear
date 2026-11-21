@@ -2,9 +2,10 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "tear-preview",
   "compatibility_date": "2026-07-21",
-  // The preview is served only from its own domain. The Worker's default Cloudflare subdomain and the
-  // per-version preview addresses would show the account name to anyone with the link, so both are off.
-  "routes": [{ "pattern": "preview.tearblade.com", "custom_domain": true }],
+  // The preview is served only from its own domain, preview.tearblade.com, attached to this Worker once in the
+  // Cloudflare dashboard and kept out of this file on purpose (see DEPLOYMENT.md, Domains). The Worker's default
+  // Cloudflare subdomain and the per-version preview addresses would show the account name to anyone with the
+  // link, so both are off.
   "workers_dev": false,
   "preview_urls": false,
   "observability": {
