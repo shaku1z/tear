@@ -21,6 +21,7 @@ The build players have: [Production](production.md).
 - [Repository structure and workflow](repository-structure.md)
 - [Playtest tool](playtest-tool.md)
 - [Replays](replays.md)
+- [Shards (cosmetics)](shards.md)
 - [Firebase](firebase.md)
 - [Cinematics](cinematics.md)
 - [Mobile, touch and phone layouts](mobile.md)
