@@ -8,6 +8,7 @@ import { createEnemyBase } from "./enemy-types/enemy-base";
 import { createGroundEnemyTypes } from "./enemy-types/ground-enemies";
 import { createSourceType } from "./enemy-types/source";
 import { createRootboundType } from "./enemy-types/rootbound";
+import { createRootbinderRebuildType } from "./enemy-types/rootbound-rebuild/rootbinder";
 import { createRootboundRebuildType } from "./enemy-types/rootbound-rebuild/rootbound";
 import { createRimehoundType } from "./enemy-types/rimehound";
 import { createSpecialEnemyTypes } from "./enemy-types/special-enemies";
@@ -33,6 +34,7 @@ function createEnemyTypes(dependencies: EnemyDependencies) {
   const Rootbound = createRootboundType(dependencies, Enemy, bossRuntime);
   const RootboundRebuild = createRootboundRebuildType(dependencies, Enemy, bossRuntime);
   const Rimehound = createRimehoundType(dependencies, Enemy);
+  const RootbinderRebuild = createRootbinderRebuildType(dependencies, Enemy);
   const WhiteHart = createWhiteHartType(dependencies, Enemy);
 
   return Object.freeze({
@@ -49,6 +51,7 @@ function createEnemyTypes(dependencies: EnemyDependencies) {
     Ranged,
     Rimehound,
     Rootbinder,
+    RootbinderRebuild,
     Rootbound,
     RootboundRebuild,
     Source,

@@ -143,6 +143,7 @@ type FactoryEnemyKind = EnemyKind;
 
 export const STANDARD_ACTOR_FACTORIES: Readonly<Record<FactoryEnemyKind, ActorFactory>> = Object.freeze({
   rimehound: (types) => new types.Rimehound(360, CONFIG.world.groundY - 17) as BehaviorActor,
+  "rootbinder-rebuild": (types) => new types.RootbinderRebuild(360, CONFIG.world.groundY - 23) as BehaviorActor,
   charger: (types) => new types.Charger(360, CONFIG.world.groundY - CONFIG.enemy.h / 2) as BehaviorActor,
   ranged: (types) => new types.Ranged(360, CONFIG.world.groundY - CONFIG.ranged.h / 2) as BehaviorActor,
   flyer: (types) => new types.Flyer(360, 300) as BehaviorActor,

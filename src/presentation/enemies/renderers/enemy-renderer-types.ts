@@ -120,6 +120,7 @@ export type EnemyClassName =
   | "Wraith"
   | "Chimera"
   | "Rimehound"
+  | "RootbinderRebuild"
   | "Warden"
   | "Colossus"
   | "Aldric"

@@ -216,6 +216,14 @@
       ]
     },
     {
+      "id": "enemy_rootbinder_rebuild",
+      "category": "enemies",
+      "subject": "rootbinder-rebuild",
+      "sources": [
+        "src/presentation/enemies/renderers/rootbinder-rebuild-renderer.ts"
+      ]
+    },
+    {
       "id": "boss_warden",
       "category": "bosses",
       "subject": "warden",

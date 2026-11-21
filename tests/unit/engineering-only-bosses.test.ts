@@ -15,6 +15,7 @@ import {
   shuffledBossRoster,
 } from "../../src/gameplay/run/content-director";
 import { gauntletTrialOrder } from "../../src/gameplay/run/gauntlet-trials";
+import { ENGINEERING_ONLY_ENEMY_IDS } from "../../src/gameplay/run/content-director";
 import { MODE_CATALOG } from "../../src/gameplay/run/mode-catalog";
 import { ENTITY_KIND_IDS, REPLAY_CONTENT_HASH, REPLAY_CONTENT_KIND_IDS } from "../../src/gameplay/snapshot/codec-ids";
 import { bossIdsAvailableOn, type ContentAvailabilitySurface } from "../../src/gameplay/stages";
@@ -52,9 +53,11 @@ describe("engineering-only bosses", () => {
     for (const mode of bossPickers) expect(mode.surface, mode.id).toBe("engineering");
   });
 
-  it("stay out of the replay content hash, which covers every other entity kind", () => {
+  it("stay out of the replay content hash, with the engineering-only enemies; it covers every other kind", () => {
     expect(REPLAY_CONTENT_KIND_IDS).toEqual(
-      ENTITY_KIND_IDS.filter((id) => !ENGINEERING_ONLY_BOSS_IDS.includes(id as never)),
+      ENTITY_KIND_IDS.filter(
+        (id) => !ENGINEERING_ONLY_BOSS_IDS.includes(id as never) && !ENGINEERING_ONLY_ENEMY_IDS.includes(id as never),
+      ),
     );
     for (const id of ENGINEERING_ONLY_BOSS_IDS) expect(REPLAY_CONTENT_KIND_IDS).not.toContain(id);
     expect(REPLAY_CONTENT_HASH).toBe(stableVerificationHash(REPLAY_CONTENT_KIND_IDS));

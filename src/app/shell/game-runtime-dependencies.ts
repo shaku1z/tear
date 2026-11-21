@@ -141,6 +141,7 @@ export interface GameRuntimeDependencies {
   readonly shopPurchaseProgressPersistence: ShopPurchaseProgressPersistence;
   readonly styleAchievementPersistence: StyleAchievementPersistence;
   readonly Rimehound: EnemyTypes["Rimehound"];
+  readonly RootbinderRebuild: EnemyTypes["RootbinderRebuild"];
   readonly Rootbinder: EnemyTypes["Rootbinder"];
   readonly Rootbound: EnemyTypes["Rootbound"];
   readonly RootboundRebuild: EnemyTypes["RootboundRebuild"];

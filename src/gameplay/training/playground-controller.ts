@@ -1,8 +1,13 @@
-import { ENEMY_IDENTITY_IDS } from "../run/content-director";
+import { ENEMY_IDENTITY_IDS, isEngineeringOnlyEnemy } from "../run/content-director";
 import { anyKeyIn } from "../../domain/keyboard-bindings";
 
 /** Menu projection of the canonical enemy identity authority. */
 export const PLAYGROUND_ALL_KINDS = ENEMY_IDENTITY_IDS;
+
+/** The kinds the Playground's spawn list offers: every kind, less the enemies being rebuilt unless they are shown. */
+export function playgroundKinds(rebuiltShown: boolean): readonly PlaygroundEnemyKind[] {
+  return rebuiltShown ? PLAYGROUND_ALL_KINDS : PLAYGROUND_ALL_KINDS.filter((kind) => !isEngineeringOnlyEnemy(kind));
+}
 
 export type PlaygroundEnemyKind = (typeof PLAYGROUND_ALL_KINDS)[number];
 

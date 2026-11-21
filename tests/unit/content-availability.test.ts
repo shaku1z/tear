@@ -62,7 +62,10 @@ describe("published content availability", () => {
       // The rebuilt Rootbound, authored last and fought only in engineering Boss Test until the switch.
       "rootbound-rebuild",
     ]);
-    expect(PUBLISHED_ENEMY_IDENTITY_IDS).toEqual(ENEMY_IDENTITY_IDS.filter((id) => id !== "rimehound"));
+    // The Pale family waits for its stage; the rebuilt Rootbinder is engineering-only until the switch.
+    expect(PUBLISHED_ENEMY_IDENTITY_IDS).toEqual(
+      ENEMY_IDENTITY_IDS.filter((id) => id !== "rimehound" && id !== "rootbinder-rebuild"),
+    );
     expect(variantIdsAvailableOn("published")).not.toEqual(expect.arrayContaining([...PALE_VARIANT_IDS]));
     expect(variantIdsAvailableOn("playground")).toEqual(expect.arrayContaining([...PALE_VARIANT_IDS]));
   });

@@ -27,6 +27,7 @@ export type LiveWorldEntityDependencies = Pick<
   | "Colossus"
   | "Aldric"
   | "Rimehound"
+  | "RootbinderRebuild"
   | "Rootbound"
   | "RootboundRebuild"
   | "WhiteHart"
@@ -81,6 +82,7 @@ export function createLiveWorldEntityFactory(
       rootboundRebuild: (x, y) => enemy(new dependencies.RootboundRebuild(x, y)),
       whiteHart: (x, y) => enemy(new dependencies.WhiteHart(x, y)),
       rimehound: (x, y) => enemy(new dependencies.Rimehound(x, y)),
+      rootbinderRebuild: (x, y) => enemy(new dependencies.RootbinderRebuild(x, y)),
       // Echo must use the live Mirror host, not the visual Ghost 2 Echo puppet.
       echo: (x, y, mods) => enemy(new dependencies.MirrorHost(x, y, mods)),
       source: (x, y) => enemy(new dependencies.Source(x, y)),

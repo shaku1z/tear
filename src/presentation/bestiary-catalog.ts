@@ -104,6 +104,13 @@ export const ENEMY_BESTIARY_COPY: Readonly<Record<EnemyKind, EnemyCopy>> = Objec
     category: "melee",
     desc: "Runs the frozen tracks in packs and cuts across your line of travel. Break its stride before it closes.",
   },
+  // Engineering-only until it replaces the Rootbinder; the bestiary lists published enemies only.
+  "rootbinder-rebuild": {
+    name: "Rootbinder (rebuild)",
+    role: "VERDANT · BINDER",
+    category: "ranged",
+    desc: "Keeps its distance, plants and sends roots along the floor at you: jump them. Planted, it takes extra damage; one heavy hit, or standing close, pulls it out, and it hops away.",
+  },
 });
 
 export const BOSS_BESTIARY_COPY: Readonly<Record<BossId, string>> = Object.freeze({

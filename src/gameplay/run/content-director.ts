@@ -59,7 +59,12 @@ export const ENEMY_KIND_IDS = Object.freeze([
   "wraith",
   "chimera",
 ] as const);
-export const ENEMY_IDENTITY_IDS = Object.freeze([...ENEMY_KIND_IDS, "rootbinder", "rimehound"] as const);
+export const ENEMY_IDENTITY_IDS = Object.freeze([
+  ...ENEMY_KIND_IDS,
+  "rootbinder",
+  "rimehound",
+  "rootbinder-rebuild",
+] as const);
 export type ActiveEnemyKind = (typeof ENEMY_KIND_IDS)[number];
 export type EnemyKind = (typeof ENEMY_IDENTITY_IDS)[number];
 
@@ -67,11 +72,31 @@ export type EnemyKind = (typeof ENEMY_IDENTITY_IDS)[number];
 export const ENEMY_HOME_STAGE = Object.freeze({
   rootbinder: "verdant-sanctum",
   rimehound: "pale-traverse",
+  "rootbinder-rebuild": "verdant-sanctum",
 } as const satisfies Readonly<Partial<Record<EnemyKind, StageId>>>);
+
+/**
+ * Each enemy being rebuilt, with the enemy it rebuilds (plans/active/VERDANT_PALE_REBUILD.md, slice 5), as a
+ * rebuilt boss names its `stageOf`. Until the rebuild replaces that enemy it is engineering-only: the Playground
+ * offers it on the engineering channel (`playground:rebuilt-enemies`), and no recorded mode or player surface has
+ * it, so replays never meet it and a change confined to it needs no ruleset step.
+ */
+export const ENEMY_REBUILD_OF = Object.freeze({
+  "rootbinder-rebuild": "rootbinder",
+} as const satisfies Readonly<Partial<Record<EnemyKind, EnemyKind>>>);
+
+export const ENGINEERING_ONLY_ENEMY_IDS: readonly EnemyKind[] = Object.freeze(
+  ENEMY_IDENTITY_IDS.filter((id) => Object.hasOwn(ENEMY_REBUILD_OF, id)),
+);
+
+export function isEngineeringOnlyEnemy(id: string): boolean {
+  return ENGINEERING_ONLY_ENEMY_IDS.some((enemy) => enemy === id);
+}
 
 export function enemyIdsAvailableOn(surface: ContentAvailabilitySurface): readonly EnemyKind[] {
   return Object.freeze(
     ENEMY_IDENTITY_IDS.filter((id) => {
+      if (isEngineeringOnlyEnemy(id)) return false;
       const home = (ENEMY_HOME_STAGE as Readonly<Partial<Record<EnemyKind, StageId>>>)[id];
       return home === undefined || STAGE_CONTENT_AVAILABILITY[home][surface];
     }),

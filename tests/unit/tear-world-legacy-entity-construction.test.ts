@@ -40,6 +40,7 @@ describe("Tear world legacy entity construction", () => {
         rootboundRebuild: (x, y) => actor("rootbound-rebuild", x, y),
         whiteHart: (x, y) => actor("white-hart", x, y),
         rimehound: (x, y) => actor("rimehound", x, y),
+        rootbinderRebuild: (x, y) => actor("rootbinder-rebuild", x, y),
         echo: (x, y, mods) => ({ ...actor("echo", x, y), mods }),
         source: (x, y) => actor("source", x, y),
         voidWisp: (x, y) => actor("void-wisp", x, y),
@@ -81,6 +82,7 @@ describe("Tear world legacy entity construction", () => {
       "rootbinder",
       "rimehound",
       "rootbound-rebuild",
+      "rootbinder-rebuild",
     ]);
     expect(echo.mods).toEqual(restored.mods);
     expect(factory.createEnemy("charger", 9, 10, initial)).toMatchObject({ x: 9, y: 10 });

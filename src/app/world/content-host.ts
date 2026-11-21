@@ -39,7 +39,9 @@ export interface LiveContentHostContext<TEnemy extends ContentHostEnemy> {
   readonly stageId?: () => StageId;
   readonly platforms: () => ArenaPlatform[];
   readonly setPlatforms: (platforms: ArenaPlatform[]) => void;
-  readonly createGround: (kind: "charger" | "ranged" | "bomber" | "armored" | "chimera" | "rimehound") => TEnemy;
+  readonly createGround: (
+    kind: "charger" | "ranged" | "bomber" | "armored" | "chimera" | "rimehound" | "rootbinder-rebuild",
+  ) => TEnemy;
   readonly createAir: (kind: "flyer" | "wraith", x: number, y: number) => TEnemy;
   readonly createSupport: (kind: "priest" | "herald" | "mender" | "anchor" | "rootbinder") => TEnemy;
   readonly createBoss: (id: string) => TEnemy;

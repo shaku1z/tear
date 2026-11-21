@@ -11,6 +11,7 @@ import { installSourceRenderer } from "./renderers/source-renderer";
 import { installRootboundRenderer } from "./renderers/rootbound-renderer";
 import { installRootboundRebuildRenderer } from "./renderers/rootbound-rebuild-renderer";
 import { installRimehoundRenderer } from "./renderers/rimehound-renderer";
+import { installRootbinderRebuildRenderer } from "./renderers/rootbinder-rebuild-renderer";
 import { installWhiteHartRenderer } from "./renderers/white-hart-renderer";
 import { installStandardEnemyRenderers } from "./renderers/standard-renderers";
 import { installWardenColossusRenderers } from "./renderers/warden-colossus-renderers";
@@ -52,6 +53,7 @@ export function createEnemyPresentation(dependencies: EnemyPresentationDependenc
     installRootboundRenderer(types, runtime);
     installRootboundRebuildRenderer(types, runtime);
     installRimehoundRenderer(types, runtime);
+    installRootbinderRebuildRenderer(types, runtime);
     installWhiteHartRenderer(types, runtime);
     for (const type of Object.values(types)) drawThroughRuntime(type, runtime);
   }

@@ -36,6 +36,7 @@ export interface TearWorldLegacyEntityConstructorPorts<
     rootboundRebuild: (x: number, y: number) => Enemy;
     whiteHart: (x: number, y: number) => Enemy;
     rimehound: (x: number, y: number) => Enemy;
+    rootbinderRebuild: (x: number, y: number) => Enemy;
     echo: (x: number, y: number, mods: EchoMods) => Enemy;
     source: (x: number, y: number) => Enemy;
     voidWisp: (x: number, y: number) => Enemy;
@@ -78,6 +79,7 @@ export function createTearWorldLegacyEntityConstruction<
       "rootbound-rebuild": { create: ports.enemy.rootboundRebuild },
       "white-hart": { create: ports.enemy.whiteHart },
       rimehound: { create: ports.enemy.rimehound },
+      "rootbinder-rebuild": { create: ports.enemy.rootbinderRebuild },
       echo: { create: (x, y, run) => ports.enemy.echo(x, y, ports.echoMods(run)) },
       source: { create: ports.enemy.source },
       "void-wisp": { create: ports.enemy.voidWisp },

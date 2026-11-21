@@ -1,7 +1,7 @@
 import { stableVerificationHash } from "../../domain/hash";
 import { createStableRegistry } from "../../domain/stable-registry";
 import { BOSS_IDENTITY_IDS, isEngineeringOnlyBoss } from "../run/boss-definitions";
-import { ENEMY_IDENTITY_IDS } from "../run/content-director";
+import { ENEMY_IDENTITY_IDS, isEngineeringOnlyEnemy } from "../run/content-director";
 
 /** The state codecs a snapshot carries, one per part of the game state. */
 export const CODEC_IDS = Object.freeze([
@@ -38,9 +38,12 @@ export const ENTITY_KIND_IDS = Object.freeze([
 export const ENTITY_KIND_REGISTRY = createStableRegistry("entity kind", ENTITY_KIND_IDS);
 export type TearEntityKindId = (typeof ENTITY_KIND_IDS)[number];
 
-/** The entity kinds a replay can contain: every kind but the engineering-only bosses, which replays refuse. */
+/**
+ * The entity kinds a replay can contain: every kind but the engineering-only bosses, which replays refuse, and the
+ * engineering-only enemies, which no recorded mode has.
+ */
 export const REPLAY_CONTENT_KIND_IDS: readonly TearEntityKindId[] = Object.freeze(
-  ENTITY_KIND_IDS.filter((id) => !isEngineeringOnlyBoss(id)),
+  ENTITY_KIND_IDS.filter((id) => !isEngineeringOnlyBoss(id) && !isEngineeringOnlyEnemy(id)),
 );
 
 /**

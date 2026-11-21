@@ -16,6 +16,8 @@ export type SurfaceChannel = "release" | "engineering";
 type FeatureSurfaceId =
   // Boss Test boss picker on the setup screen.
   | "setup:boss-picker"
+  // The enemies being rebuilt, in the Playground's spawn list (ENEMY_REBUILD_OF in content-director.ts).
+  | "playground:rebuilt-enemies"
   // Unfinished player features.
   | "feature:seed-race"
   | "feature:replay-editor"
@@ -38,6 +40,7 @@ const SCREEN_SURFACE_PREFIX = "screen:";
  */
 export const SURFACE_CHANNEL: Readonly<Record<FeatureSurfaceId, SurfaceChannel>> = Object.freeze({
   "setup:boss-picker": "engineering",
+  "playground:rebuilt-enemies": "engineering",
   "feature:seed-race": "engineering",
   "feature:replay-editor": "engineering",
   "route:engineering-query": "engineering",

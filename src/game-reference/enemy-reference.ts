@@ -58,6 +58,7 @@ export const CANONICAL_ENEMY_IDENTITY_IDS = Object.freeze([
   "chimera",
   "rootbinder",
   "rimehound",
+  "rootbinder-rebuild",
 ] as const);
 
 /** Public game-reference authority excludes the Playground-only Pale family. */
@@ -88,6 +89,7 @@ export const CANONICAL_ENEMY_VARIANT_IDS: Readonly<Record<EnemyKind, readonly st
   chimera: Object.freeze([]),
   rootbinder: Object.freeze([]),
   rimehound: Object.freeze([]),
+  "rootbinder-rebuild": Object.freeze([]),
 });
 const PUBLISHED_VARIANT_ID_SET: ReadonlySet<string> = new Set(variantIdsAvailableOn("published"));
 export const PUBLIC_CANONICAL_ENEMY_VARIANT_IDS: Readonly<Record<EnemyKind, readonly string[]>> = Object.freeze(

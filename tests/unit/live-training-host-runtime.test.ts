@@ -16,6 +16,7 @@ vi.mock("../../src/gameplay/training/playground-controller", () => ({
     readonly state = { labFilter: "" };
   },
   PLAYGROUND_ALL_KINDS: [],
+  playgroundKinds: () => [],
 }));
 vi.mock("../../src/gameplay/training/runtime-bridge", () => ({
   createPlaygroundRuntimeBridge: () => Object.freeze({ homePlatforms: () => [] }),
@@ -36,7 +37,11 @@ describe("live training host runtime", () => {
     const add = vi.fn(),
       input = { mode: "touch" };
     createLiveTrainingHostRuntime({
-      dependencies: { profileStatsPersistence: { add, max: vi.fn() }, Input: input } as never,
+      dependencies: {
+        profileStatsPersistence: { add, max: vi.fn() },
+        Input: input,
+        surfaces: { allows: () => false },
+      } as never,
       state: {} as never,
       width: 1600,
       height: 900,

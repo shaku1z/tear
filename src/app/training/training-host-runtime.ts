@@ -9,7 +9,7 @@ import {
 } from "../../gameplay/training/live-tutorial-runtime";
 import { stepUiTab } from "../interface/ui-action-coordinator";
 import { PLAYGROUND_TABS } from "../../gameplay/training/runtime-bridge";
-import { PLAYGROUND_ALL_KINDS, PlaygroundController } from "../../gameplay/training/playground-controller";
+import { PlaygroundController, playgroundKinds } from "../../gameplay/training/playground-controller";
 import { createPlaygroundRuntimeBridge } from "../../gameplay/training/runtime-bridge";
 import { createLivePlaygroundPresentation } from "../../gameplay/training/live-playground-presentation";
 import type { PlaygroundScreenModel } from "../../gameplay/training/live-playground-presentation";
@@ -250,7 +250,7 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
     inputDevice: () => d.Input.mode,
     padLabel: padPromptLabel(d.PAD),
     oneHit: () => player().oneHit,
-    kinds: PLAYGROUND_ALL_KINDS,
+    kinds: playgroundKinds(d.surfaces.allows("playground:rebuilt-enemies")),
     difficulties: () => d.CONFIG.difficulties,
     bosses: AUTHORED_BOSS_ROSTER,
     weapons: () => d.WEAPONS,
