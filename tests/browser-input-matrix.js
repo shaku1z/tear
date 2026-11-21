@@ -5,7 +5,15 @@ const http = require("node:http");
 const { listenOnFreePort } = require("./local-server");
 const path = require("node:path");
 const { chapterOpeningCarriesThroughOnEveryDevice } = require("./browser-chapter-opening");
-const { STATE_WAIT_MS, clickTarget, holdFor, notWithin, pollEvery, launchJourney } = require("./browser-waits");
+const {
+  STATE_WAIT_MS,
+  chooseOnSetup,
+  clickTarget,
+  holdFor,
+  notWithin,
+  pollEvery,
+  launchJourney,
+} = require("./browser-waits");
 const { TUTORIAL_SKIPPED_STORAGE } = require("./browser-journey-harness");
 
 async function moveCapturedPointer(page, from, to) {
@@ -650,8 +658,7 @@ async function desktopPointerAndController(browser, configure) {
   await clickTarget(controller, "menu", "PLAY");
   await controller.waitForFunction(() => window.__PANTHEON_TEST.state().game === "setup");
   // A skipped tutorial preselects Adventure; pick Endless the way a player would.
-  await clickTarget(controller, "setup", "ENDLESS");
-  await controller.waitForFunction(() => window.__PANTHEON_TEST.state().setup.mode === "endless");
+  await chooseOnSetup(controller, "ENDLESS", { mode: "endless" });
   await controller.evaluate(() => {
     window.__testGamepad.buttons[2] = { pressed: true, touched: true, value: 1 };
     window.__testGamepad.timestamp = 2;

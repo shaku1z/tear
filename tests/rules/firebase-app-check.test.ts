@@ -7,11 +7,13 @@ import { resolve } from "node:path";
 import { initializeTestEnvironment, type RulesTestEnvironment } from "@firebase/rules-unit-testing";
 import { CustomProvider } from "firebase/app-check";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import type { LeaderboardRef } from "../../src/domain/leaderboards";
 import type { AccountContext, CloudUser } from "../../src/platform/cloud";
 import { createFirebaseCloudCompatibility } from "../../src/platform/firebase-cloud";
 import { createFirebaseServices } from "../../src/platform/firebase-sdk";
 import { emulatorClientConfig, emulatorHosts, rulesTestProject, until } from "./rules-test-project";
 
+const ENDLESS_NORMAL: LeaderboardRef = { kind: "score", mode: "endless", difficulty: "normal" };
 let env: RulesTestEnvironment;
 let user: CloudUser | undefined;
 const context: AccountContext = {
@@ -50,9 +52,9 @@ describe("App Check in monitor mode", () => {
     await cloud.account.save?.(context, save);
     await expect(cloud.account.load?.(context)).resolves.toEqual(save);
     await expect(
-      cloud.shared.submitScore("endless", "normal", { name: "Guest", score: 800, wave: 4, time: 90 }),
+      cloud.shared.submitScore(ENDLESS_NORMAL, { name: "Guest", score: 800, wave: 4, time: 90 }),
     ).resolves.toBe(true);
-    expect((await cloud.shared.topScores("endless", "normal", 25))?.[0]?.uid).toBe(signedIn.id);
+    expect((await cloud.shared.topScores(ENDLESS_NORMAL, 25))?.[0]?.uid).toBe(signedIn.id);
     // App Check was on and asked for a token; the refusal did not hold any request back.
     expect(getToken).toHaveBeenCalled();
   });

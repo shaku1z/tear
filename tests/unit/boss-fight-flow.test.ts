@@ -36,13 +36,10 @@ const FIGHT_LIMIT_TICKS = 90 * TEAR_SIMULATION_TICKS_PER_SECOND;
 
 /**
  * Blocking spans each boss's fight shows today, from its spawn to its death. Each entry is removed by the
- * pull request that turns those phase changes into moves (plan PRs 2-4, and the Verdant rebuild for
+ * pull request that turns those phase changes into moves (plan PRs 3-4, and the Verdant rebuild for
  * Rootbound). Plan PR 5 deletes this table.
  */
 const STILL_BLOCKING: Readonly<Partial<Record<BossDefinitionId, number>>> = {
-  // Phase II and Phase III rituals.
-  warden: 2,
-  colossus: 2,
   // Crownfall and the revive (Phase II already changes in the fight).
   aldric: 2,
   // Phase II and Phase III rituals; the Verdant rebuild owns these.

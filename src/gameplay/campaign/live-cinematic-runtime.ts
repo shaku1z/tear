@@ -32,7 +32,6 @@ import type { SourceRuntimeOwner, SourceVoidRuntimeBridge } from "./source-void-
 import { isObject, requireRecord } from "../../domain/records";
 
 export interface LiveRitualOwner extends BossRitualActor {
-  _throwShield?(projectiles: unknown[]): void;
   _chooseVerticalTarget?(player: CinematicRuntimePlayer, platforms: readonly BossRitualPlatform[]): unknown;
   _startVertical?(mode: "vault", target: unknown, player: CinematicRuntimePlayer): void;
   verticalCd?: number;
@@ -108,7 +107,6 @@ export function createLiveCinematicRuntime(options: LiveCinematicRuntimeOptions)
         );
       else if (intent.type === "music-duck") options.setMusicDuck(intent.amount, intent.duration);
       else if (intent.type === "sound") options.playSound(intent.cue);
-      else if (intent.type === "throw-shield") owner._throwShield?.(options.projectiles());
       else if (intent.type === "resolve-first-vertical" && owner._chooseVerticalTarget && owner._startVertical) {
         const target = owner._chooseVerticalTarget(options.player(), options.ritualPlatforms());
         if (target) owner._startVertical("vault", target, options.player());

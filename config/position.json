@@ -125,9 +125,9 @@
     {
       "id": "replays",
       "name": "Replays",
-      "state": "In progress: PR 1, PR 2, PR 2b and PR 3 merged (hidden replay features, replay extras and REPAIR removed; snapshot codecs in src/gameplay/snapshot); PR 4 open (the detached world moves to src/app/world/detached)",
+      "state": "In progress: PRs 1 to 4 merged (hidden replay features, replay extras and REPAIR removed; snapshot codecs in src/gameplay/snapshot; the detached world in src/app/world/detached); PR 5a open (the record, recorder and verify, with the round-trip check over the determinism corpus)",
       "summary": "Players reach two replay systems today: Ghost 2 (position samples in localStorage, used by the REPLAYS tab, the feed and leaderboard links) and the Ghost V3 capsules (re-simulated, in IndexedDB, used by VAULT, CAREER and the Theater). The plan replaces both with one versioned record and five plain modules (record, store, watch, share, verify), moves the replay world and snapshot codecs out of TearBench, and deletes src/ghost (118 replay modules and about 800,000 characters today).",
-      "next": "Merge PR 4, then PR 5 (one replay record: record.ts, recorder.ts and verify.ts, with the round-trip check).",
+      "next": "Merge PR 5a, then PR 5b (a live run starts the way the detached world replays it) and PR 5c (the live recorder writes the new record behind a lazy slot).",
       "owner_action": "Deploy the Firestore chunk-write rules from the merged rules PR.",
       "evidence": [
         "plans/active/REPLAY_OVERHAUL_PLAN.md"
@@ -150,9 +150,9 @@
     {
       "id": "cinematics",
       "name": "Cinematics",
-      "state": "Plan approved by the lead; blocking-removal slices starting; look board waiting for the owner",
+      "state": "PR 1 merged (a rule over every boss fight; no boss event slows time). PR 2 (the Warden and the Colossus change phase in the fight) in review. Look board waiting for the owner",
       "summary": "Boss phase changes stop the fight today: a ritual script freezes the combat step, locks the player and waits for a tap or a reading timeout (5.1-6.8 s each; the Source descent 11.5 s; Rootbound stands still for 12.9 s of a 32-37 s fight). Chapter openings take 25-39 s at Full. The plan makes every in-fight beat a boss move with at most a banner, cuts chapter openings and the finale to short cards that never wait, replaces the cinematic director and ritual layer with one stage beat, and adds a rule over every boss that no tick blocks input or the combat step.",
-      "next": "PR 1: the rule over every boss and no slow motion; then the rituals come out boss by boss (PRs 2-4). The banner, chapter card and epilogue (PRs 6-8) wait for the owner’s verdict on the look board.",
+      "next": "PR 3 (Aldric) and PR 4 (the Source) take out the remaining rituals; then PR 5 deletes the blocking path. The banner, chapter card and epilogue (PRs 6-8) wait for the owner’s verdict on the look board.",
       "owner_action": "Approve or correct the look board on the ledger.",
       "evidence": [
         "plans/active/CINEMATICS_OVERHAUL.md"

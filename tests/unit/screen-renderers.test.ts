@@ -1021,7 +1021,7 @@ describe("legacy screen renderer registry", () => {
       id: "leaderboards",
       tab: "global",
       tabs: [{ id: "global", label: "GLOBAL" }],
-      modes: [{ id: "endless", label: "ENDLESS" }],
+      boards: [{ id: "endless", label: "ENDLESS" }],
       difficulties: [{ id: "hard", label: "HARD" }],
       rows: [],
       podium: [{ rank: 1, name: "Player", detail: "wave 20", color: "#e0a326", replayId: "r1" }],
@@ -1093,7 +1093,7 @@ describe("legacy screen renderer registry", () => {
     });
     expect(
       controls.find(
-        (control) => control.action.type === "leaderboards.selectBoard" && control.action.id === "mode:endless",
+        (control) => control.action.type === "leaderboards.selectBoard" && control.action.id === "board:endless",
       ),
     ).toMatchObject({ y: 198, w: 190, h: 34, chip: true });
     expect(controls.find((control) => control.action.type === "leaderboards.watchReplay")).toMatchObject({

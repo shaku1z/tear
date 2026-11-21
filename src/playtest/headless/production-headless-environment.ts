@@ -39,7 +39,8 @@ import { beginProductionBossPractice } from "./production-boss-practice-start";
 import type { PracticeBossId, PracticeBossPhase } from "../../gameplay/training/boss-phase-practice-runtime";
 import { projectProductionPolicyObservation } from "./production-policy-observation";
 import { createGameplayCausalEvent } from "../../tearbench/gameplay-causal-events";
-import { assertTearSimulationStepSeconds, TEAR_SIMULATION_TICKS_PER_SECOND } from "../../tearbench/simulation-profile";
+import { assertTearSimulationStepSeconds } from "../../tearbench/simulation-profile";
+import { stepDetachedWorld } from "../../app/world/detached/detached-step";
 
 type ProductionHeadlessCore = Readonly<{
   replay: ProductionReplayWorld;
@@ -49,6 +50,8 @@ type ProductionHeadlessCore = Readonly<{
   scenario: TearScenarioV1;
   routeAction: (action: GameAction) => boolean;
   advanceApplicationFrame: (seconds: number, confirm?: ProductionApplicationFrameConfirm) => void;
+  /** One simulation tick of the detached world, through the one detached step. */
+  step: (envelopes: readonly CommandEnvelope<GameAction>[]) => ReturnType<typeof stepDetachedWorld>;
   nativeEvents: TearGameplayEvent[];
   sourceTracks?: ProductionHeadlessSourceTrackState;
 }>;
@@ -312,6 +315,7 @@ export function createProductionHeadlessEnvironment(
       scenario,
       routeAction: composed.routeAction,
       advanceApplicationFrame: composed.advanceApplicationFrame,
+      step: (envelopes: readonly CommandEnvelope<GameAction>[]) => stepDetachedWorld(composed, envelopes),
       nativeEvents,
       ...(sourceTracks === undefined ? {} : { sourceTracks }),
     });
@@ -425,22 +429,11 @@ export function createProductionHeadlessEnvironment(
       });
       if (!Number.isSafeInteger(nextCommandId + normalizedActions.length))
         throw new RangeError("headless command sequence is exhausted");
-      if (current.replay.world.state.bossIntro() !== null) {
-        const policy = current.bootstrap.applicationFramePolicy;
-        if (policy === undefined)
-          throw new TypeError("active intro requires its declared generated application-frame policy");
-        current.advanceApplicationFrame(policy.secondsPerStep);
-      } else if (current.replay.world.context.cinema.active) {
-        // A cinematic (a boss phase change) holds the simulation and runs on application frames.
-        current.advanceApplicationFrame(1 / TEAR_SIMULATION_TICKS_PER_SECOND);
-      }
       const envelopes: CommandEnvelope<GameAction>[] = normalizedActions.map((command) =>
         Object.freeze({ kind: "command" as const, id: ++nextCommandId, tick, command }),
       );
       actionTrace.push(...envelopes);
-      const result = current.simulation.simulationRuntime.advanceOne(
-        envelopes.filter((entry) => !current.routeAction(entry.command)),
-      );
+      const result = current.step(envelopes);
       if (current.sourceTracks !== undefined) {
         current.sourceTracks.rewardComponents.push(
           Object.freeze({
