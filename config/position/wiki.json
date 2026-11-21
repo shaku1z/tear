@@ -1,0 +1,12 @@
+{
+  "id": "wiki",
+  "name": "Player wiki",
+  "state": "In progress",
+  "summary": "The wiki moves into this repository as wiki/, built from the same commit as the game: facts come from the exporter (pnpm export:wiki), pictures from the game's own renderers and test build. The separate tear-wiki repository is archived once a deploy from here is live.",
+  "next": "Review the move pull request, then confirm the Cloudflare secret question and run the first wiki deploy.",
+  "owner_action": "Archive shaku1z/tear-wiki after the first deploy from this repository.",
+  "evidence": [
+    "wiki/README.md",
+    "wiki/ARCHIVE.md"
+  ]
+}

@@ -489,7 +489,7 @@ notes, starts here.
 
 ### PR 0: this plan (docs only)
 
-The plan, its row in `plans/README.md`, and a cinematics area in `config/position.json`.
+The plan, its row in `plans/README.md`, and a cinematics area in `config/position/cinematics.json`.
 
 **Order (lead ruling, 2026-11-20).** Pull requests 1-5 only take blocking and slow motion out.
 They draw nothing new: a phase change shows with today's `bossPhaseBeat` banner and the boss's
