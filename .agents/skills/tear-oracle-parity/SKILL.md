@@ -1,37 +1,55 @@
 ---
 name: tear-oracle-parity
-description: Restore or verify Tear behavior, feel, and look against the pre-redesign oracle commit ee5e931 (the js/ monolith source of truth). Use when a redesign screen, input, timing, physics, UI, or reward flow "doesn't match the source", when porting legacy js/ behavior into the typed src/ architecture, when investigating feel regressions, or when producing parity evidence.
+description: Compare Tear with the pre-redesign oracle commit ee5e931 and restore behaviour, feel or look that drifted from it. Use when something "doesn't match the old game", when porting an old js/ behaviour into src/, when a feel regression needs a first-divergence measurement, and when producing parity evidence. Not for content rebuilt on purpose since the redesign.
 ---
 
-# Tear Oracle Parity
+# Tear oracle parity
 
-The user considers oracle commit `ee5e93141d67cc02505b2227b3be0b10d1819e1c` ("fix(weapons): align throw range and handling", the last pre-redesign `js/` monolith) the canonical feel and look. Any redesign divergence is a bug unless the user explicitly blessed it. Parity is a measurable property, not a vibe: reduce every "feels off" to a first-divergence frame, field, token, or pixel.
+The oracle is commit `ee5e93141d67cc02505b2227b3be0b10d1819e1c`, the last version before the typed
+redesign. [docs/PARITY.md](../../../docs/PARITY.md) is the contract: what must stay equivalent, the
+intentional differences, and the verification policy. Parity is measured, not judged by eye: reduce "feels
+off" to the first frame, field, token or pixel that differs.
+
+## Scope first
+
+The oracle is the reference for what the redesign was meant to preserve. It is not the reference for work
+the owner has since had rebuilt, such as the Verdant and Pale rebuilds, the cinematics overhaul, the
+Gauntlet as trials and the Shards work. Check [docs/position/](../../../docs/position/README.md),
+[docs/DECISIONS.md](../../../docs/DECISIONS.md) and the plan under `plans/active/` before calling a
+difference a bug. When neither the parity contract nor a plan covers it, ask the lead.
 
 ## Workflow
 
-1. Read `plans/active/PARITY_RESTORATION_PLAN.md` and the phase status in the latest parity commits (`git log --grep="restore source"`). Do not re-restore what already shipped.
-2. Open the oracle via [references/oracle-workbench.md](references/oracle-workbench.md): the `../Tear-oracle` worktree (recreate with `git worktree add ../Tear-oracle ee5e931` if missing), `git show ee5e931:js/<file>.js` for point reads, and twin-serve for A/B.
-3. Locate the authoritative oracle implementation FIRST — the exact function, constants, frame order, and state transitions in `js/game.js`, `js/ui.js`, `js/enemy.js`, `js/player.js`, `js/config.js`, etc. Quote line numbers in your findings and commit messages ("Parity with ee5e931: …").
-4. Diff behavior, not just text. Classify the divergence using [references/divergence-triage.md](references/divergence-triage.md): systemic (dt model, frame order, state/cursor ownership, adapter plumbing, double-sampling) vs line-level (constant, token, string, layout).
-5. Port the oracle behavior into the redesign through the typed architecture per [references/porting-contract.md](references/porting-contract.md) — verbatim behavior, redesigned plumbing. Never resurrect classic-script globals, load-order coupling, or direct DOM/SDK reads in domain code.
-6. Prove parity: side-by-side twin-serve check, trace/screenshot comparison, or an oracle-conformance fixture whose expected values were generated from the oracle build. Route test placement through `$tear-combat-scenarios` (behavior) or `$tear-ui-regression` (screens), then `$tear-change-gate`.
-7. Update the parity plan / `docs/FEATURE_INVENTORY.md` status. Commit, push, merge
-   and deployment remain separately authorized under repository governance;
-   parity evidence does not grant external-write permission.
+1. Read `plans/active/PARITY_RESTORATION_PLAN.md` ("Confirmed parity repairs" lists what is done) so you do
+   not restore something twice.
+2. Open the oracle: [references/oracle-workbench.md](references/oracle-workbench.md). Read it; never edit,
+   commit in or build from it.
+3. Find the oracle's implementation first: the function, constants, frame order and state changes. Quote
+   file and line at `ee5e931` in findings and in the commit message.
+4. Compare behaviour, not text, and classify the difference with
+   [references/divergence-triage.md](references/divergence-triage.md): a structural cause or a single line.
+5. Port the behaviour through the typed architecture:
+   [references/porting-contract.md](references/porting-contract.md). The behaviour is kept exactly; the
+   plumbing is the redesign's.
+6. Prove it with the parity commands in the workbench, a paired trace or screenshot, or a test whose
+   expected values came from the oracle. Place the test with `tear-combat-scenarios` (behaviour) or
+   `tear-ui-regression` (screens).
+7. Record an approved difference in [docs/PARITY.md](../../../docs/PARITY.md), and a repair in the plan.
 
 ## Rules
 
-- The oracle wins ties. If new-architecture code and oracle behavior disagree and no user decision says otherwise, restore the oracle behavior — including quirks that look like bugs; flag suspected oracle bugs to the user instead of silently "fixing" them.
-- One known blessed divergence class exists: deliberate architecture (typed ports, fixed-tick option, build pipeline). Feel-critical timing is NOT blessed — sim runs at the oracle's 120 Hz regime; do not reintroduce 60 Hz or quantized authoritative input into live play.
-- Never copy oracle code paths that the redesign forbids (writable globals, `?v=` cache strings, manual SW shell lists, DOM reads in gameplay). Port the behavior, not the mechanism.
-- Never trust prose descriptions of the oracle (plans, memories, this skill) over the oracle itself — read `ee5e931` directly.
-- Sweep siblings: a divergence found on one screen or entity usually exists in every screen built from the same machinery; check the family before closing.
-- Preserve the shipped weapons-overhaul (WA1+) layer when correcting physics/dt — rerun its conformance tests after any timing change.
+- Inside the contract's scope the oracle wins ties, including quirks that look like bugs. Report a
+  suspected oracle bug to the lead instead of fixing it silently.
+- The simulation stays at 120 ticks a second. Do not reintroduce 60 Hz or quantized input into live play.
+- Port behaviour, not mechanism: no writable globals, load-order coupling, `?v=` cache strings, hand-kept
+  service-worker lists, or DOM and SDK reads in rules code.
+- Trust the oracle over any description of it, including this skill.
+- A difference found on one screen or entity usually exists in everything built from the same machinery.
+  Check the family before closing.
+- After any timing change, rerun `pnpm test:weapons` and `pnpm test:determinism`.
 
-## Completion
+## Report
 
-Own immutable oracle A/B claims. Name both sides of every comparison and hand claims,
-commands, evidence and gaps to `tear-change-gate` using the shared [evidence handoff](../tear-change-gate/references/evidence-handoff.md); leave final
-full-gate coordination to it.
-
-Report: oracle evidence (file:line at ee5e931), divergence classification, what was restored vs already-matching, parity proof gathered, and remaining unverified surfaces (e.g. user-owed feel playtests). Never claim "matches the source" from a text diff alone when feel or rendering is implicated.
+The oracle evidence (file and line at `ee5e931`), the classification, what was restored and what already
+matched, the proof gathered, and what is still unverified, such as a feel check only a person can do. Do
+not write "matches the source" from a text comparison when feel or rendering is involved.

@@ -22,6 +22,7 @@
     { "path": "config/design-check.json", "why": "the design-check gate's mode" },
     { "path": "config/architecture-", "why": "architecture rules, allowlists and baselines" },
     { "path": "config/code-budget-baseline.json", "why": "the code budget's ratchet" },
+    { "path": "config/containment.json", "why": "the containment check's word list, modes, baselines and limits" },
     { "path": "config/size-caps.json", "why": "document and evidence size caps" },
     { "path": "config/bundle-budgets.json", "why": "bundle size budgets" },
     { "path": "config/load-budgets.json", "why": "load time budgets" },

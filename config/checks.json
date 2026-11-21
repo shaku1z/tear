@@ -24,6 +24,11 @@
         "seconds": 6
       },
       {
+        "id": "containment",
+        "run": "node scripts/check-containment.mjs",
+        "seconds": 3
+      },
+      {
         "id": "repository-guards",
         "run": "node node_modules/vitest/vitest.mjs run tests/unit/tool-catalogue.test.mjs tests/unit/change-impact.test.mjs tests/unit/ci-workflow.test.mjs",
         "seconds": 15
@@ -64,6 +69,11 @@
         "id": "terminology",
         "run": "node scripts/check-terminology.mjs",
         "seconds": 6
+      },
+      {
+        "id": "containment",
+        "run": "node scripts/check-containment.mjs",
+        "seconds": 3
       },
       {
         "id": "architecture",
