@@ -265,8 +265,6 @@ export interface BossTransformationSpec {
   brief?: boolean | undefined;
   speaker?: string | undefined;
   after?: string | undefined;
-  crownFall?: boolean | undefined;
-  firstVertical?: boolean | undefined;
 }
 
 export interface BossPresentationActor extends ProjectileOwnerPort {

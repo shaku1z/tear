@@ -31,12 +31,7 @@ import {
 import type { SourceRuntimeOwner, SourceVoidRuntimeBridge } from "./source-void-runtime";
 import { isObject, requireRecord } from "../../domain/records";
 
-export interface LiveRitualOwner extends BossRitualActor {
-  _chooseVerticalTarget?(player: CinematicRuntimePlayer, platforms: readonly BossRitualPlatform[]): unknown;
-  _startVertical?(mode: "vault", target: unknown, player: CinematicRuntimePlayer): void;
-  verticalCd?: number;
-  verticalTrackT?: number;
-}
+export type LiveRitualOwner = BossRitualActor;
 export interface LiveCinematicStory {
   finale: CinematicFinaleSnapshot | null;
   lastCinemaPlayerMode: string | null;
@@ -69,7 +64,6 @@ export interface LiveCinematicRuntimeOptions {
   readonly groundY: () => number;
   readonly bomberColor: () => string;
   readonly dialogueDuck: () => number;
-  readonly verticalResponse: () => number;
   readonly time: () => number;
   readonly lerp: (from: number, to: number, amount: number) => number;
   readonly clamp: (value: number, minimum: number, maximum: number) => number;
@@ -107,14 +101,7 @@ export function createLiveCinematicRuntime(options: LiveCinematicRuntimeOptions)
         );
       else if (intent.type === "music-duck") options.setMusicDuck(intent.amount, intent.duration);
       else if (intent.type === "sound") options.playSound(intent.cue);
-      else if (intent.type === "resolve-first-vertical" && owner._chooseVerticalTarget && owner._startVertical) {
-        const target = owner._chooseVerticalTarget(options.player(), options.ritualPlatforms());
-        if (target) owner._startVertical("vault", target, options.player());
-        else {
-          owner.verticalCd = 0;
-          owner.verticalTrackT = options.verticalResponse();
-        }
-      } else if (intent.type === "store-seen") options.storeSeen(intent.key);
+      else if (intent.type === "store-seen") options.storeSeen(intent.key);
     }
   };
   const sourceOptions = (owner: SourceRuntimeOwner) => ({

@@ -65,15 +65,7 @@ export function createEnemyRendererRuntime(dependencies: EnemyPresentationDepend
     ctx.strokeStyle = telegraphInk(col);
     ctx.fillStyle = col;
     ctx.lineCap = "round";
-    if (boss.cinematicPose === "aldricCrownfall" || boss.cinematicPose === "aldricFeral") {
-      ctx.globalAlpha = 0.28 + pulse * 0.22;
-      ctx.lineWidth = 5;
-      ctx.beginPath();
-      ctx.arc(boss.x, boss.y - 16, boss.hw + 22 + p * 28, -Math.PI * 0.9, Math.PI * 0.1);
-      ctx.stroke();
-      if (boss.cinematicPose === "aldricFeral")
-        weaponGlint(ctx, boss.x + boss.facing * 112, boss.y - 78, CONFIG.colors.bomber, pulse);
-    } else if (boss.cinematicPose === "echoMirror") {
+    if (boss.cinematicPose === "echoMirror") {
       const mx = CONFIG.view.w - boss.x;
       ctx.globalAlpha = 0.34 + pulse * 0.22;
       ctx.lineWidth = 3;

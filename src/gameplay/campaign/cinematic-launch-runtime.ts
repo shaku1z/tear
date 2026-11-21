@@ -186,7 +186,6 @@ export function buildBossRitualScript(
           director.elapsed,
           director.progress,
           options.time,
-          options.reducedMotion,
         ),
       );
     },
@@ -199,7 +198,7 @@ export function buildBossRitualScript(
       options.execute(options.controller.start(started.context, options.ritual));
     },
     onComplete() {
-      options.execute(options.controller.complete(started.context, options.reducedMotion));
+      options.execute(options.controller.complete(started.context));
     },
     onCancel() {
       options.execute(options.controller.cancel(started.context));
@@ -211,7 +210,7 @@ export function launchBossRitual(options: BossRitualLaunchOptions, bind?: (bindi
   const started = options.controller.begin(options.owner, options.cue, options.ritual);
   if (!options.play) {
     options.execute(options.controller.start(started.context, options.ritual));
-    options.execute(options.controller.complete(started.context, options.reducedMotion));
+    options.execute(options.controller.complete(started.context));
     return true;
   }
   bind?.({

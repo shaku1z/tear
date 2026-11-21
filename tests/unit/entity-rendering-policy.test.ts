@@ -195,22 +195,13 @@ describe("entity rendering policies", () => {
     expect(secondStyles).toEqual(expect.arrayContaining(["second-perfect", "second-eye", "second-bomber"]));
   });
 
-  it("keeps legacy enemy cinematic palette policy local to each runtime", () => {
+  it("keeps legacy enemy palette policy local to each runtime", () => {
     const firstStyles: string[] = [],
       secondStyles: string[] = [];
-    const pose = {
-      cinematicPose: "aldricFeral",
-      cinematicT: 1,
-      color: "#fff",
-      x: 40,
-      y: 50,
-      hw: 20,
-      hh: 30,
-      facing: 1,
-    };
+    const crown = { x: 40, y: 50, rot: 0 };
 
-    enemyRuntime("first").drawBossTransformationWorld(canvas(firstStyles), pose as never);
-    enemyRuntime("second").drawBossTransformationWorld(canvas(secondStyles), pose as never);
+    enemyRuntime("first").drawAldricCrown(canvas(firstStyles), crown as never, 0.5);
+    enemyRuntime("second").drawAldricCrown(canvas(secondStyles), crown as never, 0.5);
 
     expect(firstStyles).toContain("first-bomber");
     expect(secondStyles).toContain("second-bomber");
