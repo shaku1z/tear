@@ -27,6 +27,8 @@ function createDetachedOpeningWorld(seed: string) {
     outward.push(name);
   };
   const host = {
+    bossIntro: () => null,
+    endBossIntro: () => undefined,
     config: configuration.value,
     get player() {
       return world.state.player() as never;

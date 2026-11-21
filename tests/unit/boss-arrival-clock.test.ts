@@ -53,17 +53,18 @@ function playArrival(renderHz: number, frameClock: boolean): FrameTrace {
   const dt = 1 / renderHz;
   const scheduler = new FixedStepScheduler({ ticksPerSecond: TEAR_SIMULATION_TICKS_PER_SECOND });
   const state = preludeState();
-  let intro: BossIntroClock | null = arrival();
+  // Held in an object: the scheduler callback ends the arrival, which a plain local would hide from narrowing.
+  const run: { intro: BossIntroClock | null } = { intro: arrival() };
   const ticks: number[] = [],
     progress: number[] = [];
   let progressAtEnd = 0;
   for (let frame = 1; frame <= renderHz * 4; frame++) {
-    let playing = bossIntroPlaying(intro);
-    if (frameClock && intro !== null) {
-      intro.t += dt;
-      if (intro.boss) intro.boss.introT = Math.max(0, intro.dur - intro.t);
-      if (intro.t >= intro.dur) intro = null;
-      playing = intro !== null;
+    let playing = bossIntroPlaying(run.intro);
+    if (frameClock && run.intro !== null) {
+      run.intro.t += dt;
+      if (run.intro.boss) run.intro.boss.introT = Math.max(0, run.intro.dur - run.intro.t);
+      if (run.intro.t >= run.intro.dur) run.intro = null;
+      playing = run.intro !== null;
     }
     advanceFramePrelude({
       dt,
@@ -77,14 +78,14 @@ function playArrival(renderHz: number, frameClock: boolean): FrameTrace {
       clamp: (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value)),
     });
     scheduler.advance(dt * state.timeScale * 1000, (seconds) => {
-      if (!frameClock && intro !== null && !advanceBossIntro(intro, seconds, introScale)) {
-        progressAtEnd = intro.t;
-        intro = null;
+      if (!frameClock && run.intro !== null && !advanceBossIntro(run.intro, seconds, introScale)) {
+        progressAtEnd = run.intro.t;
+        run.intro = null;
       }
     });
     ticks.push(scheduler.tick);
-    progress.push(intro === null ? (frameClock ? introDur : progressAtEnd) : intro.t);
-    if (intro === null) return { endSeconds: frame * dt, ticks, progress };
+    progress.push(run.intro === null ? (frameClock ? introDur : progressAtEnd) : run.intro.t);
+    if (run.intro === null) return { endSeconds: frame * dt, ticks, progress };
   }
   throw new Error("The arrival never ended");
 }

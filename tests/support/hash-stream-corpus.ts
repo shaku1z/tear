@@ -29,14 +29,16 @@ export const PLANS = Object.freeze({
 });
 
 /**
- * The boss streams' seeds, `hash-stream:<weapon>:boss` then `…:boss:1` to `…:boss:9`: each stream takes the
- * first on which the tell-avoiding player survives the whole horizon. The boss arrival plays in 42
- * simulation ticks, as in live play (it used to run 168 full-speed ticks headless, a free window on a boss
- * that could not yet attack), and a boss stream lasts 18 s, so not every seed survives and few reach a
- * later phase. Measured over the ten seeds when the arrival moved onto the simulation clock (survived /
- * reached Phase II): sword 8 / 2, hammer 8 / 0, greatsword 10 / 0, chainblade 10 / 2, riftlock 5 / 4. The
- * "a boss reaches a later phase" fact rests on riftlock. Per-weapon Phase II is not covered here
- * (docs/PITFALLS.md).
+ * The boss streams' seeds, pinned: each is one of `hash-stream:<weapon>:boss` and `…:boss:1` to `…:boss:9`,
+ * chosen once, when the boss arrival moved onto the simulation clock (2026-11-21), as the first of those ten
+ * on which the tell-avoiding player survived the whole horizon in a probe of all ten. Nothing searches the
+ * list at run time: a stream that stops surviving its pinned seed fails the coverage test.
+ *
+ * Why not every seed survives: the arrival plays in 42 simulation ticks, as in live play (it used to run 168
+ * full-speed ticks headless, a free window on a boss that could not yet attack), and a boss stream lasts
+ * 18 s. The probe's counts over the ten seeds (survived / reached Phase II): sword 8 / 2, hammer 8 / 0,
+ * greatsword 10 / 0, chainblade 10 / 2, riftlock 5 / 4. The "a boss reaches a later phase" fact rests on
+ * riftlock. Per-weapon Phase II is not covered here (docs/PITFALLS.md).
  */
 const BOSS_SEED_INDEX: Readonly<Record<WeaponId, number>> = Object.freeze({
   sword: 0,
