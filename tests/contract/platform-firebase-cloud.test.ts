@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createFirebaseCloudCompatibility,
+  replayChunks,
+  replayThumb,
   type FirebaseCloudOptions,
   type FirebaseServices,
   type FirebaseUser,
@@ -157,5 +159,38 @@ describe("Firebase cloud adapter", () => {
     });
     await expect(compatibility.account.signIn?.(signIn)).resolves.toBe(true);
     expect(statuses.at(-1)).toBe("g1:signedin");
+  });
+});
+
+describe("replay chunks and thumbnails", () => {
+  const utf8 = (text: string): number => new TextEncoder().encode(text).length;
+
+  it("cuts within the rules' characters and Firestore's bytes, never inside a surrogate pair", () => {
+    const text = `${"x".repeat(700_000)}${"·".repeat(300_000)}${"★".repeat(300_000)}${"\u{1F600}".repeat(250_000)}`;
+    const json = JSON.stringify({ a: text });
+    const chunks = replayChunks(json);
+    expect(chunks.join("")).toBe(json);
+    for (const chunk of chunks) {
+      expect(chunk.length).toBeLessThanOrEqual(500_000);
+      expect(utf8(chunk)).toBeLessThanOrEqual(1_000_000);
+      expect(chunk).not.toMatch(/^[\udc00-\udfff]|[\ud800-\udbff]$/u);
+    }
+    expect(replayChunks("x".repeat(1_000_000))).toEqual(["x".repeat(500_000), "x".repeat(500_000)]);
+    expect(replayChunks("{}")).toEqual(["{}"]);
+  });
+
+  it("keeps only a small JPEG data URL as the thumbnail", () => {
+    const jpeg = `data:image/jpeg;base64,${"/9j/4AAQ".repeat(10)}`;
+    expect(replayThumb(jpeg)).toBe(jpeg);
+    for (const value of [
+      "https://example.com/x.png",
+      "data:image/png;base64,iVBO",
+      `${jpeg}"`,
+      "A".repeat(40_000),
+      3,
+      null,
+    ])
+      expect(replayThumb(value)).toBeNull();
+    expect(replayThumb(`data:image/jpeg;base64,${"A".repeat(32_768)}`)).toBeNull();
   });
 });
