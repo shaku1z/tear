@@ -22,5 +22,6 @@ The build players have: [Production](production.md).
 - [Playtest tool](playtest-tool.md)
 - [Replays](replays.md)
 - [Firebase](firebase.md)
+- [Performance and storefront builds](performance.md)
 - [Cinematics](cinematics.md)
 - [Mobile, touch and phone layouts](mobile.md)
