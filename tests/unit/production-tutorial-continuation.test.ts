@@ -461,16 +461,20 @@ describe("production tutorial reconstructed-byte continuation", () => {
     },
     ENTRY_CONTINUATION_BUDGET_MS,
   );
-  it("captures actual boss defeat/removal as a finished portable attempt and restarts without course effects", () => {
-    const source = bossAttempt("colossus", 3);
-    for (let tick = 1; tick <= 1000 && source.replay.world.context.cinema.id !== "colossus-breach"; tick++)
+  it("refuses a portable boss ritual whose cue differs from its authored transition", () => {
+    const source = bossAttempt("aldric", 3);
+    for (let tick = 1; tick <= 3000 && source.replay.world.context.cinema.id !== "aldric-crownfall"; tick++)
       bossStep(source, tick);
+    expect(source.replay.world.context.cinema.id).toBe("aldric-crownfall");
     const altered = JSON.parse(JSON.stringify(capture(source).snapshot)) as TearSnapshotV1;
     const runtime = (altered.state["tear.world.v1"] as Record<string, unknown>).runtime as {
-      bossCinematicBinding: { context: { cue: { after?: string } } };
+      bossCinematicBinding: { context: { cue: { crownFall?: boolean } } };
     };
-    delete runtime.bossCinematicBinding.context.cue.after;
+    delete runtime.bossCinematicBinding.context.cue.crownFall;
     expect(() => composition().create(altered)).toThrow(/authored boss transition/);
+  });
+  it("captures actual boss defeat/removal as a finished portable attempt and restarts without course effects", () => {
+    const source = bossAttempt("colossus", 3);
     for (
       let tick = 1;
       tick <= 10000 && source.replay.tutorial.session().bossPractice?.runtime.lifecycle !== "active";
