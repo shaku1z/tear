@@ -2,7 +2,8 @@ import { buildWatchChoiceScore } from "../agents/watch-build-choice";
 import { bossDefinition } from "../gameplay/run/boss-definitions";
 import type { BossId } from "../gameplay/run/content-director";
 import type { RunDifficulty } from "../gameplay/run/session";
-import { isPracticeBossId, isPracticeBossPhase } from "../gameplay/training/boss-phase-practice-runtime";
+import { isPracticeBossPhase } from "../gameplay/training/boss-phase-practice-runtime";
+import { opensHeadlessPractice } from "./headless/production-boss-practice-start";
 import type { WeaponId } from "../gameplay/weapon-selection";
 import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "../gameplay/snapshot/snapshot-contract";
 import type { TearScenarioV1 } from "../tearbench/contracts";
@@ -13,7 +14,8 @@ import {
   type ProductionHeadlessEnvironment,
 } from "./headless/production-headless-environment";
 import { createObjectCounter, readCuttableObjects, type ObjectCount } from "./boss-objects";
-import { BOSS_PLAYER_IDS, createBossPlayer, type BossPlayer, type BossPlayerId } from "./boss-player";
+import { BOSS_PLAYER_IDS, type BossPlayer, type BossPlayerId } from "./boss-player";
+import { createSeededPlayer } from "./player-variation";
 import { boxOverlaps, readBoss, readPlayerBox, trainingResets, type BossView, type PlayerBox } from "./boss-view";
 
 export interface BossFightRequest {
@@ -110,7 +112,7 @@ export function bossFightScenario(request: BossFightRequest): TearScenarioV1 {
     const phases = bossPhaseCount(request.boss);
     if (!Number.isInteger(request.phase) || request.phase < 1 || request.phase > phases)
       throw new RangeError(`${request.boss} has phases 1 to ${String(phases)}, not ${String(request.phase)}`);
-    if (!isPracticeBossId(request.boss) || !isPracticeBossPhase(request.phase))
+    if (!opensHeadlessPractice(request.boss) || !isPracticeBossPhase(request.phase))
       throw new RangeError(`${request.boss} has no phase practice in the game`);
     if (request.weapon !== "sword" || request.difficulty !== "normal")
       throw new RangeError("a chosen phase uses the game's boss practice, which runs only with Sword on Normal");
@@ -194,7 +196,8 @@ function bringToChosenPhase(
   environment: ReturnType<typeof createProductionHeadlessEnvironment>,
   request: BossFightRequest,
 ): Readonly<{ setupTicks: number; reached: boolean }> {
-  if (!isPracticeBossId(request.boss) || !isPracticeBossPhase(request.phase)) return { setupTicks: 0, reached: true };
+  if (!opensHeadlessPractice(request.boss) || !isPracticeBossPhase(request.phase))
+    return { setupTicks: 0, reached: true };
   const practice = environment.practiceBoss(request.boss, request.phase);
   let setupTicks = 0;
   while (practice() !== "active" && setupTicks < PRACTICE_SETUP_LIMIT_TICKS) {
@@ -210,7 +213,7 @@ function bringToChosenPhase(
  */
 export function playBossFight(
   request: BossFightRequest,
-  player: BossPlayer = createBossPlayer(request.player),
+  player: BossPlayer = createSeededPlayer(request.player, request.seed),
 ): BossFightResult {
   const environment = createProductionHeadlessEnvironment();
   try {

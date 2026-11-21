@@ -10,18 +10,18 @@
 
 Written so that someone with only this repository can continue. The decision log at the end has the history.
 
-- **Merged:** PRs 1, 2, 2b, 3, 4, 5a (#361: `src/replay/record.ts`, `recorder.ts`, `verify.ts`, the round-trip check), 5b-1 (#372, ruleset v21: one seed type, one start record and one run start for live play and detached worlds) and the engineering-only boss rule (#386).
+- **Merged:** PRs 1, 2, 2b, 3, 4, 5a (#361: `src/replay/record.ts`, `recorder.ts`, `verify.ts`, the round-trip check), 5b-1 (#372, ruleset v21: one seed type, one start record and one run start for live play and detached worlds), the engineering-only boss rule (#386) and 5b-2 (#388, picks as actions).
   - **#386:** `ENGINEERING_ONLY_BOSS_IDS` (`src/gameplay/run/boss-definitions.ts`, read from `stageOf`) lists the bosses only engineering surfaces reach. Replay admission refuses them, and the replay content hash (`REPLAY_CONTENT_HASH`, `src/gameplay/snapshot/codec-ids.ts`) leaves them out. `src/gameplay/run/ruleset-version.ts` says when to step: a change to what an admitted replay contains or how it plays; a change confined to an engineering-only boss needs none. The switch slice that makes a rebuild the real boss removes `stageOf` and steps.
-- **Open: PR 5b-2, picks as actions (#388, branch `codex/replay-picks-as-actions`; the lead cleared it, it merges in the next batch).**
-  - A held screen holds a detached world: `stepDetachedWorld` (`src/app/world/detached/detached-step.ts`) routes the tick's actions, then returns the last result without advancing unless the screen is `playing`, as live play does. The headless `maxTicks` also bounds held steps in a row. Proof: the pause case in `tests/unit/run-start-parity.test.ts`.
-  - Reward decisions are actions: `rewardDecisionAction` (`src/app/world/detached/action-routing.ts`) maps a `RewardDecision` to its GameAction by choice id, and `routeLiveTearBenchAction` maps it back; `draft-reroll` is new. Live picks still go to the reward runtime directly; 5c records at its decision seam (`RewardRuntime.decide` and its `beforeDecision` hook).
-  - Settings opened from pause says "A CHANGE APPLIES FROM THE NEXT RUN" on the story-scene row.
-  - No ruleset step: no stream, gold or round-trip fixture moved.
-- **Next: PR 5b-3.**
-  - The named frame-clock exception with its test. #374 (merged) moved the boss intro to simulation ticks, so the exception covers cinematics only. Cinematics PR 8 ends it.
-  - Browser evidence, on a built test target, that a live run with a draft, a boss intro and a chapter verifies from its seed alone, with no keyframes.
+  - **#388:** a held screen holds a detached world: `stepDetachedWorld` (`src/app/world/detached/detached-step.ts`) routes the tick's actions, then returns the last result without advancing unless the screen is `playing`, as live play does. Reward decisions are actions: `rewardDecisionAction` (`src/app/world/detached/action-routing.ts`) maps a `RewardDecision` to its GameAction by choice id, and `routeLiveTearBenchAction` maps it back. Correction to its description: `RewardRuntime`'s `beforeDecision` hook runs only for seed-race and beat-this-run runs, so it is not the seam for every pick; 5b-3b adds `observeDecision`, which sees every decision that changes the reward.
+- **Open: PR 5b-3a, the frame clock (#391, branch `codex/replay-frame-clock`).**
+  - The record's one frame-clock exception: `ReplayRun.frames` holds the application frames that play a scene (a cinematic or a chapter page) after the last simulated tick, each `{ tick, seconds, confirm }` with `seconds` at most 0.1 and `confirm` the scene's one `SceneConfirm` type. Verify plays a tick's frames before the next tick and never makes one up. The format stays version 3: no record has been published.
+  - `stepDetachedWorld(session, actions, frames)` plays the frames; `detachedSceneFrames` gives a headless world one frame per tick while a scene plays. Proof: `tests/unit/replay-frame-clock.test.ts` (a chapter skipped by a held confirm verifies, and differs without its frames or with the hold moved).
+  - Cinematics PR 8 ends the exception.
+- **Next: PR 5b-3b, the live tap and browser evidence (branch `codex/replay-live-tap`, cut from #391; its PR opens after #391 merges).**
+  - `src/app/replay/live-replay-tap.ts`: one slot the game runtime feeds from the live seams (the resolved run start, before the world initializes; scene frames; reward decisions through `observeDecision`; sealed actions; stepped ticks). Only a test build installs a tap, through `__TEAR_REPLAY_TAP__` (`src/app/engineering/replay-tap-inspector.ts`).
+  - `tests/browser-replay-live-verify.js`, on a built test target: a campaign run (the opening chapter skipped by a held confirm, a draft pick) and a Boss Rush run (the boss arrival), each recorded live and verified from its seed alone, with no keyframes.
 - **Then: PR 5c, the live recorder.** Its content is in the PR 5 section below.
-  - It records reward decisions at the reward runtime's decision seam, as GameActions from `rewardDecisionAction`, at the tick that consumes them.
+  - Production fills the tap slot behind a lazy slot.
   - A seed race records the race's ranks as the start's `metaRanks`. The owner keeps seed races, so they are recorded, not refused.
   - Capsules from before are refused with a player-facing line in the terminology registry's names.
 - **Agreed with Shards (for PR 10):**

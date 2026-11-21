@@ -37,7 +37,7 @@ Plays boss fights on the real game, headless, and prints a table per fight and a
                        (with --phase: every boss the game's boss practice accepts)
   --difficulty <ids>   comma list of easy, normal, hard, extreme; default normal
   --weapon <ids>       comma list, default sword
-  --seed <seeds>       comma list, default 1
+  --seed <seeds>       comma list, default 1; a seed also varies the player (its opening step, its reaction delay)
   --player <ids>       comma list of scripted, avoids-tells, cuts-objects, no-dodge, still,
                        walker; default all
   --phase <phases>     comma list of phase numbers: start there through the game's boss practice

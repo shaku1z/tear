@@ -6,7 +6,8 @@ import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "../gameplay/snapsho
 import type { TearScenarioV1 } from "../tearbench/contracts";
 import { TEAR_SIMULATION_TICKS_PER_SECOND } from "../tearbench/simulation-profile";
 import { agentView, UNMARKED_HIT, type AttributedHits } from "./boss-fight";
-import { BOSS_PLAYER_IDS, createBossPlayer, type BossPlayer, type BossPlayerId } from "./boss-player";
+import { BOSS_PLAYER_IDS, type BossPlayer, type BossPlayerId } from "./boss-player";
+import { createSeededPlayer } from "./player-variation";
 import { boxOverlaps, readPlayerBox, type PlayerBox } from "./boss-view";
 import { chapterHolds, skipChapter } from "./headless/chapter";
 import {
@@ -213,7 +214,10 @@ function start(environment: ProductionHeadlessEnvironment, request: WaveRequest)
  * Plays one wave of an Adventure stage on the real game, headless, and measures it. The run opens on the wave,
  * so the player has no upgrades from earlier waves.
  */
-export function playWave(request: WaveRequest, player: BossPlayer = createBossPlayer(request.player)): WaveResult {
+export function playWave(
+  request: WaveRequest,
+  player: BossPlayer = createSeededPlayer(request.player, request.seed),
+): WaveResult {
   const offered = new Set<string>();
   const environment = createProductionHeadlessEnvironment(
     request.build === "none"

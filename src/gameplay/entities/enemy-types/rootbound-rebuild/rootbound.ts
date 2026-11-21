@@ -81,6 +81,8 @@ export function createRootboundRebuildType(
     vaultToY = 0;
     /** The parry window of the vine, while it swings. */
     batonStrike = 0;
+    /** Ticks before the vine can be parried again: every blade touch of the swinging vine starts it. */
+    parryCd = 0;
     brambleCd = 0;
     /** Ticks since the player last hurt it, and its health a tick ago, for Mend. */
     quietT = 0;
@@ -185,9 +187,16 @@ export function createRootboundRebuildType(
       return { a, b, x1: a.x, y1: a.y, x2: b.x, y2: b.y, radius: 10 };
     }
 
-    /** A held-blade parry of the swinging vine: the swing does not land, and it staggers, open. */
-    parryBaton(): boolean {
-      if (this.dying || !SWING_STATES.has(this.state) || this.hitSpent) return false;
+    /**
+     * A held blade touching the swinging vine. Only a perfect touch (the collision's fast-tip flag) parries: the
+     * swing does not land, and it staggers, open. Any touch starts the parry cooldown, so the first touch of a
+     * sweep decides and a blade kept whirling against the vine does not get a second try. The Warden's parry has
+     * the same cooldown; this rule is duplicated there until the rebuild replaces the Rootbound.
+     */
+    parryBaton(perfect = false): boolean {
+      if (this.dying || !SWING_STATES.has(this.state) || this.hitSpent || this.parryCd > 0) return false;
+      this.parryCd = M.vineSwing.parryCooldown;
+      if (!perfect) return false;
       this.hitSpent = true;
       this.batonStrike = 0;
       this.go("staggered", M.vineSwing.stagger);
@@ -251,6 +260,7 @@ export function createRootboundRebuildType(
       }
       this.enterPhases();
       this.quietT = this.hp < this.lastHp ? 0 : this.quietT + 1;
+      this.parryCd = Math.max(0, this.parryCd - 1);
       if (REST_STATES.has(this.state)) this.rest(dt, platforms, player);
       else this.move(dt, platforms, player, projectiles);
       this.field.step(dt);
