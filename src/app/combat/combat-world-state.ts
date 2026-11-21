@@ -27,6 +27,8 @@ type WorldStatePort = Pick<
   | "setSlowZones"
   | "temporaryWalls"
   | "setTemporaryWalls"
+  | "bossIntro"
+  | "setBossIntro"
 > &
   Readonly<{
     player(): GamePlayer;
@@ -66,6 +68,10 @@ export function createLiveCombatWorldState(
     slowZones: () => state.slowZones(),
     setSlowZones: (value: GameSlowZone[]) => {
       state.setSlowZones(value);
+    },
+    bossIntro: () => state.bossIntro(),
+    endBossIntro: () => {
+      state.setBossIntro(null);
     },
     walls: () => state.temporaryWalls(),
     setWalls: (value: GameTemporaryWall[]) => {

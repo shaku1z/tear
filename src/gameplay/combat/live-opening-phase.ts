@@ -26,6 +26,7 @@ import {
 import { advancePlatformLifecycle, type BrokenPlatform, type CrackingPlatform } from "./platform-lifecycle-runtime";
 import { resolveEnemyBladeCatch, type BladeCatchEnemy } from "./enemy-blade-catch-runtime";
 import type { BladeWeaponEvent } from "../entities/blade-contracts";
+import { advanceBossIntro, type BossIntroClock } from "../run/boss-encounter";
 
 export type LivePlayer = CombatPreludePlayer & LocomotionPlayer & BossStepPlayer;
 export type LiveBlade = CombatPreludeBlade & LocomotionBlade & SecondaryBlade & TransportBlade;
@@ -53,6 +54,9 @@ export interface LiveOpeningState {
 export interface LiveOpeningPhaseHost {
   /** The owning world's mutable configuration, captured before any actors. */
   readonly config: typeof GameConfiguration;
+  /** The boss arrival in progress, which this phase advances once per tick (`advanceBossIntro`). */
+  bossIntro(): BossIntroClock | null;
+  endBossIntro(): void;
   readonly player: LivePlayer;
   readonly blade: LiveBlade;
   readonly run: LiveRun;
@@ -128,6 +132,8 @@ export interface LiveOpeningPhaseResult {
 /** Runs the movement, actor, arena, and boss half of one deterministic fixed tick. */
 export function runLiveOpeningPhase(host: LiveOpeningPhaseHost, dt: number): LiveOpeningPhaseResult {
   const { player, blade, run, state, config } = host;
+  const intro = host.bossIntro();
+  if (intro !== null && !advanceBossIntro(intro, dt, config.bossTheater.introScale)) host.endBossIntro();
   const timers = { throwCooldown: state.throwCooldown };
   const preparing = host.practicePreparing === true && !host.blocking;
   if (preparing) {

@@ -1,3 +1,4 @@
+import type { BossIntroClock } from "../../gameplay/run/boss-encounter";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { LiveCollisionPhaseHost, LiveCollisionPhaseState } from "../../gameplay/combat/live-collision-phase";
 import type { LiveOpeningPhaseHost, LiveOpeningState } from "../../gameplay/combat/live-opening-phase";
@@ -59,6 +60,8 @@ export interface LiveCombatMutableState<
   setSlowZones(value: ReturnType<CombatEntityRuntimeHooks["slowZones"]>): void;
   walls(): ReturnType<CombatEntityRuntimeHooks["walls"]>;
   setWalls(value: ReturnType<CombatEntityRuntimeHooks["walls"]>): void;
+  bossIntro(): BossIntroClock | null;
+  endBossIntro(): void;
   openingProtection(): Opening["protection"];
   setOpeningProtection(value: Opening["protection"]): void;
   openingState(): LiveOpeningState;

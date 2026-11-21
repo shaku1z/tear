@@ -3,11 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { GameEnemy, GameRun } from "../../src/gameplay/runtime/game-runtime-state";
 import { createLiveStateSetupRuntimeBridge } from "../../src/app/engineering/state-setup-runtime-bridge";
 import type { BossIntroState } from "../../src/app/world/game-host-state";
-import {
-  advanceFramePrelude,
-  commitBossIntroSnapshot,
-  type MutableFramePreludeState,
-} from "../../src/app/shell/frame-runtime";
+import { advanceBossIntro } from "../../src/gameplay/run/boss-encounter";
 import { decodeTearCodecValue } from "../../src/app/world/detached/world-hydrator";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
 import { initialRunLifecycleSnapshot } from "../../src/gameplay/run/lifecycle";
@@ -44,7 +40,7 @@ const transient = Object.freeze({
 });
 
 describe("live State Setup runtime bridge", () => {
-  it.each([30, 60, 120])("restores hydrated boss intro ownership and completes at %i render Hz", (renderHz) => {
+  it("restores hydrated boss intro ownership and completes on the simulation clock", () => {
     const bossData = { isBoss: true, introT: 1.4, hp: 100, maxHp: 100, dead: false, dying: false };
     const oldBoss = { ...bossData } as GameEnemy;
     const restoredBoss = { ...bossData } as GameEnemy;
@@ -100,38 +96,13 @@ describe("live State Setup runtime bridge", () => {
     expect(restoreBossIntro.mock.calls[0]?.[0]?.boss).toBe(restoredBoss);
     expect(restoreBossIntro.mock.calls[0]?.[0]?.boss).not.toBe(oldBoss);
     let liveIntro = restoreBossIntro.mock.calls[0]?.[0] ?? null;
-    for (let frame = 0; frame < renderHz * 2; frame++) {
-      const state: MutableFramePreludeState = {
-        slowMotion: 0,
-        timeScale: 1,
-        worldZoom: 1,
-        worldZoomTarget: 1,
-        zoom: 1,
-        flash: 0,
-        bannerTime: 0,
-        stageBannerSeconds: 0,
-        rankPopTime: 0,
-        bossBeat: null,
-        bossIntro:
-          liveIntro === null
-            ? null
-            : {
-                ...liveIntro,
-                boss: { hp: restoredBoss.hp, maxHp: restoredBoss.maxHp, introT: restoredBoss.introT ?? 0 },
-              },
-      };
-      advanceFramePrelude({
-        dt: 1 / renderHz,
-        state,
-        parrySlowScale: 0.2,
-        cinemaActive: false,
-        playgroundSlow: false,
-        introScale: 0.4,
-        lerp: (a, b, t) => a + (b - a) * t,
-        clamp: (v, min, max) => Math.max(min, Math.min(max, v)),
-      });
-      liveIntro = commitBossIntroSnapshot(liveIntro, state.bossIntro);
+    // The restored arrival runs on the restored boss: 42 ticks at 1/120 s and time scale 0.25.
+    let ticks = 0;
+    while (liveIntro !== null && ticks < 120) {
+      ticks++;
+      if (!advanceBossIntro(liveIntro, 1 / 120, 0.25)) liveIntro = null;
     }
+    expect(ticks).toBe(42);
     expect(liveIntro).toBeNull();
     expect(restoredBoss.introT).toBe(0);
     expect(oldBoss.introT).toBe(1.4);
