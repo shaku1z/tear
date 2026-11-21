@@ -103,15 +103,7 @@ export function createEnemyRendererRuntime(dependencies: EnemyPresentationDepend
     ctx.strokeStyle = telegraphInk(col);
     ctx.fillStyle = col;
     ctx.lineCap = "round";
-    if (boss.cinematicPose === "aldricCrownfall" || boss.cinematicPose === "aldricFeral") {
-      ctx.globalAlpha = 0.28 + pulse * 0.22;
-      ctx.lineWidth = 5;
-      ctx.beginPath();
-      ctx.arc(boss.x, boss.y - 16, boss.hw + 22 + p * 28, -Math.PI * 0.9, Math.PI * 0.1);
-      ctx.stroke();
-      if (boss.cinematicPose === "aldricFeral")
-        weaponGlint(ctx, boss.x + boss.facing * 112, boss.y - 78, CONFIG.colors.bomber, pulse);
-    } else if (boss.cinematicPose === "echoMirror") {
+    if (boss.cinematicPose === "echoMirror") {
       const mx = CONFIG.view.w - boss.x;
       ctx.globalAlpha = 0.34 + pulse * 0.22;
       ctx.lineWidth = 3;
@@ -254,6 +246,29 @@ export function createEnemyRendererRuntime(dependencies: EnemyPresentationDepend
     ctx.restore();
   }
 
+  /** A dashed flight path from (x0, y0) to (x1, y1) bending through (cx, cy): where a leap will land. */
+  function dangerArc(
+    ctx: CanvasRenderingContext2D,
+    x0: number,
+    y0: number,
+    cx: number,
+    cy: number,
+    x1: number,
+    y1: number,
+    color: string,
+    k: number,
+  ) {
+    ctx.save();
+    ctx.strokeStyle = telegraphInk(color);
+    ctx.globalAlpha = 0.34 + k * 0.45;
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([12, 9]);
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.quadraticCurveTo(cx, cy, x1, y1);
+    ctx.stroke();
+    ctx.restore();
+  }
   function dangerReticle(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, k: number, color: string) {
     ctx.save();
     const high = A11Y.highContrast;
@@ -524,6 +539,7 @@ export function createEnemyRendererRuntime(dependencies: EnemyPresentationDepend
     lerp,
     CHIMERA_MOVE_COLOR,
     chargeTelegraph: observed("chargeTelegraph", chargeTelegraph),
+    dangerArc: observed("dangerArc", dangerArc),
     dangerColumn: observed("dangerColumn", dangerColumn),
     dangerLane: observed("dangerLane", dangerLane),
     dangerReticle: observed("dangerReticle", dangerReticle),
