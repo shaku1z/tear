@@ -10,6 +10,12 @@ The capability contract is `src/platform/contracts.ts` (`PlatformServices`). Tar
 fail safely and leave the game playable. Optional online features stay explicitly unavailable unless
 composed in. Keep the established local keys at compatibility boundaries.
 
+IndexedDB databases, on every target: `tear-ghost-v3` (Ghost capsules, until replay PR 8 removes it) and
+`tear-replays` (version 1, one `records` store: replay records, `src/replay/record-store.ts`, capped at the
+newest 20 and 25 MB, local only). A store that is missing, blocked or over quota turns recording off for the
+run and is counted; it never fails the run. A new database or store is listed here and in
+[docs/RELEASE_COMPATIBILITY.md](../../../../docs/RELEASE_COMPATIBILITY.md).
+
 ## Firebase
 
 `src/platform/firebase-cloud.ts`, `src/platform/firebase-config.ts`, and the rules in `firestore.rules`.

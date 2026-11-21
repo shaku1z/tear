@@ -1,4 +1,5 @@
 import type { LiveReplayTapSlot } from "../replay/live-replay-tap-slot";
+import type { LiveReplayProduction } from "../replay/live-replay-production";
 import type { CommandEnvelope } from "../../domain/envelopes";
 import type { TearWorldConfiguration } from "../../gameplay/runtime/tear-world-configuration";
 import {
@@ -45,6 +46,7 @@ import { createStageRestFrame } from "./stage-rest-frame";
 export interface LiveTestBuildHookSources {
   readonly dependencies: GameRuntimeDependencies;
   readonly replayTap: LiveReplayTapSlot;
+  readonly replayProduction: LiveReplayProduction;
   readonly configuration: TearWorldConfiguration<GameRuntimeDependencies["CONFIG"]>;
   readonly browser: LiveBrowserRuntime;
   readonly world: LiveWorldComposition;
@@ -154,6 +156,7 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
     installReplayTapInspector(
       browserWindow,
       sources.replayTap,
+      sources.replayProduction,
       () => authoritativeStep.lastResult?.state.run ?? null,
       () => CINEMA.active,
     );

@@ -17,6 +17,7 @@ import { createTearTerminalRunFactPublisher } from "../../gameplay/runtime/gamep
 import type { OutcomeChronologyEffect } from "../../gameplay/run/outcome-chronology-journal";
 import type { LiveGhostPracticeSessionState } from "../replay/ghost-practice-session-state";
 import type { EnvironmentRuntimeState } from "../../gameplay/environment/environment-contracts";
+import type { ReplayRunEnd } from "../../replay/recorder";
 
 type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
 
@@ -27,6 +28,8 @@ const storedRecordingMetadata = (summary: StoredRecordingSummary): Readonly<Reco
 
 export interface LiveOutcomeCompositionOptions {
   readonly observeTerminal?: (outcome: "defeat" | "victory") => void;
+  /** Ends the run's replay record (src/app/replay/live-replay-production.ts); `keep` says whether it is kept. */
+  readonly replayRunEnded?: (run: ReplayRunEnd["run"], keep: boolean) => void;
   readonly dependencies: GameRuntimeDependencies;
   readonly lifecycle: RunLifecycleController;
   readonly controllers: LiveRunControllerRegistry<GameRun, ReplayPacket, PreparedVictory>;
@@ -88,6 +91,10 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
       })),
     authoritativeResult: options.authoritativeResult,
     stopRecording: (summary) => {
+      // A record replays one plain start to its end. Practice, beat-this-run, seed-race and assisted runs
+      // start otherwise, and a campaign run goes on past this stage, so those are not kept yet.
+      const keep = !practicing() && summary.ghostAssistance === undefined && summary.mode !== "campaign";
+      options.replayRunEnded?.({ score: summary.score, wave: summary.wave, time: summary.time }, keep);
       try {
         return d.GHOST.stopRec(recordingMetadata(summary), {
           continueSemanticInput: summary.won && active().mode === "campaign",

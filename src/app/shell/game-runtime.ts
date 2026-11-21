@@ -49,6 +49,8 @@ import { createLiveProductionWorld } from "./production-world";
 import { RuntimeFrameDriver } from "./runtime-frame-driver";
 import { createLiveSessionServices } from "./session-services-composition";
 import { createLiveReplayTapSlot, withReplayTapFrames } from "../replay/live-replay-tap-slot";
+import { createLiveReplayProduction } from "../replay/live-replay-production";
+import { liveReplayRecorder } from "../replay/live-replay-recorder-slot";
 
 /**
  * Composes the live game: browser surface, Ghost V3 sidecar, session services,
@@ -108,6 +110,15 @@ export function startLiveGame(
   const { session: ghostV3Session, recorder: ghostV3, career, frames: ghostFrames } = ghostRecording;
   const replayTap = createLiveReplayTapSlot();
   GAMEPLAY_EVENTS.subscribe(replayTap.observe);
+  // Replay PR 5c-1: every run is recorded on this device, alongside the V3 recorder until replay PR 8.
+  const replayProduction = createLiveReplayProduction({
+    slot: replayTap,
+    recorder: liveReplayRecorder,
+    build: dependencies.build,
+    playerName: () => dependencies.Cloud.displayName(),
+    now: () => new Date().toISOString(),
+    indexedDb: () => browserIndexedDb ?? null,
+  });
   observeLiveGhostRecordingBoundaries(ghostRecording, {
     ghost: GHOST,
     run: liveRun,
@@ -311,7 +322,7 @@ export function startLiveGame(
   });
   const orchestration = assembleLiveRunOrchestration({
     dependencies,
-    replayTap,
+    replayRecorder: replayProduction,
     world,
     session,
     services: sessionServices,
@@ -600,6 +611,7 @@ export function startLiveGame(
   const testBuildHookSources = {
     dependencies,
     replayTap,
+    replayProduction,
     configuration,
     browser: browserRuntime,
     world,

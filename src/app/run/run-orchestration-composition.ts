@@ -23,6 +23,7 @@ import type { LiveTrainingHost } from "../training/training-host";
 import type { createLiveWeaponRuntime } from "../../gameplay/combat/live-weapon-runtime";
 import { createLiveContentComposition } from "../world/content-composition";
 import { createLiveOutcomeComposition } from "./outcome-composition";
+import type { ReplayRunEnd } from "../../replay/recorder";
 import { createLiveRunStartHost, type LiveOpeningCaptureBoundary } from "./run-start-host";
 import { createLiveVictoryProgressionExecutor } from "./victory-progression-host";
 import { createLiveWaveComposition } from "./wave-composition";
@@ -44,6 +45,8 @@ type WeaponRuntime = ReturnType<typeof createLiveWeaponRuntime<GameEnemy>>;
 export interface LiveRunOrchestrationOptions {
   readonly runInstalled?: (run: GameRun) => void;
   readonly runStarted?: (start: RunStartChoices) => void;
+  /** The run reached its outcome; `keep` says whether its replay record is kept. */
+  readonly replayRunEnded?: (run: ReplayRunEnd["run"], keep: boolean) => void;
   readonly observeTerminal?: (outcome: "defeat" | "victory") => void;
   readonly dependencies: GameRuntimeDependencies;
   readonly entities: LiveWorldEntityConstructionPort;
@@ -279,6 +282,7 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
   });
   createLiveOutcomeComposition({
     ...(options.observeTerminal === undefined ? {} : { observeTerminal: options.observeTerminal }),
+    ...(options.replayRunEnded === undefined ? {} : { replayRunEnded: options.replayRunEnded }),
     dependencies: d,
     lifecycle: options.lifecycle,
     controllers: options.controllers,
