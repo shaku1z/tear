@@ -7,7 +7,7 @@
 // `pnpm playtest enemies` puts each enemy kind alone against the player and prints a row per kind.
 // `pnpm playtest coverage` plays every report's set and lists what the game defines that never appeared.
 import { execFileSync, spawn } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -165,21 +165,26 @@ function baseBuild(commit) {
         "so its game cannot run on these dependencies",
     );
   const folder = path.join(root, "artifacts", "playtest", `base-${name}`);
-  if (!existsSync(path.join(folder, "src"))) {
-    mkdirSync(folder, { recursive: true });
+  if (!existsSync(folder)) {
+    // Extracted under another name and renamed when complete, so a run that stops half-way leaves no folder that
+    // the next run would take for a whole game.
+    const partial = `${folder}.partial-${String(process.pid)}`;
+    rmSync(partial, { recursive: true, force: true });
+    mkdirSync(partial, { recursive: true });
     const data = git("ls-tree", "-r", "--name-only", sha, "--", "public")
       .split("\n")
       .filter((file) => file.endsWith(".json"));
     // The archive is written and read by name inside the folder: a drive letter in a path reads as a host to some tars.
     execFileSync(
       "git",
-      ["archive", "--format=tar", "-o", path.join(folder, "base.tar"), sha, "src", "config", ...data],
+      ["archive", "--format=tar", "-o", path.join(partial, "base.tar"), sha, "src", "config", ...data],
       {
         cwd: root,
       },
     );
-    execFileSync("tar", ["-xf", "base.tar"], { cwd: folder });
-    rmSync(path.join(folder, "base.tar"));
+    execFileSync("tar", ["-xf", "base.tar"], { cwd: partial });
+    rmSync(path.join(partial, "base.tar"));
+    renameSync(partial, folder);
   }
   rmSync(path.join(folder, "src", "playtest"), { recursive: true, force: true });
   cpSync(path.join(root, "src", "playtest"), path.join(folder, "src", "playtest"), { recursive: true });
