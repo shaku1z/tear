@@ -14,7 +14,6 @@ import {
   canonicalObservationActions,
   canonicalObservationEnemyKind,
   canonicalObservationStage,
-  canonicalObservationWorldBounds,
   createSourceWaveOwnershipTracker,
 } from "./observation-identity";
 import type { TearScenarioTransition } from "./runner";
@@ -276,7 +275,7 @@ export function projectLiveTearObservation(
     ...(accessClass === "A"
       ? {
           diagnostics: Object.freeze({
-            worldBounds: canonicalObservationWorldBounds(context.width, context.height),
+            worldBounds: Object.freeze({ minX: 0, maxX: context.width, minY: 0, maxY: context.height }),
             waveComplete: lifecycle.phase === "wave-cleared" || lifecycle.phase === "reward-pending",
             ...(waveActorIds === undefined
               ? { waveOwnership: "unavailable" as const }

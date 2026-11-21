@@ -14,7 +14,6 @@ import { readPlayerBox } from "../../src/playtest/boss-view";
 import { chapterHolds, skipChapter } from "../../src/playtest/headless/chapter";
 import { createProductionHeadlessEnvironment } from "../../src/playtest/headless/production-headless-environment";
 import { runScenario } from "../../src/playtest/run-play";
-import { canonicalObservationWorldBounds } from "../../src/tearbench/observation-identity";
 import { TEAR_SIMULATION_TICKS_PER_SECOND } from "../../src/tearbench/simulation-profile";
 
 /** The scripted player turns back within this far of a wall (the margin in `scripted-policy.ts`). */
@@ -28,9 +27,12 @@ describe("the scripted player and the walls", () => {
     const environment = createProductionHeadlessEnvironment();
     try {
       environment.reset(scenario());
-      expect(environment.policyObservation().diagnostics?.worldBounds).toEqual(
-        canonicalObservationWorldBounds(CONFIG.view.w, CONFIG.view.h),
-      );
+      expect(environment.policyObservation().diagnostics?.worldBounds).toEqual({
+        minX: 0,
+        maxX: CONFIG.view.w,
+        minY: 0,
+        maxY: CONFIG.view.h,
+      });
     } finally {
       environment.dispose();
     }

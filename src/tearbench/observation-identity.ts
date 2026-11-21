@@ -50,17 +50,6 @@ export function createSourceWaveOwnershipTracker() {
   });
 }
 
-/**
- * The arena a player sees, edge to edge, shared by live and detached observations. The scripted player comes off a
- * wall only when it is told where the walls are, so every observation a player decides from carries this.
- */
-export function canonicalObservationWorldBounds(
-  width: number,
-  height: number,
-): Readonly<{ minX: number; maxX: number; minY: number; maxY: number }> {
-  return Object.freeze({ minX: 0, maxX: width, minY: 0, maxY: height });
-}
-
 /** One source-owned stage identity shared by live and detached observations. */
 export function canonicalObservationStage(index: number): TearStageId {
   const stage = stageIdAtRuntimeIndex(index);
