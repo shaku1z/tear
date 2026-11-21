@@ -14,7 +14,8 @@ import {
   type ProductionHeadlessEnvironment,
 } from "./headless/production-headless-environment";
 import { createObjectCounter, readCuttableObjects, type ObjectCount } from "./boss-objects";
-import { BOSS_PLAYER_IDS, createBossPlayer, type BossPlayer, type BossPlayerId } from "./boss-player";
+import { BOSS_PLAYER_IDS, type BossPlayer, type BossPlayerId } from "./boss-player";
+import { createSeededPlayer } from "./player-variation";
 import { boxOverlaps, readBoss, readPlayerBox, trainingResets, type BossView, type PlayerBox } from "./boss-view";
 
 export interface BossFightRequest {
@@ -212,7 +213,7 @@ function bringToChosenPhase(
  */
 export function playBossFight(
   request: BossFightRequest,
-  player: BossPlayer = createBossPlayer(request.player),
+  player: BossPlayer = createSeededPlayer(request.player, request.seed),
 ): BossFightResult {
   const environment = createProductionHeadlessEnvironment();
   try {
