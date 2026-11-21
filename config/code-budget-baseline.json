@@ -12,7 +12,7 @@
       "chars": 29185
     },
     "src/app/world/detached/combat-phases.ts": {
-      "chars": 30070
+      "chars": 30060
     },
     "src/app/world/detached/replay-composition.ts": {
       "chars": 34666
@@ -21,7 +21,7 @@
       "largestFunctionStatements": 83
     },
     "src/config/game-config.ts": {
-      "chars": 27592
+      "chars": 27497
     },
     "src/game-reference/game-reference.ts": {
       "chars": 30503
@@ -69,7 +69,7 @@
       "largestFunctionStatements": 93
     },
     "src/gameplay/training/arena-rules.ts": {
-      "chars": 26787
+      "chars": 26712
     },
     "src/gameplay/training/tutorial-controller.ts": {
       "chars": 38618,
