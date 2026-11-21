@@ -7,6 +7,7 @@ const targets = ["standalone", "crazygames"];
 const forbidden = [
   "__TEAR_CATALOG_DEBUG__",
   "__TEAR_UI_TARGETS__",
+  "__TEAR_SETUP__",
   "__TEAR_DIAGNOSTICS__",
   "__TEAR_PLATFORM_SERVICES__",
   "__PANTHEON_TEST",
