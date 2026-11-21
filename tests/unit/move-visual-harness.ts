@@ -218,8 +218,12 @@ export interface TickRecord {
   readonly far: readonly (DrawnPrimitive & { readonly reach: number })[];
   /** The production `liveMove()`: the move the entity is in, or null at rest. */
   readonly liveMove: string | null;
-  /** The time left in the move state (`stateT`), where the entity keeps one: it rises when a state starts again. */
-  readonly stateT: number | null;
+  /**
+   * How many times this tick's step set each of the entity's move-state fields (`state`, and each `*State`
+   * field such as the Source's `dashState`). A move that runs on is not set again; one ended, or started
+   * again, is.
+   */
+  readonly stateWrites: Readonly<Record<string, number>>;
   readonly zones: readonly ArenaZone[];
 }
 
@@ -273,6 +277,35 @@ function presentationDependencies(
   };
 }
 
+/**
+ * Counts every write to the entity's move-state fields: `state`, and each string field named `*State`.
+ * The fields keep their values; only the writes are counted, for `TickRecord.stateWrites`.
+ */
+function watchMoveStateWrites(entity: Steppable): { taken(): Readonly<Record<string, number>> } {
+  let counts: Record<string, number> = {};
+  const target = entity as unknown as Record<string, unknown>;
+  for (const key of Object.keys(target)) {
+    if (!(key === "state" || key.endsWith("State")) || typeof target[key] !== "string") continue;
+    let value = target[key];
+    Object.defineProperty(target, key, {
+      configurable: true,
+      enumerable: true,
+      get: () => value,
+      set: (next: unknown) => {
+        counts[key] = (counts[key] ?? 0) + 1;
+        value = next;
+      },
+    });
+  }
+  return {
+    taken() {
+      const taken = counts;
+      counts = {};
+      return taken;
+    },
+  };
+}
+
 function subjectFor(
   id: string,
   harness: ReturnType<typeof createEnemyHarness>,
@@ -284,6 +317,7 @@ function subjectFor(
   const projectiles: EnemyProjectile[] = [];
   let gone = false;
   const enemies: EnemyStepActor[] = [entity];
+  const writes = watchMoveStateWrites(entity);
   return {
     id,
     entity,
@@ -343,7 +377,7 @@ function subjectFor(
         dashedOutside: outside.some((primitive) => primitive.dashed),
         far,
         liveMove: entity.liveMove(),
-        stateT: typeof entity.stateT === "number" ? entity.stateT : null,
+        stateWrites: writes.taken(),
         zones: [...(entity.zones ?? [])],
       };
     },

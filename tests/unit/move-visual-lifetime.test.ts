@@ -67,6 +67,16 @@ interface Offences {
   handDrawnMarks: number;
 }
 
+/**
+ * Whether the step set the field the live move is read from: `state`, or for a boss that names parallel
+ * moves ("dash:wind"), that family's field (`dashState`).
+ */
+function moveStateSet(record: TickRecord): boolean {
+  const live = record.liveMove ?? "";
+  const field = live.includes(":") ? `${live.slice(0, live.indexOf(":"))}State` : "state";
+  return (record.stateWrites[field] ?? 0) > 0;
+}
+
 function offences(fight: Fight): Offences {
   const result: Offences = {
     markAtRest: 0,
@@ -89,12 +99,14 @@ function offences(fight: Fight): Offences {
     if (previous !== undefined) {
       const before = previous;
       const moved = before.liveMove !== null && record.liveMove !== null && before.liveMove !== record.liveMove;
-      if (moved && record.marks.some((helper) => before.marks.includes(helper))) result.markPastItsState += 1;
+      // On the phase tick the old move has just ended, so a mark there is the new move's.
+      const sharesMark = record.marks.some((helper) => before.marks.includes(helper));
+      if (moved && sharesMark && record.phase === before.phase) result.markPastItsState += 1;
       if (record.phase !== before.phase) {
         result.zoneOverPhaseChange += record.zones.filter((zone) => before.zones.includes(zone)).length;
-        // The same state may start again on the phase tick, as a phase's own move (its timer then rises).
-        const restarted = record.stateT !== null && before.stateT !== null && record.stateT > before.stateT;
-        if (before.liveMove !== null && record.liveMove === before.liveMove && !restarted)
+        // The old move ran on if nothing set the move state on the phase tick; the phase's own move may
+        // start in the same state, but it is set.
+        if (before.liveMove !== null && record.liveMove === before.liveMove && !moveStateSet(record))
           result.moveOverPhaseChange += 1;
       }
     }
@@ -209,9 +221,12 @@ describe("nothing outlives its move", { timeout: 120_000 }, () => {
     expect(offences(bossFight("colossus", keepMarkOneTickLate(false))).markPastItsState).toBeGreaterThan(0);
   });
 
-  it("fails on a planted fault: the step does not end the move when the phase changes", () => {
-    expect(offences(bossFight("aldric", withoutPhaseNotice)).moveOverPhaseChange).toBeGreaterThan(0);
-  });
+  it.each(["aldric", "colossus"] as const)(
+    "fails on a planted fault: the step does not end %s's move when the phase changes",
+    (id) => {
+      expect(offences(bossFight(id, withoutPhaseNotice)).moveOverPhaseChange).toBeGreaterThan(0);
+    },
+  );
 
   describe.each(BOSS_IDS.filter((id) => !EXEMPT.includes(id)))("%s", (id) => {
     it("draws no mark outside its move state, resumes after a stun, and leaves nothing past death or a phase", () => {
