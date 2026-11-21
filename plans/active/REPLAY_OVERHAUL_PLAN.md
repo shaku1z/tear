@@ -12,17 +12,10 @@ Written so that someone with only this repository can continue. The decision log
 
 - **Merged:** PRs 1, 2, 2b, 3, 4 and 5a (#361: `src/replay/record.ts`, `recorder.ts`, `verify.ts`, the round-trip check).
 - **Open: PR 5b-1, #372** (branch `codex/replay-live-start`): one seed type, one start record and one run start for live play and detached worlds. The lead approved the design.
-  - Before it merges it lands after #374 (cinematics' intro clock, v19), #381 (Verdant slice 2, v20) and #377 (playtest-tool's live observation), then, once:
-    - merge `origin/main`;
-    - step the ruleset to v21, keeping v20 as #381's history line (`src/gameplay/run/ruleset-version.ts`, `config/campaign-publication-boundary.json`, `tests/unit/gauntlet-records.test.ts`);
-    - move the replays position edit to `config/position/replays.json` (#366 splits `config/position.json` per area).
-  - The determinism corpus:
-    - Keep #374's pinned boss seeds (`BOSS_SEED_INDEX`) and its tell-avoiding boss player.
-    - Keep `STREAM_BOSSES` in `tests/support/hash-stream-corpus.ts`, set to the boss each pinned seed fought on main (read `facts.bossKinds` in main's `tests/fixtures/canonical-hash-stream.json`).
-    - Regenerate on the merged tree: `TEAR_HASH_STREAM_WRITE=1 pnpm test:determinism` and `TEAR_TUTORIAL_GOLD_WRITE=1 pnpm exec vitest run tests/unit/tutorial-production-ghost.test.ts`.
-    - Check that every stream's play facts equal main's.
-    - If a boss stream fails its coverage fact (survival, or riftlock's later phase), re-pick its seed from the fixed list `hash-stream:<weapon>:boss`, then `:1` to `:9`, taking the first that passes. Update the counts in the corpus comment, name the moved seeds in the PR, and tell cinematics. The seed probe is in the lead's shared notes folder (`boss-seed-probe/`).
-  - The PR body must keep its first-run failure record.
+  - Done on the branch: merged `origin/main` after #374 (v19), #381 (v20), #366 and #377; stepped the ruleset to v21, with v20 kept as #381's history line; the position edit is in `config/position/replays.json`.
+  - The determinism corpus keeps #374's pinned boss seeds (`BOSS_SEED_INDEX`) and tell-avoiding boss player. `STREAM_BOSSES` names the boss each pinned seed fought on main. Regenerated on the merged tree: every stream's play facts equal main's, and no seed moved.
+  - Left: CI green, the lead's review, and the merge (it merges alone). If main takes another ruleset step first, merge `origin/main`, take the next number, regenerate (`TEAR_HASH_STREAM_WRITE=1 pnpm test:determinism`, `TEAR_TUTORIAL_GOLD_WRITE=1 pnpm exec vitest run tests/unit/tutorial-production-ghost.test.ts`) and check the play facts again. A boss stream that fails its coverage fact is re-picked from `hash-stream:<weapon>:boss`, then `:1` to `:9`, first that passes (the probe is in the lead's shared notes folder, `boss-seed-probe/`).
+  - The PR body keeps its first-run failure record.
 - **Next, a small PR after #372: engineering-only bosses leave replay identity** (the lead approved it in principle, 2026-11-21).
   - **Problem:** A rebuild slice for a boss that only engineering surfaces can reach (a `BossDefinition` with `stageOf`; today the new Rootbound, in Boss Test) changes gameplay identity, so by the rule above it takes a ruleset step. That step retires every replay, although no player run can contain that boss.
   - **Admission:** `readReplayRecord` refuses a record whose start names an engineering-only boss, and `verifyReplay` refuses a run whose world spawns one (a boss event or the boss order). One list, read from the boss definitions, decides which bosses are engineering-only.

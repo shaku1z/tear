@@ -156,7 +156,8 @@ export const RULESET_STEPS: readonly RulesetStep[] = Object.freeze(
     { version: SIX_BIOME_PALE_PREVIEW_V20_RULESET_VERSION, change: "the new Rootbound joined Boss Test" },
     {
       version: CURRENT_RULESET_VERSION,
-      change: "a run began starting the same way live and in its replay, keeping the cinematics setting it started with",
+      change:
+        "a run began starting the same way live and in its replay, keeping the cinematics setting it started with",
     },
   ].map((step) => Object.freeze(step)),
 );
