@@ -17,9 +17,9 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 | [Release readiness](#release-readiness) | Merged to main | Production deploy, after the owner has played the build. | — |
 | [Production deploy](#production-deploy) | Deployed 2026-11-13 | The next production deploy follows the Verdant, Tutorial and music work. | — |
 | [Verdant Sanctum visuals](#verdant-visuals) | In progress | The owner judges the moving stage; then Pale Traverse from a recipe, with its own live list. | Judge the drawn look against the reference illustration: the owner's taste decides visual work. |
-| [Verdant Sanctum gameplay](#verdant-gameplay) | In progress | Close Verdant: the owner plays the waves and the Rootbinder; then Pale. | Playtest the Rootbound in all three phases. |
+| [Verdant Sanctum gameplay](#verdant-gameplay) | In progress: rebuild from scratch, plan under the lead's review | The lead reviews the plan; then slice 1, the two rules over every boss and enemy. | — |
 | [Tutorial and Playground experience](#training-ux) | In progress | One source of names for the drilled weapon moves (this pull request, then its floaters), then the release tutorial flow and menu fixes. | — |
-| [Pale Traverse rework](#pale-traverse) | In progress | Slice 1: rebuild the Aurora Tracks as roads on a surface that raise top speed. | — |
+| [Pale Traverse rework](#pale-traverse) | In progress | Waits for the Verdant rebuild: Pale is replanned on what Verdant proves (plans/active/VERDANT_PALE_REBUILD.md). | — |
 | [Player wiki](#wiki) | In progress | Review the move pull request, then confirm the Cloudflare secret question and run the first wiki deploy. | Archive shaku1z/tear-wiki after the first deploy from this repository. |
 | [Repository structure and workflow](#repository-structure) | In progress | After the hooks pull request merges, run pnpm setup:hooks in the canonical checkout on main (scripts/governance/README.md). | — |
 | [Playtest tool](#playtest-tool) | Stage 2 under way: stage 1 is done (pnpm playtest bosses and sweep); pnpm playtest waves opens any Adventure wave directly, runs plays whole runs from wave 1, enemies meets each enemy kind alone, and coverage lists what the game defines that no report brought into play | --compare: the same situations and seeds on another commit, printing only what changed. | — |
@@ -60,11 +60,11 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 ### Verdant Sanctum gameplay
 
-**In progress.** The Rootbound boss is rebuilt in all three phases as data on a shared boss move layer that Pale and later bosses reuse: Phase I's moves, Phase II's Grafts, Root Cage and Bloom Wells, and Phase III's Regrowth and Last Spring. Its body no longer hurts on touch: it blocks, and it does not play a move the player could not walk out of. The stage's Bloom Wells stand on the floor and lift the player and light enemies; who a stage field moves is one data row. The Rootbinder is rebuilt as a support that backs away, plants and roots the allies near it, so they cannot be flung or lifted until the root is cut; cutting every root or one heavy hit uproots it, and it takes more damage while planted. Its old leash on the player is replaced by a warned snare: a ring marked on the ground that holds a player who stays in it, with a cut, a 2 second release and an immunity afterwards. Verdant's nine waves are written: each has listed enemies in spawn order (wave 32 two ground allies and then a Rootbinder, 33 a Mender, 36 a Chimera, 38 a second Rootbinder late) and the pool fills the rest; any stage can carry such a table. Listed enemies arrive without affixes. The waves were measured with the playtest tool on 24 seeds: nothing justified a change to their size or health.
+**In progress: rebuild from scratch, plan under the lead's review.** The owner rejected the Verdant gameplay a third time on 2026-11-20: the shared Verdant base is slop, move visuals linger after the move, and Verdant leans on tells far more than any other boss. Verdant's boss, enemies and stage are rebuilt from scratch in the pattern of Aldric, the Echo and the Colossus, keeping only the approved Rootbound seed-pod figure and the drawn background. Measured on main 6fb1a7cd: a scripted player takes 2.8, 1.1 and 0 hits per 10 s from today's Rootbound across its three phases, against 4 to 7 from the reference bosses; its Phase III does not move; its two phase cinematics block 12.9 s of a 37 s fight; it draws 16 tell marks against Aldric's 6. The plan adds two rules over every boss and enemy (nothing outlives its move, tell weight) and builds the new Verdant on the engineering channel until the owner approves it on preview.
 
-- Next: Close Verdant: the owner plays the waves and the Rootbinder; then Pale.
-- Owner action: Playtest the Rootbound in all three phases.
-- Evidence: [plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md)
+- Next: The lead reviews the plan; then slice 1, the two rules over every boss and enemy.
+- Owner action: none
+- Evidence: [plans/active/VERDANT_PALE_REBUILD.md](../plans/active/VERDANT_PALE_REBUILD.md), [plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md)
 
 <a id="training-ux"></a>
 
@@ -82,9 +82,9 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 **In progress.** Pale Traverse stays a Playground preview and is not published. Its gameplay is being rebuilt the way Verdant's was. The audit found that the Aurora Tracks touch nobody standing on a platform or the floor, the White Hart gives no warning the game can check and plays the same fight on every seed, and none of Pale uses the shared layers. The plan is eight pull requests: the tracks, the Rimehound, routes in the boss move layer, the White Hart one phase at a time, the waves, then leftovers. The earlier work on the unmerged branch codex/pale-traverse-r4 is reference only.
 
-- Next: Slice 1: rebuild the Aurora Tracks as roads on a surface that raise top speed.
+- Next: Waits for the Verdant rebuild: Pale is replanned on what Verdant proves (plans/active/VERDANT_PALE_REBUILD.md).
 - Owner action: none
-- Evidence: [plans/active/PALE_GAMEPLAY_REBUILD.md](../plans/active/PALE_GAMEPLAY_REBUILD.md), [plans/active/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md)
+- Evidence: [plans/active/VERDANT_PALE_REBUILD.md](../plans/active/VERDANT_PALE_REBUILD.md), [plans/active/PALE_GAMEPLAY_REBUILD.md](../plans/active/PALE_GAMEPLAY_REBUILD.md), [plans/active/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md)
 
 <a id="wiki"></a>
 
