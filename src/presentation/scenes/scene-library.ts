@@ -2,13 +2,10 @@ import type { SceneCamera, SceneWorld } from "./scene-contract";
 import {
   drawSceneBack,
   drawSceneFront,
-  drawPlatformShadows,
-  drawPlatformTexture,
   type LoadedScene,
   type SceneBitmap,
   type SceneCanvas,
   type SceneView,
-  type SurfaceTarget,
 } from "./scene-renderer";
 
 /** What a drawn stage's painter is given: canvases, the world and a way to yield the thread. */
@@ -48,23 +45,6 @@ export interface SceneLibraryPorts {
   readonly reducedMotion: () => boolean;
   readonly onError?: (stageId: string, error: unknown) => void;
 }
-
-export interface ScenePlatform {
-  readonly x: number;
-  readonly y: number;
-  readonly w: number;
-  readonly h: number;
-  readonly floor?: boolean;
-  readonly void?: boolean;
-  readonly arenaState?: string;
-}
-
-/** Platforms that are solid now cast a shadow; broken or reforming ones do not. */
-const castsShadow = (platform: ScenePlatform) =>
-  platform.floor !== true &&
-  platform.void !== true &&
-  platform.arenaState !== "broken" &&
-  platform.arenaState !== "reforming";
 
 /** World frame inputs for one stage draw. */
 export interface SceneDrawInput {
@@ -111,16 +91,6 @@ export interface SceneLibrary {
   /** Draws over whatever the caller painted; while fading in, the caller draws its own art first. */
   drawBack(context: CanvasRenderingContext2D, input: SceneDrawInput): void;
   drawFront(context: CanvasRenderingContext2D, input: SceneDrawInput): void;
-  /** Contact shadows of the stage's platforms on the back plane (call after drawBack). */
-  drawShadows(context: CanvasRenderingContext2D, stageId: string, platforms: readonly ScenePlatform[]): void;
-  /**
-   * Texture port for the stage's platform material. The material draws every
-   * platform and the floor from collision geometry, in every state; this only
-   * fills the surface once the stage is painted (false keeps the material's fill).
-   */
-  surfaceMaterial(stageId: string): {
-    draw(context: CanvasRenderingContext2D, rect: SurfaceTarget, floor: boolean): boolean;
-  };
   /** Test and evidence hook: the painted stage, if ready. */
   loaded(stageId: string): LoadedScene | undefined;
 }
@@ -210,14 +180,6 @@ export function createSceneLibrary(ports: SceneLibraryPorts): SceneLibrary {
       scene: loaded.scene,
     };
   };
-  const surface = (stageId: string) =>
-    Object.freeze({
-      draw(context: CanvasRenderingContext2D, rect: SurfaceTarget): boolean {
-        const loaded = ready(stageId);
-        return loaded !== undefined && drawPlatformTexture(context, loaded, rect);
-      },
-    });
-  const materials = new Map<string, ReturnType<typeof surface>>();
   return {
     status: (stageId) => entry(stageId)?.status ?? "none",
     show(stageId) {
@@ -256,25 +218,6 @@ export function createSceneLibrary(ports: SceneLibraryPorts): SceneLibrary {
       const current = entry(input.stageId);
       if (current?.status !== "ready" || current.loaded === undefined) return;
       drawSceneFront(context, current.loaded, frame(current.loaded, current.readyAt, input));
-    },
-    drawShadows(context, stageId, platforms) {
-      const current = entry(stageId);
-      if (current?.status !== "ready" || current.loaded === undefined) return;
-      const standing = platforms.filter(castsShadow);
-      context.save();
-      context.globalAlpha = ports.reducedMotion()
-        ? 1
-        : Math.min(1, (ports.now() - current.readyAt) / 1000 / FADE_SECONDS);
-      drawPlatformShadows(context, current.loaded, standing);
-      context.restore();
-    },
-    surfaceMaterial(stageId) {
-      let material = materials.get(stageId);
-      if (material === undefined) {
-        material = surface(stageId);
-        materials.set(stageId, material);
-      }
-      return material;
     },
   };
 }

@@ -4,6 +4,7 @@ const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
 const { decodePng } = require("./class-c-png");
 const { STATE_WAIT_MS } = require("./browser-waits");
+const { assertStageReadable, assertStageStill } = require("./stage-readability");
 
 function paintedPixelRatio(png) {
   const { rgba } = decodePng(png);
@@ -102,6 +103,16 @@ withJourney({ name: "Pale PT3-C5 presentation" }, async ({ page, buildInfo }) =>
   assert.equal(state.run.wave, 41);
   assert.equal(state.run.stage, 6);
   assert.equal(state.hazard.stageId, "pale-traverse");
+
+  // The drawn stage at rest keeps the interface ink readable (config/stage-readability.json).
+  const readability = await assertStageReadable(page, "pale-traverse");
+  console.log(`stage readability ${JSON.stringify(readability.shares)}`);
+  console.log(`stage motion ${JSON.stringify(readability.moments)}`);
+  // With reduced motion on, the stage is one still picture that keeps the same floors.
+  await page.evaluate(() => window.__PANTHEON_TEST.setOptions({ reducedMotion: true }));
+  const still = await assertStageStill(page, "pale-traverse");
+  console.log(`stage readability, reduced motion ${JSON.stringify(still.shares)}`);
+  await page.evaluate(() => window.__PANTHEON_TEST.setOptions({ reducedMotion: false }));
   assert.deepEqual(
     state.hazard.fields.map((field) => [field.kind, field.direction]),
     [
