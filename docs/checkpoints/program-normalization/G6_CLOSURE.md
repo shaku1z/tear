@@ -28,7 +28,7 @@ eligible/open. [x] Production remains frozen.
 | Synchronization PR | Wiki PR #20 contained exactly `src/data/game-reference.v1.json`, `src/data/game-reference.v1.receipt.json`, and `src/data/wiki-terminology.json`; its head was `62a0a80a2e25c4379c833da9666b8a8f308d63c6`. |
 | Wiki validation | The explicit exact-head `workflow_dispatch` Validate run `32803747300` passed. The automatic PR `Validate` run `32803748601` first entered `action_required`, was then approved through the GitHub Actions approval endpoint, and passed. Post-merge exact-main `Validate` run `32803865687` passed on wiki `main`. |
 | Wiki source | Protected wiki `main` is `ecec8c9aeba189fe7b254329010571dd71f7cc3d` (`ecec8c9`). The promoted manifest SHA-256 is `afc4eb0e7b051c76eb583be852b00a80f4c2b7632744e1a7f4199faffbba7254`. |
-| Preview | `https://tear-wiki-preview.shatheartboy.workers.dev`, preview version `eb30480a-8c6a-48f6-8dc1-81bf2054cb6f`. The Final Five roster, Greatsword, Chainblade, Riftlock, and terminology pages returned `200`; retired Spear and Ringblade identifiers were absent from active roster/content. |
+| Preview | the `tear-wiki-preview` Worker (address not recorded: it carried the account name), preview version `eb30480a-8c6a-48f6-8dc1-81bf2054cb6f`. The Final Five roster, Greatsword, Chainblade, Riftlock, and terminology pages returned `200`; retired Spear and Ringblade identifiers were absent from active roster/content. |
 | Production boundary | Production was not changed: the game remains at the 2026-08-18 version prefix `5f1d5e2d…`, and the wiki remains at the 2026-07-28 version prefix `b72b4f0e…`. |
 
 ## Contract and authority resolution
