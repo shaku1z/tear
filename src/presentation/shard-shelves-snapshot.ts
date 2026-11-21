@@ -1,9 +1,19 @@
 /**
- * The SHARDS tab of the Shop as plain data: one shelf per cosmetic slot that has items, the game's own
- * look first, then each item with what the player can do with it. Pure: the app passes the catalog, the
- * saved state and the profile facts in; the renderer turns each card into one control.
+ * The SHARDS tab of the Shop as plain data: the loadout row, a strip per collection, then one shelf per
+ * cosmetic slot that has items, the game's own look first, then each item with what the player can do with
+ * it. Pure: the app passes the catalog, the saved state and the profile facts in; the renderer turns each
+ * card and loadout into one control.
  */
-import { activeLoadout, itemStatus, priceOf, shardBalance, shardsEarned, type ItemStatus } from "../domain/cosmetics";
+import { activeLoadout, LOADOUT_IDS, loadoutSummaries } from "../domain/cosmetic-loadouts";
+import {
+  collectionProgress,
+  itemStatus,
+  priceOf,
+  shardBalance,
+  shardsEarned,
+  type CollectionProgress,
+  type ItemStatus,
+} from "../domain/cosmetics";
 import type {
   CosmeticCatalog,
   CosmeticItem,
@@ -19,17 +29,25 @@ import {
   type ProgressFacts,
   type UnlockCondition,
 } from "../domain/unlock-condition";
-import type { ShardCardView, ShardShelfView, ShardSwatchView, ShardsView } from "./screens/contracts";
+import type {
+  ShardCardView,
+  ShardCollectionView,
+  ShardShelfView,
+  ShardSwatchView,
+  ShardsView,
+} from "./screens/shard-contracts";
 import { TYPE_SCALE } from "./ui-tokens";
 
 /**
  * Shelf geometry, shared by the renderer and the desktop scroll extent so they cannot disagree. A shelf is
- * its label row and then rows of cards; shelves stand `shelfGap` apart.
+ * its label row and then rows of cards; shelves stand `shelfGap` apart. The loadout row and each collection
+ * strip are one `bar` tall with `gap` under it.
  */
 export const SHARD_SHELF = Object.freeze({
   head: 34,
   gap: 16,
   shelfGap: 22,
+  bar: 36,
   columns: Object.freeze({ desktop: 6, phone: 2 }),
 });
 
@@ -84,7 +102,18 @@ export function shardShelvesHeight(
   const rows = view.shelves.map((shelf) => Math.ceil(shelf.cards.length / columns));
   // A row of cards is the card plus the gap under it (see the renderer's grid).
   const cards = rows.reduce((sum, count) => sum + count * (cardHeight + SHARD_SHELF.gap), 0);
-  return view.shelves.length * SHARD_SHELF.head + cards + Math.max(0, view.shelves.length - 1) * SHARD_SHELF.shelfGap;
+  const shelves =
+    view.shelves.length * SHARD_SHELF.head + cards + Math.max(0, view.shelves.length - 1) * SHARD_SHELF.shelfGap;
+  return shardHeaderHeight(view) + shelves;
+}
+
+/** Height of what stands above the shelves: the loadout row, then the collection strips. */
+export function shardHeaderHeight(view: ShardsView): number {
+  const bar = SHARD_SHELF.bar + SHARD_SHELF.gap;
+  const loadouts = SHARD_SHELF.head + bar + SHARD_SHELF.shelfGap;
+  const collections =
+    view.collections.length === 0 ? 0 : SHARD_SHELF.head + view.collections.length * bar + SHARD_SHELF.shelfGap;
+  return loadouts + collections;
 }
 
 export interface ShardShelvesInput {
@@ -98,6 +127,8 @@ export interface ShardShelvesInput {
   readonly collectionName: (id: string) => string;
   /** Held items to badge NEW (the app keeps the set for one visit to the tab). */
   readonly newItems: ReadonlySet<string>;
+  /** The loadout whose DELETE waits for its confirming press, if any. */
+  readonly deleteArmed: string | null;
 }
 
 /** The colours and text a look is made of, read from the family's own parameter list: no per-family code. */
@@ -161,6 +192,21 @@ function itemCard(
     note: noteFor(item, status, input),
     isNew: isHeld(status) && input.newItems.has(item.id),
     swatch: lookSwatch(item.look, params),
+    ...(item.collection === undefined ? {} : { collection: input.collectionName(item.collection) }),
+  };
+}
+
+function collectionStrip(progress: CollectionProgress, input: ShardShelvesInput): ShardCollectionView {
+  const { collection, reward } = progress;
+  const locked = !progress.unlocked && !progress.complete;
+  return {
+    id: collection.id,
+    name: collection.name,
+    owned: progress.owned,
+    total: progress.members.length,
+    complete: progress.complete,
+    ...(reward ? { reward: reward.name } : {}),
+    note: locked ? conditionText(collection.unlock, input.names) : "",
   };
 }
 
@@ -196,5 +242,15 @@ export function buildShardShelves(input: ShardShelvesInput): ShardsView {
       cards: [defaultCard, ...items.map((item) => itemCard(item, slot, input, balance, params))],
     });
   }
-  return { balance, earned: shardsEarned(input.earned), shelves };
+  const loadouts = loadoutSummaries(input.state);
+  const active = loadouts.find((loadout) => loadout.active)?.id;
+  return {
+    balance,
+    earned: shardsEarned(input.earned),
+    shelves,
+    loadouts,
+    canAddLoadout: loadouts.length < LOADOUT_IDS.length,
+    deleteArmed: active !== undefined && input.deleteArmed === active,
+    collections: collectionProgress(catalog, input.state, input.facts).map((entry) => collectionStrip(entry, input)),
+  };
 }

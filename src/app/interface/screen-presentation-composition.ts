@@ -80,6 +80,7 @@ export interface LiveScreenPresentationComposition {
   readonly chooseReserve: (index: number) => void;
   readonly chooseTier: (index: number) => void;
   readonly rerollDraft: () => void;
+  readonly leaveShop: () => void;
   readonly dispatch: ReturnType<typeof createLiveScreenActionBindings>;
 }
 
@@ -202,6 +203,7 @@ export function createLiveScreenPresentationComposition(
     chooseReserve: run.chooseReserve,
     chooseTier: run.chooseTierUp,
     rerollDraft: run.rerollDraft,
+    leaveShop: menu.leaveShop,
     dispatch,
   });
 }

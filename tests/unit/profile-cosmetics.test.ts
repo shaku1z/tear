@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { COSMETIC_CATALOG } from "../../src/gameplay/progression/cosmetic-catalog";
 import { migrateProfileEnvelope, PROFILE_ENVELOPE_VERSION } from "../../src/persistence/profile-envelope";
-import { activeLoadout, normalizeCosmeticState } from "../../src/domain/cosmetics";
+import { activeLoadout, createLoadout, loadoutSummaries } from "../../src/domain/cosmetic-loadouts";
+import { equipCosmetic, normalizeCosmeticState } from "../../src/domain/cosmetics";
+import type { CosmeticChange } from "../../src/domain/cosmetic-types";
 import { dailyReceiptId } from "../../src/domain/reward-receipts";
 import { createProfileStore, type ProfileStore } from "../../src/persistence/profile-store";
 
@@ -28,6 +30,10 @@ function memory(initial: Record<string, string> = {}, acknowledged = true) {
   return { values, store };
 }
 /** Shards earned the way a player earns them: one paid daily claim. */
+const equip =
+  (slot: string, id: string | null): CosmeticChange =>
+  (catalog, state, now) =>
+    equipCosmetic(catalog, state, slot, id, now);
 const earn = (profile: ProfileStore, shards: number) =>
   profile.claimShards(dailyReceiptId("2026-1-1", "d_kills"), shards);
 function open(
@@ -150,13 +156,30 @@ describe("buying and equipping through the profile store", () => {
     expect(profile.shards()).toBe(200);
     expect(profile.shardBalance()).toBe(175);
     expect(await profile.buyCosmetic("trail_dusk")).toBe("owned");
-    expect(await profile.equipCosmetic("trail", "trail_dusk")).toBe("committed");
-    expect(await profile.equipCosmetic("trail", "trail_tidewater")).toBe("unknown");
+    expect(await profile.changeCosmetics(equip("trail", "trail_dusk"))).toBe("committed");
+    expect(await profile.changeCosmetics(equip("trail", "trail_tidewater"))).toBe("unknown");
     // The balance is derived: the stored shard number is untouched, only ownership is recorded.
     expect(saved(storage).profile.shards).toBe(200);
     const reloaded = open(storage).profile;
     expect(reloaded.shardBalance()).toBe(175);
     expect(activeLoadout(reloaded.cosmetics())?.slots.trail?.id).toBe("trail_dusk");
+  });
+
+  it("commits a loadout change through the same path, and keeps it over a reload", async () => {
+    const storage = memory({
+      tear_profile_v2: JSON.stringify({ schema: "tear.profile", schemaVersion: 3, profile: { shards: 200 } }),
+    });
+    const { profile } = open(storage);
+    expect(await profile.buyCosmetic("trail_dusk")).toBe("committed");
+    expect(await profile.changeCosmetics(equip("trail", "trail_dusk"))).toBe("committed");
+    expect(await profile.changeCosmetics((_catalog, state, now) => createLoadout(state, now))).toBe("committed");
+    expect(await profile.changeCosmetics(() => null)).toBe("unknown");
+    const reloaded = open(storage).profile.cosmetics();
+    expect(loadoutSummaries(reloaded).map((entry) => [entry.name, entry.active])).toEqual([
+      ["MAIN", false],
+      ["LOADOUT 2", true],
+    ]);
+    expect(activeLoadout(reloaded)?.slots.trail?.id).toBe("trail_dusk");
   });
 
   it("refuses what cannot be afforded, is locked, or is unknown, and writes nothing", async () => {
@@ -190,7 +213,7 @@ describe("buying and equipping through the profile store", () => {
     earn(profile, 100);
     return profile.buyCosmetic("trail_dusk").then(async (status) => {
       expect(status).toBe("committed");
-      expect(await profile.equipCosmetic("trail", "trail_dusk")).toBe("committed");
+      expect(await profile.changeCosmetics(equip("trail", "trail_dusk"))).toBe("committed");
       expect(open(storage).profile.cosmetics().owned).toEqual({ trail_dusk: 25 });
     });
   });

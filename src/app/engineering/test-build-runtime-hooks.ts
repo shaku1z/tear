@@ -328,7 +328,8 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
 export function installLiveBossDebugWhenEnabled(sources: LiveTestBuildHookSources): void {
   if (__TEAR_TEST_BUILD__) {
     // The click targets of the latest drawn frame, as a pointer click is matched against them, each
-    // with the page point of its centre (the inverse of the pointer's logical mapping).
+    // with the page point of its centre (the inverse of the pointer's logical mapping) and the action
+    // a click runs, so a journey can click one of several controls that share a label.
     const { canvas } = sources.browser;
     const { CONFIG, OVERSCAN } = sources.dependencies;
     Object.defineProperty(sources.dependencies.browserWindow, "__TEAR_UI_TARGETS__", {
@@ -344,6 +345,7 @@ export function installLiveBossDebugWhenEnabled(sources: LiveTestBuildHookSource
           w: button.w,
           h: button.h,
           enabled: button.enabled !== false,
+          action: button.semanticAction,
           clientX: rect.left + ((button.x + button.w / 2 + OVERSCAN.x) / spanWidth) * rect.width,
           clientY: rect.top + ((button.y + button.h / 2 + OVERSCAN.y) / spanHeight) * rect.height,
         }));

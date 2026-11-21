@@ -38,7 +38,7 @@ export interface LiveDebugCompositionOptions {
   readonly applyUpgrade: GameRuntimeDependencies["applyUpgrade"];
   readonly enterReplay: (record: object, from: "menu") => void;
   readonly beginRename: () => void;
-  readonly renameSnapshot: () => Readonly<{ active: boolean; previous: string }>;
+  readonly renameSnapshot: () => Readonly<{ active: boolean; previous: string; minLength: number; maxLength: number }>;
   readonly selectSettingsTab: (tab: string) => void;
   readonly replayStatus: () => object | null;
   readonly applyOptions: (options: object) => void;
