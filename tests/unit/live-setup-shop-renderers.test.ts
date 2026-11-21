@@ -4,6 +4,7 @@ import { AppStateController } from "../../src/app/interface/app-state-controller
 import { ARMED_CONFIRM_DELAY_MS } from "../../src/app/interface/armed-confirm";
 import { createLiveScreenNavigation } from "../../src/app/interface/live-screen-navigation";
 import { createLiveSetupShopRenderers } from "../../src/app/run/setup-shop-renderers";
+import type { LiveShopFeedbackSnapshot } from "../../src/app/run/shop-feedback-state";
 import { createSurfaceAvailability } from "../../src/domain/surface-availability";
 
 describe("live setup shop renderers", () => {
@@ -63,7 +64,7 @@ describe("live setup shop renderers", () => {
   it("withdraws a loadout DELETE question on another change, a tab change, leaving the Shop or a move", () => {
     let clock = 0;
     vi.spyOn(performance, "now").mockImplementation(() => clock);
-    let shop = { tab: "shards", displayedCoins: 0, flash: null };
+    let shop: LiveShopFeedbackSnapshot = { tab: "shards", displayedCoins: 0, flash: null };
     const loadout = (createdAt: number) => ({ name: "X", nameAt: 0, createdAt, slots: {} });
     let loadouts = { loadout_2: loadout(1) };
     const changeCosmetics = vi.fn(() => Promise.resolve("refused"));
@@ -74,7 +75,7 @@ describe("live setup shop renderers", () => {
         setScroll: vi.fn(),
         time: () => 0,
         shop: () => shop,
-        setShop: (next: typeof shop) => {
+        setShop: (next: LiveShopFeedbackSnapshot) => {
           shop = next;
         },
       },

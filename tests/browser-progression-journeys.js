@@ -379,7 +379,10 @@ withJourney(
       await waitCosmetics((state) => state.loadouts?.main?.slots?.[slot]?.id === id, `wore ${id} in MAIN`);
     }
     await clickAction("shop", { type: "shards.newLoadout" });
-    await waitCosmetics((state) => state.active?.id === "loadout_2", "made and used a second loadout");
+    await waitCosmetics(
+      (state) => state.active?.id?.startsWith("loadout_2_") === true,
+      "made and used a second loadout",
+    );
     await clickAction("shop", { type: "shards.equip", slot: "title", id: null });
     await waitCosmetics(
       (state) => state.loadouts?.loadout_2?.slots?.title?.id === null,
@@ -412,7 +415,10 @@ withJourney(
     await clickDrawn("SHARDS");
     await waitDrawn("LOADOUTS");
     await clickAction("shop", { type: "shards.useLoadout", id: "loadout_2" });
-    await waitCosmetics((state) => state.active?.id === "loadout_2", "switched to LOADOUT 2 after the reload");
+    await waitCosmetics(
+      (state) => state.active?.id?.startsWith("loadout_2_") === true,
+      "switched to LOADOUT 2 after the reload",
+    );
     await clickTarget(page, "shop", "BACK");
     await waitScreen("menu");
     await clickAction("menu", { type: "navigate", to: "profile", resetScroll: true, tab: "bests" });
