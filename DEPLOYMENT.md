@@ -58,7 +58,7 @@ The only publisher is the protected GitHub Actions workflow, described fully in 
 
 1. Merge the change into protected `main` through a pull request.
 2. Wait for the `Validate` run on that `main` commit to succeed. It uploads the built targets as `tear-release-targets-<sha>`, kept for 14 days.
-3. Optionally run `Rehearse Cloudflare Release` with that Validate run ID. It publishes the same artifact to the separate `tear-preview` Worker.
+3. Optionally run `Rehearse Cloudflare Release` with that Validate run ID. It publishes the same artifact to the separate `tear-preview` Worker, served at https://preview.tearblade.com (a custom domain; `wrangler.preview.jsonc` turns the Worker's default Cloudflare subdomain and per-version preview addresses off so the account name is never in a link).
 4. Run `Deploy Cloudflare Production` with the Validate run ID and approve the protected `Production` environment. The workflow verifies and publishes the stored artifact; it does not rebuild.
 
 The Worker name, current compatibility date, observability and the generated-assets boundary live in `wrangler.jsonc`. Cloudflare API tokens belong in GitHub Actions secrets, never in this repository or Wrangler variables.
