@@ -989,7 +989,6 @@
         "args": [
           "run",
           "tests/unit/backdrop-biomes.test.ts",
-          "tests/unit/platform-materials.test.ts",
           "tests/unit/verdant-presentation.test.ts"
         ]
       },

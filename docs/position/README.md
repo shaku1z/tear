@@ -13,7 +13,7 @@ The build players have: [Production](production.md).
 
 - [Release readiness](release-readiness.md)
 - [Production deploy](production-deploy.md)
-- [Verdant Sanctum visuals](verdant-visuals.md)
+- [Drawn stage backgrounds (Verdant, Pale)](verdant-visuals.md)
 - [Verdant Sanctum gameplay](verdant-gameplay.md)
 - [Tutorial and Playground experience](training-ux.md)
 - [Pale Traverse rework](pale-traverse.md)
@@ -21,6 +21,7 @@ The build players have: [Production](production.md).
 - [Repository structure and workflow](repository-structure.md)
 - [Playtest tool](playtest-tool.md)
 - [Replays](replays.md)
+- [Shards (cosmetics)](shards.md)
 - [Firebase](firebase.md)
 - [Cinematics](cinematics.md)
 - [Mobile, touch and phone layouts](mobile.md)

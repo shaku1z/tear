@@ -60,10 +60,7 @@
       "stager": "stage",
       "seconds": 1,
       "sources": [
-        "src/presentation/backdrop.ts",
-        "src/presentation/platform-materials/verdant-rootstone.ts",
-        "src/presentation/platform-materials/pale-ice.ts",
-        "src/presentation/scenes/scene-renderer.ts"
+        "src/presentation/backdrop.ts"
       ]
     },
     {

@@ -133,9 +133,6 @@
     "src/presentation/particles.ts": {
       "largestFunctionStatements": 139
     },
-    "src/presentation/platform-materials/verdant-rootstone.ts": {
-      "largestFunctionStatements": 129
-    },
     "src/presentation/tear-wipe.ts": {
       "largestFunctionStatements": 106
     },
