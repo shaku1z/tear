@@ -127,14 +127,13 @@ describe("blade-hit sparks", () => {
     wardrobe.wear({}, { spark: "spark_glacier" });
     const effects = system(wardrobe);
     effects.burst(0, 0, 1, 0, 5, "#abcdef", "blade-hit");
-    expect(effects.list.map((particle) => particle.col)).toEqual([
-      "#0f9fb0",
-      "#7a4ff0",
-      "#0f9fb0",
-      "#7a4ff0",
-      "#0f9fb0",
-      "#7a4ff0",
-    ]);
+    const item = catalog.items.find((entry) => entry.id === "spark_glacier");
+    const look: unknown = item?.look.colors;
+    const worn = Array.isArray(look) ? look.filter((color): color is string => typeof color === "string") : [];
+    const colours = effects.list.map((particle) => particle.col);
+    expect(worn.length).toBe(2);
+    expect(colours).toEqual(colours.map((_, index) => worn[index % worn.length]));
+    expect(colours.length).toBe(6);
     effects.reset();
     effects.burst(0, 0, 1, 0, 5, "#abcdef");
     expect(effects.list.map((particle) => particle.col)).toEqual(Array(5).fill("#abcdef"));

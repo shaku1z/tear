@@ -32,11 +32,12 @@ The owner approved this refresh on 2026-11-20. It stays on the free tier. Consol
 
 ## Done when
 
-- [ ] `pnpm test:rules` passes and runs in the CI unit job; every collection the game uses has allowed and refused cases (PR 1).
+- [x] `pnpm test:rules` passes and runs in the CI unit job; every collection the game uses has allowed and refused cases (PR 1).
 - [ ] The standalone build bundles the modular SDK in a lazy chunk. Nothing loads from gstatic, the CrazyGames build has no Firebase code, and the sizes before and after are in the pull request (PR 2).
 - [ ] App Check with reCAPTCHA v3 is wired in monitor mode and fails open; the owner registers the site key (PR 3).
 - [ ] Remote Config v1 is removed, or kept with its readers named. `/ghosts` is listed as removed once the replay overhaul's PR 8 lands. The authorized-domain fixes are listed for the owner (PR 4).
-- [ ] The owner has deployed the rules from PR 1.
+- [x] The owner has deployed the rules from PR 1 (released 2026-11-21 08:46 UTC; the deployed ruleset matches main's `firestore.rules`).
+- [ ] Leaderboard bests are spaced by the server's clock: the rules first (PR 2a, deployed by the owner), then the client that writes it (PR 2).
 
 ## Scope
 
@@ -67,13 +68,17 @@ The owner approved this refresh on 2026-11-20. It stays on the free tier. Consol
   - The adapter cuts replay chunks by UTF-8 bytes as well as characters (Firestore's 1 MiB document limit), never inside a surrogate pair. It publishes without a thumbnail that is not one.
   - CI restores the emulator jar from the Actions cache, keyed on the firebase-tools version.
   - Rules cannot cap how many documents a player creates (replays per player, orphaned chunks). App Check (PR 3) is the answer to scripted writes.
-- 2026-11-20 PR 2: the modular SDK. The adapter moved onto two small ports (Auth, Firestore paths), and
+- 2026-11-21 PR 1 merged (e3468d40). The owner deployed its rules. A read-only fetch of the live `cloud.firestore` release shows the same source as main's `firestore.rules`.
+- 2026-11-21 PR 2a: the rules side of the server-clock spacing, on its own.
+  - A best may carry `at`, and only as the server's time.
+  - A row that has `at` takes the next best only after 10 s of server time, and every later best must carry it.
+  - Rows without `at` are spaced by `ts` as before.
+  - Builds in use today write no `at`, and these rules accept their writes unchanged.
+  - Once the owner has deployed these rules, PR 2's client can start writing `at`. The rules from PR 1 refuse that field.
+- 2026-11-21 PR 2: the modular SDK. The adapter moved onto two small ports (Auth, Firestore paths), and
   `src/platform/firebase-sdk.ts` implements them with Auth and Firestore Lite.
-  - Sizes: the SDK chunk is 219,880 B raw / 66,303 B gzip. Before, the four 10.12.2 compat scripts from gstatic were 539,470 / 158,763 B.
-  - The chunk is not precached (precache 46/46 entries, 2,625,576 → 2,623,912 B), and startup grows by 25 B.
+  - Sizes: the SDK chunk is 220,347 B raw / 66,553 B gzip, loaded on demand and not precached. Before, the four 10.12.2 compat scripts from gstatic were 539,470 / 158,763 B.
+  - `pnpm check:bundles` passes on both targets: standalone startup scripts 1,730,302 B, precache 46/46 entries. The CrazyGames build has no Firebase code.
   - Remote Config is no longer fetched. Its only template (version 1, 2026-07-04) kept all four multipliers at 1, so nothing changes. PR 4 deletes `REMOTE` and its readers.
-- 2026-11-21 PR 2 also spaces leaderboard bests by the server's clock (the lead's follow-up to PR 1's review).
-  - The adapter writes `at` as `serverTimestamp()`. The rules require `at` to equal `request.time`, and require 10 s of server time since the stored `at`.
-  - A row written before `at` existed is spaced by `ts` until its next best adds `at`, and it keeps it from then on.
-  - **Deploy order:** PR 1's rules refuse a row write that carries `at`. So the owner deploys PR 2's rules before the PR 2 build reaches players. Those rules accept writes from both builds.
-  - Once no build without `at` is in use, a later change can require `at` on every best.
+  - The adapter writes `at` with `serverTimestamp()` on every best, including the full replace of a new best from #347. PR 2a's rules space bests by it.
+  - **Deploy order:** the owner deploys PR 2a's rules before PR 2 merges. Every merge to main goes to preview, which uses the same Firebase project, and PR 1's rules refuse a best that carries `at`.

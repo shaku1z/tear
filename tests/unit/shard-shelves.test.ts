@@ -221,7 +221,7 @@ describe("shard shelves", () => {
         owned: 0,
         total: 2,
         complete: false,
-        reward: "Rootcutter",
+        reward: COSMETIC_CATALOG.items.find((item) => item.id === rootbound?.reward)?.name,
         note: rootbound ? conditionText(rootbound.unlock, CONDITION_NAMES) : "",
       },
     ]);
