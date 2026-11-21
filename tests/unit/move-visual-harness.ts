@@ -286,7 +286,7 @@ function watchMoveStateWrites(entity: Steppable): { taken(): Readonly<Record<str
   const target = entity as unknown as Record<string, unknown>;
   for (const key of Object.keys(target)) {
     if (!(key === "state" || key.endsWith("State")) || typeof target[key] !== "string") continue;
-    let value = target[key];
+    let value: unknown = target[key];
     Object.defineProperty(target, key, {
       configurable: true,
       enumerable: true,
