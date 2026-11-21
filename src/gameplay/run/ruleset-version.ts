@@ -108,6 +108,12 @@ export const PRE_VERDANT_RULESET_VERSION = "tear-rules-2026.07";
  * step changes the simulation, so an older recording would play out differently. A recording
  * from an earlier ruleset is refused and the refusal names the first change it missed. A new
  * bump is one row here.
+ *
+ * When to step: for a change to what an admitted replay contains or how it plays out. Replays refuse a run with
+ * an engineering-only boss (`ENGINEERING_ONLY_BOSS_IDS` in boss-definitions.ts), and the replay content hash
+ * leaves those bosses out (`REPLAY_CONTENT_HASH`), so a change confined to one needs no step. No determinism
+ * stream or tutorial lesson fights one; a stream that did would sit outside replay identity, and its
+ * regeneration alone would not be a step.
  */
 export interface RulesetStep {
   readonly version: string;

@@ -10,23 +10,23 @@
 
 Written so that someone with only this repository can continue. The decision log at the end has the history.
 
-- **Merged:** PRs 1, 2, 2b, 3, 4 and 5a (#361: `src/replay/record.ts`, `recorder.ts`, `verify.ts`, the round-trip check).
-- **Open: PR 5b-1, #372** (branch `codex/replay-live-start`): one seed type, one start record and one run start for live play and detached worlds. The lead approved the design.
-  - Done on the branch: merged `origin/main` after #374 (v19), #381 (v20), #366 and #377; stepped the ruleset to v21, with v20 kept as #381's history line; the position edit is in `config/position/replays.json`.
-  - The determinism corpus keeps #374's pinned boss seeds (`BOSS_SEED_INDEX`) and tell-avoiding boss player. `STREAM_BOSSES` names the boss each pinned seed fought on main. Regenerated on the merged tree: every stream's play facts equal main's, and no seed moved.
-  - Left: CI green, the lead's review, and the merge (it merges alone). If main takes another ruleset step first, merge `origin/main`, take the next number, regenerate (`TEAR_HASH_STREAM_WRITE=1 pnpm test:determinism`, `TEAR_TUTORIAL_GOLD_WRITE=1 pnpm exec vitest run tests/unit/tutorial-production-ghost.test.ts`) and check the play facts again. A boss stream that fails its coverage fact is re-picked from `hash-stream:<weapon>:boss`, then `:1` to `:9`, first that passes (the probe is in the lead's shared notes folder, `boss-seed-probe/`).
-  - The PR body keeps its first-run failure record.
-- **Next, a small PR after #372: engineering-only bosses leave replay identity** (the lead approved it in principle, 2026-11-21).
-  - **Problem:** A rebuild slice for a boss that only engineering surfaces can reach (a `BossDefinition` with `stageOf`; today the new Rootbound, in Boss Test) changes gameplay identity, so by the rule above it takes a ruleset step. That step retires every replay, although no player run can contain that boss.
-  - **Admission:** `readReplayRecord` refuses a record whose start names an engineering-only boss, and `verifyReplay` refuses a run whose world spawns one (a boss event or the boss order). One list, read from the boss definitions, decides which bosses are engineering-only.
-  - **Ruleset identity:** Nothing in code forces a step today; the step is the rule above, judged by the determinism and tutorial gold fixtures. Once admission refuses engineering-only bosses, the rule can read "a step changes what an admitted record can contain". A change confined to engineering-only definitions then needs no step. A fixture stream that covers an engineering-only boss is listed as outside replay identity, so its regeneration alone does not count as a step. To confirm after #381 lands:
-    - whether `stageOf` is the field that marks engineering-only;
-    - whether any released path (Gauntlet trials, Boss Rush rosters, the Codex) can reach such a boss;
-    - which determinism streams cover one.
+- **Merged:** PRs 1, 2, 2b, 3, 4, 5a (#361: `src/replay/record.ts`, `recorder.ts`, `verify.ts`, the round-trip check) and 5b-1 (#372, ruleset v21: one seed type, one start record and one run start for live play and detached worlds).
+- **Now: engineering-only bosses leave replay identity** (branch `codex/replay-engineering-bosses`; the lead approved it in principle, 2026-11-21).
+  - **Problem:** A rebuild slice for a boss that only engineering surfaces reach changes gameplay identity, so it takes a ruleset step, and the step retires every replay although no player run can contain that boss. Verdant slice 2 (#381) stepped to v20 for two reasons: the old live recorder admits a fresh Boss Test opening (`freshBossOpening` in `src/ghost/replay-admission.ts`), and the new entity kind moved the replay content hash (a hash of every entity kind).
+  - **Findings (2026-11-21, main 59bab68d):**
+    - `stageOf` marks the engineering-only bosses: `BOSS_TEST_ROSTER` adds exactly those to the published roster, and the definition says it fights on another boss's stage until it replaces it. Today that is `rootbound-rebuild`.
+    - No released path reaches one. Boss Rush order, Gauntlet trials and the mini-boss pool draw from published rosters; the only way in is an explicit pick in Boss Test, which is an engineering mode (`surface: "engineering"`). The Codex lists `BOSS_ROSTER`.
+    - No determinism stream or tutorial lesson fights one.
+    - Slices 3 to 5 change the rebuild's behaviour, not the entity kinds, so admission alone spares them a step. A future rebuild that adds a kind also needs the content hash to leave it out.
+  - **The change:**
+    - One list, `ENGINEERING_ONLY_BOSS_IDS` in `src/gameplay/run/boss-definitions.ts`, read from `stageOf`.
+    - `readReplayRecord` refuses a start that names one. The old live admission refuses a capsule whose opening boss order holds one (until 5c retires it).
+    - The replay content hash is computed once, over the entity kinds without them (`REPLAY_CONTENT_HASH` in `src/gameplay/snapshot/codec-ids.ts`), instead of in seven places. Its value changes once in this PR.
+    - `src/gameplay/run/ruleset-version.ts` states the rule: a step is for a change to what an admitted replay contains or how it plays; a change confined to an engineering-only boss needs none.
   - **Done when:**
-    - a record or a verified run with an engineering-only boss is refused, with a test;
-    - the rule and the list of streams outside replay identity are written in `src/gameplay/run/ruleset-version.ts`;
-    - a test fails if an engineering-only boss becomes reachable from a released mode without leaving the list.
+    - a record and a capsule with an engineering-only boss are refused, with tests;
+    - a test fails if a released roster or surface can reach one;
+    - the rule is written in `src/gameplay/run/ruleset-version.ts`.
 - **Next: PR 5b-2, picks as actions.**
   - Draft, reserve and tier-up picks and rerolls become GameActions the UI dispatches, so a record holds them at their ticks.
   - In the same PR:

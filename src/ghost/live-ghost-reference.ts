@@ -3,7 +3,7 @@ import { readSeedRaceRun, seedRaceInitialBuildHash } from "../gameplay/run/seed-
 import { stableVerificationHash } from "../domain/hash";
 import { replayEngine, type ReplayEngine } from "./replay-engine";
 import { injectedBuildIdentity } from "../gameplay/snapshot/live-capture";
-import { ENTITY_KIND_REGISTRY } from "../gameplay/snapshot/codec-ids";
+import { REPLAY_CONTENT_HASH } from "../gameplay/snapshot/codec-ids";
 import { CURRENT_RULESET_VERSION } from "../gameplay/run/ruleset-version";
 import { TearGameplayEventBus } from "../gameplay/runtime/gameplay-events";
 import { AIM_MAGNITUDE_SCALE } from "../input/game-action";
@@ -42,11 +42,10 @@ export async function prepareGhostLiveReference(
     !["endless", "campaign", "bossonly", "gauntlet"].includes(context.run.mode)
   )
     throw new TypeError("Chase requires a complete, unassisted compatible run from its original opening.");
-  const current = injectedBuildIdentity("production-headless", stableVerificationHash(ENTITY_KIND_REGISTRY.ids));
+  const current = injectedBuildIdentity("production-headless", REPLAY_CONTENT_HASH);
   if (current !== undefined) {
     const ordinary =
-      context.build.rulesetVersion === CURRENT_RULESET_VERSION &&
-      context.build.contentHash === stableVerificationHash(ENTITY_KIND_REGISTRY.ids);
+      context.build.rulesetVersion === CURRENT_RULESET_VERSION && context.build.contentHash === REPLAY_CONTENT_HASH;
     const detached =
       context.build.rulesetVersion === current.rulesetVersion && context.build.contentHash === current.contentHash;
     if (
