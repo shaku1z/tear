@@ -28,6 +28,7 @@ import {
 } from "firebase/firestore";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { CONFIG } from "../../src/config/game-config";
+import { leaderboardChoices, leaderboardId, type LeaderboardKindId } from "../../src/domain/leaderboards";
 import { DIFFICULTY_IDS } from "../../src/gameplay/run/difficulty-catalog";
 import { MODE_CATALOG } from "../../src/gameplay/run/mode-catalog";
 import { rulesTestProject } from "./rules-test-project";
@@ -110,18 +111,24 @@ describe("leaderboards/{board}/scores/{uid}", () => {
   });
   const path = (uid: string, board = "endless_hard"): string => `leaderboards/${board}/scores/${uid}`;
 
-  it("names exactly the boards the LEADERBOARDS screen lists", async () => {
-    // The screen's filter (src/app/library/library-screen-adapters-runtime.ts) times every difficulty.
-    const modes = CONFIG.modes.filter((mode) => !mode.training && !mode.debug).map((mode) => mode.id);
-    const boards = modes.flatMap((mode) => DIFFICULTY_IDS.map((difficulty) => `${mode}_${difficulty}`));
-    expect(listedBoards("isBoard")).toEqual([...boards].sort());
-    for (const board of boards) await assertSucceeds(setDoc(doc(as("alice"), path("alice", board)), row("alice")));
+  // Every board the LEADERBOARDS screen can offer: its modes (src/app/library/library-screen-adapters-runtime.ts),
+  // each kind in src/domain/leaderboards.ts and every difficulty, by the id the adapter stores them under.
+  const modes = CONFIG.modes.filter((mode) => !mode.training && !mode.debug);
+  const offered = (kind: LeaderboardKindId): string[] =>
+    leaderboardChoices(modes, () => true)
+      .filter((choice) => choice.kind === kind)
+      .flatMap((choice) => DIFFICULTY_IDS.map((difficulty) => leaderboardId({ kind, mode: choice.mode, difficulty })))
+      .sort();
+
+  it("names exactly the score boards the LEADERBOARDS screen can offer", async () => {
+    expect(listedBoards("isBoard")).toEqual(offered("score"));
+    for (const board of offered("score")) {
+      await assertSucceeds(setDoc(doc(as("alice"), path("alice", board)), row("alice")));
+    }
   });
 
-  it("names one Gauntlet clear board per difficulty", () => {
-    expect(listedBoards("isClearBoard")).toEqual(
-      DIFFICULTY_IDS.map((difficulty) => `gauntletclear_${difficulty}`).sort(),
-    );
+  it("names exactly the Gauntlet clear boards the LEADERBOARDS screen can offer", () => {
+    expect(listedBoards("isClearBoard")).toEqual(offered("gauntlet-clear"));
   });
 
   it("lets anyone read a board in score order", async () => {
