@@ -368,7 +368,8 @@ describe("C30 production headless environment", () => {
 
     expect(opening).toMatchObject({
       kind: "observation",
-      observationClass: "structured-state",
+      // The live game's own projection, with what the scripted player steers by (the walls, each enemy's attack).
+      observationClass: "privileged-diagnostic",
       tick: 0,
       run: {
         mode: scenario.start.mode,
