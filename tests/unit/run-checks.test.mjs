@@ -1,3 +1,4 @@
+// Probe of an old head, do not merge.
 // The group selection and the flaky-check report of scripts/run-checks.mjs.
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
