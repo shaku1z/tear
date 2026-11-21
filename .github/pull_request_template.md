@@ -33,7 +33,7 @@
 
 ## Position
 
-<!-- If this changes a workstream's state, say which area of config/position.json you updated. -->
+<!-- If this changes a workstream's state, say which area file under config/position/ you updated. -->
 
 <!--
 Keep this description free of attribution lines: no co-author, sign-off or "generated with" trailers.

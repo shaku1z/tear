@@ -52,7 +52,7 @@ contract suites.
 ## Adding a release
 
 When a build is deployed to production, add its fixture in the same pull request that records
-the deploy in `config/position.json`:
+the deploy in `config/position/production.json`:
 
 1. Build that exact commit (`pnpm build:standalone`) in a scratch worktree.
 2. Serve `dist/standalone` locally and drive one scripted session: start an Endless run, play,
