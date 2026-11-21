@@ -82,7 +82,7 @@ jobs:
           EVENT: ${{ github.event_name }}
         run: |
           docs_only=false
-          if [[ "$EVENT" != "push" ]] && git diff --name-only origin/main HEAD | node -e 'const files = require("fs").readFileSync(0, "utf8").split(/\r?\n/u).filter(Boolean); process.exit(files.length > 0 && files.every((file) => /^(?:docs\/|plans\/|wiki\/|(?:README|CONTRIBUTING|CRAZYGAMES|DEPLOYMENT|AGENTS|CLAUDE)\.md$|config\/position\.json$|\.github\/pull_request_template\.md$)/u.test(file)) ? 0 : 1)'; then
+          if [[ "$EVENT" != "push" ]] && git diff --name-only origin/main HEAD | node -e 'const files = require("fs").readFileSync(0, "utf8").split(/\r?\n/u).filter(Boolean); process.exit(files.length > 0 && files.every((file) => /^(?:docs\/|plans\/|wiki\/|(?:README|CONTRIBUTING|CRAZYGAMES|DEPLOYMENT|AGENTS|CLAUDE)\.md$|config\/position\/[^/]+\.json$|\.github\/pull_request_template\.md$)/u.test(file)) ? 0 : 1)'; then
             docs_only=true
           fi
           echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"

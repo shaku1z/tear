@@ -152,13 +152,17 @@ async function forcePhase(page, bossId, fraction, cinematicId) {
 // A boss whose phase changes in the fight: crossing the mark changes the phase with no scene, and the
 // boss keeps fighting (plans/active/CINEMATICS_OVERHAUL.md).
 async function crossPhaseInFight(page, bossId, fraction, phase) {
+  const before = await bossSnapshot(page, bossId);
   await page.evaluate((value) => window.__PANTHEON_TEST.setBossHealthFraction(value), fraction);
   await page.waitForFunction(
     ({ id, expected }) => window.TEAR_WEAPON_DEBUG?.().enemies.find((enemy) => enemy.bossId === id)?.phase === expected,
     { id: bossId, expected: phase },
     { timeout: STATE_WAIT_MS },
   );
-  const entered = await bossSnapshot(page, bossId);
+  // Setting health runs no tick, and a boss may derive its phase from health alone (Aldric does), so the
+  // wait above can pass before the boss has seen the change. What the phase tick does (Aldric's kneel, a
+  // phase move) happens in the boss's update: wait for one to run.
+  const entered = await waitForBossSimulationAdvance(page, bossId, before.aliveT, 0);
   const cinema = await page.evaluate(() => window.__PANTHEON_TEST.state());
   assert.equal(cinema.active, false, `${bossId} phase ${String(phase)} must not start a scene`);
   assert.equal(entered.cinematicPending, false, `${bossId} phase ${String(phase)} must not request a scene`);
