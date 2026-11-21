@@ -451,13 +451,33 @@ export function createSourceType(
       });
       return true;
     }
-    override onDeathStart() {
-      this.freezeVoid = true;
+    /** The Source runs several moves at once: the first live one, or null when all rest. */
+    override liveMove(): string | null {
+      if (this.siphon) return "siphon";
+      const moves = [
+        ["dash", this.dashState],
+        ["collapse", this.collapseState],
+        ["beam", this.beamState],
+        ["fire", this.fireState],
+        ["depth", this.depthState],
+      ] as const;
+      for (const [move, state] of moves) if (state !== "idle" && state !== "rearIdle") return `${move}:${state}`;
+      return null;
+    }
+    /** Every move it runs ends together, on the phase-change tick and when death starts. */
+    override endMove(reason: "death" | "phase") {
+      super.endMove(reason);
+      this.dashState = "idle";
+      this.collapseState = "idle";
       this.beamState = "idle";
-      this.depthPlane = "foreground";
-      this.depthState = "idle";
+      this.depthState = this.depthPlane === "rear" ? "rearIdle" : "idle";
       this.siphon = null;
       clearThroneFire(this, true);
+    }
+    override onDeathStart() {
+      this.freezeVoid = true;
+      this.depthPlane = "foreground";
+      this.depthState = "idle";
     }
 
     update(dt: number, platforms: readonly EnemyPlatform[], player: EnemyPlayerPort, projectiles: EnemyProjectile[]) {
