@@ -1,3 +1,4 @@
+import { CONFIG } from "../../config/game-config";
 import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "../../gameplay/snapshot/snapshot-contract";
 import type { TearObservationV1 } from "../../tearbench/contracts";
 import { environmentSnapshotToObservation } from "../../gameplay/snapshot/environment-codec";
@@ -11,6 +12,7 @@ import {
   canonicalObservationActions,
   canonicalObservationEnemyKind,
   canonicalObservationStage,
+  canonicalObservationWorldBounds,
 } from "../../tearbench/observation-identity";
 import type { ProductionReplayWorld } from "../../app/world/detached/world-factory";
 
@@ -133,6 +135,8 @@ export function projectProductionPolicyObservation(
     }),
     // What the stage holds (fields, things a weapon can cut, routes), as the live observation gives it.
     environment: environmentSnapshotToObservation(replay.world.context.environment.snapshot()),
+    // The walls of the arena, as the live observation gives them: without them the player backs into a wall and stays.
+    diagnostics: Object.freeze({ worldBounds: canonicalObservationWorldBounds(CONFIG.view.w, CONFIG.view.h) }),
     availableActions: canonicalObservationActions(screen, run.mode, false),
   });
 }
