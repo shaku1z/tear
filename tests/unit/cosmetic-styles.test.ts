@@ -13,7 +13,7 @@ import { createParticleSystem, type ParticleSystem } from "../../src/presentatio
 
 const catalog = COSMETIC_CATALOG;
 /** The registry test below checks this list against the registry, so it cannot drift. */
-const drawnSlots: readonly (keyof typeof COSMETIC_DRAW_HOOKS)[] = ["blade", "trail", "spark"];
+const drawnSlots: readonly (keyof typeof COSMETIC_DRAW_HOOKS)[] = ["blade", "trail", "spark", "title", "banner"];
 const slot = (id: string) => {
   const found = catalog.slots.find((entry) => entry.id === id);
   if (!found) throw new Error(`no slot ${id}`);

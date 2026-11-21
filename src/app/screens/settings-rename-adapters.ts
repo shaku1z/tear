@@ -2,6 +2,7 @@ import type { SettingsRenameServices as RuntimeServices } from "./settings-renam
 import type { createLiveScreenRenderers } from "../../presentation/screens/live-screen-renderers";
 import type { AppScreen } from "../../domain/screen-catalog";
 import type { RenameSnapshot } from "./rename-controller";
+import { MAX_PLAYER_NAME, MIN_PLAYER_NAME, type NameTarget } from "../../domain/display-names";
 import type { SettingsController, GameSettings } from "./settings-controller";
 
 type Renderers = ReturnType<typeof createLiveScreenRenderers>;
@@ -39,6 +40,8 @@ export interface SettingsRenameAdapters {
   readonly toggleSetting: (key: string) => void;
   readonly activateSetting: (key: string) => void;
   readonly beginRename: (firstRun: boolean, debugBypass?: boolean) => void;
+  /** Opens the name-entry screen on another name than the player's (a loadout's). */
+  readonly beginNaming: (target: NameTarget) => void;
   readonly submitRename: () => void;
   readonly cancelRename: () => void;
   readonly renameSnapshot: () => RenameSnapshot;
@@ -48,19 +51,25 @@ export interface SettingsRenameAdapters {
 }
 
 type DeferredAction = (runtime: SettingsRenameAdapters) => void;
+/** A name entry asked for before the runtime loaded: the player name, or another target. */
+type PendingBegin = Readonly<{ firstRun: boolean; bypass: boolean }> | Readonly<{ target: NameTarget }>;
+const beginPending = (runtime: SettingsRenameAdapters, pending: PendingBegin): void => {
+  if ("target" in pending) runtime.beginNaming(pending.target);
+  else runtime.beginRename(pending.firstRun, pending.bypass);
+};
 
 /** Route-lazy settings and rename controller facade. */
 export function createLiveSettingsRenameAdapters(services: SettingsRenameServices): SettingsRenameAdapters {
   let runtime: SettingsRenameAdapters | undefined;
   let loading: Promise<void> | undefined;
   let prompted = false;
-  let pendingBegin: Readonly<{ firstRun: boolean; bypass: boolean }> | undefined;
+  let pendingBegin: PendingBegin | undefined;
   const deferred: DeferredAction[] = [];
   function ensureLoaded(): void {
     loading ??= import("./settings-rename-adapters-runtime").then((module) => {
       runtime = module.createLiveSettingsRenameAdaptersRuntime(services);
       if (prompted) runtime.markRenamePrompted();
-      if (pendingBegin !== undefined) runtime.beginRename(pendingBegin.firstRun, pendingBegin.bypass);
+      if (pendingBegin !== undefined) beginPending(runtime, pendingBegin);
       pendingBegin = undefined;
       for (const action of deferred.splice(0)) action(runtime);
     });
@@ -130,6 +139,13 @@ export function createLiveSettingsRenameAdapters(services: SettingsRenameService
         ensureLoaded();
       }
     },
+    beginNaming: (target) => {
+      if (runtime) runtime.beginNaming(target);
+      else {
+        pendingBegin = { target };
+        ensureLoaded();
+      }
+    },
     submitRename: () => {
       invoke((value) => {
         value.submitRename();
@@ -140,14 +156,20 @@ export function createLiveSettingsRenameAdapters(services: SettingsRenameService
         value.cancelRename();
       });
     },
-    renameSnapshot: () =>
-      runtime?.renameSnapshot() ?? {
+    renameSnapshot: () => {
+      if (runtime) return runtime.renameSnapshot();
+      const target = pendingBegin && "target" in pendingBegin ? pendingBegin.target : undefined;
+      return {
         active: pendingBegin !== undefined,
         error: "",
-        firstRun: pendingBegin?.firstRun ?? false,
+        firstRun: pendingBegin && "firstRun" in pendingBegin ? pendingBegin.firstRun : false,
         previous: services.screen(),
-        value: services.dependencies.PROFILE.username(),
-      },
+        value: target?.initial ?? services.dependencies.PROFILE.username(),
+        subject: target?.subject ?? "player",
+        minLength: target?.minLength ?? MIN_PLAYER_NAME,
+        maxLength: target?.maxLength ?? MAX_PLAYER_NAME,
+      };
+    },
     renameActive: () => runtime?.renameActive() ?? pendingBegin !== undefined,
     renamePrompted: () => runtime?.renamePrompted() ?? prompted,
     markRenamePrompted: () => {

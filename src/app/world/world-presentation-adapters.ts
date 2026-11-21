@@ -421,6 +421,7 @@ export function createLiveWorldPresentationAdapters(
       padLabel: padPromptLabel(d.PAD),
       camera: lastCamera,
       player: state.player(),
+      enemies: state.enemies().filter((enemy) => !enemy.dead),
       bladeReach: d.CONFIG.blade.aimRadius + d.CONFIG.blade.length,
       ...(exercise ? { exercise } : {}),
       lessonCard,

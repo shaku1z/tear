@@ -2,6 +2,7 @@ import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies
 import type { createLiveScreenRenderers } from "../../presentation/screens/live-screen-renderers";
 import type { AppScreen } from "../../domain/screen-catalog";
 import { RenameController, type RenameSnapshot } from "./rename-controller";
+import type { NameTarget } from "../../domain/display-names";
 import type { SettingsController, GameSettings } from "./settings-controller";
 import {
   buildSettingsSections,
@@ -63,6 +64,7 @@ export interface SettingsRenameAdapters {
   readonly toggleSetting: (key: string) => void;
   readonly activateSetting: (key: string) => void;
   readonly beginRename: (firstRun: boolean, debugBypass?: boolean) => void;
+  readonly beginNaming: (target: NameTarget) => void;
   readonly submitRename: () => void;
   readonly cancelRename: () => void;
   readonly renameSnapshot: () => RenameSnapshot;
@@ -280,8 +282,9 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
       id: "rename",
       value: snapshot.value,
       length: snapshot.value.length,
-      maxLength: 16,
-      minLength: 3,
+      maxLength: snapshot.maxLength,
+      minLength: snapshot.minLength,
+      subject: snapshot.subject,
       firstRun: snapshot.firstRun,
       ...(snapshot.error ? { message: snapshot.error } : {}),
     });
@@ -328,6 +331,9 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
     activateSetting: activate,
     beginRename: (firstRun, bypass) => {
       rename.begin(firstRun, bypass ?? false);
+    },
+    beginNaming: (target) => {
+      rename.beginNaming(target);
     },
     submitRename: () => {
       rename.submit();

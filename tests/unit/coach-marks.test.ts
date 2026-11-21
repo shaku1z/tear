@@ -13,6 +13,7 @@ import {
 } from "../../src/presentation/coach/coach-marks";
 import { CONFIG } from "../../src/config/game-config";
 import { PLAYGROUND_STAGES } from "../../src/gameplay/stages";
+import { createTrainingCoachPresentation } from "../../src/app/world/training-coach-presentation";
 
 const mark = (overrides: Partial<CoachMark> = {}): CoachMark => ({
   id: "a",
@@ -121,34 +122,61 @@ describe("plated call-outs on every Playground palette", () => {
         expect(coachPlateContrast(sky), sky).toBeGreaterThanOrEqual(COACH_PLATE_MIN_CONTRAST);
     });
 
-    it(`${stage.name}: a call-out sits beside the enemy it names, never on it, the player or the blade`, () => {
+    it(`${stage.name}: a call-out, named or not, covers no enemy, the player or the blade`, () => {
       const groundY = CONFIG.world.groundY,
         reach = CONFIG.blade.aimRadius + CONFIG.blade.length;
-      const hw = CONFIG.player.w / 2,
-        hh = CONFIG.player.h / 2,
-        px = CONFIG.view.w / 2,
-        py = groundY - hh;
-      // As the coach presentation builds them (training-coach-presentation.ts).
-      const player: CoachRect = { x: px - hw, y: py - hh, w: hw * 2, h: hh * 2 };
-      const blade: CoachRect = { x: px - hw - reach, y: py - hh - reach, w: (hw + reach) * 2, h: hh * 2 + reach };
-      const bounds: CoachRect = { x: 24, y: 24, w: CONFIG.view.w - 48, h: CONFIG.view.h - 70 };
-      const enemy = (x: number, surface: number): CoachRect => ({ x: x - 18, y: surface - 36, w: 36, h: 36 });
+      const player = {
+        x: CONFIG.view.w / 2,
+        y: groundY - CONFIG.player.h / 2,
+        hw: CONFIG.player.w / 2,
+        hh: CONFIG.player.h / 2,
+      };
+      const box = (x: number, surface: number) => ({ x, y: surface - 18, hw: 18, hh: 18 });
+      // An enemy on every platform of the stage and on the ground on both sides of the player.
       const enemies = [
-        ...stage.layout.map((platform) => enemy(platform.x + platform.w / 2, platform.y)),
-        ...[-420, -200, -60, 60, 200, 420].map((offset) => enemy(px + offset, groundY)),
+        ...stage.layout.map((platform) => box(platform.x + platform.w / 2, platform.y)),
+        ...[-420, -200, -60, 60, 200, 420].map((offset) => box(player.x + offset, groundY)),
       ];
-      for (const target of enemies) {
+      const camera = { cx: CONFIG.view.w / 2, cy: CONFIG.view.h / 2, ox: 0, oy: 0, scale: 1 };
+      const bounds: CoachRect = { x: 24, y: 24, w: CONFIG.view.w - 48, h: CONFIG.view.h - 70 };
+      const screen = (b: { x: number; y: number; hw: number; hh: number }): CoachRect => ({
+        x: b.x - b.hw,
+        y: b.y - b.hh,
+        w: b.hw * 2,
+        h: b.hh * 2,
+      });
+      const body = screen(player),
+        blade = { x: body.x - reach, y: body.y - reach, w: body.w + reach * 2, h: body.h + reach };
+      // Each enemy named in turn, then a call-out that names nothing (HEALED, at the player).
+      for (const target of [...enemies, undefined]) {
+        const { marks, avoid } = createTrainingCoachPresentation().frame({
+          mode: "playground",
+          run: {},
+          deltaSeconds: 1 / 60,
+          reducedMotion: true,
+          inputMode: "mouse",
+          padLabel: (binding) => binding,
+          camera,
+          player,
+          enemies,
+          bladeReach: reach,
+          lessonCard: undefined,
+          touchLayout: undefined,
+          callouts: [target ? { text: "CHARGER", tone: "info", target } : { text: "HEALED", tone: "info" }],
+        });
+        const mark = marks.find((entry) => entry.mark.channel === "callout")?.mark;
+        expect(mark?.backing).toBe("plate");
         const rect = placeCoachMark({
           size: { w: 150, h: 34 },
-          anchor: { x: target.x + target.w / 2, y: target.y },
+          anchor: mark?.anchor ?? { x: 800, y: 100 },
           bounds,
-          avoid: [player, blade],
+          avoid,
           gap: 16,
-          target,
+          ...(mark?.target ? { target: mark.target } : {}),
         });
-        const where = `enemy at ${String(target.x)},${String(target.y)}`;
-        expect(intersection(rect, target), where).toBe(0);
-        expect(intersection(rect, player), where).toBe(0);
+        const where = target ? `naming the enemy at ${String(target.x)},${String(target.y)}` : "naming nothing";
+        for (const enemy of enemies) expect(intersection(rect, screen(enemy)), where).toBe(0);
+        expect(intersection(rect, body), where).toBe(0);
         expect(intersection(rect, blade), where).toBe(0);
       }
     });

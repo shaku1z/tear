@@ -212,7 +212,7 @@
     "label": "TITLE",
     "group": "profile",
     "family": "text",
-    "hook": "not yet",
+    "hook": "ready",
     "default": {
       "text": "BLADE"
     }
@@ -222,7 +222,7 @@
     "label": "BANNER",
     "group": "profile",
     "family": "banner",
-    "hook": "not yet",
+    "hook": "ready",
     "default": {
       "colors": [
         "#2c3340",
