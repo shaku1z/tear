@@ -23,5 +23,6 @@ The build players have: [Production](production.md).
 - [Replays](replays.md)
 - [Shards (cosmetics)](shards.md)
 - [Firebase](firebase.md)
+- [Performance and storefront builds](performance.md)
 - [Cinematics](cinematics.md)
 - [Mobile, touch and phone layouts](mobile.md)
