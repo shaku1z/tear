@@ -16,9 +16,13 @@
  * deaths, staggers and strikes); only the player's own parry does (plans/active/CINEMATICS_OVERHAUL.md, PR 1).
  * v15: a flyer launched upward mid-dive breaks its dive and hovers again (it used to stay in the dive for good).
  * v16: the Warden and the Colossus change phase in the fight, with a move instead of a scene
- * (plans/active/CINEMATICS_OVERHAUL.md, PR 2).
+ * (plans/active/CINEMATICS_OVERHAUL.md, PR 2). v17: a boss's live move and its zones end on the tick its
+ * phase changes and when its death starts (`endMove` in enemy-base.ts).
  */
-export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v16";
+export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v17";
+
+/** The identity while a boss's move and zones carried over its phase change and into its death; historical replays only. */
+export const SIX_BIOME_PALE_PREVIEW_V16_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v16";
 
 /** The identity while the Warden and the Colossus stopped the fight to change phase; historical replays only. */
 export const SIX_BIOME_PALE_PREVIEW_V15_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v15";
@@ -113,7 +117,14 @@ export const RULESET_STEPS: readonly RulesetStep[] = Object.freeze(
       version: SIX_BIOME_PALE_PREVIEW_V15_RULESET_VERSION,
       change: "a flyer launched upward mid-dive began breaking its dive",
     },
-    { version: CURRENT_RULESET_VERSION, change: "the Warden and the Colossus began changing phase in the fight" },
+    {
+      version: SIX_BIOME_PALE_PREVIEW_V16_RULESET_VERSION,
+      change: "the Warden and the Colossus began changing phase in the fight",
+    },
+    {
+      version: CURRENT_RULESET_VERSION,
+      change: "a boss's moves and zones began ending at its phase changes and death",
+    },
   ].map((step) => Object.freeze(step)),
 );
 
