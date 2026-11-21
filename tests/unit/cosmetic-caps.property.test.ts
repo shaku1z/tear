@@ -20,8 +20,8 @@ const slotIds = COSMETIC_CATALOG.slots.map((slot) => slot.id);
 const unknownId = fc
   .stringMatching(new RegExp(`^[a-z0-9_]{1,${String(MAX_ID_LENGTH)}}$`, "u"))
   .filter((id) => !catalogIds.includes(id));
-/** Loadout ids from the game's fixed pool, so two records together never hold more than MAX_LOADOUTS loadouts. */
-const loadoutId = fc.constantFrom(...LOADOUT_IDS);
+/** Loadout ids from the game's fixed pool, or any other id, which normalizing drops. */
+const loadoutId = fc.oneof(fc.constantFrom(...LOADOUT_IDS), unknownId);
 const time = fc.nat({ max: 9_999_999_999_999 });
 
 /** A record as a save holds it, built from these item ids and passed through `normalizeCosmeticState`. */
@@ -30,6 +30,7 @@ function savedRecord(itemId: fc.Arbitrary<string>) {
     {
       name: fc.string({ maxLength: 30 }),
       nameAt: time,
+      createdAt: time,
       deletedAt: time,
       slots: fc.dictionary(fc.constantFrom(...slotIds), fc.record({ id: fc.option(itemId, { nil: null }), at: time })),
     },
@@ -40,7 +41,8 @@ function savedRecord(itemId: fc.Arbitrary<string>) {
       owned: fc.dictionary(itemId, fc.nat({ max: MAX_PRICE })),
       seen: fc.dictionary(itemId, time),
       counters: fc.dictionary(itemId, fc.nat()),
-      loadouts: fc.dictionary(loadoutId, loadout),
+      // Two per record keeps three records inside the loadout limits, where the merge is associative.
+      loadouts: fc.dictionary(loadoutId, loadout, { maxKeys: 2 }),
       active: fc.record({ id: loadoutId, at: time }),
     })
     .map((raw) => normalizeCosmeticState({ v: 1, ...raw }));
@@ -61,6 +63,7 @@ describe("cosmetic record bounds", () => {
           for (const id of Object.keys(side.counters)) expect(Object.hasOwn(merged.counters, id)).toBe(true);
         }
         for (const id of Object.keys(merged.seen)) expect(catalogIds).toContain(id);
+        for (const id of Object.keys(merged.loadouts)) expect(LOADOUT_IDS).toContain(id);
       }),
     );
   });
@@ -102,7 +105,7 @@ describe("cosmetic record bounds", () => {
     expect(worst).toBeLessThanOrEqual(MAX_STATE_CHARS);
     // Pinned for today's catalog (12 items, 23 slots): a change to the catalog or the record format updates
     // this number in the same pull request, so its size cost is reviewed rather than discovered.
-    expect(worst).toBe(13_751);
+    expect(worst).toBe(14_077);
     checkProperty(
       fc.property(catalogRecord, catalogRecord, (left, right) => {
         const merged = mergeCosmeticStates(left, right, COSMETIC_CATALOG);

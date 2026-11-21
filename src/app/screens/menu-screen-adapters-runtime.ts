@@ -69,6 +69,9 @@ export function createLiveMenuScreenAdaptersRuntime(
       if (cold) cold.changeCosmetics(change);
       else ensureCold();
     },
+    leaveShop(): void {
+      cold?.leaveShop();
+    },
     pressDeleteLoadout(id: string): void {
       if (cold) cold.pressDeleteLoadout(id);
       else ensureCold();

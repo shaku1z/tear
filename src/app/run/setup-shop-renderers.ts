@@ -19,8 +19,10 @@ export function createLiveSetupShopRenderers(state: MenuScreenState, services: M
   const { dependencies: d, renderers } = services;
   /** Items that were new when the SHARDS tab opened: they keep their NEW badge for this visit only. */
   let freshItems: ReadonlySet<string> = new Set();
+  /** DELETE's question; any other change to the cosmetics, a tab change or leaving the Shop withdraws it. */
   const deleteConfirm = createArmedConfirm(() => performance.now());
   const changeCosmetics = (change: CosmeticChange): void => {
+    deleteConfirm.cancel();
     void d.PROFILE.changeCosmetics(change).then((result) => {
       if (result === "committed") d.SFX.ui();
     });
@@ -126,6 +128,7 @@ export function createLiveSetupShopRenderers(state: MenuScreenState, services: M
       const tab = SHOP_TABS.find(([entry]) => entry === id)?.[0];
       if (tab === undefined || tab === state.shop().tab) return;
       d.SFX.ui();
+      deleteConfirm.cancel();
       state.setShop({ ...state.shop(), tab });
       state.setScroll(0);
       if (tab === "shards") void openShards();
@@ -138,6 +141,9 @@ export function createLiveSetupShopRenderers(state: MenuScreenState, services: M
       });
     },
     changeCosmetics,
+    leaveShop(): void {
+      deleteConfirm.cancel();
+    },
     pressDeleteLoadout(id: string): void {
       if (deleteConfirm.press(id)) changeCosmetics((_catalog, cosmetics, now) => deleteLoadout(cosmetics, id, now));
       else d.SFX.ui();

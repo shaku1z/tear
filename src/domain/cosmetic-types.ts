@@ -10,6 +10,11 @@ export const MAX_PRICE = 2000;
 /** Most items a player can own and most loadouts they can keep. Applied only when buying or creating. */
 export const MAX_OWNED = 300;
 export const MAX_LOADOUTS = 8;
+/**
+ * Most loadout deletes a record remembers, the newest. Two full sets of loadouts: a device that last met the
+ * others before a delete brings that loadout back only after this many later deletes.
+ */
+export const MAX_DELETED_LOADOUTS = 2 * MAX_LOADOUTS;
 /** Largest saved cosmetic record, in characters, so cloud and CrazyGames storage stay small. */
 export const MAX_STATE_CHARS = 48_000;
 export const DEFAULT_LOADOUT_ID = "main";
@@ -101,11 +106,14 @@ export interface EquippedEntry {
   readonly id: string | null;
   readonly at: number;
 }
+/** A named loadout. Its identity is its home and `createdAt` (src/domain/cosmetic-loadouts.ts). */
 export interface SavedLoadout {
   readonly name: string;
   readonly nameAt: number;
-  /** Set when deleted. The loadout stays as a tombstone so a delete wins over an older edit on another device. */
-  readonly deletedAt?: number;
+  /** When it was made. MAIN's is 0. */
+  readonly createdAt: number;
+  /** The pool id it was made under, saved only when the merge placed it under another. */
+  readonly home?: string;
   readonly slots: Readonly<Record<string, EquippedEntry>>;
 }
 export interface CosmeticState {
@@ -116,7 +124,11 @@ export interface CosmeticState {
   readonly seen: Readonly<Record<string, number>>;
   /** Evolution counters, merged by maximum. */
   readonly counters: Readonly<Record<string, number>>;
+  /** Pool id to the loadout saved there. */
   readonly loadouts: Readonly<Record<string, SavedLoadout>>;
+  /** Identity of a deleted loadout to when it was deleted: the newest MAX_DELETED_LOADOUTS. Absent when none. */
+  readonly deletedLoadouts?: Readonly<Record<string, number>>;
+  /** The loadout in use, by identity (`main`, or `<home>_<createdAt>`). */
   readonly active: Readonly<{ id: string; at: number }>;
 }
 

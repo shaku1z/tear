@@ -63,6 +63,8 @@ export interface LiveMenuScreenAdapters extends ShopShardsPort {
   readonly renderSetup: () => void;
   readonly renderShop: () => void;
   readonly buyShopItem: (id: string) => void;
+  /** The player left the Shop: a question it was asking is withdrawn. */
+  readonly leaveShop: () => void;
 }
 
 export function createLiveMenuScreenAdapters(
