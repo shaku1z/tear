@@ -16,6 +16,9 @@
  * meet keep both, and the merge is commutative, associative and idempotent while the devices together stay
  * inside the limits. Past them the newest loadouts, and the oldest deletes, are dropped, and which ones can
  * depend on the order the devices merge.
+ *
+ * Names. Until the player names a loadout its name is the default for the place it sits in, so a loadout the
+ * merge moves from loadout_2 to loadout_5 reads "LOADOUT 5" there. A name the player gives it stays.
  */
 import {
   type CosmeticState,
@@ -36,7 +39,7 @@ const LOADOUT_NAME_PREFIX = "LOADOUT";
 export const MIN_LOADOUT_NAME = 1;
 /**
  * MAIN's `createdAt`, and the stamp of a default name and of the slots a new loadout copies, so any deliberate
- * rename or equip of that loadout, on any device, is newer.
+ * rename or equip of that loadout, on any device, is newer. A name stamped with it is the default for its place.
  */
 const UNSTAMPED = 0;
 
@@ -76,11 +79,13 @@ export const freshMainLoadout = (): SavedLoadout => ({
 });
 
 /** Where the loadout in use sits: the one `active.id` names, or MAIN when it names none (deleted or dropped). */
-export function activeLoadoutId(state: CosmeticState): string {
-  const found = Object.entries(state.loadouts).find(
-    ([id, loadout]) => loadoutIdentity(id, loadout) === state.active.id,
-  );
-  return found ? found[0] : DEFAULT_LOADOUT_ID;
+export const activeLoadoutId = (state: CosmeticState): string =>
+  loadoutPlace(state, state.active.id) ?? DEFAULT_LOADOUT_ID;
+
+/** Where the loadout with this identity sits now; undefined when the record no longer holds it. MAIN is at `main`. */
+export function loadoutPlace(state: CosmeticState, identity: string): string | undefined {
+  if (identity === DEFAULT_LOADOUT_ID) return DEFAULT_LOADOUT_ID;
+  return Object.entries(state.loadouts).find(([id, loadout]) => loadoutIdentity(id, loadout) === identity)?.[0];
 }
 
 /** The loadout in use. Undefined only while MAIN has never been saved (nothing equipped or renamed yet). */
@@ -131,9 +136,14 @@ function newestDeletes(records: readonly LoadoutRecords[]): Record<string, numbe
   return Object.fromEntries(newest.slice(0, MAX_DELETED_LOADOUTS));
 }
 
-/** A loadout as it is saved under `id`: its home is written only when it sits elsewhere. */
+/** The name a loadout has under `id` until the player names it. */
+const defaultName = (id: string): string =>
+  id === DEFAULT_LOADOUT_ID ? DEFAULT_LOADOUT_NAME : `${LOADOUT_NAME_PREFIX} ${String(LOADOUT_IDS.indexOf(id) + 1)}`;
+
+/** A loadout as it is saved under `id`: its home is written only when it sits elsewhere, its default name is id's. */
 function savedAt(id: string, loadout: SavedLoadout, home: string): SavedLoadout {
-  const { name, nameAt, createdAt, slots } = loadout;
+  const { nameAt, createdAt, slots } = loadout;
+  const name = nameAt === UNSTAMPED ? defaultName(id) : loadout.name;
   return home === id ? { name, nameAt, createdAt, slots } : { name, nameAt, createdAt, home, slots };
 }
 
@@ -215,7 +225,7 @@ export function createLoadout(state: CosmeticState, now: number): CosmeticState 
     { id: entry.id, at: UNSTAMPED },
   ]);
   const loadout: SavedLoadout = {
-    name: `${LOADOUT_NAME_PREFIX} ${String(LOADOUT_IDS.indexOf(id) + 1)}`,
+    name: defaultName(id),
     nameAt: UNSTAMPED,
     createdAt: freshCreatedAt(state, id, now),
     slots: Object.fromEntries(copied),
