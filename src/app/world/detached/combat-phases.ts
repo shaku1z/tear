@@ -466,6 +466,10 @@ export function createProductionCombatPhases(
 
   const opening = {
     config,
+    bossIntro: () => world.state.bossIntro(),
+    endBossIntro: () => {
+      world.state.setBossIntro(null);
+    },
     get player() {
       return player();
     },

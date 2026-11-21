@@ -9,12 +9,6 @@ import type { CommandEnvelope } from "../../domain/envelopes";
 import type { GameAction } from "../../input/game-action";
 import type { TearSimulationAdvanceLifecycle } from "../../gameplay/runtime/tear-simulation-runtime";
 
-export interface MutableBossIntro {
-  delay: number;
-  t: number;
-  dur: number;
-  boss: (LiveMusicActor & { introT: number }) | null;
-}
 export interface MutableFramePreludeState {
   slowMotion: number;
   timeScale: number;
@@ -25,7 +19,6 @@ export interface MutableFramePreludeState {
   bannerTime: number;
   stageBannerSeconds: number;
   rankPopTime: number;
-  bossIntro: MutableBossIntro | null;
   bossBeat: { t: number } | null;
 }
 export interface FramePreludeInput {
@@ -34,6 +27,8 @@ export interface FramePreludeInput {
   parrySlowScale: number;
   cinemaActive: boolean;
   playgroundSlow: boolean;
+  /** A boss arrival is playing (`bossIntroPlaying`); the simulation advances it, the frame slows to it. */
+  bossArrivalPlaying: boolean;
   introScale: number;
   lerp(a: number, b: number, t: number): number;
   clamp(value: number, min: number, max: number): number;
@@ -47,14 +42,7 @@ export function advanceFramePrelude(input: FramePreludeInput): void {
   } else state.timeScale = input.lerp(state.timeScale, 1, input.clamp(8 * dt, 0, 1));
   if (input.cinemaActive) state.timeScale = 1;
   if (input.playgroundSlow) state.timeScale = Math.min(state.timeScale, 0.35);
-  const intro = state.bossIntro;
-  if (intro) {
-    if (intro.delay > 0) intro.delay = Math.max(0, intro.delay - dt);
-    else intro.t += dt;
-    if (intro.boss) intro.boss.introT = Math.max(0, intro.dur - intro.t);
-    if (intro.t >= intro.dur || !intro.boss || intro.boss.dead || intro.boss.dying) state.bossIntro = null;
-    else if (intro.delay <= 0) state.timeScale = Math.min(state.timeScale, input.introScale);
-  }
+  if (input.bossArrivalPlaying) state.timeScale = Math.min(state.timeScale, input.introScale);
   if (state.bossBeat) {
     state.bossBeat.t -= dt;
     if (state.bossBeat.t <= 0) state.bossBeat = null;
@@ -65,21 +53,6 @@ export function advanceFramePrelude(input: FramePreludeInput): void {
   if (state.bannerTime > 0) state.bannerTime -= dt;
   if (state.stageBannerSeconds > 0) state.stageBannerSeconds = Math.max(0, state.stageBannerSeconds - dt);
   if (state.rankPopTime > 0) state.rankPopTime -= dt * 1.2;
-}
-
-export function commitBossIntroSnapshot<TBoss extends { introT?: number }>(
-  current: Readonly<{ delay: number; t: number; dur: number; boss: TBoss }> | null,
-  snapshot: MutableBossIntro | null,
-): { delay: number; t: number; dur: number; boss: TBoss } | null {
-  if (snapshot === null) {
-    // advanceFramePrelude zeroes the detached actor snapshot before clearing the
-    // terminal intro record. Preserve that final mutation on the live actor.
-    if (current?.boss) current.boss.introT = 0;
-    return null;
-  }
-  if (current === null) return null;
-  if (typeof snapshot.boss?.introT === "number") current.boss.introT = snapshot.boss.introT;
-  return { boss: current.boss, delay: snapshot.delay, t: snapshot.t, dur: snapshot.dur };
 }
 
 export interface FixedSimulationPort {
@@ -263,6 +236,7 @@ export interface LiveFrameRuntimeOptions {
   readonly parrySlowScale: number;
   cinemaActive(): boolean;
   playgroundSlow(): boolean;
+  bossArrivalPlaying(): boolean;
   readonly introScale: number;
   lerp(a: number, b: number, t: number): number;
   clamp(value: number, min: number, max: number): number;
@@ -303,6 +277,7 @@ export class LiveFrameRuntime {
       parrySlowScale: this.#options.parrySlowScale,
       cinemaActive: this.#options.cinemaActive(),
       playgroundSlow: this.#options.playgroundSlow(),
+      bossArrivalPlaying: this.#options.bossArrivalPlaying(),
       introScale: this.#options.introScale,
       lerp: (a, b, t) => this.#options.lerp(a, b, t),
       clamp: (value, minimum, maximum) => this.#options.clamp(value, minimum, maximum),
