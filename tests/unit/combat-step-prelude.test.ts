@@ -163,9 +163,9 @@ describe("combat step prelude", () => {
 describe("combat feedback runtime", () => {
   it("applies queue effects in authored order and keeps maxima", () => {
     const calls: string[] = [],
-      state = { hitStop: 0.2, slowMotion: 0.1 };
+      state = { hitStop: 0.2 };
     applyCombatFeedback(
-      [{ shake: 9, flash: 0.4, hitstop: 0.1, slowmo: 0.6, banner: "BREAK", txt: "HIT", big: true }],
+      [{ shake: 9, flash: 0.4, hitstop: 0.1, banner: "BREAK", txt: "HIT", big: true }],
       state,
       { x: 4, y: 5, color: "red" },
       {
@@ -194,7 +194,7 @@ describe("combat feedback runtime", () => {
       true,
     );
     expect(calls).toEqual(["shake", "flash", "banner", "floater", "slam"]);
-    expect(state).toEqual({ hitStop: 0.2, slowMotion: 0.6 });
+    expect(state).toEqual({ hitStop: 0.2 });
   });
 });
 

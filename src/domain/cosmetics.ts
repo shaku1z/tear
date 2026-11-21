@@ -13,12 +13,25 @@ import {
   MAX_LOADOUT_NAME,
   MAX_OWNED,
   type CosmeticCatalog,
+  type CosmeticCollection,
   type CosmeticItem,
   type CosmeticState,
   type EquippedEntry,
   type Loadout,
   type SavedLoadout,
 } from "./cosmetic-types";
+import {
+  activeLoadout,
+  activeLoadoutId,
+  freshMainLoadout,
+  isLoadoutIdentity,
+  isLoadoutPlace,
+  LOADOUT_IDS,
+  loadoutIdentity,
+  mergeLoadoutRecords,
+  settleLoadouts,
+  stampAfter,
+} from "./cosmetic-loadouts";
 import { isItemId } from "./identifiers";
 import { hasOwnKey, isRecord, ownValue } from "./records";
 import { conditionMet, type ProgressFacts, type UnlockCondition } from "./unlock-condition";
@@ -57,55 +70,50 @@ function keepKeys(map: Readonly<Record<string, number>>, keep: (id: string) => b
   return Object.fromEntries(Object.entries(map).filter(([id]) => keep(id)));
 }
 
+/** A saved loadout under a pool id, or undefined when it is not one. A legacy `deletedAt` is reported apart. */
+function savedLoadout(id: string, entry: unknown): { loadout: SavedLoadout; deletedAt?: number } | undefined {
+  if (!LOADOUT_IDS.includes(id) || !isRecord(entry) || typeof entry.name !== "string") return undefined;
+  const nameAt = wholeNumber(entry.nameAt) ? entry.nameAt : 0;
+  const slots = slotMap(entry.slots);
+  const name = entry.name.slice(0, MAX_LOADOUT_NAME);
+  if (id === DEFAULT_LOADOUT_ID) return { loadout: { ...freshMainLoadout(), name, nameAt, slots } };
+  // A record written before loadouts had a creation time is dated by its name.
+  const createdAt = wholeNumber(entry.createdAt) ? entry.createdAt : nameAt;
+  const home = typeof entry.home === "string" && isLoadoutPlace(entry.home) ? { home: entry.home } : {};
+  const loadout: SavedLoadout = { name, nameAt, createdAt, ...home, slots };
+  return { loadout, ...(wholeNumber(entry.deletedAt) ? { deletedAt: entry.deletedAt } : {}) };
+}
+
 /**
- * Any stored or remote value to a valid state. Malformed entries are dropped, never thrown on. Unknown
- * item, slot and loadout ids are kept (a newer client may know them) and no owned item is dropped for being
- * too many, so a save never loses an item depending on key order.
+ * Any stored or remote value to a valid state. Malformed entries are dropped, never thrown on. Unknown item and
+ * slot ids are kept (a newer client may know them) and no owned item is dropped for being too many, so a save
+ * never loses an item depending on key order. Loadouts are settled by the rule the merge uses, so only pool ids
+ * are kept, and an entry an earlier build marked deleted counts as a delete.
  */
 export function normalizeCosmeticState(value: unknown): CosmeticState {
   if (!isRecord(value) || value.v !== COSMETIC_STATE_VERSION) return emptyCosmeticState();
   const loadouts: Record<string, SavedLoadout> = {};
+  const deletedLoadouts = numberMap(value.deletedLoadouts);
   if (isRecord(value.loadouts))
     for (const [id, entry] of Object.entries(value.loadouts)) {
-      if (!isItemId(id) || !isRecord(entry) || typeof entry.name !== "string") continue;
-      loadouts[id] = {
-        name: entry.name.slice(0, MAX_LOADOUT_NAME),
-        nameAt: wholeNumber(entry.nameAt) ? entry.nameAt : 0,
-        ...(wholeNumber(entry.deletedAt) ? { deletedAt: entry.deletedAt } : {}),
-        slots: slotMap(entry.slots),
-      };
+      const saved = savedLoadout(id, entry);
+      if (!saved) continue;
+      if (saved.deletedAt === undefined) loadouts[id] = saved.loadout;
+      else deletedLoadouts[loadoutIdentity(id, saved.loadout)] = saved.deletedAt;
     }
   const raw = value.active;
-  const active =
-    isRecord(raw) && isItemId(raw.id) && wholeNumber(raw.at)
-      ? { id: raw.id, at: raw.at }
-      : { id: DEFAULT_LOADOUT_ID, at: 0 };
+  const at = isRecord(raw) && wholeNumber(raw.at) ? raw.at : 0;
+  const named = isRecord(raw) && typeof raw.id === "string" ? raw.id : DEFAULT_LOADOUT_ID;
+  // An earlier build named the loadout in use by its pool id.
+  const listed = ownValue(loadouts, named);
+  const id = listed ? loadoutIdentity(named, listed) : named;
   return {
     v: COSMETIC_STATE_VERSION,
     owned: numberMap(value.owned),
     seen: numberMap(value.seen),
     counters: numberMap(value.counters),
-    loadouts,
-    active,
-  };
-}
-
-const newer = (a: { at: number; id: string | null }, b: { at: number; id: string | null }): boolean =>
-  a.at > b.at || (a.at === b.at && (a.id ?? "") > (b.id ?? ""));
-
-function mergeLoadout(left: SavedLoadout, right: SavedLoadout): SavedLoadout {
-  const slots: Record<string, EquippedEntry> = { ...left.slots };
-  for (const [slot, entry] of Object.entries(right.slots)) {
-    const current = ownValue(slots, slot);
-    if (!current || newer(entry, current)) slots[slot] = entry;
-  }
-  const rightName = right.nameAt > left.nameAt || (right.nameAt === left.nameAt && right.name > left.name);
-  const deletedAt = Math.max(left.deletedAt ?? -1, right.deletedAt ?? -1);
-  return {
-    name: rightName ? right.name : left.name,
-    nameAt: Math.max(left.nameAt, right.nameAt),
-    ...(deletedAt >= 0 ? { deletedAt } : {}),
-    slots,
+    ...settleLoadouts([{ loadouts, deletedLoadouts }]),
+    active: { id: isLoadoutIdentity(id) ? id : DEFAULT_LOADOUT_ID, at },
   };
 }
 
@@ -123,34 +131,28 @@ function mergeNumbers(
 }
 
 /**
- * Union of ownership (larger price on a clash), earliest seen, largest counters, per-slot newest equip, newest
- * active loadout. Order-independent: merge(a, b) equals merge(b, a).
+ * Union of ownership (larger price on a clash), earliest seen, largest counters, and the loadouts settled by
+ * `mergeLoadoutRecords` (src/domain/cosmetic-loadouts.ts). Order-independent: merge(a, b) equals merge(b, a).
  *
  * Owned items and counters are never dropped, whatever their id: dropping an owned item would refund its
  * shards with nobody seeing why, and a counter may be a newer client's progress toward an item this build does
  * not list yet, which an older device merging the profile must not erase. With the catalog, `seen` is kept
  * for its items only: a seen mark may name an item the player does not own (looking at a shelf clears its NEW
  * mark before buying), and losing one for an id this build does not list only shows NEW once more. Each entry
- * is judged alone, so the merge stays commutative, associative and idempotent.
+ * is judged alone, so the merge stays commutative, associative and idempotent (loadouts within their limits).
  */
 export function mergeCosmeticStates(
   left: CosmeticState,
   right: CosmeticState,
   catalog?: CosmeticCatalog,
 ): CosmeticState {
-  const loadouts: Record<string, SavedLoadout> = { ...left.loadouts };
-  for (const [id, entry] of Object.entries(right.loadouts)) {
-    const current = ownValue(loadouts, id);
-    loadouts[id] = current ? mergeLoadout(current, entry) : entry;
-  }
   const seen = mergeNumbers(left.seen, right.seen, Math.min);
   return {
     v: COSMETIC_STATE_VERSION,
     owned: mergeNumbers(left.owned, right.owned, Math.max),
     seen: catalog ? keepKeys(seen, (id) => catalog.items.some((item) => item.id === id)) : seen,
     counters: mergeNumbers(left.counters, right.counters, Math.max),
-    loadouts,
-    active: newer(right.active, left.active) ? right.active : left.active,
+    ...mergeLoadoutRecords(left, right),
   };
 }
 
@@ -166,20 +168,6 @@ export const shardBalance = (earned: number, state: CosmeticState): number =>
 export const priceOf = (catalog: CosmeticCatalog, item: CosmeticItem): number =>
   catalog.tiers.find((tier) => tier.id === item.tier)?.price ?? Number.POSITIVE_INFINITY;
 const sellsForShards = (item: CosmeticItem): boolean => item.acquire.some((entry) => entry.how === "shards");
-
-const latestChange = (loadout: SavedLoadout): number =>
-  Math.max(loadout.nameAt, ...Object.values(loadout.slots).map((entry) => entry.at));
-const isDeletedLoadout = (loadout: SavedLoadout): boolean =>
-  loadout.deletedAt !== undefined && loadout.deletedAt >= latestChange(loadout);
-
-/** The loadout saved under `id`, or undefined when there is none or it was deleted. */
-function liveLoadout(state: CosmeticState, id: string): SavedLoadout | undefined {
-  const loadout = ownValue(state.loadouts, id);
-  return loadout && !isDeletedLoadout(loadout) ? loadout : undefined;
-}
-
-/** The loadout in use, or undefined while nothing has been equipped yet. */
-export const activeLoadout = (state: CosmeticState): SavedLoadout | undefined => liveLoadout(state, state.active.id);
 
 /** Whether the player owns the item (bought or granted). */
 const owns = (state: CosmeticState, id: string): boolean => hasOwnKey(state.owned, id);
@@ -243,22 +231,54 @@ export function acquireCondition(entry: Acquisition): UnlockCondition | null {
  * (its reward). Challenge, mastery, code and bundle grants arrive through their own receipts later.
  */
 export function claimableGrants(catalog: CosmeticCatalog, state: CosmeticState, facts: ProgressFacts): string[] {
-  const owned = (id: string): boolean => owns(state, id);
-  const complete = (collectionId: string): boolean => {
-    const reward = catalog.collections.find((entry) => entry.id === collectionId)?.reward;
-    const members = catalog.items.filter((item) => item.collection === collectionId && item.id !== reward);
-    return members.length > 0 && members.every((item) => owned(item.id));
-  };
+  const complete = new Set(
+    collectionProgress(catalog, state, facts)
+      .filter((progress) => progress.complete)
+      .map((progress) => progress.collection.id),
+  );
   return catalog.items
-    .filter((item) => !owned(item.id) && !(item.unlock && !conditionMet(item.unlock, facts)))
+    .filter((item) => !owns(state, item.id) && !(item.unlock && !conditionMet(item.unlock, facts)))
     .filter((item) =>
       item.acquire.some((entry) => {
         const condition = acquireCondition(entry);
         if (condition) return conditionMet(condition, facts);
-        return entry.how === "collection" && complete(entry.id);
+        return entry.how === "collection" && complete.has(entry.id);
       }),
     )
     .map((item) => item.id);
+}
+
+export interface CollectionProgress {
+  readonly collection: CosmeticCollection;
+  /** The items that complete it: every item of the collection except its reward. */
+  readonly members: readonly CosmeticItem[];
+  readonly owned: number;
+  /** Its unlock condition is met, so its items may be bought. */
+  readonly unlocked: boolean;
+  /** Every member is owned, which grants the reward. */
+  readonly complete: boolean;
+  readonly reward?: CosmeticItem;
+}
+
+/** Where the player stands on each collection. The one place membership and completion are decided. */
+export function collectionProgress(
+  catalog: CosmeticCatalog,
+  state: CosmeticState,
+  facts: ProgressFacts,
+): CollectionProgress[] {
+  return catalog.collections.map((collection) => {
+    const reward = catalog.items.find((item) => item.id === collection.reward);
+    const members = catalog.items.filter((item) => item.collection === collection.id && item.id !== collection.reward);
+    const owned = members.filter((item) => owns(state, item.id)).length;
+    return {
+      collection,
+      members,
+      owned,
+      unlocked: conditionMet(collection.unlock, facts),
+      complete: members.length > 0 && owned === members.length,
+      ...(reward ? { reward } : {}),
+    };
+  });
 }
 
 export const grantItems = (state: CosmeticState, ids: readonly string[]): CosmeticState => {
@@ -269,8 +289,8 @@ export const grantItems = (state: CosmeticState, ids: readonly string[]): Cosmet
 };
 
 /**
- * Equip an owned, known item in the active loadout (created as "main" on first use), or clear the slot with
- * `null`. Anything else changes nothing.
+ * Equip an owned, known item in the loadout in use (MAIN, saved on first use, when no other is), or clear the
+ * slot with `null`. Anything else changes nothing.
  */
 export function equipCosmetic(
   catalog: CosmeticCatalog,
@@ -283,17 +303,11 @@ export function equipCosmetic(
     const item = catalog.items.find((entry) => entry.id === itemId);
     if (item?.slot !== slot || !owns(state, item.id)) return null;
   } else if (!catalog.slots.some((entry) => entry.id === slot)) return null;
-  // The loadout in use; failing that, the live main loadout; only when neither exists is a fresh main made.
-  const live = activeLoadout(state);
-  const id = live ? state.active.id : DEFAULT_LOADOUT_ID;
-  const base: SavedLoadout = live ?? liveLoadout(state, id) ?? { name: "MAIN", nameAt: now, slots: {} };
-  const at = Math.max(
-    Math.trunc(now),
-    (ownValue(base.slots, slot)?.at ?? 0) + 1,
-    (ownValue(state.loadouts, id)?.deletedAt ?? -1) + 1,
-  );
+  const id = activeLoadoutId(state);
+  const base = ownValue(state.loadouts, id) ?? freshMainLoadout();
+  const at = stampAfter(now, ownValue(base.slots, slot)?.at ?? 0);
   const loadout: SavedLoadout = { ...base, slots: { ...base.slots, [slot]: { id: itemId, at } } };
-  return { ...state, loadouts: { ...state.loadouts, [id]: loadout }, active: live ? state.active : { id, at } };
+  return { ...state, loadouts: { ...state.loadouts, [id]: loadout } };
 }
 
 /** What is on right now: owned, known and in the right slot. Anything else falls back to the slot's default look. */

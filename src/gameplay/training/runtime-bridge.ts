@@ -23,6 +23,7 @@ export interface PlaygroundRuntimeEnemy {
   contactDmg?: number;
   x: number;
   y: number;
+  hw: number;
   hh: number;
   stun: number;
   hp: number;
@@ -55,7 +56,7 @@ export interface PlaygroundRuntimeDependencies {
   clearProjectiles(): void;
   spawn(kind: string, hpScale: number): PlaygroundRuntimeEnemy | undefined;
   /** A call-out; `at` is the world point it sits above (the enemy it names), else the player. */
-  announce(text: string, at?: Readonly<{ x: number; y: number }>): void;
+  announce(text: string, target?: Readonly<{ x: number; y: number; hw: number; hh: number }>): void;
   navigate(screen: "pgmenu" | "pglab" | "playing"): void;
   releasePointer(): void;
   requestPointer(): void;
@@ -130,7 +131,7 @@ export function createPlaygroundRuntimeBridge(dependencies: PlaygroundRuntimeDep
     let spawned: PlaygroundRuntimeEnemy | undefined;
     for (const intent of intents) {
       if (intent.type === "announce") {
-        dependencies.announce(intent.text, spawned && { x: spawned.x, y: spawned.y - spawned.hh });
+        dependencies.announce(intent.text, spawned && { x: spawned.x, y: spawned.y, hw: spawned.hw, hh: spawned.hh });
         spawned = undefined;
       } else if (intent.type === "apply-difficulty") {
         dependencies.scalePlayerDamage(intent.damageRatio);

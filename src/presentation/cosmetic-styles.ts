@@ -11,6 +11,8 @@ import { ownValue } from "../domain/records";
 
 export type RibbonFade = "linear" | "hold";
 const RIBBON_FADES: readonly RibbonFade[] = ["linear", "hold"];
+export type BannerPattern = "flat" | "split" | "stripe";
+const BANNER_PATTERNS: readonly BannerPattern[] = ["flat", "split", "stripe"];
 
 /** The blade's colours. `base` and `accent` draw nothing until the owner decides how a blade body may change. */
 export interface TintStyle {
@@ -28,10 +30,23 @@ export interface BurstStyle {
   readonly colors: readonly string[];
   readonly countScale: number;
 }
+/** A line of text shown with the player's name (a title). */
+export interface TextStyle {
+  readonly worn: boolean;
+  readonly text: string;
+}
+/** Two colours in a pattern, shown along the edge of the player's card. */
+export interface BannerStyle {
+  readonly worn: boolean;
+  readonly colors: readonly string[];
+  readonly pattern: BannerPattern;
+}
 export interface CosmeticStyles {
   readonly blade: TintStyle;
   readonly trail: RibbonStyle;
   readonly spark: BurstStyle;
+  readonly title: TextStyle;
+  readonly banner: BannerStyle;
 }
 
 /**
@@ -43,6 +58,8 @@ export const COSMETIC_DRAW_HOOKS = {
   blade: { family: "tint", draws: ["glow"] },
   trail: { family: "ribbon", draws: ["colors", "widthScale", "fade"] },
   spark: { family: "burst", draws: ["colors", "countScale"] },
+  title: { family: "text", draws: ["text"] },
+  banner: { family: "banner", draws: ["colors", "pattern"] },
 } as const satisfies Record<keyof CosmeticStyles, Readonly<{ family: string; draws: readonly string[] }>>;
 
 type DrawnSlot = keyof typeof COSMETIC_DRAW_HOOKS;
@@ -67,6 +84,13 @@ function colorList(look: Look, slot: DrawnSlot, key: string): readonly string[] 
 function fade(look: Look, slot: DrawnSlot): RibbonFade {
   return RIBBON_FADES.find((entry) => entry === look.fade) ?? invalid(slot, "fade");
 }
+function text(look: Look, slot: DrawnSlot): string {
+  const value = look.text;
+  return typeof value === "string" ? value : invalid(slot, "text");
+}
+function pattern(look: Look, slot: DrawnSlot): BannerPattern {
+  return BANNER_PATTERNS.find((entry) => entry === look.pattern) ?? invalid(slot, "pattern");
+}
 
 /**
  * The look drawn for one slot: the equipped item's look over the slot default, with the family's calm
@@ -88,10 +112,16 @@ function resolveLook(
   return { look: { ...slot.default, ...item.look, ...calmLook }, worn: true };
 }
 
+/**
+ * Every drawn slot's style for one loadout: the local player's, or anyone else's passed in the same shape (a
+ * leaderboard row, a replay card, a co-op partner).
+ */
 export function resolveCosmeticStyles(catalog: CosmeticCatalog, loadout: Loadout, calm: boolean): CosmeticStyles {
   const blade = resolveLook(catalog, loadout, "blade", calm);
   const trail = resolveLook(catalog, loadout, "trail", calm);
   const spark = resolveLook(catalog, loadout, "spark", calm);
+  const title = resolveLook(catalog, loadout, "title", calm);
+  const banner = resolveLook(catalog, loadout, "banner", calm);
   return Object.freeze({
     blade: Object.freeze({ worn: blade.worn, glow: color(blade.look, "blade", "glow") }),
     trail: Object.freeze({
@@ -104,6 +134,12 @@ export function resolveCosmeticStyles(catalog: CosmeticCatalog, loadout: Loadout
       worn: spark.worn,
       colors: colorList(spark.look, "spark", "colors"),
       countScale: amount(spark.look, "spark", "countScale"),
+    }),
+    title: Object.freeze({ worn: title.worn, text: text(title.look, "title") }),
+    banner: Object.freeze({
+      worn: banner.worn,
+      colors: colorList(banner.look, "banner", "colors"),
+      pattern: pattern(banner.look, "banner"),
     }),
   });
 }

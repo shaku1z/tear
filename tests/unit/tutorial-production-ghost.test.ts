@@ -22,11 +22,8 @@ import { createProductionReplayRun, createProductionReplayWorld } from "../../sr
 import { stableVerificationHash } from "../../src/domain/hash";
 import { CONFIG } from "../../src/config/game-config";
 import { productionGhostPath, recordProductionGhostTrace } from "../../src/gameplay/training/tutorial-production-ghost";
-import {
-  TutorialGhostCoach,
-  parseTutorialCoachCheckpoint,
-  shippingTutorialGold,
-} from "../../src/gameplay/training/tutorial-ghost-coach";
+import { parseTutorialCoachCheckpoint } from "../../src/gameplay/training/tutorial-coach-checkpoint";
+import { TutorialGhostCoach, shippingTutorialGold } from "../../src/gameplay/training/tutorial-ghost-coach";
 import { loadShippingTutorialGold } from "../../src/gameplay/training/tutorial-gold-shipping";
 
 // These tests need the coach's demonstrations, so they load the on-demand corpus first; the game asks for it once a lesson is played.

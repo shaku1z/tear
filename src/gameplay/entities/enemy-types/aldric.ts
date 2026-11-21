@@ -583,7 +583,6 @@ export function createAldricType(
             priority: 9,
             shake: 11,
             flash: 0.38,
-            slowmo: 0.38,
             zoom: 0.065,
             cue: "aldricIgnite",
           });
@@ -642,7 +641,6 @@ export function createAldricType(
             color: CONFIG.colors.bomber,
             priority: 8,
             shake: 10,
-            slowmo: 0.35,
             zoom: 0.05,
           });
           this.weaponImpactT = 0.24;

@@ -26,7 +26,7 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { joinQueue, lightKind, queueDirectory, queueSlots } from "./queue.mjs";
 
-/** This copy of the gate. In CI it is main's copy (.github/actions/main-gate); locally, the checkout. */
+/** This copy of the gate. In CI it is main's copy (scripts/ci-main-gate.sh); locally, the checkout. */
 const gateRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 /** The checkout being checked: TEAR_CHECKED_ROOT when main's copy of the gate runs against a change. */
 const root = process.env.TEAR_CHECKED_ROOT ? resolve(process.env.TEAR_CHECKED_ROOT) : gateRoot;

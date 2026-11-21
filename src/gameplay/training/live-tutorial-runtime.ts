@@ -5,7 +5,8 @@ import type {
   PracticeBossEntry,
   PracticeBossState,
 } from "./practice-boss-catalog";
-import { TutorialGhostCoach, shippingTutorialGold, type TutorialCoachCheckpoint } from "./tutorial-ghost-coach";
+import type { TutorialCoachCheckpoint } from "./tutorial-coach-checkpoint";
+import { TutorialGhostCoach, shippingTutorialGold } from "./tutorial-ghost-coach";
 import { stableVerificationHash } from "../../domain/hash";
 import type { TutorialGoldFrame } from "./tutorial-gold-reference";
 import type { AuthoritativeInputSnapshot } from "../runtime/authoritative-input";
@@ -16,8 +17,8 @@ import {
   type TutorialGhostSnapshot,
   type TutorialLesson,
   type TutorialSessionView,
-  parseTutorialSessionCheckpoint,
 } from "./tutorial-controller";
+import { parseTutorialSessionCheckpoint } from "./tutorial-session-checkpoint";
 import { tutorialArenaDefinition, type TutorialArenaId } from "./tutorial-arenas";
 import type { TutorialMark } from "./tutorial-marks";
 import type { CONFIG as GameConfiguration } from "../../config/game-config";

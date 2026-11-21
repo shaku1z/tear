@@ -3,6 +3,8 @@ import { firstRunProfileFacts, isTutorialFirst } from "../../gameplay/progressio
 import { nextTutorialLesson } from "../../gameplay/training/tutorial-lesson-ids";
 import type { createLiveSetupShopRenderers } from "../run/setup-shop-renderers";
 import type { LiveMenuScreenAdapters, MenuScreenServices, MenuScreenState } from "./menu-screen-adapters";
+import type { CosmeticChange } from "../../domain/cosmetic-types";
+import type { NameTarget } from "../../domain/display-names";
 
 export function createLiveMenuScreenAdaptersRuntime(
   state: MenuScreenState,
@@ -63,9 +65,21 @@ export function createLiveMenuScreenAdaptersRuntime(
       if (cold) cold.buyCosmetic(id);
       else ensureCold();
     },
-    equipCosmetic(slot: string, id: string | null): void {
-      if (cold) cold.equipCosmetic(slot, id);
+    changeCosmetics(change: CosmeticChange): void {
+      if (cold) cold.changeCosmetics(change);
       else ensureCold();
+    },
+    leaveShop(): void {
+      cold?.leaveShop();
+    },
+    pressDeleteLoadout(id: string): void {
+      if (cold) cold.pressDeleteLoadout(id);
+      else ensureCold();
+    },
+    loadoutNameTarget(id: string): NameTarget | null {
+      if (cold) return cold.loadoutNameTarget(id);
+      ensureCold();
+      return null;
     },
   });
 }

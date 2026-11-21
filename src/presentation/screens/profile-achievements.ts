@@ -3,8 +3,16 @@ import type { AchievementsScreenView, ProfileScreenView, ScreenRenderContext } f
 import { clipBody, page, pageFooter, replayRow, tabs } from "./screen-primitives";
 import { createCompactProfile } from "./compact-profile";
 import { profileListEmptyState } from "./profile-list-empty-state";
+import { drawBannerBand } from "../cosmetic-banner";
 
 const PROFILE_HUE = "#b06cff";
+/** Baselines in the passport, from its top: today's, and with a worn title on its own line under the name. */
+const PASSPORT_LINES = Object.freeze({
+  plain: Object.freeze({ name: 42, cloud: 66, badges: 90 }),
+  titled: Object.freeze({ name: 40, title: 58, cloud: 72, badges: 94 }),
+});
+/** A worn banner runs along the passport's top edge, above the name. */
+const PASSPORT_BANNER_HEIGHT = 8;
 /** First y under the profile tab strip; the snapshot's scroll bounds use the same value. */
 export const PROFILE_CONTENT_TOP = 306;
 
@@ -303,7 +311,10 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
     canvas.fillStyle = ui.ink;
     canvas.fillRect(x, y, right - x, height);
     canvas.globalAlpha = 1;
-    ui.spine(canvas, x, y, height, view.signedIn ? PROFILE_HUE : ui.t.color.muted);
+    const look = view.passport?.look,
+      lines = look?.title === undefined ? PASSPORT_LINES.plain : PASSPORT_LINES.titled;
+    if (look?.banner) drawBannerBand(canvas, look.banner, x, y, right - x, PASSPORT_BANNER_HEIGHT);
+    ui.spine(canvas, x, y, height, look?.banner?.colors[1] ?? (view.signedIn ? PROFILE_HUE : ui.t.color.muted));
     ui.avatar(canvas, x + 16, y + 14, 72);
     canvas.beginPath();
     canvas.arc(x + 84, y + 22, 6, 0, Math.PI * 2);
@@ -325,9 +336,16 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
       floor: ui.t.type.lead,
       bold: true,
     });
-    ui.displayText(canvas, name.lines[0] ?? view.name, x + 106, y + 42, name.size);
+    ui.displayText(canvas, name.lines[0] ?? view.name, x + 106, y + lines.name, name.size);
+    if (look?.title !== undefined)
+      ui.textBox(canvas, look.title, x + 106, y + PASSPORT_LINES.titled.title, textWidth, {
+        size: ui.t.type.micro,
+        color: ui.readable(PROFILE_HUE),
+        bold: true,
+        maxLines: 1,
+      });
     if (view.cloudStatus)
-      ui.textBox(canvas, view.cloudStatus, x + 106, y + 66, textWidth, {
+      ui.textBox(canvas, view.cloudStatus, x + 106, y + lines.cloud, textWidth, {
         size: ui.t.type.caption,
         alpha: ui.t.alpha.muted,
         maxLines: 1,
@@ -337,7 +355,7 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
       canvas,
       `◆ ${passportData.coins.toLocaleString("en-US")}`,
       x + 106,
-      y + 90,
+      y + lines.badges,
       "#a86a0c",
       "left",
     );
@@ -345,7 +363,7 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
       canvas,
       `⬡ ${passportData.shards.toLocaleString("en-US")}`,
       x + 116 + coinWidth,
-      y + 90,
+      y + lines.badges,
       "#7d3fc8",
       "left",
     );

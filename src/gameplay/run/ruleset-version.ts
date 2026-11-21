@@ -12,9 +12,17 @@
  * planted Rootbinder roots the allies near it (they cannot be flung or lifted until the root is cut) and no
  * longer leashes the player. v11: a planted Rootbinder snares the player with a warned mark on the ground.
  * v12: Verdant's waves are written (a stage wave script: listed enemies first and last, the pool fills between).
- * v13: the enemies a wave script lists arrive without affixes.
+ * v13: the enemies a wave script lists arrive without affixes. v14: no boss event slows time (phase changes,
+ * deaths, staggers and strikes); only the player's own parry does (plans/active/CINEMATICS_OVERHAUL.md, PR 1).
+ * v15: a flyer launched upward mid-dive breaks its dive and hovers again (it used to stay in the dive for good).
  */
-export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v13";
+export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v15";
+
+/** The identity while a flyer launched mid-dive stayed in its dive; historical replays only. */
+export const SIX_BIOME_PALE_PREVIEW_V14_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v14";
+
+/** The identity while boss events slowed time; historical replays only. */
+export const SIX_BIOME_PALE_PREVIEW_V13_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v13";
 
 /** The identity while a wave script's listed enemies still rolled affixes; historical replays only. */
 export const SIX_BIOME_PALE_PREVIEW_V12_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v12";
@@ -91,7 +99,12 @@ export const RULESET_STEPS: readonly RulesetStep[] = Object.freeze(
     { version: SIX_BIOME_PALE_PREVIEW_V10_RULESET_VERSION, change: "Rootbinders began rooting their allies" },
     { version: SIX_BIOME_PALE_PREVIEW_V11_RULESET_VERSION, change: "Rootbinders began snaring with a warning" },
     { version: SIX_BIOME_PALE_PREVIEW_V12_RULESET_VERSION, change: "Verdant's waves were written" },
-    { version: CURRENT_RULESET_VERSION, change: "the listed enemies of a wave began arriving without affixes" },
+    {
+      version: SIX_BIOME_PALE_PREVIEW_V13_RULESET_VERSION,
+      change: "the listed enemies of a wave began arriving without affixes",
+    },
+    { version: SIX_BIOME_PALE_PREVIEW_V14_RULESET_VERSION, change: "bosses stopped slowing time" },
+    { version: CURRENT_RULESET_VERSION, change: "a flyer launched upward mid-dive began breaking its dive" },
   ].map((step) => Object.freeze(step)),
 );
 

@@ -1,9 +1,9 @@
 // The gate: main's copy judges a change (judgedChecks), and a change to a gate file waits for review.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { resolve } from "node:path";
+import { posix, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { DESIGN_CHECK_LABELS } from "../../scripts/design-check.mjs";
-import { GATE_LABEL, gateFilesIn, loadGateList } from "../../scripts/gate-files.mjs";
+import { checkedScripts, GATE_LABEL, gateFilesIn, loadGateList } from "../../scripts/gate-files.mjs";
 import { decide, FIX_LABEL } from "../../scripts/merge-ready.mjs";
 import { judgedChecks, loadChecks } from "../../scripts/run-checks.mjs";
 
@@ -91,11 +91,7 @@ describe("the gate file list (config/gate-files.json)", () => {
       ...[...workflow.matchAll(/uses: \.\/(\.github\/actions\/[\w-]+)/gu)].map((match) => `${match[1]}/action.yml`),
     ];
     expect(run.length).toBeGreaterThan(5);
-    // Scripts the workflow runs that only describe or build, and decide no verdict.
-    const notGate = new Set(["scripts/build-target.mjs"]);
-    expect([...new Set(run)].filter((file) => !notGate.has(file) && gateFilesIn(list, [file]).length === 0)).toEqual(
-      [],
-    );
+    expect([...new Set(run)].filter((file) => gateFilesIn(list, [file]).length === 0)).toEqual([]);
   });
 
   it("matches exact paths exactly and prefixes by start", () => {
@@ -109,6 +105,126 @@ describe("the gate file list (config/gate-files.json)", () => {
         "src/app/main.ts",
       ]),
     ).toEqual(["config/checks.json", "scripts/ci-verdict.mjs", ".github/workflows/nightly.yml"]);
+  });
+});
+
+describe("the scripts the checks reach (checkedScripts)", () => {
+  const reached = checkedScripts(loadChecks());
+
+  it("makes every script a config/checks.json command reaches a gate file", () => {
+    expect(reached.size).toBeGreaterThan(20);
+    expect([...reached.keys()].filter((file) => gateFilesIn(list, [file]).length === 0)).toEqual([]);
+  });
+
+  it("reaches the checkers' own modules, which the named configs alone missed", () => {
+    expect(reached.get("scripts/check-source-architecture.mjs")).toContain(
+      "node scripts/check-source-architecture.mjs",
+    );
+    expect(reached.get("scripts/architecture/evaluate.mjs")).toBe("imported by scripts/architecture/analyze.mjs");
+    expect(reached.has("scripts/check-code-budget.mjs")).toBe(true);
+    expect(reached.has("scripts/check-bundle-budget.mjs")).toBe(true);
+  });
+
+  it("sees every relative import of a reached script that stays in scripts/", () => {
+    const anyImport = /(?:\bfrom|\bimport|\brequire)\s*\(?\s*["'](\.\.?\/[^"']+)["']/gu;
+    const missed = [...reached.keys()].flatMap((file) =>
+      [...read(file).matchAll(anyImport)]
+        .map((match) => posix.join(posix.dirname(file), match[1]))
+        .filter((target) => target.startsWith("scripts/") && !target.endsWith(".json") && !reached.has(target))
+        .map((target) => `${file} -> ${target}`),
+    );
+    expect(missed).toEqual([]);
+  });
+
+  it("follows imports to the end, inside scripts/ only, and leaves tests alone", () => {
+    const files = {
+      "scripts/check-a.mjs": 'import { b } from "./lib/b.mjs";\nimport x from "../src/x.mjs";',
+      "scripts/lib/b.mjs": 'const c = await import("./c.mjs");\nconst d = require("../d.cjs");',
+      "scripts/lib/c.mjs": "export const c = 1;",
+      "scripts/d.cjs": "module.exports = 1;",
+    };
+    const checks = {
+      gate: ["fast"],
+      groups: { fast: [check("a", "node scripts/check-a.mjs --changed"), check("t", "node tests/browser-x.js")] },
+    };
+    const found = checkedScripts(checks, (file) => {
+      if (files[file] === undefined) throw new Error(`no ${file}`);
+      return files[file];
+    });
+    expect([...found.keys()]).toEqual([
+      "scripts/check-a.mjs",
+      "scripts/lib/b.mjs",
+      "scripts/lib/c.mjs",
+      "scripts/d.cjs",
+    ]);
+    expect(found.get("scripts/lib/c.mjs")).toBe("imported by scripts/lib/b.mjs");
+  });
+
+  it("adds reached scripts to the list read beside its checks, and only those the list does not name", () => {
+    const added = list.files.filter((entry) => entry.reached === true).map((entry) => entry.path);
+    expect(added).toContain("scripts/architecture/evaluate.mjs");
+    expect(added).not.toContain("scripts/run-checks.mjs");
+    expect(JSON.parse(read("config/gate-files.json")).files.some((entry) => entry.reached)).toBe(false);
+  });
+});
+
+describe("the config files the checks' tools read (TOOL_CONFIGS)", () => {
+  const reached = checkedScripts(loadChecks());
+
+  it("reaches the vitest configs, every tsconfig through references and extends, and what they import", () => {
+    expect(reached.get("vitest.config.ts")).toContain("read by default by the check");
+    expect(reached.get("vitest.endurance.config.ts")).toContain("--config vitest.endurance.config.ts");
+    expect(reached.get("tsconfig.json")).toContain("tsc -b");
+    for (const project of ["tsconfig.app.json", "tsconfig.node.json", "tsconfig.test.json"])
+      expect(reached.get(project), project).toBe("referenced by tsconfig.json");
+    expect(reached.get("scripts/test-files.mjs")).toBe("imported by vitest.config.ts");
+  });
+
+  it("makes every root config of vitest, vite, playwright or tsc a gate file", () => {
+    const configs = readdirSync(root).filter((name) =>
+      /^(?:(?:vitest|vite|playwright)(?:\.[\w-]+)?\.config\.[cm]?[jt]s|tsconfig[\w.-]*\.json)$/u.test(name),
+    );
+    expect(configs.length).toBeGreaterThan(5);
+    expect(configs.filter((name) => gateFilesIn(list, [name]).length === 0)).toEqual([]);
+  });
+
+  it("takes a named config over the default, follows extends and references, and finds playwright's default", () => {
+    const files = {
+      "vitest.config.ts": "export default {};",
+      "vitest.slow.config.mts": 'import { x } from "./scripts/x.mjs";',
+      "scripts/x.mjs": "export const x = 1;",
+      "tsconfig.json": '{ "references": [{ "path": "./tsconfig.a.json" }, { "path": "./packages/b" }] }',
+      "tsconfig.a.json": '{ "extends": "./tsconfig.base.json" }',
+      "tsconfig.base.json": "{}",
+      "packages/b/tsconfig.json": "{}",
+      "playwright.config.ts": "export default {};",
+    };
+    const checks = {
+      gate: ["fast"],
+      groups: {
+        fast: [
+          check("slow", "node node_modules/vitest/vitest.mjs run --config vitest.slow.config.mts"),
+          check("types", "node node_modules/typescript/bin/tsc -b"),
+          check("e2e", "pnpm exec playwright test"),
+        ],
+      },
+    };
+    const found = checkedScripts(checks, (file) => {
+      if (files[file] === undefined) throw new Error(`no ${file}`);
+      return files[file];
+    });
+    expect([...found.keys()].sort()).toEqual(
+      [
+        "packages/b/tsconfig.json",
+        "playwright.config.ts",
+        "scripts/x.mjs",
+        "tsconfig.a.json",
+        "tsconfig.base.json",
+        "tsconfig.json",
+        "vitest.slow.config.mts",
+      ].sort(),
+    );
+    expect(found.get("tsconfig.base.json")).toBe("extended by tsconfig.a.json");
   });
 });
 

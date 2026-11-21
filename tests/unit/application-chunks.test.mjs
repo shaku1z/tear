@@ -97,6 +97,18 @@ describe("application chunk rule", () => {
     expect(startupGroups.every((name) => typeof name === "string" && name < ON_DEMAND_SHARED_CHUNK)).toBe(true);
   });
 
+  it("names the tutorial corpus chunk the budget, precache and runtime cache look for, even when only an on-demand module imports it", () => {
+    const corpus = "/repo/src/gameplay/training/tutorial-gold-reference-data.json";
+    const reader = "/repo/src/gameplay/training/tutorial-gold-corpus.ts";
+    const meta = graph({
+      [ROOT]: {},
+      [reader]: { dynamicImporters: [ROOT] },
+      [corpus]: { importers: [reader], code: large },
+    });
+    expect(reachedOnlyDynamically(corpus, meta)).toBe(true);
+    expect(applicationChunk(corpus, meta)).toBe("tutorial-gold-reference");
+  });
+
   it("folds a listed gameplay folder into another folder's chunk and gives the others their own", () => {
     const meta = graph({ [ROOT]: {} });
     expect(applicationChunk("/repo/src/gameplay/snapshot/state-codec.ts", meta)).toBe("gameplay-run");

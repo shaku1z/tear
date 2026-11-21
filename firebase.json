@@ -4,5 +4,11 @@
   },
   "remoteconfig": {
     "template": "remoteconfig.template.json"
+  },
+  "emulators": {
+    "auth": { "port": 9199 },
+    "firestore": { "port": 8189 },
+    "ui": { "enabled": false },
+    "singleProjectMode": true
   }
 }

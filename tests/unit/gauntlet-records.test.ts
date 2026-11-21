@@ -12,6 +12,8 @@ import {
   SIX_BIOME_PALE_PREVIEW_V10_RULESET_VERSION,
   SIX_BIOME_PALE_PREVIEW_V11_RULESET_VERSION,
   SIX_BIOME_PALE_PREVIEW_V12_RULESET_VERSION,
+  SIX_BIOME_PALE_PREVIEW_V13_RULESET_VERSION,
+  SIX_BIOME_PALE_PREVIEW_V14_RULESET_VERSION,
   SIX_BIOME_PALE_PREVIEW_V9_RULESET_VERSION,
   UNKNOWN_RULESET_REFUSAL,
   rulesetRefusal,
@@ -114,12 +116,18 @@ describe("ruleset steps", () => {
     const versions = RULESET_STEPS.map((step) => step.version);
     expect(new Set(versions).size).toBe(versions.length);
     expect(versions.at(-1)).toBe(CURRENT_RULESET_VERSION);
-    expect(versions.at(-2)).toBe(SIX_BIOME_PALE_PREVIEW_V12_RULESET_VERSION);
+    expect(versions.at(-2)).toBe(SIX_BIOME_PALE_PREVIEW_V14_RULESET_VERSION);
     for (const step of RULESET_STEPS) expect(step.change.length).toBeGreaterThan(0);
   });
 
   it("admits only the current ruleset, in every mode, and names the first change an older recording missed", () => {
     expect(rulesetRefusal(CURRENT_RULESET_VERSION)).toBeNull();
+    expect(rulesetRefusal(SIX_BIOME_PALE_PREVIEW_V14_RULESET_VERSION)).toBe(
+      "recorded before a flyer launched upward mid-dive began breaking its dive",
+    );
+    expect(rulesetRefusal(SIX_BIOME_PALE_PREVIEW_V13_RULESET_VERSION)).toBe(
+      "recorded before bosses stopped slowing time",
+    );
     expect(rulesetRefusal(SIX_BIOME_PALE_PREVIEW_V12_RULESET_VERSION)).toBe(
       "recorded before the listed enemies of a wave began arriving without affixes",
     );

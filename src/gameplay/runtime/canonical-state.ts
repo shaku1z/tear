@@ -1,5 +1,5 @@
 import type { AuthoritativeInputSnapshot } from "./authoritative-input";
-import type { TutorialSessionCheckpoint } from "../training/tutorial-controller";
+import type { TutorialSessionCheckpoint } from "../training/tutorial-session-checkpoint";
 import type { EnvironmentSnapshot } from "../environment/environment-contracts";
 import { projectEnvironmentSemanticSnapshot } from "../environment/environment-projection";
 import { DeferredCanonicalState } from "./authoritative-step";

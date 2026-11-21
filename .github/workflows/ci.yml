@@ -86,9 +86,14 @@ jobs:
             docs_only=true
           fi
           echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
-      - uses: ./.github/actions/main-gate
-        with:
-          main: ${{ steps.main.outputs.main }}
+      # Main's copy of the loader, read from main, so a head cut before it is judged too.
+      - name: Use main's copy of the gate
+        shell: bash
+        env:
+          MAIN: ${{ steps.main.outputs.main }}
+        run: |
+          if git cat-file -e "$MAIN:scripts/ci-main-gate.sh" 2>/dev/null; then git show "$MAIN:scripts/ci-main-gate.sh" | bash -s -- "$MAIN"
+          else bash scripts/ci-main-gate.sh "$MAIN"; fi
       # Shown on the run and the pull request; pnpm merge:ready holds such a change for the lead.
       - name: Flag changed gate files
         if: github.event_name != 'push'
@@ -143,9 +148,14 @@ jobs:
         with:
           main: ${{ needs.scope.outputs.merge_main }}
           commit: ${{ needs.scope.outputs.commit }}
-      - uses: ./.github/actions/main-gate
-        with:
-          main: ${{ needs.scope.outputs.main }}
+      # Main's copy of the loader, read from main, so a head cut before it is judged too.
+      - name: Use main's copy of the gate
+        shell: bash
+        env:
+          MAIN: ${{ needs.scope.outputs.main }}
+        run: |
+          if git cat-file -e "$MAIN:scripts/ci-main-gate.sh" 2>/dev/null; then git show "$MAIN:scripts/ci-main-gate.sh" | bash -s -- "$MAIN"
+          else bash scripts/ci-main-gate.sh "$MAIN"; fi
       - uses: ./.github/actions/check-results
         with:
           job: static
@@ -173,7 +183,7 @@ jobs:
     needs: scope
     if: needs.scope.outputs.docs_only == 'false'
     runs-on: ubuntu-latest
-    timeout-minutes: 16
+    timeout-minutes: 18
     permissions:
       contents: read
       actions: read
@@ -186,12 +196,31 @@ jobs:
         with:
           main: ${{ needs.scope.outputs.merge_main }}
           commit: ${{ needs.scope.outputs.commit }}
-      - uses: ./.github/actions/main-gate
-        with:
-          main: ${{ needs.scope.outputs.main }}
+      # Main's copy of the loader, read from main, so a head cut before it is judged too.
+      - name: Use main's copy of the gate
+        shell: bash
+        env:
+          MAIN: ${{ needs.scope.outputs.main }}
+        run: |
+          if git cat-file -e "$MAIN:scripts/ci-main-gate.sh" 2>/dev/null; then git show "$MAIN:scripts/ci-main-gate.sh" | bash -s -- "$MAIN"
+          else bash scripts/ci-main-gate.sh "$MAIN"; fi
       - uses: ./.github/actions/check-results
         with:
           job: unit
+      # The firestore-rules check runs the Firebase emulators, which need Java 21 or later.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      # The emulators' Firestore jar (about 70 MB) is downloaded once per firebase-tools version and then
+      # restored, so the gate does not fetch it on every run.
+      - name: Read the firebase-tools version
+        id: firebase-tools
+        run: echo "version=$(node -p "require('./package.json').devDependencies['firebase-tools']")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ runner.os }}-${{ steps.firebase-tools.outputs.version }}
       - name: Unit tests
         run: node "$TEAR_GATE/run-checks.mjs" unit
       # Read by .github/actions/check-results on a re-run of this job (to report flaky checks), which
@@ -233,9 +262,14 @@ jobs:
         with:
           main: ${{ needs.scope.outputs.merge_main }}
           commit: ${{ needs.scope.outputs.commit }}
-      - uses: ./.github/actions/main-gate
-        with:
-          main: ${{ needs.scope.outputs.main }}
+      # Main's copy of the loader, read from main, so a head cut before it is judged too.
+      - name: Use main's copy of the gate
+        shell: bash
+        env:
+          MAIN: ${{ needs.scope.outputs.main }}
+        run: |
+          if git cat-file -e "$MAIN:scripts/ci-main-gate.sh" 2>/dev/null; then git show "$MAIN:scripts/ci-main-gate.sh" | bash -s -- "$MAIN"
+          else bash scripts/ci-main-gate.sh "$MAIN"; fi
       - uses: ./.github/actions/check-results
         with:
           job: build
@@ -343,9 +377,14 @@ jobs:
         env:
           EXPECTED: ${{ needs.build.outputs.hashes }}
         run: node scripts/ci-build-hashes.mjs --expect "$EXPECTED"
-      - uses: ./.github/actions/main-gate
-        with:
-          main: ${{ needs.scope.outputs.main }}
+      # Main's copy of the loader, read from main, so a head cut before it is judged too.
+      - name: Use main's copy of the gate
+        shell: bash
+        env:
+          MAIN: ${{ needs.scope.outputs.main }}
+        run: |
+          if git cat-file -e "$MAIN:scripts/ci-main-gate.sh" 2>/dev/null; then git show "$MAIN:scripts/ci-main-gate.sh" | bash -s -- "$MAIN"
+          else bash scripts/ci-main-gate.sh "$MAIN"; fi
       - uses: ./.github/actions/check-results
         with:
           job: browser-${{ matrix.shard }}
@@ -407,9 +446,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .node-version
-      - uses: ./.github/actions/main-gate
-        with:
-          main: ${{ needs.scope.outputs.main }}
+      # Main's copy of the loader, read from main, so a head cut before it is judged too.
+      - name: Use main's copy of the gate
+        shell: bash
+        env:
+          MAIN: ${{ needs.scope.outputs.main }}
+        run: |
+          if git cat-file -e "$MAIN:scripts/ci-main-gate.sh" 2>/dev/null; then git show "$MAIN:scripts/ci-main-gate.sh" | bash -s -- "$MAIN"
+          else bash scripts/ci-main-gate.sh "$MAIN"; fi
       - name: Every needed job passed
         env:
           NEEDS: ${{ toJSON(needs) }}
