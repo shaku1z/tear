@@ -5,6 +5,7 @@
  * and the HUD, a priority queue with timing, and the fade curve. The renderer only
  * measures text and draws the result.
  */
+import { composite, contrastRatio } from "../ui-color";
 
 export interface CoachRect {
   readonly x: number;
@@ -33,6 +34,10 @@ export interface CoachMark {
   readonly keys: readonly string[];
   /** Screen point the mark refers to (the player, a target), or undefined to sit in its home slot. */
   readonly anchor?: CoachPoint;
+  /** What the mark names (a spawned enemy's box on screen): it sits beside it, never on it. */
+  readonly target?: CoachRect;
+  /** "plate": light ink on a dark plate, for a mark drawn over the action (see `COACH_PLATE`). */
+  readonly backing?: "plate";
   /** Higher wins its channel. */
   readonly priority: number;
   /** Seconds the mark stays before fading; `Infinity` keeps it until dismissed or replaced. */
@@ -54,6 +59,21 @@ export interface CoachPlacementInput {
   readonly avoid: readonly CoachRect[];
   /** Distance kept from the anchor and from every avoided rectangle. */
   readonly gap: number;
+  /** What the mark names: tried beside first (right, then left), and never covered. */
+  readonly target?: CoachRect;
+}
+
+/**
+ * A plated mark's colours: light ink on a dark plate, so it reads over any sky, light or dark.
+ * The plate is translucent; `coachPlateContrast` measures the ink against it laid over a sky.
+ */
+export const COACH_PLATE = Object.freeze({ fill: "#0b0a12", alpha: 0.84, ink: "#f1eff9" });
+/** The one contrast rule a plated mark meets against every sky behind it (WCAG AA for text). */
+export const COACH_PLATE_MIN_CONTRAST = 4.5;
+
+/** Contrast of a plated mark's ink against its plate laid over `sky`. */
+export function coachPlateContrast(sky: string): number {
+  return contrastRatio(COACH_PLATE.ink, composite(COACH_PLATE.fill, COACH_PLATE.alpha, sky));
 }
 
 export interface CoachPlacement extends CoachRect {
@@ -83,17 +103,23 @@ function clampInto(rect: CoachRect, bounds: CoachRect): CoachRect {
 }
 
 /**
- * Candidate slots around the anchor in reading order of preference: above (centred,
- * then leaning left/right), beside, below, then progressively further above so a mark
- * can climb over a crowded floor. Each slot is clamped into the bounds.
+ * Candidate slots in reading order of preference: beside the target when there is one,
+ * then around the anchor: above (centred, then leaning left/right), beside, below, then
+ * progressively further above so a mark can climb over a crowded floor. Each slot is
+ * clamped into the bounds.
  */
 function candidates(input: CoachPlacementInput): readonly CoachRect[] {
-  const { size, anchor, gap } = input,
+  const { size, anchor, gap, target } = input,
     { w, h } = size;
   const above = anchor.y - gap - h,
     below = anchor.y + gap,
     centreX = anchor.x - w / 2;
-  const raw: CoachRect[] = [
+  const raw: CoachRect[] = [];
+  if (target) {
+    const middle = target.y + target.h / 2 - h / 2;
+    raw.push({ x: target.x + target.w + gap, y: middle, w, h }, { x: target.x - gap - w, y: middle, w, h });
+  }
+  raw.push(
     { x: centreX, y: above, w, h },
     { x: anchor.x - w + gap, y: above, w, h },
     { x: anchor.x - gap, y: above, w, h },
@@ -102,7 +128,7 @@ function candidates(input: CoachPlacementInput): readonly CoachRect[] {
     { x: centreX, y: below, w, h },
     { x: anchor.x + gap * 2, y: anchor.y, w, h },
     { x: anchor.x - gap * 2 - w, y: anchor.y, w, h },
-  ];
+  );
   for (let step = 1; step <= 4; step++) {
     const y = above - step * (h + gap);
     raw.push({ x: centreX, y, w, h }, { x: anchor.x - w + gap, y, w, h }, { x: anchor.x - gap, y, w, h });
@@ -120,7 +146,7 @@ function candidates(input: CoachPlacementInput): readonly CoachRect[] {
  * does, the candidate with the least covered area, nearest the anchor on ties.
  */
 export function placeCoachMark(input: CoachPlacementInput): CoachPlacement {
-  const avoid = input.avoid.map((rect) => inflate(rect, input.gap / 2));
+  const avoid = [...input.avoid, ...(input.target ? [input.target] : [])].map((rect) => inflate(rect, input.gap / 2));
   let best: CoachPlacement | undefined,
     bestDistance = Infinity;
   for (const rect of candidates(input)) {

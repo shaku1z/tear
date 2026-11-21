@@ -76,11 +76,16 @@ export function createTrainingCoachPresentation() {
       if (sources.touchLayout) avoid.push(...touchControlRects(sources.touchLayout));
       const exercise = sources.exercise,
         camera = sources.camera;
-      const callouts = (sources.callouts ?? []).map(({ text, tone, at }) => ({
-        text,
-        tone,
-        ...(at && camera ? { anchor: worldToScreen(camera, at.x, at.y) } : {}),
-      }));
+      const callouts = (sources.callouts ?? []).map(({ text, tone, target }) => {
+        if (!target || !camera) return { text, tone };
+        const topLeft = worldToScreen(camera, target.x - target.hw, target.y - target.hh),
+          bottomRight = worldToScreen(camera, target.x + target.hw, target.y + target.hh);
+        return {
+          text,
+          tone,
+          target: { x: topLeft.x, y: topLeft.y, w: bottomRight.x - topLeft.x, h: bottomRight.y - topLeft.y },
+        };
+      });
       const frame: TrainingCoachFrame = {
         deltaSeconds: sources.deltaSeconds,
         reducedMotion: sources.reducedMotion,
