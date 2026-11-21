@@ -1,14 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
   COACH_FADE_SECONDS,
+  COACH_PLATE_MIN_CONTRAST,
   CoachQueue,
   coachMarkAlpha,
+  coachPlateContrast,
   inflate,
   intersection,
   placeCoachMark,
   type CoachMark,
   type CoachRect,
 } from "../../src/presentation/coach/coach-marks";
+import { CONFIG } from "../../src/config/game-config";
+import { PLAYGROUND_STAGES } from "../../src/gameplay/stages";
 
 const mark = (overrides: Partial<CoachMark> = {}): CoachMark => ({
   id: "a",
@@ -102,6 +106,65 @@ describe("coach mark placement", () => {
     expect(placed.overlap).toBeGreaterThan(0);
     expect(placed.x).toBeGreaterThanOrEqual(0);
     expect(placed.x + placed.w).toBeLessThanOrEqual(400);
+  });
+});
+
+describe("plated call-outs on every Playground palette", () => {
+  it("covers the six Playground palettes", () => {
+    expect(PLAYGROUND_STAGES.length).toBeGreaterThanOrEqual(6);
+  });
+
+  for (const stage of PLAYGROUND_STAGES) {
+    it(`${stage.name}: the call-out ink meets the contrast rule over the sky, platforms and accent`, () => {
+      // White bounds every lightened sky stop from above; the stage's own colours are what sits behind.
+      for (const sky of [stage.bg, stage.plat, stage.accent, "#ffffff"])
+        expect(coachPlateContrast(sky), sky).toBeGreaterThanOrEqual(COACH_PLATE_MIN_CONTRAST);
+    });
+
+    it(`${stage.name}: a call-out sits beside the enemy it names, never on it, the player or the blade`, () => {
+      const groundY = CONFIG.world.groundY,
+        reach = CONFIG.blade.aimRadius + CONFIG.blade.length;
+      const hw = CONFIG.player.w / 2,
+        hh = CONFIG.player.h / 2,
+        px = CONFIG.view.w / 2,
+        py = groundY - hh;
+      // As the coach presentation builds them (training-coach-presentation.ts).
+      const player: CoachRect = { x: px - hw, y: py - hh, w: hw * 2, h: hh * 2 };
+      const blade: CoachRect = { x: px - hw - reach, y: py - hh - reach, w: (hw + reach) * 2, h: hh * 2 + reach };
+      const bounds: CoachRect = { x: 24, y: 24, w: CONFIG.view.w - 48, h: CONFIG.view.h - 70 };
+      const enemy = (x: number, surface: number): CoachRect => ({ x: x - 18, y: surface - 36, w: 36, h: 36 });
+      const enemies = [
+        ...stage.layout.map((platform) => enemy(platform.x + platform.w / 2, platform.y)),
+        ...[-420, -200, -60, 60, 200, 420].map((offset) => enemy(px + offset, groundY)),
+      ];
+      for (const target of enemies) {
+        const rect = placeCoachMark({
+          size: { w: 150, h: 34 },
+          anchor: { x: target.x + target.w / 2, y: target.y },
+          bounds,
+          avoid: [player, blade],
+          gap: 16,
+          target,
+        });
+        const where = `enemy at ${String(target.x)},${String(target.y)}`;
+        expect(intersection(rect, target), where).toBe(0);
+        expect(intersection(rect, player), where).toBe(0);
+        expect(intersection(rect, blade), where).toBe(0);
+      }
+    });
+  }
+
+  it("tries beside the named enemy before above it", () => {
+    const target = { x: 700, y: 400, w: 36, h: 36 };
+    const rect = placeCoachMark({
+      size: { w: 150, h: 34 },
+      anchor: { x: 718, y: 400 },
+      bounds: { x: 0, y: 0, w: 1600, h: 900 },
+      avoid: [],
+      gap: 16,
+      target,
+    });
+    expect(rect).toMatchObject({ x: 752, y: 401, overlap: 0 });
   });
 });
 

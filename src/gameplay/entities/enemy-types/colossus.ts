@@ -333,7 +333,6 @@ export function createColossusType(
         banner: perfect ? "CORE EXPOSED" : "SHIELD ARM RUPTURED",
         color: perfect ? CONFIG.colors.perfect : "#ff8a32",
         priority: perfect ? 9 : 7,
-        slowmo: perfect ? 0.42 : 0,
         zoom: perfect ? 0.09 : 0.045,
       });
       FX.shockwave(this.x, this.y, 12, perfect ? CONFIG.colors.perfect : "#ff8a32", perfect ? 260 : 180, 6);
@@ -421,7 +420,6 @@ export function createColossusType(
             priority: 9,
             shake: 14,
             flash: 0.4,
-            slowmo: 0.4,
             zoom: 0.08,
           });
           this.state = "recover";
@@ -474,7 +472,7 @@ export function createColossusType(
             player.takeDamage(this.cfg.smashDmg, this.x, this);
           FX.shockwave(this.x, this.y + this.hh, 16, CONFIG.colors.slam, 300, 7);
           this.plateKickT = 0.45;
-          bossFeedback(this, "contact", { shake: 12, slowmo: 0.36, zoom: 0.06 });
+          bossFeedback(this, "contact", { shake: 12, zoom: 0.06 });
           this.state = "recover";
           this.stateT = 0.7;
           this.atkT = this.cfg.atkCd;

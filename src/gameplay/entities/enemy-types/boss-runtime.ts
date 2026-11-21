@@ -9,108 +9,113 @@ import type {
   WeaponSegment,
 } from "../enemy-contracts";
 
+/**
+ * Feedback each boss gives for its named moments, drained by the combat feedback step. A phase change
+ * and a death never slow time: the fight keeps running (plans/active/CINEMATICS_OVERHAUL.md). The rule
+ * over every boss fight (tests/unit/boss-fight-flow.test.ts) checks this table.
+ */
+export const BOSS_PRESENTATION: Readonly<Record<string, Readonly<Record<string, BossFxEvent>>>> = {
+  warden: {
+    windup: { shake: 1.5, cue: "wardenLockdown", priority: 2 },
+    launch: { shake: 3, cue: "wardenMortarLaunch", priority: 3 },
+    contact: { shake: 6, hitstop: 0.035, cue: "wardenClash", priority: 5 },
+    counter: { shake: 5, flash: 0.15, hitstop: 0.045, cue: "wardenClash", priority: 6 },
+    stagger: { shake: 9, flash: 0.32, hitstop: 0.07, cue: "wardenGuardBreak", priority: 8 },
+    phaseTransition: { shake: 8, flash: 0.34, zoom: 0.04, cue: "wardenLockdown", priority: 9 },
+    platformBreak: { shake: 3, cue: "wardenLockdown", priority: 2 },
+    platformRebuild: { shake: 1, cue: "platformRebuild", priority: 1 },
+    death: { shake: 10, flash: 0.42, zoom: 0.055, hitstop: 0.09, cue: "bossDeathWarden", priority: 10 },
+  },
+  colossus: {
+    windup: { shake: 2, cue: "colossusServo", priority: 2 },
+    launch: { shake: 4, cue: "colossusServo", priority: 3 },
+    contact: { shake: 9, hitstop: 0.055, cue: "colossusPlate", priority: 6 },
+    counter: { shake: 7, hitstop: 0.05, cue: "sweeperCounter", priority: 7 },
+    stagger: {
+      shake: 11,
+      flash: 0.22,
+      zoom: 0.055,
+      hitstop: 0.075,
+      cue: "colossusStagger",
+      priority: 8,
+    },
+    phaseTransition: { shake: 10, flash: 0.3, zoom: 0.05, cue: "colossusServo", priority: 9 },
+    platformBreak: { shake: 6, cue: "colossusPlate", priority: 4 },
+    platformRebuild: { shake: 2, cue: "platformRebuild", priority: 1 },
+    death: {
+      shake: 12,
+      flash: 0.38,
+      zoom: 0.065,
+      hitstop: 0.1,
+      cue: "bossDeathColossus",
+      priority: 10,
+    },
+  },
+  aldric: {
+    windup: { shake: 1, cue: "aldricCleaver", priority: 2 },
+    launch: { shake: 3, cue: "aldricCleaver", priority: 3 },
+    contact: { shake: 7, hitstop: 0.045, cue: "aldricCleaver", priority: 6 },
+    counter: { shake: 5, hitstop: 0.04, cue: "aldricCleaver", priority: 6 },
+    stagger: { shake: 8, flash: 0.18, cue: "aldricCleaver", priority: 8 },
+    phaseTransition: { shake: 8, flash: 0.3, zoom: 0.045, cue: "aldricIgnite", priority: 9 },
+    platformBreak: { shake: 4, cue: "aldricCleaver", priority: 3 },
+    platformRebuild: { shake: 1, cue: "platformRebuild", priority: 1 },
+    death: { shake: 10, flash: 0.36, zoom: 0.05, hitstop: 0.09, cue: "bossDeathAldric", priority: 10 },
+  },
+  rootbound: {
+    windup: { shake: 1, cue: "updraft", priority: 2 },
+    launch: { shake: 3, cue: "slam", priority: 3 },
+    contact: { shake: 7, hitstop: 0.045, cue: "slam", priority: 6 },
+    counter: { shake: 5, hitstop: 0.04, cue: "slam", priority: 6 },
+    stagger: { shake: 8, flash: 0.2, cue: "wardenGuardBreak", priority: 8 },
+    phaseTransition: { shake: 8, flash: 0.3, zoom: 0.045, cue: "boom", priority: 9 },
+    platformBreak: { shake: 4, cue: "slam", priority: 3 },
+    platformRebuild: { shake: 1, cue: "platformRebuild", priority: 1 },
+    death: { shake: 10, flash: 0.4, zoom: 0.055, hitstop: 0.09, cue: "bossDeathWarden", priority: 10 },
+  },
+  "white-hart": {
+    windup: { shake: 1, priority: 2 },
+    launch: { shake: 3, priority: 3 },
+    contact: { shake: 7, hitstop: 0.045, priority: 6 },
+    counter: { shake: 5, flash: 0.12, hitstop: 0.04, priority: 7 },
+    stagger: { shake: 8, flash: 0.2, priority: 8 },
+    phaseTransition: { shake: 7, flash: 0.28, zoom: 0.04, priority: 9 },
+    platformBreak: { shake: 3, priority: 3 },
+    platformRebuild: { shake: 1, cue: "platformRebuild", priority: 1 },
+    death: { shake: 10, flash: 0.4, zoom: 0.055, hitstop: 0.09, priority: 10 },
+  },
+  echo: {
+    windup: { shake: 0, cue: "echoResonance", priority: 2 },
+    launch: { shake: 2, cue: "echoResonance", priority: 3 },
+    contact: { shake: 4, hitstop: 0.035, cue: "echoResonance", priority: 5 },
+    counter: { shake: 3, flash: 0.1, cue: "echoResonance", priority: 6 },
+    stagger: { shake: 5, flash: 0.16, cue: "echoResonance", priority: 8 },
+    phaseTransition: { shake: 4, flash: 0.24, zoom: 0.03, cue: "echoResonance", priority: 9 },
+    platformBreak: { shake: 1, cue: "echoResonance", priority: 2 },
+    platformRebuild: { shake: 0, cue: "echoResonance", priority: 1 },
+    death: { shake: 7, flash: 0.5, zoom: 0.035, hitstop: 0.08, cue: "bossDeathEcho", priority: 10 },
+  },
+  source: {
+    windup: { shake: 0, cue: "sourceCross", priority: 2 },
+    launch: { shake: 3, cue: "sourceCross", priority: 3 },
+    contact: { shake: 6, hitstop: 0.04, cue: "sourceFracture", priority: 6 },
+    counter: { shake: 5, flash: 0.12, hitstop: 0.045, cue: "sourceRepel", priority: 7 },
+    stagger: { shake: 7, flash: 0.2, cue: "sourceFracture", priority: 8 },
+    phaseTransition: { shake: 7, flash: 0.32, zoom: 0.045, cue: "sourceCross", priority: 9 },
+    platformBreak: { shake: 2, cue: "sourceFracture", priority: 3 },
+    platformRebuild: { shake: 0, cue: "voidTransfer", priority: 1 },
+    death: { shake: 9, flash: 0.5, zoom: 0.07, hitstop: 0.1, cue: "bossDeathSource", priority: 10 },
+  },
+};
+
 export function createBossRuntime(dependencies: EnemyDependencies) {
   const { CLOCK, CONFIG, FX, SFX, segPointDist } = dependencies;
   // ====================================================================================
   //  BOSS THEATER — the shared ceremony layer every boss speaks through.
   //  BOSSFX mirrors the Echo's fxq (drained generically in game.js): any boss can push
-  //  {shake, flash, hitstop, slowmo, zoom, txt, x, y, big, color, quiet} beats.
+  //  {shake, flash, hitstop, zoom, txt, x, y, big, color, quiet} beats. No boss
+  //  event slows time: the fight never stops (plans/active/CINEMATICS_OVERHAUL.md).
   // ====================================================================================
-  const BOSS_PRESENTATION: Record<string, Record<string, BossFxEvent>> = {
-    warden: {
-      windup: { shake: 1.5, cue: "wardenLockdown", priority: 2 },
-      launch: { shake: 3, cue: "wardenMortarLaunch", priority: 3 },
-      contact: { shake: 6, hitstop: 0.035, cue: "wardenClash", priority: 5 },
-      counter: { shake: 5, flash: 0.15, hitstop: 0.045, cue: "wardenClash", priority: 6 },
-      stagger: { shake: 9, flash: 0.32, hitstop: 0.07, cue: "wardenGuardBreak", priority: 8 },
-      phaseTransition: { shake: 8, flash: 0.34, slowmo: 0.42, zoom: 0.04, cue: "wardenLockdown", priority: 9 },
-      platformBreak: { shake: 3, cue: "wardenLockdown", priority: 2 },
-      platformRebuild: { shake: 1, cue: "platformRebuild", priority: 1 },
-      death: { shake: 10, flash: 0.42, slowmo: 0.7, zoom: 0.055, hitstop: 0.09, cue: "bossDeathWarden", priority: 10 },
-    },
-    colossus: {
-      windup: { shake: 2, cue: "colossusServo", priority: 2 },
-      launch: { shake: 4, cue: "colossusServo", priority: 3 },
-      contact: { shake: 9, hitstop: 0.055, cue: "colossusPlate", priority: 6 },
-      counter: { shake: 7, hitstop: 0.05, cue: "sweeperCounter", priority: 7 },
-      stagger: {
-        shake: 11,
-        flash: 0.22,
-        slowmo: 0.35,
-        zoom: 0.055,
-        hitstop: 0.075,
-        cue: "colossusStagger",
-        priority: 8,
-      },
-      phaseTransition: { shake: 10, flash: 0.3, slowmo: 0.4, zoom: 0.05, cue: "colossusServo", priority: 9 },
-      platformBreak: { shake: 6, cue: "colossusPlate", priority: 4 },
-      platformRebuild: { shake: 2, cue: "platformRebuild", priority: 1 },
-      death: {
-        shake: 12,
-        flash: 0.38,
-        slowmo: 0.75,
-        zoom: 0.065,
-        hitstop: 0.1,
-        cue: "bossDeathColossus",
-        priority: 10,
-      },
-    },
-    aldric: {
-      windup: { shake: 1, cue: "aldricCleaver", priority: 2 },
-      launch: { shake: 3, cue: "aldricCleaver", priority: 3 },
-      contact: { shake: 7, hitstop: 0.045, cue: "aldricCleaver", priority: 6 },
-      counter: { shake: 5, hitstop: 0.04, cue: "aldricCleaver", priority: 6 },
-      stagger: { shake: 8, flash: 0.18, slowmo: 0.3, cue: "aldricCleaver", priority: 8 },
-      phaseTransition: { shake: 8, flash: 0.3, slowmo: 0.4, zoom: 0.045, cue: "aldricIgnite", priority: 9 },
-      platformBreak: { shake: 4, cue: "aldricCleaver", priority: 3 },
-      platformRebuild: { shake: 1, cue: "platformRebuild", priority: 1 },
-      death: { shake: 10, flash: 0.36, slowmo: 0.72, zoom: 0.05, hitstop: 0.09, cue: "bossDeathAldric", priority: 10 },
-    },
-    rootbound: {
-      windup: { shake: 1, cue: "updraft", priority: 2 },
-      launch: { shake: 3, cue: "slam", priority: 3 },
-      contact: { shake: 7, hitstop: 0.045, cue: "slam", priority: 6 },
-      counter: { shake: 5, hitstop: 0.04, cue: "slam", priority: 6 },
-      stagger: { shake: 8, flash: 0.2, slowmo: 0.3, cue: "wardenGuardBreak", priority: 8 },
-      phaseTransition: { shake: 8, flash: 0.3, slowmo: 0.4, zoom: 0.045, cue: "boom", priority: 9 },
-      platformBreak: { shake: 4, cue: "slam", priority: 3 },
-      platformRebuild: { shake: 1, cue: "platformRebuild", priority: 1 },
-      death: { shake: 10, flash: 0.4, slowmo: 0.75, zoom: 0.055, hitstop: 0.09, cue: "bossDeathWarden", priority: 10 },
-    },
-    "white-hart": {
-      windup: { shake: 1, priority: 2 },
-      launch: { shake: 3, priority: 3 },
-      contact: { shake: 7, hitstop: 0.045, priority: 6 },
-      counter: { shake: 5, flash: 0.12, hitstop: 0.04, priority: 7 },
-      stagger: { shake: 8, flash: 0.2, slowmo: 0.32, priority: 8 },
-      phaseTransition: { shake: 7, flash: 0.28, slowmo: 0.4, zoom: 0.04, priority: 9 },
-      platformBreak: { shake: 3, priority: 3 },
-      platformRebuild: { shake: 1, cue: "platformRebuild", priority: 1 },
-      death: { shake: 10, flash: 0.4, slowmo: 0.75, zoom: 0.055, hitstop: 0.09, priority: 10 },
-    },
-    echo: {
-      windup: { shake: 0, cue: "echoResonance", priority: 2 },
-      launch: { shake: 2, cue: "echoResonance", priority: 3 },
-      contact: { shake: 4, hitstop: 0.035, cue: "echoResonance", priority: 5 },
-      counter: { shake: 3, flash: 0.1, cue: "echoResonance", priority: 6 },
-      stagger: { shake: 5, flash: 0.16, slowmo: 0.3, cue: "echoResonance", priority: 8 },
-      phaseTransition: { shake: 4, flash: 0.24, slowmo: 0.38, zoom: 0.03, cue: "echoResonance", priority: 9 },
-      platformBreak: { shake: 1, cue: "echoResonance", priority: 2 },
-      platformRebuild: { shake: 0, cue: "echoResonance", priority: 1 },
-      death: { shake: 7, flash: 0.5, slowmo: 0.75, zoom: 0.035, hitstop: 0.08, cue: "bossDeathEcho", priority: 10 },
-    },
-    source: {
-      windup: { shake: 0, cue: "sourceCross", priority: 2 },
-      launch: { shake: 3, cue: "sourceCross", priority: 3 },
-      contact: { shake: 6, hitstop: 0.04, cue: "sourceFracture", priority: 6 },
-      counter: { shake: 5, flash: 0.12, hitstop: 0.045, cue: "sourceRepel", priority: 7 },
-      stagger: { shake: 7, flash: 0.2, slowmo: 0.34, cue: "sourceFracture", priority: 8 },
-      phaseTransition: { shake: 7, flash: 0.32, slowmo: 0.42, zoom: 0.045, cue: "sourceCross", priority: 9 },
-      platformBreak: { shake: 2, cue: "sourceFracture", priority: 3 },
-      platformRebuild: { shake: 0, cue: "voidTransfer", priority: 1 },
-      death: { shake: 9, flash: 0.5, slowmo: 0.85, zoom: 0.07, hitstop: 0.1, cue: "bossDeathSource", priority: 10 },
-    },
-  };
   interface BossFxQueue {
     q: BossFxEvent[];
     juice(event: BossFxEvent): void;
@@ -131,7 +136,7 @@ export function createBossRuntime(dependencies: EnemyDependencies) {
       if (!this.q.length) return [];
       const requests = this.q.splice(0),
         out: BossFxEvent = { priority: -1, quiet: true },
-        numeric = ["shake", "flash", "hitstop", "slowmo", "zoom"] as const;
+        numeric = ["shake", "flash", "hitstop", "zoom"] as const;
       let cuePriority = -1,
         textPriority = -1;
       for (const ev of requests) {
@@ -160,7 +165,7 @@ export function createBossRuntime(dependencies: EnemyDependencies) {
     BOSSFX.event(boss, name, overrides);
   }
 
-  // a PHASE TURN, made ceremonial: slow-mo + flash + shake + a named banner + rings.
+  // a PHASE TURN: flash + shake + a named banner + rings, with no slow motion.
   // Also arms the HP bar's crack-flash (game.js reads boss._phaseFlashT).
   function bossPhaseBeat(boss: BossPresentationActor, title: string, color?: string) {
     const c = color ?? boss.color;
