@@ -5,8 +5,8 @@
 
 **Paused for the weekly budget (2026-11-21); measuring and gates are in place.** The startup set is split and guarded by the bundle and load budgets; the load profile counts requests to every origin (Firebase's SDK included) and caps them per target. The preview lives at preview.tearblade.com with the default Cloudflare subdomains off in both Wrangler configs. Firebase slice 2 (modular SDK, PR 371) cuts cross-origin scripts from 160,421 bytes to none and adds one 66.5 KB same-origin chunk; the first frame is unchanged and laptop music ready is not faster (about 10% slower, inconclusive).
 
-- Next: Set the tick budget from five hosted nightlies; measure startup before and after replay overhaul PR 5; settle the laptop music-ready question on the nightly; investigate the boot stall if it appears in a hosted nightly.
-- Owner action: Say when the next production deploy happens: the production Worker's default Cloudflare address stops serving then and must be checked. Decide whether the load profile may keep making real anonymous Firebase calls against the production project. Run the CrazyGames live-session check.
+- Next: Set the tick budget from five hosted nightlies; measure startup before and after replay overhaul PR 5; settle the laptop music-ready question on the nightly; investigate the boot stall if it appears in a hosted nightly; stop the load profile making real anonymous Firebase calls against the production project (answer the Firestore and identitytoolkit requests with recorded responses, or use the emulator, keeping the byte and request counts).
+- Owner action: Production deploy (owner starts it); afterwards an agent checks the default address is off. Run the CrazyGames live-session check.
 - Evidence: [plans/active/PERFORMANCE_PLATFORMS_PLAN.md](../../plans/active/PERFORMANCE_PLATFORMS_PLAN.md), [docs/PERFORMANCE_BUDGETS.md](../PERFORMANCE_BUDGETS.md), [#362](https://github.com/shaku1z/tear/pull/362), [#373](https://github.com/shaku1z/tear/pull/373)
 
 [All areas](README.md)
