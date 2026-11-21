@@ -48,6 +48,8 @@ type BossActor = BehaviorActor &
     phaseTag: string;
     mode: string;
     state: string;
+    pendingAtk: string;
+    windupLength(): number;
     cinematicRequest: unknown;
     zones: ArenaZone[];
     searchlights: ArenaZone[];
@@ -120,15 +122,20 @@ describe("boss phase conformance", () => {
     boss.hp = boss.maxHp * 0.65;
     expect(boss.phase).toBe(2);
     updateBoss(boss, platforms, player, projectiles);
-    expect(boss.phaseMarker).toBe(2);
+    // The phase changes in the fight: the staff is raised for the slam, and no scene is requested.
+    expect(boss).toMatchObject({ phaseMarker: 2, phaseTag: "UNCHAINED", state: "windup", pendingAtk: "phaseSlam" });
+    expect(boss.cinematicRequest).toBeNull();
+    expect(boss.searchlights).toEqual([]);
+    updateBoss(boss, platforms, player, projectiles, boss.windupLength() + 0.01);
+    expect(boss.state).toBe("idle");
     expect(boss.searchlights).toHaveLength(CONFIG.warden.zoneCount);
     expect(boss.cages).toHaveLength(2);
     expect(boss.zones.every((zone) => zone.on)).toBe(true);
 
-    boss.cinematicRequest = null;
     boss.hp = boss.maxHp * 0.3;
     updateBoss(boss, platforms, player, projectiles);
     expect(boss).toMatchObject({ phaseMarker: 3, phaseTag: "NOTHING LEFT", state: "fakedeath" });
+    expect(boss.cinematicRequest).toBeNull();
     expect(boss.zones).toEqual([]);
     expect(platforms.some((platform) => platform.arenaFractureRequest?.reason === "wardenPhase")).toBe(true);
   });
@@ -139,14 +146,18 @@ describe("boss phase conformance", () => {
     boss.hp = boss.maxHp * 0.6;
     updateBoss(boss, platforms, player, projectiles);
     expect(boss).toMatchObject({ phase: 2, phaseMarker: 2, shielded: false, phaseTag: "BREACHED" });
+    // The first Phase II move throws the torn-off shield as the saw after its windup; no scene.
+    expect(boss).toMatchObject({ state: "windup", pendingAtk: "saw" });
+    expect(boss.cinematicRequest).toBeNull();
+    updateBoss(boss, platforms, player, projectiles, boss.windupLength() + 0.01);
+    expect(projectiles.filter((shot) => shot.family === "sweeper" && shot.owner === boss)).toHaveLength(1);
 
-    boss.cinematicRequest = null;
     boss.hp = boss.maxHp * 0.25;
     updateBoss(boss, platforms, player, projectiles);
     expect(boss.phaseMarker).toBe(3);
     expect(boss.zones).toHaveLength(CONFIG.colossus.panelCount);
     expect(boss.zones.filter((zone) => zone.arming)).toHaveLength(1);
-    boss.cinematicRequest = null;
+    expect(boss.cinematicRequest).toBeNull();
     updateBoss(boss, platforms, player, projectiles, CONFIG.colossus.panelStep + 0.01);
     expect(boss.zones.filter((zone) => zone.on)).toHaveLength(1);
     expect(boss.zones.filter((zone) => zone.arming)).toHaveLength(1);
@@ -600,13 +611,13 @@ describe("authored boss phase practice", () => {
     expect(() => validateBossPhasePracticeState({ ...world.runtime.snapshot(), unknown: true }, candidate)).toThrow();
   });
 
-  it("retains selected entry while allowing normal later phase, ritual and terminal progression", () => {
+  it("retains selected entry while allowing a later in-fight phase change and terminal progression", () => {
     const world = practiceWorld();
     world.runtime.begin({ bossId: "colossus", phase: 1, seed: "continued-entry" });
     for (let tick = 0; tick < 120 && world.runtime.snapshot()?.lifecycle !== "active"; tick++) world.step();
     world.boss.hit(world.boss.maxHp * 0.5, 0, 0);
     world.step();
-    expect(world.director.active).toBe(true);
+    expect(world.director.active).toBe(false);
     const state = JSON.parse(JSON.stringify(world.runtime.snapshot())) as unknown;
     const candidate = world.services.observe();
     if (candidate === null) throw new Error("Expected progressed world");

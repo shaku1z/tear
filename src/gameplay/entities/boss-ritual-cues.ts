@@ -14,49 +14,12 @@ const cues: Readonly<
       sfx: string;
       speaker?: string;
       anchor: string;
-      after?: "throwShield";
       crownFall?: boolean;
       firstVertical?: boolean;
       brief?: boolean;
     }>
   >
 > = {
-  "warden-unchained": {
-    bossId: "warden",
-    phase: 2,
-    pose: "wardenRule",
-    line: "THE RULES ARE ALL THAT REMAIN.",
-    sfx: "wardenLockdown",
-    anchor: "lower-left",
-  },
-  "warden-nothing-left": {
-    bossId: "warden",
-    phase: 3,
-    pose: "wardenBreak",
-    line: "THERE IS NOTHING LEFT TO GUARD.",
-    sfx: "wardenLockdown",
-    anchor: "lower-left",
-    brief: true,
-  },
-  "colossus-breach": {
-    bossId: "colossus",
-    phase: 2,
-    pose: "colossusContainment",
-    line: "OUTER CONTAINMENT FAILED.",
-    speaker: "FOUNDRY WARNING",
-    sfx: "colossusServo",
-    anchor: "upper-left",
-    after: "throwShield",
-  },
-  "colossus-meltdown": {
-    bossId: "colossus",
-    phase: 3,
-    pose: "colossusCore",
-    line: "CORE CONTAINMENT: LOST.",
-    speaker: "FOUNDRY WARNING",
-    sfx: "colossusServo",
-    anchor: "upper-left",
-  },
   "aldric-crownfall": {
     bossId: "aldric",
     phase: 3,
@@ -130,7 +93,6 @@ export function canonicalBossRitualCue(owner: BossRitualActor, cue: BossRitualCu
     status.phase !== expected.phase ||
     expected.bossId !== owner.bossId ||
     cue.pose !== expected.pose ||
-    cue.after !== expected.after ||
     Boolean(cue.crownFall) !== Boolean(expected.crownFall) ||
     Boolean(cue.firstVertical) !== Boolean(expected.firstVertical) ||
     Boolean(cue.brief) !== Boolean(expected.brief) ||
