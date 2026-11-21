@@ -245,12 +245,59 @@ describe("Class-A live application-frame surface", () => {
     expect(environment.step([]).observation.diagnostics?.progressTick).toBe(0);
     const player = fixture.context.state.player();
     if (player === undefined) throw new Error("fixture player is unavailable");
+    // Moving is not progress; losing health is.
     player.x += 5;
-    expect(environment.step([]).observation.diagnostics?.progressTick).toBe(2);
+    expect(environment.step([]).observation.diagnostics?.progressTick).toBe(0);
+    player.hp -= 5;
+    expect(environment.step([]).observation.diagnostics?.progressTick).toBe(3);
     phase = "wave-cleared";
     expect(environment.observe().diagnostics?.waveComplete).toBe(true);
     const stalled = { ...environment.observe(), tick: 5000 };
     expect(runInvariantChecks(stalled, ["runtime.no-softlock"])[0]?.id).toBe("runtime.no-softlock");
+  });
+
+  it("fails runtime.no-softlock on a stuck run and passes it on a run that is getting somewhere", () => {
+    // The stuck run of 2026-11-20: one enemy at a fixed health, the player moving and throwing, blades in flight
+    // coming and going. The normal run is the same fight with the enemy losing health now and then.
+    const play = (hurtEvery: number | null) => {
+      const fixture = contextFixture();
+      const enemy = {
+        id: "enemy:1548",
+        kind: "charger" as const,
+        dead: false,
+        isBoss: false,
+        x: 18,
+        y: 40,
+        vx: 0,
+        vy: 0,
+        hp: 92,
+        maxHp: 117,
+        contactDmg: 13,
+      };
+      fixture.context.state.enemies().push(enemy as never);
+      const shots: { dead: boolean; x: number; y: number; vx: number; vy: number }[] = [];
+      const context = {
+        ...fixture.context,
+        state: { ...fixture.context.state, projectiles: () => shots },
+      } as unknown as LiveTearRuntimeEnvironmentContext;
+      const environment = createLiveTearRuntimeEnvironment(context, "A");
+      environment.reset(SCENARIO);
+      const player = fixture.context.state.player();
+      if (player === undefined) throw new Error("fixture player is unavailable");
+      let firstFailure: number | null = null;
+      for (let step = 1; step <= 4_000 && firstFailure === null; step += 1) {
+        player.x = 1300 - (step % 90);
+        shots.length = 0;
+        if (step % 40 < 25) shots.push({ dead: false, x: 1300 - step, y: 300, vx: -1400, vy: 0 });
+        if (hurtEvery !== null && step % hurtEvery === 0) enemy.hp -= 0.01;
+        const observation = environment.step([]).observation;
+        if (runInvariantChecks(observation, ["runtime.no-softlock"]).length > 0) firstFailure = observation.tick;
+      }
+      return firstFailure;
+    };
+    // The environment declares a softlock limit of 3,600 ticks; the stuck run's last progress is its first tick.
+    expect(play(null)).toBe(3_601);
+    expect(play(600)).toBeNull();
   });
 
   it("delivers native run and spawn events exactly once through an ordinary TearBench session", () => {
