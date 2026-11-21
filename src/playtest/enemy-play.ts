@@ -4,7 +4,8 @@ import type { WeaponId } from "../gameplay/weapon-selection";
 import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "../gameplay/snapshot/snapshot-contract";
 import type { TearScenarioV1 } from "../tearbench/contracts";
 import { agentView, type AttributedHits } from "./boss-fight";
-import { BOSS_PLAYER_IDS, createBossPlayer, type BossPlayer, type BossPlayerId } from "./boss-player";
+import { BOSS_PLAYER_IDS, type BossPlayer, type BossPlayerId } from "./boss-player";
+import { createSeededPlayer } from "./player-variation";
 import { readPlayerBox, trainingResets } from "./boss-view";
 import { createProductionHeadlessEnvironment } from "./headless/production-headless-environment";
 import { requireProductionHeadlessScenario } from "./headless/production-headless-scenario";
@@ -88,7 +89,10 @@ export function enemyScenario(request: EnemyRequest): TearScenarioV1 {
  * Plays the player against enemies of one kind on the real game, headless, and measures the meeting. The
  * enemies are put in play by the game's own spawner, at wave 1 strength, and the player has no upgrades.
  */
-export function playEnemy(request: EnemyRequest, player: BossPlayer = createBossPlayer(request.player)): EnemyResult {
+export function playEnemy(
+  request: EnemyRequest,
+  player: BossPlayer = createSeededPlayer(request.player, request.seed),
+): EnemyResult {
   const environment = createProductionHeadlessEnvironment();
   try {
     environment.reset(enemyScenario(request));

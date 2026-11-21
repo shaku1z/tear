@@ -5,7 +5,8 @@ import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "../gameplay/snapsho
 import type { TearScenarioV1 } from "../tearbench/contracts";
 import { TEAR_SIMULATION_TICKS_PER_SECOND } from "../tearbench/simulation-profile";
 import { agentView } from "./boss-fight";
-import { BOSS_PLAYER_IDS, createBossPlayer, type BossPlayer, type BossPlayerId } from "./boss-player";
+import { BOSS_PLAYER_IDS, type BossPlayer, type BossPlayerId } from "./boss-player";
+import { createSeededPlayer } from "./player-variation";
 import { readBoss, readPlayerBox } from "./boss-view";
 import { chapterHolds, finaleHolds, skipChapter, skipFinale } from "./headless/chapter";
 import { createProductionHeadlessEnvironment } from "./headless/production-headless-environment";
@@ -119,7 +120,10 @@ export function runScenario(request: RunRequest): TearScenarioV1 {
  * Plays one run from wave 1 on the real game, headless, as a player's run goes: the player drafts from what the
  * game offers after each wave and skips each story chapter. Measures it wave by wave.
  */
-export function playRun(request: RunRequest, player: BossPlayer = createBossPlayer(request.player)): RunResult {
+export function playRun(
+  request: RunRequest,
+  player: BossPlayer = createSeededPlayer(request.player, request.seed),
+): RunResult {
   const environment = createProductionHeadlessEnvironment();
   try {
     environment.reset(runScenario(request));
