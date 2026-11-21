@@ -21,7 +21,13 @@ import {
   createProductionHeadlessEnvironment,
   type ProductionHeadlessEnvironment,
 } from "../../src/playtest/headless/production-headless-environment";
-import { SPECS, corpusActions, rewardActions, scenarioContract, type StreamSpec } from "../support/hash-stream-corpus";
+import {
+  SPECS,
+  createCorpusPlayer,
+  rewardActions,
+  scenarioContract,
+  type StreamSpec,
+} from "../support/hash-stream-corpus";
 import { agentView, bossFightScenario, type BossFightRequest } from "../../src/playtest/boss-fight";
 import { createBossPlayer } from "../../src/playtest/boss-player";
 import type { PracticeBossId } from "../../src/gameplay/training/boss-phase-practice-runtime";
@@ -257,8 +263,9 @@ function recordStream(spec: StreamSpec): StreamRecord {
   let finalHash = "";
   try {
     environment.reset(scenarioContract(spec));
+    const player = createCorpusPlayer(spec);
     for (let tick = 1; tick <= spec.ticks; tick += 1) {
-      const actions = corpusActions(environment, spec.plan, tick, (observation) => {
+      const actions = player(environment, tick, (observation) => {
         counter.observe(observation);
       });
       const transition = environment.step(actions);
