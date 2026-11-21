@@ -1,42 +1,216 @@
 rules_version = '2';
+// Every collection the game uses is matched below; anything else is refused. Each rule is tested,
+// allowed and refused writes both, under the Firestore emulator: tests/rules/firestore-rules.test.ts
+// (`pnpm test:rules`). Change a rule and its tests in the same pull request. Deploying is the owner's step.
 service cloud.firestore {
   match /databases/{database}/documents {
-    // each player owns their cloud save (the display name lives inside the profile blob
-    // and is validated client-side, so this stays a plain owner-only rule — a validation
-    // clause here referencing request.resource.data would break READS, which have none).
-    match /users/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+    function signedIn() {
+      return request.auth != null;
     }
-    // public leaderboards; you may only write/delete your own entry, score must be numeric
+    function isUser(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+    function incoming() {
+      return request.resource.data;
+    }
+    // The keys this write changes, adds or removes (the whole document on a create).
+    function changedKeys() {
+      return resource == null ? incoming().keys() : incoming().diff(resource.data).affectedKeys();
+    }
+    // The keys this write adds or changes, leaving out the ones it removes.
+    function setKeys() {
+      return resource == null
+          ? incoming().keys()
+          : incoming().diff(resource.data).addedKeys().union(incoming().diff(resource.data).changedKeys());
+    }
+    function intIn(value, low, high) {
+      return value is int && value >= low && value <= high;
+    }
+    function stringIn(value, low, high) {
+      return value is string && value.size() >= low && value.size() <= high;
+    }
+    // A client clock reading (Date.now()) within ten minutes of the server's.
+    function nearNow(ms) {
+      return ms is int && ms > request.time.toMillis() - 600000 && ms < request.time.toMillis() + 600000;
+    }
+    function numberIn(value, low, high) {
+      return value is number && value >= low && value <= high;
+    }
+    // The game's mode and difficulty ids (MODE_CATALOG, DIFFICULTY_IDS); the rules test compares them.
+    function isMode(mode) {
+      return mode in ['bossonly', 'campaign', 'endless', 'gauntlet', 'playground', 'sandbox', 'tutorial'];
+    }
+    function isDifficulty(difficulty) {
+      return difficulty in ['easy', 'extreme', 'hard', 'normal', 'onehit'];
+    }
+
+    // Each player owns their cloud save: exactly a profile blob and a meta blob. The display name lives
+    // inside the profile and is validated in the game. A write may change only those two fields, so
+    // documents from older builds that hold other fields still save.
+    match /users/{uid} {
+      allow read, delete: if isUser(uid);
+      allow create, update: if isUser(uid)
+                            && changedKeys().hasOnly(['profile', 'meta'])
+                            && incoming().profile is map
+                            && incoming().meta is map;
+    }
+
+    // Public leaderboards. A player writes only their own row, and only two kinds of write:
+    //  - a new best: every row field, a better value than the row holds, at least 10 s after the last. It may
+    //    drop fields (the replay link of a slower run, fields of older builds) but sets only the row fields;
+    //  - the replay link: only replayId, naming a replay this player owns.
+    // A row is never deleted, so "better than the row holds" and the 10 s spacing cannot be reset. The spacing
+    // is between the rows' own clock readings, each within 10 minutes of the server's: a client can bunch at
+    // most ~120 writes into one burst, and no more than one per 10 s over any longer time.
+    // Score boards, one per mode the LEADERBOARDS screen lists times DIFFICULTY_IDS, keep the highest
+    // score. Gauntlet clear boards, one per difficulty, keep the fastest clear: score is the clear time in
+    // simulation ticks (120 a second), wave the trials cleared. The rules test fails when the game's
+    // lists change without these.
+    function isBoard(board) {
+      return board in [
+        'campaign_easy', 'campaign_normal', 'campaign_hard', 'campaign_extreme', 'campaign_onehit',
+        'endless_easy', 'endless_normal', 'endless_hard', 'endless_extreme', 'endless_onehit',
+        'gauntlet_easy', 'gauntlet_normal', 'gauntlet_hard', 'gauntlet_extreme', 'gauntlet_onehit'
+      ];
+    }
+    function isClearBoard(board) {
+      return board in [
+        'gauntletclear_easy', 'gauntletclear_normal', 'gauntletclear_hard', 'gauntletclear_extreme',
+        'gauntletclear_onehit'
+      ];
+    }
+    function isRow(row, uid) {
+      return stringIn(row.name, 1, 16) && row.name.matches('[A-Za-z0-9 _-]+')
+          && intIn(row.time, 0, 10000000)
+          && row.uid == uid
+          && nearNow(row.ts);
+    }
+    function isRowWrite() {
+      return setKeys().hasOnly(['name', 'score', 'wave', 'time', 'uid', 'ts'])
+          && incoming().keys().hasAll(['name', 'score', 'wave', 'time', 'uid', 'ts']);
+    }
+    function afterLastWrite() {
+      return incoming().ts >= resource.data.get('ts', 0) + 10000;
+    }
+    function isNewBest(uid) {
+      return isRowWrite() && isRow(incoming(), uid)
+          && intIn(incoming().score, 1, 1000000000)
+          && intIn(incoming().wave, 0, 100000)
+          && (resource == null || (incoming().score > resource.data.get('score', 0) && afterLastWrite()));
+    }
+    // A clear takes at least 30 s (3,600 ticks) and at most four hours (1,728,000 ticks). The floor is set well below
+    // the fastest clear the Gauntlet session could estimate (about 75 s with a strong build): refusing a real
+    // record is worse than accepting a forged one, which any value above the floor would be anyway.
+    function isNewFastest(uid) {
+      return isRowWrite() && isRow(incoming(), uid)
+          && intIn(incoming().score, 3600, 1728000)
+          && intIn(incoming().wave, 1, 32)
+          && (resource == null || (incoming().score < resource.data.get('score', 1728001) && afterLastWrite()));
+    }
+    function isReplayLink(uid) {
+      return resource != null
+          && changedKeys().hasOnly(['replayId'])
+          && stringIn(incoming().replayId, 1, 128)
+          && get(/databases/$(database)/documents/replays/$(incoming().replayId)).data.ownerUid == uid;
+    }
     match /leaderboards/{board}/scores/{uid} {
       allow read: if true;
-      allow create, update: if request.auth != null && request.auth.uid == uid
-                            && request.resource.data.score is number;
-      allow delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if isUser(uid)
+                            && ((isBoard(board) && isNewBest(uid))
+                                || (isClearBoard(board) && isNewFastest(uid))
+                                || ((isBoard(board) || isClearBoard(board)) && isReplayLink(uid)));
+      allow delete: if false;
     }
-    // append-only balancing telemetry (developer reads in the console only)
+
+    // Append-only balancing statistics, anonymous by construction (no account id). The developer reads
+    // them in the console. Only the run_end statistic the game sends (src/gameplay/run/outcome-planner.ts,
+    // src/app/run/outcome-composition.ts, and the economy figures of src/gameplay/scoring/live-economy-runtime.ts),
+    // each field of its own type and range; every field but the event and the clock reading is optional.
+    function isRunEnd(data) {
+      return data.keys().hasOnly(['event', 'ts', 'mode', 'diff', 'wave', 'score', 'time', 'peak', 'died', 'won',
+                                  'campaign', 'earned', 'wallet', 'coinMagnet', 'fortune', 'bounty', 'shopRanks'])
+          && data.event == 'run_end'
+          && nearNow(data.ts)
+          && isMode(data.get('mode', 'endless'))
+          && isDifficulty(data.get('diff', 'normal'))
+          && numberIn(data.get('wave', 0), 0, 100000)
+          && numberIn(data.get('score', 0), 0, 1000000000)
+          && numberIn(data.get('time', 0), 0, 10000000)
+          && numberIn(data.get('peak', 0), 0, 100000)
+          && data.get('died', false) is bool
+          && data.get('won', false) is bool
+          && data.get('campaign', false) is bool
+          && numberIn(data.get('earned', 0), 0, 1000000000)
+          && numberIn(data.get('wallet', 0), 0, 1000000000000)
+          && numberIn(data.get('coinMagnet', 0), 0, 1000)
+          && numberIn(data.get('fortune', 0), 0, 1000)
+          && numberIn(data.get('bounty', 0), 0, 1000)
+          && numberIn(data.get('shopRanks', 0), 0, 100000);
+    }
     match /telemetry/{doc} {
-      allow create: if request.auth != null;
+      allow create: if signedIn() && isRunEnd(incoming());
       allow read, update, delete: if false;
     }
-    // one replay ghost per board — legacy, superseded by /replays; the game only reads it, nobody writes
+
+    // One replay ghost per board: legacy, superseded by /replays. The game only reads it; nobody writes.
     match /ghosts/{board} {
       allow read: if true;
       allow write: if false;
     }
-    // published replays: a RunSummary doc + the recording chunked underneath.
-    // Anyone can watch; only the owner (the Replay Passport uid) can create/replace/delete.
+
+    // Published replays: a summary document, with the recording in up to 6 chunks of at most 500,000
+    // characters underneath (publishReplay caps the recording at 3,000,000). Anyone can watch; only the
+    // owner (the Replay Passport uid) writes. A leaderboard replay has the fixed id
+    // lb_<board>_<difficulty>_<uid>, so only that player can hold it, and re-publishing replaces it with
+    // set(); chunks from a longer earlier copy stay at or above the new chunkCount, unread and unwritable.
+    // Any other replay id is r followed by base-36 characters, new on every publish. So only a leaderboard
+    // replay is ever written over, and its date then moves forward, to the new publish.
+    function isReplayId(id) {
+      return id.matches('lb_[a-z]+_[a-z]+_' + request.auth.uid) || id.matches('r[0-9a-z]{1,32}');
+    }
+    // The feed draws the thumbnail as an image, so it is a small JPEG inside the document, never a link that
+    // would send every viewer's address to another site or taint the canvas it is drawn on.
+    function isThumb(thumb) {
+      return thumb == null
+          || (stringIn(thumb, 24, 32768) && thumb.matches('data:image/jpeg;base64,[A-Za-z0-9+/]+=*'));
+    }
+    // Exactly the fields publishReplay writes (src/platform/firebase-cloud.ts), each of its type and range.
+    function isReplaySummary(id) {
+      return incoming().keys().hasOnly(['ownerUid', 'createdAt', 'chunkCount', 'mode', 'diff', 'wave', 'score',
+                                        'time', 'won', 'kills', 'peak', 'name', 'thumb', 'lb'])
+          && incoming().keys().hasAll(['ownerUid', 'createdAt', 'chunkCount', 'mode', 'diff', 'wave', 'score',
+                                       'time', 'won', 'kills', 'peak', 'name', 'thumb', 'lb'])
+          && incoming().ownerUid == request.auth.uid
+          && intIn(incoming().chunkCount, 1, 6)
+          && isMode(incoming().mode)
+          && isDifficulty(incoming().diff)
+          && intIn(incoming().wave, 0, 100000)
+          && intIn(incoming().score, 0, 1000000000)
+          && numberIn(incoming().time, 0, 10000000)
+          && incoming().won is bool
+          && intIn(incoming().kills, 0, 10000000)
+          && intIn(incoming().peak, 0, 100000)
+          && stringIn(incoming().name, 1, 32)
+          && isThumb(incoming().thumb)
+          && incoming().lb == id.matches('lb_.*')
+          && nearNow(incoming().createdAt);
+    }
     match /replays/{id} {
       allow read: if true;
-      allow create: if request.auth != null && request.resource.data.ownerUid == request.auth.uid;
-      allow update: if request.auth != null && resource.data.ownerUid == request.auth.uid
-                    && request.resource.data.ownerUid == request.auth.uid;
-      allow delete: if request.auth != null && request.auth.uid == resource.data.ownerUid;
+      allow create: if signedIn() && isReplayId(id) && isReplaySummary(id);
+      allow update: if signedIn() && resource.data.ownerUid == request.auth.uid
+                    && id.matches('lb_.*') && isReplaySummary(id)
+                    && incoming().createdAt > resource.data.createdAt;
+      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
       match /chunks/{n} {
         allow read: if true;
-        // only the parent replay's owner may write its chunks (the parent is written first)
-        allow create, update: if request.auth != null
-                              && get(/databases/$(database)/documents/replays/$(id)).data.ownerUid == request.auth.uid;
+        // Only the parent replay's owner writes its chunks (the parent is written first).
+        allow create, update: if signedIn()
+                              && n.matches('[0-5]')
+                              && get(/databases/$(database)/documents/replays/$(id)).data.ownerUid == request.auth.uid
+                              && int(n) < get(/databases/$(database)/documents/replays/$(id)).data.chunkCount
+                              && incoming().keys().hasOnly(['d'])
+                              && stringIn(incoming().d, 0, 500000);
         allow delete: if false;
       }
     }

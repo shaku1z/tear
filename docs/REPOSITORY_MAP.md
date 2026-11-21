@@ -46,8 +46,8 @@ re-run the command instead of editing the output.
 | `DEPLOYMENT.md` | Deployment guide. | Hand | No |
 | `README.md` | Orientation, commands and the `src/` map. | Hand | No |
 | `eslint.config.mjs` | ESLint rules (no formatting rules). | Hand | No |
-| `firebase.json` | Firebase project configuration. | Hand | No |
-| `firestore.rules` | Firestore security rules. | Hand | No |
+| `firebase.json` | Firebase project configuration and the local emulator ports `pnpm test:rules` uses. | Hand | No |
+| `firestore.rules` | Firestore security rules, tested under the emulator by `tests/rules/` (`pnpm test:rules`). | Hand | No |
 | `index.html` | The page Vite builds from. | Hand | No |
 | `package.json` | Dependencies and every package script (catalogue: `config/tool-catalogue.json`). | Hand | No |
 | `pnpm-lock.yaml` | Locked dependency versions. | `pnpm install` | Yes |
@@ -60,6 +60,7 @@ re-run the command instead of editing the output.
 | `vite.config.ts` | Vite build for the standalone and CrazyGames targets. | Hand | No |
 | `vitest.config.ts` | Vitest settings for unit and contract tests. | Hand | No |
 | `vitest.endurance.config.ts` | Vitest settings for the endurance suite. | Hand | No |
+| `vitest.rules.config.ts` | Vitest settings for the Firestore rules tests (run through `pnpm test:rules`). | Hand | No |
 | `wrangler.jsonc` | Cloudflare Worker config for production. | Hand | No |
 | `wrangler.preview.jsonc` | Cloudflare Worker config for the preview Worker. | Hand | No |
 
