@@ -58,7 +58,7 @@ The branch has the code. It is PR 2 plus:
 2. Keep App Check inside the `firebase-sdk` chunk. A separate App Check chunk makes Rolldown split out a shared `index.esm-*.js`, which takes a 47th precache entry; the budget is 46.
 3. Checks: `pnpm test:rules` (42 tests), `pnpm check:quick`, then `pnpm build:standalone`, `pnpm build:crazygames`, `pnpm check:bundles` and `pnpm check:load-budgets`. The SDK chunk was 234,220 B raw / 71,850 B gzip with App Check.
 4. Open the PR. With the key empty it changes nothing at run time.
-5. **OWNER**: create a reCAPTCHA v3 key for `tearblade.com`, `tear-preview.shatheartboy.workers.dev` and `localhost`.
+5. **OWNER**: create a reCAPTCHA v3 key for `tearblade.com`, the preview site's host (the lead has it) and `localhost`.
 6. **OWNER**: in Firebase console, App Check, register the web app with that key and its secret. Leave enforcement OFF for Firestore and Authentication (metrics only), and set the token time to live to 1 day. Give the lead the site key; it is public.
 7. A follow-up PR sets `FIREBASE_APP_CHECK_SITE_KEY`. It must also:
    - name reCAPTCHA on `public/privacy.html` (the privacy test fails otherwise);
@@ -78,7 +78,7 @@ The branch has the code. It is PR 2 plus:
 4. `/ghosts`: once the replay overhaul's PR 8 has removed `loadGhost` and every `/ghosts` read, and after agreeing with the session that owns replay storage:
    - remove `match /ghosts/{board}` from `firestore.rules`, and its tests in `tests/rules/`;
    - tell the lead when it merges, so the lead can deploy.
-5. **OWNER**: in Firebase console, Authentication, Settings, Authorized domains, add `tear-preview.shatheartboy.workers.dev` so Google sign-in works on preview, and remove `tear-psi.vercel.app`.
+5. **OWNER**: in Firebase console, Authentication, Settings, Authorized domains, add the preview site's host (the lead has it) so Google sign-in works on preview, and remove `tear-psi.vercel.app`.
 6. Follow-ups, each its own small PR:
    - Credit Firebase and Workbox on the credits screen, as for the other bundled dependencies; the bundle strips their licence comments.
    - Once no build that writes bests without `at` is in use, require `at` on every best in `isRowWrite`. That is one line and a test; the lead deploys it.
