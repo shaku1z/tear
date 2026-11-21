@@ -23,8 +23,24 @@ export interface LiveBrowserRuntime {
   readonly fullscreenButton: HTMLElement | null;
   /** The platform can go fullscreen here (not on CrazyGames, which owns it, or iPhone Safari). */
   readonly fullscreenAvailable: () => boolean;
+  /** The boss debug harness (`__PANTHEON_TEST`) is installed. */
   readonly pantheonDebug: boolean;
+  /** The boss debug overlay is drawn: platform labels, zone boxes and the painted/visible box. */
+  readonly pantheonDebugOverlay: boolean;
   readonly testMode: boolean;
+}
+
+/**
+ * Test builds only. `?bossdebug=1` installs the boss debug harness and draws its overlay; adding
+ * `&overlay=0` keeps the harness and draws no overlay, so a picture for the owner shows the game as
+ * players see it. A production build has neither.
+ */
+export function bossDebugFlags(
+  testBuild: boolean,
+  parameters: Pick<URLSearchParams, "get">,
+): { readonly hooks: boolean; readonly overlay: boolean } {
+  const hooks = testBuild && parameters.get("bossdebug") === "1";
+  return Object.freeze({ hooks, overlay: hooks && parameters.get("overlay") !== "0" });
 }
 
 export function createLiveBrowserRuntime(d: BrowserDependencies): LiveBrowserRuntime {
@@ -55,6 +71,7 @@ export function createLiveBrowserRuntime(d: BrowserDependencies): LiveBrowserRun
   });
   // Only composition-admitted engineering parameters are read; release builds receive none.
   const parameters = d.engineeringQuery;
+  const bossDebug = bossDebugFlags(__TEAR_TEST_BUILD__, parameters);
   return Object.freeze({
     canvas: element,
     context,
@@ -70,7 +87,8 @@ export function createLiveBrowserRuntime(d: BrowserDependencies): LiveBrowserRun
     hint: d.browserDocument.getElementById("hint"),
     fullscreenButton: d.browserDocument.getElementById("fs"),
     fullscreenAvailable: () => d.fullscreen().available,
-    pantheonDebug: __TEAR_TEST_BUILD__ && parameters.get("bossdebug") === "1",
+    pantheonDebug: bossDebug.hooks,
+    pantheonDebugOverlay: bossDebug.overlay,
     testMode: parameters.get("test") === "1",
   });
 }
