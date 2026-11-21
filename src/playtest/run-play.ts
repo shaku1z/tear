@@ -6,10 +6,11 @@ import type { TearScenarioV1 } from "../tearbench/contracts";
 import { TEAR_SIMULATION_TICKS_PER_SECOND } from "../tearbench/simulation-profile";
 import { agentView } from "./boss-fight";
 import { BOSS_PLAYER_IDS, createBossPlayer, type BossPlayer, type BossPlayerId } from "./boss-player";
-import { readPlayerBox } from "./boss-view";
-import { chapterState, CHAPTER_WAVE_LIVE, skipChapter } from "./headless/chapter";
+import { readBoss, readPlayerBox } from "./boss-view";
+import { chapterHolds, skipChapter } from "./headless/chapter";
 import { createProductionHeadlessEnvironment } from "./headless/production-headless-environment";
 import { requireProductionHeadlessScenario } from "./headless/production-headless-scenario";
+import { kindOf } from "./wave-play";
 
 export interface RunRequest {
   /** A mode the game plays as a run of waves from wave 1: the Adventure, Endless or the Gauntlet. */
@@ -48,6 +49,18 @@ export interface RunResult extends RunRequest {
   readonly waves: readonly RunWave[];
   /** Upgrades the player held at the end, by id. */
   readonly upgrades: Readonly<Record<string, number>>;
+  /** What the run brought into play, for the coverage list. */
+  readonly appeared: RunAppeared;
+}
+
+export interface RunAppeared {
+  /** Upgrades the drafts offered, by id. */
+  readonly offered: readonly string[];
+  /** Enemy kinds that arrived, and the affixes they arrived with. */
+  readonly enemies: readonly string[];
+  readonly affixes: readonly string[];
+  /** Boss phases played, as "<boss> phase <n>". */
+  readonly bossPhases: readonly string[];
 }
 
 /** The modes a `runs` report plays: every mode the game plays as numbered waves from wave 1. */
@@ -61,6 +74,13 @@ interface RunView {
   readonly wave: number;
   readonly waveLog: readonly Readonly<{ wave: number | string; time: number; kills: number; died?: boolean }>[];
   readonly mods?: Readonly<{ owned?: Readonly<Record<string, number>> }>;
+}
+
+interface ArrivedEnemy {
+  readonly kind?: string;
+  readonly supportType?: string;
+  readonly affixes?: readonly string[];
+  readonly isBoss?: boolean;
 }
 
 interface Tally {
@@ -105,13 +125,15 @@ export function playRun(request: RunRequest, player: BossPlayer = createBossPlay
     environment.reset(runScenario(request));
     const run = (): RunView => environment.world().run() as unknown as RunView;
     const tallies: Tally[] = [];
+    const seen = new Set<unknown>();
+    const appeared = { offered: new Set<string>(), enemies: new Set<string>(), affixes: new Set<string>() };
+    const bossPhases = new Set<string>();
     let ticks = 0;
     let end: RunEnd | undefined;
     let reason: string | undefined;
     while (end === undefined) {
       // The Adventure opens each stage with a story chapter that holds the run until the player skips it.
-      const chapter = chapterState(environment);
-      if (chapter !== undefined && chapter !== CHAPTER_WAVE_LIVE && environment.cinematicActive())
+      if (chapterHolds(environment) && environment.cinematicActive())
         if (!skipChapter(environment)) {
           end = "broken";
           reason = `the story chapter before wave ${String(run().wave)} did not end`;
@@ -120,6 +142,16 @@ export function playRun(request: RunRequest, player: BossPlayer = createBossPlay
       const view = agentView(environment, request.weapon);
       const health = view.state.player.hp;
       const wave = run().wave;
+      if (view.ui.screen === "draft") for (const choice of view.ui.choices) appeared.offered.add(choice.id);
+      const boss = readBoss(environment.world());
+      if (boss !== null) bossPhases.add(`${boss.id} phase ${String(boss.phase)}`);
+      for (const enemy of environment.world().enemies() as readonly ArrivedEnemy[]) {
+        if (seen.has(enemy)) continue;
+        seen.add(enemy);
+        if (enemy.isBoss === true) continue;
+        appeared.enemies.add(kindOf(enemy));
+        for (const affix of enemy.affixes ?? []) appeared.affixes.add(affix);
+      }
       let tally = tallies.at(-1);
       if (tally?.wave !== wave) {
         tally = { wave, ticks: 0, damageTaken: 0, hitsTaken: 0, healthAtStart: health, healthAtEnd: health };
@@ -162,6 +194,12 @@ export function playRun(request: RunRequest, player: BossPlayer = createBossPlay
         };
       }),
       upgrades: { ...(run().mods?.owned ?? {}) },
+      appeared: {
+        offered: [...appeared.offered].sort(),
+        enemies: [...appeared.enemies].sort(),
+        affixes: [...appeared.affixes].sort(),
+        bossPhases: [...bossPhases].sort(),
+      },
     };
   } finally {
     environment.dispose();

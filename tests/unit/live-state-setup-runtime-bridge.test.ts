@@ -8,7 +8,7 @@ import {
   commitBossIntroSnapshot,
   type MutableFramePreludeState,
 } from "../../src/app/shell/frame-runtime";
-import { decodeTearCodecValue } from "../../src/tearbench/detached-world-hydrator";
+import { decodeTearCodecValue } from "../../src/app/world/detached/world-hydrator";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
 import { initialRunLifecycleSnapshot } from "../../src/gameplay/run/lifecycle";
 

@@ -9,11 +9,11 @@ import { WEAPON_IDS, type WeaponId } from "../../src/gameplay/weapon-selection";
 import { projectGameplayEventForParity } from "../../src/tearbench/gameplay-causal-events";
 import {
   CANONICAL_ENGINEERING_SCENARIOS,
-  createProductionGhostReplayComposition,
   buildExitLaunchSnapshot,
   type TearCausalEventV1,
   type TearObservationV1,
 } from "../../src/tearbench";
+import { createProductionGhostReplayComposition } from "../../src/app/world/detached/replay-composition";
 import { createProductionHeadlessEnvironment } from "../../src/playtest/headless/production-headless-environment";
 
 const REPLAY_TRIDENT: GhostReplayTrident = {

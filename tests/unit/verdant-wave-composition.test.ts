@@ -8,7 +8,7 @@ import { compositionCost } from "../../src/gameplay/run/composition-budget";
 import { BOSS_ROSTER, type EnemyKind } from "../../src/gameplay/run/content-director";
 import { planNextWave, type WaveStage } from "../../src/gameplay/run/wave-planner";
 import { DIFFICULTY_CATALOG } from "../../src/gameplay/run/difficulty-catalog";
-import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
+import { createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
 
 const stages: readonly WaveStage[] = STAGES.map((stage) => ({
   id: stage.id,

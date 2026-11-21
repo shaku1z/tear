@@ -1,3 +1,4 @@
+import type { RunRandomStreamsSnapshot } from "../../simulation/run-random";
 import type { EnvironmentObjectKind } from "../environment/environment-object-kinds";
 
 /**
@@ -121,4 +122,11 @@ export interface TearSnapshotV1 {
   readonly rng: Readonly<Record<string, Readonly<{ algorithm: string; state: string }>>>;
   readonly codecs: Readonly<Record<string, number>>;
   readonly state: Readonly<Record<string, unknown>>;
+}
+
+/** Immutable run-start facts captured before natural opening content consumes RNG. */
+export interface ProductionReplayBootstrap {
+  readonly build: TearBuildIdentityV1;
+  readonly rng: RunRandomStreamsSnapshot;
+  readonly applicationFramePolicy?: Readonly<{ version: 1; kind: "generated-step-intro"; secondsPerStep: number }>;
 }

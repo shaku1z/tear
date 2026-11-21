@@ -1,12 +1,12 @@
-import { createFinaleRuntime, type FinaleRuntimeState } from "../gameplay/campaign/finale-runtime";
-import { FinaleController } from "../gameplay/campaign/finale-controller";
-import type { PreparedVictory } from "../gameplay/run/outcome-planner";
-import type { LiveGameHostState } from "../app/world/game-host-state";
-import type { RunLifecycleController } from "../gameplay/run/lifecycle";
-import type { CinematicDirectorPort, CinematicScript } from "../gameplay/runtime/cinematic-director";
-import type { CONFIG } from "../config/game-config";
-import { clamp } from "../domain/geometry";
-import { stagePlatforms } from "../gameplay/stages";
+import { createFinaleRuntime, type FinaleRuntimeState } from "../../../gameplay/campaign/finale-runtime";
+import { FinaleController } from "../../../gameplay/campaign/finale-controller";
+import type { PreparedVictory } from "../../../gameplay/run/outcome-planner";
+import type { LiveGameHostState } from "../game-host-state";
+import type { RunLifecycleController } from "../../../gameplay/run/lifecycle";
+import type { CinematicDirectorPort, CinematicScript } from "../../../gameplay/runtime/cinematic-director";
+import type { CONFIG } from "../../../config/game-config";
+import { clamp } from "../../../domain/geometry";
+import { stagePlatforms } from "../../../gameplay/stages";
 
 /** Real finale controller/director over a detached world's actors. All durable ports stay absent. */
 export function createProductionFinaleRuntime(

@@ -11,11 +11,11 @@ import type { BatonSegment } from "../../src/gameplay/combat/held-blade-collisio
 import { createBossArena, type ArenaPlatform } from "../../src/gameplay/training/arena-rules";
 import {
   captureProductionReplayCheckpoint,
-  createProductionCombatSimulation,
   createProductionGhostReplayComposition,
-  createProductionReplayWorld,
-} from "../../src/tearbench";
-import { createProductionCombatPhases } from "../../src/tearbench/production-combat-phases";
+} from "../../src/app/world/detached/replay-composition";
+import { createProductionCombatSimulation } from "../../src/app/world/detached/combat-simulation";
+import { createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
+import { createProductionCombatPhases } from "../../src/app/world/detached/combat-phases";
 import { environmentHash, environmentSnapshotToObservation } from "../../src/gameplay/snapshot/environment-codec";
 import { RunDnaObserver } from "../../src/gameplay/runtime/run-dna-observer";
 import { UPGRADES, applyUpgrade } from "../../src/gameplay/upgrades";

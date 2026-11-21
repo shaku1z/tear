@@ -10,7 +10,7 @@ import {
   projectGameplayEventForParity,
   type TearSemanticEngineEventV1,
 } from "../../src/tearbench/gameplay-causal-events";
-import { applyTearCodecConfiguration, hydrateTearCodecWorld } from "../../src/tearbench";
+import { applyTearCodecConfiguration, hydrateTearCodecWorld } from "../../src/app/world/detached/world-hydrator";
 import type { TearCodecValue } from "../../src/gameplay/snapshot/state-codec";
 import { applyWeapon } from "../../src/gameplay/weapons";
 import {
