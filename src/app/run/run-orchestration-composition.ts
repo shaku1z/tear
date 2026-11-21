@@ -1,3 +1,4 @@
+import type { RunStartChoices } from "../../gameplay/run/run-start-choices";
 import { bindLiveHammerMeteor } from "../../gameplay/combat/live-hammer-meteor";
 import type { PreparedVictory, RunResultInfo } from "../../gameplay/run/outcome-planner";
 import type { RunDifficulty, RunMode } from "../../gameplay/run/session";
@@ -42,6 +43,7 @@ type WeaponRuntime = ReturnType<typeof createLiveWeaponRuntime<GameEnemy>>;
 
 export interface LiveRunOrchestrationOptions {
   readonly runInstalled?: (run: GameRun) => void;
+  readonly runStarted?: (start: RunStartChoices) => void;
   readonly observeTerminal?: (outcome: "defeat" | "victory") => void;
   readonly dependencies: GameRuntimeDependencies;
   readonly entities: LiveWorldEntityConstructionPort;
@@ -166,6 +168,7 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
 
   createLiveRunStartHost({
     ...(options.runInstalled === undefined ? {} : { runInstalled: options.runInstalled }),
+    ...(options.runStarted === undefined ? {} : { runStarted: options.runStarted }),
     ...(options.race === undefined ? {} : { race: options.race }),
     dependencies: d,
     world: options.world,

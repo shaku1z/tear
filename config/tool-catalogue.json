@@ -458,6 +458,13 @@
       ],
       "duration": "under-a-minute"
     },
+    "test:browser:replay-live-verify": {
+      "purpose": "Browser check that a live campaign run and a live Boss Rush run, recorded through the live replay tap, verify from their seeds alone",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
     "test:browser:ghost-vault-conditional-commit": {
       "purpose": "Browser check of Ghost Vault conditional commits",
       "effects": [

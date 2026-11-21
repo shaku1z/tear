@@ -19,6 +19,11 @@ export interface LiveRunStartPort<TMods extends { weaponId?: string }> {
    * session, profile and META; a replay reads its record. Every world step below reads only these.
    */
   readonly resolveStart: (mode: RunMode, difficulty: RunDifficulty) => RunStartChoices;
+  /**
+   * The resolved start, before any world step: a replay record opens here, so it sees the events the
+   * world emits while it initializes (the tick-0 stage and wave marks) as a replay of it does.
+   */
+  readonly openReplayRecord: (start: RunStartChoices) => void;
   readonly initializeWorld: (start: RunStartChoices) => RunSessionBlueprint<TMods>;
   readonly resetAuthoritativeClocks: () => void;
   readonly finishWorldReset: () => void;
@@ -52,6 +57,7 @@ export class LiveRunStartController<TMods extends { weaponId?: string }> {
   start(mode: RunMode, difficulty: RunDifficulty): RunSession<TMods> {
     this.#port.replaceActiveRun();
     const start = this.#port.resolveStart(mode, difficulty);
+    this.#port.openReplayRecord(start);
     const blueprint = this.#port.initializeWorld(start);
     this.#port.resetAuthoritativeClocks();
     const { runSeed } = start;

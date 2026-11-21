@@ -30,6 +30,8 @@ export interface LiveOpeningCaptureBoundary {
 
 interface RunStartHostContext extends Omit<RunStartWorldContext, "dependencies" | "hooks" | "race"> {
   readonly runInstalled?: (run: GameRun) => void;
+  /** A run's start is resolved, before its world initializes: the live replay tap opens its record here. */
+  readonly runStarted?: (start: RunStartChoices) => void;
   readonly dependencies: GameRuntimeDependencies;
   readonly applySettings: () => void;
   readonly race?: Readonly<{
@@ -152,6 +154,9 @@ export function createLiveRunStartHost(
         cinematics: sanitizeCinematicPreference(context.cinematics.preference()),
         playedChapters: Object.freeze([...context.cinematics.playedChapters()]),
       });
+    },
+    openReplayRecord: (start) => {
+      context.runStarted?.(start);
     },
     exposeDebugState: () => {
       // The weapon inspector is an engineering global: never installed in release builds.
