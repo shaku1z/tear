@@ -200,6 +200,55 @@ brushwork.
 6. **Measure.** Bake time at full and low graphics and at reduced CPU speed,
    and the frame-time scenarios, in the pull request.
 
+## Where the work stands and what is next
+
+Written 2026-11-21 so that someone with only the repository can continue.
+
+| Stage (`src/gameplay/stages.ts`) | Background |
+| --- | --- |
+| `verdant-sanctum` | Drawn from a recipe, with a `live` list. Owner approved. |
+| `pale-traverse` | Drawn from a recipe, with a `live` list. Owner picked the composition (board D, round 2). |
+| `grounds`, `undercroft`, `crimson-fields`, `voidspire` | Procedural backdrop (`src/presentation/backdrop.ts`). Not drawn yet. |
+| `tear` | The void stage. Has its own inverted look and is not part of this work. |
+
+Next, in this order unless the owner says otherwise:
+
+1. **Ask the owner which stage comes next, and whether the remaining stages
+   get drawn backgrounds at all.** The owner said on 2026-11-21 that the other
+   stages' platforms look right as they are; nothing has been decided about
+   their backgrounds. Campaign order (`grounds`, `undercroft`,
+   `crimson-fields`, `voidspire`) is the default.
+2. **Composition boards before any pull request.** For Pale the owner had no
+   illustration, so two or three candidate recipes were painted by this
+   painter (`paintStageArt` with the stage's real platforms drawn on top) at
+   rest, at two later moments and with reduced motion, and shown to the owner
+   with the measured readability and motion figures. The owner picks one or
+   asks for a mix; the pick is recorded under step 1 of "Drawing a background
+   for a biome". The board harness was a scratch script and is not in the
+   repository: bundle a small entry that imports the painter, a candidate
+   recipe and `scene-renderer`, and run it in a headless browser.
+3. **One pull request per stage**: the recipe in `recipes/`, its line in
+   `recipes/index.ts`, the stage id in `scene-registry.ts`, the stage and its
+   browser check in `config/stage-readability.json`, and a new stroke kind only
+   for a form no existing kind draws. `ridge` (hills, ranges, treelines) and
+   `ribbon` already exist for the open-sky stages.
+4. **A `live` list** once the still picture is approved, measured against the
+   motion ceilings.
+
+Open points left by the work so far:
+
+- Verdant's play band reads at 75.8% against its 75% floor since the platforms
+  became plain. A change that darkens the stage is fixed in the recipe.
+- `src/gameplay/training/arena-rules.ts` still names `verdant-rootstone` and
+  `pale-ice` as boss arena materials. Nothing draws those names; the arenas
+  take the shared arena look. The Verdant and Pale gameplay rebuilds remove
+  them (`plans/active/VERDANT_PALE_REBUILD.md`).
+- No road, track or field art is drawn on any stage: stage features were
+  removed by the gameplay rebuild, and a biome may later get at most one.
+- Frame-time scenarios have been run for Verdant only, and one Nightly
+  performance run for the drawn stages is still owed.
+- Phone sizes are not measured (`plans/MOBILE_LATER.md`); mobile is paused.
+
 ## History
 
 Verdant Sanctum first shipped as an image package: the owner's painting cut
