@@ -166,7 +166,7 @@ describe("blade-hit sparks", () => {
     wardrobe.wear(player, { spark: "spark_orchid" });
     wardrobe.wear(racer, { spark: "spark_glacier" });
     const effects = system(wardrobe);
-    const colours = (by: object): string[] => {
+    const colours = (by: object): (string | null | undefined)[] => {
       effects.reset();
       effects.burst(0, 0, 1, 0, 4, "#abcdef", { kind: "blade-hit", by });
       return [...new Set(effects.list.map((particle) => particle.col))];
