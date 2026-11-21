@@ -3,17 +3,11 @@
     "standalone": {
       "coldBytesToFirstFrame": 650000,
       "coldRequestsToFirstFrame": 28,
-      "coldBytesToPlayingWithoutStems": 670000,
+      "coldBytesToPlayingWithoutStems": 710000,
       "warmNetworkRequestsToFirstFrame": 3,
-      "coldCrossOriginScriptRequests": 4,
-      "coldCrossOriginScriptBytes": 170000,
-      "crossOriginOrigins": [
-        "https://firebaseinstallations.googleapis.com",
-        "https://firebaseremoteconfig.googleapis.com",
-        "https://firestore.googleapis.com",
-        "https://identitytoolkit.googleapis.com",
-        "https://www.gstatic.com"
-      ]
+      "coldCrossOriginScriptRequests": 0,
+      "coldCrossOriginScriptBytes": 0,
+      "crossOriginOrigins": ["https://firestore.googleapis.com", "https://identitytoolkit.googleapis.com"]
     },
     "crazygames": {
       "coldBytesToFirstFrame": 650000,
