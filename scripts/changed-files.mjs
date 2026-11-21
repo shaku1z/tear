@@ -1,6 +1,6 @@
 // Files this checkout changes relative to main: committed since the merge base with origin/main,
 // plus staged, unstaged and untracked files. Used by `--changed` in scripts/format.mjs and
-// scripts/lint.mjs, which the fast check group (and so the pre-push hook) runs.
+// scripts/lint.mjs, which the fast check group runs.
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
