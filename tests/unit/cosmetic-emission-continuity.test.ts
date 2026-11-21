@@ -18,6 +18,7 @@ import { runLiveCollisionPhase } from "../../src/gameplay/combat/live-collision-
 import { runLiveOpeningPhase } from "../../src/gameplay/combat/live-opening-phase";
 import { GFX, THEME } from "../../src/config/game-config";
 import { DEFAULT_COSMETIC_LOOKS } from "../../src/presentation/cosmetic-defaults";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 function liveActions(replay: ReturnType<typeof createProductionReplayWorld>) {
   // The real emission callbacks are exercised. Unrelated device and
@@ -53,8 +54,8 @@ describe("captured cosmetic emission continuity", () => {
   it.each(["perfect", "slam", "ink", "bladeTrail", "reform", "charger", undefined, "#123456"])(
     "resolves live opening color %s before particle emission",
     (color) => {
-      const live = createProductionReplayWorld({ seed: "opening-colors" }),
-        detached = createProductionReplayWorld({ seed: "opening-colors" });
+      const live = createProductionReplayWorld({ runSeed: scenarioRunSeed("opening-colors") }),
+        detached = createProductionReplayWorld({ runSeed: scenarioRunSeed("opening-colors") });
       const reference = liveOpening(live),
         production = createProductionCombatPhases(detached).opening;
       const priorInk = THEME.ink;
@@ -84,8 +85,8 @@ describe("captured cosmetic emission continuity", () => {
   );
 
   it.each(["hard landing", "spike"] as const)("matches live colors through the actual opening %s route", (route) => {
-    const live = createProductionReplayWorld({ seed: "opening-route-colors" }),
-      detached = createProductionReplayWorld({ seed: "opening-route-colors" });
+    const live = createProductionReplayWorld({ runSeed: scenarioRunSeed("opening-route-colors") }),
+      detached = createProductionReplayWorld({ runSeed: scenarioRunSeed("opening-route-colors") });
     const priorLow = GFX.low,
       priorInk = THEME.ink;
     GFX.low = false;
@@ -206,7 +207,7 @@ describe("captured cosmetic emission continuity", () => {
     };
     const receipt = emit(),
       expected = owner.capture();
-    const other = createProductionReplayWorld({ seed: "unrelated-emission-world" });
+    const other = createProductionReplayWorld({ runSeed: scenarioRunSeed("unrelated-emission-world") });
     other.effects.explode(100, 100);
     owner.restore(owner.prepare(saved, 17, 0));
     expect(emit()).toEqual(receipt);
@@ -214,7 +215,7 @@ describe("captured cosmetic emission continuity", () => {
   });
 
   it("emits actual production mirror-lock sparks instead of the old no-op", () => {
-    const replay = createProductionReplayWorld({ seed: "cosmetic-mirror" });
+    const replay = createProductionReplayWorld({ runSeed: scenarioRunSeed("cosmetic-mirror") });
     const { Mirror, MirrorHost } = replay.factories.mirrorTypes;
     const host = new MirrorHost(800, replay.configuration.value.world.groundY - 35, replay.world.state.run());
     host._live = true;
@@ -247,7 +248,7 @@ describe("captured cosmetic emission continuity", () => {
   });
 
   it("uses the live clone-removal ghost geometry in the actual production callback", () => {
-    const replay = createProductionReplayWorld({ seed: "cosmetic-clone" });
+    const replay = createProductionReplayWorld({ runSeed: scenarioRunSeed("cosmetic-clone") });
     const phases = createProductionCombatPhases(replay);
     phases.opening.removeBossClone({ x: 800, y: 775, hw: 19, hh: 27 } as never);
     expect(replay.effects.list).toEqual([
@@ -260,8 +261,8 @@ describe("captured cosmetic emission continuity", () => {
   });
 
   it("binds actual heavy-bleed status positioning identically through live and production opening ports", () => {
-    const live = createProductionReplayWorld({ seed: "bleed-cosmetics" }),
-      detached = createProductionReplayWorld({ seed: "bleed-cosmetics" });
+    const live = createProductionReplayWorld({ runSeed: scenarioRunSeed("bleed-cosmetics") }),
+      detached = createProductionReplayWorld({ runSeed: scenarioRunSeed("bleed-cosmetics") });
     const run = (replay: typeof live, host: Pick<ReturnType<typeof liveOpening>, "random" | "ember" | "drip">) => {
       const enemy = replay.world.entities.createEnemy("charger", 800, 775, replay.world.state.run() as never);
       Object.assign(enemy, { spawnT: 0, bleedStacks: 3, bleedT: 1, burnT: 0, _stFx: 0 });
@@ -288,7 +289,7 @@ describe("captured cosmetic emission continuity", () => {
   });
 
   it("continues actual Aldric charge admission and ember fields after a production checkpoint", () => {
-    const composition = createProductionGhostReplayComposition({ seed: "aldric-cosmetics" }),
+    const composition = createProductionGhostReplayComposition({ runSeed: scenarioRunSeed("aldric-cosmetics") }),
       source = composition.create(undefined);
     const boss = source.replay.world.entities.createEnemy("aldric", 800, 700, source.replay.world.state.run() as never);
     Object.assign(boss, {
@@ -334,7 +335,7 @@ describe("captured cosmetic emission continuity", () => {
   });
 
   it("emits the hostile-blade collision feedback through the actual collision phase", () => {
-    const replay = createProductionReplayWorld({ seed: "collision-emissions" }),
+    const replay = createProductionReplayWorld({ runSeed: scenarioRunSeed("collision-emissions") }),
       phase = createProductionCombatPhases(replay);
     const player = replay.world.state.player(),
       blade = replay.world.state.blade();
@@ -364,8 +365,8 @@ describe("captured cosmetic emission continuity", () => {
   });
 
   it("matches live opening and collision effect callbacks in order while preserving production traces", () => {
-    const live = createProductionReplayWorld({ seed: "callback-emissions" }),
-      detached = createProductionReplayWorld({ seed: "callback-emissions" });
+    const live = createProductionReplayWorld({ runSeed: scenarioRunSeed("callback-emissions") }),
+      detached = createProductionReplayWorld({ runSeed: scenarioRunSeed("callback-emissions") });
     const reference = liveActions(live),
       phases = createProductionCombatPhases(detached);
     const emit = (host: Pick<typeof reference, "opening" | "collision">) => {
@@ -397,8 +398,8 @@ describe("captured cosmetic emission continuity", () => {
   });
 
   it.each(["charger", "aldric"])("matches the actual live kill transaction's emissions for %s", (kind) => {
-    const live = createProductionReplayWorld({ seed: "kill-emissions" }),
-      detached = createProductionReplayWorld({ seed: "kill-emissions" });
+    const live = createProductionReplayWorld({ runSeed: scenarioRunSeed("kill-emissions") }),
+      detached = createProductionReplayWorld({ runSeed: scenarioRunSeed("kill-emissions") });
     const run = (replay: typeof live, liveHost: boolean) => {
       const enemy = replay.world.entities.createEnemy(kind, 800, 775, replay.world.state.run() as never);
       Object.assign(enemy, {

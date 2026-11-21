@@ -12,6 +12,7 @@ import {
 import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-setup-live-compiler";
 import { buildBloomWellCycleState } from "../../src/tearbench/state-setup-factories";
 import { resolveTearSdl, type TearSdlDocumentV1 } from "../../src/tearbench/tearsdl";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 type Harness = ReturnType<typeof createEnemyHarness>;
 type Boss = InstanceType<Harness["types"]["Rootbound"]> & {
@@ -135,9 +136,10 @@ describe("Verdant gameplay regressions", () => {
   });
 
   it("applies Bloom lift in the production replay world, as live play does", () => {
-    const source = createProductionGhostReplayComposition({ seed: "verdant-replay-lift", mode: "campaign" }).create(
-      undefined,
-    );
+    const source = createProductionGhostReplayComposition({
+      runSeed: scenarioRunSeed("verdant-replay-lift"),
+      mode: "campaign",
+    }).create(undefined);
     const checkpoint = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "lift");
     const base: TearSdlDocumentV1 = {
       format: "tearsdl",
@@ -162,9 +164,10 @@ describe("Verdant gameplay regressions", () => {
       checkpoint.snapshot,
       resolveTearSdl(buildBloomWellCycleState(base, well)),
     );
-    const detached = createProductionGhostReplayComposition({ seed: "verdant-replay-lift", mode: "campaign" }).create(
-      snapshot,
-    );
+    const detached = createProductionGhostReplayComposition({
+      runSeed: scenarioRunSeed("verdant-replay-lift"),
+      mode: "campaign",
+    }).create(snapshot);
     const live = detached.replay.world.state.player() as { x: number; y: number; vy: number };
     live.vy = 0;
     detached.replay.world.context.environment.step(BLOOM_WELL_TIMING.warningTicks + 1, dt, () => undefined);

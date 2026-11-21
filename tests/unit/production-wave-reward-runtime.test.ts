@@ -1,3 +1,4 @@
+import { startDetachedTestRun } from "../support/detached-run-start";
 import { WEAPONS } from "../../src/gameplay/weapons";
 import { STAGES } from "../../src/gameplay/stages";
 import {
@@ -13,16 +14,17 @@ import { createProductionReplayWorld } from "../../src/app/world/detached/world-
 import { createProductionWaveRewardRuntime } from "../../src/app/world/detached/wave-reward-runtime";
 import { TearGameplayEventBus } from "../../src/gameplay/runtime/gameplay-events";
 import { ghostReferenceBoundary, type GhostReferenceBoundary } from "../../src/ghost/live-ghost-reference-data";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 describe("production wave and reward runtime", () => {
   it("uses the native Riftlock reset before preparing the next legal wave", () => {
     const replay = createProductionReplayWorld({
-      seed: "native-wave-rift-reset",
+      runSeed: scenarioRunSeed("native-wave-rift-reset"),
       mode: "endless",
       weaponId: "riftlock",
     });
     const runtime = createProductionWaveRewardRuntime(replay);
-    runtime.startNaturalOpening();
+    startDetachedTestRun(replay, runtime);
     const blade = replay.world.state.blade(),
       player = replay.world.state.player(),
       run = replay.world.state.run();
@@ -53,7 +55,7 @@ describe("production wave and reward runtime", () => {
 
   it("keeps spent Riftlock state on reward-owner construction and midwave snapshot hydration", () => {
     const composition = createProductionGhostReplayComposition({
-      seed: "midwave-rift-reset",
+      runSeed: scenarioRunSeed("midwave-rift-reset"),
       mode: "endless",
       weaponId: "riftlock",
     });
@@ -92,12 +94,15 @@ describe("production wave and reward runtime", () => {
 
   it("records two real reward selections with strict loadout payloads and separate feedback facts", () => {
     // Constructed wave clears isolate the actual reward/emission owners, not combat quality.
-    const replay = createProductionReplayWorld({ seed: "two-native-reward-selections", mode: "endless" });
+    const replay = createProductionReplayWorld({
+      runSeed: scenarioRunSeed("two-native-reward-selections"),
+      mode: "endless",
+    });
     const bus = new TearGameplayEventBus(),
       events: TearCausalEventV1[] = [];
     bus.subscribe((event) => events.push(createLiveGhostCausalEvent(event, events.length + 1)));
     const runtime = createProductionWaveRewardRuntime(replay, { gameplayEvents: bus });
-    runtime.startNaturalOpening();
+    startDetachedTestRun(replay, runtime);
     const selected: string[] = [];
     for (let wave = 1; wave <= 2; wave++) {
       const run = replay.world.state.run();
@@ -123,21 +128,25 @@ describe("production wave and reward runtime", () => {
 
   it("binds Chase boundaries to the stage actually loaded at emission, including native boss starts", () => {
     // Engineering transition setup; the real planner owns stage loading and native facts.
-    const replay = createProductionReplayWorld({ seed: "chase-stage-boundary", mode: "gauntlet" }),
+    const replay = createProductionReplayWorld({ runSeed: scenarioRunSeed("chase-stage-boundary"), mode: "gauntlet" }),
       bus = new TearGameplayEventBus();
     const runtime = createProductionWaveRewardRuntime(replay, { gameplayEvents: bus }),
       splits: GhostReferenceBoundary[] = [];
-    const run = replay.world.state.run();
-    if (run === null) throw new Error("run missing");
     let stageFacts = 0;
     bus.subscribe((event) => {
       if (event.kind === "stage") stageFacts++;
-      const boundary = ghostReferenceBoundary(event, { stage: replay.stage.index, time: run.runTime });
+      const time = replay.world.state.run()?.runTime ?? 0;
+      const boundary = ghostReferenceBoundary(event, { stage: replay.stage.index, time });
       if (boundary) splits.push(boundary);
     });
-    runtime.startNaturalOpening();
+    startDetachedTestRun(replay, runtime);
+    // The run start installs a fresh run; stage facts reach the world's own event port, not this bus.
+    const run = replay.world.state.run();
+    if (run === null) throw new Error("run missing");
+    expect(stageFacts).toBe(0);
     // Wave 10 opens the fourth trial, in its boss's home stage.
     const fourthHome = STAGES.findIndex((stage) => stage.boss === run.bossOrder[3]);
+    expect(fourthHome).toBeGreaterThanOrEqual(0);
     run.wave = 9;
     run.runTime = 12;
     replay.world.lifecycle.clearWave();
@@ -155,9 +164,9 @@ describe("production wave and reward runtime", () => {
     expect(splits.at(-1)).toMatchObject({ stage: replay.stage.index, wave: 12, time: 24, event: "start" });
   });
   it("preserves restored focus until a source transition explicitly resets it", () => {
-    const replay = createProductionReplayWorld({ seed: "reward-focus", mode: "endless" });
+    const replay = createProductionReplayWorld({ runSeed: scenarioRunSeed("reward-focus"), mode: "endless" });
     const runtime = createProductionWaveRewardRuntime(replay);
-    runtime.startNaturalOpening();
+    startDetachedTestRun(replay, runtime);
     Object.assign(replay.world.state.run()?.mods ?? {}, { draftRerolls: 1 });
     Object.assign(replay.world.state.run() ?? {}, { spawnQueue: [] });
     replay.world.state.setEnemies([]);
@@ -175,9 +184,9 @@ describe("production wave and reward runtime", () => {
     }).toThrow(/focus/);
   });
   it("clears a whole Gauntlet trial: two rounds with drafts and no healing, then the boss, then the next trial", () => {
-    const replay = createProductionReplayWorld({ seed: "gauntlet-trial", mode: "gauntlet" });
+    const replay = createProductionReplayWorld({ runSeed: scenarioRunSeed("gauntlet-trial"), mode: "gauntlet" });
     const runtime = createProductionWaveRewardRuntime(replay);
-    runtime.startNaturalOpening();
+    startDetachedTestRun(replay, runtime);
     const run = replay.world.state.run() as never as {
       bossOrder: string[];
       bossesBeaten: number;
@@ -226,10 +235,10 @@ describe("production wave and reward runtime", () => {
     expect(replay.stage.index).toBe(home(1));
   });
   it("owns a natural opening and routes its real draft transition without a host screen", () => {
-    const replay = createProductionReplayWorld({ seed: "production-wave-reward", mode: "endless" });
+    const replay = createProductionReplayWorld({ runSeed: scenarioRunSeed("production-wave-reward"), mode: "endless" });
     const runtime = createProductionWaveRewardRuntime(replay);
 
-    runtime.startNaturalOpening();
+    startDetachedTestRun(replay, runtime);
     expect(replay.world.lifecycle.snapshot()).toMatchObject({ phase: "wave-active", wave: 1, reward: null });
     const run = replay.world.state.run() as never as { spawnQueue: unknown[] };
     run.spawnQueue = [];

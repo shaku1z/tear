@@ -2,7 +2,7 @@ import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies
 import type { LiveGameHostState } from "../world/game-host-state";
 import { CampaignRuntimeState } from "../../gameplay/campaign/campaign-runtime-state";
 import { StageRuntimeState } from "../world/stage-runtime-state";
-import { LiveStageController } from "../world/stage-controller";
+import { createRunStageController } from "../world/run-stage";
 import {
   createCampaignChapterController,
   createFinaleController,
@@ -19,7 +19,6 @@ import type {
 import type { CinematicBeat, CinematicScript } from "../../presentation/cinematics";
 import type { ArenaPlatform } from "../../gameplay/training/arena-rules";
 import type { FinaleIntent } from "../../gameplay/campaign/finale-controller";
-import { stageIdAtRuntimeIndex } from "../../gameplay/stages";
 import {
   observeFinaleOutwardCall,
   type FinaleMaximumFeelReceipt,
@@ -42,7 +41,6 @@ export interface CampaignHostServices {
   readonly win: (campaign: boolean) => void;
   readonly achievementsEnabled: () => boolean;
   readonly checkAchievements: () => void;
-  readonly resetStageAchievements: () => void;
   readonly rememberBiome: (name: string) => void;
   readonly cinematicPreference: () => CinematicPreference;
   readonly addFlash: (amount: number) => FinaleMaximumFeelReceipt;
@@ -76,34 +74,16 @@ export function createLiveCampaignHost(services: CampaignHostServices): LiveCamp
     () => createFinaleController(d.CONFIG),
   );
   services.installStage(
-    new LiveStageController(stage, {
-      cancelCinematic: () => {
-        if (cinema.active) cinema.cancel("stage-change");
-      },
-      clearHazards: () => {
-        state.setSlowZones([]);
-        state.setTemporaryWalls([]);
-      },
-      run: () => state.run(),
-      blade: () => state.blade() ?? null,
-      achievementTracking: () => services.achievementsEnabled(),
-      rememberBiome: (name) => {
-        services.rememberBiome(name);
-      },
-      resetStageAchievements: () => {
-        services.resetStageAchievements();
-      },
-      resetPlayerStagePassives: () => {
-        state.player()?.resetStagePassives();
-      },
-      recordReplayStage: (index) => {
-        const stageId = stageIdAtRuntimeIndex(index);
-        d.GAMEPLAY_EVENTS.emit({
-          kind: "stage",
-          stage: index,
-          ...(stageId === null ? {} : { stageId }),
-          transition: "entered",
-        });
+    createRunStageController({
+      stage,
+      state,
+      cinema,
+      gameplayEvents: d.GAMEPLAY_EVENTS,
+      progress: {
+        tracking: () => services.achievementsEnabled(),
+        rememberBiome: (name) => {
+          services.rememberBiome(name);
+        },
       },
     }),
   );

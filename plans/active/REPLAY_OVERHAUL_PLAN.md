@@ -6,6 +6,50 @@
 - **Status:** Active
 - **Closure condition:** Every "done when" line below holds, `src/ghost/` no longer exists, and `pnpm check:functional` passes from the final commit.
 
+## Where this stands (hand-over; keep current with every pull request)
+
+Written so that someone with only this repository can continue. The decision log at the end has the history.
+
+- **Merged:** PRs 1, 2, 2b, 3, 4 and 5a (#361: `src/replay/record.ts`, `recorder.ts`, `verify.ts`, the round-trip check).
+- **Open: PR 5b-1, #372** (branch `codex/replay-live-start`): one seed type, one start record and one run start for live play and detached worlds. The lead approved the design.
+  - Done on the branch: merged `origin/main` after #374 (v19), #381 (v20), #366 and #377; stepped the ruleset to v21, with v20 kept as #381's history line; the position edit is in `config/position/replays.json`.
+  - The determinism corpus keeps #374's pinned boss seeds (`BOSS_SEED_INDEX`) and tell-avoiding boss player. `STREAM_BOSSES` names the boss each pinned seed fought on main. Regenerated on the merged tree: every stream's play facts equal main's, and no seed moved.
+  - Left: CI green, the lead's review, and the merge (it merges alone). If main takes another ruleset step first, merge `origin/main`, take the next number, regenerate (`TEAR_HASH_STREAM_WRITE=1 pnpm test:determinism`, `TEAR_TUTORIAL_GOLD_WRITE=1 pnpm exec vitest run tests/unit/tutorial-production-ghost.test.ts`) and check the play facts again. A boss stream that fails its coverage fact is re-picked from `hash-stream:<weapon>:boss`, then `:1` to `:9`, first that passes (the probe is in the lead's shared notes folder, `boss-seed-probe/`).
+  - The PR body keeps its first-run failure record.
+- **Next, a small PR after #372: engineering-only bosses leave replay identity** (the lead approved it in principle, 2026-11-21).
+  - **Problem:** A rebuild slice for a boss that only engineering surfaces can reach (a `BossDefinition` with `stageOf`; today the new Rootbound, in Boss Test) changes gameplay identity, so by the rule above it takes a ruleset step. That step retires every replay, although no player run can contain that boss.
+  - **Admission:** `readReplayRecord` refuses a record whose start names an engineering-only boss, and `verifyReplay` refuses a run whose world spawns one (a boss event or the boss order). One list, read from the boss definitions, decides which bosses are engineering-only.
+  - **Ruleset identity:** Nothing in code forces a step today; the step is the rule above, judged by the determinism and tutorial gold fixtures. Once admission refuses engineering-only bosses, the rule can read "a step changes what an admitted record can contain". A change confined to engineering-only definitions then needs no step. A fixture stream that covers an engineering-only boss is listed as outside replay identity, so its regeneration alone does not count as a step. To confirm after #381 lands:
+    - whether `stageOf` is the field that marks engineering-only;
+    - whether any released path (Gauntlet trials, Boss Rush rosters, the Codex) can reach such a boss;
+    - which determinism streams cover one.
+  - **Done when:**
+    - a record or a verified run with an engineering-only boss is refused, with a test;
+    - the rule and the list of streams outside replay identity are written in `src/gameplay/run/ruleset-version.ts`;
+    - a test fails if an engineering-only boss becomes reachable from a released mode without leaving the list.
+- **Next: PR 5b-2, picks as actions.**
+  - Draft, reserve and tier-up picks and rerolls become GameActions the UI dispatches, so a record holds them at their ticks.
+  - In the same PR:
+    - **Cinematics hint:** the Settings row for Cinematics says, during a run, that a change applies from the next run.
+    - **Paused-world hold:** a paused screen holds a detached or headless world as it holds live play. Today 600 paused ticks cost the player 33 health. Prove it by pausing for a number of ticks in `tests/unit/run-start-parity.test.ts` and comparing. Tell playtest-tool when it lands.
+- **Then: PR 5b-3.**
+  - The named frame-clock exception with its test. After #374 it covers cinematics only: the boss intro advances on ticks. Cinematics PR 8 ends it.
+  - Browser evidence, on a built test target, that a live run with a draft, a boss intro and a chapter verifies from its seed alone, with no keyframes.
+- **Then: PR 5c, the live recorder.** Its content is in the PR 5 section below.
+  - A seed race records the race's ranks as the start's `metaRanks`. The owner keeps seed races, so they are recorded, not refused.
+  - Capsules from before are refused with a player-facing line in the terminology registry's names.
+- **Agreed with Shards (for PR 10):**
+  - `ReplayLook.cosmetics` is the domain `Loadout`, filled at run start with `loadoutOf(COSMETIC_CATALOG, PROFILE.cosmetics())`.
+  - `readLook` caps the entry count at the number of catalog slots.
+  - The viewer's calm setting wins.
+  - No cosmetics in the feed or leaderboard summaries.
+  - Shards makes the wardrobe hold one style per owner before PR 9 (race) needs two wearers.
+- **Rules that apply to every step:**
+  - Each step that changes gameplay identity takes the next free ruleset number when it merges.
+  - A test's first run is its verdict, and the PR records it.
+  - No Firebase rules deploys; that is the owner's step.
+  - Mobile is paused.
+
 ## Why
 
 The owner said on 2026-11-13 that replays "need to be updated as well, in general", and on
@@ -582,8 +626,11 @@ before this PR are refused as "recorded before this update".
 PR 5 lands in three pull requests (the replay owner, 2026-11-21). A seed and actions record cannot replay a live run until the live run starts the way the detached world does, so the parity work is its own step:
 
 - **5a, the record and verify (pure addition, no live change).** `src/replay/record.ts` (the record type, `readReplayRecord`, the summary counter), `recorder.ts` (actions at ticks, a checkpoint hash every 120 ticks, the result), `verify.ts` (re-simulate from the seed on a world port and compare every checkpoint, the result and the summary) and `app/replay/detached-replay-world.ts` (that port over the detached world). `app/world/detached/detached-step.ts` is the one way a detached world steps a tick without a recorded frame clock. The round-trip check runs over the determinism corpus; `tests/unit/replay-record.test.ts` holds the malformed corpus, the old-format refusals and the format guard. Measured: the record as plain JSON is about 387 KB for an 18-second corpus run (about 1.3 MB a minute, because the scripted policy sends a move and an aim every tick); the stored encoding is PR 6's and reports its bytes against this. V3 capsule bytes for the same runs were not measured: the headless runs have no V3 capsule.
-- **5b, live start parity.** The live run records and the detached world replays the same start: the run seed as the record's seed, the meta progression and opening content as start choices, reward picks and rerolls as actions at ticks, and the cinematic and boss-intro frame clock recorded as the one exception until the cinematics overhaul makes those scenes stop nothing. A browser test records a live run (a draft, a boss intro and a chapter) and verifies it from its seed.
-- **5c, the live recorder.** The live sidecar records the new record behind a lazily loaded slot (a deferred-modules row, fetched ahead on an idle menu, ensured at run start, with a chunk test that it stays out of the startup chunks); the HUD checkpoint parser moves to the HUD's owner and seed-race composition goes behind the slot; the Theater opens the new record; capsules from before are refused; the V3 recorder modules with no consumer left are deleted.
+- **5b, live start parity.** The live run records and the detached world replays the same start: the run seed as the record's seed, the meta progression and opening content as start choices, reward picks and rerolls as actions at ticks, and the cinematic and boss-intro frame clock recorded as the one exception until the cinematics overhaul makes those scenes stop nothing. A browser test records a live run (a draft, a boss intro and a chapter) and verifies it from its seed. It lands as three pull requests, each on main before the next starts (the lead, 2026-11-21):
+  - **5b-1, one start.** One seed type (`runSeed`, a 32-bit integer above zero; `scenarioRunSeed` is the one text-to-seed conversion, for scenarios and old snapshots), the start choices as one record (`RunStartChoices`, now with the run's cinematics setting and the chapters the session has played), one start for live play and detached worlds (`createRunStartWorldPort` driven by `LiveRunStartController`; `startDetachedRun` feeds it the recorded choices) and one stage load with its environment (`run-stage.ts`). `tests/unit/run-start-parity.test.ts` starts the live host on a used detached world and a fresh detached world from the recorded choices, and compares them at the start and on every tick after it.
+  - **5b-2, picks as actions.** Draft, reserve and tier-up picks and rerolls become GameActions the UI dispatches, so a record holds them at their ticks. The Settings row for Cinematics says, during a run, that a change applies from the next run (a run keeps the setting it started with, since 5b-1). A paused screen holds a detached or headless world as it holds live play (playtest-tool measured 600 paused ticks costing the player 33 health); the parity test pauses for a number of ticks and compares, and playtest-tool is told when it lands.
+  - **5b-3, the frame clock.** The named frame-clock exception (director, cinema, ritual and chapter frames, and the boss intro until cinematics' intro-clock slice merges; it ends with cinematics PR 8) with its test, and browser evidence that a live run verifies from its seed alone, with no keyframes.
+- **5c, the live recorder.** The live sidecar records the new record behind a lazily loaded slot (a seed race records the race's ranks as the start's `metaRanks`; seed races are kept, so they are recorded, not refused) (a deferred-modules row, fetched ahead on an idle menu, ensured at run start, with a chunk test that it stays out of the startup chunks); the HUD checkpoint parser moves to the HUD's owner and seed-race composition goes behind the slot; the Theater opens the new record; capsules from before are refused; the V3 recorder modules with no consumer left are deleted.
 
 ### PR 6: one store (`store.ts`, `indexeddb-chunk-storage.ts`, `share.ts` file encoding)
 
@@ -817,3 +864,4 @@ writes are closed. Deploying the rules is the owner's step.
 - 2026-11-20 PR 3 (`codex/replay-snapshot`): the snapshot codecs, the snapshot contract, the codec and factory ids, the checkpoint parsers and `seed-race-contract.ts` moved to `src/gameplay/snapshot/` and `src/gameplay/run/`, as agreed with the lead and playtest-tool. The two hydrators move in PR 4. The layer allowlist went from 37 to 32 edges.
 - 2026-11-20 PR 4 (`codex/replay-detached-world`): the detached world moved to `src/app/world/detached/`, its own `detached-world` layer, so the one new edge is `playtest -> detached-world`. No `tearbench -> app` or `ghost -> app` edge; the layer allowlist went from 32 to 18 edges. The remaining ghost cycle (7 files) goes with `src/ghost` in PRs 5 to 8.
 - 2026-11-21 PR 5 split into 5a (record, recorder and verify over the detached world, and the round-trip check), 5b (live start parity) and 5c (the live recorder behind a lazy slot). `envelope.ts` stays with Ghost 2 until PR 8; `replay-admission`, `authoritative-receipt`, `application-frame-events` and `truth-kernel` go with their last consumer. 5a: every stream of the determinism corpus records, reads back and verifies from its seed, and each checkpoint equals the pinned determinism hash.
+- 2026-11-21 PR 5b-1 (`codex/replay-live-start`): one seed type, one start record, one run start and one stage load for live play and detached worlds; the eleven start differences in the start map are closed, each named in the pull request. A run keeps the cinematics setting it started with, so changing it mid-run applies from the next run. The determinism corpus names the boss each boss stream fights, because the shared start draws Boss Rush order as live play does; every stream's play facts are unchanged and its hashes are regenerated. Tutorial gold is regenerated: its lessons' inputs, actions and final counters are unchanged, only the start state and hashes.

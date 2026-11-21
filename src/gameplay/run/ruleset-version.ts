@@ -23,9 +23,14 @@
  * 0.25 time scale), so a world with no frame clock (replay verify, the headless playtest) plays it as live
  * play does; it used to run 168 full-speed ticks there (plans/active/CINEMATICS_OVERHAUL.md, the intro-clock
  * slice). v20: the new Rootbound, fought in Boss Test on the engineering channel, is a new entity kind
- * (plans/active/VERDANT_PALE_REBUILD.md, 4.1).
+ * (plans/active/VERDANT_PALE_REBUILD.md, 4.1). v21: a run starts the same way live and in its replay, from one
+ * record of its start choices, and keeps the cinematics setting it started with
+ * (plans/active/REPLAY_OVERHAUL_PLAN.md, PR 5b-1).
  */
-export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v20";
+export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v21";
+
+/** The identity while a replay started its run apart from the live game's start; historical replays only. */
+export const SIX_BIOME_PALE_PREVIEW_V20_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v20";
 
 /** The identity before the new Rootbound could be fought in Boss Test; historical replays only. */
 export const SIX_BIOME_PALE_PREVIEW_V19_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v19";
@@ -148,7 +153,12 @@ export const RULESET_STEPS: readonly RulesetStep[] = Object.freeze(
       version: SIX_BIOME_PALE_PREVIEW_V19_RULESET_VERSION,
       change: "the boss arrival began counting simulation ticks",
     },
-    { version: CURRENT_RULESET_VERSION, change: "the new Rootbound joined Boss Test" },
+    { version: SIX_BIOME_PALE_PREVIEW_V20_RULESET_VERSION, change: "the new Rootbound joined Boss Test" },
+    {
+      version: CURRENT_RULESET_VERSION,
+      change:
+        "a run began starting the same way live and in its replay, keeping the cinematics setting it started with",
+    },
   ].map((step) => Object.freeze(step)),
 );
 

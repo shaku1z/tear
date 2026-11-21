@@ -28,9 +28,10 @@ import { createLiveWaveComposition } from "./wave-composition";
 import type { OutcomeChronologyEffect } from "../../gameplay/run/outcome-chronology-journal";
 import type { LiveGhostPracticeSessionState } from "../replay/ghost-practice-session-state";
 import type { EnvironmentRuntimeState } from "../../gameplay/environment/environment-contracts";
-import { activateStageEnvironment } from "../../gameplay/environment/stage-environment-activation";
+import { loadRunStage } from "../world/run-stage";
 import { cleanupBossEncounterActors } from "../../gameplay/run/boss-encounter";
-import { stageIdAtRuntimeIndex } from "../../gameplay/stages";
+import type { RunStartWorld } from "./run-start-world";
+import type { CinematicPreference } from "../../gameplay/campaign/cinematic-preference";
 import type { AttackPresentationCueSink } from "../../gameplay/combat/attack-presentation-cue";
 
 type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
@@ -72,11 +73,11 @@ export interface LiveRunOrchestrationOptions {
   readonly environment: EnvironmentRuntimeState;
   readonly attackPresentation: AttackPresentationCueSink;
   readonly applySettings: () => void;
-  readonly prepareWorld: () => void;
-  readonly resetTransientWorld: () => void;
-  readonly finishWorldReset: () => void;
-  readonly resetAuthoritativeClocks: () => void;
-  readonly resetCombatIdentity: () => void;
+  /** The world a run starts in; the same constructor builds a detached world. */
+  readonly world: RunStartWorld;
+  readonly combat: Readonly<{ resetClock(): void; resetIdentity(): void }>;
+  readonly hud: Readonly<{ restore(value: undefined): void }>;
+  readonly cinematicPreference: () => CinematicPreference;
   readonly race?: Readonly<{
     active(): boolean;
     apply(): boolean;
@@ -126,15 +127,16 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
     options.weapon.addZoom(amount);
   };
   const dealArea: LiveRunOrchestrationOptions["weapon"]["dealArea"] = (...args) => options.weapon.dealArea(...args);
-  const setEnvironmentStage = (index: number, reason: "new-run" | "stage-transition"): void => {
-    const stageId = stageIdAtRuntimeIndex(index);
-    if (stageId === null) throw new RangeError(`environment stage index is invalid: ${String(index)}`);
-    activateStageEnvironment(options.environment, stageId, options.authoritativeResult()?.tick ?? 0, reason);
+  const stageLoad = {
+    load: (index: number) => {
+      options.controllers.api.loadStage(index);
+    },
+    enemies: options.enemies,
+    environment: options.environment,
+    tick: () => options.authoritativeResult()?.tick ?? 0,
   };
   const loadTransitionStage = (index: number): void => {
-    cleanupBossEncounterActors(options.enemies(), "stage-transition");
-    options.controllers.api.loadStage(index);
-    setEnvironmentStage(index, "stage-transition");
+    loadRunStage(stageLoad, index, "stage-transition");
   };
   const content = createLiveContentComposition({
     dependencies: d,
@@ -166,36 +168,24 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
     ...(options.runInstalled === undefined ? {} : { runInstalled: options.runInstalled }),
     ...(options.race === undefined ? {} : { race: options.race }),
     dependencies: d,
-    state: options.state,
+    world: options.world,
     width: options.width,
-    services: options.worldServices,
-    prepareWorld: options.prepareWorld,
+    combat: options.combat,
+    hud: options.hud,
+    cinematics: {
+      preference: options.cinematicPreference,
+      playedChapters: campaignRuntime.playedChapters,
+    },
     applySettings: options.applySettings,
-    configureBlade: (blade, weaponId) => {
-      const weapon = d.applyWeapon(d.CONFIG, weaponId);
-      blade.weapon = weapon;
-      blade.model = weapon.model;
-    },
-    createPlayer: (x, y) => options.entities.createPlayer(x, y),
-    createBlade: () => options.entities.createBlade(),
-    installRun: (session) => {
-      options.state.setRun(session);
-    },
-    world: { resetTransient: options.resetTransientWorld, finishReset: options.finishWorldReset },
-    resetAuthoritativeClocks: options.resetAuthoritativeClocks,
-    environment: options.environment,
-    resetCombatIdentity: options.resetCombatIdentity,
     ...(options.createRunSeed === undefined ? {} : { createRunSeed: options.createRunSeed }),
     ...(options.withOpeningCapture === undefined ? {} : { withOpeningCapture: options.withOpeningCapture }),
     ...(options.openingExposed === undefined ? {} : { openingExposed: options.openingExposed }),
     ...(options.discardOpeningCapture === undefined ? {} : { discardOpeningCapture: options.discardOpeningCapture }),
     loadStage: (index) => {
-      options.controllers.api.loadStage(index);
-      setEnvironmentStage(index, "new-run");
+      loadRunStage(stageLoad, index, "new-run");
     },
     stage,
     story,
-    lifecycle: options.lifecycle,
     install: (controller) => {
       options.controllers.installRunStart(controller);
     },
@@ -203,12 +193,12 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
       options.setScreen(screen, detail);
     },
     selectedBoss: options.selectedBoss,
-    shuffledRoster: content.shuffledRoster,
-    gauntletTrials: content.gauntletTrials,
-    bossBiome: content.bossBiome,
-    trainingPlatforms: () => playgroundRuntime.homePlatforms(),
-    playground: playgroundRuntime,
-    tutorial,
+    content,
+    training: {
+      platforms: () => playgroundRuntime.homePlatforms(),
+      playground: playgroundRuntime,
+      tutorial,
+    },
     ...(options.baselinePractice === undefined ? {} : { baselinePractice: options.baselinePractice }),
     startNextWave: options.controllers.api.startNextWave,
     achievementTracking: options.achievementTracking,
@@ -294,9 +284,11 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
     player: options.player,
     stageIndex: () => stage.index,
     loadStage: (index) => {
-      cleanupBossEncounterActors(options.enemies(), "stage-transition");
-      stage.load(index);
-      setEnvironmentStage(index, "stage-transition");
+      // The outcome's restart loads the stage state alone: the stage controller's resets are its own.
+      const load = (next: number): void => {
+        stage.load(next);
+      };
+      loadRunStage({ ...stageLoad, load }, index, "stage-transition");
     },
     authoritativeResult: options.authoritativeResult,
     setLastRecording: options.setLastRecording,

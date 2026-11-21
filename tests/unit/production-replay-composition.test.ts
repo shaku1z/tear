@@ -34,6 +34,7 @@ import type { TearSnapshotV1 } from "../../src/gameplay/snapshot/snapshot-contra
 import { createLiveParticlePresentationState } from "../../src/app/world/detached/particle-state";
 import { legacyCosmeticEmissionSnapshot } from "../../src/domain/cosmetic-emission-random";
 import { UPGRADES, applyUpgrade } from "../../src/gameplay/upgrades";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 const timing: CampaignChapterTiming = Object.freeze({
   loreReveal: 0.1,
@@ -48,7 +49,10 @@ const timing: CampaignChapterTiming = Object.freeze({
 });
 
 function activeChapterCheckpoint(slowText = false, opening = false) {
-  const composition = createProductionGhostReplayComposition({ seed: "runtime-atomic-chapter", mode: "campaign" });
+  const composition = createProductionGhostReplayComposition({
+    runSeed: scenarioRunSeed("runtime-atomic-chapter"),
+    mode: "campaign",
+  });
   const source = composition.create(undefined);
   // This is a constructed chapter boundary; retire the now-real natural launch before installing it.
   source.replay.world.context.cinema.cancel("constructed chapter fixture");
@@ -165,9 +169,10 @@ function withoutPresentation(snapshot: TearSnapshotV1): TearSnapshotV1 {
 }
 
 function rewardDelayCheckpoint(completedSelection = false) {
-  const source = createProductionGhostReplayComposition({ seed: "reward-clear-delay", mode: "endless" }).create(
-    undefined,
-  );
+  const source = createProductionGhostReplayComposition({
+    runSeed: scenarioRunSeed("reward-clear-delay"),
+    mode: "endless",
+  }).create(undefined);
   source.waveReward.reward.reset();
   const run = source.replay.world.state.run();
   if (run === null) throw new Error("reward delay requires a run");
@@ -201,7 +206,7 @@ describe("production replay composition", () => {
       if (paused) expect(source.waveReward.routeAction({ type: "pause" })).toBe(true);
       const saved = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "reward-delay");
       const restored = createProductionGhostReplayComposition({
-        seed: saved.snapshot.seed,
+        runSeed: scenarioRunSeed(saved.snapshot.seed),
         inputSnapshots: new Map([[saved.snapshot.tick, saved.input]]),
       }).create(saved.snapshot);
       expect(restored.semanticProjection()).toEqual(source.semanticProjection());
@@ -261,7 +266,7 @@ describe("production replay composition", () => {
       lifecycle.reward = null;
       (invalid.state["tear.ui.v1"] as Record<string, unknown>).screen = "draft";
     }
-    const destination = createProductionReplayWorld({ seed: "unchanged-delay-target" }),
+    const destination = createProductionReplayWorld({ runSeed: scenarioRunSeed("unchanged-delay-target") }),
       unchanged = unchangedDestination(destination);
     expect(() => restoreProductionReplaySnapshot(destination, invalid)).toThrow();
     unchanged();
@@ -270,7 +275,7 @@ describe("production replay composition", () => {
   it.each([0, 250])(
     "retains held aim magnitude %s through an input keyframe and its next command-free tick",
     (magnitude) => {
-      const options = { seed: "held-aim-frontier", mode: "endless" };
+      const options = { runSeed: scenarioRunSeed("held-aim-frontier"), mode: "endless" };
       const source = createProductionGhostReplayComposition(options).create(undefined);
       source.simulation.advanceOne([
         { kind: "command", id: 1, tick: 1, command: { type: "aim", turn: 125000, magnitude } },
@@ -291,7 +296,7 @@ describe("production replay composition", () => {
     "refuses reward/run coherence drift %s before replacement",
     (field) => {
       const source = createProductionGhostReplayComposition({
-        seed: `reward-incoherent-${field}`,
+        runSeed: scenarioRunSeed(`reward-incoherent-${field}`),
         mode: "endless",
       }).create(undefined);
       Object.assign(source.replay.world.state.run() ?? {}, { spawnQueue: [] });
@@ -313,7 +318,7 @@ describe("production replay composition", () => {
         runtime.lifecycle = { ...(runtime.lifecycle as Record<string, unknown>), reward: "boss", bossWave: true };
       } else if (field === "reservedChoice") selection.reservedChoice = { id: "fleet" };
       else selection[field] = true;
-      const target = createProductionReplayWorld({ seed: "unmodified-reward-target" }),
+      const target = createProductionReplayWorld({ runSeed: scenarioRunSeed("unmodified-reward-target") }),
         unchanged = unchangedDestination(target);
       expect(() => restoreProductionReplaySnapshot(target, invalid)).toThrow(/reward|choices/);
       unchanged();
@@ -322,7 +327,10 @@ describe("production replay composition", () => {
   it.each(["draft", "reserve", "tierup"] as const)(
     "continues a constructed %s boundary through the real reward owner without hydration effects",
     (phase) => {
-      const composition = createProductionGhostReplayComposition({ seed: `reward-boundary-${phase}`, mode: "endless" });
+      const composition = createProductionGhostReplayComposition({
+        runSeed: scenarioRunSeed(`reward-boundary-${phase}`),
+        mode: "endless",
+      });
       const source = composition.create(undefined),
         independent = composition.create(undefined);
       const run = source.replay.world.state.run() as never as {
@@ -403,7 +411,10 @@ describe("production replay composition", () => {
     },
   );
   it("launches the natural chapter and advances only explicit application frames and confirm inputs", () => {
-    const composition = createProductionGhostReplayComposition({ seed: "natural-explicit-chapter", mode: "campaign" });
+    const composition = createProductionGhostReplayComposition({
+      runSeed: scenarioRunSeed("natural-explicit-chapter"),
+      mode: "campaign",
+    });
     const source = composition.create(undefined);
     const cinema = source.replay.world.context.cinema;
     expect(source.replay.world.lifecycle.snapshot()).toMatchObject({
@@ -443,8 +454,10 @@ describe("production replay composition", () => {
     };
     expect(source.replay.world.state.run()).toMatchObject(activation);
     expect(restored.replay.world.state.run()).toMatchObject(activation);
-    expect(source.waveReward.outward).toEqual(expect.arrayContaining(["showWaveBanner", "playWaveSound"]));
-    expect(restored.waveReward.outward).toEqual(expect.arrayContaining(["showWaveBanner", "playWaveSound"]));
+    // The wave banner is world state, as in live play; only the sound is outward device work.
+    expect(source.waveReward.outward).toEqual(expect.arrayContaining(["playWaveSound"]));
+    expect(restored.waveReward.outward).toEqual(expect.arrayContaining(["playWaveSound"]));
+    expect(source.waveReward.outward).not.toContain("showWaveBanner");
     expect(source.simulation.scheduler.tick).toBe(1);
     expect(() => {
       source.advanceApplicationFrame(Number.NaN);
@@ -458,7 +471,7 @@ describe("production replay composition", () => {
     expect(cinema.captureState()).toEqual(stopped);
   });
   it("derives legacy v1 entropy only from staged run/tick and never claims old exact protocol identity", () => {
-    const composition = createProductionGhostReplayComposition({ seed: "legacy-emission-custody" }),
+    const composition = createProductionGhostReplayComposition({ runSeed: scenarioRunSeed("legacy-emission-custody") }),
       source = composition.create(undefined);
     source.replay.effects.spark(800, 775, 1, 0);
     const checkpoint = captureProductionReplayCheckpoint(
@@ -474,8 +487,8 @@ describe("production replay composition", () => {
       >;
     payload.version = 1;
     delete payload.entropy;
-    const first = createProductionReplayWorld({ seed: "temporary-one" }),
-      second = createProductionReplayWorld({ seed: "temporary-two" });
+    const first = createProductionReplayWorld({ runSeed: scenarioRunSeed("temporary-one") }),
+      second = createProductionReplayWorld({ runSeed: scenarioRunSeed("temporary-two") });
     first.cosmeticEmissionRandom.next();
     second.effects.explode(20, 30);
     restoreProductionReplaySnapshot(first, legacy);
@@ -495,7 +508,9 @@ describe("production replay composition", () => {
     expect(current).not.toEqual(payload);
   });
   it("captures, stages and recaptures actual particles using candidate tuning without changing replay semantics", () => {
-    const composition = createProductionGhostReplayComposition({ seed: "particle-presentation-portability" });
+    const composition = createProductionGhostReplayComposition({
+      runSeed: scenarioRunSeed("particle-presentation-portability"),
+    });
     const source = composition.create(undefined),
       fx = source.replay.effects;
     source.replay.configuration.value.effects.highBudget = 4;
@@ -505,7 +520,7 @@ describe("production replay composition", () => {
     fx.setViewRect({ left: 0, top: 0, right: 1200, bottom: 900 });
     const checkpoint = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "particles");
     const saved = (checkpoint.snapshot.state["tear.ui.v1"] as Record<string, unknown>).particlesPresentation;
-    const target = createProductionReplayWorld({ seed: "different-particle-target" });
+    const target = createProductionReplayWorld({ runSeed: scenarioRunSeed("different-particle-target") });
     target.configuration.value.effects.highBudget = 9;
     target.configuration.value.effects.cullMargin = 7;
     const list = target.effects.list;
@@ -551,7 +566,9 @@ describe("production replay composition", () => {
     expect(target.effects._replacementCursor).toBe(0);
   });
   it("accepts a portable live HUD checkpoint without changing replay semantics", () => {
-    const composition = createProductionGhostReplayComposition({ seed: "presentation-portability" });
+    const composition = createProductionGhostReplayComposition({
+      runSeed: scenarioRunSeed("presentation-portability"),
+    });
     const source = composition.create(undefined);
     const checkpoint = captureProductionReplayCheckpoint(
       source.replay,
@@ -574,12 +591,12 @@ describe("production replay composition", () => {
   });
 
   it("restores exact checkpoint seconds without inferring historical time", () => {
-    const composition = createProductionGhostReplayComposition({ seed: "checkpoint-clock" });
+    const composition = createProductionGhostReplayComposition({ runSeed: scenarioRunSeed("checkpoint-clock") });
     const source = composition.create(undefined);
     source.replay.world.context.services.clock.set(0.173456789);
     const checkpoint = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "clock");
     expect((checkpoint.snapshot.state["tear.world.v1"] as Record<string, unknown>).simulationSeconds).toBe(0.173456789);
-    const target = createProductionReplayWorld({ seed: "checkpoint-clock-target" });
+    const target = createProductionReplayWorld({ runSeed: scenarioRunSeed("checkpoint-clock-target") });
     restoreProductionReplaySnapshot(target, checkpoint.snapshot);
     expect(target.world.context.services.clock.seconds()).toBe(0.173456789);
     const legacy = structuredClone(checkpoint.snapshot);
@@ -590,7 +607,9 @@ describe("production replay composition", () => {
   });
 
   it.each([-1, "12", null])("rejects invalid checkpoint seconds %s before clock or world mutation", (seconds) => {
-    const source = createProductionGhostReplayComposition({ seed: "invalid-clock" }).create(undefined);
+    const source = createProductionGhostReplayComposition({ runSeed: scenarioRunSeed("invalid-clock") }).create(
+      undefined,
+    );
     const { snapshot } = captureProductionReplayCheckpoint(
       source.replay,
       source.combat,
@@ -599,7 +618,7 @@ describe("production replay composition", () => {
     );
     const invalid = structuredClone(snapshot);
     (invalid.state["tear.world.v1"] as Record<string, unknown>).simulationSeconds = seconds;
-    const target = createProductionReplayWorld({ seed: "invalid-clock-target" });
+    const target = createProductionReplayWorld({ runSeed: scenarioRunSeed("invalid-clock-target") });
     target.world.context.services.clock.set(0.75);
     const unchanged = unchangedDestination(target);
     expect(() => restoreProductionReplaySnapshot(target, invalid)).toThrow(/simulationSeconds/);
@@ -655,7 +674,7 @@ describe("production replay composition", () => {
           ...(kind === "inactive chapter" ? { "tear.cinematic.v1": INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } : {}),
         },
       };
-      const target = createProductionReplayWorld({ seed: "menu-rejection" });
+      const target = createProductionReplayWorld({ runSeed: scenarioRunSeed("menu-rejection") });
       const assertUnchanged = unchangedDestination(target);
       expect(() => restoreProductionReplaySnapshot(target, snapshot)).toThrow(/UI screen is invalid|chapter binding/);
       assertUnchanged();
@@ -714,7 +733,7 @@ describe("production replay composition", () => {
       },
     };
     const target = createProductionReplayWorld({
-      seed: "atomicity-target",
+      runSeed: scenarioRunSeed("atomicity-target"),
       mode: "endless",
       enemies: [{ id: "reflection", x: 600, y: 500 }],
     });
@@ -729,7 +748,10 @@ describe("production replay composition", () => {
     "direct chapter restore rejects $name before lifecycle mutation",
     ({ patch, cinema, error }) => {
       const fixture = activeChapterCheckpoint();
-      const target = createProductionReplayWorld({ seed: "direct-atomicity-target", mode: "campaign" });
+      const target = createProductionReplayWorld({
+        runSeed: scenarioRunSeed("direct-atomicity-target"),
+        mode: "campaign",
+      });
       const assertUnchanged = unchangedDestination(target);
       const runtime = {
         ...patch(fixture.runtime),
@@ -789,7 +811,7 @@ describe("production replay composition", () => {
 
   it("rejects legacy omitted-presentation timing against base before replacing a modified destination", () => {
     const fixture = activeChapterCheckpoint(true);
-    const target = createProductionReplayWorld({ seed: "legacy-slow-target" });
+    const target = createProductionReplayWorld({ runSeed: scenarioRunSeed("legacy-slow-target") });
     target.configuration.value.presentation.revealCharsPerSec = 1;
     const assertUnchanged = unchangedDestination(target);
     expect(() => restoreProductionReplaySnapshot(target, withoutPresentation(fixture.snapshot))).toThrow(
@@ -800,7 +822,7 @@ describe("production replay composition", () => {
 
   it("restores legacy omitted-presentation payloads using the authoritative base rather than current target tuning", () => {
     const fixture = activeChapterCheckpoint();
-    const target = createProductionReplayWorld({ seed: "legacy-default-target" });
+    const target = createProductionReplayWorld({ runSeed: scenarioRunSeed("legacy-default-target") });
     target.configuration.value.presentation.revealCharsPerSec = 1;
     const stableConfiguration = target.configuration.value,
       stablePresentation = stableConfiguration.presentation;
@@ -823,14 +845,14 @@ describe("production replay composition", () => {
         "tear.world.v1": { ...world, runtime: { ...fixture.runtime, wasSwinging: "true" } },
       },
     };
-    const target = createProductionReplayWorld({ seed: "transient-atomicity-target" });
+    const target = createProductionReplayWorld({ runSeed: scenarioRunSeed("transient-atomicity-target") });
     const assertUnchanged = unchangedDestination(target);
     expect(() => restoreProductionReplaySnapshot(target, snapshot)).toThrow(/wasSwinging must be boolean/);
     assertUnchanged();
   });
 
   it("preserves an existing same-world non-chapter cinematic owner in the direct helper", () => {
-    const target = createProductionReplayWorld({ seed: "same-world-cinema" });
+    const target = createProductionReplayWorld({ runSeed: scenarioRunSeed("same-world-cinema") });
     const onStart = vi.fn(),
       onEnter = vi.fn(),
       onComplete = vi.fn();
@@ -861,9 +883,9 @@ describe("production replay composition", () => {
   });
 
   it("does not carry an outgoing non-chapter callback context into a replaced world", () => {
-    const composition = createProductionGhostReplayComposition({ seed: "non-chapter-replacement" });
+    const composition = createProductionGhostReplayComposition({ runSeed: scenarioRunSeed("non-chapter-replacement") });
     const source = composition.create(undefined),
-      target = createProductionReplayWorld({ seed: "outgoing-cinema" });
+      target = createProductionReplayWorld({ runSeed: scenarioRunSeed("outgoing-cinema") });
     const script = { id: "same-script-different-world", revision: "1", beats: [{ id: "held", duration: 3 }] };
     source.replay.world.context.cinema.start(script, { player: source.replay.world.state.player() });
     target.world.context.cinema.start(script, { player: target.world.state.player() });
@@ -879,7 +901,10 @@ describe("production replay composition", () => {
   });
 
   it("continues a restored boss intro on simulation ticks and resumes real boss AI", () => {
-    const composition = createProductionGhostReplayComposition({ seed: "replay-boss-intro", mode: "bossonly" });
+    const composition = createProductionGhostReplayComposition({
+      runSeed: scenarioRunSeed("replay-boss-intro"),
+      mode: "bossonly",
+    });
     const source = composition.create(undefined);
     const boss = source.replay.world.entities.createEnemy(
       "rootbound",
@@ -896,7 +921,10 @@ describe("production replay composition", () => {
       source.waveReward,
       "active-intro",
     );
-    const target = createProductionReplayWorld({ seed: "replay-boss-intro-target", mode: "bossonly" });
+    const target = createProductionReplayWorld({
+      runSeed: scenarioRunSeed("replay-boss-intro-target"),
+      mode: "bossonly",
+    });
     restoreProductionReplaySnapshot(target, snapshot);
     expect(target.world.state.bossIntro()?.boss).toBe(target.world.state.enemies()[0]);
     expect(target.world.state.bossIntro()?.boss).not.toBe(boss);
@@ -967,7 +995,7 @@ describe("production replay composition", () => {
 
   it("captures and restores active Rootbound Regrowth and Last Spring state through the shared transaction", () => {
     const composition = createProductionGhostReplayComposition({
-      seed: "rootbound-phase-three-transaction",
+      runSeed: scenarioRunSeed("rootbound-phase-three-transaction"),
       mode: "bossonly",
     });
     const source = composition.create(undefined);
@@ -1142,7 +1170,10 @@ describe("production replay composition", () => {
   });
 
   it("restores an active data-bound chapter and activates its prepared wave", () => {
-    const replay = createProductionReplayWorld({ seed: "production-replay-chapter", mode: "campaign" });
+    const replay = createProductionReplayWorld({
+      runSeed: scenarioRunSeed("production-replay-chapter"),
+      mode: "campaign",
+    });
     const spec = createCampaignChapterBindingSpec({
       stageIndex: 0,
       priorOutro: null,
@@ -1183,7 +1214,9 @@ describe("production replay composition", () => {
   });
 
   it("rebases non-empty foreign environment state and rejects malformed post-rebase state atomically", () => {
-    const composition = createProductionGhostReplayComposition({ seed: "production-replay-environment" });
+    const composition = createProductionGhostReplayComposition({
+      runSeed: scenarioRunSeed("production-replay-environment"),
+    });
     const source = composition.create(undefined);
     source.replay.world.context.environment.setStage("grounds", "restore");
     source.replay.world.context.environment.addField({
@@ -1219,7 +1252,10 @@ describe("production replay composition", () => {
         "tear.hazard.v1": Object.freeze({ ...hazard, worldId: foreignWorldId, fields: foreignFields }),
       }),
     };
-    const target = createProductionReplayWorld({ seed: "production-replay-environment-target", mode: "campaign" });
+    const target = createProductionReplayWorld({
+      runSeed: scenarioRunSeed("production-replay-environment-target"),
+      mode: "campaign",
+    });
     restoreProductionReplaySnapshot(target, foreignSnapshot);
     const targetEnvironment = target.world.context.environment.snapshot();
     expect(targetEnvironment.fields).toHaveLength(1);

@@ -15,11 +15,13 @@ import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-setup-
 import { PALE_STAGE_ENGINEERING_TEARSDL } from "../../src/tearbench/pale-stage-engineering-scenario";
 import { resolveTearSdl } from "../../src/tearbench/tearsdl";
 import type { TearSnapshotV1 } from "../../src/gameplay/snapshot/snapshot-contract";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 function sourceSnapshot(): TearSnapshotV1 {
-  const source = createProductionGhostReplayComposition({ seed: "pale-stage-wave-41", mode: "campaign" }).create(
-    undefined,
-  );
+  const source = createProductionGhostReplayComposition({
+    runSeed: scenarioRunSeed("pale-stage-wave-41"),
+    mode: "campaign",
+  }).create(undefined);
   return captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "pale-stage-wave-41-source")
     .snapshot;
 }

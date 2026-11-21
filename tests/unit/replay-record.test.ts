@@ -1,5 +1,4 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -13,13 +12,22 @@ import {
 import { createReplayRecorder } from "../../src/replay/recorder";
 
 const HASH = "0123456789abcdef";
+/** A new player's saved progress and settings. */
+const NEW_PLAYER = Object.freeze({
+  metaRanks: {},
+  variantDiscovery: [],
+  achievementSnapshot: [],
+  restoredTrail: false,
+  cinematics: "full" as const,
+  playedChapters: [],
+});
 
 function validRecord() {
   const recorder = createReplayRecorder({
     ruleset: "rules",
     build: { version: "0.1.0", revision: "abc", target: "test" },
-    seed: "seed",
-    start: { mode: "endless", difficulty: "easy", weapon: "sword" },
+    seed: 12345,
+    start: { mode: "endless", difficulty: "easy", weapon: "sword", ...NEW_PLAYER },
     look: { playerName: "Player", cosmetics: {}, music: null, recordedAt: "2026-11-21" },
   });
   for (let tick = 1; tick <= REPLAY_CHECKPOINT_TICKS * 2 + 5; tick += 1)
@@ -71,6 +79,18 @@ describe("the replay record", () => {
       {},
       { ...record, run: undefined },
       { ...record, run: { ...record.run, seed: "" } },
+      { ...record, run: { ...record.run, seed: "12345" } },
+      { ...record, run: { ...record.run, seed: 0 } },
+      { ...record, run: { ...record.run, seed: 2 ** 32 } },
+      { ...record, run: { ...record.run, seed: 1.5 } },
+      { ...record, run: { ...record.run, start: { ...record.run.start, mode: "tutorial" } } },
+      { ...record, run: { ...record.run, start: { ...record.run.start, mode: "playground" } } },
+      { ...record, run: { ...record.run, start: { ...record.run.start, metaRanks: { tough: -1 } } } },
+      { ...record, run: { ...record.run, start: { ...record.run.start, variantDiscovery: [1] } } },
+      { ...record, run: { ...record.run, start: { ...record.run.start, restoredTrail: "yes" } } },
+      { ...record, run: { ...record.run, start: { ...record.run.start, cinematics: "loud" } } },
+      { ...record, run: { ...record.run, start: { ...record.run.start, playedChapters: [2, 1] } } },
+      { ...record, run: { ...record.run, start: { ...record.run.start, achievementSnapshot: undefined } } },
       { ...record, run: { ...record.run, start: { ...record.run.start, weapon: "spoon" } } },
       { ...record, run: { ...record.run, start: { ...record.run.start, mode: "waves" } } },
       { ...record, run: { ...record.run, checkpoints: record.run.checkpoints.slice(1) } },
@@ -112,8 +132,8 @@ describe("the replay record", () => {
     const recorder = createReplayRecorder({
       ruleset: "rules",
       build: { version: "0.1.0", revision: "abc", target: "test" },
-      seed: "seed",
-      start: { mode: "endless", difficulty: "easy", weapon: "sword" },
+      seed: 12345,
+      start: { mode: "endless", difficulty: "easy", weapon: "sword", ...NEW_PLAYER },
       look: { playerName: "Player", cosmetics: {}, music: null, recordedAt: "2026-11-21" },
     });
     expect(() => {
@@ -146,16 +166,24 @@ const GHOST_V3_FORMAT_FILES = Object.freeze([
 ]);
 
 describe("one replay format", () => {
-  const sources = execFileSync("git", ["ls-files", "src"], { encoding: "utf8" })
-    .split("\n")
-    .filter((path) => path.endsWith(".ts") && path !== "src/replay/record.ts");
-  const naming = (pattern: RegExp) => sources.filter((path) => pattern.test(readFileSync(path, "utf8")));
+  /** The tracked src TypeScript files other than record.ts that hold `pattern`, by one native git grep. */
+  const naming = (pattern: string): string[] => {
+    try {
+      return execFileSync("git", ["grep", "-l", "-E", pattern, "--", ":(glob)src/**/*.ts"], { encoding: "utf8" })
+        .split("\n")
+        .filter((path) => path !== "" && path !== "src/replay/record.ts");
+    } catch (error) {
+      // git grep exits 1 when nothing matches; anything else is a real failure.
+      if ((error as { status?: number }).status === 1) return [];
+      throw error;
+    }
+  };
 
   it("is named only by src/replay/record.ts", () => {
-    expect(naming(/["'`]tear-replay["'`]/u)).toEqual([]);
+    expect(naming("[\"'`]tear-replay[\"'`]")).toEqual([]);
   });
 
   it("leaves the Ghost V3 format names only in modules that are still to be replaced", () => {
-    expect(naming(/["'`]tearghost-[a-z-]+["'`]/u).sort()).toEqual([...GHOST_V3_FORMAT_FILES]);
+    expect(naming("[\"'`]tearghost-[a-z-]+[\"'`]").sort()).toEqual([...GHOST_V3_FORMAT_FILES]);
   });
 });

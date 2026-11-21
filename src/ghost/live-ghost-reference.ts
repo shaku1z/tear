@@ -23,6 +23,7 @@ import {
   type GhostLiveReference,
   type GhostReferenceFrame,
 } from "./live-ghost-reference-data";
+import { scenarioRunSeed } from "../gameplay/run/run-start-choices";
 
 /** Existing production replay, one forward pass. No reconstructed actors escape. */
 export async function prepareGhostLiveReference(
@@ -113,7 +114,7 @@ export async function prepareGhostLiveReference(
     }
   });
   const composition = replayEngine.loaded().createProductionGhostReplayComposition({
-    seed: anchor.seed,
+    runSeed: scenarioRunSeed(anchor.seed),
     raceDecisions: readSeedRaceDecisions(capsule, context.run.id),
     requireRecordedApplicationFrames: true,
     gameplayEvents,

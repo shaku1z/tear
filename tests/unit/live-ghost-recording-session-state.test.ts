@@ -15,10 +15,11 @@ import { createGhostReplayRunContext } from "../../src/ghost/replay-admission";
 import { createLiveGhostCausalEvent } from "../../src/ghost/live-causal-events";
 import { TearGameplayEventBus } from "../../src/gameplay/runtime/gameplay-events";
 import { projectGhostRunDnaTheater } from "../../src/ghost/run-dna-theater";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 describe("live Ghost recording session state", () => {
   it("seals native terminal-tick damage before a multi-step frame tail, and refuses corrupt fresh coverage", async () => {
-    const replay = createProductionReplayWorld({ seed: "dna-terminal", mode: "endless" });
+    const replay = createProductionReplayWorld({ runSeed: scenarioRunSeed("dna-terminal"), mode: "endless" });
     const player = replay.world.state.player(),
       blade = replay.world.state.blade(),
       run = replay.world.state.run();

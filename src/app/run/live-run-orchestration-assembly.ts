@@ -55,11 +55,8 @@ export function assembleLiveRunOrchestration(options: LiveRunOrchestrationAssemb
     environment,
   } = world;
   const { transient } = world.context;
-  const { impact, feel } = transient;
-  const CINEMA = world.context.cinema;
+  const { feel } = transient;
   const { campaign: campaignHost, training: trainingHost, weapon: weaponRuntime } = campaignTraining;
-  const { story } = campaignHost;
-  const { tutorial: TUT } = trainingHost;
   const { achievements: AT, tracks: achTracks, check: achCheck } = campaignTraining.style;
   const { controllers: runControllers, applySettings, seedRace } = services;
   const { awardCoins, telemetry: economyTelemetry } = services.economy;
@@ -105,32 +102,17 @@ export function assembleLiveRunOrchestration(options: LiveRunOrchestrationAssemb
     applySettings,
     attackPresentation: options.attackPresentation,
     environment,
-    prepareWorld: () => {
-      if (!options.practiceStart.active()) {
-        TUT.restoreSession(undefined);
-        TUT.restorePresentation(undefined);
-      }
-      if (CINEMA.active) CINEMA.cancel("new-run");
-      story.resetFinale();
-      hostState.setBossIntro(null);
-      hostState.setBossBeat(null);
+    world,
+    combat: {
+      resetClock: () => {
+        options.combat().simulationRuntime.reset(0);
+      },
+      resetIdentity: () => {
+        options.combat().combatEntityRuntime.resetIdentity();
+      },
     },
-    resetTransientWorld: () => {
-      impact.hitStop = 0;
-      impact.shake = 0;
-      options.hudFeedback.restore(undefined);
-    },
-    finishWorldReset: () => {
-      transient.resetFeel();
-      impact.slowMotion = 0;
-      transient.resetOpening();
-    },
-    resetAuthoritativeClocks: () => {
-      options.combat().simulationRuntime.reset(0);
-    },
-    resetCombatIdentity: () => {
-      options.combat().combatEntityRuntime.resetIdentity();
-    },
+    hud: options.hudFeedback,
+    cinematicPreference: () => services.settings.cinematics,
     race: seedRace,
     createRunSeed: () => seedRace.seed() ?? session.takeRunSeed() ?? dependencies.createRunSeed(),
     withOpeningCapture: openingCapture.withCapture,

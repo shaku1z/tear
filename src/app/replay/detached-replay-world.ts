@@ -1,7 +1,7 @@
 import { TearGameplayEventBus } from "../../gameplay/runtime/gameplay-events";
 import type { AuthoritativeStepResult } from "../../gameplay/runtime/authoritative-step";
 import type { CanonicalGameplayState } from "../../gameplay/runtime/canonical-state";
-import type { ReplayRun } from "../../replay/record";
+import { replayStartChoices, type ReplayRun } from "../../replay/record";
 import type { ReplayWorld, ReplayWorldRun } from "../../replay/verify";
 import { stepDetachedWorld } from "../world/detached/detached-step";
 import { createProductionGhostReplayComposition } from "../world/detached/replay-composition";
@@ -12,12 +12,14 @@ const NO_RUN = Object.freeze({ score: 0, wave: 0, time: 0 });
 function startDetachedReplay(run: ReplayRun, observe: Parameters<ReplayWorld["start"]>[1]): ReplayWorldRun {
   const events = new TearGameplayEventBus();
   const unsubscribe = events.subscribe(observe);
+  const start = replayStartChoices(run);
   const session = createProductionGhostReplayComposition({
-    seed: run.seed,
-    mode: run.start.mode,
-    weaponId: run.start.weapon,
-    difficulty: run.start.difficulty,
-    ...(run.start.boss === undefined ? {} : { firstBoss: run.start.boss }),
+    runSeed: start.runSeed,
+    mode: start.mode,
+    weaponId: start.weapon,
+    difficulty: start.difficulty,
+    firstBoss: start.boss,
+    saved: start,
     gameplayEvents: events,
   }).create(undefined);
   events.setTickSource(() => session.simulation.scheduler.tick);

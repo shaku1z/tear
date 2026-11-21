@@ -4,6 +4,7 @@ import { EnvironmentRuntime } from "../../src/gameplay/environment/environment-r
 import { ENEMY_IDENTITY_IDS } from "../../src/gameplay/run/content-director";
 import { bindBiomeActors } from "../../src/gameplay/environment/biome-actors/bind-biome-actors";
 import { createProductionGhostReplayComposition } from "../../src/app/world/detached/replay-composition";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 // Rules over all content: whatever live play can build or bind, the production replay world must
 // build and bind the same way. A new enemy or biome actor is covered without adding a case here.
@@ -41,16 +42,20 @@ describe("production replay covers all live content", () => {
       });
     });
     const replay = recordActorSourceBindings(() =>
-      createProductionGhostReplayComposition({ seed: "replay-binding-rule", mode: "campaign" }).create(undefined),
+      createProductionGhostReplayComposition({
+        runSeed: scenarioRunSeed("replay-binding-rule"),
+        mode: "campaign",
+      }).create(undefined),
     );
     expect(live.length).toBeGreaterThan(0);
     expect(replay).toEqual(live);
   });
 
   it("constructs every enemy kind in the production replay world", () => {
-    const { replay } = createProductionGhostReplayComposition({ seed: "replay-enemy-rule", mode: "campaign" }).create(
-      undefined,
-    );
+    const { replay } = createProductionGhostReplayComposition({
+      runSeed: scenarioRunSeed("replay-enemy-rule"),
+      mode: "campaign",
+    }).create(undefined);
     const run = replay.world.state.run();
     // Some identities build a shared kind (priest is a support enemy); the rule is that each one builds.
     for (const kind of ENEMY_IDENTITY_IDS) {

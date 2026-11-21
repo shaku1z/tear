@@ -1,3 +1,4 @@
+import { startDetachedTestRun } from "../support/detached-run-start";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { applyWeapon } from "../../src/gameplay/weapons";
 import { CONFIG } from "../../src/config/game-config";
@@ -9,6 +10,7 @@ import { createProductionWaveRewardRuntime } from "../../src/app/world/detached/
 import { projectProductionReplayCanonicalState } from "../../src/app/world/detached/replay-composition";
 import { createLiveTutorialSessionActions } from "../../src/app/training/tutorial-session-actions";
 import { loadShippingTutorialGold } from "../../src/gameplay/training/tutorial-gold-shipping";
+import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 // These tests need the coach's demonstrations, so they load the on-demand corpus first; the game asks for it once a lesson is played.
 beforeAll(async () => {
@@ -23,7 +25,7 @@ describe("live tutorial runtime", () => {
         throw new Error("handoff not installed");
       };
       const replay = createProductionReplayWorld({
-        seed: "lab-handoff",
+        runSeed: scenarioRunSeed("lab-handoff"),
         mode: "tutorial",
         weaponId: "sword",
         difficulty: "normal",
@@ -36,7 +38,7 @@ describe("live tutorial runtime", () => {
       });
       const content = createProductionWaveRewardRuntime(replay);
       replay.bindTutorialSpawn(content.spawnTutorial);
-      content.startNaturalOpening();
+      startDetachedTestRun(replay, content, { combat: core });
       replay.tutorial.openPractice(1);
       expect(replay.tutorial.selectLesson("move")).toBe(true);
       const sourceRun = replay.world.state.run();
