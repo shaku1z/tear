@@ -188,13 +188,8 @@ export function createBossRuntime(dependencies: EnemyDependencies) {
       return;
     }
     // where the spoken line anchors, so world choreography owns the frame center
-    // (Pantheon VI P4). Colossus is a non-conversational upper-left warning; the
-    // Source speaks from depth-center; the rest sit in a lower corner.
+    // (Pantheon VI P4). The Source speaks from depth-center; the rest sit in a lower corner.
     const anchorByPose = {
-      wardenRule: "lower-left",
-      wardenBreak: "lower-left",
-      colossusContainment: "upper-left",
-      colossusCore: "upper-left",
       aldricCrownfall: "lower-right",
       aldricFeral: "lower-right",
       echoMirror: "lower-right",
