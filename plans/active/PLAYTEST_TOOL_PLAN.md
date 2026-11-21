@@ -460,6 +460,27 @@ the commit before the wave change of pull request 316 print both situations as c
 went. Tests: `tests/unit/playtest-compare.test.ts` (failure mode 3: one enemy's health doubled, its time to
 kill flagged and nothing else).
 
+Built seventh (2026-11-21): the headless player decides from the live game's own observation. Headless runs
+ended at waves 5 to 8 where the same scripted player in the browser reached wave 60. The cause was not a
+revive (the standalone game has no continue screen: it is the rewarded-advert continue, and there are no
+adverts). The headless player was given a second, poorer observation: no walls, no enemy attack states, and
+enemy names that were list positions and moved when an enemy died. The scripted player turns off a wall only
+when it is told where the walls are, so a Riftlock player backed into the left wall and stayed. Now
+`headless/production-policy-observation.ts` hands the headless world to the live projection
+(`projectLiveTearObservation`), so there is one observation for both, with the game's own enemy ids. Measured
+on the easy Adventure with Riftlock, seeds "117" and "1" to "5": headless runs ended at waves 5 to 8 before,
+and at 60 (won), 10, 8, 9, 60 (won) and 18 after; the browser player on the same six runs ended at 60, 60, 18,
+9, 60 and 10. The two do not match run for run (one known difference is the pause below), but they spread
+the same. Three things came with it. A run that beat the last boss
+sat in the closing scene to its time limit: `skipFinale` in `headless/chapter.ts` holds confirm through it, as
+a player does, to the win screen. With real attack states the player gives way to an enemy winding up, and it
+would not go to a target standing at a wall; `MovementModule` in `src/agents/scripted-policy.ts` now lets it
+approach one (this is also the browser player's rule). And the recorded scripted fights in
+`tests/fixtures/canonical-hash-stream.json` change, because the player decides differently; the game's rules
+do not. Not fixed, not this tool's code: the headless world keeps stepping while a screen pauses the game
+(600 paused ticks cost the player 33 health), and `--seed` is hashed, so headless seed "117" is the browser's
+seed 1714819488. Tests: `tests/unit/scripted-player-walls.test.ts`, `tests/unit/playtest-finale.test.ts`.
+
 Done when:
 - [ ] Every boss phase, every wave of each biome and every enemy kind is a row that starts directly, in under 1 s each.
 - [x] `pnpm playtest runs` reports where runs end and per-wave time and health cost for 3 modes, 3 difficulties and 5 weapons.
