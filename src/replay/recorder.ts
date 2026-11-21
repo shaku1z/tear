@@ -1,6 +1,8 @@
 /**
  * Builds a replay record while a run plays. The host calls `step` once per simulation tick with the
- * actions applied at that tick, `observe` with each gameplay event, and `finish` when the run ends.
+ * actions applied at that tick, `frame` for each application frame that starts while a scene is active
+ * (the record's named frame-clock exception, ReplayFrame), `observe` with each gameplay event, and
+ * `finish` when the run ends.
  * The state hash is asked for only at checkpoint ticks, so recording costs one hash per second.
  */
 import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
@@ -11,6 +13,8 @@ import {
   createReplaySummaryCounter,
   type ReplayAction,
   type ReplayCheckpoint,
+  type ReplayFrame,
+  type ReplayFrameConfirm,
   type ReplayLook,
   type ReplayRecord,
   type ReplayRun,
@@ -28,6 +32,8 @@ export interface ReplayRunEnd {
 export interface ReplayRecorder {
   /** One simulation tick: the actions applied at `tick`, and its state hash on demand. */
   readonly step: (tick: number, actions: readonly ReplayAction[], hash: () => string) => void;
+  /** An application frame that started during a scene, after `tick` (the last stepped tick, 0 before any). */
+  readonly frame: (tick: number, seconds: number, confirm: ReplayFrameConfirm) => void;
   readonly observe: (event: TearGameplayEvent) => void;
   readonly finish: (end: ReplayRunEnd) => ReplayRecord;
 }
@@ -35,6 +41,7 @@ export interface ReplayRecorder {
 export function createReplayRecorder(header: ReplayRecorderHeader): ReplayRecorder {
   const actions: ReplayAction[] = [];
   const checkpoints: ReplayCheckpoint[] = [];
+  const frames: ReplayFrame[] = [];
   const counter = createReplaySummaryCounter();
   let lastTick = 0;
   let lastId = 0;
@@ -52,6 +59,11 @@ export function createReplayRecorder(header: ReplayRecorderHeader): ReplayRecord
       lastTick = tick;
       if (tick % REPLAY_CHECKPOINT_TICKS === 0) checkpoints.push(Object.freeze({ tick, hash: hash() }));
     },
+    frame(tick: number, seconds: number, confirm: ReplayFrameConfirm): void {
+      if (finished) throw new Error("replay recorder already finished");
+      if (tick !== lastTick) throw new RangeError(`replay frame expected after tick ${String(lastTick)}`);
+      frames.push(Object.freeze({ tick, seconds, confirm: Object.freeze({ ...confirm }) }));
+    },
     observe: counter.observe,
     finish(end: ReplayRunEnd): ReplayRecord {
       if (finished) throw new Error("replay recorder already finished");
@@ -66,6 +78,8 @@ export function createReplayRecorder(header: ReplayRecorderHeader): ReplayRecord
           seed: header.seed,
           start: header.start,
           actions: Object.freeze(actions),
+          // A frame after the last tick cannot change the result.
+          frames: Object.freeze(frames.filter((frame) => frame.tick < end.tick)),
           checkpoints: Object.freeze(checkpoints),
           result: Object.freeze({ tick: end.tick, hash: end.hash, outcome: counter.outcome() }),
         }),

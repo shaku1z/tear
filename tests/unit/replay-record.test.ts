@@ -30,12 +30,16 @@ function validRecord() {
     start: { mode: "endless", difficulty: "easy", weapon: "sword", ...NEW_PLAYER },
     look: { playerName: "Player", cosmetics: {}, music: null, recordedAt: "2026-11-21" },
   });
-  for (let tick = 1; tick <= REPLAY_CHECKPOINT_TICKS * 2 + 5; tick += 1)
+  // Scene frames: one before the first tick, and one after tick 10 with confirm held.
+  recorder.frame(0, 1 / 60, { key: false, touch: false, pad: false, click: false });
+  for (let tick = 1; tick <= REPLAY_CHECKPOINT_TICKS * 2 + 5; tick += 1) {
     recorder.step(
       tick,
       tick === 3 ? [{ kind: "command", id: 1, tick, command: { type: "jump", phase: "pressed" } }] : [],
       () => HASH,
     );
+    if (tick === 10) recorder.frame(10, 1 / 60, { key: true, touch: false, pad: false, click: false });
+  }
   recorder.observe({ kind: "death", tick: 40, actorId: "e1", cause: "combat" });
   recorder.observe({ kind: "wave", tick: 2, wave: 1, event: "start" });
   return recorder.finish({ tick: REPLAY_CHECKPOINT_TICKS * 2 + 5, hash: HASH, run: { score: 10, wave: 1, time: 2 } });
@@ -46,6 +50,10 @@ describe("the replay record", () => {
     const record = validRecord();
     expect(record).toMatchObject({ format: REPLAY_FORMAT, version: REPLAY_VERSION });
     expect(record.run.checkpoints.map((checkpoint) => checkpoint.tick)).toEqual([120, 240]);
+    expect(record.run.frames.map((frame) => [frame.tick, frame.confirm.key])).toEqual([
+      [0, false],
+      [10, true],
+    ]);
     expect(record.summary).toEqual({
       score: 10,
       wave: 1,
@@ -117,6 +125,43 @@ describe("the replay record", () => {
           ],
         },
       },
+      { ...record, run: { ...record.run, frames: undefined } },
+      {
+        ...record,
+        run: {
+          ...record.run,
+          frames: [{ tick: 10, seconds: 0.5, confirm: { key: false, touch: false, pad: false, click: false } }],
+        },
+      },
+      {
+        ...record,
+        run: {
+          ...record.run,
+          frames: [{ tick: 10, seconds: -1, confirm: { key: false, touch: false, pad: false, click: false } }],
+        },
+      },
+      {
+        ...record,
+        run: {
+          ...record.run,
+          frames: [{ tick: 245, seconds: 0.01, confirm: { key: false, touch: false, pad: false, click: false } }],
+        },
+      },
+      { ...record, run: { ...record.run, frames: [{ tick: 10, seconds: 0.01, confirm: { key: true } }] } },
+      {
+        ...record,
+        run: {
+          ...record.run,
+          frames: [
+            {
+              tick: 10,
+              seconds: 0.01,
+              confirm: { ...{ key: false, touch: false, pad: false, click: false }, mouse: true },
+            },
+          ],
+        },
+      },
+      { ...record, run: { ...record.run, frames: [...record.run.frames].reverse() } },
       { ...record, summary: { ...record.summary, kills: -1 } },
       { ...record, look: { ...record.look, playerName: "x".repeat(65) } },
     ];
@@ -156,6 +201,10 @@ describe("the replay record", () => {
     recorder.step(1, [{ kind: "command", id: 4, tick: 1, command: { type: "jump", phase: "pressed" } }], () => HASH);
     expect(() => {
       recorder.step(2, [{ kind: "command", id: 4, tick: 2, command: { type: "jump", phase: "released" } }], () => HASH);
+    }).toThrow(RangeError);
+    // A scene frame belongs after the last stepped tick.
+    expect(() => {
+      recorder.frame(0, 1 / 60, { key: false, touch: false, pad: false, click: false });
     }).toThrow(RangeError);
   });
 });

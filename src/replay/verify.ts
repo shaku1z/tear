@@ -6,11 +6,9 @@
  * choices and given its actions at their ticks, reaches the same state hashes again.
  *
  * Live play and the detached world start a run through one run start, so a record's seed and start
- * choices give the same opening world. Until the rest of replay PR 5b, a record from live play is still
- * not guaranteed to verify: its reward picks are UI calls, not actions, and the cinema frame clock
- * differs. The detached world also carries one frame-clock exception (src/app/world/detached/
- * detached-step.ts): while a boss intro or a cinematic holds the fight, each tick first runs one
- * application frame of one tick's length with no confirm press.
+ * choices give the same opening world; reward picks are actions, and the scene frames the record holds
+ * (ReplayFrame, its one frame clock) are played before the tick after them. Verify plays only what the
+ * record holds: it never makes up a frame.
  *
  * The world is a port: the app builds the detached production world behind it
  * (src/app/replay/detached-replay-world.ts), and verify sees only `ReplayRecord["run"]` through it, so
@@ -23,6 +21,7 @@ import {
   createReplaySummaryCounter,
   replayPlaybackRefusal,
   type ReplayAction,
+  type ReplayFrame,
   type ReplayRecord,
   type ReplayRun,
   type ReplaySummary,
@@ -36,7 +35,8 @@ export interface ReplayWorldTick {
 
 /** A run being re-simulated, one tick per `step`. */
 export interface ReplayWorldRun {
-  readonly step: (actions: readonly ReplayAction[]) => ReplayWorldTick;
+  /** One tick: the scene frames recorded before it, in order, then the tick with its actions. */
+  readonly step: (actions: readonly ReplayAction[], frames: readonly ReplayFrame[]) => ReplayWorldTick;
   /** The run's score, wave and clock now. */
   readonly run: () => Readonly<{ score: number; wave: number; time: number }>;
   readonly dispose: () => void;
@@ -44,7 +44,10 @@ export interface ReplayWorldRun {
 
 export interface ReplayWorld {
   /** Starts the recorded run from its seed and start choices; `observe` receives its gameplay events. */
-  readonly start: (run: ReplayRun, observe: (event: TearGameplayEvent) => void) => ReplayWorldRun;
+  readonly start: (
+    run: Pick<ReplayRun, "seed" | "start">,
+    observe: (event: TearGameplayEvent) => void,
+  ) => ReplayWorldRun;
 }
 
 export type ReplayVerdict =
@@ -75,16 +78,19 @@ function summaryText(summary: ReplaySummary): string {
 export function verifyReplay(record: ReplayRecord, world: ReplayWorld): ReplayVerdict {
   const refusal = replayPlaybackRefusal(record.run);
   if (refusal !== null) return Object.freeze({ status: "refused", message: refusal });
-  const { actions, checkpoints, result } = record.run;
+  const { actions, frames, checkpoints, result } = record.run;
   const counter = createReplaySummaryCounter();
   const run = world.start(record.run, counter.observe);
   try {
     let next = 0;
+    let nextFrame = 0;
     let last: ReplayWorldTick | undefined;
     for (let tick = 1; tick <= result.tick; tick += 1) {
       const start = next;
       while (next < actions.length && actions[next]?.tick === tick) next += 1;
-      last = run.step(actions.slice(start, next));
+      const firstFrame = nextFrame;
+      while (nextFrame < frames.length && frames[nextFrame]?.tick === tick - 1) nextFrame += 1;
+      last = run.step(actions.slice(start, next), frames.slice(firstFrame, nextFrame));
       if (last.tick !== tick) return differs(tick, "ended-early", String(tick), String(last.tick));
       if (tick % REPLAY_CHECKPOINT_TICKS === 0) {
         const expected = checkpoints[tick / REPLAY_CHECKPOINT_TICKS - 1]?.hash ?? "";

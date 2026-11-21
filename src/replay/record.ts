@@ -5,15 +5,13 @@
  * module declares a replay format id or version (tests/unit/replay-record.test.ts).
  *
  * A record is a seed, the run's start choices and its semantic actions at ticks, with a state hash
- * every REPLAY_CHECKPOINT_TICKS and at the end. It holds no keyframes, random tracks or frame clocks:
- * the detached world re-simulates the run, and keyframes for seeking are a cache kept beside a record.
+ * every REPLAY_CHECKPOINT_TICKS and at the end. It holds no keyframes or random tracks: the detached
+ * world re-simulates the run, and keyframes for seeking are a cache kept beside a record. It holds one
+ * frame clock, as a named exception: `frames` (see ReplayFrame).
  *
  * Live play and the detached world start a run the same way: one run start (src/app/run/run-start-world.ts)
- * from the same start choices, the record's `seed` and `start`. Until the rest of replay PR 5b, a record
- * from live play is still not guaranteed to verify, for two reasons: its reward picks are UI calls, not
- * actions, and the cinema frame clock. The detached world also carries one frame-clock exception
- * (src/app/world/detached/detached-step.ts): while a boss intro or a cinematic holds the fight, each tick
- * first runs one application frame of one tick's length with no confirm press.
+ * from the same start choices, the record's `seed` and `start`. Reward picks and rerolls are actions
+ * (`rewardDecisionAction` in src/app/world/detached/action-routing.ts), and a held screen holds both.
  *
  * Tutorial and Playground runs are never recorded (they earn nothing and are practice), so a record of
  * one is refused.
@@ -25,6 +23,7 @@ import { DIFFICULTY_IDS, type DifficultyId } from "../gameplay/run/difficulty-ca
 import { MODE_IDS } from "../gameplay/run/mode-catalog";
 import { rulesetRefusal } from "../gameplay/run/ruleset-version";
 import type { RunMode } from "../gameplay/run/session";
+import type { SceneConfirm } from "../gameplay/runtime/cinematic-director";
 import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
 import { isWeaponId, type WeaponId } from "../gameplay/weapon-selection";
 import { normalizeGameAction, type GameAction } from "../input/game-action";
@@ -83,6 +82,25 @@ export interface ReplayResult {
   readonly outcome: ReplayOutcome;
 }
 
+/** The confirm presses a live frame sampled while a scene played. */
+export type ReplayFrameConfirm = SceneConfirm;
+
+/** The frame driver's cap on one application frame (RuntimeFrameDriver). */
+export const REPLAY_FRAME_MAX_SECONDS = 0.1;
+
+/**
+ * The record's one frame clock, a named exception: an application frame that started while a scene (a
+ * cinematic, a chapter page or a boss ritual) was active. A scene plays on frame seconds and confirm
+ * presses, not on ticks, and it holds the fight, so the tick it ends on is gameplay. `tick` is the last
+ * simulated tick before the frame (0 before the first); verify plays a tick's frames, in order, before
+ * the tick after it. The exception ends with cinematics PR 8, when no scene holds the fight.
+ */
+export interface ReplayFrame {
+  readonly tick: number;
+  readonly seconds: number;
+  readonly confirm: ReplayFrameConfirm;
+}
+
 /** What the simulation needs. Verify and the world builder read only this part. */
 export interface ReplayRun {
   readonly ruleset: string;
@@ -91,6 +109,7 @@ export interface ReplayRun {
   readonly seed: number;
   readonly start: ReplayStart;
   readonly actions: readonly ReplayAction[];
+  readonly frames: readonly ReplayFrame[];
   readonly checkpoints: readonly ReplayCheckpoint[];
   readonly result: ReplayResult;
 }
@@ -245,6 +264,39 @@ function readActions(value: unknown, resultTick: number): readonly ReplayAction[
   return Object.freeze(actions);
 }
 
+const CONFIRM_SOURCES = Object.freeze(["key", "touch", "pad", "click"] as const);
+
+function readFrames(value: unknown, resultTick: number): readonly ReplayFrame[] {
+  const frames = list(value, "run.frames").map((entry, index): ReplayFrame => {
+    const path = `run.frames[${String(index)}]`;
+    const frame = object(entry, path);
+    const tick = count(frame.tick, `${path}.tick`);
+    if (tick >= resultTick) fail(`${path}.tick`, "must come before the last tick of the run");
+    const seconds = amount(frame.seconds, `${path}.seconds`);
+    if (seconds > REPLAY_FRAME_MAX_SECONDS) fail(`${path}.seconds`, "is longer than one application frame");
+    const confirm = object(frame.confirm, `${path}.confirm`);
+    if (
+      Object.keys(confirm).length !== CONFIRM_SOURCES.length ||
+      CONFIRM_SOURCES.some((source) => typeof confirm[source] !== "boolean")
+    )
+      fail(`${path}.confirm`, "must hold key, touch, pad and click as true or false");
+    const pressed = (source: (typeof CONFIRM_SOURCES)[number]): boolean => confirm[source] === true;
+    return Object.freeze({
+      tick,
+      seconds,
+      confirm: Object.freeze({
+        key: pressed("key"),
+        touch: pressed("touch"),
+        pad: pressed("pad"),
+        click: pressed("click"),
+      }),
+    });
+  });
+  if (frames.some((frame, index) => index > 0 && frame.tick < (frames[index - 1]?.tick ?? 0)))
+    fail("run.frames", "must be in tick order");
+  return Object.freeze(frames);
+}
+
 function readCheckpoints(value: unknown, resultTick: number): readonly ReplayCheckpoint[] {
   const checkpoints = list(value, "run.checkpoints").map((entry, index) => {
     const path = `run.checkpoints[${String(index)}]`;
@@ -274,6 +326,7 @@ function readRun(value: unknown): ReplayRun {
     seed: runSeed(run.seed, "run.seed"),
     start: readStart(run.start),
     actions: readActions(run.actions, resultTick),
+    frames: readFrames(run.frames, resultTick),
     checkpoints: readCheckpoints(run.checkpoints, resultTick),
     result: Object.freeze({
       tick: resultTick,

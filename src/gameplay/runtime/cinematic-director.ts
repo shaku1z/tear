@@ -149,6 +149,9 @@ export interface CinematicScript {
   onCancel?: (context: CinematicContext, reason: string, director: CinematicDirectorPort) => void;
 }
 
+/** The confirm presses one live frame samples while a scene plays: the sources a scene skip reads. */
+export type SceneConfirm = Readonly<{ key: boolean; touch: boolean; pad: boolean; click: boolean }>;
+
 interface ConfirmSources {
   key?: boolean;
   touch?: boolean;
