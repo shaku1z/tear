@@ -122,12 +122,28 @@ describe("training coach", () => {
     expect(ids(later)).toEqual(["playground:help"]);
   });
 
-  it("draws a call-out above what it names, and gives a repeated call-out its full time", () => {
+  it("shows the help in full for each of two arena changes a few seconds apart", () => {
+    const run = {};
     const coach = new TrainingCoach();
-    const enemy = { x: 900, y: 500 };
-    const first = coach.step(frame({ callouts: [{ text: "GRUNT", tone: "info", anchor: enemy }] }));
+    const at = (arena: number, deltaSeconds = 1 / 60) =>
+      coach.step(frame({ deltaSeconds, playground: { runKey: run, arena } }));
+    at(0);
+    at(0, 2);
+    at(1);
+    at(1, 2);
+    // The second change starts the help again with its whole time ahead: still on screen
+    // almost a full help time later, though the first help began more than that ago.
+    at(2);
+    expect(ids(at(2, COACH_HELP_SECONDS - 0.5))).toEqual(["playground:help"]);
+    expect(ids(at(2, 1))).toEqual([]);
+  });
+
+  it("plates a call-out beside what it names, and gives a repeated call-out its full time", () => {
+    const coach = new TrainingCoach();
+    const enemy = { x: 880, y: 500, w: 40, h: 40 };
+    const first = coach.step(frame({ callouts: [{ text: "GRUNT", tone: "info", target: enemy }] }));
     expect(first.map((entry) => entry.mark)).toEqual([
-      expect.objectContaining({ title: "GRUNT", text: "", anchor: enemy, channel: "callout" }),
+      expect.objectContaining({ title: "GRUNT", text: "", target: enemy, backing: "plate", channel: "callout" }),
     ]);
     coach.step(frame({ deltaSeconds: COACH_CALLOUT_SECONDS - 0.2 }));
     // A second HEALED (no anchor: at the player) replaces the first and restarts.

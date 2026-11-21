@@ -3,6 +3,7 @@ import {
   coachMarkAlpha,
   type CoachMark,
   type CoachPoint,
+  type CoachRect,
   type CoachTone,
 } from "../../presentation/coach/coach-marks";
 import {
@@ -27,12 +28,12 @@ export const COACH_LEARNED_SECONDS = 3;
 /** How long a call-out (a spawned enemy's name, CLEARED, a save notice) stays. */
 export const COACH_CALLOUT_SECONDS = 1.2;
 
-/** A short training call-out, drawn as a coach mark above what it names. */
+/** A short training call-out, drawn as a plated coach mark beside what it names. */
 export interface TrainingCallout {
   readonly text: string;
   readonly tone: Extract<CoachTone, "info" | "success" | "nudge">;
-  /** The world point it sits above (a spawned enemy's head); the player when absent. */
-  readonly at?: Readonly<{ x: number; y: number }>;
+  /** What it names in the world (a spawned enemy: centre and half extents); the player when absent. */
+  readonly target?: Readonly<{ x: number; y: number; hw: number; hh: number }>;
 }
 
 /** Carries call-outs from the training rules that post them to the coach that draws them. */
@@ -74,7 +75,7 @@ export interface TrainingCoachFrame {
   /** Present while a Playground run is on screen; the help returns for a new run or a new arena. */
   readonly playground?: Readonly<{ runKey: unknown; arena?: number }>;
   /** Call-outs posted since the last frame, anchored on screen (undefined: at the player). */
-  readonly callouts?: readonly Readonly<{ text: string; tone: TrainingCallout["tone"]; anchor?: CoachPoint }>[];
+  readonly callouts?: readonly Readonly<{ text: string; tone: TrainingCallout["tone"]; target?: CoachRect }>[];
 }
 
 /**
@@ -186,7 +187,8 @@ export class TrainingCoach {
   /** Each call-out replaces the last: the newest thing named is the one worth reading. */
   #callout(frame: TrainingCoachFrame): void {
     for (const callout of frame.callouts ?? []) {
-      const anchor = callout.anchor ?? frame.player;
+      const target = callout.target,
+        anchor = target ? { x: target.x + target.w / 2, y: target.y } : frame.player;
       this.#queue.offer({
         id: "callout",
         occasion: String(++this.#occasions),
@@ -196,6 +198,8 @@ export class TrainingCoach {
         text: "",
         keys: [],
         ...(anchor ? { anchor } : {}),
+        ...(target ? { target } : {}),
+        backing: "plate",
         priority: 2,
         seconds: COACH_CALLOUT_SECONDS,
       });
