@@ -1,6 +1,7 @@
 import type { RunDifficulty, RunMode } from "./session";
 import { migrateWeaponSelection, type WeaponId } from "../weapon-selection";
 import type { CinematicPreference } from "../campaign/cinematic-preference";
+import { MODE_IDS } from "./mode-catalog";
 
 /**
  * Everything a run's start depends on besides the code: the player's picks and the saved progress the
@@ -61,6 +62,11 @@ export type SavedRunStart = Partial<
   >
 >;
 
+/** True for a mode the game publishes. */
+export function isRunMode(value: string): value is RunMode {
+  return (MODE_IDS as readonly string[]).includes(value);
+}
+
 /** What a scenario states about its start; everything else is a new player's start. */
 export interface ScenarioRunStart {
   readonly runSeed: number;
@@ -74,9 +80,11 @@ export interface ScenarioRunStart {
 /** The start choices of a scenario: its own fields, and a new player's for the rest. */
 export function scenarioRunStartChoices(scenario: ScenarioRunStart): RunStartChoices {
   if (!isRunSeed(scenario.runSeed)) throw new RangeError("a run seed is a non-zero unsigned 32-bit integer");
+  const mode = scenario.mode ?? "endless";
+  if (!isRunMode(mode)) throw new RangeError(`no run mode "${mode}"; the modes are ${MODE_IDS.join(", ")}`);
   const saved = scenario.saved ?? {};
   return Object.freeze({
-    mode: (scenario.mode ?? "endless") as RunMode,
+    mode,
     difficulty: scenario.difficulty ?? "normal",
     weapon: migrateWeaponSelection(scenario.weaponId ?? "sword"),
     boss: scenario.firstBoss ?? "shuffle",
