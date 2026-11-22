@@ -49,5 +49,24 @@ withJourney(
     );
     assert.deepEqual(campaign.verdict, { status: "verified", tick: campaign.record.run.result.tick });
     assert.deepEqual(campaign.counters, ONE_STORED_RUN);
+
+    // Watching it: the Theater re-simulates the kept run, so the stage it shows at a tick is the stage
+    // live play was in at that tick, before and after each stage change.
+    const { page } = journey;
+    const { record } = campaign;
+    assert.equal(await page.evaluate((seed) => window.__TEAR_REPLAY_TAP__.watchKept(seed), record.run.seed), true);
+    const stages = record.summary.marks.filter((mark) => mark.kind === "stage");
+    const liveStageAt = (tick) => stages.filter((mark) => mark.tick <= tick).at(-1)?.value;
+    const last = record.run.result.tick;
+    const shown = [];
+    for (const change of stages.filter((mark) => mark.tick > 0)) {
+      for (const tick of [change.tick - 60, change.tick + 60, 0]) {
+        const view = await page.evaluate((fraction) => window.__TEAR_REPLAY_TAP__.seekShown(fraction), tick / last);
+        assert.ok(view, "the Theater shows no kept record");
+        shown.push(view);
+        assert.equal(view.stage, liveStageAt(view.tick), `the replay shows stage ${view.stage} at tick ${view.tick}`);
+      }
+    }
+    console.log("stage shown at a tick", JSON.stringify(shown));
   },
 );

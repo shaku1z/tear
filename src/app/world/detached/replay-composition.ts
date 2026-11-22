@@ -92,6 +92,8 @@ export function captureProductionRewardSelection(selection: RewardSelectionSnaps
 const productionWaveRewards = new WeakMap<ProductionReplayWorld, ProductionWaveRewardRuntime>();
 
 export type { ProductionApplicationFrameConfirm } from "./application-frame";
+// One recorded tick in the detached world, so a lazily loaded caller steps it through this engine module.
+export { stepDetachedWorld } from "./detached-step";
 
 export interface ProductionGhostReplayCompositionOptions {
   readonly observeStyle?: ProductionCombatPhaseOptions["observeStyle"];

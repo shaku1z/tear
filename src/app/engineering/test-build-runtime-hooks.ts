@@ -164,6 +164,7 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
       () => authoritativeStep.lastResult?.state.run ?? null,
       () => CINEMA.active,
       () => replayStage,
+      () => sources.interface.screens.replay,
     );
   });
   const consumedActions: CommandEnvelope<GameAction>[] = [];

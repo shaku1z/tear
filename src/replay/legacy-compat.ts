@@ -136,6 +136,17 @@ export interface ReplayPlayback {
   _skipFx?: boolean;
 }
 
+/**
+ * The stage a recording starts in. A recording from this build holds it as its stage at time 0. An older
+ * one has only the stages entered later: with none, the run stayed in the stage it ended in; otherwise
+ * stages are entered in order, so it started in the one before the first entered.
+ */
+function firstStage(recording: Readonly<{ stage?: unknown; stages: readonly VisualStageEvent[] }>): number {
+  const first = recording.stages[0];
+  if (first === undefined) return numberValue(recording.stage);
+  return first.t === 0 ? first.s : Math.max(0, first.s - 1);
+}
+
 export class LegacyGhostEngine {
   readonly RATE = 0.1;
   readonly ERATE = 0.25;
@@ -172,7 +183,8 @@ export class LegacyGhostEngine {
       tx: [],
       ty: [],
       fc: [],
-      stages: [],
+      // The run's first stage is entered before recording starts; record it as the stage at time 0.
+      stages: this.#stage === undefined ? [] : [{ t: 0, s: this.#stage }],
       waves: [],
       spawns: [],
       esamp: [],
@@ -240,6 +252,7 @@ export class LegacyGhostEngine {
       return;
     }
     if (event.kind === "stage") {
+      this.#stage = event.stage;
       this.rec?.stages.push({ t: this.#time(), s: event.stage });
     } else if (event.kind === "wave") {
       this.rec?.waves.push({ t: this.#time(), w: event.wave, e: event.event });
@@ -337,7 +350,10 @@ export class LegacyGhostEngine {
       values
         .filter((entry) => entry.t >= cutTime)
         .map((entry) => ({ ...entry, t: Number((entry.t - cutTime).toFixed(1)) }));
+    // The stage in effect at the cut stays, as the stage at the new time 0.
+    const before = recording.stages.filter((entry) => entry.t < cutTime).at(-1);
     recording.stages = shift(recording.stages);
+    if (before !== undefined && recording.stages[0]?.t !== 0) recording.stages.unshift({ t: 0, s: before.s });
     recording.waves = shift(recording.waves);
     recording.spawns = shift(recording.spawns);
     recording.deaths = shift(recording.deaths);
@@ -352,6 +368,9 @@ export class LegacyGhostEngine {
       });
     recording.t -= cutTime;
   }
+
+  /** The stage entered last, even before a recording starts: a run's first stage is entered then. */
+  #stage: number | undefined;
 
   #time(): number {
     return this.rec === null ? 0 : Number(this.rec.t.toFixed(1));
@@ -606,7 +625,7 @@ export class LegacyGhostEngine {
   stageAt(): number {
     const playback = this.play;
     if (playback === null) return 0;
-    let stage = numberValue(playback.d.stage);
+    let stage = firstStage(playback.d);
     for (const event of playback.d.stages) {
       if (event.t <= playback.t) stage = event.s;
       else break;

@@ -75,22 +75,44 @@ function summaryText(summary: ReplaySummary): string {
   return stableVerificationHash(summary);
 }
 
+/** One tick's inputs: the scene frames recorded before it, in order, then the tick's actions. */
+export interface ReplayTickInputs {
+  readonly tick: number;
+  readonly actions: readonly ReplayAction[];
+  readonly frames: readonly ReplayFrame[];
+}
+
+/**
+ * The record's inputs tick by tick from tick 1, in the order verify and watch both play them: the
+ * frames sampled after tick N - 1 go before tick N.
+ */
+export function createReplayInputCursor(run: Pick<ReplayRun, "actions" | "frames">): () => ReplayTickInputs {
+  const { actions, frames } = run;
+  let tick = 0;
+  let next = 0;
+  let nextFrame = 0;
+  return () => {
+    tick += 1;
+    const start = next;
+    while (next < actions.length && actions[next]?.tick === tick) next += 1;
+    const firstFrame = nextFrame;
+    while (nextFrame < frames.length && frames[nextFrame]?.tick === tick - 1) nextFrame += 1;
+    return Object.freeze({ tick, actions: actions.slice(start, next), frames: frames.slice(firstFrame, nextFrame) });
+  };
+}
+
 export function verifyReplay(record: ReplayRecord, world: ReplayWorld): ReplayVerdict {
   const refusal = replayPlaybackRefusal(record.run);
   if (refusal !== null) return Object.freeze({ status: "refused", message: refusal });
-  const { actions, frames, checkpoints, result } = record.run;
+  const { checkpoints, result } = record.run;
   const counter = createReplaySummaryCounter();
   const run = world.start(record.run, counter.observe);
+  const inputs = createReplayInputCursor(record.run);
   try {
-    let next = 0;
-    let nextFrame = 0;
     let last: ReplayWorldTick | undefined;
     for (let tick = 1; tick <= result.tick; tick += 1) {
-      const start = next;
-      while (next < actions.length && actions[next]?.tick === tick) next += 1;
-      const firstFrame = nextFrame;
-      while (nextFrame < frames.length && frames[nextFrame]?.tick === tick - 1) nextFrame += 1;
-      last = run.step(actions.slice(start, next), frames.slice(firstFrame, nextFrame));
+      const { actions, frames } = inputs();
+      last = run.step(actions, frames);
       if (last.tick !== tick) return differs(tick, "ended-early", String(tick), String(last.tick));
       if (tick % REPLAY_CHECKPOINT_TICKS === 0) {
         const expected = checkpoints[tick / REPLAY_CHECKPOINT_TICKS - 1]?.hash ?? "";

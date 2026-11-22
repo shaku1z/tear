@@ -13,6 +13,7 @@ import type { ReplayRecord } from "../../replay/record";
 import type { ReplayReadResult } from "../../replay/record";
 import { openReplayRecordStore, type ReplayRecordEntry, type ReplayRecordStore } from "../../replay/record-store";
 import { verifyReplay, type ReplayVerdict } from "../../replay/verify";
+import type { ReplayScreenAdapter } from "../replay/replay-screen-adapter";
 
 type RunTotals = Readonly<{ score: number; wave: number; time: number }> | null;
 
@@ -47,7 +48,17 @@ export interface ReplayTapInspector {
   readonly stored: () => Promise<readonly ReplayRecordEntry[] | Readonly<{ failed: string }>>;
   /** One stored record, read back from the store. */
   readonly storedRecord: (key: string) => Promise<ReplayReadResult | null | Readonly<{ failed: string }>>;
+  /** Opens the kept run with this seed in the Theater, through the path WATCH takes. */
+  readonly watchKept: (seed: number) => Promise<boolean>;
+  /** Moves the Theater to this share of the run, as the seek bar does, and says what it shows then. */
+  readonly seekShown: (fraction: number) => Readonly<{ tick: number; stage: number }> | undefined;
 }
+
+/** The replay screen's members the inspector drives. */
+export type ReplayTapScreen = Pick<
+  ReplayScreenAdapter,
+  "watchKeptRun" | "shownReplay" | "seekToFraction" | "togglePause" | "status" | "render"
+>;
 
 export function installReplayTapInspector(
   target: Window,
@@ -56,6 +67,7 @@ export function installReplayTapInspector(
   run: () => RunTotals,
   scene: () => boolean,
   stage: () => number,
+  screen: () => ReplayTapScreen,
 ): void {
   const now = () => target.performance.now();
   const samples = new Map<string, number[]>();
@@ -134,6 +146,15 @@ export function installReplayTapInspector(
     tapError: production.lastTapError,
     stored: () => withStore((store) => store.entries()),
     storedRecord: (key: string) => withStore((store) => store.read(key)),
+    watchKept: async (seed: number) => {
+      const opened = await screen().watchKeptRun(String(seed), "menu");
+      if (opened && screen().status()?.paused === false) screen().togglePause();
+      return opened;
+    },
+    seekShown: (fraction: number) => {
+      screen().seekToFraction(fraction);
+      return screen().shownReplay();
+    },
   });
   (target as Window & { __TEAR_REPLAY_TAP__?: ReplayTapInspector }).__TEAR_REPLAY_TAP__ = inspector;
 }

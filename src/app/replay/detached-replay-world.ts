@@ -1,48 +1,33 @@
-import { TearGameplayEventBus } from "../../gameplay/runtime/gameplay-events";
 import type { AuthoritativeStepResult } from "../../gameplay/runtime/authoritative-step";
 import type { CanonicalGameplayState } from "../../gameplay/runtime/canonical-state";
-import { replayStartChoices, type ReplayRun } from "../../replay/record";
+import type { ReplayRun } from "../../replay/record";
 import type { ReplayWorld, ReplayWorldRun } from "../../replay/verify";
 import { stepDetachedWorld } from "../world/detached/detached-step";
 import { createProductionGhostReplayComposition } from "../world/detached/replay-composition";
+import { startRecordWorld, type RecordWorldEngine } from "./record-world";
 
 const NO_RUN = Object.freeze({ score: 0, wave: 0, time: 0 });
 
-/** Starts a recorded run in the detached production world from its seed and start choices. */
+const STATIC_ENGINE: RecordWorldEngine = Object.freeze({ createProductionGhostReplayComposition, stepDetachedWorld });
+
 function startDetachedReplay(
   run: Pick<ReplayRun, "seed" | "start">,
   observe: Parameters<ReplayWorld["start"]>[1],
 ): ReplayWorldRun {
-  const events = new TearGameplayEventBus();
-  const unsubscribe = events.subscribe(observe);
-  const start = replayStartChoices(run);
-  const session = createProductionGhostReplayComposition({
-    runSeed: start.runSeed,
-    mode: start.mode,
-    weaponId: start.weapon,
-    difficulty: start.difficulty,
-    firstBoss: start.boss,
-    saved: start,
-    gameplayEvents: events,
-  }).create(undefined);
-  events.setTickSource(() => session.simulation.scheduler.tick);
+  const world = startRecordWorld(STATIC_ENGINE, run, observe);
   // The last step's result; its state is captured only when asked for.
   let last: AuthoritativeStepResult<CanonicalGameplayState> | undefined;
   return Object.freeze<ReplayWorldRun>({
     step(actions, frames) {
-      const result = stepDetachedWorld(session, actions, frames);
+      const result = world.step(actions, frames);
       last = result;
-      return Object.freeze({
-        tick: result.tick,
-        hash: () => result.stateHash,
-        terminated: session.replay.world.lifecycle.phase === "terminated",
-      });
+      return Object.freeze({ tick: result.tick, hash: () => result.stateHash, terminated: world.terminated() });
     },
     run() {
       const current = last?.state.run;
       return current == null ? NO_RUN : Object.freeze({ score: current.score, wave: current.wave, time: current.time });
     },
-    dispose: unsubscribe,
+    dispose: world.dispose,
   });
 }
 
