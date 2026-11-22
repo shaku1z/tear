@@ -18,6 +18,16 @@ export function panelTag(context: ScreenRenderContext, label: string, x: number,
   return y + t.type.micro + t.space.sm;
 }
 
+/**
+ * A solid surface for content that has no card of its own (progress rows, the wave log), so the
+ * faded live scene behind a run overlay never shows through it. It is the same panel the cards use.
+ */
+export function runContentSurface(context: ScreenRenderContext, x: number, y: number, w: number, h: number): void {
+  const { canvas, ui } = context,
+    pad = ui.t.metric.panelPad;
+  ui.panel(canvas, x - pad, y - pad, w + pad * 2, h + pad * 2);
+}
+
 /** Clips `draw` to the panel rect and draws the scroll hint under it when content overflows. */
 function scrolled(
   context: ScreenRenderContext,
@@ -150,18 +160,30 @@ export function runProgressPanel(
 ): number {
   const t = context.ui.t,
     rowH = progressRowHeight(context);
-  let cursor = panelTag(context, "DAILY CHALLENGES", x, y);
   const sections: readonly (readonly [string, readonly ProgressView[]])[] = [
     ["", rows.filter((row) => row.kind !== "achievement")],
     ["ACHIEVEMENTS", rows.filter((row) => row.kind === "achievement")],
   ];
-  for (const [label, group] of sections) {
-    if (label) cursor = panelTag(context, label, x, cursor + t.space.sm);
+  // Lay the rows out first so the solid surface under them is exactly as tall as they are.
+  let cursor = y + t.type.micro + t.space.sm;
+  const placed: { label?: string; labelY: number; row?: ProgressView; y: number }[] = [];
+  layout: for (const [label, group] of sections) {
+    if (label) {
+      placed.push({ label, labelY: cursor + t.space.sm, y: cursor });
+      cursor += t.space.sm + t.type.micro + t.space.sm;
+    }
     for (const row of group) {
-      if (cursor + rowH > bottom) return cursor - y;
-      progressRow(context, x, cursor, width, row);
+      if (cursor + rowH > bottom) break layout;
+      placed.push({ row, labelY: 0, y: cursor });
       cursor += rowH;
     }
+  }
+  const noAchievements = rows.every((row) => row.kind !== "achievement");
+  runContentSurface(context, x, y, width, cursor - y + (noAchievements ? t.type.caption * 3 : 0));
+  panelTag(context, "DAILY CHALLENGES", x, y);
+  for (const item of placed) {
+    if (item.label) panelTag(context, item.label, x, item.labelY);
+    else if (item.row) progressRow(context, x, item.y, width, item.row);
   }
   if (rows.every((row) => row.kind !== "achievement")) {
     context.ui.textBox(context.canvas, "Keep fighting to make progress.", x, cursor + t.type.caption, width, {
@@ -178,6 +200,7 @@ export function waveLogPanel(context: ScreenRenderContext, rows: readonly Result
   const { canvas, ui } = context,
     t = ui.t;
   const columns = [rect.w * 0.45, rect.w * 0.68, rect.w];
+  runContentSurface(context, rect.x, rect.y, rect.w, rect.h);
   const headerY = rect.y + t.type.label;
   canvas.save();
   canvas.globalAlpha = t.alpha.soft;
