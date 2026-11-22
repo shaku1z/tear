@@ -89,7 +89,7 @@ export function installAldricEchoRenderers(types: EnemyTypes, runtime: EnemyRend
       ctx.moveTo(this.x - this.hw * 0.5 + shoulderLead, by + 28);
       ctx.lineTo(this.x + this.hw * 0.5 + shoulderLead, by + 28);
       ctx.stroke();
-      const introP = this.introT > 0 ? clamp(1 - this.introT / (CONFIG.bossTheater.introDur || 1.4), 0, 1) : -1;
+      const introP = this.introT > 0 ? clamp(1 - this.introT / CONFIG.bossTheater.introDur, 0, 1) : -1;
       const poseA = introP >= 0 ? lerp(-0.6, -1.75, Math.sin(introP * Math.PI)) : this.weaponA;
       const cleaverPose = this.weaponGeometry(poseA, introP >= 0 ? poseA : this.weaponPrevA);
       if (!downed && Math.abs(this.weaponA - this.weaponPrevA) > 0.04 && !GFX.low) {

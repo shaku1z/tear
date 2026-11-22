@@ -1,6 +1,5 @@
 import type {
   AchievementToastSnapshot,
-  BossIntroSnapshot,
   WorldRenderContext,
   ReticleSnapshot,
   StageBannerSnapshot,
@@ -146,18 +145,6 @@ export function createOverlayRenderers(context: WorldRenderContext) {
     canvas.restore();
   }
 
-  function bossIntro(snapshot: BossIntroSnapshot): void {
-    ui.bossIntro(canvas, {
-      screen: snapshot.screen,
-      bossName: snapshot.bossName || "BOSS",
-      epithet: snapshot.epithet,
-      openingLine: snapshot.openingLine,
-      color: snapshot.color,
-      t: snapshot.elapsed,
-      dur: snapshot.duration,
-    });
-  }
-
   function stageBanner(snapshot: StageBannerSnapshot): void {
     const t = ui.t,
       type = hudType(context),
@@ -214,5 +201,5 @@ export function createOverlayRenderers(context: WorldRenderContext) {
     canvas.restore();
   }
 
-  return { achievementToast, waveBanner, bossIntro, stageBanner, reticle };
+  return { achievementToast, waveBanner, stageBanner, reticle };
 }

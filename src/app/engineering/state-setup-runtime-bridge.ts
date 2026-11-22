@@ -7,6 +7,7 @@ import type { CinematicDirectorBinding, CinematicDirectorPort } from "../../game
 import { validateRunLifecycleSnapshot, type RunLifecycleSnapshot } from "../../gameplay/run/lifecycle";
 import type { GameEnemy, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { BossIntroState } from "../world/game-host-state";
+import { parseStageBeat, type StageBeat } from "../../gameplay/stage-beat";
 
 interface StagedChapterBinding {
   readonly binding: CinematicDirectorBinding;
@@ -42,6 +43,9 @@ export interface LiveStateSetupRuntimeBridgeOptions {
   }>;
   readonly captureBossIntro: () => BossIntroState | null;
   readonly restoreBossIntro: (intro: BossIntroState | null) => void;
+  /** The beat written over the world (`src/gameplay/stage-beat.ts`). */
+  readonly captureStageBeat: () => StageBeat | null;
+  readonly restoreStageBeat: (beat: StageBeat | null) => void;
   readonly captureTransient: () => Readonly<Record<string, unknown>>;
   readonly restoreTransient: (snapshot: Readonly<Record<string, unknown>>) => void;
   readonly captureLifecycle: () => RunLifecycleSnapshot;
@@ -72,10 +76,16 @@ export interface LiveStateSetupRuntimeBridge {
   ) => void;
 }
 
+/** 2: the arrival runs at full speed (ruleset v24). A version 1 clock counted slowed arrival time. */
+const BOSS_INTRO_VERSION = 2;
+
 function bossIntro(value: unknown, version: unknown): BossIntroState | null {
-  if (version !== undefined && version !== 1) throw new RangeError("unsupported boss intro snapshot version");
+  if (version === 1)
+    throw new RangeError("boss intro snapshot version 1 is from the slowed arrival before ruleset v24");
+  if (version !== undefined && version !== BOSS_INTRO_VERSION)
+    throw new RangeError("unsupported boss intro snapshot version");
   if (value === undefined || value === null) return null;
-  if (version !== 1 || !isRecord(value)) {
+  if (version !== BOSS_INTRO_VERSION || !isRecord(value)) {
     throw new TypeError("boss intro snapshot must be a versioned object");
   }
   const intro = value as Partial<Omit<BossIntroState, "boss">> & { boss?: GameEnemy | null };
@@ -253,8 +263,9 @@ export function createLiveStateSetupRuntimeBridge(
     const tutorialSession = options.tutorial?.captureSession();
     return Object.freeze({
       ...options.captureTransient(),
-      bossIntroVersion: 1,
+      bossIntroVersion: BOSS_INTRO_VERSION,
       bossIntro: options.captureBossIntro(),
+      stageBeat: options.captureStageBeat(),
       lifecycle: options.captureLifecycle(),
       chapterBinding: options.captureChapterBinding(),
       stageBanner: options.captureStageBanner(),
@@ -275,12 +286,14 @@ export function createLiveStateSetupRuntimeBridge(
     const intro = bossIntro(snapshot.bossIntro, snapshot.bossIntroVersion);
     const transient = normalizeTransient(snapshot);
     const banner = stageBanner(snapshot.stageBanner);
+    const beat = parseStageBeat(snapshot.stageBeat);
     const protection = cinemaProtection(snapshot.cinemaProtection);
     options.restoreTransient(transient);
     options.restoreStageBanner(banner.name, banner.seconds);
     options.restoreLifecycle(snapshot.lifecycle as RunLifecycleSnapshot);
     options.restoreCinemaProtection(protection);
     options.restoreBossIntro(intro);
+    options.restoreStageBeat(beat);
     const world = options.practiceWorld?.();
     const practiceBinding = world
       ? canonicalPracticeBinding(snapshot.bossCinematicBinding, world.run, world.platforms)
@@ -308,6 +321,7 @@ export function createLiveStateSetupRuntimeBridge(
     resolveStateSetupBossIntro(snapshot, candidateEnemies);
     validateTransient(normalizeTransient(snapshot));
     stageBanner(snapshot.stageBanner);
+    parseStageBeat(snapshot.stageBeat);
     cinemaProtection(snapshot.cinemaProtection);
     options.tutorial?.validateSession(snapshot.tutorialSession, candidateRun.weaponId, candidateEnemies, {
       run: candidateRun,

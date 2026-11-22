@@ -7,6 +7,7 @@ import { advanceBossIntro } from "../../src/gameplay/run/boss-encounter";
 import { decodeTearCodecValue } from "../../src/app/world/detached/world-hydrator";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
 import { initialRunLifecycleSnapshot } from "../../src/gameplay/run/lifecycle";
+import { arrivalBanner, stepStageBeat, type StageBeat } from "../../src/gameplay/stage-beat";
 
 function campaignRun(): GameRun {
   return {
@@ -41,11 +42,13 @@ const transient = Object.freeze({
 
 describe("live State Setup runtime bridge", () => {
   it("restores hydrated boss intro ownership and completes on the simulation clock", () => {
-    const bossData = { isBoss: true, introT: 1.4, hp: 100, maxHp: 100, dead: false, dying: false };
+    const bossData = { isBoss: true, introT: 1, hp: 100, maxHp: 100, dead: false, dying: false };
     const oldBoss = { ...bossData } as GameEnemy;
     const restoredBoss = { ...bossData } as GameEnemy;
-    const intro = { boss: oldBoss, delay: 0, t: 0, dur: 1.4 };
+    const intro = { boss: oldBoss, delay: 0, t: 0, dur: 1 };
     const restoreBossIntro = vi.fn<(value: BossIntroState | null) => void>();
+    const beat = stepStageBeat(arrivalBanner({ bossName: "ALDRIC", epithet: "THE BERSERKER KING", color: "#c33" }));
+    const restoreStageBeat = vi.fn<(value: StageBeat | null) => void>();
     const options = {
       captureTransient: () => transient,
       restoreTransient: vi.fn(),
@@ -60,6 +63,8 @@ describe("live State Setup runtime bridge", () => {
       restoreStageBanner: vi.fn(),
       captureBossIntro: () => intro,
       restoreBossIntro,
+      captureStageBeat: () => beat,
+      restoreStageBeat,
       cinema: {
         captureState: () => INACTIVE_CINEMATIC_DIRECTOR_STATE_V1,
         validateState: () => INACTIVE_CINEMATIC_DIRECTOR_STATE_V1,
@@ -68,8 +73,9 @@ describe("live State Setup runtime bridge", () => {
     };
     const bridge = createLiveStateSetupRuntimeBridge(options);
     expect(bridge.capture().bossIntro).toEqual(intro);
+    expect(bridge.capture().stageBeat).toEqual(beat);
     const hydratedIntro = decodeTearCodecValue(
-      { delay: 0, t: 0, dur: 1.4, boss: { $ref: "boss-1" } },
+      { delay: 0, t: 0, dur: 1, boss: { $ref: "boss-1" } },
       new Map([["boss-1", restoredBoss]]),
     ) as BossIntroState;
     const snapshot = { ...bridge.capture(), bossIntro: hydratedIntro, cinema: INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 };
@@ -83,8 +89,15 @@ describe("live State Setup runtime bridge", () => {
       bridge.validate({ ...snapshot, bossIntro: null }, campaignRun(), 0, [restoredBoss]);
     }).toThrow(/missing its intro binding/);
     expect(() => {
-      bridge.validate({ ...snapshot, bossIntroVersion: 2 }, campaignRun(), 0, [restoredBoss]);
+      bridge.validate({ ...snapshot, bossIntroVersion: 3 }, campaignRun(), 0, [restoredBoss]);
     }).toThrow(/unsupported/);
+    // A version 1 clock counted the slowed arrival; it is refused by name.
+    expect(() => {
+      bridge.validate({ ...snapshot, bossIntroVersion: 1 }, campaignRun(), 0, [restoredBoss]);
+    }).toThrow(/slowed arrival before ruleset v24/);
+    expect(() => {
+      bridge.validate({ ...snapshot, stageBeat: { ...beat, age: 138 } }, campaignRun(), 0, [restoredBoss]);
+    }).toThrow(/Invalid stage beat/);
     expect(() => {
       bridge.validate({ ...snapshot, bossIntro: { ...hydratedIntro, t: Number.NaN } }, campaignRun(), 0, [
         restoredBoss,
@@ -95,17 +108,18 @@ describe("live State Setup runtime bridge", () => {
     expect(restoreBossIntro).toHaveBeenCalledWith(hydratedIntro);
     expect(restoreBossIntro.mock.calls[0]?.[0]?.boss).toBe(restoredBoss);
     expect(restoreBossIntro.mock.calls[0]?.[0]?.boss).not.toBe(oldBoss);
+    expect(restoreStageBeat).toHaveBeenCalledWith(beat);
     let liveIntro = restoreBossIntro.mock.calls[0]?.[0] ?? null;
-    // The restored arrival runs on the restored boss: 42 ticks at 1/120 s and time scale 0.25.
+    // The restored arrival runs on the restored boss: 120 ticks at 1/120 s, at full speed.
     let ticks = 0;
-    while (liveIntro !== null && ticks < 120) {
+    while (liveIntro !== null && ticks < 240) {
       ticks++;
-      if (!advanceBossIntro(liveIntro, 1 / 120, 0.25)) liveIntro = null;
+      if (!advanceBossIntro(liveIntro, 1 / 120)) liveIntro = null;
     }
-    expect(ticks).toBe(42);
+    expect(ticks).toBe(120);
     expect(liveIntro).toBeNull();
     expect(restoredBoss.introT).toBe(0);
-    expect(oldBoss.introT).toBe(1.4);
+    expect(oldBoss.introT).toBe(1);
     bridge.restore({ ...bridge.capture(), bossIntro: null, cinema: INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 });
     expect(restoreBossIntro).toHaveBeenLastCalledWith(null);
   });
@@ -117,6 +131,8 @@ describe("live State Setup runtime bridge", () => {
     const bridge = createLiveStateSetupRuntimeBridge({
       captureBossIntro: () => null,
       restoreBossIntro: vi.fn(),
+      captureStageBeat: () => null,
+      restoreStageBeat: vi.fn(),
       captureTransient: () => ({}),
       restoreTransient: vi.fn(),
       captureLifecycle: initialRunLifecycleSnapshot,
@@ -147,6 +163,8 @@ describe("live State Setup runtime bridge", () => {
     const bridge = createLiveStateSetupRuntimeBridge({
       captureBossIntro: () => null,
       restoreBossIntro: vi.fn(),
+      captureStageBeat: () => null,
+      restoreStageBeat: vi.fn(),
       captureTransient: () => ({}),
       restoreTransient: vi.fn(),
       captureLifecycle: initialRunLifecycleSnapshot,
@@ -188,6 +206,8 @@ describe("live State Setup runtime bridge", () => {
     const bridge = createLiveStateSetupRuntimeBridge({
       captureBossIntro: () => null,
       restoreBossIntro: vi.fn(),
+      captureStageBeat: () => null,
+      restoreStageBeat: vi.fn(),
       captureTransient: () => ({}),
       restoreTransient: vi.fn(),
       captureLifecycle: initialRunLifecycleSnapshot,
@@ -222,6 +242,8 @@ describe("live State Setup runtime bridge", () => {
     const bridge = createLiveStateSetupRuntimeBridge({
       captureBossIntro: () => null,
       restoreBossIntro: vi.fn(),
+      captureStageBeat: () => null,
+      restoreStageBeat: vi.fn(),
       captureTransient: () => transient,
       restoreTransient: vi.fn(),
       captureLifecycle: initialRunLifecycleSnapshot,

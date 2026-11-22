@@ -36,7 +36,6 @@ type FrameServices = Omit<
   | "wipe"
   | "renderWorld"
   | "drawHud"
-  | "drawBossIntro"
   | "drawTouchControls"
   | "drawWaveBanner"
   | "drawStageBanner"
@@ -131,9 +130,6 @@ export function createLiveInterfaceComposition(
     renderWorld: () => worldAdapters.renderWorld(),
     drawHud: () => {
       worldAdapters.drawHud();
-    },
-    drawBossIntro: () => {
-      worldAdapters.drawBossIntro();
     },
     drawTouchControls: () => {
       worldAdapters.drawTouchControls();

@@ -20,7 +20,6 @@ import { renderWorldFrame, type WorldBounds, type WorldCamera } from "../../pres
 import type { SceneDrawInput } from "../../presentation/scenes/scene-library";
 import { buildHudSnapshot } from "../../presentation/world/hud-snapshot";
 import {
-  buildBossIntroSnapshot,
   buildReticleSnapshot,
   buildStageBannerSnapshot,
   buildTouchControlsSnapshot,
@@ -74,7 +73,6 @@ type Stage = ReturnType<GameRuntimeDependencies["stageAt"]>;
 type Platforms = ArenaPlatform[];
 type Finale = Parameters<typeof buildFinaleWorldSnapshot>[0];
 type SceneBoss = Parameters<typeof buildSceneEffectsSnapshot>[0]["enemies"][number];
-type ScreenRectangle = Parameters<typeof buildBossIntroSnapshot>[0];
 type BossPresentationActor = Parameters<GameRuntimeDependencies["drawBossTransformationWorld"]>[1];
 type PresentationRun = GameRun & { readonly _arenaBroken?: Platforms | null };
 type PresentationEnemy = VisualEnemySource & {
@@ -120,7 +118,7 @@ export interface WorldPresentationServices {
     readonly debug: "include" | "exclude";
     readonly actors: "include" | "exclude";
   }>;
-  readonly screenRectangle: () => ScreenRectangle;
+  readonly screenRectangle: () => WorldRect;
   readonly world: WorldRendererRegistry;
   readonly stage: { index: number; current: Stage; platforms: Platforms; bannerSeconds: number; name: string };
   readonly tutorial: LiveTutorialRuntime;
@@ -144,7 +142,6 @@ export interface LiveWorldPresentationAdapters {
   readonly drawAchievementToast: (deltaSeconds: number, held?: boolean) => void;
   readonly drawTouchControls: () => void;
   readonly drawWaveBanner: () => void;
-  readonly drawBossIntro: () => void;
   readonly drawStageBanner: () => void;
   readonly drawReticle: () => void;
 }
@@ -541,20 +538,6 @@ export function createLiveWorldPresentationAdapters(
           normalColor: d.CONFIG.colors.perfect,
         }),
       );
-    },
-    drawBossIntro(): void {
-      const intro = state.bossIntro();
-      if (intro && isDrawableEnemy(intro.boss)) {
-        world.bossIntro(
-          buildBossIntroSnapshot(
-            services.screenRectangle(),
-            projectPresentationEnemy(intro.boss),
-            intro.t,
-            intro.dur,
-            d.CONFIG.colors.boss,
-          ),
-        );
-      }
     },
     drawStageBanner(): void {
       const run = state.run();

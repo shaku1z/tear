@@ -12,16 +12,16 @@
       "chars": 29185
     },
     "src/app/world/detached/combat-phases.ts": {
-      "chars": 30060
+      "chars": 30047
     },
     "src/app/world/detached/replay-composition.ts": {
-      "chars": 34666
+      "chars": 34095
     },
     "src/audio/stems/validate.ts": {
       "largestFunctionStatements": 83
     },
     "src/config/game-config.ts": {
-      "chars": 27497
+      "chars": 27437
     },
     "src/game-reference/game-reference.ts": {
       "chars": 30503
@@ -39,7 +39,7 @@
       "largestFunctionStatements": 209
     },
     "src/gameplay/entities/enemy-types/colossus.ts": {
-      "largestFunctionStatements": 160
+      "largestFunctionStatements": 158
     },
     "src/gameplay/entities/enemy-types/enemy-base.ts": {
       "largestFunctionStatements": 86
@@ -104,7 +104,7 @@
       "largestFunctionStatements": 84
     },
     "src/presentation/enemies/renderers/aldric-echo-renderers.ts": {
-      "largestFunctionStatements": 114
+      "largestFunctionStatements": 105
     },
     "src/presentation/enemies/renderers/base-renderers.ts": {
       "largestFunctionStatements": 81

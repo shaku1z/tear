@@ -58,7 +58,6 @@ function enemy(patch: Partial<ThrownEnemy> = {}): ThrownEnemy {
     color: "red",
     dead: false,
     dying: false,
-    introT: 0,
     isBoss: false,
     bleedStacks: 0,
     stun: 0,
@@ -122,6 +121,13 @@ describe("thrown collision runtime", () => {
     const cutPart = vi.fn(() => true);
     resolveThrownCollisions(blade(), player, [enemy({ hit, cutPoint: () => null, cutPart })], [], run, tuning, hooks());
     expect(cutPart).not.toHaveBeenCalled();
+    expect(hit).toHaveBeenCalledOnce();
+  });
+
+  it("hits a boss during its arrival (plans/active/CINEMATICS_OVERHAUL.md, PR 6)", () => {
+    const hit = vi.fn(() => 10);
+    const arriving = Object.assign(enemy({ isBoss: true, hit }), { introT: 0.5 });
+    resolveThrownCollisions(blade(), player, [arriving], [], run, tuning, hooks());
     expect(hit).toHaveBeenCalledOnce();
   });
 

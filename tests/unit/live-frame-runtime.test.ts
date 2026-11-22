@@ -27,7 +27,6 @@ describe("live frame runtime", () => {
       bannerTime: 0,
       stageBannerSeconds: seconds,
       rankPopTime: 0,
-      bossBeat: null,
     };
     advanceFramePrelude({
       dt,
@@ -35,8 +34,6 @@ describe("live frame runtime", () => {
       parrySlowScale: 0.2,
       cinemaActive: false,
       playgroundSlow: false,
-      bossArrivalPlaying: false,
-      introScale: 0.4,
       lerp: (a, b, t) => a + (b - a) * t,
       clamp: (v, min, max) => Math.max(min, Math.min(max, v)),
     });
@@ -54,7 +51,6 @@ describe("live frame runtime", () => {
       bannerTime: 1,
       stageBannerSeconds: 1,
       rankPopTime: 1,
-      bossBeat: { t: 0.1 },
     };
     advanceFramePrelude({
       dt: 0.25,
@@ -62,13 +58,10 @@ describe("live frame runtime", () => {
       parrySlowScale: 0.2,
       cinemaActive: false,
       playgroundSlow: false,
-      bossArrivalPlaying: true,
-      introScale: 0.4,
       lerp: (a, b, t) => a + (b - a) * t,
       clamp: (v, min, max) => Math.max(min, Math.min(max, v)),
     });
     expect(state.timeScale).toBe(0.2);
-    expect(state.bossBeat).toBeNull();
     expect(state.flash).toBeCloseTo(0.2);
     expect(state).toMatchObject({
       worldZoom: 1.75,

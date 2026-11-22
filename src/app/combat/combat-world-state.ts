@@ -1,3 +1,4 @@
+import type { StageBeat } from "../../gameplay/stage-beat";
 import type { LiveCollisionPhaseState } from "../../gameplay/combat/live-collision-phase";
 import type { LiveOpeningState } from "../../gameplay/combat/live-opening-phase";
 import type { TearWorldTransientState } from "../../gameplay/runtime/tear-world-transient-state";
@@ -29,6 +30,8 @@ type WorldStatePort = Pick<
   | "setTemporaryWalls"
   | "bossIntro"
   | "setBossIntro"
+  | "stageBeat"
+  | "setStageBeat"
 > &
   Readonly<{
     player(): GamePlayer;
@@ -70,8 +73,12 @@ export function createLiveCombatWorldState(
       state.setSlowZones(value);
     },
     bossIntro: () => state.bossIntro(),
-    endBossIntro: () => {
-      state.setBossIntro(null);
+    setBossIntro: (value: null) => {
+      state.setBossIntro(value);
+    },
+    stageBeat: () => state.stageBeat(),
+    setStageBeat: (value: StageBeat | null) => {
+      state.setStageBeat(value);
     },
     walls: () => state.temporaryWalls(),
     setWalls: (value: GameTemporaryWall[]) => {

@@ -160,8 +160,8 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
       options.state.setBossIntro({ boss: enemy, t: 0, dur: duration, delay });
       options.observeBossIntro?.(options.actorId(enemy), duration, delay);
     },
-    clearBossBeat: () => {
-      options.state.setBossBeat(null);
+    clearStageBeat: () => {
+      options.state.setStageBeat(null);
     },
     clearBanner: () => {
       options.setBannerSeconds(0);

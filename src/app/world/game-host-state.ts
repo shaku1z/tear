@@ -11,6 +11,7 @@ import type {
 import type { RunResultInfo } from "../../gameplay/run/outcome-planner";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { TearWorldState } from "../../gameplay/runtime/tear-world-context";
+import type { StageBeat } from "../../gameplay/stage-beat";
 
 type ReplayPacket = ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>;
 
@@ -21,12 +22,7 @@ export interface BossIntroState {
   delay: number;
 }
 
-export interface BossBeatState {
-  text: string;
-  color: string;
-  t: number;
-  dur: number;
-}
+export type { StageBeat };
 
 /** App-facing extension of the portable replaceable per-world state contract. */
 export interface LiveGameHostState extends TearWorldState<
@@ -39,7 +35,7 @@ export interface LiveGameHostState extends TearWorldState<
   GameSlowZone,
   GameTemporaryWall,
   BossIntroState,
-  BossBeatState
+  StageBeat
 > {
   selectedWeapon(): string;
   setSelectedWeapon(value: string): void;

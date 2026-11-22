@@ -13,6 +13,7 @@ import { createLivePresentationHost, type LivePresentationHost } from "./present
 import { isSheetScreen, screenDensity } from "../../domain/screen-catalog";
 import { controlsKeepOut, type KeepOutArea } from "../../presentation/demo-keep-out";
 import { drawRotateGate } from "../../presentation/rotate-gate";
+import { stageBeatProgress, type StageBeat } from "../../gameplay/stage-beat";
 
 export interface LivePresentationSurface {
   readonly wipe: TearWipe;
@@ -35,12 +36,6 @@ export function createLivePresentationSurface(
 interface FlashingEnemy {
   readonly flash: number;
   readonly whiteFlash?: number;
-}
-interface BossBeat {
-  readonly text: string;
-  readonly color: string;
-  readonly t: number;
-  readonly dur: number;
 }
 interface StagePresentationState<Stage extends Readonly<{ readonly bg: string }>> {
   readonly current: Stage;
@@ -71,9 +66,9 @@ interface PresentationUi extends ButtonLayerUiPort, CinematicUiPort {
   font(size: number, bold?: boolean): string;
   sheetRect(): Readonly<{ x: number; y: number; w: number; h: number }>;
   sheet(context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, hue?: string): void;
-  bossPhaseBanner(
+  beatBanner(
     context: CanvasRenderingContext2D,
-    model: Readonly<{ text: string; color: string; alpha: number }>,
+    model: Readonly<{ text: string; mark: string | null; line?: string; color: string; alpha: number; reveal: number }>,
   ): void;
   cursor(context: CanvasRenderingContext2D, x: number, y: number): void;
   badge(
@@ -116,8 +111,7 @@ export interface LivePresentationFrameState<Screen extends string> {
   readonly biomeMode: () => boolean;
   readonly enemies: () => readonly FlashingEnemy[];
   readonly flash: () => number;
-  readonly bossBeat: () => BossBeat | null;
-  readonly bossIntroActive: () => boolean;
+  readonly stageBeat: () => StageBeat | null;
   readonly bannerSeconds: () => number;
   readonly rankPopup: () => Readonly<{ seconds: number; text: string; multiplier: number }>;
   readonly timeSeconds: () => number;
@@ -160,7 +154,6 @@ export interface LivePresentationFrameServices<Screen extends string, Stage exte
   readonly stageBackground: (stage: Stage) => string;
   readonly renderWorld: () => WorldCamera;
   readonly drawHud: () => void;
-  readonly drawBossIntro: () => void;
   readonly drawTouchControls: () => void;
   readonly drawWaveBanner: () => void;
   readonly drawStageBanner: () => void;
@@ -235,33 +228,27 @@ export function createLivePresentationFrameHost<Screen extends string, Stage ext
         }
         // The HUD belongs to live play; run overlays (pause, draft, results) carry their own summary.
         handoff.observe(services.cinema.active && services.cinema.script?.kind === "chapter", state.bannerSeconds());
-        // The HUD returns on a chapter's READY beat (before control) and stays out of
-        // the boss arrival card, whose letterbox would otherwise sit over it.
+        // The HUD returns on a chapter's READY beat (before control); a boss arrival never hides it.
         const hudBack = !services.cinema.active || !services.cinema.hideHud || services.cinema.beat?.hud === true;
-        if (
-          services.capturePolicy().ui === "include" &&
-          hudBack &&
-          !state.bossIntroActive() &&
-          state.screen() === "playing"
-        )
-          services.drawHud();
-        const beat = state.bossBeat();
+        if (services.capturePolicy().ui === "include" && hudBack && state.screen() === "playing") services.drawHud();
+        const beat = state.stageBeat();
         if (
           services.capturePolicy().ui === "include" &&
           beat !== null &&
           state.screen() === "playing" &&
-          !state.bossIntroActive() &&
           !services.cinema.active
         ) {
-          const progress = services.clamp(beat.t / beat.dur, 0, 1);
-          ui.bossPhaseBanner(context, {
-            text: beat.text,
-            color: beat.color,
-            alpha: Math.min(1, (1 - progress) * 6, progress * 5),
+          // In over the first sixth of the hold, out over the last fifth; the rule is drawn by the first third.
+          const progress = stageBeatProgress(beat);
+          ui.beatBanner(context, {
+            text: beat.title,
+            mark: beat.mark,
+            ...(beat.line === null ? {} : { line: beat.line }),
+            color: beat.accent,
+            alpha: Math.min(1, progress * 6, (1 - progress) * 5),
+            reveal: Math.min(1, progress * 3),
           });
         }
-        if (services.capturePolicy().ui === "include" && state.bossIntroActive() && state.screen() === "playing")
-          services.drawBossIntro();
         if (services.capturePolicy().ui === "include" && services.cinema.active)
           services.cinema.draw(context, ui, host.screenRectangle(), services.reducedMotion(), (text) =>
             cinematicPromptForDevice(text, services.input.mode, services.confirmGlyph()),
@@ -366,7 +353,7 @@ export function createLivePresentationFrameHost<Screen extends string, Stage ext
       drawPostLayers: () => {
         if (services.capturePolicy().ui === "include") {
           services.wipe.draw(state.deltaSeconds());
-          services.drawAchievementToast(state.deltaSeconds(), services.cinema.active || state.bossIntroActive());
+          services.drawAchievementToast(state.deltaSeconds(), services.cinema.active);
         }
       },
       drawCursor: () => {
@@ -415,7 +402,7 @@ export function createLivePresentationFrameHost<Screen extends string, Stage ext
           pointerLocked: services.pointerLocked(),
           runSeconds: run.runSeconds,
           completedRuns: run.completedRuns,
-          presentationBusy: services.cinema.active || state.bossIntroActive(),
+          presentationBusy: services.cinema.active,
         });
         setDisplay(services.lockHint, visible.lockHint ? "block" : "none");
         if (visible.controlHint && services.inputHint !== null) {

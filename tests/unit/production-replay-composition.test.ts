@@ -912,9 +912,12 @@ describe("production replay composition", () => {
       520,
       source.replay.world.state.run() as never,
     );
-    boss.introT = 1.4;
+    boss.introT = 1;
     source.replay.world.state.setEnemies([boss]);
-    source.replay.world.state.setBossIntro({ boss, delay: 0.15, t: 0, dur: 1.4 });
+    source.replay.world.state.setBossIntro({ boss, delay: 0.15, t: 0, dur: 1 });
+    // This boss is the wave's boss: the wave's own queued boss would spawn about 0.8 s in and start
+    // its own arrival over this one's 120 ticks.
+    (source.replay.world.state.run() as unknown as { spawnQueue: unknown[] }).spawnQueue = [];
     const { snapshot } = captureProductionReplayCheckpoint(
       source.replay,
       source.combat,
@@ -928,32 +931,38 @@ describe("production replay composition", () => {
     restoreProductionReplaySnapshot(target, snapshot);
     expect(target.world.state.bossIntro()?.boss).toBe(target.world.state.enemies()[0]);
     expect(target.world.state.bossIntro()?.boss).not.toBe(boss);
-    expect(target.world.state.bossIntro()).toMatchObject({ delay: 0.15, t: 0, dur: 1.4 });
+    expect(target.world.state.bossIntro()).toMatchObject({ delay: 0.15, t: 0, dur: 1 });
     const restored = composition.create(snapshot);
     const restoredBoss = restored.replay.world.state.enemies()[0] as (typeof boss & { state: string }) | undefined;
     if (restoredBoss === undefined) throw new Error("restored boss missing");
     expect(restored.replay.world.state.bossIntro()?.boss).toBe(restoredBoss);
-    // An application frame plays the arrival at its time scale but does not advance it; the simulation
-    // tick does (the intro-clock slice of plans/active/CINEMATICS_OVERHAUL.md).
+    // An application frame does not advance the arrival; the simulation tick does
+    // (plans/active/CINEMATICS_OVERHAUL.md, the intro-clock slice and PR 6).
     restored.advanceApplicationFrame(0.1);
     expect(restored.replay.world.state.bossIntro()).toMatchObject({ delay: 0.15, t: 0 });
     expect(() => {
       restored.advanceApplicationFrame(0.101);
     }).toThrow(/bounded finite seconds/);
-    // 0.15 s of delay at full speed is 18 ticks; then the 1.4 s arrival at time scale 0.25 is 42 ticks.
+    // 0.15 s of delay is 18 ticks; then the 1.0 s arrival, at full speed, is 120 ticks.
     let ticks = 0;
     while (ticks < 18) {
       restored.simulation.advanceOne([]);
       ticks += 1;
-      expect(restoredBoss.introT).toBe(1.4);
+      expect(restoredBoss.introT).toBe(1);
       expect(restoredBoss.state).toBe("intro");
     }
     expect(restored.replay.world.state.bossIntro()).toMatchObject({ delay: 0, t: 0 });
-    while (ticks < 200 && restored.replay.world.state.bossIntro() !== null) {
+    expect(restored.replay.world.state.stageBeat()).toBeNull();
+    // The arrival's first tick writes the boss's name over the world as a banner stage beat.
+    restored.simulation.advanceOne([]);
+    ticks += 1;
+    expect(restored.replay.world.state.stageBeat()).toMatchObject({ kind: "banner", age: 0 });
+    while (ticks < 300 && restored.replay.world.state.bossIntro() !== null) {
       restored.simulation.advanceOne([]);
       ticks += 1;
     }
-    expect(ticks).toBe(18 + 42);
+    expect(ticks).toBe(18 + 120);
+    expect(restored.replay.world.state.stageBeat()).toMatchObject({ kind: "banner", age: 119 });
     expect(restoredBoss.introT).toBe(0);
     for (let index = 0; index < 120 && restoredBoss.state === "intro"; index += 1) restored.simulation.advanceOne([]);
     expect(restoredBoss.state).not.toBe("intro");

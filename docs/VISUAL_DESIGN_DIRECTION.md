@@ -117,7 +117,7 @@ The authored safe composition remains 1600×900. `screenRectangle` is the true p
 - A chapter intro is a title card the biome writes into its own upper sky: numeral, condensed title, a short accent rule and one mono lore page at a time, in the biome ink, on a haze of the sky's own colour. No panel, plate, outline or halo; the arena, the player and the far side of the sky stay in full colour.
 - The text keeps a clear field above every platform of its stage, and pages hold long enough to read before they play on by themselves. One true, device-worded prompt sits in the floor band.
 - Skipping lands on the biome reveal, never on combat. The HUD returns on the READY beat, before control; the first wave starts only after the card ends, and its WAVE banner is not repeated.
-- Boss arrival cards keep every line inside their letterbox bars and hide the HUD while they play. The finale epilogue alone sits on the dark rail fade, because it is already on the cinematic field.
+- A boss arrival is a stage beat banner under the boss bar, with the HUD kept; nothing letterboxes a live fight. The finale epilogue alone sits on the dark rail fade, because it is already on the cinematic field.
 - The full contract, its tokens and its test are in DESIGN_SYSTEM.md, "Adventure chapter presentation contract".
 
 ### Playground and HUD

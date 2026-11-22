@@ -2,6 +2,13 @@ import { runDnaObserver, withRunDnaAttack } from "../runtime/run-dna-observer";
 import type { TutorialAttemptFact } from "../training/tutorial-failure-coach";
 import type { CONFIG as GameConfiguration } from "../../config/game-config";
 import {
+  arrivalBanner,
+  lastFeedbackBanner,
+  stepStageBeat,
+  type FeedbackBannerBatch,
+  type StageBeat,
+} from "../stage-beat";
+import {
   stepCombatPrelude,
   type CombatPreludeBlade,
   type CombatPreludePlayer,
@@ -51,12 +58,21 @@ export interface LiveOpeningState {
   landingVelocity: number;
 }
 
+/**
+ * The world records this phase advances once per tick: the boss arrival in progress (`advanceBossIntro`)
+ * and what is written over the world (`src/gameplay/stage-beat.ts`).
+ */
+export interface OpeningWorld {
+  bossIntro(): BossIntroClock | null;
+  setBossIntro(value: null): void;
+  stageBeat(): StageBeat | null;
+  setStageBeat(value: StageBeat | null): void;
+}
+
 export interface LiveOpeningPhaseHost {
   /** The owning world's mutable configuration, captured before any actors. */
   readonly config: typeof GameConfiguration;
-  /** The boss arrival in progress, which this phase advances once per tick (`advanceBossIntro`). */
-  bossIntro(): BossIntroClock | null;
-  endBossIntro(): void;
+  readonly world: OpeningWorld;
   readonly player: LivePlayer;
   readonly blade: LiveBlade;
   readonly run: LiveRun;
@@ -105,7 +121,11 @@ export interface LiveOpeningPhaseHost {
   lobExplode: () => void;
   emitThrowResolve: () => void;
   nearestEnemy: () => LiveEnemy | null;
-  updateFeedback: (dt: number) => void;
+  /**
+   * Drains the tick's boss and Mirror feedback events (live play presents them) and returns them, so this
+   * phase writes their banner as world state the same way in every host.
+   */
+  updateFeedback: (dt: number) => readonly FeedbackBannerBatch[];
   consumeThrow: () => boolean;
   updateWave: (dt: number) => void;
   startTransformation: (enemy: LiveEnemy, request: unknown) => boolean;
@@ -131,9 +151,18 @@ export interface LiveOpeningPhaseResult {
 
 /** Runs the movement, actor, arena, and boss half of one deterministic fixed tick. */
 export function runLiveOpeningPhase(host: LiveOpeningPhaseHost, dt: number): LiveOpeningPhaseResult {
-  const { player, blade, run, state, config } = host;
-  const intro = host.bossIntro();
-  if (intro !== null && !advanceBossIntro(intro, dt, config.bossTheater.introScale)) host.endBossIntro();
+  const { player, blade, run, state, config, world } = host;
+  world.setStageBeat(stepStageBeat(world.stageBeat()));
+  const intro = world.bossIntro();
+  if (intro !== null) {
+    // The arrival's first tick past its delay writes the boss's name and epithet as a banner.
+    const arriving = intro.delay <= 0 && intro.t === 0 && intro.boss !== null;
+    if (!advanceBossIntro(intro, dt)) world.setBossIntro(null);
+    else if (arriving && intro.boss !== null) {
+      const banner = arrivalBanner(intro.boss);
+      if (banner !== null) world.setStageBeat(banner);
+    }
+  }
   const timers = { throwCooldown: state.throwCooldown };
   const preparing = host.practicePreparing === true && !host.blocking;
   if (preparing) {
@@ -178,7 +207,8 @@ export function runLiveOpeningPhase(host: LiveOpeningPhaseHost, dt: number): Liv
   if (prelude.linkBreakReason) host.linkBroken(prelude.linkBreakReason);
   if (!preparing) {
     runSecondary(host, dt, prelude.previousBladeState, prelude.wasReturning, !!prelude.linkBreakReason);
-    host.updateFeedback(dt);
+    const banner = lastFeedbackBanner(...host.updateFeedback(dt));
+    if (banner !== null) world.setStageBeat(banner);
     runLocomotion(host, dt);
     runTransport(host);
   }

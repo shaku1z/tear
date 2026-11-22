@@ -17,6 +17,7 @@ import type {
 } from "./combat-action-context";
 import type { LiveEnemy, LiveCollisionPhaseState } from "../../gameplay/combat/live-collision-phase";
 import type { ParryProjectile } from "../../gameplay/combat/blade-parry-runtime";
+import type { FeedbackBannerBatch } from "../../gameplay/stage-beat";
 
 /** Builds the detailed legacy effect/event adapters outside the application composition root. */
 export function createLiveCombatActions<
@@ -108,10 +109,7 @@ export function createLiveCombatActions<
   };
   const opening: Omit<LiveOpeningPhaseHost, "state"> = {
     config: d.CONFIG,
-    bossIntro: () => live.bossIntro(),
-    endBossIntro: () => {
-      live.endBossIntro();
-    },
+    world: live,
     get player() {
       return player();
     },
@@ -388,9 +386,7 @@ export function createLiveCombatActions<
       f.emitThrowResolve(null, blade().throwDmg);
     },
     nearestEnemy: () => f.openingNearestEnemy(),
-    updateFeedback: (seconds) => {
-      updateRuntimeFeedback(context, seconds);
-    },
+    updateFeedback: (seconds) => updateRuntimeFeedback(context, seconds),
     consumeThrow: f.consumeThrow,
     updateWave: f.updateWave,
     startTransformation: f.startTransformation,
@@ -755,17 +751,19 @@ function resolveColor(d: LiveCombatActionContext["dependencies"], color?: string
   return color ?? d.CONFIG.colors.perfect;
 }
 
-function updateRuntimeFeedback(context: LiveCombatActionContext, seconds: number): void {
+function updateRuntimeFeedback(context: LiveCombatActionContext, seconds: number): readonly FeedbackBannerBatch[] {
   const { dependencies: d, live, ports } = context,
     f = ports.functions,
     target = live.player();
+  let mirrorEvents: CombatFeedbackEvent[] = [];
   if (d.Mirror.active) {
     // The combat read itself is shared simulation; the floater and the queued
     // effect flush below are this host's presentation.
     if (updateMirrorCombat(d.Mirror, seconds, target, live.blade())) {
       f.addFloater(target.x, target.y - 70, "REFLECTION SHATTERED", true, d.Mirror.color);
     }
-    applyFeedback(context, d.Mirror.fxq.splice(0), { x: target.x, y: target.y - 70, color: d.Mirror.color }, true);
+    mirrorEvents = d.Mirror.fxq.splice(0);
+    applyFeedback(context, mirrorEvents, { x: target.x, y: target.y - 70, color: d.Mirror.color }, true);
   }
   const bossEvents: CombatFeedbackEvent[] = d.BOSSFX.drain().map((event) => ({
     ...(event.shake === undefined ? {} : { shake: event.shake }),
@@ -773,6 +771,7 @@ function updateRuntimeFeedback(context: LiveCombatActionContext, seconds: number
     ...(event.hitstop === undefined ? {} : { hitstop: event.hitstop }),
     ...(event.zoom === undefined ? {} : { zoom: event.zoom }),
     ...(event.banner === undefined ? {} : { banner: event.banner }),
+    ...(event.mark === undefined ? {} : { mark: event.mark }),
     ...(event.txt === undefined ? {} : { txt: event.txt }),
     ...(event.x === undefined ? {} : { x: event.x }),
     ...(event.y === undefined ? {} : { y: event.y }),
@@ -782,6 +781,10 @@ function updateRuntimeFeedback(context: LiveCombatActionContext, seconds: number
     ...(event.cue === undefined ? {} : { cue: event.cue }),
   }));
   applyFeedback(context, bossEvents, { x: target.x, y: target.y - 70, color: d.CONFIG.colors.boss }, false);
+  return [
+    [mirrorEvents, d.Mirror.color],
+    [bossEvents, d.CONFIG.colors.boss],
+  ];
 }
 
 function applyFeedback(
@@ -802,9 +805,6 @@ function applyFeedback(
       shake: f.addShake,
       flash: f.addFlash,
       zoom: f.addZoom,
-      banner: (text, color) => {
-        f.setBossBanner(text, color);
-      },
       floater: f.addFloater,
       sound: (cue) => {
         f.playSound(cue);

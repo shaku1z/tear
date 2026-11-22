@@ -136,7 +136,7 @@ export function createLiveCampaignHost(services: CampaignHostServices): LiveCamp
         state.setSlowZones([]);
         state.setTemporaryWalls([]);
         state.setBossIntro(null);
-        state.setBossBeat(null);
+        state.setStageBeat(null);
         run().spawnQueue.length = 0;
         run().chapterState = "WAVE_LIVE";
       },
@@ -229,8 +229,8 @@ export function createLiveCampaignHost(services: CampaignHostServices): LiveCamp
       },
       win: services.win,
     },
-    clearBossBeat: () => {
-      state.setBossBeat(null);
+    clearStageBeat: () => {
+      state.setStageBeat(null);
     },
     prepareVictory: services.prepareVictory,
     win: services.win,

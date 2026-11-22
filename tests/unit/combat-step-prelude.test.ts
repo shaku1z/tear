@@ -178,9 +178,6 @@ describe("combat feedback runtime", () => {
         zoom() {
           calls.push("zoom");
         },
-        banner() {
-          calls.push("banner");
-        },
         floater() {
           calls.push("floater");
         },
@@ -193,7 +190,8 @@ describe("combat feedback runtime", () => {
       },
       true,
     );
-    expect(calls).toEqual(["shake", "flash", "banner", "floater", "slam"]);
+    // The banner is not presentation here: the opening phase writes it as a stage beat.
+    expect(calls).toEqual(["shake", "flash", "floater", "slam"]);
     expect(state).toEqual({ hitStop: 0.2 });
   });
 });

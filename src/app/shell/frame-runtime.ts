@@ -19,7 +19,6 @@ export interface MutableFramePreludeState {
   bannerTime: number;
   stageBannerSeconds: number;
   rankPopTime: number;
-  bossBeat: { t: number } | null;
 }
 export interface FramePreludeInput {
   dt: number;
@@ -27,9 +26,6 @@ export interface FramePreludeInput {
   parrySlowScale: number;
   cinemaActive: boolean;
   playgroundSlow: boolean;
-  /** A boss arrival is playing (`bossIntroPlaying`); the simulation advances it, the frame slows to it. */
-  bossArrivalPlaying: boolean;
-  introScale: number;
   lerp(a: number, b: number, t: number): number;
   clamp(value: number, min: number, max: number): number;
 }
@@ -42,11 +38,6 @@ export function advanceFramePrelude(input: FramePreludeInput): void {
   } else state.timeScale = input.lerp(state.timeScale, 1, input.clamp(8 * dt, 0, 1));
   if (input.cinemaActive) state.timeScale = 1;
   if (input.playgroundSlow) state.timeScale = Math.min(state.timeScale, 0.35);
-  if (input.bossArrivalPlaying) state.timeScale = Math.min(state.timeScale, input.introScale);
-  if (state.bossBeat) {
-    state.bossBeat.t -= dt;
-    if (state.bossBeat.t <= 0) state.bossBeat = null;
-  }
   state.worldZoom = input.lerp(state.worldZoom, state.worldZoomTarget, input.clamp(3 * dt, 0, 1));
   state.zoom = input.lerp(state.zoom, state.worldZoom, input.clamp(9 * dt, 0, 1));
   if (state.flash > 0) state.flash = Math.max(0, state.flash - dt * 3.2);
@@ -236,8 +227,6 @@ export interface LiveFrameRuntimeOptions {
   readonly parrySlowScale: number;
   cinemaActive(): boolean;
   playgroundSlow(): boolean;
-  bossArrivalPlaying(): boolean;
-  readonly introScale: number;
   lerp(a: number, b: number, t: number): number;
   clamp(value: number, min: number, max: number): number;
   timeScale(): number;
@@ -277,8 +266,6 @@ export class LiveFrameRuntime {
       parrySlowScale: this.#options.parrySlowScale,
       cinemaActive: this.#options.cinemaActive(),
       playgroundSlow: this.#options.playgroundSlow(),
-      bossArrivalPlaying: this.#options.bossArrivalPlaying(),
-      introScale: this.#options.introScale,
       lerp: (a, b, t) => this.#options.lerp(a, b, t),
       clamp: (value, minimum, maximum) => this.#options.clamp(value, minimum, maximum),
     });

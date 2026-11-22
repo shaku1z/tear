@@ -81,7 +81,7 @@ export interface SourceVoidRuntimeDependencies<TProjectile extends SourceRuntime
   replaceProjectiles(projectiles: TProjectile[]): void;
   replacePlatforms(platforms: ArenaPlatform[]): void;
   clearDescent(): void;
-  clearBossBeat(): void;
+  clearStageBeat(): void;
   setWorldZoom(value: number): void;
   spawnWisp(x: number, y: number, lane: VoidLane): void;
   liveWispCount(): number;
@@ -147,7 +147,7 @@ export function createSourceVoidRuntimeBridge<TProjectile extends SourceRuntimeP
         }
       } else if (intent.type === "spawn-wisp") dependencies.spawnWisp(intent.x, intent.y, intent.lane);
       else if (intent.type === "source-breach-lock") {
-        dependencies.clearBossBeat();
+        dependencies.clearStageBeat();
         owner.breachState = "follow";
         owner.breachContactSpent = true;
       } else if (intent.type === "begin-void-run") owner.beginVoidRun?.();
