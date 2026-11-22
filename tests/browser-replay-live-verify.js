@@ -2,8 +2,7 @@
 // (src/app/replay/live-replay-production.ts) records a live run, keeps it on this device in the
 // `tear-replays` IndexedDB database, and the record read back from there verifies from its seed alone in
 // the detached world, with no keyframes. Built test target only (`pnpm build:test:standalone`). The legs
-// are in tests/browser-replay-live-legs.js; a campaign run across a stage win is the nightly
-// tests/browser-replay-campaign-stages.js.
+// are in tests/browser-replay-live-legs.js.
 //
 // - Cold leg: a run started straight after boot, before anything waits for the recorder. A run that
 //   starts before the recorder's code has loaded is not recorded and is counted (`notLoaded`); run start

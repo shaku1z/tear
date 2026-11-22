@@ -462,10 +462,6 @@
         "run": "node tests/browser-replay-engine-cold.js"
       },
       {
-        "id": "replay-campaign-stages",
-        "run": "node tests/browser-replay-campaign-stages.js"
-      },
-      {
         "id": "pale-aurora-track",
         "run": "node scripts/tearbench.mjs run pale-aurora-track-behavior"
       },

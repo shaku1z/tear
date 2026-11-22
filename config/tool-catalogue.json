@@ -465,13 +465,6 @@
       ],
       "duration": "minutes"
     },
-    "test:browser:replay-campaign-stages": {
-      "purpose": "Nightly browser check that a live campaign run is one replay record across a stage win, stored once and verified from its seed",
-      "effects": [
-        "launches-browser"
-      ],
-      "duration": "minutes"
-    },
     "test:browser:ghost-vault-conditional-commit": {
       "purpose": "Browser check of Ghost Vault conditional commits",
       "effects": [

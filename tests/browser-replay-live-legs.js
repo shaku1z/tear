@@ -1,5 +1,5 @@
-// The legs the live replay browser tests play (tests/browser-replay-live-verify.js on every pull request,
-// tests/browser-replay-campaign-stages.js nightly), over the `__TEAR_REPLAY_TAP__` test-build inspector
+// The legs the live replay browser tests play (tests/browser-replay-live-verify.js on every pull request),
+// over the `__TEAR_REPLAY_TAP__` test-build inspector
 // (src/app/engineering/replay-tap-inspector.ts) and the scripted Watch Agent.
 //
 // The live game runs as a player plays it. The Watch Agent plays through the real setup screen, the real
@@ -82,6 +82,8 @@ async function recordLiveRun(journey, options, done) {
   };
   assert.ok(done(snapshot, stages), `${options.mode}: the run did not reach its goal (${JSON.stringify(reached)})`);
   await page.evaluate(() => window.__TEAR_WATCH_AGENT__.stop());
+  const tapError = await page.evaluate(() => window.__TEAR_REPLAY_TAP__.tapError());
+  assert.equal(tapError, null, `${options.mode}: the recorder threw`);
   assert.ok(await page.evaluate(() => window.__TEAR_REPLAY_TAP__.recording()), `${options.mode}: no run recorded`);
   const timings = await page.evaluate(() => window.__TEAR_REPLAY_TAP__.timings());
   // End it as a kept run's outcome does, then read it back from the store.

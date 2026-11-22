@@ -167,7 +167,7 @@ async function withJourney(options, run) {
     await trackScriptLoads(page);
     // The isolated test storage a page starts with. `tutorialSkipped` plays as a player who
     // skipped the tutorial on purpose, so PLAY opens the run setup; without it a fresh profile is
-    // tutorial-first and PLAY starts the tutorial. `storage` adds saved keys of its own (key: string value).
+    // tutorial-first and PLAY starts the tutorial.
     const seeded = {
       ...(options.settings
         ? {
@@ -180,7 +180,6 @@ async function withJourney(options, run) {
           }
         : {}),
       ...(options.tutorialSkipped ? TUTORIAL_SKIPPED_STORAGE : {}),
-      ...(options.storage || {}),
     };
     if (Object.keys(seeded).length > 0)
       await page.addInitScript((storage) => {

@@ -41,6 +41,8 @@ export interface ReplayTapInspector {
   readonly timings: () => ReplayTapTimings;
   readonly verify: (record: ReplayRecord) => ReplayVerdict;
   readonly counters: () => LiveReplayProductionCounters;
+  /** What the last tap that threw threw, or null. */
+  readonly tapError: () => string | null;
   /** The stored records' index, once every write started so far has finished. */
   readonly stored: () => Promise<readonly ReplayRecordEntry[] | Readonly<{ failed: string }>>;
   /** One stored record, read back from the store. */
@@ -129,6 +131,7 @@ export function installReplayTapInspector(
       ),
     verify: (record: ReplayRecord) => verifyReplay(record, createDetachedReplayWorld()),
     counters: production.counters,
+    tapError: production.lastTapError,
     stored: () => withStore((store) => store.entries()),
     storedRecord: (key: string) => withStore((store) => store.read(key)),
   });

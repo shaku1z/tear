@@ -87,6 +87,23 @@ describe("the production live replay recorder", () => {
     expect(production.counters()).toMatchObject({ tapErrors: 1, recorded: 0 });
   });
 
+  it("stops a tap that throws even when something else wraps it in the slot", async () => {
+    const { production, slot, recorder, puts } = harness({ frameThrows: true });
+    await recorder.ensure();
+    production.runStarted(choices);
+    const guarded = slot.current();
+    if (guarded === null) throw new Error("no tap installed");
+    // A wrapper over the guarded tap, as the test-build timing inspector installs.
+    slot.install({ ...guarded });
+    slot.frame(1, 1 / 60, null as never, false);
+    expect(slot.current()).not.toBeNull();
+    production.runEnded(run, true);
+    await production.settled();
+    expect(puts).toEqual([]);
+    expect(production.counters()).toMatchObject({ tapErrors: 1, recorded: 0 });
+    expect(production.lastTapError()).toBe("tap fault");
+  });
+
   it("finishes but does not store a run that is not kept", async () => {
     const { production, slot, recorder, puts } = harness();
     await recorder.ensure();

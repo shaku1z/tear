@@ -51,6 +51,8 @@ export interface LiveReplayProduction {
   readonly finishOpen: (run: ReplayRunEnd["run"]) => ReturnType<LiveReplayTap["finish"]>;
   readonly ensure: () => Promise<void>;
   readonly counters: () => LiveReplayProductionCounters;
+  /** What the last tap that threw threw, as text (the test-build inspector), or null. */
+  readonly lastTapError: () => string | null;
   /** Settles once every store write started so far has finished (tests and the inspector). */
   readonly settled: () => Promise<void>;
 }
@@ -67,16 +69,23 @@ export function keepsReplayRecord(
   return !practice && run.beatThisRun === undefined && run.seedRace === undefined && run.ghostAssistance === undefined;
 }
 
-/** A tap that removes itself from the slot, for the rest of the run, the first time it throws. */
-function guarded(tap: LiveReplayTap, slot: LiveReplayTapSlot, failed: () => void): LiveReplayTap {
+/**
+ * A tap that stops recording for the rest of the run the first time it throws: every later call does
+ * nothing and its finish returns no record, even when something else wraps it in the slot. It also
+ * leaves the slot if it is still the slot's tap.
+ */
+function guarded(tap: LiveReplayTap, slot: LiveReplayTapSlot, failed: (error: unknown) => void): LiveReplayTap {
+  let broken = false;
   const safe =
     <Args extends unknown[], Result>(call: (...args: Args) => Result, fallback: Result) =>
     (...args: Args): Result => {
+      if (broken) return fallback;
       try {
         return call(...args);
-      } catch {
+      } catch (error) {
+        broken = true;
         if (slot.current() === wrapped) slot.install(null);
-        failed();
+        failed(error);
         return fallback;
       }
     };
@@ -105,6 +114,7 @@ export function createLiveReplayProduction(ports: LiveReplayProductionPorts): Li
   const storeFailed = (reason: ReplayRecordFailure) => {
     counts.storeFailures[reason] = (counts.storeFailures[reason] ?? 0) + 1;
   };
+  let lastTapError: string | null = null;
   let store: Promise<ReplayRecordStore | null> | null = null;
   let writes: Promise<void> = Promise.resolve();
   const openStore = (module: LiveReplayRecorderModule): Promise<ReplayRecordStore | null> => {
@@ -135,8 +145,9 @@ export function createLiveReplayProduction(ports: LiveReplayProductionPorts): Li
       const look: ReplayLook = { playerName: ports.playerName(), cosmetics: {}, music: null, recordedAt: ports.now() };
       const tap = ports.recorder.loaded().createLiveReplayTap({ build: ports.build, look });
       ports.slot.install(
-        guarded(tap, ports.slot, () => {
+        guarded(tap, ports.slot, (error) => {
           counts.tapErrors += 1;
+          lastTapError = error instanceof Error ? error.message : String(error);
         }),
       );
       ports.slot.runStarted(choices);
@@ -164,6 +175,7 @@ export function createLiveReplayProduction(ports: LiveReplayProductionPorts): Li
     finishOpen: (run: ReplayRunEnd["run"]) => take()?.finish(run) ?? null,
     ensure: () => ports.recorder.ensure().then(() => undefined),
     counters: () => Object.freeze({ ...counts, storeFailures: Object.freeze({ ...counts.storeFailures }) }),
+    lastTapError: () => lastTapError,
     settled: () => writes,
   });
 }
