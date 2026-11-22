@@ -2,6 +2,7 @@
 // To defer another module: declare a `lazySlot` beside the code that uses it, then add one row here.
 // The build check (`pnpm check:bundle-budget`) fails when a row's module ends up in a startup chunk.
 import { replayEngine } from "../../ghost/replay-engine";
+import { liveReplayRecorder } from "../replay/live-replay-recorder-slot";
 import { startIdleTask } from "../../platform/worker-cache-warmup";
 import type { LazyModuleSlot } from "../../domain/lazy-module";
 
@@ -29,6 +30,8 @@ const DEFERRED_MODULES: readonly DeferredModule[] = [
   deferred(replayEngine, () => import("../world/detached/replay-composition"), {
     fetchAheadOnIdleMenu: true,
   }),
+  // Recording a run (replay PR 5c-1): a run that starts before it loads is not recorded, so fetch it early.
+  deferred(liveReplayRecorder, () => import("../replay/live-replay-recorder"), { fetchAheadOnIdleMenu: true }),
 ];
 
 /** Names where each deferred module comes from, and fetches the ones that ask for it once the menu is idle. */

@@ -234,4 +234,34 @@ describe("live outcome composition pending-finale persistence", () => {
     ])
       expect(effect).not.toHaveBeenCalled();
   });
+  it.each([
+    ["a plain Endless run", { mode: "endless" }, {}, false, true],
+    ["a campaign run (its defeat or final win)", { mode: "campaign" }, {}, false, true],
+    ["a seed race", { mode: "endless" }, { seedRace: {} }, false, false],
+    ["a beat-this-run attempt", { mode: "endless" }, { beatThisRun: {} }, false, false],
+    ["a run with ghost assistance", { mode: "endless" }, { ghostAssistance: {} }, false, false],
+    ["a Ghost practice child", { mode: "endless" }, {}, true, false],
+  ] as const)(
+    "ends the replay record of %s, keeping it only for a plain start",
+    (_name, run, extra, practice, keep) => {
+      const ended: unknown[] = [];
+      createLiveOutcomeComposition({
+        dependencies: {
+          GAMEPLAY_EVENTS: {},
+          pendingFinalePersistence: { pending: () => null },
+          GHOST: { stopRec: () => null },
+          Input: { stopSemanticRecording: () => undefined },
+        } as never,
+        run: () => run,
+        ...(practice ? { practiceSession: { active: () => ({ id: "practice" }) } } : {}),
+        replayRunEnded: (totals: unknown, kept: boolean) => ended.push([totals, kept]),
+        cleanupBossActors: () => undefined,
+        environment: { clear: () => undefined },
+        lifecycle: { terminate: () => undefined },
+      } as never);
+      const context = captured.context as unknown as { stopRecording(summary: Record<string, unknown>): void };
+      context.stopRecording({ mode: run.mode, won: false, score: 120, wave: 3, time: 41, ...extra });
+      expect(ended).toEqual([[{ score: 120, wave: 3, time: 41 }, keep]]);
+    },
+  );
 });

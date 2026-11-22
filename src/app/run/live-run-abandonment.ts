@@ -10,6 +10,8 @@ export interface LiveRunAbandonmentOptions {
   readonly ghost: Pick<GameRuntimeDependencies["GHOST"], "recording" | "stopRec">;
   readonly input: Pick<BrowserInput, "stopSemanticRecording">;
   readonly run: () => GameRun;
+  /** The quit run's replay record ends here (src/app/replay/live-replay-production.ts). */
+  readonly replayRunEnded?: (run: GameRun) => void;
 }
 
 export interface LiveRunAbandonment {
@@ -39,6 +41,7 @@ export function createLiveRunAbandonment(options: LiveRunAbandonmentOptions): Li
         runTimeSeconds: run.runTime,
         reason,
       });
+      options.replayRunEnded?.(run);
       if (options.ghost.recording()) options.ghost.stopRec({ ...metadata, abandoned: reason });
     } finally {
       options.input.stopSemanticRecording();

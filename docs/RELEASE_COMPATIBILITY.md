@@ -31,6 +31,12 @@ Not promised today:
 - **Downgrades.** An older build reading data written by a newer one is not supported; envelopes
   reject unsupported future versions.
 - **Developer-only storage** (test-build storage isolation, debug overlays).
+- **Replay records** in the `tear-replays` database (version 1, one `records` store, from replay
+  PR 5c-1). Each kept run's record is stored on this device, the newest 20 up to 25 MB in all, and
+  nothing is uploaded. No screen lists them yet, so nothing is promised about them; the promise to
+  list and open them starts with the release that lists them (replay PR 5c-2), whose fixture adds
+  the database. Clearing the site's data removes them; nothing in the game deletes them before
+  replay PR 8.
 
 ## The fixtures
 

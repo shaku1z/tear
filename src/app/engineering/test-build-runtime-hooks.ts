@@ -1,4 +1,5 @@
 import type { LiveReplayTapSlot } from "../replay/live-replay-tap-slot";
+import type { LiveReplayProduction } from "../replay/live-replay-production";
 import type { CommandEnvelope } from "../../domain/envelopes";
 import type { TearWorldConfiguration } from "../../gameplay/runtime/tear-world-configuration";
 import {
@@ -45,6 +46,7 @@ import { createStageRestFrame } from "./stage-rest-frame";
 export interface LiveTestBuildHookSources {
   readonly dependencies: GameRuntimeDependencies;
   readonly replayTap: LiveReplayTapSlot;
+  readonly replayProduction: LiveReplayProduction;
   readonly configuration: TearWorldConfiguration<GameRuntimeDependencies["CONFIG"]>;
   readonly browser: LiveBrowserRuntime;
   readonly world: LiveWorldComposition;
@@ -150,12 +152,18 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
   installGhostVaultConditionalCommitInspector(browserWindow);
   // The inspector carries the recorder and the detached replay world, which live startup must not
   // (src/app/shell/deferred-modules.ts), so it loads on its own.
+  let replayStage = 0;
+  GAMEPLAY_EVENTS.subscribe((event) => {
+    if (event.kind === "stage" && event.transition !== "exited") replayStage = event.stage;
+  });
   void import("./replay-tap-inspector").then(({ installReplayTapInspector }) => {
     installReplayTapInspector(
       browserWindow,
       sources.replayTap,
+      sources.replayProduction,
       () => authoritativeStep.lastResult?.state.run ?? null,
       () => CINEMA.active,
+      () => replayStage,
     );
   });
   const consumedActions: CommandEnvelope<GameAction>[] = [];
