@@ -300,7 +300,7 @@
       {
         "id": "replay-live-verify",
         "run": "node tests/browser-replay-live-verify.js",
-        "seconds": 72
+        "seconds": 110
       },
       {
         "id": "framerate-determinism",

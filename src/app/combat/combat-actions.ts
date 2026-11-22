@@ -3,6 +3,7 @@ import { bindRunDnaShot, runDnaObserver } from "../../gameplay/runtime/run-dna-o
 import { updateMirrorCombat } from "../../gameplay/combat/mirror-combat-feedback";
 import { overrunMovementMultiplier } from "../../gameplay/combat/overrun";
 import { isObject } from "../../domain/records";
+import { boxesOverlap } from "../../domain/geometry";
 import { applyCombatFeedback, type CombatFeedbackEvent } from "../../gameplay/combat/combat-feedback-runtime";
 import type { CombatEntityRuntimeHooks } from "../../gameplay/combat/combat-entity-runtime";
 import type { LiveOpeningPhaseHost } from "../../gameplay/combat/live-opening-phase";
@@ -274,17 +275,7 @@ export function createLiveCombatActions<
     drip: (x, y) => {
       d.FX.drip(x, y);
     },
-    overlap: (actor, enemy, padding) =>
-      d.aabbOverlap(
-        actor.x,
-        actor.y,
-        actor.hw + (padding ?? 0),
-        actor.hh + (padding ?? 0),
-        enemy.x,
-        enemy.y,
-        enemy.hw,
-        enemy.hh,
-      ),
+    overlap: boxesOverlap,
     styleHit: () => {
       f.addStyle("hit");
     },
