@@ -175,13 +175,14 @@ export function createUiState(colors: UiPalette) {
         muted: 0.66,
         faint: 0.52,
         ghost: 0.25,
-        // content surfaces: the sheet and the run-overlay scrim are solid, so the live
-        // scene never shows through content; the main-menu rail is a soft fade (rail at
+        // content surfaces: the sheet is solid, and run overlays fade the live scene with one
+        // scrim (overlay) while their content (cards, progress rows, the wave log) sits on
+        // its own solid surface, so the scene never shows through content; the main-menu rail is a soft fade (rail at
         // the screen edge, railMid at the mid stop, then clear), each dark-surface ghost
         // control adds its own fill (railControl), and the menu demo keeps out of the
         // controls (src/presentation/demo-keep-out.ts)
         sheet: 1,
-        overlay: 1,
+        overlay: 0.88,
         rail: 0.9,
         railMid: 0.6,
         railControl: 0.42,
