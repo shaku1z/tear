@@ -57,9 +57,10 @@ describe("the live scene never shows through a screen's content", () => {
     expect(menu).toEqual(["menu backdrop", "screen"]);
   });
 
-  it("makes the sheet and the run-overlay scrim solid", () => {
+  it("makes the sheet solid and fades the scene behind run overlays", () => {
     const { alpha } = createUiState({ bomber: "#f80", charger: "#e33", perfect: "#1cc" }).t;
     expect(alpha.sheet).toBe(1);
-    expect(alpha.overlay).toBe(1);
+    expect(alpha.overlay).toBeGreaterThan(0.8);
+    expect(alpha.overlay).toBeLessThan(1);
   });
 });
