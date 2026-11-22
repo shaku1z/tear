@@ -397,7 +397,7 @@ describe("Phase II", () => {
   });
 });
 
-describe("Lingering bramble: patches that stay, from Phase II", () => {
+describe("Lingering bramble: patches that stay", () => {
   const P = M.lingeringBramble;
   const field = (cap: number) => {
     const zones = new RootboundZones(CONFIG.view.w, GROUND);
@@ -428,13 +428,42 @@ describe("Lingering bramble: patches that stay, from Phase II", () => {
     expect(zones.list).toEqual([]);
   });
 
-  it("at most the phase's cap at once, the oldest withering first; none in Phase I", () => {
-    const { zones } = field(P.caps[1]);
+  it("at most the phase's cap at once, the oldest withering first", () => {
+    expect(P.caps).toEqual([2, 4, 5]);
+    const { zones } = field(3);
     for (const x of [100, 300, 500, 700]) zones.growPatch(x);
     expect(zones.list.map((zone) => zone.x)).toEqual([300, 500, 700]);
-    const none = field(P.caps[0]);
+    const none = field(0);
     none.zones.growPatch(500);
     expect(none.zones.list).toEqual([]);
+  });
+
+  it("each Surface Strike leaves one where it came up, Phase I's Burrow included", () => {
+    const { boss, step, until } = setup(300, levelAt(800));
+    boss.startBurrow();
+    until("surface");
+    const at = boss.x;
+    expect(boss.zones).toEqual([]);
+    while (boss.state === "surface") step();
+    expect(boss.zones).toEqual([expect.objectContaining({ kind: "bramble", x: at, w: P.width, on: false })]);
+  });
+
+  it("Last Bloom's ring leaves them around the centre as it bursts, never where the player stood on the phase tick", () => {
+    const bloomPatches = (playerX: number) => {
+      const { boss, player, step, until } = phaseTwo(300, levelAt(playerX));
+      boss.hp = boss.maxHp * 0.2;
+      boss.noticePhase();
+      step();
+      expect(boss.state).toBe("bloomsink");
+      player.x = 100; // where it goes afterwards does not matter: the phase tick decides
+      until("burst");
+      return boss.zones.filter((zone) => zone.kind === "bramble").map((zone) => zone.x);
+    };
+    const centre = CONFIG.view.w / 2;
+    const ring = P.bloomAt.map((k) => centre + k * M.lastBloom.radius);
+    expect(bloomPatches(centre + 400)).toEqual(ring);
+    // A player on a ring point at the phase tick: that patch does not grow, the others do.
+    expect(bloomPatches(ring[0] ?? 0)).toEqual(ring.slice(1));
   });
 
   it("one that would overlap a patch renews it in place: still grown, a whole length ahead", () => {

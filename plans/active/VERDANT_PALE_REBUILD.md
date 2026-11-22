@@ -279,7 +279,7 @@ Colossus's Phase III multiplier).
 | Thorn Burst | I, II, III | player within 130 px for 48 ticks; cooldown 3 s | 34 (swell) | 12: a ring of 150 px | 54 (burst), open | 16 | no (peril) | none: the swell is the tell |
 | Root Seam | II, III | the hit of every Vine Swing | - | the vine stays planted for 120 ticks and drives a root seam along the floor in the swing's direction: a boss zone 110 px wide, 300 px/s, at most 240 ticks, 7 damage per 48 ticks (Aldric's seams) | - | 7 every 48 ticks | - | none: the seam is the hit |
 | Bramble Rows | II, III | cooldown 9 s, player on the floor | 60 (kneel) | three floor sections light in turn: each warns for 36 ticks, then burns for 84; the next starts 48 ticks after the last. It stays kneeling and open the whole time (about 360 ticks) | 48 (rise) | 12 per 48 ticks | - | 3: the zone warning, through the shared zone renderer |
-| Lingering bramble | II, III | the Root Seam every 160 px it runs; each Bramble Row as it burns out (at its centre); the planted vine when its 120 ticks run out (a cut vine leaves none) | 54 (grows), never under the shared tell minimum | a patch of floor bramble 120 px wide stays live for 1200 ticks; at most 3 (Phase II) or 4 (Phase III) at once, and the oldest withers first; one that would overlap a patch renews it in place | - | 8 per 48 ticks, on the floor only | - | none new: the shared zone renderer's bramble, warning while it grows |
+| Lingering bramble | I, II, III | every Surface Strike where it came up; the Root Seam every 160 px it runs; each Bramble Row as it burns out (at its centre); the planted vine when its 120 ticks run out (a cut vine leaves none); Last Bloom's ring as it bursts, at the centre and one ring radius each side, except where the player stood on the phase tick | 54 (grows), never under the shared tell minimum | a patch of floor bramble 120 px wide stays live for 1200 ticks; at most 2, 4 and 5 at once by phase, and the oldest withers first; one that would overlap a patch renews it in place | - | 8 per 48 ticks, on the floor only | - | none new: the shared zone renderer's bramble, warning while it grows |
 | Mend | II | player hasn't hit it for 480 ticks and is more than 500 px away | 24 (kneel) | heals 1.5 % of its full health a second for up to 240 ticks, never above the health it entered Phase II with; any hit ends it | 72 (split), open, after a hit | - | - | none: the kneel is the tell |
 | Spring Surge | III | cooldown 7.5 s | 102 (spring): rises at the arena centre | 1: two root waves run along the floor both ways (jumpable ground shocks, 760 px/s, 16) and five seed pods arc out (deflectable, 12) | 66 (slam), open | 16 / 12 | pods deflect | the peril diamond only: the rise is the tell (slice 4 dropped the centre column, 5.2: a departure from this table the lead confirmed, 2026-11-21) |
 
@@ -645,36 +645,47 @@ that splits each hit by its call stack, tool gap in plans/active/PLAYTEST_TOOL_P
 - Body contact is about 2 per 10 s at the Colossus and Aldric and 1.1 at the new boss.
 
 **Pressure: the lingering bramble** (the lead's design of 2026-11-21, from the table above: the references hit
-through things that outlast a dash, and the new boss's moves were all short windows). The seam, the rows and,
-from Phase II, the planted vine leave bramble that stays (2.1). Practice on normal, Sword, seeds 1 to 12,
-main 55beb59b plus this step, health 3000 unchanged:
+through things that outlast a dash, and the new boss's moves were all short windows). The Surface Strike, the
+seam, the rows, the planted vine and Last Bloom's ring leave bramble that stays (2.1); the lead set the sources,
+Phase I's cap of 2 and the rule that Last Bloom's bramble never grows where the player stood on the phase tick.
+Practice on normal, Sword, seeds 1 to 12, main 55beb59b plus this step, health 3000 unchanged:
 
 | Phase | Scripted hits per 10 s | Target (refs' median) | Avoids-tells clear | Target | Blocking ticks |
 | --- | --- | --- | --- | --- | --- |
-| I | 1.5 | 2.5-4.4 (3.0) | 14.0 s (9 of 12 cleared) | 10.4-21.6 s | 0 |
-| II | 3.4 (was 1.2) | 3.4-6.0 (4.1) | 15.0 s | 8.4-16.9 s | 0 |
-| III | 2.9 (was 1.9) | 3.4-6.0 (4.9) | 6.4 s | 5.3-12.9 s | 0 |
+| I | 1.9 (was 1.5) | 2.5-4.4 (3.0) | 12.9 s (10 of 12 cleared) | 10.4-21.6 s | 0 |
+| II | 3.5 (was 1.2) | 3.4-6.0 (4.1) | 10.7 s | 8.4-16.9 s | 0 |
+| III | 4.4 (was 1.9) | 3.4-6.0 (4.9) | 7.5 s | 5.3-12.9 s | 0 |
 
-- **Where the hits come from now** (the scratch probe): Phase II 2.7 per 10 s over the phase's own fights:
-  patches 1.2, Root Seam 0.8, Bramble Rows 0.4, body 0.3. Phase III 3.0: body 1.2, pods 0.6, moves 0.5,
-  patches 0.4, rows 0.2.
-- **The dials, measured:** a seed every 240 px and 96 px wide gave 3.2 and 2.5; a seed every 160 px gave 3.3
-  and 2.8; 120 px wide, 3.2 and 2.6; caps of 4 and 5, 3.2 and 2.4 (the cap never binds); 160 px and 120 px
-  together, 3.4 and 2.9, taken.
+- **Where the hits come from now** (the scratch probe, each phase's own fights): Phase I 1.9 per 10 s: body
+  1.0, patches 0.6, moves 0.3. Phase II 3.0: patches 1.6, Root Seam 0.8, body 0.3, Bramble Rows 0.3. Phase III
+  4.5: patches 2.7, pods 0.9, moves 0.3, body 0.2, rows 0.2, seam 0.1.
+- **The dials, measured** (scripted hits, Phases I / II / III):
+  - Before the Phase I and Last Bloom sources: seeding every 240 px and 96 px wide gave - / 3.2 / 2.5; 160 px
+    and 120 px together gave - / 3.4 / 2.9.
+  - With them, caps 2-3-4 and the ring at one radius each side: 1.9 / 3.0 / 3.8. Phase II fell because the
+    strike's patches now take its cap, and the oldest withers.
+  - Caps 2-4-5 and the ring at the centre as well: 1.9 / 3.5 / 4.4, taken.
+  - Caps 2-5-5 gave 1.9 / 3.5 / 4.4; 140 px wide, 1.9 / 3.5 / 3.7.
+  - Phase I is 1.9 with a cap of 2, 3 or 4 (measured, not taken): the cap is not what holds it.
+- **No patch goes live under the player without its whole tell:** `tests/unit/rootbound-bramble-fairness.test.ts`
+  plays the twelve seeds from each phase (30 s each) with the tell-avoiding player. It records each patch the
+  tick it first appears, with the player's position and how long the patch has left to grow. 67, 88 and 62
+  patches started from Phases I to III, 8, 7 and 2 of them on the player (the Surface Strike comes up under
+  it), each with its whole tell: none had less than the shared minimum. With the patches' growth set to 30 ticks,
+  under the minimum, all three fail.
 - **The floor stays open:** in no tick of any of the 12 seeds is the floor without a gap the player's width,
-  live zones or growing ones. The most of the floor live patches cover at once is 22.5 %; every live zone
-  together, 55.8 %; every zone, growing ones included, 85 %.
-- **The avoids-tells player** takes patch hits: in Phase II 29 with no hit before them and 7 within its 0.9 s
-  of invulnerability plus 0.25 s (knocked), 0 in Phase III. Every one is on a patch already live, which it
-  crossed airborne or dashing while its scripted base chased the boss; none grew under it. Aldric's throne
-  fire hits the same player 5.0 per 10 s in Phase II for the same reason: tool gap in
-  plans/active/PLAYTEST_TOOL_PLAN.md (it reads a tell only within 28 px and has no rule for standing floor
-  zones).
+  live zones or growing ones. The most of the floor live patches cover at once is 15 %, 30 % and 37.5 % by
+  phase; every live zone together, 63 %; every zone, growing ones included, 89 %.
+- **The avoids-tells player** still walks into live patches (Phase II: 24 with no hit before them, 10 knocked).
+  Every one is on a patch already live, which it crossed airborne or dashing while its scripted base chased the
+  boss. Aldric's throne fire hits the same player 5.0 per 10 s in Phase II for the same reason. The lead accepted
+  this as a tool gap (plans/active/PLAYTEST_TOOL_PLAN.md: it reads a tell only within 28 px and has no rule for
+  standing floor zones). The fairness this step proves is the test above.
 - **The easy full fight** (`--difficulty easy --seed 1,2,3,4,5,6 --player scripted --seconds 300`): the boss
   wins all six, 0 blocking ticks.
-- **Open, for the lead:** Phase III is under its band and Phase I unchanged. Phase I has no source: the seam,
-  the rows and the planted vine are Phase II moves. Phase III starts on an empty floor (5.1 ends zones on the
-  phase tick) and its clear is 6.4 s, so patches do not build up in it.
+- **Open, for the lead: Phase I, 1.9 against 2.5-4.4.** Its one ground move, the Surface Strike, leaves one
+  patch per Burrow, and a Burrow surfaces once in Phase I. The patches add 0.6 per 10 s; the cap is not the
+  limit. Nothing else is added until the lead decides.
 
 ## 3. Delete list
 
@@ -1074,7 +1085,7 @@ repository must be able to take the next slice from here.
 | Parry | Merged, #393 (fbadb5fc): only a perfect touch parries the Vine Swing, with a cooldown. No ruleset step. |
 | 4 | Merged, #395 (e1cb6f1e): Phase III. Rebuild-only, no ruleset step. |
 | Tuning on the seeded sample | Merged, #397 (55beb59b): the Second Swing aims (`move-aim.ts`), the new boss declares its tells, health 3000, Phase III's clear target re-based (2.4). Rebuild-only, no ruleset step. |
-| Pressure | In review (branch `codex/verdant-bramble-pressure`): the lingering bramble (2.1, 2.4). Phase II's hits reach their band; Phase I and Phase III stay open for the lead. Rebuild-only, no ruleset step. |
+| Pressure | In review, #400 (branch `codex/verdant-bramble-pressure`): the lingering bramble (2.1, 2.4), with the seeded fairness test. Phases II and III are in their bands; Phase I (1.9) is open for the lead. Rebuild-only, no ruleset step. |
 | 5 | Built on branch `codex/verdant-rootbinder-rebuild` (the Rootbinder); its pull request opens after the pressure one. |
 | 6-7 | Not started. |
 

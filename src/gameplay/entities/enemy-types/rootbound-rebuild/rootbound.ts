@@ -117,6 +117,9 @@ export function createRootboundRebuildType(
     blooming = false;
     /** Where the planted vine's root is in the floor. */
     rootX = 0;
+    /** Where the player stood on the tick the phase last changed: Last Bloom's bramble never grows there. */
+    phaseTickPlayerX = 0;
+    phaseTickPlayerHw = 0;
     readonly field = new RootboundZones(CONFIG.view.w, CONFIG.world.groundY);
     /** What the world damages through and the shared zone renderer draws. */
     zones: ArenaZone[] = [];
@@ -241,7 +244,7 @@ export function createRootboundRebuildType(
       return true;
     }
 
-    /** Its seam and rows end with the move: on the phase-change tick and when death starts. */
+    /** Its zones (the seam, the rows and the bramble) all end on the phase-change tick and when death starts. */
     override endMoveZones(reason: MoveEndReason): void {
       void reason;
       this.field.clear();
@@ -321,7 +324,7 @@ export function createRootboundRebuildType(
         this.integrate(dt, platforms);
         return;
       }
-      this.enterPhases();
+      this.enterPhases(player);
       this.quietT = this.hp < this.lastHp ? 0 : this.quietT + 1;
       this.parryCd = Math.max(0, this.parryCd - 1);
       if (REST_STATES.has(this.state)) this.rest(dt, platforms, player);
@@ -340,8 +343,10 @@ export function createRootboundRebuildType(
      * Last Bloom. Health that crosses both at once enters Phase II first; the next mark ends Uproot (the phase
      * change ends the move in progress) and starts Last Bloom.
      */
-    enterPhases(): void {
+    enterPhases(player: EnemyPlayerPort): void {
       if (this.phase <= this.enteredPhase || CHANGE_STATES.has(this.state)) return;
+      this.phaseTickPlayerX = player.x;
+      this.phaseTickPlayerHw = player.hw;
       const change = this.enteredPhase < 2 ? M.uproot : M.lastBloom;
       this.phaseTag = change.banner;
       bossPhaseBeat(this, change.banner, LEAF);
@@ -680,16 +685,25 @@ export function createRootboundRebuildType(
       else this.go("bloomunder", M.lastBloom.under);
     }
 
-    /** After a Surface Strike: under again while the Burrow has surfaces left, else the open split. */
+    /** After a Surface Strike: bramble grows where it came up; under again while the Burrow has surfaces left. */
     afterSurface(): void {
+      this.field.growPatch(this.x);
       this.surfacesLeft -= 1;
       if (this.surfacesLeft > 0) this.go("resurface", this.byPhase(ROOTBOUND_CADENCE.resurfaceUnder));
       else this.go("split", M.surfaceStrike.recover);
     }
 
-    /** Last Bloom comes up at the centre in a Thorn Burst ring. */
+    /**
+     * Last Bloom comes up at the centre in a Thorn Burst ring, and bramble starts growing around it: never under
+     * where the player stood on the phase tick.
+     */
     bloom(): void {
       this.blooming = false;
+      const reach = M.lingeringBramble.width / 2 + this.phaseTickPlayerHw;
+      for (const k of M.lingeringBramble.bloomAt) {
+        const x = this.x + k * M.lastBloom.radius;
+        if (Math.abs(x - this.phaseTickPlayerX) >= reach) this.field.growPatch(x);
+      }
       this.ringRadius = M.lastBloom.radius;
       this.hitSpent = false;
       this.go("burst", M.thornBurst.hit);
