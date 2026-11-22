@@ -110,8 +110,10 @@ function offences(fight: Fight): Offences {
           result.moveOverPhaseChange += 1;
       }
     }
+    // The tick a stun runs out is held too: the stun is spent at the start of the step, before the update.
+    const held = record.stunned || previous?.stunned === true;
     for (const zone of record.zones) {
-      const ticks = (age.get(zone) ?? 0) + (record.stunned ? 0 : 1);
+      const ticks = (age.get(zone) ?? 0) + (held ? 0 : 1);
       age.set(zone, ticks);
       if ((zone.maxLife ?? 0) > 0 && ticks > Math.ceil((zone.maxLife ?? 0) / DT) + 2) result.zonePastItsLength += 1;
     }
@@ -175,6 +177,26 @@ function withoutPhaseNotice(subject: Subject): void {
   (subject.entity as { noticePhase?: () => void }).noticePhase = () => undefined;
 }
 
+/**
+ * Plants the fault of a zone that lives past its declared length: each zone, the first time it is seen,
+ * declares 4 ticks less than it lives. The new Rootbound's bramble lives through several of the fight's
+ * stuns, so the proof also holds the rule's count of the boss's clock (the ticks a stun holds, the one it
+ * runs out on included) to its 2-tick slack.
+ */
+function zonesOverrunByFourTicks(subject: Subject): void {
+  const seen = new WeakSet<ArenaZone>();
+  const draw = subject.draw.bind(subject);
+  subject.draw = () => {
+    const record = draw();
+    for (const zone of record.zones) {
+      if (seen.has(zone)) continue;
+      seen.add(zone);
+      zone.maxLife = (zone.maxLife ?? 0) - 4 * DT;
+    }
+    return record;
+  };
+}
+
 /** Every rule held. Hand-drawn marks are checked against the baseline instead. */
 const NO_RULE_BROKEN: Omit<Offences, "handDrawnMarks"> = {
   markAtRest: 0,
@@ -219,6 +241,12 @@ describe("nothing outlives its move", { timeout: 120_000 }, () => {
 
   it("fails on a planted fault: a windup's mark kept into the next state of the move", () => {
     expect(offences(bossFight("colossus", keepMarkOneTickLate(false))).markPastItsState).toBeGreaterThan(0);
+  });
+
+  it("fails on a planted fault: a zone that lives 4 ticks past its declared length, through stuns", () => {
+    const fight = bossFight("rootbound-rebuild", zonesOverrunByFourTicks);
+    expect(fight.stuns.length).toBeGreaterThan(2);
+    expect(offences(fight).zonePastItsLength).toBeGreaterThan(0);
   });
 
   it.each(["aldric", "colossus"] as const)(

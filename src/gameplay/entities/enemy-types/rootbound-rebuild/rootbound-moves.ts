@@ -44,6 +44,28 @@ export const ROOTBOUND_MOVES = Object.freeze({
    */
   rootSeam: Object.freeze({ planted: 120, width: 110, speed: 300, life: 240, damage: 7, tickEvery: 48, root: 24 }),
   /**
+   * Bramble that stays, the Verdant's pressure that outlasts a dash. Each source leaves a patch:
+   * - every Surface Strike where it came up (each Burrow's, Phase I on);
+   * - the Root Seam every `seamEvery` px it runs, and each Bramble Row at its centre as it burns out;
+   * - the planted vine at its root when its time in the floor runs out (a cut vine leaves none: the cut answers it);
+   * - Last Bloom's ring as it bursts, at each of `bloomAt` (offsets from the centre, in ring radii), except where
+   *   the player stood on the phase tick.
+   * A patch grows for `warn` ticks (never under the shared tell minimum), then stays live for `live`, `damage`
+   * every `tickEvery`, on the floor only: a jump clears it. At most `caps` (by phase) grow or stand at once; one
+   * past the cap withers the oldest first. One that would overlap a standing patch renews that patch instead.
+   * They all end with the phase.
+   */
+  lingeringBramble: Object.freeze({
+    width: 120,
+    warn: 54,
+    live: 1200,
+    damage: 8,
+    tickEvery: 48,
+    seamEvery: 160,
+    bloomAt: Object.freeze([-1, 0, 1] as const),
+    caps: Object.freeze([2, 4, 5] as const),
+  }),
+  /**
    * Phase II on, with the player on the floor: it kneels, open the whole time, and three thirds of the floor
    * light in turn, starting with the player's and sweeping away from the keeper. Each warns for `warn`, then
    * burns for `burn`; the next starts warning `gap` ticks after the one before starts burning.

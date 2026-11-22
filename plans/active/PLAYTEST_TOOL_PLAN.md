@@ -534,6 +534,14 @@ player gave one fight six times; the seeded one falls in Phase I at 42.7, 42.1 a
 25.2 and 15.3 s. Every table in this plan from before this is from plain players. Test:
 `tests/unit/playtest-player-variation.test.ts`.
 
+Named gap (2026-11-21, the Verdant pressure step, plans/active/VERDANT_PALE_REBUILD.md 2.4, not fixed): the
+tell-avoiding player has no rule for a standing floor zone. It reads a tell only once its box is within 28 px
+of it (`TELL_AVOIDANCE.marginPixels`), steps away and jumps, and when nothing is that close its scripted base
+walks, jumps and dashes it back toward the boss, across the zone. It lands in live bramble patches it could see
+for seconds (29 such hits in the new Rootbound's Phase II, 12 seeds, none on a patch that grew under it) and in
+Aldric's throne fire (5.0 hits per 10 s in Phase II). So a boss whose pressure stands on the floor cannot be shown
+to be avoidable by this player; a person stops or jumps over it.
+
 Named gap (2026-11-21, not fixed): a practice of an engineering-only boss cannot be restored from a checkpoint.
 The tutorial re-checks a practice state against the published roster; a state the headless world's own practice
 made passes as that object, a restored copy does not. Nothing uses such a restore today. It needs the admission

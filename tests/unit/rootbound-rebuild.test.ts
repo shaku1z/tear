@@ -12,6 +12,11 @@ import {
   ROOTBOUND_CADENCE,
   ROOTBOUND_MOVES as M,
 } from "../../src/gameplay/entities/enemy-types/rootbound-rebuild/rootbound-moves";
+import {
+  PATCH_WARN_TICKS,
+  RootboundZones,
+} from "../../src/gameplay/entities/enemy-types/rootbound-rebuild/rootbound-zones";
+import { BOSS_TELL_MIN_LEAD_SECONDS } from "../../src/gameplay/entities/boss-tells";
 import { aimedTellTicks as aimedTell, minAimedTellTicks } from "../../src/gameplay/entities/move-aim";
 import { createEnemyHarness, createTestPlayer, type TestPlayer } from "./enemy-test-harness";
 
@@ -330,16 +335,20 @@ describe("Phase II", () => {
     const [first] = boss.zones;
     expect(first).toMatchObject({ kind: "bramble", on: false, warn: true });
     expect(Math.abs((first?.x ?? 0) - player.x)).toBeLessThan((first?.w ?? 0) / 2);
-    const seen = new Set(boss.zones);
+    const third = CONFIG.view.w / M.brambleRows.rows;
+    const isRow = (zone: { w?: number }) => zone.w === third;
+    const seen = new Set(boss.zones.filter(isRow));
     let lit = 0;
     while (boss.state === "bramble") {
       step();
-      for (const zone of boss.zones) seen.add(zone);
+      for (const zone of boss.zones.filter(isRow)) seen.add(zone);
       if (first?.on === true && boss.zones.includes(first)) lit += 1;
     }
     expect(lit).toBe(M.brambleRows.burn);
     expect(seen.size).toBe(M.brambleRows.rows);
-    expect(boss.zones).toEqual([]);
+    // The rows are gone; each left a lingering patch at its centre.
+    expect(boss.zones.filter(isRow)).toEqual([]);
+    expect(boss.zones.map((zone) => zone.x).sort((a, b) => a - b)).toEqual([0.5, 1.5, 2.5].map((k) => k * third));
     expect(boss.state).toBe("bramblerecover");
   });
 
@@ -385,6 +394,128 @@ describe("Phase II", () => {
     expect(until("rise")).toBe(ROOTBOUND_CADENCE.resurfaceUnder[1]);
     until("split");
     expect(player.damage.map((hit) => hit.amount)).toEqual([M.surfaceStrike.damage, M.surfaceStrike.damage]);
+  });
+});
+
+describe("Lingering bramble: patches that stay", () => {
+  const P = M.lingeringBramble;
+  const field = (cap: number) => {
+    const zones = new RootboundZones(CONFIG.view.w, GROUND);
+    zones.patchCap = cap;
+    const steps = (ticks: number) => {
+      for (let tick = 0; tick < ticks; tick += 1) zones.step(DT);
+    };
+    return { zones, steps };
+  };
+
+  it("grows for its tell, never under the shared minimum, then stays live for its length, on the floor only", () => {
+    const { zones, steps } = field(3);
+    expect(PATCH_WARN_TICKS).toBeGreaterThanOrEqual(Math.ceil(BOSS_TELL_MIN_LEAD_SECONDS.normal * 120));
+    zones.growPatch(500);
+    const [patch] = zones.list;
+    expect(patch).toMatchObject({ kind: "bramble", x: 500, w: P.width, dmg: P.damage, on: false, warn: true });
+    expect(zones.tells()).toEqual([
+      expect.objectContaining({ mark: "band", stage: "warning", x: 500, hw: P.width / 2, y: GROUND - 4, hh: 4 }),
+    ]);
+    steps(PATCH_WARN_TICKS - 1);
+    expect(patch?.on).toBe(false);
+    steps(1);
+    expect(patch?.on).toBe(true);
+    expect(zones.tells()[0]?.stage).toBe("active");
+    steps(P.live - 1);
+    expect(zones.list).toEqual([patch]);
+    steps(1);
+    expect(zones.list).toEqual([]);
+  });
+
+  it("at most the phase's cap at once, the oldest withering first", () => {
+    expect(P.caps).toEqual([2, 4, 5]);
+    const { zones } = field(3);
+    for (const x of [100, 300, 500, 700]) zones.growPatch(x);
+    expect(zones.list.map((zone) => zone.x)).toEqual([300, 500, 700]);
+    const none = field(0);
+    none.zones.growPatch(500);
+    expect(none.zones.list).toEqual([]);
+  });
+
+  it("each Surface Strike leaves one where it came up, Phase I's Burrow included", () => {
+    const { boss, step, until } = setup(300, levelAt(800));
+    boss.startBurrow();
+    until("surface");
+    const at = boss.x;
+    expect(boss.zones).toEqual([]);
+    while (boss.state === "surface") step();
+    expect(boss.zones).toEqual([expect.objectContaining({ kind: "bramble", x: at, w: P.width, on: false })]);
+  });
+
+  it("Last Bloom's ring leaves them around the centre as it bursts, never where the player stood on the phase tick", () => {
+    const bloomPatches = (playerX: number) => {
+      const { boss, player, step, until } = phaseTwo(300, levelAt(playerX));
+      boss.hp = boss.maxHp * 0.2;
+      boss.noticePhase();
+      step();
+      expect(boss.state).toBe("bloomsink");
+      player.x = 100; // where it goes afterwards does not matter: the phase tick decides
+      until("burst");
+      return boss.zones.filter((zone) => zone.kind === "bramble").map((zone) => zone.x);
+    };
+    const centre = CONFIG.view.w / 2;
+    const ring = P.bloomAt.map((k) => centre + k * M.lastBloom.radius);
+    expect(bloomPatches(centre + 400)).toEqual(ring);
+    // A player on a ring point at the phase tick: that patch does not grow, the others do.
+    expect(bloomPatches(ring[0] ?? 0)).toEqual(ring.slice(1));
+  });
+
+  it("one that would overlap a patch renews it in place: still grown, a whole length ahead", () => {
+    const { zones, steps } = field(3);
+    zones.growPatch(500);
+    steps(PATCH_WARN_TICKS + 600);
+    zones.growPatch(500 + P.width / 2);
+    expect(zones.patchCount).toBe(1);
+    const [renewed] = zones.list;
+    expect(renewed).toMatchObject({ x: 500, on: true });
+    steps(P.live - 1);
+    expect(zones.list).toEqual([renewed]);
+    steps(1);
+    expect(zones.list).toEqual([]);
+  });
+
+  it("the Root Seam seeds one every `seamEvery` px it runs", () => {
+    const { zones, steps } = field(4);
+    zones.startSeam(100, 1);
+    steps(M.rootSeam.life);
+    const seeded = Math.floor((M.rootSeam.speed * M.rootSeam.life) / 120 / P.seamEvery);
+    expect(seeded).toBeGreaterThan(1);
+    expect(zones.list.map((zone) => Math.round(zone.x))).toEqual(
+      Array.from({ length: seeded }, (_, i) => 100 + (i + 1) * P.seamEvery),
+    );
+  });
+
+  it("the planted vine leaves one at its root when its time runs out, and none when it is cut", () => {
+    const run = (cut: boolean) => {
+      const { boss, until } = phaseTwo(400, levelAt(560));
+      boss.startSwing();
+      until("planted");
+      const root = boss.rootX;
+      if (cut) boss.cutPart();
+      else until("idle");
+      return { root, patches: boss.zones.filter((zone) => zone.kind === "bramble").map((zone) => zone.x) };
+    };
+    const timedOut = run(false);
+    expect(timedOut.patches).toContain(timedOut.root);
+    expect(run(true).patches).toEqual([]);
+  });
+
+  it("they all end with the phase", () => {
+    const { boss, step } = phaseTwo(300, levelAt(560));
+    boss.field.patchCap = P.caps[1];
+    boss.field.growPatch(800);
+    step();
+    expect(boss.zones.some((zone) => zone.kind === "bramble")).toBe(true);
+    boss.hp = boss.maxHp * 0.2;
+    boss.noticePhase();
+    step();
+    expect(boss.zones).toEqual([]);
   });
 });
 
