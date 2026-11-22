@@ -28,6 +28,9 @@ export function runContentSurface(context: ScreenRenderContext, x: number, y: nu
   ui.panel(canvas, x - pad, y - pad, w + pad * 2, h + pad * 2);
 }
 
+/** The height a section tag takes above a panel; a surface under the panel reaches up to include it. */
+const tagHeight = (context: ScreenRenderContext): number => context.ui.t.type.micro + context.ui.t.space.sm;
+
 /** Clips `draw` to the panel rect and draws the scroll hint under it when content overflows. */
 function scrolled(
   context: ScreenRenderContext,
@@ -68,12 +71,18 @@ export function arsenalPanel(context: ScreenRenderContext, abilities: readonly C
     t = ui.t,
     pad = t.metric.panelPad;
   if (abilities.length === 0) {
-    ui.textBox(canvas, "No abilities yet — they drop between waves.", rect.x, rect.y + t.type.caption, rect.w, {
-      size: t.type.caption,
-      alpha: t.alpha.muted,
-      maxLines: 3,
-    });
-    return t.type.caption * 3;
+    const line = "No abilities yet — they drop between waves.",
+      options = { size: t.type.caption, alpha: t.alpha.muted, maxLines: 3 };
+    const { height } = ui.textBox(canvas, line, rect.x, 0, rect.w, { ...options, measureOnly: true });
+    runContentSurface(
+      context,
+      rect.x,
+      rect.y - tagHeight(context),
+      rect.w,
+      tagHeight(context) + t.type.caption + height,
+    );
+    ui.textBox(canvas, line, rect.x, rect.y + t.type.caption, rect.w, options);
+    return t.type.caption + height;
   }
   const cardH = arsenalCardHeight(context),
     rowH = cardH + t.space.sm;
@@ -167,31 +176,39 @@ export function runProgressPanel(
   // Lay the rows out first so the solid surface under them is exactly as tall as they are.
   let cursor = y + t.type.micro + t.space.sm;
   const placed: { label?: string; labelY: number; row?: ProgressView; y: number }[] = [];
+  let overflowed = false;
   layout: for (const [label, group] of sections) {
     if (label) {
       placed.push({ label, labelY: cursor + t.space.sm, y: cursor });
       cursor += t.space.sm + t.type.micro + t.space.sm;
     }
     for (const row of group) {
-      if (cursor + rowH > bottom) break layout;
+      if (cursor + rowH > bottom) {
+        overflowed = true;
+        break layout;
+      }
       placed.push({ row, labelY: 0, y: cursor });
       cursor += rowH;
     }
   }
-  const noAchievements = rows.every((row) => row.kind !== "achievement");
-  runContentSurface(context, x, y, width, cursor - y + (noAchievements ? t.type.caption * 3 : 0));
+  // With no achievements the panel says so; a panel that ran out of room draws no such line.
+  const empty =
+    !overflowed && rows.every((row) => row.kind !== "achievement")
+      ? {
+          text: "Keep fighting to make progress.",
+          options: { size: t.type.caption, alpha: t.alpha.muted, maxLines: 2 },
+        }
+      : undefined;
+  const emptyHeight = empty
+    ? context.ui.textBox(context.canvas, empty.text, x, 0, width, { ...empty.options, measureOnly: true }).height
+    : 0;
+  runContentSurface(context, x, y, width, cursor - y + (empty ? t.type.caption + emptyHeight : 0));
   panelTag(context, "DAILY CHALLENGES", x, y);
   for (const item of placed) {
     if (item.label) panelTag(context, item.label, x, item.labelY);
     else if (item.row) progressRow(context, x, item.y, width, item.row);
   }
-  if (rows.every((row) => row.kind !== "achievement")) {
-    context.ui.textBox(context.canvas, "Keep fighting to make progress.", x, cursor + t.type.caption, width, {
-      size: t.type.caption,
-      alpha: t.alpha.muted,
-      maxLines: 2,
-    });
-  }
+  if (empty) context.ui.textBox(context.canvas, empty.text, x, cursor + t.type.caption, width, empty.options);
   return cursor - y;
 }
 
@@ -200,7 +217,9 @@ export function waveLogPanel(context: ScreenRenderContext, rows: readonly Result
   const { canvas, ui } = context,
     t = ui.t;
   const columns = [rect.w * 0.45, rect.w * 0.68, rect.w];
-  runContentSurface(context, rect.x, rect.y, rect.w, rect.h);
+  // As tall as its header and rows need, never past the panel rect.
+  const used = t.type.label + t.space.sm + t.space.md + Math.max(1, rows.length) * (t.type.body + t.space.md);
+  runContentSurface(context, rect.x, rect.y - tagHeight(context), rect.w, tagHeight(context) + Math.min(rect.h, used));
   const headerY = rect.y + t.type.label;
   canvas.save();
   canvas.globalAlpha = t.alpha.soft;
