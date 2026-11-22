@@ -122,7 +122,7 @@ describe("TearSimulationRuntime", () => {
     expect(reads).toBe(1);
   });
 
-  it("surrounds only executed live ticks without exposing a second step route", () => {
+  it("surrounds only executed live ticks and stops the frame at a tick it cannot step", () => {
     const { runtime } = createKernel();
     const order: string[] = [];
     runtime.advance(
@@ -148,21 +148,11 @@ describe("TearSimulationRuntime", () => {
       },
     );
 
-    expect(order).toEqual([
-      "should:1",
-      "before:1",
-      "actions:1",
-      "after:1",
-      "cleanup:1",
-      "should:2",
-      "should:3",
-      "before:3",
-      "actions:3",
-      "after:3",
-      "cleanup:3",
-    ]);
-    expect(runtime.lastResult?.tick).toBe(3);
-    expect(runtime.input.snapshot().tick).toBe(3);
+    expect(order).toEqual(["should:1", "before:1", "actions:1", "after:1", "cleanup:1", "should:2"]);
+    // Tick 2 is not taken, so the clock counts only the simulated tick and a re-simulation numbers alike.
+    expect(runtime.scheduler.tick).toBe(1);
+    expect(runtime.lastResult?.tick).toBe(1);
+    expect(runtime.input.snapshot().tick).toBe(1);
   });
 
   it("uses that same action/lifecycle path for one exact tooling tick", () => {

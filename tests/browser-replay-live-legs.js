@@ -1,5 +1,6 @@
-// The legs the live replay browser tests play (tests/browser-replay-live-verify.js on every pull request),
-// over the `__TEAR_REPLAY_TAP__` test-build inspector
+// The legs the live replay browser tests play (tests/browser-replay-live-verify.js on every pull request,
+// tests/browser-replay-campaign-stages.js nightly, over a campaign run into its second stage),
+// read through the `__TEAR_REPLAY_TAP__` test-build inspector
 // (src/app/engineering/replay-tap-inspector.ts) and the scripted Watch Agent.
 //
 // The live game runs as a player plays it. The Watch Agent plays through the real setup screen, the real

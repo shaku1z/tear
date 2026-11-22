@@ -84,6 +84,22 @@ export function segSegmentDist(
   );
 }
 
+/** A box by its centre and half sizes. */
+export interface CentredBox {
+  readonly x: number;
+  readonly y: number;
+  readonly hw: number;
+  readonly hh: number;
+}
+
+/**
+ * Whether two centred boxes overlap, the first grown by `padding` on every side. The live and the
+ * detached combat hosts both test contact through this one function, so a replay touches what play touched.
+ */
+export function boxesOverlap(a: CentredBox, b: CentredBox, padding = 0): boolean {
+  return aabbOverlap(a.x, a.y, a.hw + padding, a.hh + padding, b.x, b.y, b.hw, b.hh);
+}
+
 export function aabbOverlap(
   ax: number,
   ay: number,

@@ -122,8 +122,9 @@ export class TearSimulationRuntime<State> {
     seconds: number,
     actionsForTick: TearSimulationActionsForTick,
     lifecycle: TearSimulationAdvanceLifecycle,
+    checked = false,
   ): AuthoritativeStepResult<State> | null {
-    if (lifecycle.shouldStep?.(tick) === false) return null;
+    if (!checked && lifecycle.shouldStep?.(tick) === false) return null;
     try {
       lifecycle.beforeStep?.(tick);
       const actions = actionsForTick(tick);
@@ -147,9 +148,14 @@ export class TearSimulationRuntime<State> {
     actionsForTick: TearSimulationActionsForTick,
     lifecycle: TearSimulationAdvanceLifecycle = {},
   ): FrameAdvance {
-    return this.#scheduler.advance(elapsedMilliseconds, (seconds, tick) => {
-      this.#executeTick(tick, seconds, actionsForTick, lifecycle);
-    });
+    // A tick the host cannot step is not taken, so the clock counts only simulated ticks.
+    return this.#scheduler.advance(
+      elapsedMilliseconds,
+      (seconds, tick) => {
+        this.#executeTick(tick, seconds, actionsForTick, lifecycle, true);
+      },
+      (tick) => lifecycle.shouldStep?.(tick) !== false,
+    );
   }
 
   /**

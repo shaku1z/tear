@@ -2,7 +2,7 @@ import { isObject } from "../../../domain/records";
 import { createLiveCollisionGameplayBindings } from "../../../gameplay/combat/live-collision-gameplay-bindings";
 import type { LiveStyleAchievementOptions } from "../../../gameplay/scoring/live-style-achievement-runtime";
 import { bindRunDnaShot, runDnaObserver } from "../../../gameplay/runtime/run-dna-observer";
-import { aabbOverlap, clamp, len, lerp, segCircle, segPointDist } from "../../../domain/geometry";
+import { aabbOverlap, boxesOverlap, clamp, len, lerp, segCircle, segPointDist } from "../../../domain/geometry";
 import { GFX, THEME } from "../../../config/game-config";
 import {
   CombatEntityRuntime,
@@ -595,10 +595,7 @@ export function createProductionCombatPhases(
       outward.push("drip");
       effects.drip(x, y);
     },
-    overlap: (
-      a: { x: number; y: number; hw: number; hh: number },
-      b: { x: number; y: number; hw: number; hh: number },
-    ) => aabbOverlap(a.x, a.y, a.hw, a.hh, b.x, b.y, b.hw, b.hh),
+    overlap: boxesOverlap,
     styleHit: () => {
       style.addStyle("hit");
     },

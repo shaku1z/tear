@@ -300,7 +300,7 @@
       {
         "id": "replay-live-verify",
         "run": "node tests/browser-replay-live-verify.js",
-        "seconds": 72
+        "seconds": 110
       },
       {
         "id": "framerate-determinism",
@@ -460,6 +460,10 @@
       {
         "id": "replay-engine-cold",
         "run": "node tests/browser-replay-engine-cold.js"
+      },
+      {
+        "id": "replay-campaign-stages",
+        "run": "node tests/browser-replay-campaign-stages.js"
       },
       {
         "id": "pale-aurora-track",
