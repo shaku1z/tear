@@ -394,8 +394,10 @@ describe("production TearBench combat parity", () => {
         observer.completeTick(tick, player);
         hits = run.weaponStats.throwHits;
         if (index === 100) {
-          // Real scheduler skips: no actions or combat commit during a paused tail.
+          // A paused tail: no actions, no combat commit, and the clock does not count the ticks it skips.
+          const pausedAt = core.simulationRuntime.scheduler.tick;
           core.simulationRuntime.advance(25, () => [], { shouldStep: () => false });
+          expect(core.simulationRuntime.scheduler.tick).toBe(pausedAt);
           observer.frameEnded(core.simulationRuntime.scheduler.tick);
         }
       }
@@ -429,7 +431,7 @@ describe("production TearBench combat parity", () => {
     expect(measured.capture.metrics.maxHp).toBe(measured.initialHp + 30);
     expect(measured.capture.metrics.movingTicks).toBeGreaterThan(0);
     expect(measured.capture.capture.available).toEqual(expect.arrayContaining(["air-dash", "phase-step"]));
-    expect(measured.capture.capture.skippedTicks).toBeGreaterThan(0);
+    expect(measured.capture.capture.skippedTicks).toBe(0);
     expect(measured.capture.capture.complete).toBe(true);
     const context = createGhostReplayRunContext({
       runId: "native-run",

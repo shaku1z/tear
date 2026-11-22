@@ -120,13 +120,14 @@ describe("live Ghost recording session state", () => {
         },
       },
     );
-    expect(advanced.steps).toBe(4);
+    // The outcome ends play in the first tick, so the frame stops there: the tail is not counted.
+    expect(advanced.steps).toBe(1);
     expect(playing).toBe(false);
     expect(recorder.active).toBe(true);
     frames.end(advanced.steps);
     await recorder.drain();
     const capsule = await new GhostCapsuleReader(vault).read("terminal-capsule");
-    expect(capsule.maxTick).toBe(4);
+    expect(capsule.maxTick).toBe(1);
     const result = capsule.tracks.results.find(
       (entry) => typeof entry.value === "object" && entry.value !== null && "capture" in entry.value,
     );

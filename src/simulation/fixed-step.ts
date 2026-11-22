@@ -35,7 +35,17 @@ export class FixedStepScheduler {
     return (this.#tick * this.stepMilliseconds) / 1000;
   }
 
-  advance(elapsedMilliseconds: number, step: (seconds: number, tick: number) => void): FrameAdvance {
+  /**
+   * Runs the whole ticks the elapsed time owes. `canStep(tick)` false means the host cannot simulate the
+   * next tick (it left the playing screen part-way through a frame): the scheduler stops there, does not
+   * count that tick and drops the whole ticks still owed, so the tick count is the number of ticks
+   * simulated and a re-simulation that steps one tick at a time numbers them the same.
+   */
+  advance(
+    elapsedMilliseconds: number,
+    step: (seconds: number, tick: number) => void,
+    canStep: (tick: number) => boolean = () => true,
+  ): FrameAdvance {
     if (!Number.isFinite(elapsedMilliseconds) || elapsedMilliseconds < 0) {
       throw new RangeError("elapsedMilliseconds must be finite and non-negative");
     }
@@ -46,6 +56,10 @@ export class FixedStepScheduler {
 
     let steps = 0;
     while (this.#accumulatorSteps + 1e-9 >= 1 && steps < this.maxCatchUpSteps) {
+      if (!canStep(this.#tick + 1)) {
+        this.#accumulatorSteps = Math.max(0, this.#accumulatorSteps - Math.floor(this.#accumulatorSteps + 1e-9));
+        break;
+      }
       this.#accumulatorSteps = Math.max(0, this.#accumulatorSteps - 1);
       this.#tick += 1;
       steps += 1;

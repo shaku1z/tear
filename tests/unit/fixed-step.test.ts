@@ -19,6 +19,32 @@ describe("FixedStepScheduler", () => {
     expect(simulate(144)).toEqual(simulate(60));
   });
 
+  it("does not count a tick the host cannot step, so live ticks number like a one-tick re-simulation", () => {
+    const scheduler = new FixedStepScheduler();
+    const stepped: number[] = [];
+    let playing = true;
+    // A frame owes three ticks and the second leaves the playing screen (a wave clear opens a draft).
+    scheduler.advance(
+      50,
+      (_seconds, tick) => {
+        stepped.push(tick);
+        if (tick === 2) playing = false;
+      },
+      () => playing,
+    );
+    expect(stepped).toEqual([1, 2]);
+    expect(scheduler.tick).toBe(2);
+    // The owed tick is dropped, not carried into the frame that resumes play.
+    playing = true;
+    const resumed = scheduler.advance(
+      1000 / 60,
+      (_seconds, tick) => stepped.push(tick),
+      () => playing,
+    );
+    expect(stepped).toEqual([1, 2, 3]);
+    expect(resumed.steps).toBe(1);
+  });
+
   it("bounds catch-up work and reports dropped wall time", () => {
     const scheduler = new FixedStepScheduler({ maxCatchUpSteps: 4 });
     const result = scheduler.advance(1000, () => undefined);
