@@ -1,6 +1,7 @@
 import { replayTransportScrub } from "../library/replay-transport-controller";
 import { replayEngine } from "../../ghost/replay-engine";
 import { findKeptRecord, type KeptRecord } from "./kept-record-lookup";
+import type { RecordWorldEngine } from "./record-world";
 import { liveReplayRecorder } from "./live-replay-recorder-slot";
 import { createBrowserGhostReplayPresentation } from "./browser-ghost-replay-presentation";
 import { createBrowserReplayClipExport } from "./browser-replay-clip-export";
@@ -175,18 +176,19 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
     const seed = provenance?.seed;
     return typeof seed === "string" && /^\d+$/.test(seed) ? seed : undefined;
   }
-  async function keptRecordFor(seed: string): Promise<KeptRecord | undefined> {
+  async function keptRecordFor(
+    seed: string,
+  ): Promise<Readonly<{ kept: KeptRecord; engine: RecordWorldEngine }> | undefined> {
     try {
       const module = await liveReplayRecorder.ensure();
       const kept = await findKeptRecord(() => module.openReplayRecordStore(services.browserIndexedDb ?? null), seed);
-      if (kept !== undefined) await replayEngine.ensure();
-      return kept;
+      return kept === undefined ? undefined : Object.freeze({ kept, engine: await replayEngine.ensure() });
     } catch {
       return undefined;
     }
   }
-  function openKeptRecord(kept: KeptRecord, from: AppScreen): boolean {
-    const opened = theater.openRecord(kept.record, kept.key, from);
+  function openKeptRecord(found: Readonly<{ kept: KeptRecord; engine: RecordWorldEngine }>, from: AppScreen): boolean {
+    const opened = theater.openRecord(found.kept.record, found.kept.key, from, found.engine);
     if (opened.kind === "refused") return false;
     if (active === "legacy" && runtime !== undefined) runtime.exit();
     pending = undefined;

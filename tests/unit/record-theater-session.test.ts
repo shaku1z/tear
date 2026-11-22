@@ -1,24 +1,18 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import * as engineModule from "../../src/app/world/detached/replay-composition";
 import { createRecordTheaterSession } from "../../src/app/replay/record-theater-session";
 import { keptRecordKeyFor } from "../../src/app/replay/kept-record-lookup";
-import { replayEngine } from "../../src/ghost/replay-engine";
 import { REPLAY_CHECKPOINT_TICKS } from "../../src/replay/record";
 import { SPECS } from "../support/hash-stream-corpus";
 import { recordCorpusStream } from "../support/replay-corpus-record";
-
-beforeAll(async () => {
-  replayEngine.install(() => Promise.resolve(engineModule));
-  await replayEngine.ensure();
-});
 
 describe("watching a kept record", () => {
   it("re-simulates the run: every checkpoint the Theater seeks to has the recorded state, forwards and back", () => {
     const spec = SPECS[0];
     if (spec === undefined) throw new Error("no corpus stream");
     const record = recordCorpusStream(spec);
-    const session = createRecordTheaterSession(record, "record:test:1");
+    const session = createRecordTheaterSession(record, "record:test:1", engineModule);
     expect(session.lastTick).toBe(record.run.result.tick);
     const checkpoints = record.run.checkpoints.map((checkpoint, index) => ({
       tick: (index + 1) * REPLAY_CHECKPOINT_TICKS,

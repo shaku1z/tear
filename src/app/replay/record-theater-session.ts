@@ -1,4 +1,3 @@
-import { replayEngine } from "../../ghost/replay-engine";
 import type {
   GhostVerifiedProductionReplaySession,
   GhostVerifiedReplayRenderView,
@@ -7,7 +6,7 @@ import type { GhostSeekResult } from "../../ghost/replay-world";
 import type { ReplayRecord } from "../../replay/record";
 import { createReplayInputCursor, type ReplayTickInputs } from "../../replay/verify";
 import type { ProductionGhostReplayCompositionOptions } from "../world/detached/replay-composition";
-import { startRecordWorld, type RecordWorld } from "./record-world";
+import { startRecordWorld, type RecordWorld, type RecordWorldEngine } from "./record-world";
 
 /** A Theater source over a kept record. It also says which stage the world shows now. */
 export interface RecordTheaterSession extends GhostVerifiedProductionReplaySession {
@@ -23,11 +22,12 @@ export interface RecordTheaterSession extends GhostVerifiedProductionReplaySessi
  * the ones play had at that tick.
  *
  * A record has no keyframes, so the session keeps one world and steps it forward. A seek backwards
- * starts the run again from its seed. Callers await `replayEngine.ensure()` before opening one.
+ * starts the run again from its seed. The engine is the one `replayEngine.ensure()` resolved to.
  */
 export function createRecordTheaterSession(
   record: ReplayRecord,
   key: string,
+  engine: RecordWorldEngine,
   presentation: Pick<ProductionGhostReplayCompositionOptions, "presentation" | "renderView"> = {},
 ): RecordTheaterSession {
   const lastTick = record.run.result.tick;
@@ -37,7 +37,7 @@ export function createRecordTheaterSession(
   let hash = "";
   const restart = (): RecordWorld => {
     world?.dispose();
-    world = startRecordWorld(replayEngine.loaded(), record.run, () => undefined, presentation);
+    world = startRecordWorld(engine, record.run, () => undefined, presentation);
     next = createReplayInputCursor(record.run);
     tick = 0;
     hash = "";

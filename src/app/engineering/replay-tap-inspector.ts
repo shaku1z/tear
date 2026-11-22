@@ -52,6 +52,8 @@ export interface ReplayTapInspector {
   readonly watchKept: (seed: number) => Promise<boolean>;
   /** Moves the Theater to this share of the run, as the seek bar does, and says what it shows then. */
   readonly seekShown: (fraction: number) => Readonly<{ tick: number; stage: number }> | undefined;
+  /** Leaves the paused run for the menu, as the pause screen's QUIT does. */
+  readonly quit: () => void;
 }
 
 /** The replay screen's members the inspector drives. */
@@ -68,6 +70,7 @@ export function installReplayTapInspector(
   scene: () => boolean,
   stage: () => number,
   screen: () => ReplayTapScreen,
+  dispatch: (action: Readonly<{ type: "run.quit" }>) => void = () => undefined,
 ): void {
   const now = () => target.performance.now();
   const samples = new Map<string, number[]>();
@@ -150,6 +153,9 @@ export function installReplayTapInspector(
       const opened = await screen().watchKeptRun(String(seed), "menu");
       if (opened && screen().status()?.paused === false) screen().togglePause();
       return opened;
+    },
+    quit: () => {
+      dispatch({ type: "run.quit" });
     },
     seekShown: (fraction: number) => {
       screen().seekToFraction(fraction);
