@@ -72,7 +72,6 @@ export interface ThrownEnemy {
   color: string;
   dead: boolean;
   dying: boolean;
-  introT?: number;
   behavior?: string;
   duelReady?: boolean;
   duelCd?: number;
@@ -195,7 +194,7 @@ export function resolveThrownCollisions(
     }
   }
   for (const enemy of enemies) {
-    if (enemy.dead || enemy.dying || (enemy.introT ?? 0) > 0 || !blade.canHitThrownEnemy(enemy)) continue;
+    if (enemy.dead || enemy.dying || !blade.canHitThrownEnemy(enemy)) continue;
     const cut = enemy.cutPoint?.() ?? null;
     if (
       cut !== null &&

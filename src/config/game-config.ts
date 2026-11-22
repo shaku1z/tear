@@ -308,9 +308,8 @@ const CONFIG = {
     reformClearMargin: 18,
     minElevatedActive: 1,
   },
-  // shared boss ceremony timing. Individual fights supply the poses and attack grammar;
-  // the theater layer owns only the real-time pacing.
-  bossTheater: { introDur: 1.4, introScale: 0.25, deathDur: 0.9 },
+  // shared boss ceremony timing; the arrival runs at full speed (120 ticks) and can be hit.
+  bossTheater: { introDur: 1.0, deathDur: 0.9 },
   // THE FINAL CUT: a no-fail blade epilogue. These timings are presentation
   // knobs only; completion is persisted before the first beat begins.
   finale: {

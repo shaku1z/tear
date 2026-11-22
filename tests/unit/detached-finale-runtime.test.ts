@@ -114,7 +114,7 @@ describe("detached portable finale runtime", () => {
     detached.stage.index = 6;
     detached.world.state.setEnemies([]);
     detached.world.state.setBossIntro({ id: "stale-intro" } as never);
-    detached.world.state.setBossBeat({ id: "stale-beat" } as never);
+    detached.world.state.setStageBeat({ id: "stale-beat" } as never);
     detached.world.lifecycle.start("detached-finale-session");
     detached.world.lifecycle.prepareWave(60, true, false);
     detached.world.lifecycle.activateWave();
@@ -164,7 +164,7 @@ describe("detached portable finale runtime", () => {
     });
     expect(finale.snapshot()?.phase).toBe("silence");
     expect(detached.world.state.bossIntro()).toBeNull();
-    expect(detached.world.state.bossBeat()).toBeNull();
+    expect(detached.world.state.stageBeat()).toBeNull();
     expect(finale.outcome.pendingFinale()).not.toBeNull();
     expect(nativeEvents).toContainEqual(
       expect.objectContaining({

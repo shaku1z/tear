@@ -332,11 +332,7 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
         biomeMode,
         enemies: () => hostState.enemies(),
         flash: () => feel.flash,
-        bossBeat: () => hostState.bossBeat(),
-        bossIntroActive: () => {
-          const intro = hostState.bossIntro();
-          return intro !== null && intro.delay <= 0;
-        },
+        stageBeat: () => hostState.stageBeat(),
         bannerSeconds: () => feel.bannerSeconds,
         rankPopup: () => ({ seconds: feel.rankPopupSeconds, text: feel.rankPopupText, multiplier: liveRun().mult }),
         timeSeconds: interfaceFrame.seconds,

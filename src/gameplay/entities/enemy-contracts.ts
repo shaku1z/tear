@@ -248,6 +248,8 @@ export interface BossFxEvent {
   zoom?: number | undefined;
   cue?: string | undefined;
   banner?: string | undefined;
+  /** Written before the banner in its colour: the phase numeral of a phase change. */
+  mark?: string | undefined;
   txt?: string | undefined;
   x?: number | undefined;
   y?: number | undefined;
@@ -278,6 +280,7 @@ export interface BossPresentationActor extends ProjectileOwnerPort {
   presentationId: string;
   bossId?: string | undefined;
   isMiniBoss?: boolean | undefined;
+  phase?: number | undefined;
   _perilUntil?: number | undefined;
   /** The move state the peril was rung in: the diamond shows during that state only. */
   _perilMove?: string | null | undefined;

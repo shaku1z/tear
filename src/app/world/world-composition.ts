@@ -14,7 +14,7 @@ import type {
   GameSlowZone,
   GameTemporaryWall,
 } from "../../gameplay/runtime/game-runtime-state";
-import type { BossBeatState, BossIntroState, LiveGameHostState } from "./game-host-state";
+import type { StageBeat, BossIntroState, LiveGameHostState } from "./game-host-state";
 import { createLiveWorldServices, type LiveWorldContext } from "./world-context";
 import { createLiveWorldEntityFactory, type LiveWorldEntityConstructionPort } from "./world-entity-factory";
 import type { TearWorldConfiguration } from "../../gameplay/runtime/tear-world-configuration";
@@ -35,7 +35,7 @@ type PortableWorldState = TearWorldState<
   GameSlowZone,
   GameTemporaryWall,
   BossIntroState,
-  BossBeatState
+  StageBeat
 >;
 type ReplayPacket = ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>;
 
@@ -54,7 +54,7 @@ export interface LiveWorldMirrors {
   slowZones?(value: GameSlowZone[]): void;
   temporaryWalls?(value: GameTemporaryWall[]): void;
   bossIntro?(value: BossIntroState | null): void;
-  bossBeat?(value: BossBeatState | null): void;
+  stageBeat?(value: StageBeat | null): void;
 }
 
 /** Session values the host owns; they outlive any single world. */
@@ -115,7 +115,7 @@ export function createLiveWorldState(session: LiveWorldSessionPort, mirrors: Liv
     GameSlowZone,
     GameTemporaryWall,
     BossIntroState,
-    BossBeatState
+    StageBeat
   >();
   return Object.freeze({
     // A null run or undefined actor would be a torn world, not a reset one;
@@ -171,10 +171,10 @@ export function createLiveWorldState(session: LiveWorldSessionPort, mirrors: Liv
       portable.setBossIntro(value);
       mirrors.bossIntro?.(value);
     },
-    bossBeat: () => portable.bossBeat(),
-    setBossBeat: (value) => {
-      portable.setBossBeat(value);
-      mirrors.bossBeat?.(value);
+    stageBeat: () => portable.stageBeat(),
+    setStageBeat: (value) => {
+      portable.setStageBeat(value);
+      mirrors.stageBeat?.(value);
     },
     selectedWeapon: () => session.selectedWeapon(),
     setSelectedWeapon: (value) => {

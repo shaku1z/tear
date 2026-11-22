@@ -173,7 +173,7 @@ The live scene never shows through a screen's content. A sheet is solid (`alpha.
 - The HUD is drawn only while playing; run overlays carry their own summary.
 - Announcements (stage and wave banners) share one band under the HUD lane, never over the spawn floor; the wave banner waits while the stage banner shows.
 - On-screen touch controls come from `src/input/touch-control-layout.ts`, the single owner of their geometry: input hit-tests exactly the circles the renderer draws, anchored to the real screen edges and safe area and sized in CSS pixels.
-- Achievement toasts have one placement per context (`hud` in a run, below the touch pause control; `corner` bottom-right on menus and overlays; `sheet-footer` left of BACK on sheet screens), are at most 360 wide, and are queued one at a time by the controller. While a cinematic or a boss arrival card owns the screen, the queue waits: nothing is shown, marked seen or timed until it ends.
+- Achievement toasts have one placement per context (`hud` in a run, below the touch pause control; `corner` bottom-right on menus and overlays; `sheet-footer` left of BACK on sheet screens), are at most 360 wide, and are queued one at a time by the controller. While a cinematic owns the screen, the queue waits: nothing is shown, marked seen or timed until it ends.
 
 ### Adventure chapter presentation contract
 
@@ -186,7 +186,7 @@ A chapter intro is the living biome writing its own title card. It follows the H
 - **Beats and reading contract.** ENTER (the header breathes in, `motion.chapterIn`) → pages → EXIT (the lore softens, the header stays) → REVEAL (the title crossfades into the biome name, the intro line settles, the haze retreats to `revealRest`) → READY (the HUD returns, the name and the last of the haze dissolve, then control). Each page holds for its reading dwell (`chapterPageDwell`: words at 220 wpm plus a settle, never under 3.2 s) and then plays on by itself; a confirm advances it sooner once it is fully shown. Full shows every page; Brief shows one (the prologue's hook, the fallen boss's relic, or the stage's first page) at the same dwell. Hold to skip jumps to the REVEAL, which keeps its own pace (`skipScale: 1`).
 - **Hand-off.** No enemy exists until the chapter completes: the first wave stays prepared until then (`activate-prepared-wave` on completion). The HUD returns on READY, before control; the wave banner raised by that activation is not repeated over the HUD's own WAVE line; the DOM controls hint and achievement toasts wait for the cinematic to end.
 - **Touch.** Every chapter role rises to the touch text floor (11 CSS px) at the live scale, and the column widens to keep about 46 characters a line.
-- Boss arrival cards keep every line inside their letterbox bars (`bossIntro*` metrics: name and epithet in the lower bar, a spoken opening line in the upper bar) and hide the HUD while they play.
+- The stage beat banner (`beatBanner`, `beatBanner*` metrics) is the one thing written over a live fight: a boss arrival, a phase change and a named move. It sits under the boss bar with no panel: an optional mark in the accent colour (a phase numeral or the boss name), a muted dot, the title in the display face, an accent rule that wipes in from the centre, and an optional line. It never hides the HUD.
 
 ### Usage examples
 

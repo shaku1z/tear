@@ -29,9 +29,14 @@
  * Phase III with Last Bloom (plans/active/VERDANT_PALE_REBUILD.md, slice 3). v23: the Source's Unmake and true
  * form happen in the fight: the floor goes 0.8 s into the Unmake, the void stream forms under the player, who
  * keeps control, and the void run starts at 1.6 s; true form is a phase beat and its first move follows at once
- * (plans/active/CINEMATICS_OVERHAUL.md, PR 4).
+ * (plans/active/CINEMATICS_OVERHAUL.md, PR 4). v24: the boss arrival runs at full speed, 120 ticks, and the boss
+ * can be hit through it; its name, phase banners and named moves are one stage beat in world state, stepped
+ * per tick (plans/active/CINEMATICS_OVERHAUL.md, PR 6).
  */
-export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v23";
+export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v24";
+
+/** The identity while the boss arrival played in slow motion behind a letterbox; historical replays only. */
+export const SIX_BIOME_PALE_PREVIEW_V23_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v23";
 
 /** The identity while the Source stopped the fight for its void descent and true form; historical replays only. */
 export const SIX_BIOME_PALE_PREVIEW_V22_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v22";
@@ -179,7 +184,11 @@ export const RULESET_STEPS: readonly RulesetStep[] = Object.freeze(
       version: SIX_BIOME_PALE_PREVIEW_V22_RULESET_VERSION,
       change: "the new Rootbound fought its Phase II",
     },
-    { version: CURRENT_RULESET_VERSION, change: "the Source began its Unmake and true form in the fight" },
+    {
+      version: SIX_BIOME_PALE_PREVIEW_V23_RULESET_VERSION,
+      change: "the Source began its Unmake and true form in the fight",
+    },
+    { version: CURRENT_RULESET_VERSION, change: "the boss arrival began running at full speed" },
   ].map((step) => Object.freeze(step)),
 );
 

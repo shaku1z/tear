@@ -79,7 +79,6 @@ export interface HeldWeaponEffect {
 export interface HeldBladeEnemy {
   dead: boolean;
   dying: boolean;
-  introT?: number;
   hitCd: number;
   x: number;
   y: number;

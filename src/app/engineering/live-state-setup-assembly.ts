@@ -48,6 +48,10 @@ export function assembleLiveStateSetup(options: LiveStateSetupAssemblyOptions) {
     restoreBossIntro: (intro) => {
       hostState.setBossIntro(intro);
     },
+    captureStageBeat: () => hostState.stageBeat(),
+    restoreStageBeat: (beat) => {
+      hostState.setStageBeat(beat);
+    },
     captureTransient: () => ({
       hitStop: impact.hitStop,
       shake: impact.shake,

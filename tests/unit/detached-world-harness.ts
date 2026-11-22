@@ -498,8 +498,12 @@ export function createDetachedCombatPhases(detached: DetachedWorld, options: Det
   const opening = {
     config,
     // The harness plays no boss arrival: the production composition owns that record.
-    bossIntro: () => null,
-    endBossIntro: () => undefined,
+    world: {
+      bossIntro: () => null,
+      setBossIntro: () => undefined,
+      stageBeat: () => null,
+      setStageBeat: () => undefined,
+    },
     get player() {
       return player();
     },
@@ -609,6 +613,7 @@ export function createDetachedCombatPhases(detached: DetachedWorld, options: Det
       }
       const drained = detached.factories.enemyTypes.BOSSFX.drain();
       if (drained.length > 0) outward.push(`bossFx:${String(drained.length)}`);
+      return [];
     },
     consumeThrow: () => input.consumeThrow(() => false),
     updateWave: (dt: number) => {
@@ -1173,7 +1178,7 @@ export function createDetachedFinaleComposition(
         world.state.setSlowZones([]);
         world.state.setTemporaryWalls([]);
         world.state.setBossIntro(null);
-        world.state.setBossBeat(null);
+        world.state.setStageBeat(null);
         const active = run();
         if (Array.isArray(active.spawnQueue)) active.spawnQueue.length = 0;
         active.chapterState = "WAVE_LIVE";

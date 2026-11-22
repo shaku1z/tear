@@ -147,7 +147,7 @@ describe("live campaign sequences", () => {
       rememberPrologue: (shown) => {
         prologueShown = shown;
       },
-      clearBossBeat: () => undefined,
+      clearStageBeat: () => undefined,
     });
 
     expect(prologueShown).toBe(true);
@@ -175,7 +175,7 @@ describe("live campaign sequences", () => {
         intents.push(...next);
       },
       rememberPrologue: () => undefined,
-      clearBossBeat: () => undefined,
+      clearStageBeat: () => undefined,
     });
 
     expect(cinema.started).toBe(true);

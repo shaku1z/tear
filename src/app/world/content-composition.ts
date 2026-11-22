@@ -26,7 +26,7 @@ export interface LiveContentCompositionOptions {
   readonly actorId: (enemy: GameEnemy) => string;
   readonly wipeRemainingSeconds: () => number;
   readonly setBossIntro: (enemy: GameEnemy, duration: number, delay: number) => void;
-  readonly clearBossBeat: () => void;
+  readonly clearStageBeat: () => void;
   readonly clearBanner: () => void;
 }
 
@@ -114,7 +114,7 @@ export function createLiveContentComposition(options: LiveContentCompositionOpti
     bossIntroDuration: d.CONFIG.bossTheater.introDur,
     wipeRemainingSeconds: options.wipeRemainingSeconds,
     setBossIntro: options.setBossIntro,
-    clearBossBeat: options.clearBossBeat,
+    clearStageBeat: options.clearStageBeat,
     clearBanners: options.clearBanner,
     bossArena: (id) => arena.create(id),
   });

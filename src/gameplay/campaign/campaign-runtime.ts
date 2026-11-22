@@ -53,7 +53,7 @@ export interface LiveCampaignRuntimePort {
   readonly chapterIntents: ChapterIntentPorts;
   readonly finaleIntents: FinaleIntentPorts;
   readonly observeFinaleIntents?: (intents: readonly FinaleIntent[]) => void;
-  readonly clearBossBeat: () => void;
+  readonly clearStageBeat: () => void;
   readonly prepareVictory: (campaign: boolean, persistFinale: boolean) => PreparedVictory;
   readonly win: (campaign: boolean) => void;
   readonly formatTime: (seconds: number) => string;
@@ -108,7 +108,7 @@ export function createLiveCampaignRuntime(port: LiveCampaignRuntimePort): LiveCa
       preparedWave: port.preparedWave,
       activationDeferred: port.activationDeferred,
       dispatch: dispatchChapter,
-      clearBossBeat: port.clearBossBeat,
+      clearStageBeat: port.clearStageBeat,
     },
   };
   const finale = createFinaleRuntime({

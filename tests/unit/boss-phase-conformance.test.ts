@@ -392,7 +392,7 @@ function practiceWorld() {
     clearDescent() {
       descent = null;
     },
-    clearBossBeat: no,
+    clearStageBeat: no,
     setWorldZoom: no,
     spawnWisp: no,
     liveWispCount: () => 0,
@@ -438,7 +438,7 @@ function practiceWorld() {
     time: () => tick / 120,
     lerp,
     clamp,
-    clearBossBeat: no,
+    clearStageBeat: no,
     setMusicDuck: no,
     playSound: no,
     storeSeen: no,

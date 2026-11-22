@@ -34,7 +34,7 @@ export function createLiveBossPhasePractice(options: {
   config: typeof CONFIG;
   state: Pick<
     LiveGameHostState,
-    "run" | "player" | "enemies" | "setEnemies" | "setProjectiles" | "setBossIntro" | "setBossBeat"
+    "run" | "player" | "enemies" | "setEnemies" | "setProjectiles" | "setBossIntro" | "setStageBeat"
   >;
   stage: { index: number; platforms: unknown[] };
   selectStage(index: number): void;
@@ -134,7 +134,7 @@ export function createLiveBossPhasePractice(options: {
         options.state.setEnemies([]);
         options.state.setProjectiles([]);
         options.state.setBossIntro(null);
-        options.state.setBossBeat(null);
+        options.state.setStageBeat(null);
         const active = run();
         active.voidScroll = null;
         Reflect.set(active, "voidDescent", null);

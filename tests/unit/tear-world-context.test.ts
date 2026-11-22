@@ -33,13 +33,13 @@ describe("Tear world context", () => {
     first.enemies().push({ id: "world-only" });
     first.setProjectiles([{ id: "projectile" }]);
     first.setBossIntro({ id: "intro" });
-    first.setBossBeat({ id: "beat" });
+    first.setStageBeat({ id: "beat" });
 
     expect(first.run()).toEqual({ id: "one" });
     expect(first.enemies()).toEqual([firstEnemy, { id: "world-only" }]);
     expect(first.projectiles()).toEqual([{ id: "projectile" }]);
     expect(first.bossIntro()).toEqual({ id: "intro" });
-    expect(first.bossBeat()).toEqual({ id: "beat" });
+    expect(first.stageBeat()).toEqual({ id: "beat" });
     expect(second.enemies()).toEqual([]);
     expect(Object.isFrozen(first)).toBe(true);
   });

@@ -30,13 +30,7 @@ export function resolveHeldBladeEnemyCollisions(input: HeldBladeCollisionInput):
   for (const enemy of enemies) if (severSiphon(input, enemy)) hitStop = Math.max(hitStop, t.hitStop.small);
 
   for (const enemy of enemies) {
-    if (
-      enemy.dead ||
-      enemy.dying ||
-      (enemy.introT ?? 0) > 0 ||
-      enemy.hitCd > 0 ||
-      (blade.canHitHeldEnemy && !blade.canHitHeldEnemy(enemy))
-    )
+    if (enemy.dead || enemy.dying || enemy.hitCd > 0 || (blade.canHitHeldEnemy && !blade.canHitHeldEnemy(enemy)))
       continue;
     if (baseDamage > 0 && cutBossPart(input, enemy)) {
       hitStop = Math.max(hitStop, t.hitStop.small);

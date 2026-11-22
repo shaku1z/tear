@@ -356,7 +356,7 @@ export function createColossusType(
         this.phaseMarker = ph;
       }
       if (this.introT > 0) {
-        const ip = 1 - this.introT / (CONFIG.bossTheater.introDur || 1.4);
+        const ip = 1 - this.introT / CONFIG.bossTheater.introDur;
         if (ip > 0.64 && !this._introBeat) {
           this._introBeat = true;
           this._shock(projectiles, 1);

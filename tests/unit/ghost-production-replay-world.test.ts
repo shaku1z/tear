@@ -96,7 +96,6 @@ function replayPresentation(calls: string[]) {
     text: noDraw,
     title: noDraw,
     bossHud: noDraw,
-    bossIntro: noDraw,
     chapterHeader: noDraw,
     loreFragment: noDraw,
     chapterPrompt: noDraw,

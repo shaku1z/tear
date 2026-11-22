@@ -144,6 +144,10 @@ export function createLiveCombatActionPorts(options: LiveCombatActionPortsOption
       setBossIntro: (value) => {
         hostState.setBossIntro(value);
       },
+      stageBeat: () => hostState.stageBeat(),
+      setStageBeat: (value) => {
+        hostState.setStageBeat(value);
+      },
       temporaryWalls: () => hostState.temporaryWalls(),
       setTemporaryWalls: (value) => {
         hostState.setTemporaryWalls(value);
@@ -295,9 +299,6 @@ export function createLiveCombatActionPorts(options: LiveCombatActionPortsOption
         startTransformation: (enemy, request) =>
           isRitualOwner(enemy) && isRitualCue(request) && !CINEMA.active && startBossTransformation(enemy, request),
         achievementsEnabled: achTracks,
-        setBossBanner: (text, color) => {
-          hostState.setBossBeat({ text, color, t: 1.15, dur: 1.15 });
-        },
         // Raw device edge in every live run (recording is passive; the authoritative
         // input only replays sealed envelopes during verification).
         consumeThrow: () => options.input().consumeThrow(() => Input.consumeThrow()),
