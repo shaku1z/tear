@@ -143,8 +143,8 @@ export interface DailyChallengeView extends ProgressView {
   readonly reward: string;
 }
 
+/** The main menu. Drills are reached from PLAY's setup screen, not from the menu rail (owner, 2026-11-23). */
 export interface MenuScreenView {
-  readonly practiceAvailable?: boolean;
   readonly id: "menu";
   readonly playerName: string;
   readonly signedIn: boolean;
