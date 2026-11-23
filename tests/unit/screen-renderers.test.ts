@@ -31,6 +31,10 @@ import {
 } from "../../src/app/run/run-screen-adapters";
 import { backControl, tabs, verticalMenu } from "../../src/presentation/screens/screen-primitives";
 import { keyboardLabel } from "../../src/domain/keyboard-bindings";
+import { REPLAY_ROW_ACTIONS } from "../../src/presentation/screens/profile-achievements";
+
+/** Where the REPLAYS row actions start at 1600 wide: the list's right edge less the actions' width. */
+const REPLAYS_ACTIONS_X = 878;
 
 class TestUi implements ScreenUiPort {
   readonly ink = "#000";
@@ -343,10 +347,10 @@ describe("legacy screen renderer registry", () => {
       x: 1110,
       y: 306,
     });
-    // The toolbar is 52 tall, so the first row starts at 358.
+    // The toolbar is 52 tall, so the first row starts at 358; the actions sit on one line inside the row.
     expect(controls.find((control) => control.label === "DOWNLOAD")).toMatchObject({
-      x: 968,
-      y: 420,
+      x: REPLAYS_ACTIONS_X + REPLAY_ROW_ACTIONS.slots.download.x,
+      y: 358 + REPLAY_ROW_ACTIONS.slots.download.y,
       action: { type: "profile.downloadReplay", id: "kept" },
     });
   });
@@ -1162,7 +1166,7 @@ describe("legacy screen renderer registry", () => {
     expect(labels(false)).not.toContain("RESET DEFAULTS");
   });
 
-  it("uses the oracle replay row geometry under the REPLAYS toolbar and a profile-specific watch intent", () => {
+  it("puts the replay row actions on one line under the REPLAYS toolbar, with a profile-specific watch intent", () => {
     const controls: ScreenControl[] = [];
     const renderer = createScreenRenderers(createRenderContext(controls));
     renderer.profile({
@@ -1184,17 +1188,18 @@ describe("legacy screen renderer registry", () => {
         },
       ],
     });
+    const { watch, pin } = REPLAY_ROW_ACTIONS.slots;
     expect(controls.find((control) => control.action.type === "profile.watchReplay")).toMatchObject({
-      x: 968,
-      y: 376,
-      w: 110,
-      h: 40,
+      x: REPLAYS_ACTIONS_X + watch.x,
+      y: 358 + watch.y,
+      w: watch.w,
+      h: watch.h,
     });
     expect(controls.find((control) => control.action.type === "profile.pinReplay")).toMatchObject({
-      x: 1086,
-      y: 376,
-      w: 78,
-      h: 40,
+      x: REPLAYS_ACTIONS_X + pin.x,
+      y: 358 + pin.y,
+      w: pin.w,
+      h: pin.h,
     });
     expect(controls.some((control) => control.action.type === "profile.importReplay")).toBe(false);
   });

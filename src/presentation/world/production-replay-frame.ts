@@ -1,27 +1,27 @@
 import { renderWorldFrame, type WorldFramePorts } from "./world-frame";
 
-/** Settled scene owned by an isolated replay seek; only draw capabilities escape. */
+/**
+ * Settled scene owned by an isolated replay seek; only draw capabilities escape.
+ *
+ * The camera is the live game's: `renderWorldFrame` centres it on the arena and applies the world's zoom
+ * (`ports.zoom`). A replay adds no camera of its own. `draw` fits the whole arena into the rectangle it is
+ * given, as the live game fits it into the window, and paints the backdrop over the rest of the rectangle.
+ */
 export function createProductionReplayFrame(
   input: Readonly<{
     tick: number;
     clockSeconds: number;
     screen: string;
     clockBlocked: boolean;
-    cameraX: number;
-    cameraY: number;
     /** Leaves the area behind the world clear instead of filling it. */
     transparent?: boolean;
     ports: Omit<WorldFramePorts, "canvas" | "screen">;
+    /** What play draws over the world (HUD, scenes, banners), in the arena's coordinates. */
+    drawOverlay?: (canvas: CanvasRenderingContext2D) => void;
   }>,
 ) {
   const { width, height, zoom } = input.ports;
-  const camera = Object.freeze({
-    policy: "player-follow" as const,
-    x: input.cameraX,
-    y: input.cameraY,
-    scale: zoom,
-    reconstructed: true as const,
-  });
+  const camera = Object.freeze({ policy: "arena" as const, x: width / 2, y: height / 2, scale: zoom });
   return Object.freeze({
     tick: input.tick,
     viewport: Object.freeze({ width, height }),
@@ -45,20 +45,20 @@ export function createProductionReplayFrame(
           canvas.fillStyle = "#090e15";
           canvas.fillRect(rectangle.x, rectangle.y, rectangle.w, rectangle.h);
         }
-        const scale = Math.min(rectangle.w / width, rectangle.h / height);
-        canvas.translate(
-          rectangle.x + (rectangle.w - width * scale) / 2,
-          rectangle.y + (rectangle.h - height * scale) / 2,
-        );
+        const scale = Math.min(rectangle.w / width, rectangle.h / height),
+          left = rectangle.x + (rectangle.w - width * scale) / 2,
+          top = rectangle.y + (rectangle.h - height * scale) / 2;
+        canvas.translate(left, top);
         canvas.scale(scale, scale);
-        // Keep the logical content inside its aspect-fit rectangle before moving the world camera.
-        canvas.beginPath();
-        canvas.rect(0, 0, width, height);
-        canvas.clip();
-        const dx = (width / 2 - camera.x) * zoom,
-          dy = (height / 2 - camera.y) * zoom;
-        canvas.translate(dx, dy);
-        renderWorldFrame({ ...input.ports, canvas, screen: { x: -dx, y: -dy, w: width, h: height } });
+        // The rectangle in world-frame coordinates: the arena plus the margin the fit leaves around it.
+        const screen = {
+          x: (rectangle.x - left) / scale,
+          y: (rectangle.y - top) / scale,
+          w: rectangle.w / scale,
+          h: rectangle.h / scale,
+        };
+        renderWorldFrame({ ...input.ports, canvas, screen });
+        input.drawOverlay?.(canvas);
       } finally {
         canvas.restore();
       }

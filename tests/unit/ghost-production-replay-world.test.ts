@@ -246,7 +246,7 @@ describe("Ghost production replay world", () => {
       expect(calls.some((call) => call.startsWith("fillRect:"))).toBe(true);
       expect(calls.some((call) => call.startsWith("lineTo:"))).toBe(true);
       expect(frame.tick).toBe(tick);
-      expect(frame.camera.policy).toBe("player-follow");
+      expect(frame.camera.policy).toBe("arena");
       expect("world" in frame).toBe(false);
       expect(
         JSON.stringify({

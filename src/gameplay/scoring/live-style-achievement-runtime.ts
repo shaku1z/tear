@@ -17,7 +17,15 @@ import {
   type AchievementRunState,
   type DodgeProjectile,
 } from "../progression/achievement-runtime";
-import { addStyle, loseStyle, rankForCombo, trickColor, updateStyle, type TrickTuning } from "./style-runtime";
+import {
+  addStyle,
+  formatRunClock,
+  loseStyle,
+  rankForCombo,
+  trickColor,
+  updateStyle,
+  type TrickTuning,
+} from "./style-runtime";
 import {
   applyStyleSnapshot,
   executeAchievementIntents,
@@ -202,7 +210,6 @@ export function createLiveStyleAchievementRuntime<TProjectile extends SplitProje
     splitProjectile: (projectile: TProjectile) => {
       splitParryProjectile(projectile, options.projectileSpeed(), options.createProjectile, options.addProjectile);
     },
-    formatTime: (seconds: number) =>
-      `${String(Math.floor(seconds / 60))}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`,
+    formatTime: formatRunClock,
   });
 }

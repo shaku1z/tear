@@ -18,6 +18,8 @@ export interface RecordWatchSession extends GhostVerifiedProductionReplaySession
   readonly lastTick: number;
   /** The stage index of the re-simulated world at the tick last sought. */
   readonly stage: () => number;
+  /** The run's upgrades at the tick last sought. */
+  readonly loadout: () => ReturnType<RecordWorld["loadout"]>;
 }
 
 /**
@@ -72,6 +74,7 @@ export function createRecordWatchSession(
     verifiedReceiptTicks: chapters,
     seek,
     stage: () => (world ?? restart()).stage(),
+    loadout: () => (world ?? restart()).loadout(),
     ...(presentation.renderView === undefined
       ? {}
       : {

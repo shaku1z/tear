@@ -325,6 +325,8 @@ export interface ReplayScreenView {
   readonly infoVisible?: boolean;
   readonly infoRows?: readonly StatView[];
   readonly loadout?: readonly CardView[];
+  /** The loadout list's heading and what it says when the list is empty; the run's final loadout when absent. */
+  readonly loadoutHeading?: Readonly<{ title: string; empty: string }>;
   /** A run re-simulated on the replay screen: the replay transport with seek, checkpoints and practice. */
   readonly theater?: boolean;
   /** Only verified recorded checkpoints can begin an unranked practice child. */

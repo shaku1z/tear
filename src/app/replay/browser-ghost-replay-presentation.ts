@@ -24,17 +24,33 @@ import {
   type LiveWorldSimulationPresentationAdapterOptions,
 } from "../world/world-simulation-factories";
 import type { ProductionReplayPresentationContext } from "../world/detached/world-factory";
+import type { ProductionGhostReplayCompositionOptions } from "../world/detached/replay-composition";
+import { createWorldRenderers } from "../../presentation/world";
+import { easeOut } from "../../presentation/world/primitives";
+import { createWorldIndicators, type WorldIndicators } from "../world/world-indicators";
+import { createReplayIndicatorClock } from "./replay-indicator-clock";
+import { UPGRADES } from "../../gameplay/upgrades";
+import { formatRunClock, trickColor } from "../../gameplay/scoring/style-runtime";
+import type { GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { CosmeticWardrobe } from "../../presentation/cosmetic-styles";
 import type { RecordWorldPresentation } from "./record-world";
 
 type Ui = LiveWorldSimulationPresentationAdapterOptions["ui"] & CinematicUiPort & WorldUiPort;
 /** The parts of a drawn replay frame a caller may leave out. */
 export type ReplayFrameLayer =
-  "backdrop" | "platforms" | "hazards" | "environment" | "enemies" | "projectiles" | "player" | "blade" | "effects";
+  | "backdrop"
+  | "platforms"
+  | "hazards"
+  | "environment"
+  | "enemies"
+  | "projectiles"
+  | "player"
+  | "blade"
+  | "effects"
+  /** What play shows over the world: the HUD, the wave and stage banners and the aim mark. */
+  | "indicators";
 /** How a reconstructed world is drawn. The replay viewer uses the defaults. */
 export interface BrowserGhostReplayPresentationOptions {
-  /** World zoom of a drawn frame. */
-  readonly zoom?: number;
   /** Layers left out of the next drawn frame. Without the backdrop the frame is drawn on transparency. */
   readonly hidden?: () => ReadonlySet<ReplayFrameLayer>;
   /** Painted stage backgrounds, drawn as the live world draws them. */
@@ -56,8 +72,15 @@ export function createBrowserGhostReplayPresentation(
       backdrop: ReturnType<typeof createBackdrop>;
       graphics: typeof GFX;
       accessibility: typeof A11Y;
+      clock: ReturnType<typeof createReplayIndicatorClock>;
     }>
   >();
+  /** The canvas a frame is being drawn on; the indicator renderers draw there. */
+  let activeCanvas: CanvasRenderingContext2D | undefined;
+  const replayCanvas = (): CanvasRenderingContext2D => {
+    if (activeCanvas === undefined) throw new Error("replay draw has no target");
+    return activeCanvas;
+  };
   return {
     ...(options.wardrobe === undefined ? {} : { wardrobe: options.wardrobe }),
     presentation(context: ProductionReplayPresentationContext) {
@@ -74,7 +97,13 @@ export function createBrowserGhostReplayPresentation(
         createCanvas: () => document.createElement("canvas"),
         performance,
       });
-      owners.set(context.clock, { theme, backdrop, graphics, accessibility });
+      owners.set(context.clock, {
+        theme,
+        backdrop,
+        graphics,
+        accessibility,
+        clock: createReplayIndicatorClock(context.config.juice.bannerTime),
+      });
       return createLiveWorldSimulationPresentationAdapter({
         clock: context.clock,
         effects: context.effects,
@@ -88,7 +117,7 @@ export function createBrowserGhostReplayPresentation(
     renderView(replay, tick, screen) {
       const owner = owners.get(replay.clock);
       if (owner === undefined) throw new Error("replay renderer is unavailable");
-      const { theme, backdrop, graphics, accessibility } = owner,
+      const { theme, backdrop, graphics, accessibility, clock } = owner,
         config = replay.configuration.value;
       const state = replay.world.state,
         run = state.run(),
@@ -100,9 +129,29 @@ export function createBrowserGhostReplayPresentation(
       theme.set(options.scenes?.paper(stage.id) ?? stage.bg);
       const width = config.view.w,
         height = config.view.h,
-        zoom = options.zoom ?? 1.15,
+        // The live camera's zoom: the scene's world zoom (the finale and the void run change it).
+        zoom = replay.world.context.transient.feel.worldZoom,
         hidden = options.hidden?.() ?? NOTHING_HIDDEN,
         scenes = options.scenes;
+      clock.observe({
+        tick,
+        wave: run.wave,
+        stage: replay.stage.index,
+        stageBannerSeconds: replay.stage.bannerSeconds,
+        hpFraction: Math.max(0, Math.min(1, player.hp / player.maxHp)),
+        multiplier: run.mult,
+      });
+      // The world renderers hold the canvas they draw on, so the indicators are built for each canvas drawn.
+      const builtIndicators = new WeakMap<CanvasRenderingContext2D, WorldIndicators>();
+      const indicators = (): WorldIndicators => {
+        const canvas = replayCanvas();
+        let built = builtIndicators.get(canvas);
+        if (built === undefined) {
+          built = replayIndicators(replay, clock, { canvas, theme, graphics, accessibility, width, height });
+          builtIndicators.set(canvas, built);
+        }
+        return built;
+      };
       const enemies = state.enemies(),
         environment = replay.world.context.environment.snapshot();
       const presentationOptions = {
@@ -155,7 +204,6 @@ export function createBrowserGhostReplayPresentation(
         seamLife: config.aldric.seamLife,
         trailLife: config.warden.trailLife,
       });
-      let activeCanvas: CanvasRenderingContext2D | undefined;
       const sceneInput = (
         timeSeconds: number,
         playerWorldX: number,
@@ -167,9 +215,11 @@ export function createBrowserGhostReplayPresentation(
         clockSeconds: replay.clock.sim,
         screen,
         clockBlocked: state.bossIntro() !== null || replay.world.context.cinema.active,
-        cameraX: clamp(player.x, width / (2 * zoom), width - width / (2 * zoom)),
-        cameraY: height / 2,
         transparent: hidden.has("backdrop"),
+        drawOverlay: (canvas) => {
+          if (!hidden.has("indicators"))
+            drawPlayOverlay(canvas, replay, screen, indicators(), clock, ui, accessibility);
+        },
         ports: {
           width,
           height,
@@ -189,7 +239,9 @@ export function createBrowserGhostReplayPresentation(
             sandbox: run.mode === "sandbox",
             player,
             formatLabel: formatEnemyLabel,
-            drawStatus: () => undefined,
+            drawStatus: (enemy) => {
+              indicators().enemyStatus(enemy);
+            },
           }),
           player: hidden.has("player")
             ? undefined
@@ -286,39 +338,108 @@ export function createBrowserGhostReplayPresentation(
           activeCanvas = canvas;
           try {
             frame.draw(canvas, rectangle);
-            if (replay.world.context.cinema.active) {
-              const fit = Math.min(rectangle.w / width, rectangle.h / height);
-              canvas.save();
-              try {
-                canvas.beginPath();
-                canvas.rect(rectangle.x, rectangle.y, rectangle.w, rectangle.h);
-                canvas.clip();
-                canvas.translate(
-                  rectangle.x + (rectangle.w - width * fit) / 2,
-                  rectangle.y + (rectangle.h - height * fit) / 2,
-                );
-                canvas.scale(fit, fit);
-                drawCinematicDirector(
-                  replay.world.context.cinema,
-                  config,
-                  canvas,
-                  ui,
-                  { x: 0, y: 0, w: width, h: height },
-                  accessibility.reducedMotion,
-                );
-              } finally {
-                canvas.restore();
-              }
-            }
           } finally {
             activeCanvas = undefined;
           }
         },
       });
-      function replayCanvas(): CanvasRenderingContext2D {
-        if (activeCanvas === undefined) throw new Error("replay draw has no target");
-        return activeCanvas;
-      }
     },
   };
+
+  /** Play's indicators over a replay world, drawn through the live world renderers on the replay's canvas. */
+  function replayIndicators(
+    replay: Parameters<NonNullable<ProductionGhostReplayCompositionOptions["renderView"]>>[0],
+    clock: ReturnType<typeof createReplayIndicatorClock>,
+    look: Readonly<{
+      canvas: CanvasRenderingContext2D;
+      theme: typeof THEME;
+      graphics: typeof GFX;
+      accessibility: typeof A11Y;
+      width: number;
+      height: number;
+    }>,
+  ): WorldIndicators {
+    const config = replay.configuration.value,
+      state = replay.world.state,
+      stage = replay.stage;
+    const renderers = createWorldRenderers({
+      canvas: look.canvas,
+      ui,
+      width: look.width,
+      height: look.height,
+      safe: { top: 0, right: 0, bottom: 0, left: 0 },
+      screen: { x: 0, y: 0, w: look.width, h: look.height },
+      get ink() {
+        return look.theme.ink;
+      },
+      get darkTheme() {
+        return look.theme.dark;
+      },
+      get timeSeconds() {
+        return replay.clock.sim;
+      },
+      lowGraphics: look.graphics.low,
+      reducedMotion: look.accessibility.reducedMotion,
+      highContrast: look.accessibility.highContrast,
+    });
+    return createWorldIndicators(
+      renderers,
+      {
+        run: () => state.run() as GameRun,
+        player: () => state.player(),
+        blade: () => state.blade(),
+        enemies: () => state.enemies(),
+        bossIntro: () => state.bossIntro(),
+        bannerSeconds: clock.waveBanner,
+        stage: () => ({
+          index: stage.index,
+          current: stage.current,
+          name: stage.name,
+          bannerSeconds: clock.stageBanner(),
+        }),
+        hud: clock.hud,
+        hudClockSeconds: clock.hudClockSeconds,
+        deltaSeconds: clock.deltaSeconds,
+      },
+      {
+        config,
+        upgrades: UPGRADES,
+        flashScale: () => look.accessibility.flashScale,
+        fallbackAccent: () => ui.t.color.accent,
+        ink: () => look.theme.ink,
+        formatTime: formatRunClock,
+        trickColor: (multiplier) => trickColor(multiplier, config.colors),
+        ease: easeOut,
+      },
+    );
+  }
+}
+
+/**
+ * What play draws over the world, in play's order and on play's conditions (`renderWorldLayers` in
+ * src/app/interface/presentation-composition.ts): the HUD, a running scene, the wave or stage banner and
+ * the blade's reticle.
+ */
+function drawPlayOverlay(
+  canvas: CanvasRenderingContext2D,
+  replay: Parameters<NonNullable<ProductionGhostReplayCompositionOptions["renderView"]>>[0],
+  screen: string,
+  indicators: WorldIndicators,
+  clock: ReturnType<typeof createReplayIndicatorClock>,
+  ui: Ui,
+  accessibility: typeof A11Y,
+): void {
+  if (screen !== "playing") return;
+  const config = replay.configuration.value,
+    cinema = replay.world.context.cinema,
+    width = config.view.w,
+    height = config.view.h;
+  if (!cinema.active || !cinema.hideHud || cinema.beat?.hud === true) indicators.hud();
+  if (cinema.active)
+    drawCinematicDirector(cinema, config, canvas, ui, { x: 0, y: 0, w: width, h: height }, accessibility.reducedMotion);
+  // The stage banner owns the announcement band while it shows.
+  const stageBanner = clock.stageBanner() > 0;
+  if (!cinema.active && !stageBanner && clock.waveBanner() > 0) indicators.waveBanner();
+  if (!cinema.active && stageBanner) indicators.stageBanner();
+  if (!cinema.active || cinema.playerMode === "landing" || cinema.playerMode === "finalBlade") indicators.reticle();
 }

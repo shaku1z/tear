@@ -23,7 +23,9 @@ import { refuseGhostTheater, type GhostTheaterOpenResult } from "../../ghost/the
 import { readGhostReplayRunContext } from "../../ghost/replay-admission";
 import { rulesetRefusal } from "../../gameplay/run/ruleset-version";
 import { replayPlaybackRefusal, type ReplayRecord } from "../../replay/record";
-import { createRecordWatchSession } from "../replay/record-watch-session";
+import { createRecordWatchSession, type RecordWatchSession } from "../replay/record-watch-session";
+import type { CardView } from "../../presentation/screens/contracts";
+import { formatRunClock } from "../../gameplay/scoring/style-runtime";
 import type { RecordWorldEngine, RecordWorldPresentation } from "../replay/record-world";
 
 export interface GhostTheaterScreenServices {
@@ -34,6 +36,8 @@ export interface GhostTheaterScreenServices {
   readonly deltaSeconds: () => number;
   readonly nativeTransport?: () => ReplayNativeTransport;
   readonly launchPractice: (child: GhostPracticeChild) => GhostPracticeLaunchResult;
+  /** The INFO panel's cards for a run's upgrades. */
+  readonly loadoutCards?: LoadoutCards;
 }
 
 export interface GhostTheaterScreenStatus {
@@ -51,6 +55,8 @@ interface GhostTheaterContext {
   readonly assisted: boolean;
   /** The stage the shown world is in; a kept record's world reports it. */
   readonly stage?: () => number;
+  /** A kept record and its run's upgrades at the shown tick; INFO lists both. */
+  readonly kept?: KeptRun;
   readonly session: GhostVerifiedProductionReplaySession;
   readonly transport: ReplayTransport;
   readonly from: AppScreen;
@@ -71,6 +77,38 @@ interface GhostTheaterContext {
 }
 
 const TICKS_PER_SECOND = 120;
+
+const RESULT_WORDS = Object.freeze({ victory: "VICTORY", defeat: "FELL ON WAVE", quit: "LEFT ON WAVE" });
+
+/** The INFO panel's cards for a run's upgrades. */
+type LoadoutCards = (items: ReturnType<RecordWatchSession["loadout"]>) => readonly CardView[];
+/** A kept record and its run's upgrades at the shown tick; INFO lists both. */
+type KeptRun = Readonly<{ record: ReplayRecord; loadout: RecordWatchSession["loadout"] }>;
+
+/** INFO for a kept run: who played what and how it ended, and the upgrades held at the shown moment. */
+function keptInfo(
+  kept: KeptRun,
+  cards: LoadoutCards | undefined,
+): Pick<ReplayScreenView, "infoRows" | "loadout" | "loadoutHeading"> {
+  const { run, summary, look } = kept.record,
+    outcome = run.result.outcome;
+  return Object.freeze({
+    infoRows: Object.freeze([
+      { label: "PLAYER", value: look.playerName || "Player" },
+      { label: "RUN", value: `${run.start.mode} · ${run.start.difficulty} · ${run.start.weapon}`.toUpperCase() },
+      {
+        label: "RESULT",
+        value: outcome === "victory" ? RESULT_WORDS.victory : `${RESULT_WORDS[outcome]} ${String(summary.wave)}`,
+      },
+      { label: "SCORE", value: summary.score.toLocaleString("en-US") },
+      { label: "KILLS", value: summary.kills.toLocaleString("en-US") },
+      { label: "TIME", value: formatRunClock(summary.time) },
+    ]),
+    loadout: cards?.(kept.loadout()) ?? [],
+    loadoutHeading: Object.freeze({ title: "LOADOUT AT THIS MOMENT", empty: "No upgrades taken yet." }),
+  });
+}
+
 function isSpeed(value: number): value is ReplaySpeed {
   return REPLAY_SPEEDS.includes(value as ReplaySpeed);
 }
@@ -115,10 +153,14 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
     const currentContext = context;
     const state = currentContext.transport.state();
     const current = currentContext.result.tick;
+    const kept = currentContext.kept;
     return Object.freeze({
       id: "replay",
-      title: "SAVED REPLAY",
-      detail: `RECORDED RUN${currentContext.assisted ? " · ASSISTED · UNRANKED" : ""}`,
+      title: kept === undefined ? "SAVED REPLAY" : kept.record.look.playerName || "Player",
+      detail:
+        kept === undefined
+          ? `RECORDED RUN${currentContext.assisted ? " · ASSISTED · UNRANKED" : ""}`
+          : `${kept.record.run.start.mode} · reached wave ${String(kept.record.summary.wave)} · ${kept.record.summary.score.toLocaleString("en-US")} pts`.toUpperCase(),
       paused: !state.playing,
       speed: state.speed,
       // Players read time, not simulation ticks (120 per second).
@@ -139,15 +181,19 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
         }),
       ),
       infoVisible: currentContext.infoVisible,
-      infoRows: Object.freeze([
-        {
-          label: "POSITION",
-          value: `${replayClock(current - currentContext.firstTick)} / ${replayClock(currentContext.lastTick - currentContext.firstTick)}`,
-        },
-        { label: "SAVED POINTS", value: String(currentContext.checkpoints.length) },
-        { label: "HERE", value: currentContext.checkpoints.includes(current) ? "AT A SAVED POINT" : "PLAYING" },
-        { label: "STORED", value: "ON THIS DEVICE" },
-      ]),
+      ...(currentContext.kept === undefined
+        ? {
+            infoRows: Object.freeze([
+              {
+                label: "POSITION",
+                value: `${replayClock(current - currentContext.firstTick)} / ${replayClock(currentContext.lastTick - currentContext.firstTick)}`,
+              },
+              { label: "SAVED POINTS", value: String(currentContext.checkpoints.length) },
+              { label: "HERE", value: currentContext.checkpoints.includes(current) ? "AT A SAVED POINT" : "PLAYING" },
+              { label: "STORED", value: "ON THIS DEVICE" },
+            ]),
+          }
+        : keptInfo(currentContext.kept, services.loadoutCards)),
       ...(currentContext.message === undefined ? {} : { notice: currentContext.message }),
       theater: true,
       worldVisible: currentContext.frame !== undefined,
@@ -219,10 +265,13 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
         const transport = new ReplayTransport();
         const result = session.seek(0);
         transport.seek(0);
+        // WATCH plays the run at once, as a video player does.
+        transport.play();
         context = {
           sourceId: key,
           assisted: false,
           stage: session.stage,
+          kept: Object.freeze({ record, loadout: session.loadout }),
           session,
           transport,
           from,
