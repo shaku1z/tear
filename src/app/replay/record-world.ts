@@ -9,6 +9,7 @@ import type {
   ProductionGhostReplayCompositionOptions,
   ProductionReplayCheckpointCapture,
 } from "../world/detached/replay-composition";
+import { ownedLoadout } from "../../gameplay/progression/upgrade-loadout";
 import type { Loadout } from "../../domain/cosmetic-types";
 import type { CosmeticWardrobe } from "../../presentation/cosmetic-styles";
 
@@ -39,6 +40,8 @@ export interface RecordWorld {
   ) => AuthoritativeStepResult<CanonicalGameplayState>;
   /** The stage the world is in now: the stage a replay shows at this tick. */
   readonly stage: () => number;
+  /** The run's upgrades now, as the run-end screen lists them. */
+  readonly loadout: () => ReturnType<typeof ownedLoadout>;
   readonly terminated: () => boolean;
   /** The world drawn through the game's own frame builder; only when the world was given a renderer. */
   readonly renderView: () => GhostReplayRenderView | undefined;
@@ -82,6 +85,10 @@ export function startRecordWorld(
   return Object.freeze<RecordWorld>({
     step: (actions, frames) => engine.stepDetachedWorld(session, actions, frames),
     stage: () => session.replay.stage.index,
+    loadout: () => {
+      const current = session.replay.world.state.run();
+      return current === null ? [] : ownedLoadout(current.mods);
+    },
     terminated: () => session.replay.world.lifecycle.phase === "terminated",
     renderView: () => session.renderView?.(),
     checkpoint: () => {

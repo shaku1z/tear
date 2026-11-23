@@ -48,6 +48,10 @@ Written so that someone with only this repository can continue. The decision log
   - The caps are 300 records and 25 MB (was 20). The store keeps a count of what its caps dropped beside the index (`dropped`); the list takes it, and so clears it, when it opens (`takeDropped`).
   - Measured in Chrome on the store as built, with a real 40-second Endless record (546,547 bytes of JSON, stored as 44,401): with 300 records, open 0.2 ms, list 0.7 ms (an index of about 100 KB), read 3.7 ms, add 10 ms (p95 13), an add that evicts 16 ms. Main with 20 records: add 3.8 ms, list 0.3 ms, read 3.8 ms. Chrome already compresses large values on disk (main's 20 records of 10.9 MB used 1.6 MB of the origin), so on Chrome the gain is mostly in what the caps count; 300 records used 13.6 MB.
   - Not in this step (decision log, 2026-11-23): the V3 vault modules in the table below stay until PR 8, and no storage port.
+- **Merged: what the owner asked for (#414, after approving One Replays, 2026-11-23).** Players see the replay framed as play frames it (the whole arena, no crop or side-scroll), play's HUD, banners, reticle and enemy status marks over it, WATCH playing at once, INFO with the run (mode, difficulty, weapon, result, score, kills, time) and the upgrades held at the shown moment, and the REPLAYS row actions on one line inside the card.
+  - Framing: the replay had its own camera, following the player at a fixed 1.15 zoom and cropping to a 16:9 box. The frame now uses play's camera (centred on the arena, the world's zoom) and fits the whole arena between the screen's bars (`src/presentation/world/production-replay-frame.ts`).
+  - Indicators: one module, `src/app/world/world-indicators.ts`, builds the HUD, wave and stage banners, reticle and enemy status from a world's state for live play and the replay. The detached world has no frame clock, so the banners and the HUD's easing run on the shown ticks (`src/app/replay/replay-indicator-clock.ts`); a seek starts them over.
+  - INFO: the loadout at a moment is `ownedLoadout` (`src/gameplay/progression/upgrade-loadout.ts`), which the run-end screen uses too.
 - **Then: one watch (PR 7b).**
 - **Agreed with Shards (for PR 10):**
   - `ReplayLook.cosmetics` is the domain `Loadout`, filled at run start with `loadoutOf(COSMETIC_CATALOG, PROFILE.cosmetics())`.
@@ -830,6 +834,15 @@ position file and moves this card to `plans/completed/`.
 - **Measured:** Record bytes added by `look`; a test that changing `look` leaves every hash unchanged.
 - **Removed:** The last `ghost` names in code and current docs.
 
+### Later: DOWNLOAD as a video (not scheduled)
+
+**Players see:** DOWNLOAD on a REPLAYS row saves a video of the run (MP4) instead of the record file.
+
+The owner's note on One Replays (2026-11-23): a download a player keeps should be a video, not JSON; not
+for now. Shape when it is scheduled: render the re-simulated run through watch's own frame (PR 7), encode
+it in the browser (WebCodecs where the browser has it), and keep the record file reachable for IMPORT,
+which needs it. Measure encode time and file size for a five-minute run before choosing defaults.
+
 ## Evidence per pull request
 
 | PR | Determinism (`pnpm test:determinism`) | Round-trip check | Browser replay journey on a built `dist/` | Other |
@@ -1009,3 +1022,4 @@ writes are closed. Deploying the rules is the owner's step.
 - 2026-11-23 Cinematic skip (`codex/replay-cinematic-skip`): the step-4 divergence was the test hooks' skip, which asked the director directly and so was in no record. The hooks skip with a held confirm, like a player; a rule test lists every scene change outside the director and how its record holds it, and only engineering tools may ask the director to skip.
 - 2026-11-23 PR 7 split into 7a (the seek cache, `codex/replay-watch`) and 7b (`watch.ts`, the replay screen and frame merges, `browser-replay-matches-live`, the renderer-import rule). 7a builds checkpoints in memory while watching instead of capturing them during live play and storing them beside the record: a kept run re-simulates to the end in a few seconds, so a stored cache would cost store space and a build-tag rule for little gain. A stored or worker-built cache comes back only if long runs make the first pass too slow.
 - 2026-11-23 Summary time (`codex/replay-summary-time`), from the lead after One Replays: the two faults found taking its pictures go before the status timers, summary time first. `summary.time` is seconds to the millisecond, written by the live run end and by verify through the same two functions; the dropped browser round trip comes back over a kept live run.
+- 2026-11-23 What the owner asked for (`codex/replay-owner-changes`), before PR 7: the owner approved One Replays with changes. The replay frames the arena with play's camera (the crop came from the replay's own player-follow camera at a fixed zoom); the indicators come back from one module shared with live play, timed on the shown ticks; INFO shows the run and its loadout at the shown moment; WATCH plays at once; the row actions fit the card. A video DOWNLOAD (MP4) is a later step, not scheduled.

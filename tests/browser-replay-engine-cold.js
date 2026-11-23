@@ -1,11 +1,33 @@
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
 const { STATE_WAIT_MS, settleFor } = require("./browser-waits");
 
 // The replay engine is fetched on first use. Open a saved replay on a cold page whose engine chunk is held back
 // (so neither the idle fetch-ahead nor an earlier fetch can have delivered it): the open must wait, not throw; a failed fetch must give one plain
 // message; and the next try, with the network back, must open the replay.
-const ENGINE_CHUNK = "**/assets/production-replay-composition-*.js";
+//
+// The engine is the deferred `replayEngine` row in src/app/shell/deferred-modules.ts, whose module is
+// src/app/world/detached/replay-composition.ts, so Rollup names its chunk `replay-composition-<hash>.js`. The
+// check finds that one file in the build it serves and fails when there is none or more than one: a renamed
+// module then fails here, instead of leaving a pattern that holds nothing back.
+const ENGINE_CHUNK_NAME = /^replay-composition-[\w-]+\.js$/u;
+const assetsDirectory = path.resolve(
+  __dirname,
+  "..",
+  "dist",
+  process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone",
+  "assets",
+);
+const engineChunks = fs.readdirSync(assetsDirectory).filter((name) => ENGINE_CHUNK_NAME.test(name));
+assert.equal(
+  engineChunks.length,
+  1,
+  `exactly one replay engine chunk must match ${String(ENGINE_CHUNK_NAME)} in ${assetsDirectory}; found ${JSON.stringify(engineChunks)}`,
+);
+const [ENGINE_CHUNK_FILE] = engineChunks;
+const isEngineChunk = (url) => new URL(url).pathname.endsWith(`/assets/${ENGINE_CHUNK_FILE}`);
 
 withJourney({ name: "Replay engine cold open" }, async ({ page, boot }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
@@ -38,7 +60,7 @@ withJourney({ name: "Replay engine cold open" }, async ({ page, boot }) => {
   // A fresh page: the engine has not been fetched. Hold its chunk back.
   const requested = [];
   page.on("request", (request) => {
-    if (/production-replay-composition-[\w-]+\.js/u.test(request.url())) requested.push(request.url());
+    if (isEngineChunk(request.url())) requested.push(request.url());
   });
   let hold = true;
   const gate = [];
@@ -47,7 +69,7 @@ withJourney({ name: "Replay engine cold open" }, async ({ page, boot }) => {
     gate.push(route);
     return undefined;
   };
-  await page.route(ENGINE_CHUNK, handler);
+  await page.route(isEngineChunk, handler);
   await boot();
 
   // 1) The open waits for the engine instead of throwing.
@@ -69,6 +91,7 @@ withJourney({ name: "Replay engine cold open" }, async ({ page, boot }) => {
     "the open must still be waiting while the engine is held back",
   );
   assert.ok(requested.length >= 1, "opening a replay must request the engine");
+  assert.ok(gate.length >= 1, "the engine request must be the one held back");
 
   // 2) The fetch fails: one plain message, no hang.
   hold = false;
@@ -80,7 +103,7 @@ withJourney({ name: "Replay engine cold open" }, async ({ page, boot }) => {
   assert.match(failure.failure ?? "", /online visit|try again/u, `plain failure message, got ${failure.failure}`);
 
   // 3) The network is back: the next try opens the replay.
-  await page.unroute(ENGINE_CHUNK, handler);
+  await page.unroute(isEngineChunk, handler);
   const opened = await page.evaluate(
     (id) => window.__TEAR_GHOST_V3__.read(id).then((capsule) => capsule?.manifest?.id ?? null),
     manifest.id,

@@ -59,7 +59,7 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
     const navTop = compact ? playY + playH + metric.btnGap * 2 : 426;
     // Navigation row `index`: one column on desktop; in compact density the rows flow
     // into as many columns as the remaining height needs.
-    const navCount = 5 + (view.practiceAvailable ? 1 : 0) + (view.nowPlaying ? 1 : 0);
+    const navCount = 5 + (view.nowPlaying ? 1 : 0);
     const rowsAvailable = Math.max(1, Math.floor((height - ui.t.space.lg - navTop + metric.btnGap) / pitch));
     const columns = compact ? Math.max(2, Math.ceil(navCount / rowsAvailable)) : 1;
     const railWidth = columns * columnWidth + (columns - 1) * metric.btnGap;
@@ -138,18 +138,8 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
         action: { type: "navigate", to, resetScroll: to !== "settings" },
       });
     });
-    // Extra rows continue the same rhythm under SETTINGS: DRILLS, then the music row.
+    // The music row continues the same rhythm under SETTINGS.
     let slot = rail.length;
-    if (view.practiceAvailable) {
-      context.enqueue({
-        ...navSlot(slot++),
-        glyph: "◎",
-        label: "DRILLS",
-        sub: "LESSONS · NO REWARDS",
-        ghost: true,
-        action: { type: "tutorial.action", command: "open-practice" },
-      });
-    }
     if (view.nowPlaying) {
       // The now-playing row is a slimmer status row on desktop.
       context.enqueue({

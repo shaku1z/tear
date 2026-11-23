@@ -143,8 +143,8 @@ export interface DailyChallengeView extends ProgressView {
   readonly reward: string;
 }
 
+/** The main menu. Drills are reached from PLAY's setup screen, not from the menu rail (owner, 2026-11-23). */
 export interface MenuScreenView {
-  readonly practiceAvailable?: boolean;
   readonly id: "menu";
   readonly playerName: string;
   readonly signedIn: boolean;
@@ -325,6 +325,8 @@ export interface ReplayScreenView {
   readonly infoVisible?: boolean;
   readonly infoRows?: readonly StatView[];
   readonly loadout?: readonly CardView[];
+  /** The loadout list's heading and what it says when the list is empty; the run's final loadout when absent. */
+  readonly loadoutHeading?: Readonly<{ title: string; empty: string }>;
   /** A run re-simulated on the replay screen: the replay transport with seek, checkpoints and practice. */
   readonly theater?: boolean;
   /** Only verified recorded checkpoints can begin an unranked practice child. */

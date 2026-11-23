@@ -21,15 +21,24 @@ const PASSPORT_BANNER_HEIGHT = 8;
 /** First y under the profile tab strip; the snapshot's scroll bounds use the same value. */
 export const PROFILE_CONTENT_TOP = 306;
 
-/** Where each row action sits on a desktop row, from the row's action column; PIN and DELETE use short labels. */
-const ROW_SLOTS: Readonly<
-  Record<ReplayRowActionId, Readonly<{ x: number; y: number; w: number; h: number; label?: string }>>
-> = Object.freeze({
-  watch: { x: 0, y: 18, w: 110, h: 40 },
-  pin: { x: 118, y: 18, w: 78, h: 40 },
-  share: { x: 204, y: 18, w: 104, h: 40 },
-  delete: { x: 316, y: 18, w: 64, h: 40, label: "✕" },
-  download: { x: 0, y: 62, w: 116, h: 28 },
+/**
+ * A desktop REPLAYS row's actions: one line, inside the row's card, from the row's action column. PIN
+ * and DELETE use short labels. `tests/unit/profile-replay-row.test.ts` keeps every action on the card.
+ */
+export const REPLAY_ROW_ACTIONS = Object.freeze({
+  /** The card's height (`replayRow` in screen-primitives.ts). */
+  cardHeight: 84,
+  /** The action column's width, from the card's right edge. */
+  width: 482,
+  slots: Object.freeze<
+    Record<ReplayRowActionId, Readonly<{ x: number; y: number; w: number; h: number; label?: string }>>
+  >({
+    watch: { x: 0, y: 22, w: 110, h: 40 },
+    pin: { x: 118, y: 22, w: 64, h: 40 },
+    share: { x: 190, y: 22, w: 100, h: 40 },
+    download: { x: 298, y: 22, w: 112, h: 40 },
+    delete: { x: 418, y: 22, w: 52, h: 40, label: "✕" },
+  }),
 });
 
 export function createProfileAchievementRenderers(context: ScreenRenderContext) {
@@ -86,10 +95,18 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
         view.replays?.forEach((replay, index) => {
           const y = top + index * rowHeight - context.scroll;
           if (y + rowHeight < top - 8 || y > bottom + 8) return;
-          replayRow(context, replay, left, y, listWidth, replay.pinned ? "#e0a326" : undefined, 410);
-          const actionsX = left + listWidth - 392;
+          replayRow(
+            context,
+            replay,
+            left,
+            y,
+            listWidth,
+            replay.pinned ? "#e0a326" : undefined,
+            REPLAY_ROW_ACTIONS.width + 18,
+          );
+          const actionsX = left + listWidth - REPLAY_ROW_ACTIONS.width;
           for (const row of replayRowActions(replay)) {
-            const slot = ROW_SLOTS[row.id];
+            const slot = REPLAY_ROW_ACTIONS.slots[row.id];
             enqueueRow({
               x: actionsX + slot.x,
               y: y + slot.y,

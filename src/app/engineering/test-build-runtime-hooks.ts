@@ -157,20 +157,27 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
   GAMEPLAY_EVENTS.subscribe((event) => {
     if (event.kind === "stage" && event.transition !== "exited") replayStage = event.stage;
   });
-  void import("./replay-tap-inspector").then(({ installReplayTapInspector }) => {
-    installReplayTapInspector(
-      browserWindow,
-      sources.replayTap,
-      sources.replayProduction,
-      () => authoritativeStep.lastResult?.state.run ?? null,
-      () => CINEMA.active,
-      () => replayStage,
-      () => sources.interface.screens.replay,
-      (action) => {
-        sources.interface.screens.dispatch(action);
-      },
-    );
-  });
+  // A failed fetch (offline, or a check holding the engine back) leaves the inspector uninstalled; the checks
+  // that use it wait for its global, so they report its absence. It is not an error of the page.
+  void import("./replay-tap-inspector").then(
+    ({ installReplayTapInspector }) => {
+      installReplayTapInspector(
+        browserWindow,
+        sources.replayTap,
+        sources.replayProduction,
+        () => authoritativeStep.lastResult?.state.run ?? null,
+        () => CINEMA.active,
+        () => replayStage,
+        () => sources.interface.screens.replay,
+        (action) => {
+          sources.interface.screens.dispatch(action);
+        },
+      );
+    },
+    (error: unknown) => {
+      console.warn("replay tap inspector did not load:", error);
+    },
+  );
   const consumedActions: CommandEnvelope<GameAction>[] = [];
   Input.semantic.subscribe((entry) => {
     consumedActions.push(entry);

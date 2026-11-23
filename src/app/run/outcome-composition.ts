@@ -19,6 +19,7 @@ import type { LiveGhostPracticeSessionState } from "../replay/ghost-practice-ses
 import type { EnvironmentRuntimeState } from "../../gameplay/environment/environment-contracts";
 import type { ReplayRunEnd } from "../../replay/recorder";
 import { keepsReplayRecord, replayRunTotals } from "../replay/live-replay-production";
+import { ownedLoadout } from "../../gameplay/progression/upgrade-loadout";
 
 type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
 
@@ -84,12 +85,7 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
     snapshot: () => snapshotOutcomeRun(active()),
     displayName: () => d.Cloud.displayName(),
     stageIndex: options.stageIndex,
-    loadout: () =>
-      d.UPGRADES.filter((ability) => Boolean(active().mods.owned[ability.id])).map((ability) => ({
-        id: ability.id,
-        tier: active().mods.tier[ability.id] ?? 1,
-        count: active().mods.owned[ability.id] ?? 1,
-      })),
+    loadout: () => ownedLoadout(active().mods),
     authoritativeResult: options.authoritativeResult,
     stopRecording: (summary) => {
       // The run's real end: a defeat or a final win (a campaign stage win is not an outcome).
