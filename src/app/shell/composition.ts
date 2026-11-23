@@ -40,6 +40,7 @@ import { createBrowserGamepad } from "../../input/browser-gamepad";
 import { createBrowserInput } from "../../input/browser-input";
 import { createProfileStore } from "../../persistence/profile-store";
 import type { CloudFactory } from "../../platform/cloud-factory";
+import { cloudFactoryForBuild } from "../../platform/offline-cloud";
 import type { TearBuildTarget } from "../../platform/contracts";
 import type { BuildIdentity } from "../../platform/build-identity";
 import { createPrivacyNotice } from "../../platform/browser-privacy-notice";
@@ -359,7 +360,12 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     privacyStance.sendsStatistics && privacyStance.privacyUrl !== null
       ? createPrivacyNotice({ document, storage: window.localStorage, privacyUrl: privacyStance.privacyUrl })
       : null;
-  const { Cloud, FirebaseProvider } = createCloud({
+  // A test build or the dev server never reaches a production cloud, with or without `?test=1`.
+  const buildCloud = cloudFactoryForBuild(createCloud, {
+    testBuild: __TEAR_TEST_BUILD__,
+    devServer: import.meta.env.DEV,
+  });
+  const { Cloud, FirebaseProvider } = buildCloud({
     target,
     getPlatform: () => platform.services,
     getProfile: () => PROFILE,
