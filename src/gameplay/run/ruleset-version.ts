@@ -31,9 +31,15 @@
  * keeps control, and the void run starts at 1.6 s; true form is a phase beat and its first move follows at once
  * (plans/active/CINEMATICS_OVERHAUL.md, PR 4). v24: the boss arrival runs at full speed, 120 ticks, and the boss
  * can be hit through it; its name, phase banners and named moves are one stage beat in world state, stepped
- * per tick (plans/active/CINEMATICS_OVERHAUL.md, PR 6).
+ * per tick (plans/active/CINEMATICS_OVERHAUL.md, PR 6). v25: the state a replay checks holds each actor's status
+ * effects (burn, bleed, mark, stun, root, slow and the others in `ENEMY_STATUS_FIELDS` and
+ * `PLAYER_STATUS_FIELDS`), so a replay that drifts on one is caught at its next checkpoint
+ * (plans/active/REPLAY_OVERHAUL_PLAN.md, step 5).
  */
-export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v24";
+export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v25";
+
+/** The identity while a replay's checkpoints left out status effects; historical replays only. */
+export const SIX_BIOME_PALE_PREVIEW_V24_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v24";
 
 /** The identity while the boss arrival played in slow motion behind a letterbox; historical replays only. */
 export const SIX_BIOME_PALE_PREVIEW_V23_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v23";
@@ -188,7 +194,8 @@ export const RULESET_STEPS: readonly RulesetStep[] = Object.freeze(
       version: SIX_BIOME_PALE_PREVIEW_V23_RULESET_VERSION,
       change: "the Source began its Unmake and true form in the fight",
     },
-    { version: CURRENT_RULESET_VERSION, change: "the boss arrival began running at full speed" },
+    { version: SIX_BIOME_PALE_PREVIEW_V24_RULESET_VERSION, change: "the boss arrival began running at full speed" },
+    { version: CURRENT_RULESET_VERSION, change: "replays began checking status effects such as burn" },
   ].map((step) => Object.freeze(step)),
 );
 

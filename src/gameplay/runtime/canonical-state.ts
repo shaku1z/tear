@@ -4,6 +4,67 @@ import type { EnvironmentSnapshot } from "../environment/environment-contracts";
 import { projectEnvironmentSemanticSnapshot } from "../environment/environment-projection";
 import { DeferredCanonicalState } from "./authoritative-step";
 
+/**
+ * The status effects an actor carries from tick to tick that its position, speed and health do not show:
+ * what a weapon, an ability, an enemy or the stage put on it, and that changes what happens to it later.
+ * They are in the canonical state, so a replay that drifts on one (a burn that ends a tick late) is caught
+ * at the next checkpoint. A new status is one name here, on the actor that carries it.
+ */
+export const ENEMY_STATUS_FIELDS = Object.freeze([
+  "bleedStacks",
+  "bleedT",
+  "burnT",
+  "burnDps",
+  "markT",
+  "slowStatus",
+  "stun",
+  "shield",
+  "seamT",
+  "breakPressure",
+  "breakT",
+  "driveT",
+  "boundT",
+  "severT",
+  "severMult",
+  "severTier",
+  "rooted",
+] as const);
+export const PLAYER_STATUS_FIELDS = Object.freeze([
+  "iframe",
+  "shield",
+  "rootT",
+  "slowMult",
+  "voidSlowT",
+  "hazardT",
+] as const);
+export type EnemyStatusField = (typeof ENEMY_STATUS_FIELDS)[number];
+export type PlayerStatusField = (typeof PLAYER_STATUS_FIELDS)[number];
+type StatusValues<Field extends string> = Readonly<Partial<Record<Field, number | boolean>>>;
+
+/** An actor's statuses as values, read from the live actor (numbers as they are, flags as flags). */
+export function copyStatus<Field extends string>(
+  fields: readonly Field[],
+  actor: Readonly<Partial<Record<Field, unknown>>>,
+): StatusValues<Field> {
+  const values: Partial<Record<Field, number | boolean>> = {};
+  for (const field of fields) {
+    const value = actor[field];
+    if (typeof value === "number" || typeof value === "boolean") values[field] = value;
+  }
+  return values;
+}
+
+/** The canonical form of an actor's statuses: numbers in thousandths, as positions are, flags as flags. */
+function projectStatus<Field extends string>(
+  fields: readonly Field[],
+  actor: Readonly<Partial<Record<Field, unknown>>>,
+): StatusValues<Field> {
+  const values: Partial<Record<Field, number | boolean>> = {};
+  for (const [field, value] of Object.entries(copyStatus(fields, actor)) as [Field, number | boolean][])
+    values[field] = typeof value === "number" ? fixed(value) : value;
+  return Object.freeze(values);
+}
+
 export interface RuntimeRunState {
   readonly mode: string;
   readonly wave: number;
@@ -19,13 +80,13 @@ export interface RuntimeBodyState {
   readonly vy: number;
 }
 
-export interface RuntimePlayerState extends RuntimeBodyState {
+export interface RuntimePlayerState extends RuntimeBodyState, StatusValues<PlayerStatusField> {
   readonly hp: number;
 }
 export interface RuntimeBladeState extends RuntimeBodyState {
   readonly state: string;
 }
-export interface RuntimeEnemyState extends RuntimeBodyState {
+export interface RuntimeEnemyState extends RuntimeBodyState, StatusValues<EnemyStatusField> {
   readonly _gid?: number;
   readonly kind?: string;
   readonly bossId?: string;
@@ -104,7 +165,14 @@ export interface CanonicalGameplayState {
   readonly tick: number;
   readonly input: AuthoritativeInputSnapshot;
   readonly run: Readonly<{ mode: string; wave: number; score: number; time: number; seed: number }> | null;
-  readonly player: Readonly<{ x: number; y: number; vx: number; vy: number; hp: number }> | null;
+  readonly player: Readonly<{
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    hp: number;
+    status: StatusValues<PlayerStatusField>;
+  }> | null;
   readonly blade: Readonly<{ state: string; x: number; y: number; vx: number; vy: number }> | null;
   readonly enemies: readonly Readonly<{
     id: number;
@@ -116,6 +184,7 @@ export interface CanonicalGameplayState {
     vy: number;
     hp: number;
     dead: boolean;
+    status: StatusValues<EnemyStatusField>;
     rimehound?: Readonly<CanonicalRimehoundState>;
     whiteHart?: Readonly<CanonicalWhiteHartState>;
   }>[];
@@ -175,6 +244,7 @@ export function projectCanonicalGameplayState(
             vx: fixed(player.vx),
             vy: fixed(player.vy),
             hp: fixed(player.hp),
+            status: projectStatus(PLAYER_STATUS_FIELDS, player),
           }),
     blade:
       blade === null
@@ -199,6 +269,7 @@ export function projectCanonicalGameplayState(
             vy: fixed(enemy.vy),
             hp: fixed(enemy.hp),
             dead: enemy.dead,
+            status: projectStatus(ENEMY_STATUS_FIELDS, enemy),
             ...(enemy.kind === "rimehound"
               ? {
                   rimehound: Object.freeze({
@@ -294,7 +365,16 @@ export function captureCanonicalGameplayState(
       ? null
       : { mode: run.mode, wave: run.wave, score: run.score, runTime: run.runTime, runSeed: run.runSeed };
   const playerValue =
-    player === null ? null : { x: player.x, y: player.y, vx: player.vx, vy: player.vy, hp: player.hp };
+    player === null
+      ? null
+      : {
+          x: player.x,
+          y: player.y,
+          vx: player.vx,
+          vy: player.vy,
+          hp: player.hp,
+          ...copyStatus(PLAYER_STATUS_FIELDS, player),
+        };
   const bladeValue = blade === null ? null : { state: blade.state, x: blade.x, y: blade.y, vx: blade.vx, vy: blade.vy };
   return new DeferredCanonicalState(() =>
     projectCanonicalGameplayState(tick, input, runValue, playerValue, bladeValue, enemies, environment, tutorial),
