@@ -13,7 +13,7 @@ This checklist is the deletion contract for the legacy screen ranges. A row is p
 | Profile — Passport | Identity/sync status, currencies, achievement chip, rare showcase seals, rename cooldown label, sign-in/out availability | Cloud/profile lookups and auth/rename actions |
 | Profile — Bests | Empty-state PLAY action, finest record, full record ledger | Collect/sort best records and format time/score |
 | Profile — Stats | Twelve glyph/accent tiles and biome/boss journey markers | Entry count-up value and profile-stat lookups |
-| Profile — Replays | Vault rows, preview IDs, availability and WATCH actions, scroll | Vault loading/deletion/publish coordination stays outside rendering |
+| Profile — Replays | One REPLAYS list: ALL/BESTS/PINNED filters, IMPORT A REPLAY FILE, rows with preview IDs and WATCH/PIN/SHARE/DOWNLOAD/DELETE, scroll | Reading the replay store, pin/delete/share and file import stay outside rendering |
 | Achievements | Three daily cards/reset clock/rewards, shards/completion/NEXT UP strip, category counts, rarity/locked cards, progress and both rewards, scroll | Daily/achievement progress and reward calculations; no profile writes in renderer |
 | Leaderboards — Global | Mode+difficulty selectors, cloud/sign-in/loading/empty messages, top-three podium, replay actions, ranks 4+, pinned own rank | Async fetch/cache, user identity, replay loading, board key selection |
 | Leaderboards — Feed | Replay rows, badges/timestamps, thumbnail preview IDs, WATCH actions and scroll | Remote/local feed loading and replay envelope validation |

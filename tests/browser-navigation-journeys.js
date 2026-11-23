@@ -1,6 +1,6 @@
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
-const { STATE_WAIT_MS } = require("./browser-waits");
+const { STATE_WAIT_MS, pollEvery } = require("./browser-waits");
 
 withJourney(
   { name: "navigation journeys", tutorialSkipped: true },
@@ -10,8 +10,30 @@ withJourney(
       assert.ok(snapshot, "built artifact must expose the read-only setup selection summary in PANTHEON_DEBUG");
       return snapshot;
     }
-    async function settleInput() {
-      await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    // A setup choice counts once the game shows it selected, not after a number of frames: a click the
+    // game has not acted on yet must not be followed by BEGIN, which would start the previous choice.
+    // Click again only while the choice is still unchanged, as clickAndWait does for a screen.
+    async function choose(x, y, field, value) {
+      const selected = () => page.evaluate((key) => window.__PANTHEON_TEST.state().setup?.[key], field);
+      const deadline = Date.now() + STATE_WAIT_MS;
+      await page.mouse.click(x, y);
+      for (;;) {
+        try {
+          await page.waitForFunction(
+            ({ key, expected }) => window.__PANTHEON_TEST.state().setup?.[key] === expected,
+            { key: field, expected: value },
+            { timeout: pollEvery(1_000) },
+          );
+          return;
+        } catch (error) {
+          if (error?.name !== "TimeoutError") throw error;
+          if (Date.now() > deadline)
+            throw new Error(`setup ${field} never became ${value} (it is ${String(await selected())})`, {
+              cause: error,
+            });
+          await page.mouse.click(x, y);
+        }
+      }
     }
 
     const hubRoutes = [
@@ -34,12 +56,9 @@ withJourney(
 
     // Exercise all selectable War Table columns, including the conditional boss picker.
     await clickAndWait(260, 360, "setup");
-    await page.mouse.click(430, 195 + 2 * 60); // GAUNTLET
-    await settleInput();
-    await page.mouse.click(820, 196 + 2 * 60); // HARD
-    await settleInput();
-    await page.mouse.click(1180, 196 + 3 * 60); // CHAINBLADE
-    await settleInput();
+    await choose(430, 195 + 2 * 60, "mode", "gauntlet");
+    await choose(820, 196 + 2 * 60, "difficulty", "hard");
+    await choose(1180, 196 + 3 * 60, "weapon", "chainblade");
     assert.deepEqual(await setupSnapshot(), {
       mode: "gauntlet",
       difficulty: "hard",
@@ -49,10 +68,8 @@ withJourney(
     await clickAndWait(800, 850, "menu");
 
     await clickAndWait(260, 360, "setup");
-    await page.mouse.click(430, 509); // BOSS ONLY (first compact DEV row)
-    await settleInput();
-    await page.mouse.click(829, 683); // THE WARDEN (first boss after SHUFFLE in the six-boss published row)
-    await settleInput();
+    await choose(430, 509, "mode", "bossonly"); // BOSS ONLY (first compact DEV row)
+    await choose(829, 683, "boss", "warden"); // THE WARDEN (first boss after SHUFFLE in the six-boss published row)
     assert.deepEqual(await setupSnapshot(), {
       mode: "bossonly",
       difficulty: "hard",
@@ -78,8 +95,7 @@ withJourney(
       console.log(`navigation journey: starting ${mode}`);
       await boot();
       await clickAndWait(260, 360, "setup");
-      await page.mouse.click(430, modeY);
-      await settleInput();
+      await choose(430, modeY, "mode", mode);
       await page.mouse.click(800, 758);
       try {
         await page.waitForFunction(

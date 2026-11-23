@@ -33,7 +33,7 @@ import { isAppScreen, type AppScreen } from "../../domain/screen-catalog";
 
 type RendererBase = Omit<LiveScreenRendererOptions, "dispatch" | "renderPreview">;
 type ReplayBase = Omit<ReplayScreenServices, "renderers" | "categories" | "fallbackCategory" | "specialColor">;
-type LibraryBase = Omit<LibraryScreenServices, "renderers" | "enterReplay" | "enterGhostTheater">;
+type LibraryBase = Omit<LibraryScreenServices, "renderers" | "enterReplay" | "watchRecord">;
 type SettingsBase = Omit<SettingsRenameServices, "renderers" | "setCodexGuide">;
 type RunServicesBase = Omit<
   RunScreenServices,
@@ -116,23 +116,7 @@ export function createLiveScreenPresentationComposition(
     ...options.library,
     renderers: renderer,
     enterReplay: (record, from) => replay.enter(record, isAppScreen(from) ? from : "profile"),
-    enterGhostTheater: (id) => replay.enterGhostCapsule(id, "profile"),
-    enterCareerSource: async (id, command, expectedManifestHash) => {
-      if (command === "race") {
-        await options.library.chase?.chooseRace?.(id, expectedManifestHash);
-        return;
-      }
-      if (command === "chase") {
-        await options.library.chase?.choose(id, expectedManifestHash);
-        return;
-      }
-      if (command === "download") {
-        options.actions.ghostFiles.downloadArchive(id);
-        return;
-      }
-      const result = await replay.enterGhostCapsule(id, "profile");
-      if (result.kind === "refused") throw new Error(result.detail);
-    },
+    watchRecord: (key) => replay.watchRecord(key, "profile"),
   });
   const settings: SettingsRenameAdapters = createLiveSettingsRenameAdapters({
     ...options.settings,

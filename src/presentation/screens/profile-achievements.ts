@@ -1,8 +1,13 @@
-import { createCareerArchiveRenderer } from "./career-archive";
 import type { AchievementsScreenView, ProfileScreenView, ScreenRenderContext } from "./contracts";
-import { clipBody, page, pageFooter, replayRow, tabs } from "./screen-primitives";
+import { chips, clipBody, page, pageFooter, replayRow, tabs } from "./screen-primitives";
 import { createCompactProfile } from "./compact-profile";
-import { profileListEmptyState } from "./profile-list-empty-state";
+import {
+  REPLAY_IMPORT_LABEL,
+  REPLAY_TOOLBAR_HEIGHT,
+  profileListEmptyState,
+  replayRowActions,
+  type ReplayRowActionId,
+} from "./profile-replay-list";
 import { drawBannerBand } from "../cosmetic-banner";
 
 const PROFILE_HUE = "#b06cff";
@@ -16,32 +21,24 @@ const PASSPORT_BANNER_HEIGHT = 8;
 /** First y under the profile tab strip; the snapshot's scroll bounds use the same value. */
 export const PROFILE_CONTENT_TOP = 306;
 
-const ARCHIVE_STATUS: Readonly<Record<string, string>> = Object.freeze({
-  idle: "",
-  unavailable: "Importing replay files isn't available in this browser.",
-  picking: "Choosing a file…",
-  validating: "Checking the file…",
-  ready: "Ready to restore.",
-  restoring: "Restoring…",
-  "reselect-required": "Choose the file again to continue.",
-  complete: "Restored to this device.",
-  cancelled: "Import cancelled.",
-  failed: "That file couldn't be restored.",
-  "download-requested": "Download started.",
+/** Where each row action sits on a desktop row, from the row's action column; PIN and DELETE use short labels. */
+const ROW_SLOTS: Readonly<
+  Record<ReplayRowActionId, Readonly<{ x: number; y: number; w: number; h: number; label?: string }>>
+> = Object.freeze({
+  watch: { x: 0, y: 18, w: 110, h: 40 },
+  pin: { x: 118, y: 18, w: 78, h: 40 },
+  share: { x: 204, y: 18, w: 104, h: 40 },
+  delete: { x: 316, y: 18, w: 64, h: 40, label: "✕" },
+  download: { x: 0, y: 62, w: 116, h: 28 },
 });
 
 export function createProfileAchievementRenderers(context: ScreenRenderContext) {
   const { ui } = context;
-  const career = createCareerArchiveRenderer(context);
   // Phone landscape (compact density) composes these screens as compact pages. Only touch reaches
   // compact density, so production builds (no touch while mobile is paused) leave the layout out.
   const compact = __TEAR_MOBILE__ ? createCompactProfile(context) : null;
 
   function profile(view: ProfileScreenView): void {
-    if (view.career) {
-      career(view.career);
-      return;
-    }
     if (compact !== null && ui.density.compact) {
       compact.profile(view);
       return;
@@ -55,8 +52,8 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
       bottom = layout.bodyBottom;
     let top = PROFILE_CONTENT_TOP;
 
-    if (view.tab === "vault") top = vaultToolbar(view, top);
-    const listEmpty = (view.tab === "replays" || view.tab === "vault") && (view.replays?.length ?? 0) === 0;
+    if (view.tab === "replays") top = replayToolbar(view, top);
+    const listEmpty = view.tab === "replays" && (view.replays?.length ?? 0) === 0;
     if (view.message && !listEmpty) {
       ui.textBox(canvas, view.message, context.width / 2, top + 4, listWidth, {
         size: ui.t.type.caption,
@@ -67,12 +64,12 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
       top += 24;
     }
 
-    if ((view.tab === "replays" || view.tab === "vault") && view.replays) {
+    if (view.tab === "replays" && view.replays) {
       const rowHeight = 96;
       if (listEmpty) {
         const empty = profileListEmptyState(view);
         const ctaY = ui.emptyState(canvas, empty.glyph, empty.line, context.width / 2, top + 110, empty.detail, 720);
-        if (view.tab === "replays")
+        if (empty.play)
           context.enqueue({
             x: context.width / 2 - 130,
             y: ctaY,
@@ -91,59 +88,18 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
           if (y + rowHeight < top - 8 || y > bottom + 8) return;
           replayRow(context, replay, left, y, listWidth, replay.pinned ? "#e0a326" : undefined, 410);
           const actionsX = left + listWidth - 392;
-          if (view.tab === "vault" && replay.canDownloadArchive)
+          for (const row of replayRowActions(replay)) {
+            const slot = ROW_SLOTS[row.id];
             enqueueRow({
-              x: actionsX,
-              y: y + 62,
-              w: 116,
-              h: 28,
-              label: "DOWNLOAD",
-              size: ui.t.type.micro,
-              action: { type: "profile.downloadGhostArchive", id: replay.id },
-            });
-          enqueueRow({
-            x: actionsX,
-            y: y + 18,
-            w: 110,
-            h: 40,
-            size: ui.t.type.label,
-            label: view.tab === "vault" ? "◆ THEATER" : "▶  WATCH",
-            enabled: replay.available,
-            ...(view.tab === "vault" && replay.theaterUnavailable ? { label: "CAN'T PLAY" } : {}),
-            action:
-              view.tab === "vault"
-                ? { type: "profile.watchGhostCapsule", id: replay.id }
-                : { type: "profile.watchReplay", id: replay.id },
-          });
-          if (replay.local) {
-            enqueueRow({
-              x: actionsX + 118,
-              y: y + 18,
-              w: 78,
-              h: 40,
-              label: replay.pinned ? "★" : "PIN",
-              selected: replay.pinned,
-              size: ui.t.type.label,
-              action: { type: "profile.pinReplay", id: replay.id, pinned: !replay.pinned },
-            });
-            enqueueRow({
-              x: actionsX + 204,
-              y: y + 18,
-              w: 104,
-              h: 40,
-              label: replay.shared ? "SHARED" : "SHARE",
-              selected: replay.shared,
-              size: ui.t.type.label,
-              enabled: !replay.shared,
-              action: { type: "profile.publishReplay", id: replay.id },
-            });
-            enqueueRow({
-              x: actionsX + 316,
-              y: y + 18,
-              w: 64,
-              h: 40,
-              label: "✕",
-              action: { type: "profile.deleteReplay", id: replay.id },
+              x: actionsX + slot.x,
+              y: y + slot.y,
+              w: slot.w,
+              h: slot.h,
+              label: row.id === "pin" && row.selected === true ? "★" : (slot.label ?? row.label),
+              size: slot.h < 40 ? ui.t.type.micro : ui.t.type.label,
+              ...(row.enabled === undefined ? {} : { enabled: row.enabled }),
+              ...(row.selected === undefined ? {} : { selected: row.selected }),
+              action: row.action,
             });
           }
         });
@@ -256,49 +212,28 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
     pageFooter(context, { canScrollUp: view.canScrollUp, canScrollDown: view.canScrollDown });
   }
 
-  /** Vault import controls as one toolbar under the tabs; returns the next free y. */
-  function vaultToolbar(view: ProfileScreenView, top: number): number {
-    const { canvas } = context,
-      left = context.width / 2 - 560;
-    const archive = view.archive;
-    if (archive === undefined) return top;
-    let x = left;
-    const button = (
-      label: string,
-      w: number,
-      action: Parameters<ScreenRenderContext["enqueue"]>[0]["action"],
-      enabled = true,
-    ): void => {
-      context.enqueue({ x, y: top, w, h: 36, label, size: ui.t.type.label, enabled, action });
-      x += w + 10;
-    };
-    button("IMPORT A REPLAY FILE", 250, { type: "profile.pickGhostArchive" }, archive.canPick);
-    if (archive.jobId !== undefined && archive.revision !== undefined) {
-      if (archive.canReselect) button("CHOOSE AGAIN", 170, { type: "profile.reselectGhostArchive", id: archive.jobId });
-      if (archive.canRestore)
-        button(archive.pairedCapsuleIds ? "RESTORE BOTH" : "RESTORE", 150, {
-          type: "profile.restoreGhostArchive",
-          id: archive.jobId,
-          revision: archive.revision,
-        });
-      if (archive.canCancel)
-        button("CANCEL", 120, { type: "profile.cancelGhostRestore", id: archive.jobId, revision: archive.revision });
-    }
-    if (archive.canCancelSelection) button("CANCEL", 120, { type: "profile.cancelGhostArchiveSelection" });
-    const status = [
-      ARCHIVE_STATUS[archive.status] ?? "",
-      archive.pairedCapsuleIds ? "Includes the scored run and its finale." : "",
-    ]
-      .filter(Boolean)
-      .join(" ");
-    if (status)
-      ui.textBox(canvas, status, left, top + 56, 1120, {
-        size: ui.t.type.caption,
-        alpha: ui.t.alpha.soft,
-        maxLines: 1,
+  /** The REPLAYS toolbar under the tabs: the filters, and IMPORT A REPLAY FILE on the right; returns the next free y. */
+  function replayToolbar(view: ProfileScreenView, top: number): number {
+    const left = context.width / 2 - 560;
+    chips(context, view.replayFilters ?? [], (id) => ({ type: "profile.filterReplays", id }), {
+      y: top,
+      width: 110,
+      height: 36,
+      left,
+      buttons: true,
+    });
+    if (view.canImport === true)
+      context.enqueue({
+        x: left + 1120 - 250,
+        y: top,
+        w: 250,
+        h: 36,
+        label: REPLAY_IMPORT_LABEL,
+        size: ui.t.type.label,
+        action: { type: "profile.importReplay" },
       });
-    ui.divider(canvas, left, top + (status ? 70 : 48), 1120, 0.14);
-    return top + (status ? 84 : 62);
+    ui.divider(context.canvas, left, top + 46, 1120, 0.14);
+    return top + REPLAY_TOOLBAR_HEIGHT;
   }
 
   function passport(view: ProfileScreenView): void {

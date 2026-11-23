@@ -942,14 +942,14 @@
           "replay"
         ],
         "owner": "Replay overhaul owner",
-        "reason": "Player copy of the old replay screens until the One Replays PR replaces them with one list.",
+        "reason": "The profile card's code name, which players never see.",
         "testEvidence": [
           "check:terminology",
           "check:containment"
         ],
         "expiry": {
-          "checkpoint": "REPLAY-ONE-LIST",
-          "condition": "The One Replays PR (plans/active/REPLAY_OVERHAUL_PLAN.md) folds the old replay screens into one REPLAYS list and removes these names from this file."
+          "checkpoint": "PROFILE-CARD-NAME",
+          "condition": "The profile card's code name (its view field, its renderer and its cosmetics look) is an old replay name that players never see. Renaming the card in code removes it from this file."
         }
       },
       {
@@ -959,31 +959,14 @@
           "replay"
         ],
         "owner": "Replay overhaul owner",
-        "reason": "Player copy of the old replay screens until the One Replays PR replaces them with one list.",
+        "reason": "The profile card's code name, which players never see.",
         "testEvidence": [
           "check:terminology",
           "check:containment"
         ],
         "expiry": {
-          "checkpoint": "REPLAY-ONE-LIST",
-          "condition": "The One Replays PR (plans/active/REPLAY_OVERHAUL_PLAN.md) folds the old replay screens into one REPLAYS list and removes these names from this file."
-        }
-      },
-      {
-        "id": "compat-replay-src-presentation-screens-career-archive",
-        "pathPattern": "src/presentation/screens/career-archive.ts",
-        "termIds": [
-          "replay"
-        ],
-        "owner": "Replay overhaul owner",
-        "reason": "Player copy of the old replay screens until the One Replays PR replaces them with one list.",
-        "testEvidence": [
-          "check:terminology",
-          "check:containment"
-        ],
-        "expiry": {
-          "checkpoint": "REPLAY-ONE-LIST",
-          "condition": "The One Replays PR (plans/active/REPLAY_OVERHAUL_PLAN.md) folds the old replay screens into one REPLAYS list and removes these names from this file."
+          "checkpoint": "PROFILE-CARD-NAME",
+          "condition": "The profile card's code name (its view field, its renderer and its cosmetics look) is an old replay name that players never see. Renaming the card in code removes it from this file."
         }
       },
       {
@@ -993,31 +976,14 @@
           "replay"
         ],
         "owner": "Replay overhaul owner",
-        "reason": "Player copy of the old replay screens until the One Replays PR replaces them with one list.",
+        "reason": "The profile card's code name, which players never see.",
         "testEvidence": [
           "check:terminology",
           "check:containment"
         ],
         "expiry": {
-          "checkpoint": "REPLAY-ONE-LIST",
-          "condition": "The One Replays PR (plans/active/REPLAY_OVERHAUL_PLAN.md) folds the old replay screens into one REPLAYS list and removes these names from this file."
-        }
-      },
-      {
-        "id": "compat-replay-src-presentation-screens-leaderboards-replays",
-        "pathPattern": "src/presentation/screens/leaderboards-replays.ts",
-        "termIds": [
-          "replay"
-        ],
-        "owner": "Replay overhaul owner",
-        "reason": "Player copy of the old replay screens until the One Replays PR replaces them with one list.",
-        "testEvidence": [
-          "check:terminology",
-          "check:containment"
-        ],
-        "expiry": {
-          "checkpoint": "REPLAY-ONE-LIST",
-          "condition": "The One Replays PR (plans/active/REPLAY_OVERHAUL_PLAN.md) folds the old replay screens into one REPLAYS list and removes these names from this file."
+          "checkpoint": "PROFILE-CARD-NAME",
+          "condition": "The profile card's code name (its view field, its renderer and its cosmetics look) is an old replay name that players never see. Renaming the card in code removes it from this file."
         }
       },
       {
@@ -1027,14 +993,14 @@
           "replay"
         ],
         "owner": "Replay overhaul owner",
-        "reason": "Player copy of the old replay screens until the One Replays PR replaces them with one list.",
+        "reason": "Names the old replay stores and engines while they still exist.",
         "testEvidence": [
           "check:terminology",
           "check:containment"
         ],
         "expiry": {
-          "checkpoint": "REPLAY-ONE-LIST",
-          "condition": "The One Replays PR (plans/active/REPLAY_OVERHAUL_PLAN.md) folds the old replay screens into one REPLAYS list and removes these names from this file."
+          "checkpoint": "REPLAY-GHOST-REMOVAL",
+          "condition": "The replay plan's PR that removes the old replay stores (plans/active/REPLAY_OVERHAUL_PLAN.md) deletes the stores and engines this file names."
         }
       },
       {
@@ -1044,14 +1010,14 @@
           "replay"
         ],
         "owner": "Replay overhaul owner",
-        "reason": "Player copy of the old replay screens until the One Replays PR replaces them with one list.",
+        "reason": "Names the old replay stores and engines while they still exist.",
         "testEvidence": [
           "check:terminology",
           "check:containment"
         ],
         "expiry": {
-          "checkpoint": "REPLAY-ONE-LIST",
-          "condition": "The One Replays PR (plans/active/REPLAY_OVERHAUL_PLAN.md) folds the old replay screens into one REPLAYS list and removes these names from this file."
+          "checkpoint": "REPLAY-GHOST-REMOVAL",
+          "condition": "The replay plan's PR that removes the old replay stores (plans/active/REPLAY_OVERHAUL_PLAN.md) deletes the stores and engines this file names."
         }
       },
       {
@@ -1061,14 +1027,14 @@
           "replay"
         ],
         "owner": "Replay overhaul owner",
-        "reason": "Player copy of the old replay screens until the One Replays PR replaces them with one list.",
+        "reason": "Names the old replay stores and engines while they still exist.",
         "testEvidence": [
           "check:terminology",
           "check:containment"
         ],
         "expiry": {
-          "checkpoint": "REPLAY-ONE-LIST",
-          "condition": "The One Replays PR (plans/active/REPLAY_OVERHAUL_PLAN.md) folds the old replay screens into one REPLAYS list and removes these names from this file."
+          "checkpoint": "REPLAY-GHOST-REMOVAL",
+          "condition": "The replay plan's PR that removes the old replay stores (plans/active/REPLAY_OVERHAUL_PLAN.md) deletes the stores and engines this file names."
         }
       },
       {
@@ -1078,48 +1044,14 @@
           "replay"
         ],
         "owner": "Replay overhaul owner",
-        "reason": "Player copy of the old replay screens until the One Replays PR replaces them with one list.",
+        "reason": "Names the old replay stores and engines while they still exist.",
         "testEvidence": [
           "check:terminology",
           "check:containment"
         ],
         "expiry": {
-          "checkpoint": "REPLAY-ONE-LIST",
-          "condition": "The One Replays PR (plans/active/REPLAY_OVERHAUL_PLAN.md) folds the old replay screens into one REPLAYS list and removes these names from this file."
-        }
-      },
-      {
-        "id": "compat-replay-src-app-interface-live-screen-actions",
-        "pathPattern": "src/app/interface/live-screen-actions.ts",
-        "termIds": [
-          "replay"
-        ],
-        "owner": "Replay overhaul owner",
-        "reason": "Player copy of the old replay screens until the One Replays PR replaces them with one list.",
-        "testEvidence": [
-          "check:terminology",
-          "check:containment"
-        ],
-        "expiry": {
-          "checkpoint": "REPLAY-ONE-LIST",
-          "condition": "The One Replays PR (plans/active/REPLAY_OVERHAUL_PLAN.md) folds the old replay screens into one REPLAYS list and removes these names from this file."
-        }
-      },
-      {
-        "id": "compat-replay-src-app-interface-screen-action-bindings",
-        "pathPattern": "src/app/interface/screen-action-bindings.ts",
-        "termIds": [
-          "replay"
-        ],
-        "owner": "Replay overhaul owner",
-        "reason": "Player copy of the old replay screens until the One Replays PR replaces them with one list.",
-        "testEvidence": [
-          "check:terminology",
-          "check:containment"
-        ],
-        "expiry": {
-          "checkpoint": "REPLAY-ONE-LIST",
-          "condition": "The One Replays PR (plans/active/REPLAY_OVERHAUL_PLAN.md) folds the old replay screens into one REPLAYS list and removes these names from this file."
+          "checkpoint": "REPLAY-GHOST-REMOVAL",
+          "condition": "The replay plan's PR that removes the old replay stores (plans/active/REPLAY_OVERHAUL_PLAN.md) deletes the stores and engines this file names."
         }
       },
       {
@@ -1129,14 +1061,14 @@
           "replay"
         ],
         "owner": "Replay overhaul owner",
-        "reason": "Player copy of the old replay screens until the One Replays PR replaces them with one list.",
+        "reason": "Describes the old replay screens until the replay plan's docs PR rewrites it.",
         "testEvidence": [
           "check:terminology",
           "check:containment"
         ],
         "expiry": {
-          "checkpoint": "REPLAY-ONE-LIST",
-          "condition": "The One Replays PR (plans/active/REPLAY_OVERHAUL_PLAN.md) folds the old replay screens into one REPLAYS list and removes these names from this file."
+          "checkpoint": "REPLAY-DOCS",
+          "condition": "The replay plan's docs PR (plans/active/REPLAY_OVERHAUL_PLAN.md) rewrites the old names this document still uses."
         }
       },
       {
@@ -1146,14 +1078,14 @@
           "replay"
         ],
         "owner": "Replay overhaul owner",
-        "reason": "Player copy of the old replay screens until the One Replays PR replaces them with one list.",
+        "reason": "Describes the old replay screens until the replay plan's docs PR rewrites it.",
         "testEvidence": [
           "check:terminology",
           "check:containment"
         ],
         "expiry": {
-          "checkpoint": "REPLAY-ONE-LIST",
-          "condition": "The One Replays PR (plans/active/REPLAY_OVERHAUL_PLAN.md) folds the old replay screens into one REPLAYS list and removes these names from this file."
+          "checkpoint": "REPLAY-DOCS",
+          "condition": "The replay plan's docs PR (plans/active/REPLAY_OVERHAUL_PLAN.md) rewrites the old names this document still uses."
         }
       },
       {

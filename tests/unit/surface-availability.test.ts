@@ -39,7 +39,6 @@ describe("surface availability policy", () => {
     const engineering: readonly ScreenAction[] = [
       { type: "setup.start", race: true },
       { type: "setup.selectBoss", id: "warden" },
-      { type: "career.control", command: "race" },
       { type: "replay.editor.toggle" },
     ];
     for (const action of engineering) {
@@ -51,14 +50,12 @@ describe("surface availability policy", () => {
     const player: readonly ScreenAction[] = [
       { type: "setup.start" },
       { type: "setup.selectMode", id: "endless" },
-      { type: "navigate", to: "profile", tab: "vault" },
-      { type: "career.control", command: "watch" },
-      { type: "career.control", command: "chase" },
-      { type: "career.control", command: "download" },
+      { type: "navigate", to: "profile", tab: "replays" },
       { type: "replay.practice" },
-      { type: "profile.watchGhostCapsule", id: "c" },
-      { type: "profile.downloadGhostArchive", id: "c" },
-      { type: "profile.restoreGhostArchive", id: "j", revision: 1 },
+      { type: "profile.filterReplays", id: "pinned" },
+      { type: "profile.watchReplay", id: "r" },
+      { type: "profile.downloadReplay", id: "r" },
+      { type: "profile.importReplay" },
       { type: "profile.publishReplay", id: "r" },
       { type: "leaderboards.watchReplay", id: "r" },
       { type: "chase.control", command: "toggle" },

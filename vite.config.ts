@@ -247,7 +247,6 @@ export default defineConfig(({ mode, command }) => {
                   "assets/tutorial-gold-reference-*.js",
                   "assets/tutorial-gold-corpus-*.js",
                   "assets/worker-tutorial-gold-*.js",
-                  "assets/career-archive-worker-*.js",
                   "assets/live-ghost-reference-worker-*.js",
                   "assets/firebase-sdk-*.js",
                   ...definition.staticPages.map((page) => `${page}.html`),
@@ -262,7 +261,7 @@ export default defineConfig(({ mode, command }) => {
                     options: { cacheName: "tear-tutorial-gold", expiration: { maxEntries: 6 } },
                   },
                   {
-                    urlPattern: /\/assets\/(?:career-archive|live-ghost-reference)-worker-[\w-]+\.js$/u,
+                    urlPattern: /\/assets\/live-ghost-reference-worker-[\w-]+\.js$/u,
                     handler: "CacheFirst",
                     options: { cacheName: "tear-workers", expiration: { maxEntries: 6 } },
                   },

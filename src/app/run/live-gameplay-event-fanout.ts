@@ -15,7 +15,6 @@ export interface LiveGameplayEventObservers {
 
 export interface LiveGameplayEventFanOutOptions {
   readonly events: TearGameplayEventBus;
-  readonly career: Readonly<{ observe: GameplayEventObserver }>;
   readonly recorder: GhostLiveRecorder | null;
   readonly nextEventSequence: () => number;
   /** Whether the event may advance persistent biome telemetry. */
@@ -29,15 +28,14 @@ export interface LiveGameplayEventFanOut {
 
 /**
  * Installs the live runtime's one gameplay-event subscription. Observers run in
- * a fixed order: ghost chase, career, the Ghost V3 causal
+ * a fixed order: ghost chase, the Ghost V3 causal
  * stream, then biome telemetry.
  */
 export function subscribeLiveGameplayEventFanOut(options: LiveGameplayEventFanOutOptions): LiveGameplayEventFanOut {
-  const { career, recorder } = options;
+  const { recorder } = options;
   let observeChaseEvent: GameplayEventObserver = () => undefined;
   options.events.subscribe((event) => {
     observeChaseEvent(event);
-    career.observe(event);
     recorder?.record("events", event.tick, createLiveGhostCausalEvent(event, options.nextEventSequence()));
     if (options.recordsTelemetry()) {
       executeEnvironmentTelemetryIntents(

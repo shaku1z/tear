@@ -27,6 +27,8 @@ function harness(options: Readonly<{ put?: ReplayRecordPut; open?: "ok" | "block
     },
     entries: () => Promise.resolve([]),
     read: () => Promise.resolve(null),
+    pin: () => Promise.resolve("done"),
+    remove: () => Promise.resolve("done"),
     close: () => undefined,
   };
   const tap = (): LiveReplayTap => ({

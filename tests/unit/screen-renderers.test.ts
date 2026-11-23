@@ -314,33 +314,40 @@ describe("legacy screen renderer registry", () => {
     expect(new Set(found).size).toBe(18);
   });
 
-  it("keeps local Vault controls stable below the import toolbar", () => {
+  it("draws the REPLAYS filters and import above the list, and the rows below them", () => {
     const controls: ScreenControl[] = [],
       renderer = createScreenRenderers(createControlContext(controls));
-    const local = {
-      id: "profile" as const,
-      tab: "vault",
+    renderer.profile({
+      id: "profile",
+      tab: "replays",
       tabs: [],
       name: "Guest",
       signedIn: false,
       stats: [],
-      archive: { status: "idle" as const, detail: "Local files", canPick: true },
-      replays: [
-        {
-          id: "local-source",
-          title: "Local capsule",
-          detail: "Local bytes",
-          canDownloadArchive: true,
-          available: true,
-        },
+      canImport: true,
+      replayFilters: [
+        { id: "all", label: "ALL", selected: true },
+        { id: "bests", label: "BESTS" },
+        { id: "pinned", label: "PINNED" },
       ],
-    };
-    renderer.profile(local);
-    // The vault toolbar sits under the tabs (y 306); rows start below it (306 + 62).
+      replays: [{ id: "kept", title: "ENDLESS · NORMAL", detail: "wave 4", canDownload: true, available: true }],
+    });
+    const filters = controls.filter((control) => control.action.type === "profile.filterReplays");
+    expect(filters.map((control) => [control.label, control.y, control.selected])).toEqual([
+      ["ALL", 306, true],
+      ["BESTS", 306, undefined],
+      ["PINNED", 306, undefined],
+    ]);
+    expect(controls.find((control) => control.action.type === "profile.importReplay")).toMatchObject({
+      label: "IMPORT A REPLAY FILE",
+      x: 1110,
+      y: 306,
+    });
+    // The toolbar is 52 tall, so the first row starts at 358.
     expect(controls.find((control) => control.label === "DOWNLOAD")).toMatchObject({
       x: 968,
-      y: 430,
-      action: { id: "local-source" },
+      y: 420,
+      action: { type: "profile.downloadReplay", id: "kept" },
     });
   });
   it("pauses the Tutorial on the current lesson with plain actions and only reached lessons", () => {
@@ -1155,7 +1162,7 @@ describe("legacy screen renderer registry", () => {
     expect(labels(false)).not.toContain("RESET DEFAULTS");
   });
 
-  it("uses the oracle replay-vault row geometry and a profile-specific watch intent", () => {
+  it("uses the oracle replay row geometry under the REPLAYS toolbar and a profile-specific watch intent", () => {
     const controls: ScreenControl[] = [];
     const renderer = createScreenRenderers(createRenderContext(controls));
     renderer.profile({
@@ -1168,7 +1175,7 @@ describe("legacy screen renderer registry", () => {
       replays: [
         {
           id: "local-1",
-          title: "You — Endless · normal",
+          title: "ENDLESS · NORMAL",
           detail: "wave 4 · 900 pts",
           available: true,
           local: true,
@@ -1179,313 +1186,89 @@ describe("legacy screen renderer registry", () => {
     });
     expect(controls.find((control) => control.action.type === "profile.watchReplay")).toMatchObject({
       x: 968,
-      y: 324,
+      y: 376,
       w: 110,
       h: 40,
     });
     expect(controls.find((control) => control.action.type === "profile.pinReplay")).toMatchObject({
       x: 1086,
-      y: 324,
+      y: 376,
       w: 78,
       h: 40,
     });
+    expect(controls.some((control) => control.action.type === "profile.importReplay")).toBe(false);
   });
 
-  it("renders Ghost Vault custody rows without exposing legacy replay mutations", () => {
+  it("offers each row only the actions its run supports", () => {
     const controls: ScreenControl[] = [];
-    const renderer = createScreenRenderers(createRenderContext(controls));
-    renderer.profile({
+    createScreenRenderers(createRenderContext(controls)).profile({
       id: "profile",
-      tab: "vault",
-      tabs: [{ id: "vault", label: "VAULT", selected: true }],
-      name: "Guest",
-      signedIn: false,
-      stats: [],
-      replays: [
-        {
-          id: "capsule:run-1",
-          title: "Ghost V3 - COACHING",
-          detail: "COMPLETE - 3 CHUNKS",
-          available: false,
-          badge: "DURABLE CAPSULE",
-        },
-      ],
-    });
-    expect(controls.find((control) => control.action.type === "profile.watchGhostCapsule")).toMatchObject({
-      enabled: false,
-      label: "◆ THEATER",
-      action: { type: "profile.watchGhostCapsule", id: "capsule:run-1" },
-    });
-    expect(controls.some((control) => control.action.type === "profile.pinReplay")).toBe(false);
-    expect(controls.some((control) => control.action.type === "profile.deleteReplay")).toBe(false);
-  });
-
-  it("keeps archive selection and exact restore controls outside the empty/populated Vault row clip", () => {
-    for (const populated of [false, true]) {
-      const controls: ScreenControl[] = [],
-        renderer = createScreenRenderers(createRenderContext(controls));
-      renderer.profile({
-        id: "profile",
-        tab: "vault",
-        tabs: [],
-        name: "Guest",
-        signedIn: false,
-        stats: [],
-        replays: populated
-          ? [{ id: "healthy", title: "Ghost", detail: "Complete", available: true, canDownloadArchive: true }]
-          : [],
-        archive: {
-          status: "ready",
-          detail: "Preview only",
-          canPick: true,
-          jobId: "intent",
-          revision: 7,
-          canReselect: true,
-          canRestore: true,
-          canCancel: true,
-        },
-      });
-      expect(controls.find((control) => control.action.type === "profile.pickGhostArchive")).toMatchObject({
-        y: 306,
-        enabled: true,
-      });
-      expect(controls.find((control) => control.action.type === "profile.restoreGhostArchive")).toMatchObject({
-        y: 306,
-        action: { id: "intent", revision: 7 },
-      });
-      expect(controls.find((control) => control.action.type === "profile.cancelGhostRestore")).toMatchObject({
-        action: { id: "intent", revision: 7 },
-      });
-      if (populated)
-        expect(controls.find((control) => control.action.type === "profile.downloadGhostArchive")).toMatchObject({
-          y: 452,
-          w: 116,
-        });
-    }
-  });
-  it("offers the single download and names RESTORE BOTH for an imported linked file", () => {
-    const controls: ScreenControl[] = [],
-      renderer = createScreenRenderers(createRenderContext(controls));
-    renderer.profile({
-      id: "profile",
-      tab: "vault",
+      tab: "replays",
       tabs: [],
       name: "Guest",
       signedIn: false,
       stats: [],
       replays: [
-        {
-          id: "parent",
-          title: "Scored run",
-          detail: "Complete",
-          available: true,
-          canDownloadArchive: true,
-        },
+        { id: "kept", title: "A", detail: "a", available: true, canShare: true, canDownload: true, pinned: true },
+        { id: "retired", title: "B", detail: "b", available: false },
       ],
-      archive: {
-        status: "ready",
-        detail: "Validated pair",
-        canPick: true,
-        jobId: "pair",
-        revision: 0,
-        canRestore: true,
-        pairedCapsuleIds: ["parent", "finale"],
-      },
     });
-    const downloads = controls.filter((control) => control.action.type === "profile.downloadGhostArchive");
-    expect(downloads).toHaveLength(1);
-    expect(downloads.find((c) => c.label === "DOWNLOAD")).toMatchObject({ action: { id: "parent" } });
-    expect(controls.find((c) => c.action.type === "profile.restoreGhostArchive")).toMatchObject({
-      label: "RESTORE BOTH",
-      action: { id: "pair", revision: 0 },
-    });
-    for (const control of downloads) expect(control.y + control.h).toBeLessThanOrEqual(790);
-  });
-  it("C39 review: clips scrolled row hit/focus rectangles while fixed archive controls remain reachable", () => {
-    for (const tab of ["vault", "replays"]) {
-      const controls: ScreenControl[] = [],
-        context = createRenderContext(controls),
-        renderer = createScreenRenderers({ ...context, scroll: 96 });
-      renderer.profile({
-        id: "profile",
-        tab,
-        tabs: [],
-        name: "Guest",
-        signedIn: false,
-        stats: [],
-        replays: Array.from({ length: 8 }, (_, index) => ({
-          id: `row-${String(index)}`,
-          title: "Ghost",
-          detail: "Complete",
-          available: true,
-          canDownloadArchive: true,
-          local: tab === "replays",
-        })),
-        ...(tab === "vault"
-          ? {
-              archive: {
-                status: "ready" as const,
-                detail: "Preview",
-                canPick: true,
-                jobId: "intent",
-                revision: 7,
-                canReselect: true,
-                canRestore: true,
-                canCancel: true,
-              },
-            }
-          : {}),
-      });
-      const rowTypes = new Set([
-        "profile.watchGhostCapsule",
-        "profile.downloadGhostArchive",
-        "profile.watchReplay",
-        "profile.pinReplay",
-        "profile.publishReplay",
-        "profile.deleteReplay",
-      ]);
-      const rows = controls.filter((control) => rowTypes.has(control.action.type)),
-        top = tab === "vault" ? 390 : 306,
-        bottom = context.height - 110;
-      expect(rows.filter((control) => control.y < top || control.y + control.h > bottom)).toEqual([]);
-      expect(
-        rows.some(
-          (control) =>
-            control.action.type === (tab === "vault" ? "profile.downloadGhostArchive" : "profile.watchReplay"),
-        ),
-      ).toBe(true);
-      if (tab === "vault")
-        for (const type of [
-          "profile.pickGhostArchive",
-          "profile.reselectGhostArchive",
-          "profile.restoreGhostArchive",
-          "profile.cancelGhostRestore",
-        ])
-          expect(controls.find((control) => control.action.type === type)).toMatchObject({ y: 306 });
-    }
+    const of = (id: string) =>
+      controls
+        .filter((control) => "id" in control.action && control.action.id === id)
+        .map((control) => [control.action.type, control.label, control.enabled ?? true]);
+    expect(of("kept")).toEqual([
+      ["profile.watchReplay", "▶  WATCH", true],
+      ["profile.pinReplay", "★", true],
+      ["profile.publishReplay", "SHARE", true],
+      ["profile.downloadReplay", "DOWNLOAD", true],
+      ["profile.deleteReplay", "✕", true],
+    ]);
+    // A run this version cannot play is listed so it can be deleted; it cannot be watched, shared or saved.
+    expect(of("retired")).toEqual([
+      ["profile.watchReplay", "CAN'T PLAY", false],
+      ["profile.pinReplay", "PIN", true],
+      ["profile.publishReplay", "SHARE", false],
+      ["profile.deleteReplay", "✕", true],
+    ]);
   });
 
-  it("offers healthy complete archive download despite Theater refusal and shows unsupported file capability", () => {
+  it("C39 review: clips scrolled row hit/focus rectangles while the toolbar stays reachable", () => {
     const controls: ScreenControl[] = [],
-      renderer = createScreenRenderers(createRenderContext(controls));
+      context = createRenderContext(controls),
+      renderer = createScreenRenderers({ ...context, scroll: 96 });
     renderer.profile({
       id: "profile",
-      tab: "vault",
+      tab: "replays",
       tabs: [],
       name: "Guest",
       signedIn: false,
       stats: [],
-      replays: [
-        {
-          id: "historical",
-          title: "Ghost",
-          detail: "Healthy complete",
-          available: false,
-          theaterUnavailable: true,
-          canDownloadArchive: true,
-        },
-      ],
-      archive: { status: "unavailable", detail: "Local storage unavailable", canPick: false },
+      canImport: true,
+      replayFilters: [{ id: "all", label: "ALL", selected: true }],
+      replays: Array.from({ length: 8 }, (_, index) => ({
+        id: `row-${String(index)}`,
+        title: "Run",
+        detail: "Complete",
+        available: true,
+        canDownload: true,
+        canShare: true,
+        local: true,
+      })),
     });
-    expect(controls.find((control) => control.action.type === "profile.pickGhostArchive")).toMatchObject({
-      enabled: false,
-    });
-    expect(controls.find((control) => control.action.type === "profile.downloadGhostArchive")).toMatchObject({
-      label: "DOWNLOAD",
-      action: { id: "historical" },
-    });
-    expect(controls.find((control) => control.action.type === "profile.watchGhostCapsule")).toMatchObject({
-      enabled: false,
-    });
-    expect(controls.some((control) => control.action.type === "profile.restoreGhostArchive")).toBe(false);
-  });
-
-  it("routes a healthy Ghost Vault capsule to Theater through a distinct semantic action", () => {
-    const controls: ScreenControl[] = [];
-    const renderer = createScreenRenderers(createRenderContext(controls));
-    renderer.profile({
-      id: "profile",
-      tab: "vault",
-      tabs: [{ id: "vault", label: "VAULT", selected: true }],
-      name: "Guest",
-      signedIn: false,
-      stats: [],
-      replays: [
-        {
-          id: "verified-capsule",
-          title: "Ghost V3 - COACHING",
-          detail: "COMPLETE - 3 CHUNKS - HEALTHY",
-          available: true,
-          badge: "DURABLE CAPSULE",
-        },
-      ],
-    });
-    expect(controls.find((control) => control.action.type === "profile.watchGhostCapsule")).toMatchObject({
-      enabled: true,
-      label: "◆ THEATER",
-      action: { type: "profile.watchGhostCapsule", id: "verified-capsule" },
-    });
-  });
-
-  it("renders a refused Ghost Theater route as disabled without exposing decoder detail", () => {
-    const controls: ScreenControl[] = [];
-    const renderer = createScreenRenderers(createRenderContext(controls));
-    renderer.profile({
-      id: "profile",
-      tab: "vault",
-      tabs: [{ id: "vault", label: "VAULT", selected: true }],
-      name: "Guest",
-      signedIn: false,
-      stats: [],
-      replays: [
-        {
-          id: "refused-capsule",
-          title: "Ghost V3 - COACHING",
-          detail: "COMPLETE - 3 CHUNKS - HEALTHY",
-          available: false,
-          theaterUnavailable: true,
-          badge: "DURABLE CAPSULE",
-        },
-      ],
-    });
-    expect(controls.find((control) => control.action.type === "profile.watchGhostCapsule")).toMatchObject({
-      label: "CAN'T PLAY",
-      enabled: false,
-    });
-    expect(JSON.stringify(controls)).not.toContain("codec restore rejected");
-  });
-
-  it("shows an unhealthy Vault capsule as CAN'T PLAY and offers no repair", () => {
-    const controls: ScreenControl[] = [];
-    const renderer = createScreenRenderers(createRenderContext(controls));
-    renderer.profile({
-      id: "profile",
-      tab: "vault",
-      tabs: [{ id: "vault", label: "VAULT", selected: true }],
-      name: "Guest",
-      signedIn: false,
-      stats: [],
-      replays: [
-        {
-          id: "damaged-capsule",
-          title: "Ghost V3 - COACHING",
-          detail: "Complete recording · damaged, can't play",
-          available: false,
-          theaterUnavailable: true,
-          badge: "SAVED REPLAY",
-        },
-      ],
-    });
-    expect(controls.find((control) => control.action.type === "profile.watchGhostCapsule")).toMatchObject({
-      label: "CAN'T PLAY",
-      x: 968,
-      y: 324,
-      w: 110,
-      h: 40,
-      action: { type: "profile.watchGhostCapsule", id: "damaged-capsule" },
-    });
-    expect(controls.some((control) => control.label === "REPAIR")).toBe(false);
-    expect(controls.some((control) => control.action.type === "profile.watchReplay")).toBe(false);
+    const rowTypes = new Set([
+      "profile.watchReplay",
+      "profile.downloadReplay",
+      "profile.pinReplay",
+      "profile.publishReplay",
+      "profile.deleteReplay",
+    ]);
+    const rows = controls.filter((control) => rowTypes.has(control.action.type)),
+      bottom = context.height - 110;
+    expect(rows.filter((control) => control.y < 358 || control.y + control.h > bottom)).toEqual([]);
+    expect(rows.some((control) => control.action.type === "profile.watchReplay")).toBe(true);
+    for (const type of ["profile.filterReplays", "profile.importReplay"])
+      expect(controls.find((control) => control.action.type === type)).toMatchObject({ y: 306 });
   });
 
   it("declares every legacy-only parity field needed before old screen ranges can be deleted", () => {
@@ -1580,70 +1363,6 @@ describe("release and engineering surface rendering", () => {
     expect(
       controls.find((control) => control.action.type === "setup.start" && control.action.race === true),
     ).toMatchObject({ label: "CREATE SEED-LOCKED RACE" });
-  });
-  it("closes up the Career command row when a command surface is unavailable", () => {
-    const controls: ScreenControl[] = [];
-    const hidden = new Set(["race"]);
-    const context: ScreenRenderContext = {
-      ...createRenderContext(controls),
-      available: (action) => action.type !== "career.control" || !hidden.has(action.command),
-    };
-    const entry = {
-      kind: "capsule",
-      present: true,
-      mode: "endless",
-      weapon: "sword",
-      result: "defeat",
-      wave: 3,
-      score: 10,
-      date: "2026-11-11",
-      dna: {},
-      actor: "human",
-      verified: "receipts",
-      seconds: 1,
-      damage: 1,
-      categories: [],
-      composition: {},
-      loadout: [],
-      abilities: [],
-      bosses: [],
-      style: null,
-      nearMiss: [],
-      gameVersion: "0.1.0",
-      unavailable: [],
-      beatAttempt: false,
-      assisted: false,
-    };
-    createScreenRenderers(context).profile({
-      id: "profile",
-      tab: "career",
-      tabs: [],
-      name: "Guest",
-      signedIn: false,
-      stats: [],
-      career: {
-        status: "ready",
-        indexing: false,
-        message: "",
-        query: { view: "history", sort: "newest" },
-        rows: [],
-        confirming: false,
-        selected: { entry, notes: { tags: [], retention: "normal" }, detail: "Recorded" },
-        retained: 1,
-        known: 1,
-        total: 1,
-        page: 0,
-        pages: 1,
-      },
-    } as never);
-    const row = controls.filter(
-      (control) =>
-        control.action.type === "career.control" &&
-        ["watch", "download", "chase", "race"].includes(control.action.command),
-    );
-    expect(row.map((control) => control.label)).toEqual(["THEATER", "DOWNLOAD", "CHASE BEST"]);
-    // The page pattern content column is 1120 wide.
-    expect(row[2]).toMatchObject({ w: (1120 - 2 * 8) / 3 });
   });
 });
 

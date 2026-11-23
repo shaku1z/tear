@@ -66,7 +66,6 @@
     "test:browser:ghost-v3-interrupted-recovery": "node tests/browser-ghost-v3-interrupted-recovery.js",
     "test:browser:ghost-v3-corrupt-recovery": "node tests/browser-ghost-v3-corrupt-recovery.js",
     "test:browser:ghost-v3-storage-fault": "node tests/browser-ghost-v3-storage-fault.js",
-    "test:browser:ghost-vault-library": "node tests/browser-ghost-vault-library.js",
     "test:browser:replay-engine-cold": "node tests/browser-replay-engine-cold.js",
     "test:browser:replay-live-verify": "node tests/browser-replay-live-verify.js",
     "test:browser:replay-campaign-stages": "node tests/browser-replay-campaign-stages.js",

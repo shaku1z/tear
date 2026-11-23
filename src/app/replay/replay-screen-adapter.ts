@@ -1,7 +1,8 @@
 import { replayTransportScrub } from "../library/replay-transport-controller";
 import { replayEngine } from "../../ghost/replay-engine";
-import { findKeptRecord, keptRecordSeed, type KeptRecord } from "./kept-record-lookup";
+import { findKeptRecord, keptRecordSeed, readKeptRecord, type KeptRecord } from "./kept-record-lookup";
 import type { RecordWorldEngine } from "./record-world";
+import type { ReplayRecordStore } from "../../replay/record-store";
 import { liveReplayRecorder } from "./live-replay-recorder-slot";
 import { createBrowserGhostReplayPresentation } from "./browser-ghost-replay-presentation";
 import { createBrowserReplayClipExport } from "./browser-replay-clip-export";
@@ -13,7 +14,6 @@ import { readBrowserGhostCapsule } from "../../ghost/browser-capsule-vault";
 import { createGhostTheaterScreenAdapter } from "../library/ghost-theater-screen-adapter";
 import type { GhostPracticeChild } from "../../ghost/replay-world";
 import type { GhostPracticeLaunchResult } from "./ghost-practice-launch";
-import { refuseGhostTheater, type GhostTheaterOpenResult } from "../../ghost/theater-open-result";
 
 type Dependencies = Pick<
   GameRuntimeDependencies,
@@ -78,9 +78,10 @@ export interface ReplayScreenAdapter {
   readonly enter: (data: unknown, from?: AppScreen) => boolean;
   readonly exit: () => void;
   readonly render: () => void;
-  readonly enterGhostCapsule: (id: string, from?: AppScreen) => Promise<GhostTheaterOpenResult>;
   /** Opens the kept record of the run with this seed on the replay screen; false when there is none. */
   readonly watchKeptRun: (seed: string, from?: AppScreen) => Promise<boolean>;
+  /** Opens the kept record stored under this key (a REPLAYS list row); false when it cannot be played. */
+  readonly watchRecord: (key: string, from?: AppScreen) => Promise<boolean>;
   /** The tick and stage the replay screen shows, while it shows a kept record. */
   readonly shownReplay: () => Readonly<{ tick: number; stage: number }> | undefined;
   readonly togglePause: () => void;
@@ -104,8 +105,8 @@ export interface ReplayScreenAdapter {
 type LegacyReplayScreenAdapter = Omit<
   ReplayScreenAdapter,
   | "cancelPendingOpen"
-  | "enterGhostCapsule"
   | "watchKeptRun"
+  | "watchRecord"
   | "shownReplay"
   | "practice"
   | "toggleReplayEditor"
@@ -171,11 +172,11 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
     }
   }
   async function keptRecordFor(
-    seed: string,
+    find: (open: () => Promise<ReplayRecordStore | Readonly<{ failed: unknown }>>) => Promise<KeptRecord | undefined>,
   ): Promise<Readonly<{ kept: KeptRecord; engine: RecordWorldEngine }> | undefined> {
     try {
       const module = await liveReplayRecorder.ensure();
-      const kept = await findKeptRecord(() => module.openReplayRecordStore(services.browserIndexedDb ?? null), seed);
+      const kept = await find(() => module.openReplayRecordStore(services.browserIndexedDb ?? null));
       return kept === undefined ? undefined : Object.freeze({ kept, engine: await replayEngine.ensure() });
     } catch {
       return undefined;
@@ -212,7 +213,11 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
     return true;
   }
   async function openKeptRun(seed: string, from: AppScreen, request: number): Promise<boolean> {
-    const kept = await keptRecordFor(seed);
+    const kept = await keptRecordFor((open) => findKeptRecord(open, seed));
+    return request === sourceRequest && kept !== undefined && openKeptRecord(kept, from);
+  }
+  async function watchRecord(key: string, from: AppScreen, request: number): Promise<boolean> {
+    const kept = await keptRecordFor((open) => readKeptRecord(open, key));
     return request === sourceRequest && kept !== undefined && openKeptRecord(kept, from);
   }
   function enterRecording(data: unknown, from: AppScreen): boolean {
@@ -255,20 +260,6 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
     services.setScreen(destination);
   }
 
-  async function enterGhostCapsule(id: string, from: AppScreen = "profile"): Promise<GhostTheaterOpenResult> {
-    const request = ++sourceRequest;
-    const capsule = await readBrowserGhostCapsule(services.browserIndexedDb, id).catch(() => undefined);
-    if (request !== sourceRequest) return refuseGhostTheater("source-invalid");
-    if (capsule === undefined) return refuseGhostTheater("capsule-unavailable");
-    const opened = theater.open(capsule, from);
-    if (opened.kind === "refused") return opened;
-    if (active === "legacy" && runtime !== undefined) runtime.exit();
-    pending = undefined;
-    active = "theater";
-    services.setScreen("replay", { returnTo: from });
-    return opened;
-  }
-
   const adapter: ReplayScreenAdapter = {
     cancelPendingOpen: () => {
       sourceRequest++;
@@ -276,8 +267,8 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
       deferred.splice(0);
     },
     enter,
-    enterGhostCapsule,
     watchKeptRun: (seed, from = "profile") => openKeptRun(seed, from, ++sourceRequest),
+    watchRecord: (key, from = "profile") => watchRecord(key, from, ++sourceRequest),
     shownReplay: () => {
       const tick = active === "theater" ? theater.shownTick() : undefined;
       const stage = active === "theater" ? theater.shownStage() : undefined;

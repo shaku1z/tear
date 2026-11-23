@@ -9,7 +9,6 @@ import { retryFailedCoverPaintings } from "../../presentation/music-cover-art";
 export interface LiveScreenTransitionHooks {
   readonly cancelChase: (screen: string) => void;
   readonly cancelPendingReplayOpen: () => void;
-  readonly leaveCareer: () => void;
   readonly leaveShop: () => void;
   readonly interruptTutorialCoaching: () => void;
 }
@@ -41,9 +40,6 @@ export function createLiveScreenNavigation(options: LiveScreenNavigationOptions)
   let cancelPendingReplayOpen: LiveScreenTransitionHooks["cancelPendingReplayOpen"] = () => {
     /* Replay is loaded later. */
   };
-  let leaveCareer: LiveScreenTransitionHooks["leaveCareer"] = () => {
-    /* Lazy library not loaded yet. */
-  };
   let leaveShop: LiveScreenTransitionHooks["leaveShop"] = () => {
     /* The Shop is loaded later. */
   };
@@ -55,7 +51,6 @@ export function createLiveScreenNavigation(options: LiveScreenNavigationOptions)
     const prior = state;
     state = app.transition(next, { ...context, leaving: options.place() });
     cancelPendingReplayOpen();
-    if (prior === "profile" && state !== "profile") leaveCareer();
     if (prior === "shop" && state !== "shop") leaveShop();
     // A song previewed on the MUSIC screen stops when the player leaves it (rename sits over it).
     if (prior === "music" && state !== "music" && state !== "rename") setMusicPreview(null);
@@ -78,7 +73,6 @@ export function createLiveScreenNavigation(options: LiveScreenNavigationOptions)
     bind(hooks: Partial<LiveScreenTransitionHooks>): void {
       if (hooks.cancelChase !== undefined) cancelChase = hooks.cancelChase;
       if (hooks.cancelPendingReplayOpen !== undefined) cancelPendingReplayOpen = hooks.cancelPendingReplayOpen;
-      if (hooks.leaveCareer !== undefined) leaveCareer = hooks.leaveCareer;
       if (hooks.leaveShop !== undefined) leaveShop = hooks.leaveShop;
       if (hooks.interruptTutorialCoaching !== undefined) interruptTutorialCoaching = hooks.interruptTutorialCoaching;
     },

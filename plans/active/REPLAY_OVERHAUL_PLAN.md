@@ -27,8 +27,13 @@ Written so that someone with only this repository can continue. The decision log
   - Ghost 2 got the stage fix only: a recording starts with the stage it starts in, playback no longer starts from the end stage, and a trim keeps the stage at its cut (`tests/unit/replay-visual-stage.test.ts`).
   - #404: a run that ends inside a tick (a death or a win) ends its record once that tick is simulated, and a restarted run ends its record as a quit.
   - #405: a test build or the dev server gets the offline cloud (`cloudFactoryForBuild`, `src/platform/offline-cloud.ts`), so a replay session's test run never reaches a production leaderboard. The one entry that did on 2026-11-22 is the owner's to remove.
-- **Open: plan and guards** (this card's order and the name guards; see "The order from here").
-- **Then: One Replays**, the visible fold, before any more internals. The order and each step's "Players see:" line are in "The order from here".
+- **Merged: plan and guards (#406)** (this card's order and the name guards; see "The order from here").
+- **Open: One Replays**, the visible fold. Players see one REPLAYS list in Profile (filters ALL, BESTS, PINNED; WATCH, PIN, SHARE, DOWNLOAD and DELETE on each run; IMPORT A REPLAY FILE), and the replay screen says REPLAY from every WATCH.
+  - The list is `src/app/replay/replay-list.ts` (rows) and `replay-list-controller.ts` (actions). Rows come from the `tear-replays` index, which now carries each record's list row and pin (`src/replay/record-store.ts`: `pin`, `remove`, ten pins at most, eviction drops the oldest unpinned run first). An index written before rows existed is filled once by reading each record.
+  - Ghost 2 recordings with no kept record of the same seed are listed as "Recorded before this update" and play through the old player until PR 8. A kept run keeps its Ghost 2 copy's id: SHARE publishes that copy (the feed plays only Ghost 2 until PR 8), and PIN and DELETE act on both. V3 capsules are not listed; they stay on the device until PR 8 removes them.
+  - DOWNLOAD saves the record as JSON (`tear-replay-<date>-<seed>.json`); IMPORT reads one through `readReplayRecord` and stores it.
+  - Removed: the VAULT and CAREER tabs, their screens, controllers, the career writer and worker, the V3 cold restore and their tests and browser checks. The V3 vault's own import path (`capsule-paired-archive.ts`, `capsule-import-plan.ts`) and the career store that vault upkeep reads pins from stay until PR 8. The chase controls have no entry point left; PR 9 removes them.
+  - Left for PR 6: telling the player when the store dropped a run to make room.
 - **Agreed with Shards (for PR 10):**
   - `ReplayLook.cosmetics` is the domain `Loadout`, filled at run start with `loadoutOf(COSMETIC_CATALOG, PROFILE.cosmetics())`.
   - `readLook` caps the entry count at the number of catalog slots.
