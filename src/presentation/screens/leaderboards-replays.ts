@@ -66,10 +66,12 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     canvas.beginPath();
     canvas.arc(barX + barWidth * view.progress, barY + 2.5, 7, 0, Math.PI * 2);
     canvas.fill();
-    canvas.textAlign = "right";
+    // The clock reads on the track's line, past its end: above the track it crossed the strip's top edge.
+    canvas.textAlign = "left";
+    canvas.textBaseline = "middle";
     canvas.fillStyle = REPLAY_MUTED;
     canvas.font = ui.font(ui.t.type.caption, true);
-    canvas.fillText(`${view.elapsed} / ${view.duration}`, barX + barWidth, barY - 10);
+    canvas.fillText(`${view.elapsed} / ${view.duration}`, barX + barWidth + 16, barY + 2.5);
     canvas.restore();
   }
 
