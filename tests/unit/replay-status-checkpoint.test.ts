@@ -10,7 +10,10 @@
 import { describe, expect, it } from "vitest";
 
 import { stepDetachedWorld } from "../../src/app/world/detached/detached-step";
-import { createProductionGhostReplayComposition } from "../../src/app/world/detached/replay-composition";
+import {
+  captureProductionReplayCheckpoint,
+  createProductionGhostReplayComposition,
+} from "../../src/app/world/detached/replay-composition";
 import { startRecordWorld, type RecordWorldEngine } from "../../src/app/replay/record-world";
 import { createDetachedReplayWorld } from "../../src/app/replay/detached-replay-world";
 import {
@@ -39,6 +42,7 @@ function changedWorld(
   let changed = false;
   const engine: RecordWorldEngine = {
     createProductionGhostReplayComposition,
+    captureProductionReplayCheckpoint,
     stepDetachedWorld: (session: Session, actions, frames) => {
       const result = stepDetachedWorld(session, actions, frames);
       if (!changed && result.tick === after)

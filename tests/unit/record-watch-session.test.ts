@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import * as engineModule from "../../src/app/world/detached/replay-composition";
 import { createRecordWatchSession } from "../../src/app/replay/record-watch-session";
 import { keptRecordKeyFor } from "../../src/app/replay/kept-record-lookup";
+import { createRecordSeekCache } from "../../src/app/replay/record-seek-cache";
 import { REPLAY_CHECKPOINT_TICKS } from "../../src/replay/record";
 import { SPECS } from "../support/hash-stream-corpus";
 import { recordCorpusStream } from "../support/replay-corpus-record";
@@ -26,13 +27,94 @@ describe("watching a kept record", () => {
     }));
     expect(checkpoints.length).toBeGreaterThan(1);
     for (const { tick, hash } of checkpoints) expect(session.seek(tick).semanticHash).toBe(hash);
-    // A seek backwards starts the run again from its seed and reaches the same state.
+    // A seek backwards starts again from the seek cache and reaches the same state.
     const [first] = checkpoints;
     if (first === undefined) throw new Error("no checkpoint");
     expect(session.seek(first.tick).semanticHash).toBe(first.hash);
     expect(session.seek(record.run.result.tick).semanticHash).toBe(record.run.result.hash);
     expect(session.stage()).toBe(0);
     expect(() => session.seek(record.run.result.tick + 1)).toThrow(RangeError);
+  });
+
+  it.each(SPECS.map((spec) => [spec.id, spec] as const))(
+    "seeks back from the seek cache to the recorded state: %s",
+    (_id, spec) => {
+      const record = recordCorpusStream(spec);
+      const starts: (number | undefined)[] = [];
+      const engine = {
+        ...engineModule,
+        createProductionGhostReplayComposition: (
+          options: Parameters<typeof engineModule.createProductionGhostReplayComposition>[0],
+        ) => {
+          const composition = engineModule.createProductionGhostReplayComposition(options);
+          return {
+            ...composition,
+            create: (snapshot: Parameters<typeof composition.create>[0]) => {
+              starts.push(snapshot?.tick);
+              return composition.create(snapshot);
+            },
+          };
+        },
+      };
+      const cache = createRecordSeekCache({ every: REPLAY_CHECKPOINT_TICKS, limit: 64 });
+      const session = createRecordWatchSession(record, "record:test:1", engine, {}, cache);
+      expect(session.seek(record.run.result.tick).semanticHash).toBe(record.run.result.hash);
+      const checkpoints = record.run.checkpoints.map((checkpoint, index) => ({
+        tick: (index + 1) * REPLAY_CHECKPOINT_TICKS,
+        hash: checkpoint.hash,
+      }));
+      expect(cache.held().ticks).toEqual(checkpoints.map((checkpoint) => checkpoint.tick));
+      // Backwards, from the latest checkpoint before the end: each seek starts a world at that checkpoint.
+      for (const { tick, hash } of checkpoints.filter((checkpoint) => checkpoint.tick < session.lastTick).reverse()) {
+        expect(session.seek(tick).semanticHash).toBe(hash);
+        expect(starts.at(-1)).toBe(tick);
+      }
+      // A world started from a checkpoint plays on to the recorded end.
+      const [first] = checkpoints;
+      if (first !== undefined) {
+        expect(session.seek(first.tick + 7).tick).toBe(first.tick + 7);
+        expect(starts.at(-1)).toBe(first.tick);
+      }
+      expect(session.seek(record.run.result.tick).semanticHash).toBe(record.run.result.hash);
+      // Only the opening started from the seed.
+      expect(starts.filter((tick) => tick === undefined)).toHaveLength(1);
+    },
+  );
+
+  it("takes and restores checkpoints in a built game, which has its own build identity", () => {
+    vi.stubGlobal("__TEAR_BUILD_REVISION__", "0123456789abcdef0123456789abcdef01234567");
+    vi.stubGlobal("__TEAR_BUILD_TARGET__", "test-standalone");
+    vi.stubGlobal("__TEAR_BUILD_SOURCE_FINGERPRINT__", "a".repeat(64));
+    const spec = SPECS[0];
+    if (spec === undefined) throw new Error("no corpus stream");
+    const record = recordCorpusStream(spec);
+    const cache = createRecordSeekCache({ every: REPLAY_CHECKPOINT_TICKS, limit: 64 });
+    const session = createRecordWatchSession(record, "record:test:1", engineModule, {}, cache);
+    session.seek(record.run.result.tick);
+    expect(cache.held().ticks.length).toBeGreaterThan(1);
+    const [first] = record.run.checkpoints;
+    expect(session.seek(REPLAY_CHECKPOINT_TICKS).semanticHash).toBe(first?.hash);
+  });
+
+  it("re-simulates from the seed when a checkpoint cannot be taken, so a seek never fails on the cache", () => {
+    const spec = SPECS[0];
+    if (spec === undefined) throw new Error("no corpus stream");
+    const record = recordCorpusStream(spec);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const engine = {
+      ...engineModule,
+      captureProductionReplayCheckpoint: (): never => {
+        throw new TypeError("no checkpoint");
+      },
+    };
+    const cache = createRecordSeekCache({ every: REPLAY_CHECKPOINT_TICKS, limit: 64 });
+    const session = createRecordWatchSession(record, "record:test:1", engine, {}, cache);
+    expect(session.seek(record.run.result.tick).semanticHash).toBe(record.run.result.hash);
+    const [first] = record.run.checkpoints;
+    expect(session.seek(REPLAY_CHECKPOINT_TICKS).semanticHash).toBe(first?.hash);
+    expect(cache.held().ticks).toEqual([]);
+    expect(warn).toHaveBeenCalledWith("replay seek cache off: no checkpoint");
+    warn.mockRestore();
   });
 
   it("never touches progress: a watched run that earns achievements and coins writes nothing outside its world", () => {

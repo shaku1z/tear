@@ -5,6 +5,7 @@ import type {
 import type { GhostSeekResult } from "../../ghost/replay-world";
 import type { ReplayRecord } from "../../replay/record";
 import { createReplayInputCursor, type ReplayTickInputs } from "../../replay/verify";
+import { createRecordSeekCache, type RecordSeekCache } from "./record-seek-cache";
 import {
   startRecordWorld,
   type RecordWorld,
@@ -28,38 +29,64 @@ export interface RecordWatchSession extends GhostVerifiedProductionReplaySession
  * the ones play had at that tick. The runner's blade wears the cosmetics the record carries, in the
  * viewer's calm setting; an id the catalog does not know draws the default.
  *
- * A record has no keyframes, so the session keeps one world and steps it forward. A seek backwards
- * starts the run again from its seed. The engine is the one `replayEngine.ensure()` resolved to.
+ * The session keeps one world and steps it forward. A seek to a tick the world has passed starts a new
+ * world from the nearest checkpoint at or before it (`RecordSeekCache`), or from the seed when there is
+ * none. The engine is the one `replayEngine.ensure()` resolved to.
  */
 export function createRecordWatchSession(
   record: ReplayRecord,
   key: string,
   engine: RecordWorldEngine,
   presentation: RecordWorldPresentation = {},
+  cache: RecordSeekCache = createRecordSeekCache(),
 ): RecordWatchSession {
   const lastTick = record.run.result.tick;
   let world: RecordWorld | undefined;
   let next: () => ReplayTickInputs = createReplayInputCursor(record.run);
   let tick = 0;
   let hash = "";
-  const restart = (): RecordWorld => {
+  /** Why the cache was turned off for this run, if it was: watch then re-simulates from the seed. */
+  let cacheOff: string | undefined;
+  const turnCacheOff = (error: unknown) => {
+    cacheOff = error instanceof Error ? error.message : String(error);
+    console.warn(`replay seek cache off: ${cacheOff}`);
+  };
+  const nearest = (target: number) => (cacheOff === undefined ? cache.nearest(target) : undefined);
+  /** A new world at the cache's nearest checkpoint at or before `target`, or at the seed. */
+  const restart = (target: number): RecordWorld => {
     world?.dispose();
-    world = startRecordWorld(engine, record.run, () => undefined, presentation);
+    let from = nearest(target);
+    try {
+      world = startRecordWorld(engine, record.run, () => undefined, presentation, from);
+    } catch (error) {
+      if (from === undefined) throw error;
+      turnCacheOff(error);
+      from = undefined;
+      world = startRecordWorld(engine, record.run, () => undefined, presentation);
+    }
+    // The look is presentation, not checkpoint state: every new world, from the seed or a checkpoint, is dressed.
     world.dress(record.look.cosmetics);
-    next = createReplayInputCursor(record.run);
-    tick = 0;
-    hash = "";
+    next = createReplayInputCursor(record.run, from?.tick ?? 0);
+    tick = from?.tick ?? 0;
+    hash = from?.semanticHash ?? "";
     return world;
   };
   const seek = (target: number): GhostSeekResult => {
     if (!Number.isSafeInteger(target) || target < 0 || target > lastTick)
       throw new RangeError("replay seek is outside the recorded run");
-    const current = world === undefined || target < tick ? restart() : world;
+    const cached = nearest(target)?.tick ?? 0;
+    const current = world === undefined || target < tick || cached > tick ? restart(target) : world;
     while (tick < target) {
       const { actions, frames } = next();
       const result = current.step(actions, frames);
       tick += 1;
       hash = result.stateHash;
+      if (cacheOff === undefined && cache.wants(tick))
+        try {
+          cache.add(current.checkpoint());
+        } catch (error) {
+          turnCacheOff(error);
+        }
     }
     return Object.freeze({ tick, semanticHash: hash, presentationFallback: false });
   };
@@ -73,8 +100,8 @@ export function createRecordWatchSession(
     sourceRootHash: record.run.result.hash,
     verifiedReceiptTicks: chapters,
     seek,
-    stage: () => (world ?? restart()).stage(),
-    loadout: () => (world ?? restart()).loadout(),
+    stage: () => (world ?? restart(0)).stage(),
+    loadout: () => (world ?? restart(0)).loadout(),
     ...(presentation.renderView === undefined
       ? {}
       : {

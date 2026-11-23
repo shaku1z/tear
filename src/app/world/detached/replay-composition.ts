@@ -329,10 +329,11 @@ function productionRuntimeState(replay: ProductionReplayWorld, prepared?: Prepar
       ),
     captureCinemaProtection: () => Object.freeze({ ...transient.protection }),
     restoreCinemaProtection: transient.assignProtection.bind(transient),
-    captureStageBanner: () => Object.freeze({ name: "", seconds: transient.feel.bannerSeconds }),
-    restoreStageBanner: (_name, seconds) => {
-      transient.feel.bannerSeconds = seconds;
-    },
+    // The detached world has no stage banner of its own: its one banner timer is `feel.bannerSeconds`,
+    // captured and restored exactly as `bannerT` above (it counts a tick below zero by design, which a
+    // stage banner may not).
+    captureStageBanner: () => Object.freeze({ name: "", seconds: 0 }),
+    restoreStageBanner: () => undefined,
     cinema: prepared?.director ?? replay.world.context.cinema,
   });
 }
@@ -417,6 +418,9 @@ export function captureProductionReplayCheckpoint(
     validateCinema: runtime.validate,
   });
   const tick = simulation.simulationRuntime.scheduler.tick;
+  // In a built game the capture takes the build's own identity; the checkpoint declares the same one,
+  // as `create` does, so a watched run can take checkpoints in a build as it does headless.
+  const build = buildIdentity ?? injectedBuildIdentity("headless", REPLAY_CONTENT_HASH);
   const snapshot = captureLiveStateSetupSnapshot({
     id,
     tick,
@@ -428,9 +432,9 @@ export function captureProductionReplayCheckpoint(
     registry: createDefaultStateCodecRegistry(),
     observationClass: "structured-state",
     producer: "production-headless-checkpoint",
-    target: buildIdentity?.target ?? "headless",
-    contentHash: buildIdentity?.contentHash ?? REPLAY_CONTENT_HASH,
-    ...(buildIdentity === undefined ? {} : { buildIdentity }),
+    target: build?.target ?? "headless",
+    contentHash: build?.contentHash ?? REPLAY_CONTENT_HASH,
+    ...(build === undefined ? {} : { buildIdentity: build }),
     // A required contract hash that explicitly denotes absence of a pixel capture;
     // it is not rendered-output evidence.
     visualHash: stableVerificationHash("not-captured"),

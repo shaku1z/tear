@@ -83,14 +83,17 @@ export interface ReplayTickInputs {
 }
 
 /**
- * The record's inputs tick by tick from tick 1, in the order verify and watch both play them: the
- * frames sampled after tick N - 1 go before tick N.
+ * The record's inputs tick by tick from tick `after + 1` (tick 1 by default), in the order verify and
+ * watch both play them: the frames sampled after tick N - 1 go before tick N. Watch starts one after a
+ * checkpoint it restored.
  */
-export function createReplayInputCursor(run: Pick<ReplayRun, "actions" | "frames">): () => ReplayTickInputs {
+export function createReplayInputCursor(run: Pick<ReplayRun, "actions" | "frames">, after = 0): () => ReplayTickInputs {
   const { actions, frames } = run;
-  let tick = 0;
+  let tick = after;
   let next = 0;
   let nextFrame = 0;
+  while (next < actions.length && (actions[next]?.tick ?? 0) <= after) next += 1;
+  while (nextFrame < frames.length && (frames[nextFrame]?.tick ?? 0) < after) nextFrame += 1;
   return () => {
     tick += 1;
     const start = next;
