@@ -8,8 +8,8 @@ import { createReplayInputCursor, type ReplayTickInputs } from "../../replay/ver
 import type { ProductionGhostReplayCompositionOptions } from "../world/detached/replay-composition";
 import { startRecordWorld, type RecordWorld, type RecordWorldEngine } from "./record-world";
 
-/** A Theater source over a kept record. It also says which stage the world shows now. */
-export interface RecordTheaterSession extends GhostVerifiedProductionReplaySession {
+/** A replay-screen source over a kept record. It also says which stage the world shows now. */
+export interface RecordWatchSession extends GhostVerifiedProductionReplaySession {
   readonly firstTick: number;
   readonly lastTick: number;
   /** The stage index of the re-simulated world at the tick last sought. */
@@ -24,12 +24,12 @@ export interface RecordTheaterSession extends GhostVerifiedProductionReplaySessi
  * A record has no keyframes, so the session keeps one world and steps it forward. A seek backwards
  * starts the run again from its seed. The engine is the one `replayEngine.ensure()` resolved to.
  */
-export function createRecordTheaterSession(
+export function createRecordWatchSession(
   record: ReplayRecord,
   key: string,
   engine: RecordWorldEngine,
   presentation: Pick<ProductionGhostReplayCompositionOptions, "presentation" | "renderView"> = {},
-): RecordTheaterSession {
+): RecordWatchSession {
   const lastTick = record.run.result.tick;
   let world: RecordWorld | undefined;
   let next: () => ReplayTickInputs = createReplayInputCursor(record.run);
@@ -57,7 +57,7 @@ export function createRecordTheaterSession(
   };
   // The seek bar's chapters: the stages, waves and boss waves the run reached.
   const chapters = Object.freeze([...new Set(record.summary.marks.map((mark) => mark.tick))].sort((a, b) => a - b));
-  return Object.freeze<RecordTheaterSession>({
+  return Object.freeze<RecordWatchSession>({
     firstTick: 0,
     lastTick,
     sourceId: key,
@@ -83,7 +83,7 @@ export function createRecordTheaterSession(
           },
         }),
     forkPractice(): never {
-      throw new TypeError("practice from a kept run arrives with the new Theater");
+      throw new TypeError("practice from a kept run is not available yet");
     },
   });
 }

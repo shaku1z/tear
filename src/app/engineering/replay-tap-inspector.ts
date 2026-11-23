@@ -48,9 +48,9 @@ export interface ReplayTapInspector {
   readonly stored: () => Promise<readonly ReplayRecordEntry[] | Readonly<{ failed: string }>>;
   /** One stored record, read back from the store. */
   readonly storedRecord: (key: string) => Promise<ReplayReadResult | null | Readonly<{ failed: string }>>;
-  /** Opens the kept run with this seed in the Theater, through the path WATCH takes. */
+  /** Opens the kept run with this seed on the replay screen, through the path WATCH takes. */
   readonly watchKept: (seed: number) => Promise<boolean>;
-  /** Moves the Theater to this share of the run, as the seek bar does, and says what it shows then. */
+  /** Moves the replay screen to this share of the run, as the seek bar does, and says what it shows then. */
   readonly seekShown: (fraction: number) => Readonly<{ tick: number; stage: number }> | undefined;
   /** Leaves the paused run for the menu, as the pause screen's QUIT does. */
   readonly quit: () => void;

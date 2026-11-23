@@ -24,7 +24,7 @@ import { refuseGhostTheater, type GhostTheaterOpenResult } from "../../ghost/the
 import { readGhostReplayRunContext } from "../../ghost/replay-admission";
 import { rulesetRefusal } from "../../gameplay/run/ruleset-version";
 import { replayPlaybackRefusal, type ReplayRecord } from "../../replay/record";
-import { createRecordTheaterSession } from "../replay/record-theater-session";
+import { createRecordWatchSession } from "../replay/record-watch-session";
 import type { RecordWorldEngine } from "../replay/record-world";
 
 export interface GhostTheaterScreenServices {
@@ -203,9 +203,9 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
 
   return Object.freeze({
     sourceId: () => context?.sourceId,
-    /** The stage the Theater shows now, when its source reports one. */
+    /** The stage the replay screen shows now, when its source reports one. */
     shownStage: () => context?.stage?.(),
-    /** The tick the Theater shows now. */
+    /** The tick the replay screen shows now. */
     shownTick: () => context?.result.tick,
     /** Opens a kept record: the run re-simulated from its seed and drawn by the game's own renderer. */
     openRecord(record: ReplayRecord, key: string, from: AppScreen, engine: RecordWorldEngine): GhostTheaterOpenResult {
@@ -216,7 +216,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
         return refuseGhostTheater("ruleset-retired", key, 0, refusal);
       }
       try {
-        const session = createRecordTheaterSession(record, key, engine, services.presentation);
+        const session = createRecordWatchSession(record, key, engine, services.presentation);
         const transport = new ReplayTransport();
         const result = session.seek(0);
         transport.seek(0);

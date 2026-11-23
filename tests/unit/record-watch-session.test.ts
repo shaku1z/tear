@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import * as engineModule from "../../src/app/world/detached/replay-composition";
-import { createRecordTheaterSession } from "../../src/app/replay/record-theater-session";
+import { createRecordWatchSession } from "../../src/app/replay/record-watch-session";
 import { keptRecordKeyFor } from "../../src/app/replay/kept-record-lookup";
 import { REPLAY_CHECKPOINT_TICKS } from "../../src/replay/record";
 import { SPECS } from "../support/hash-stream-corpus";
@@ -12,11 +12,11 @@ afterEach(() => {
 });
 
 describe("watching a kept record", () => {
-  it("re-simulates the run: every checkpoint the Theater seeks to has the recorded state, forwards and back", () => {
+  it("re-simulates the run: every checkpoint the replay screen seeks to has the recorded state, forwards and back", () => {
     const spec = SPECS[0];
     if (spec === undefined) throw new Error("no corpus stream");
     const record = recordCorpusStream(spec);
-    const session = createRecordTheaterSession(record, "record:test:1", engineModule);
+    const session = createRecordWatchSession(record, "record:test:1", engineModule);
     expect(session.lastTick).toBe(record.run.result.tick);
     const checkpoints = record.run.checkpoints.map((checkpoint, index) => ({
       tick: (index + 1) * REPLAY_CHECKPOINT_TICKS,
@@ -72,7 +72,7 @@ describe("watching a kept record", () => {
         };
       },
     };
-    const session = createRecordTheaterSession(record, "record:test:1", engine);
+    const session = createRecordWatchSession(record, "record:test:1", engine);
     session.seek(session.lastTick);
     // The run did earn: play's own achievement and reward steps ran and were kept as intents in the world.
     expect(outward().filter((step) => /achievement/iu.test(step)).length).toBeGreaterThan(0);

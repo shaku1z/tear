@@ -79,9 +79,9 @@ export interface ReplayScreenAdapter {
   readonly exit: () => void;
   readonly render: () => void;
   readonly enterGhostCapsule: (id: string, from?: AppScreen) => Promise<GhostTheaterOpenResult>;
-  /** Opens the kept record of the run with this seed in the Theater; false when there is none. */
+  /** Opens the kept record of the run with this seed on the replay screen; false when there is none. */
   readonly watchKeptRun: (seed: string, from?: AppScreen) => Promise<boolean>;
-  /** The tick and stage the Theater shows, while it shows a kept record. */
+  /** The tick and stage the replay screen shows, while it shows a kept record. */
   readonly shownReplay: () => Readonly<{ tick: number; stage: number }> | undefined;
   readonly togglePause: () => void;
   readonly seekBy: (delta: number) => void;
@@ -191,7 +191,7 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
     return true;
   }
   /**
-   * Watches a run. A run kept in the replay store is re-simulated in the Theater, so the stage, weapon,
+   * Watches a run. A run kept in the replay store is re-simulated on the replay screen, so the stage, weapon,
    * projectiles and bosses are the run's own at each moment; any other recording plays as before.
    */
   function enter(data: unknown, from: AppScreen = "menu"): boolean {
