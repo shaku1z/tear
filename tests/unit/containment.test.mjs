@@ -28,6 +28,13 @@ describe("plain names", () => {
     expect(countThemedWords("grottos citadels ungrotto Grottoed", words)).toBe(0);
   });
 
+  it("counts a version-numbered name as a word or a part, and only with its own digits", () => {
+    const versions = new Set(["v2", "grotto"]);
+    expect(countThemedWords("v2 ghostV2 tear-ghost-v2 GHOST_V2 storeV2Index profile_v2", versions)).toBe(6);
+    expect(countThemedWords("v3 v21 v2x Fqv2vj uv2 v", versions)).toBe(0);
+    expect(countThemedWords("grotto2 GROTTO3", versions)).toBe(2);
+  });
+
   it("refuses a listed word in a new path and allows a baselined path", () => {
     const problems = plainNameProblems(
       ["old/grotto.ts", "src/app/citadel/menu.ts", "src/fine.ts"],

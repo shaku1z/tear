@@ -46,6 +46,9 @@ it found it.
 - One condition language for unlocks, one tell format for bosses, one page frame for screens, one input
   vocabulary for prompts, one persistence contract for saves. New needs extend these; they do not fork them.
 - When you find a second copy, remove it in the same change or name the follow-up that removes it.
+- One thing players see has one name, one screen and one store. A second name, screen or store for it needs
+  the owner's OK in a plan. The registry in `config/terminology-registry.json` holds the name and the old
+  ones it replaced; `pnpm check:terminology` and `pnpm check:containment` refuse the old ones.
 
 ## 4. No one-off fixes
 
@@ -75,6 +78,8 @@ it found it.
 - Files stay under the size limit by splitting along real responsibilities, not by moving code around.
 - Plain names that say what a thing is (no lab, foundry, studio, academy, forge). Names players see come
   from the terminology registry.
+- No version number in a product, module or store name. When a format changes, its version is a field in
+  the data and one reader migrates the old one; the name stays.
 - Every new thing is findable: listed where its kind is listed (tool catalogue, evidence routes, repository
   map, position file, docs index), with a short how-to when others will add to it.
 
@@ -97,7 +102,9 @@ baseline or widen an ignore list to get green.
 
 ## The design check every plan and pull request answers
 
-Put these answers in the plan before code, and in the pull request description (short answers are fine):
+Put these answers in the plan before code, and in the pull request description (short answers are fine).
+Every plan and every pull request that carries out a plan also says **Players see:** what changes for a
+player, or that nothing does.
 
 1. **General case:** what is the general version of this, and where else does it (or will it) apply?
 2. **One owner:** which single module or data file owns this rule or content now?

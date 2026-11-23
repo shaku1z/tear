@@ -184,6 +184,11 @@ Docs-only changes: `pnpm check:docs`, `pnpm test:docs`,
 - A game task does not authorize touching the music or wiki repositories,
   Cloudflare, or any other service; the owner must name each one.
 - Keep scratch files, logs and screenshots outside the repository.
+- **One thing, one name.** A thing players see has one name, one screen and one
+  store. A second name, screen or store for it needs the owner's OK in a plan.
+  No version number in a product, module or store name: a format version is a
+  field in the data. Every plan pull request says what players see
+  (`**Players see:**`).
 
 ## Containment
 
@@ -194,6 +199,7 @@ now. "Rule only" means nothing fails when it is broken, so it is yours to keep.
 | What went wrong | What stops it |
 | --- | --- |
 | Themed names over over-built systems | `pnpm check:containment`: a word from its list (`config/containment.json`) in a new path, or more of them in a file than its baseline, fails. `pnpm check:terminology` refuses the old names in player and document text. A new file under `src/` fails `tests/unit/change-impact.test.mjs` until it has an evidence route, and a new top-level folder fails `pnpm check:docs` until it has a row in docs/REPOSITORY_MAP.md. |
+| Several names, screens and stores for one thing (replays: Vault, Theater, Career, Ghost V2/V3) | `pnpm check:terminology` refuses the `replay` term's old names in player text and docs, outside allowlist entries that each expire at the replay PR that removes them. `pnpm check:containment` counts vault, theater, capsule, passport and version-numbered names (`v2`, `v3`, alone or as part of a name) and fails on a new path or a count over its baseline. Rule only: a second screen or store for one thing needs the owner's OK in a plan. |
 | Too many scripts and tests | Every script needs a `config/tool-catalogue.json` entry (`tests/unit/tool-catalogue.test.mjs`). `pnpm check:containment` reports growth in the number of package scripts and script files (observe mode until the lead enforces it). Tests: rule only, add the smallest test that fails without the change. |
 | Worktree and branch sprawl, stranded work | `pnpm check:containment` reports worktree and local branch counts over the limit (observe mode until the backlog is cleared). `pnpm who` flags `no-pr`, `stale` and `merged-or-empty`; `pnpm leftovers` lists merged branches. Removal is manual. |
 | Developer surfaces in a release build | The build drops developer code (`vite.config.ts`), `scripts/check-production-test-isolation.mjs` refuses test globals in release output, and the browser check `release-has-no-engineering-surfaces` looks at the built game. |
