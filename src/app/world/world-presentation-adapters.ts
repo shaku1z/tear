@@ -18,16 +18,9 @@ import type { WorldRect } from "../../presentation/world/contracts";
 import { formatEnemyLabel } from "../../presentation/world/entity-layer";
 import { renderWorldFrame, type WorldBounds, type WorldCamera } from "../../presentation/world/world-frame";
 import type { SceneDrawInput } from "../../presentation/scenes/scene-library";
-import { buildHudSnapshot } from "../../presentation/world/hud-snapshot";
+import { buildTouchControlsSnapshot, buildTutorialCardSnapshot } from "../../presentation/world/overlay-snapshots";
+import { createWorldIndicators, type WorldIndicatorState } from "./world-indicators";
 import {
-  buildReticleSnapshot,
-  buildStageBannerSnapshot,
-  buildTouchControlsSnapshot,
-  buildTutorialCardSnapshot,
-  buildWaveBannerSnapshot,
-} from "../../presentation/world/overlay-snapshots";
-import {
-  buildEnemyStatusSnapshot,
   buildEntityLayerSnapshot,
   buildFinaleWorldSnapshot,
   buildPantheonDebugSnapshot,
@@ -43,8 +36,6 @@ import { isSheetScreen } from "../../domain/screen-catalog";
 import { isObject } from "../../domain/records";
 import type { EnvironmentSnapshot } from "../../gameplay/environment/environment-contracts";
 import { renderEnvironmentLayer } from "./environment-layer";
-import { gauntletTrialCard, gauntletWave } from "../../gameplay/run/gauntlet-trials";
-import { bossName } from "../../gameplay/run/content-director";
 
 type Dependencies = Pick<
   GameRuntimeDependencies,
@@ -156,16 +147,17 @@ export function createLiveWorldPresentationAdapters(
       ? []
       : state.enemies().flatMap((enemy) => (isDrawableEnemy(enemy) ? [projectPresentationEnemy(enemy)] : []));
 
-  const drawEnemyStatus = (enemy: VisualEnemySource): void => {
-    world.enemyStatus(
-      buildEnemyStatusSnapshot(enemy, {
-        bleedMaximum: d.CONFIG.status.bleedMax,
-        bleedColor: d.CONFIG.colors.charger,
-        burnColor: d.CONFIG.colors.slam,
-        markColor: d.CONFIG.colors.eye,
-      }),
-    );
-  };
+  const indicators = createWorldIndicators(world, liveIndicatorState(state, stage), {
+    config: d.CONFIG,
+    upgrades: d.UPGRADES,
+    flashScale: () => d.A11Y.flashScale,
+    fallbackAccent: () => d.UI.t.color.accent,
+    ink: () => d.THEME.ink,
+    formatTime: services.formatTime,
+    trickColor: services.trickColor,
+    ease: services.ease,
+  });
+  const drawEnemyStatus = indicators.enemyStatus;
   const drawPantheonDebug = (view: WorldBounds, painted: WorldBounds): void => {
     // Release builds never show it, so the snapshot (a copy of every platform,
     // projectile and enemy zone) is not built at all.
@@ -426,38 +418,8 @@ export function createLiveWorldPresentationAdapters(
     world.coachMarks(frame);
   };
   const drawHud = (): void => {
-    const run = state.run();
-    const enemies = state.enemies();
-    const boss = enemies.find((enemy) => enemy.isBoss);
-    const previous = state.hud();
-    const intro = state.bossIntro();
-    const player = state.player();
-    if (!player) return;
-    const result = buildHudSnapshot({
-      player,
-      run: { ...run, owned: run.mods.owned },
-      ...(boss ? { boss } : {}),
-      ...(intro ? { bossIntro: { boss: intro.boss, delay: intro.delay, elapsed: intro.t, duration: intro.dur } } : {}),
-      upgrades: d.UPGRADES,
-      enemyCount: enemies.length,
-      previousLagHp: previous.lagHp,
-      previousMultiplier: previous.multiplier,
-      multiplierPop: previous.multiplierPop,
-      nowMilliseconds: state.hudClockSeconds() * 1000,
-      flashScale: d.A11Y.flashScale,
-      deltaSeconds: state.lastUiDelta(),
-      stageAccent: stage.current.accent,
-      fallbackAccent: d.UI.t.color.accent,
-      bossColor: d.CONFIG.colors.boss,
-      dashCooldown: d.CONFIG.dash.cooldown,
-      dashColor: d.CONFIG.colors.perfect,
-      shieldColor: d.CONFIG.colors.armoredShield,
-      trickDecay: d.CONFIG.trick.decay,
-      formatTime: services.formatTime,
-      trickColor: services.trickColor,
-      ease: services.ease,
-    });
-    world.hud(result.snapshot);
+    if (!state.player()) return;
+    indicators.hud();
     if (state.screen() === "playing") services.chase?.hud(canvas, width);
     drawTraining();
   };
@@ -522,57 +484,9 @@ export function createLiveWorldPresentationAdapters(
         }),
       );
     },
-    drawWaveBanner(): void {
-      const run = state.run();
-      world.waveBanner(
-        buildWaveBannerSnapshot({
-          remainingSeconds: state.bannerSeconds(),
-          duration: d.CONFIG.juice.bannerTime,
-          mode: run.mode,
-          bossWave: !!run.isBossWave,
-          wave: run.wave,
-          ...(run.mode === "gauntlet" ? { trialCount: run.bossOrder.length } : {}),
-          waveTag: run.waveTag,
-          horde: !!run.horde,
-          hordeColor: d.CONFIG.colors.charger,
-          normalColor: d.CONFIG.colors.perfect,
-        }),
-      );
-    },
-    drawStageBanner(): void {
-      const run = state.run();
-      world.stageBanner(
-        buildStageBannerSnapshot({
-          elapsed: stage.bannerSeconds,
-          mode: run.mode,
-          stageIndex: stage.index,
-          stageName: stage.name || stage.current.name,
-          blurb: stage.current.blurb || "",
-          accent: stage.current.accent || d.THEME.ink,
-          trial: gauntletTrialBanner(run),
-        }),
-      );
-    },
-    drawReticle(): void {
-      const blade = state.blade();
-      if (!blade) return;
-      const player = state.player();
-      const config = d.CONFIG.blade;
-      world.reticle(
-        buildReticleSnapshot({
-          blade,
-          airborne: !!player && !player.onGround,
-          playerVerticalSpeed: player?.vy ?? 0,
-          slamMinDownSpeed: config.slamMinDownSpeed,
-          slamPowerSpeed: config.slamPowerSpeed,
-          slamEmpowerAt: config.slamEmpowerAt,
-          launchMinUpSpeed: config.launchMinUpSpeed,
-          risingSpeedReference: config.risingSpeedRef,
-          slamColor: d.CONFIG.colors.slam,
-          updraftColor: d.CONFIG.colors.perfect,
-        }),
-      );
-    },
+    drawWaveBanner: indicators.waveBanner,
+    drawStageBanner: indicators.stageBanner,
+    drawReticle: indicators.reticle,
   });
 }
 
@@ -692,14 +606,18 @@ export function projectSceneBoss(enemy: GameEnemy): SceneBoss {
   };
 }
 
-/** The Gauntlet trial card's label and boss; undefined outside a Gauntlet. */
-function gauntletTrialBanner(
-  run: Readonly<{ mode: string; wave: number; bossOrder?: readonly string[] }>,
-): Readonly<{ label: string; boss: string }> | undefined {
-  if (run.mode !== "gauntlet" || run.wave < 1 || run.bossOrder === undefined) return undefined;
-  const trial = gauntletWave(run.wave).trial;
-  const boss = run.bossOrder[trial];
-  return boss === undefined
-    ? undefined
-    : { label: gauntletTrialCard(trial, run.bossOrder.length), boss: bossName(boss) };
+/** The live world, as the indicators read it. */
+function liveIndicatorState(state: WorldPresentationState, stage: WorldPresentationServices["stage"]) {
+  return Object.freeze<WorldIndicatorState>({
+    run: state.run,
+    player: state.player,
+    blade: state.blade,
+    enemies: state.enemies,
+    bossIntro: state.bossIntro,
+    bannerSeconds: state.bannerSeconds,
+    stage: () => stage,
+    hud: state.hud,
+    hudClockSeconds: state.hudClockSeconds,
+    deltaSeconds: state.lastUiDelta,
+  });
 }

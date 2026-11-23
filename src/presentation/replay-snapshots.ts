@@ -1,4 +1,4 @@
-import type { ReplayScreenView } from "./screens/contracts";
+import type { CardView, ReplayScreenView } from "./screens/contracts";
 import type { UpgradeCategoryPresentation, UpgradePresentationSource } from "./run-screen-snapshots";
 
 /** Simulation ticks (120 per second) as the m:ss a player reads. */
@@ -28,6 +28,36 @@ export interface ReplayChapterSource {
   readonly t: number;
   readonly boss?: boolean;
 }
+/** The replay INFO panel's loadout: one card per upgrade, its tier, UNIQUE or how many were taken. */
+export function replayLoadoutCards(
+  items: readonly Readonly<{ id: string; tier: number; count: number }>[],
+  look: Readonly<{
+    upgrades: readonly UpgradePresentationSource[];
+    categories: Readonly<Record<string, UpgradeCategoryPresentation>>;
+    fallbackCategory: UpgradeCategoryPresentation;
+    specialColor: string;
+  }>,
+): readonly CardView[] {
+  return items.flatMap((item) => {
+    const upgrade = look.upgrades.find((entry) => entry.id === item.id);
+    if (upgrade === undefined) return [];
+    const category = look.categories[upgrade.cat] ?? look.fallbackCategory;
+    return [
+      {
+        id: item.id,
+        label: upgrade.name,
+        accent: upgrade.tiers !== undefined ? look.specialColor : category.color,
+        footer:
+          upgrade.tiers !== undefined
+            ? "TIER " + String(item.tier)
+            : upgrade.unique
+              ? "UNIQUE"
+              : "×" + String(item.count),
+      },
+    ];
+  });
+}
+
 export function buildReplayScreenSnapshot(input: {
   readonly data: ReplayDataSource;
   readonly modeLabel: string;
@@ -53,29 +83,16 @@ export function buildReplayScreenSnapshot(input: {
     { label: "PEAK MULTIPLIER", value: "×" + String(data.peak ?? 1) },
     { label: "TIME", value: input.formatTime(data.time ?? input.duration) },
   ];
-  const finalItems = new Map<string, { id: string; tier: number; n: number }>();
+  const finalItems = new Map<string, { id: string; tier: number; count: number }>();
   for (const item of data.finalLoadout ?? data.loadout ?? []) {
     const previous = finalItems.get(item.id);
     finalItems.set(item.id, {
       id: item.id,
       tier: item.tier ?? previous?.tier ?? 1,
-      n: item.n ?? (previous?.n ?? 0) + 1,
+      count: item.n ?? (previous?.count ?? 0) + 1,
     });
   }
-  const loadout = [...finalItems.values()].flatMap((item) => {
-    const upgrade = input.upgrades.find((entry) => entry.id === item.id);
-    if (upgrade === undefined) return [];
-    const category = input.categories[upgrade.cat] ?? input.fallbackCategory;
-    return [
-      {
-        id: item.id,
-        label: upgrade.name,
-        accent: upgrade.tiers !== undefined ? input.specialColor : category.color,
-        footer:
-          upgrade.tiers !== undefined ? "TIER " + String(item.tier) : upgrade.unique ? "UNIQUE" : "×" + String(item.n),
-      },
-    ];
-  });
+  const loadout = replayLoadoutCards([...finalItems.values()], input);
   // The header states the run's final result; the right-hand readout is the wave on screen now.
   return Object.freeze({
     id: "replay",

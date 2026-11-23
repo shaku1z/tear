@@ -19,6 +19,9 @@ vi.mock("../../src/ghost/production-replay-session", () => ({
 
 import { createGhostTheaterScreenAdapter } from "../../src/app/library/ghost-theater-screen-adapter";
 import type { ReplayScreenView } from "../../src/presentation/screens/contracts";
+import * as engineModule from "../../src/app/world/detached/replay-composition";
+import { SPECS } from "../support/hash-stream-corpus";
+import { recordCorpusStream } from "../support/replay-corpus-record";
 import type { GhostReadCapsule } from "../../src/ghost/capsule-reader";
 
 function hostileCapsule(): GhostReadCapsule {
@@ -61,41 +64,41 @@ describe("Ghost Theater open result", () => {
       }),
       launchPractice: () => ({ ok: false as const, message: "unused" }),
     };
-    const theater = createGhostTheaterScreenAdapter(services);
-    expect(theater.open(hostileCapsule(), "profile").kind).toBe("opened");
-    theater.render();
+    const screen = createGhostTheaterScreenAdapter(services);
+    expect(screen.open(hostileCapsule(), "profile").kind).toBe("opened");
+    screen.render();
     expect(seeks.at(-1)).toBe(1680);
     expect(rendered.at(-1)?.progress).toBe(0.9);
     controls.clicked = false;
     pressed.add("Space");
-    theater.render();
-    expect(theater.status()?.paused).toBe(false);
+    screen.render();
+    expect(screen.status()?.paused).toBe(false);
     expect(pressed.has("Space")).toBe(false);
     pressed.clear();
     pressed.add("ArrowLeft");
-    theater.render();
+    screen.render();
     expect(seeks.at(-1)).toBe(1080);
     pressed.clear();
     pressed.add("ArrowRight");
-    theater.render();
+    screen.render();
     expect(seeks.at(-1)).toBe(1680);
     pressed.clear();
     pressed.add("Space");
-    theater.render();
-    expect(theater.status()?.paused).toBe(true);
-    theater.toggleReplayEditor();
+    screen.render();
+    expect(screen.status()?.paused).toBe(true);
+    screen.toggleReplayEditor();
     controls.clicked = true;
     const accepted = takeClick.mock.calls.length;
     pressed.clear();
     pressed.add("ArrowLeft");
-    theater.render();
+    screen.render();
     expect(seeks.at(-1)).toBe(1680);
     expect(takeClick).toHaveBeenCalledTimes(accepted);
-    theater.toggleReplayEditor();
+    screen.toggleReplayEditor();
     controls.clicked = false;
     pressed.clear();
-    theater.seekBy(-5);
-    theater.render();
+    screen.seekBy(-5);
+    screen.render();
     expect(seeks.at(-1)).toBe(1080);
     fixture.session = undefined;
   });
@@ -112,7 +115,7 @@ describe("Ghost Theater open result", () => {
       ]),
     });
     const rendered: unknown[] = [];
-    const theater = createGhostTheaterScreenAdapter({
+    const screen = createGhostTheaterScreenAdapter({
       render: (view) => {
         rendered.push(view);
       },
@@ -120,7 +123,7 @@ describe("Ghost Theater open result", () => {
       launchPractice: () => ({ ok: false, message: "unused" }),
     });
 
-    const result = theater.open(hostileCapsule(), "profile");
+    const result = screen.open(hostileCapsule(), "profile");
 
     expect(result).toEqual({
       kind: "refused",
@@ -130,10 +133,10 @@ describe("Ghost Theater open result", () => {
       root: "root-hostile",
     });
     expect(fixture.sessionCalls).toBe(0);
-    expect(theater.status()).toBeNull();
-    theater.seekBy(30);
-    theater.togglePause();
-    theater.render();
+    expect(screen.status()).toBeNull();
+    screen.seekBy(30);
+    screen.togglePause();
+    screen.render();
     expect(rendered).toEqual([]);
   });
 });
@@ -152,7 +155,7 @@ describe("Theater local media ownership", () => {
       signals: AbortSignal[] = [],
       downloads = vi.fn();
     let finish: ((value: never) => void) | undefined;
-    const theater = createGhostTheaterScreenAdapter({
+    const screen = createGhostTheaterScreenAdapter({
       render: (view) => {
         rendered.push(view);
       },
@@ -179,32 +182,32 @@ describe("Theater local media ownership", () => {
       manifest: { ...hostileCapsule().manifest, schemaVersion: 2, status: "complete" },
       maxTick: 240,
     } as GhostReadCapsule;
-    expect(theater.open(capsule, "profile").kind).toBe("opened");
-    theater.toggleReplayEditor();
-    theater.jumpCheckpoint(1);
-    theater.markClipIn();
-    theater.jumpCheckpoint(1);
-    theater.setSpeed(0.5);
-    theater.appendClip();
-    theater.restart();
-    theater.markClipIn();
-    theater.jumpCheckpoint(1);
-    theater.setSpeed(2);
-    theater.appendClip();
-    theater.exportClips();
-    theater.render();
+    expect(screen.open(capsule, "profile").kind).toBe("opened");
+    screen.toggleReplayEditor();
+    screen.jumpCheckpoint(1);
+    screen.markClipIn();
+    screen.jumpCheckpoint(1);
+    screen.setSpeed(0.5);
+    screen.appendClip();
+    screen.restart();
+    screen.markClipIn();
+    screen.jumpCheckpoint(1);
+    screen.setSpeed(2);
+    screen.appendClip();
+    screen.exportClips();
+    screen.render();
     expect(rendered.at(-1)?.clipExport?.status).toBe("rendering");
-    theater.cancelClipExport();
+    screen.cancelClipExport();
     expect(signals[0]?.aborted).toBe(true);
-    theater.exit();
-    expect(theater.open(capsule, "profile").kind).toBe("opened");
-    theater.toggleReplayEditor();
+    screen.exit();
+    expect(screen.open(capsule, "profile").kind).toBe("opened");
+    screen.toggleReplayEditor();
     finish?.({ thumbnail: "late" } as never);
     await Promise.resolve();
-    theater.render();
+    screen.render();
     expect(rendered.at(-1)?.clipExport?.status).toBe("idle");
     expect(rendered.at(-1)?.clipExport?.thumbnail).toBeUndefined();
-    theater.downloadClip();
+    screen.downloadClip();
     expect(downloads).not.toHaveBeenCalled();
     fixture.session = undefined;
   });
@@ -405,3 +408,39 @@ function ebmlElements(bytes: Uint8Array): { id: number; data: Uint8Array; positi
   }
   return result;
 }
+
+/** WATCH on a kept run (`openRecord`): the replay plays at once, and INFO says who played what and how it ended, with the run's upgrades at the shown moment. */
+describe("watching a kept run", () => {
+  it("plays at once, and INFO lists the run and the upgrades held at the shown moment", () => {
+    const spec = SPECS[0];
+    if (spec === undefined) throw new Error("no corpus stream");
+    const record = recordCorpusStream(spec);
+    const views: ReplayScreenView[] = [];
+    const screen = createGhostTheaterScreenAdapter({
+      render: (view) => views.push(view),
+      deltaSeconds: () => 1 / 60,
+      launchPractice: () => ({ ok: false, message: "no practice here" }) as never,
+      loadoutCards: (items) => items.map((item) => ({ id: item.id, label: item.id, footer: String(item.count) })),
+    });
+    expect(screen.openRecord(record, "record:test:1", "profile", engineModule).kind).toBe("opened");
+    expect(screen.status()?.paused).toBe(false);
+    screen.render();
+    expect(screen.shownTick()).toBeGreaterThan(0);
+
+    screen.toggleInfo();
+    screen.seekToFraction(1);
+    screen.render();
+    const view = views.at(-1);
+    expect(view?.infoVisible).toBe(true);
+    expect(view?.infoRows?.map((row) => row.label)).toEqual(["PLAYER", "RUN", "RESULT", "SCORE", "KILLS", "TIME"]);
+    expect(view?.infoRows?.find((row) => row.label === "SCORE")?.value).toBe(
+      record.summary.score.toLocaleString("en-US"),
+    );
+    expect(view?.loadoutHeading?.title).toBe("LOADOUT AT THIS MOMENT");
+    expect(view?.loadout?.length).toBeGreaterThan(0);
+
+    screen.seekToFraction(0);
+    screen.render();
+    expect(views.at(-1)?.loadout).toEqual([]);
+  });
+});
