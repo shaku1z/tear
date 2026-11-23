@@ -15,7 +15,7 @@
  */
 import type { RunStartChoices } from "../../gameplay/run/run-start-choices";
 import type { LazyModule } from "../../domain/lazy-module";
-import type { ReplayBuild, ReplayLook } from "../../replay/record";
+import type { ReplayBuild, ReplayLook, ReplayRecord } from "../../replay/record";
 import type { ReplayRecordFailure, ReplayRecordStore } from "../../replay/record-store";
 import type { ReplayRunEnd } from "../../replay/recorder";
 import type { LiveReplayRecorderModule } from "./live-replay-recorder-slot";
@@ -45,10 +45,13 @@ export interface LiveReplayProductionPorts {
 export interface LiveReplayProduction {
   /** A run's start is resolved, before its world initializes. */
   readonly runStarted: (choices: RunStartChoices) => void;
-  /** The run reached its outcome; `keep` is false for runs a record does not replay. */
-  readonly runEnded: (run: ReplayRunEnd["run"], keep: boolean) => void;
-  /** Ends the open recording now and returns it, unstored (the test-build inspector). */
-  readonly finishOpen: (run: ReplayRunEnd["run"]) => ReturnType<LiveReplayTap["finish"]>;
+  /**
+   * The run ended; `keep` is false for runs a record does not replay. `run` gives its totals and is read
+   * once the tick it ended in has been simulated.
+   */
+  readonly runEnded: (run: () => ReplayRunEnd["run"], keep: boolean) => void;
+  /** Ends the open recording between ticks and returns it, unstored (the test-build inspector). */
+  readonly finishOpen: (run: () => ReplayRunEnd["run"]) => ReplayRecord | null;
   readonly ensure: () => Promise<void>;
   readonly counters: () => LiveReplayProductionCounters;
   /** What the last tap that threw threw, as text (the test-build inspector), or null. */
@@ -69,9 +72,14 @@ export function keepsReplayRecord(
   return !practice && run.beatThisRun === undefined && run.seedRace === undefined && run.ghostAssistance === undefined;
 }
 
+/** A live run's totals as its replay record ends with them. */
+export function replayRunTotals(run: Readonly<{ score: number; wave: number; runTime: number }>): ReplayRunEnd["run"] {
+  return { score: run.score, wave: run.wave, time: run.runTime };
+}
+
 /**
  * A tap that stops recording for the rest of the run the first time it throws: every later call does
- * nothing and its finish returns no record, even when something else wraps it in the slot. It also
+ * nothing and its finish gives no record, even when something else wraps it in the slot. It also
  * leaves the slot if it is still the slot's tap.
  */
 function guarded(tap: LiveReplayTap, slot: LiveReplayTapSlot, failed: (error: unknown) => void): LiveReplayTap {
@@ -89,6 +97,7 @@ function guarded(tap: LiveReplayTap, slot: LiveReplayTapSlot, failed: (error: un
         return fallback;
       }
     };
+  const finishSafely = safe(tap.finish, undefined);
   const wrapped: LiveReplayTap = Object.freeze({
     runStarted: safe(tap.runStarted, undefined),
     frame: safe(tap.frame, undefined),
@@ -96,7 +105,17 @@ function guarded(tap: LiveReplayTap, slot: LiveReplayTapSlot, failed: (error: un
     sealed: safe(tap.sealed, undefined),
     stepped: safe(tap.stepped, undefined),
     observe: safe(tap.observe, undefined),
-    finish: safe(tap.finish, null),
+    // A broken tap has no record to give, but still says so, so the slot is freed.
+    finish: (run: () => ReplayRunEnd["run"], done: (record: ReplayRecord | null) => void) => {
+      let answered = false;
+      const once = (record: ReplayRecord | null) => {
+        if (answered) return;
+        answered = true;
+        done(record);
+      };
+      finishSafely(run, once);
+      if (broken) once(null);
+    },
   });
   return wrapped;
 }
@@ -129,10 +148,14 @@ export function createLiveReplayProduction(ports: LiveReplayProductionPorts): Li
     });
     return store;
   };
-  const take = (): LiveReplayTap | null => {
+  // The tap stays in the slot until its record is done, so it sees the tick its run ended in.
+  const finish = (run: () => ReplayRunEnd["run"], done: (record: ReplayRecord | null) => void): void => {
     const tap = ports.slot.current();
-    ports.slot.install(null);
-    return tap;
+    if (tap === null) return;
+    tap.finish(run, (record) => {
+      if (ports.slot.current() === tap) ports.slot.install(null);
+      done(record);
+    });
   };
   return Object.freeze({
     runStarted(choices: RunStartChoices): void {
@@ -152,27 +175,34 @@ export function createLiveReplayProduction(ports: LiveReplayProductionPorts): Li
       );
       ports.slot.runStarted(choices);
     },
-    runEnded(run: ReplayRunEnd["run"], keep: boolean): void {
-      const record = take()?.finish(run) ?? null;
-      if (record === null || !keep) return;
-      counts.recorded += 1;
-      const module = ports.recorder.loaded();
-      writes = writes
-        .then(() => openStore(module))
-        .then(async (opened) => {
-          if (opened === null) return;
-          const put = await opened.put(record);
-          if (put.status === "stored") {
-            counts.stored += 1;
-            counts.evicted += put.evicted.length;
-          } else if (put.status === "oversized") counts.oversized += 1;
-          else storeFailed(put.reason);
-        })
-        .catch(() => {
-          storeFailed("error");
-        });
+    runEnded(run: () => ReplayRunEnd["run"], keep: boolean): void {
+      finish(run, (record) => {
+        if (record === null || !keep) return;
+        counts.recorded += 1;
+        const module = ports.recorder.loaded();
+        writes = writes
+          .then(() => openStore(module))
+          .then(async (opened) => {
+            if (opened === null) return;
+            const put = await opened.put(record);
+            if (put.status === "stored") {
+              counts.stored += 1;
+              counts.evicted += put.evicted.length;
+            } else if (put.status === "oversized") counts.oversized += 1;
+            else storeFailed(put.reason);
+          })
+          .catch(() => {
+            storeFailed("error");
+          });
+      });
     },
-    finishOpen: (run: ReplayRunEnd["run"]) => take()?.finish(run) ?? null,
+    finishOpen: (run: () => ReplayRunEnd["run"]) => {
+      let finished: ReplayRecord | null = null;
+      finish(run, (record) => {
+        finished = record;
+      });
+      return finished;
+    },
     ensure: () => ports.recorder.ensure().then(() => undefined),
     counters: () => Object.freeze({ ...counts, storeFailures: Object.freeze({ ...counts.storeFailures }) }),
     lastTapError: () => lastTapError,

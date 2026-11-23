@@ -6,9 +6,9 @@
 import { describe, expect, it } from "vitest";
 
 import { createLiveReplayTap } from "../../src/app/replay/live-replay-tap";
-import { createLiveReplayTapSlot } from "../../src/app/replay/live-replay-tap-slot";
+import { createLiveReplayTapSlot, type LiveReplayTap } from "../../src/app/replay/live-replay-tap-slot";
 import type { RunStartChoices } from "../../src/gameplay/run/run-start-choices";
-import { readReplayRecord } from "../../src/replay/record";
+import { readReplayRecord, type ReplayRecord } from "../../src/replay/record";
 
 const CHOICES: RunStartChoices = Object.freeze({
   mode: "endless",
@@ -30,6 +30,19 @@ const HEADER = Object.freeze({
 const HASH = "0123456789abcdef";
 const RELEASED = Object.freeze({ key: false, touch: false, pad: false, click: false });
 const REWARD = Object.freeze({ choices: [{ id: "edge" }, { id: "reach" }], reserveChoices: [] });
+const NO_RUN = () => ({ score: 0, wave: 0, time: 0 });
+
+/** The tap's record for a run ended now, or undefined while it waits for the tick in play. */
+function finishNow(
+  tap: Pick<LiveReplayTap, "finish"> | null | undefined,
+  run = NO_RUN,
+): ReplayRecord | null | undefined {
+  let record: ReplayRecord | null | undefined;
+  tap?.finish(run, (finished) => {
+    record = finished;
+  });
+  return record;
+}
 
 describe("the live replay tap", () => {
   it("records reward actions before the sealed actions of the tick that carries them", () => {
@@ -49,7 +62,7 @@ describe("the live replay tap", () => {
     slot.frame(5, 1 / 60, RELEASED, true);
     slot.sealed(2, [{ kind: "command", id: 91, tick: 2, command: { type: "jump", phase: "released" } }]);
     slot.stepped(2, () => HASH);
-    const record = slot.current()?.finish({ score: 3, wave: 1, time: 0 });
+    const record = finishNow(slot.current(), () => ({ score: 3, wave: 1, time: 0 }));
     expect(record?.run.seed).toBe(4242);
     expect(record?.run.start).not.toHaveProperty("boss");
     expect(record?.run.start.metaRanks).toEqual({ tough: 1 });
@@ -62,7 +75,30 @@ describe("the live replay tap", () => {
     ]);
     expect(record?.run.actions[2]?.command).toEqual({ type: "draft-choice", choiceId: "reach" });
     expect(readReplayRecord(JSON.parse(JSON.stringify(record)))).toMatchObject({ ok: true });
-    expect(slot.current()?.finish({ score: 0, wave: 0, time: 0 })).toBeNull();
+    expect(finishNow(slot.current())).toBeNull();
+  });
+
+  it("ends a run that ends inside a tick with that tick: its actions, its hash and its totals then", () => {
+    const tap = createLiveReplayTap(HEADER);
+    tap.runStarted(CHOICES);
+    tap.sealed(1, []);
+    tap.stepped(1, () => "first");
+    tap.sealed(2, [{ kind: "command", id: 7, tick: 2, command: { type: "jump", phase: "pressed" } }]);
+    let totals = { score: 1, wave: 1, time: 0 };
+    let record: ReplayRecord | null | undefined;
+    // The live outcome ends the run from inside tick 2's combat.
+    tap.finish(
+      () => totals,
+      (finished) => {
+        record = finished;
+      },
+    );
+    expect(record).toBeUndefined();
+    totals = { score: 5, wave: 1, time: 0 };
+    tap.stepped(2, () => "second");
+    expect(record?.run.result).toMatchObject({ tick: 2, hash: "second" });
+    expect(record?.run.actions.map((action) => action.tick)).toEqual([2]);
+    expect(record?.summary).toMatchObject({ score: 5 });
   });
 
   it("records no Tutorial or Playground run", () => {
@@ -71,7 +107,7 @@ describe("the live replay tap", () => {
       tap.runStarted({ ...CHOICES, mode });
       tap.sealed(1, []);
       tap.stepped(1, () => HASH);
-      expect(tap.finish({ score: 0, wave: 0, time: 0 })).toBeNull();
+      expect(finishNow(tap)).toBeNull();
     }
   });
 
@@ -81,7 +117,7 @@ describe("the live replay tap", () => {
       tap.runStarted({ ...CHOICES, mode: "bossonly", boss });
       tap.sealed(1, []);
       tap.stepped(1, () => HASH);
-      return tap.finish({ score: 0, wave: 0, time: 0 });
+      return finishNow(tap);
     };
     const released = recordOn("warden");
     expect(released?.run.start.boss).toBe("warden");

@@ -18,7 +18,7 @@ import type { OutcomeChronologyEffect } from "../../gameplay/run/outcome-chronol
 import type { LiveGhostPracticeSessionState } from "../replay/ghost-practice-session-state";
 import type { EnvironmentRuntimeState } from "../../gameplay/environment/environment-contracts";
 import type { ReplayRunEnd } from "../../replay/recorder";
-import { keepsReplayRecord } from "../replay/live-replay-production";
+import { keepsReplayRecord, replayRunTotals } from "../replay/live-replay-production";
 
 type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
 
@@ -30,7 +30,7 @@ const storedRecordingMetadata = (summary: StoredRecordingSummary): Readonly<Reco
 export interface LiveOutcomeCompositionOptions {
   readonly observeTerminal?: (outcome: "defeat" | "victory") => void;
   /** Ends the run's replay record (src/app/replay/live-replay-production.ts); `keep` says whether it is kept. */
-  readonly replayRunEnded?: (run: ReplayRunEnd["run"], keep: boolean) => void;
+  readonly replayRunEnded?: (run: () => ReplayRunEnd["run"], keep: boolean) => void;
   readonly dependencies: GameRuntimeDependencies;
   readonly lifecycle: RunLifecycleController;
   readonly controllers: LiveRunControllerRegistry<GameRun, ReplayPacket, PreparedVictory>;
@@ -94,7 +94,9 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
     stopRecording: (summary) => {
       // The run's real end: a defeat or a final win (a campaign stage win is not an outcome).
       const keep = keepsReplayRecord(summary, options.practiceSession?.active() != null);
-      options.replayRunEnded?.({ score: summary.score, wave: summary.wave, time: summary.time }, keep);
+      // Read when the record closes: a death ends the record after the tick it happened in.
+      const run = active();
+      options.replayRunEnded?.(() => replayRunTotals(run), keep);
       try {
         return d.GHOST.stopRec(recordingMetadata(summary), {
           continueSemanticInput: summary.won && active().mode === "campaign",

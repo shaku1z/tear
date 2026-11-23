@@ -33,8 +33,12 @@ export interface LiveReplayTapSeams {
 }
 
 export interface LiveReplayTap extends LiveReplayTapSeams {
-  /** The run being recorded ended at its last simulated tick; null when no recorded run is open. */
-  readonly finish: (run: ReplayRunEnd["run"]) => ReplayRecord | null;
+  /**
+   * The run being recorded ended. `done` gets its record, or null when no recorded run is open, once the
+   * tick the run ended in has been simulated: at once between ticks, after `stepped` inside one. `run` is
+   * read then, so the totals are the ones that tick left.
+   */
+  readonly finish: (run: () => ReplayRunEnd["run"], done: (record: ReplayRecord | null) => void) => void;
 }
 
 export interface LiveReplayTapSlot extends LiveReplayTapSeams {

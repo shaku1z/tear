@@ -252,9 +252,10 @@ describe("live outcome composition pending-finale persistence", () => {
           GHOST: { stopRec: () => null },
           Input: { stopSemanticRecording: () => undefined },
         } as never,
-        run: () => run,
+        // The record reads the live run's totals when it closes.
+        run: () => ({ ...run, score: 120, wave: 3, runTime: 41 }),
         ...(practice ? { practiceSession: { active: () => ({ id: "practice" }) } } : {}),
-        replayRunEnded: (totals: unknown, kept: boolean) => ended.push([totals, kept]),
+        replayRunEnded: (totals: () => unknown, kept: boolean) => ended.push([totals(), kept]),
         cleanupBossActors: () => undefined,
         environment: { clear: () => undefined },
         lifecycle: { terminate: () => undefined },

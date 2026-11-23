@@ -38,7 +38,9 @@ function harness(options: Readonly<{ put?: ReplayRecordPut; open?: "ok" | "block
     sealed: () => undefined,
     stepped: () => undefined,
     observe: () => undefined,
-    finish: () => record,
+    finish: (_run, done) => {
+      done(record);
+    },
   });
   const module = {
     createLiveReplayTap: tap,
@@ -66,7 +68,7 @@ describe("the production live replay recorder", () => {
     await recorder.ensure();
     production.runStarted(choices);
     expect(slot.current()).not.toBeNull();
-    production.runEnded(run, true);
+    production.runEnded(() => run, true);
     await production.settled();
     expect(slot.current()).toBeNull();
     expect(puts).toEqual([record]);
@@ -81,7 +83,7 @@ describe("the production live replay recorder", () => {
       slot.frame(1, 1 / 60, null as never, false);
     }).not.toThrow();
     expect(slot.current()).toBeNull();
-    production.runEnded(run, true);
+    production.runEnded(() => run, true);
     await production.settled();
     expect(puts).toEqual([]);
     expect(production.counters()).toMatchObject({ tapErrors: 1, recorded: 0 });
@@ -97,8 +99,9 @@ describe("the production live replay recorder", () => {
     slot.install({ ...guarded });
     slot.frame(1, 1 / 60, null as never, false);
     expect(slot.current()).not.toBeNull();
-    production.runEnded(run, true);
+    production.runEnded(() => run, true);
     await production.settled();
+    expect(slot.current()).toBeNull();
     expect(puts).toEqual([]);
     expect(production.counters()).toMatchObject({ tapErrors: 1, recorded: 0 });
     expect(production.lastTapError()).toBe("tap fault");
@@ -108,7 +111,7 @@ describe("the production live replay recorder", () => {
     const { production, slot, recorder, puts } = harness();
     await recorder.ensure();
     production.runStarted(choices);
-    production.runEnded(run, false);
+    production.runEnded(() => run, false);
     await production.settled();
     expect(slot.current()).toBeNull();
     expect(puts).toEqual([]);
@@ -124,7 +127,7 @@ describe("the production live replay recorder", () => {
       const { production, recorder } = harness(setup);
       await recorder.ensure();
       production.runStarted(choices);
-      production.runEnded(run, true);
+      production.runEnded(() => run, true);
       await production.settled();
       expect(production.counters()).toMatchObject({ recorded: 1, ...expected });
     }
