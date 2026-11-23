@@ -549,7 +549,24 @@ describe("legacy screen renderer registry", () => {
       unlocked: 0,
       modeLabel: "Tutorial",
       difficultyLabel: "Normal",
+    });
+    // Drills are not on the main menu (owner, 2026-11-23); PLAY's setup screen offers them.
+    expect(controls.some((control) => control.label === "DRILLS")).toBe(false);
+    expect(
+      controls.some(
+        (control) => control.action.type === "tutorial.action" && control.action.command === "open-practice",
+      ),
+    ).toBe(false);
+    controls.length = 0;
+    renderer.setup({
+      id: "setup",
       practiceAvailable: true,
+      modes: [{ id: "endless", label: "endless", selected: true }],
+      difficulties: [{ id: "normal", label: "normal", selected: true }],
+      weapons: [{ id: "sword", label: "sword", selected: true }],
+      showDifficulty: true,
+      startGlyph: "▢",
+      startSummary: "ENDLESS · NORMAL · SWORD",
     });
     expect(controls.find((control) => control.label === "DRILLS")?.action).toEqual({
       type: "tutorial.action",

@@ -52,7 +52,6 @@ export function menuMusicRow(state: NowPlaying): Readonly<{ label: string; detai
 }
 
 export function buildMenuSnapshot(input: {
-  readonly tutorialDone?: number;
   /** Set while the profile is tutorial-first (see first-run-guidance): the lesson PLAY continues at. */
   readonly tutorialFirst?: Readonly<{ next: number; count: number }>;
   readonly username: string;
@@ -73,7 +72,6 @@ export function buildMenuSnapshot(input: {
     id: "menu",
     nowPlaying: menuMusicRow(getNowPlaying()),
     playerName: (input.campaignEmblem ? "◇ " : "") + (input.username || "GUEST"),
-    ...(Number.isSafeInteger(input.tutorialDone) && (input.tutorialDone ?? 0) > 0 ? { practiceAvailable: true } : {}),
     signedIn: input.signedIn,
     coins: input.coins,
     shards: input.shards,
