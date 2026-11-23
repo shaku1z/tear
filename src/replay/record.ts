@@ -28,6 +28,7 @@ import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
 import { isWeaponId, type WeaponId } from "../gameplay/weapon-selection";
 import { normalizeGameAction, type GameAction } from "../input/game-action";
 import { isRunSeed, type RunStartChoices } from "../gameplay/run/run-start-choices";
+import cosmeticSlots from "../gameplay/progression/cosmetics/slots.json";
 
 export const REPLAY_FORMAT = "tear-replay";
 /**
@@ -390,7 +391,11 @@ function readSummary(value: unknown, resultTick: number): ReplaySummary {
 
 function readLook(value: unknown): ReplayLook {
   const look = object(value, "look");
-  const cosmetics = Object.entries(object(look.cosmetics, "look.cosmetics")).map(([slot, id]) => [
+  const worn = Object.entries(object(look.cosmetics, "look.cosmetics"));
+  // One cosmetic per Shards slot at most, so a record cannot carry an unbounded look.
+  if (worn.length > cosmeticSlots.length)
+    fail("look.cosmetics", `has more than ${String(cosmeticSlots.length)} entries, one per cosmetic slot`);
+  const cosmetics = worn.map(([slot, id]) => [
     text(slot, "look.cosmetics", 64),
     text(id, `look.cosmetics.${slot}`, 64),
   ]);

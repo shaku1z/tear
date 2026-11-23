@@ -24,7 +24,8 @@ import {
   type LiveWorldSimulationPresentationAdapterOptions,
 } from "../world/world-simulation-factories";
 import type { ProductionReplayPresentationContext } from "../world/detached/world-factory";
-import type { ProductionGhostReplayCompositionOptions } from "../world/detached/replay-composition";
+import type { CosmeticWardrobe } from "../../presentation/cosmetic-styles";
+import type { RecordWorldPresentation } from "./record-world";
 
 type Ui = LiveWorldSimulationPresentationAdapterOptions["ui"] & CinematicUiPort & WorldUiPort;
 /** The parts of a drawn replay frame a caller may leave out. */
@@ -38,6 +39,8 @@ export interface BrowserGhostReplayPresentationOptions {
   readonly hidden?: () => ReadonlySet<ReplayFrameLayer>;
   /** Painted stage backgrounds, drawn as the live world draws them. */
   readonly scenes?: SceneLibrary;
+  /** Who wears which cosmetics: a watched record dresses its runner's blade here. The game's own look when absent. */
+  readonly wardrobe?: CosmeticWardrobe;
 }
 const NOTHING_HIDDEN: ReadonlySet<ReplayFrameLayer> = new Set();
 /** Each reconstructed world gets its own theme, backdrop caches, FX and renderer constructors. */
@@ -45,7 +48,7 @@ export function createBrowserGhostReplayPresentation(
   document: Document,
   ui: Ui,
   options: BrowserGhostReplayPresentationOptions = {},
-): Pick<ProductionGhostReplayCompositionOptions, "presentation" | "renderView"> {
+): RecordWorldPresentation {
   const owners = new WeakMap<
     object,
     Readonly<{
@@ -56,6 +59,7 @@ export function createBrowserGhostReplayPresentation(
     }>
   >();
   return {
+    ...(options.wardrobe === undefined ? {} : { wardrobe: options.wardrobe }),
     presentation(context: ProductionReplayPresentationContext) {
       const theme = { ...THEME },
         graphics = { ...GFX },
@@ -78,8 +82,7 @@ export function createBrowserGhostReplayPresentation(
         configuration: { config: context.config, theme, graphics, accessibility },
         geometry: { clamp, len, lerp },
         cosmeticRandom: context.cosmeticRandom,
-        // A replay draws the game's own look until it records the wearer's loadout (agreed with the replay rebuild).
-        looks: DEFAULT_COSMETIC_LOOKS,
+        looks: options.wardrobe ?? DEFAULT_COSMETIC_LOOKS,
       });
     },
     renderView(replay, tick, screen) {

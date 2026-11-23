@@ -11,7 +11,7 @@ import type { LiveReplayRecorderModule } from "../../src/app/replay/live-replay-
 import { createLiveReplayTapSlot, type LiveReplayTap } from "../../src/app/replay/live-replay-tap-slot";
 import type { RunStartChoices } from "../../src/gameplay/run/run-start-choices";
 import { loadOnce } from "../../src/domain/lazy-module";
-import type { ReplayRecord } from "../../src/replay/record";
+import type { ReplayLook, ReplayRecord } from "../../src/replay/record";
 import type { ReplayRecordPut, ReplayRecordStore } from "../../src/replay/record-store";
 
 const choices = {} as RunStartChoices;
@@ -32,19 +32,23 @@ function harness(options: Readonly<{ put?: ReplayRecordPut; open?: "ok" | "block
     takeDropped: () => Promise.resolve(0),
     close: () => undefined,
   };
-  const tap = (): LiveReplayTap => ({
-    runStarted: () => undefined,
-    frame: () => {
-      if (options.frameThrows === true) throw new Error("tap fault");
-    },
-    decision: () => undefined,
-    sealed: () => undefined,
-    stepped: () => undefined,
-    observe: () => undefined,
-    finish: (_run, done) => {
-      done(record);
-    },
-  });
+  const looks: ReplayLook[] = [];
+  const tap = (given: Readonly<{ look: ReplayLook }>): LiveReplayTap => {
+    looks.push(given.look);
+    return {
+      runStarted: () => undefined,
+      frame: () => {
+        if (options.frameThrows === true) throw new Error("tap fault");
+      },
+      decision: () => undefined,
+      sealed: () => undefined,
+      stepped: () => undefined,
+      observe: () => undefined,
+      finish: (_run, done) => {
+        done(record);
+      },
+    };
+  };
   const module = {
     createLiveReplayTap: tap,
     openReplayRecordStore: () => Promise.resolve(options.open === "blocked" ? { failed: "blocked" } : store),
@@ -56,13 +60,28 @@ function harness(options: Readonly<{ put?: ReplayRecordPut; open?: "ok" | "block
     recorder,
     build: { version: "0.1.0", revision: "test", target: "standalone" },
     playerName: () => "Player",
+    cosmetics: () => ({ trail: "trail_dusk", spark: "spark_glacier" }),
     now: () => "2026-11-21T00:00:00Z",
     indexedDb: () => null,
   });
-  return { production, slot, recorder, puts };
+  return { production, slot, recorder, puts, looks };
 }
 
 describe("the production live replay recorder", () => {
+  it("records the loadout the runner wears at run start in the look", async () => {
+    const { production, recorder, looks } = harness();
+    await recorder.ensure();
+    production.runStarted(choices);
+    expect(looks).toEqual([
+      {
+        playerName: "Player",
+        cosmetics: { trail: "trail_dusk", spark: "spark_glacier" },
+        music: null,
+        recordedAt: "2026-11-21T00:00:00Z",
+      },
+    ]);
+  });
+
   it("counts a run that starts before the recorder loads and records the next one", async () => {
     const { production, slot, recorder, puts } = harness();
     production.runStarted(choices);

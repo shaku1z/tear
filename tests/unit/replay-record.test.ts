@@ -10,6 +10,7 @@ import {
   readReplayRecord,
 } from "../../src/replay/record";
 import { createReplayRecorder } from "../../src/replay/recorder";
+import cosmeticSlots from "../../src/gameplay/progression/cosmetics/slots.json";
 
 const HASH = "0123456789abcdef";
 /** A new player's saved progress and settings. */
@@ -21,6 +22,10 @@ const NEW_PLAYER = Object.freeze({
   cinematics: "full" as const,
   playedChapters: [],
 });
+
+/** A look with `count` cosmetics, one per made-up slot. */
+const lookWith = (count: number): Record<string, string> =>
+  Object.fromEntries(Array.from({ length: count }, (_, index) => [`slot_${String(index)}`, `item_${String(index)}`]));
 
 function validRecord() {
   const recorder = createReplayRecorder({
@@ -164,6 +169,8 @@ describe("the replay record", () => {
       { ...record, run: { ...record.run, frames: [...record.run.frames].reverse() } },
       { ...record, summary: { ...record.summary, kills: -1 } },
       { ...record, look: { ...record.look, playerName: "x".repeat(65) } },
+      // More cosmetics than there are Shards slots.
+      { ...record, look: { ...record.look, cosmetics: lookWith(cosmeticSlots.length + 1) } },
     ];
     for (const [index, value] of damaged.entries())
       expect(readReplayRecord(value), `damaged case ${String(index)}`).toMatchObject({
@@ -171,6 +178,12 @@ describe("the replay record", () => {
         reason: "malformed",
         message: MALFORMED_MESSAGE,
       });
+  });
+
+  it("admits one cosmetic per Shards slot in the look, ids it does not know included", () => {
+    const record = validRecord();
+    const full = { ...record, look: { ...record.look, cosmetics: lookWith(cosmeticSlots.length) } };
+    expect(readReplayRecord(full)).toMatchObject({ ok: true, record: { look: { cosmetics: full.look.cosmetics } } });
   });
 
   it("admits a Boss Test run on a released boss and refuses one on an engineering-only boss", () => {
