@@ -240,6 +240,10 @@ export interface LiveTearRuntimeEnvironmentContext {
   readonly skipTutorial: () => void;
   /** Whether the current screen has drawn any controls; false while its lazy renderer is still loading. */
   readonly controlsDrawn: () => boolean;
+  /**
+   * Skips scenes as a player does, so a replay record holds the skip: call it every frame while scenes
+   * should be skipped. It holds Enter once a scene's input has armed and releases it otherwise.
+   */
   readonly skipCinematic: () => void;
   /** Test-build/Class-A bridge to one real cinematic-director transition. */
   readonly advanceStateSetupCinematicBeat: () => boolean;
