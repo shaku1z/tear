@@ -118,10 +118,10 @@ export function installReplayTapInspector(
     recording: () => slot.current() !== null,
     scene,
     stage,
-    finish: () => production.finishOpen(totals()),
+    finish: () => production.finishOpen(totals),
     keep: async () => {
       const started = now();
-      production.runEnded(totals(), true);
+      production.runEnded(totals, true);
       const ended = now();
       await production.settled();
       return { endMs: ended - started, writeMs: now() - ended };

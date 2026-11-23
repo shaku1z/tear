@@ -32,6 +32,8 @@ interface RunStartHostContext extends Omit<RunStartWorldContext, "dependencies" 
   readonly runInstalled?: (run: GameRun) => void;
   /** A run's start is resolved, before its world initializes: the live replay tap opens its record here. */
   readonly runStarted?: (start: RunStartChoices) => void;
+  /** A new run replaces the run in play (a restart): its replay record ends as a quit. */
+  readonly replayRunReplaced?: (run: GameRun) => void;
   readonly dependencies: GameRuntimeDependencies;
   readonly applySettings: () => void;
   readonly race?: Readonly<{
@@ -131,6 +133,8 @@ export function createLiveRunStartHost(
     ...world,
     replaceActiveRun: () => {
       context.discardOpeningCapture?.();
+      const replaced = state.run();
+      if (replaced !== null) context.replayRunReplaced?.(replaced);
       try {
         replacement.sealActiveRecording();
       } finally {
