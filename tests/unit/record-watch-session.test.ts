@@ -7,6 +7,8 @@ import { createRecordSeekCache } from "../../src/app/replay/record-seek-cache";
 import { REPLAY_CHECKPOINT_TICKS } from "../../src/replay/record";
 import { SPECS } from "../support/hash-stream-corpus";
 import { recordCorpusStream } from "../support/replay-corpus-record";
+import { COSMETIC_CATALOG } from "../../src/gameplay/progression/cosmetic-catalog";
+import { createCosmeticWardrobe } from "../../src/presentation/cosmetic-styles";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -159,6 +161,50 @@ describe("watching a kept record", () => {
     // The run did earn: play's own achievement and reward steps ran and were kept as intents in the world.
     expect(outward().filter((step) => /achievement/iu.test(step)).length).toBeGreaterThan(0);
     expect(writes).toEqual([]);
+  });
+
+  it("dresses the runner's blade in the recorded look, an unknown id in the default, and changes no hash", () => {
+    const spec = SPECS[0];
+    if (spec === undefined) throw new Error("no corpus stream");
+    const recorded = recordCorpusStream(spec);
+    const record = {
+      ...recorded,
+      look: { ...recorded.look, cosmetics: { trail: "trail_dusk", spark: "no_such_item" } },
+    };
+    // The blade of each world the session starts: a seek backwards starts a new one.
+    const blades: object[] = [];
+    const engine = {
+      ...engineModule,
+      createProductionGhostReplayComposition: (
+        options: Parameters<typeof engineModule.createProductionGhostReplayComposition>[0],
+      ) => {
+        const composition = engineModule.createProductionGhostReplayComposition(options);
+        return {
+          ...composition,
+          create: (input: undefined) => {
+            const session = composition.create(input);
+            const blade = session.replay.world.state.blade();
+            if (blade !== undefined) blades.push(blade);
+            return session;
+          },
+        };
+      },
+    };
+    const wardrobe = createCosmeticWardrobe(COSMETIC_CATALOG, () => false);
+    const session = createRecordWatchSession(record, "record:test:1", engine, { wardrobe });
+    const [first] = record.run.checkpoints;
+    if (first === undefined) throw new Error("no checkpoint");
+    expect(session.seek(REPLAY_CHECKPOINT_TICKS).semanticHash).toBe(first.hash);
+    expect(session.seek(record.run.result.tick).semanticHash).toBe(record.run.result.hash);
+    expect(session.seek(REPLAY_CHECKPOINT_TICKS).semanticHash).toBe(first.hash);
+    expect(blades.length).toBe(2);
+    const dusk = COSMETIC_CATALOG.items.find((item) => item.id === "trail_dusk");
+    for (const blade of blades) {
+      const worn = wardrobe.of(blade);
+      expect(worn.trail.worn).toBe(true);
+      expect(worn.trail.colors).toEqual(dusk?.look.colors);
+      expect(worn.spark).toEqual(wardrobe.defaults.spark);
+    }
   });
 
   it("finds the newest kept record of a run by its seed", () => {

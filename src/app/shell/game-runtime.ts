@@ -41,6 +41,8 @@ import { bindBiomeActors } from "../../gameplay/environment/biome-actors/bind-bi
 import { countCanonicalStateCost } from "../world/canonical-state-cost";
 import { createLiveInputAuthorityState } from "../world/input-authority-state";
 import { createLiveBrowserRuntime } from "./browser-runtime";
+import { loadoutOf } from "../../domain/cosmetics";
+import { COSMETIC_CATALOG } from "../../gameplay/progression/cosmetic-catalog";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { GameBlade, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import { createLiveProductionWorld } from "./production-world";
@@ -109,6 +111,8 @@ export function startLiveGame(
     recorder: liveReplayRecorder,
     build: dependencies.build,
     playerName: () => dependencies.Cloud.displayName(),
+    // The loadout run-start-host puts on the player's blade, read at the same moment.
+    cosmetics: () => loadoutOf(COSMETIC_CATALOG, dependencies.PROFILE.cosmetics()),
     now: () => new Date().toISOString(),
     indexedDb: () => browserIndexedDb ?? null,
   });

@@ -5,9 +5,13 @@ import type {
 import type { GhostSeekResult } from "../../ghost/replay-world";
 import type { ReplayRecord } from "../../replay/record";
 import { createReplayInputCursor, type ReplayTickInputs } from "../../replay/verify";
-import type { ProductionGhostReplayCompositionOptions } from "../world/detached/replay-composition";
 import { createRecordSeekCache, type RecordSeekCache } from "./record-seek-cache";
-import { startRecordWorld, type RecordWorld, type RecordWorldEngine } from "./record-world";
+import {
+  startRecordWorld,
+  type RecordWorld,
+  type RecordWorldEngine,
+  type RecordWorldPresentation,
+} from "./record-world";
 
 /** A replay-screen source over a kept record. It also says which stage the world shows now. */
 export interface RecordWatchSession extends GhostVerifiedProductionReplaySession {
@@ -20,7 +24,8 @@ export interface RecordWatchSession extends GhostVerifiedProductionReplaySession
 /**
  * Watches a kept record by re-simulating it in the detached production world and drawing that world
  * through the game's own frame builder, so the stage, the weapon, projectiles and bosses at a tick are
- * the ones play had at that tick.
+ * the ones play had at that tick. The runner's blade wears the cosmetics the record carries, in the
+ * viewer's calm setting; an id the catalog does not know draws the default.
  *
  * The session keeps one world and steps it forward. A seek to a tick the world has passed starts a new
  * world from the nearest checkpoint at or before it (`RecordSeekCache`), or from the seed when there is
@@ -30,7 +35,7 @@ export function createRecordWatchSession(
   record: ReplayRecord,
   key: string,
   engine: RecordWorldEngine,
-  presentation: Pick<ProductionGhostReplayCompositionOptions, "presentation" | "renderView"> = {},
+  presentation: RecordWorldPresentation = {},
   cache: RecordSeekCache = createRecordSeekCache(),
 ): RecordWatchSession {
   const lastTick = record.run.result.tick;
@@ -57,6 +62,8 @@ export function createRecordWatchSession(
       from = undefined;
       world = startRecordWorld(engine, record.run, () => undefined, presentation);
     }
+    // The look is presentation, not checkpoint state: every new world, from the seed or a checkpoint, is dressed.
+    world.dress(record.look.cosmetics);
     next = createReplayInputCursor(record.run, from?.tick ?? 0);
     tick = from?.tick ?? 0;
     hash = from?.semanticHash ?? "";
