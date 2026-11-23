@@ -19,6 +19,7 @@ import { stepDetachedWorld, type DetachedSceneFrame } from "../../src/app/world/
 import { createProductionGhostReplayComposition } from "../../src/app/world/detached/replay-composition";
 import { CURRENT_RULESET_VERSION } from "../../src/gameplay/run/ruleset-version";
 import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
+import { canonicalReplayTotals } from "../../src/gameplay/runtime/canonical-state";
 import { TearGameplayEventBus } from "../../src/gameplay/runtime/gameplay-events";
 import { replayStartChoices, type ReplayRecord, type ReplayStart } from "../../src/replay/record";
 import { createReplayRecorder } from "../../src/replay/recorder";
@@ -84,7 +85,7 @@ function recordLiveLike(holdFromFrame: number): Readonly<{ record: ReplayRecord;
   const record = recorder.finish({
     tick: last.tick,
     hash: last.stateHash,
-    run: { score: run?.score ?? 0, wave: run?.wave ?? 0, time: run?.time ?? 0 },
+    run: canonicalReplayTotals(run),
   });
   return { record, sceneTicks };
 }

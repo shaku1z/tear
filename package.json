@@ -69,6 +69,7 @@
     "test:browser:ghost-vault-library": "node tests/browser-ghost-vault-library.js",
     "test:browser:replay-engine-cold": "node tests/browser-replay-engine-cold.js",
     "test:browser:replay-live-verify": "node tests/browser-replay-live-verify.js",
+    "test:browser:replay-file-round-trip": "node tests/browser-replay-file-round-trip.js",
     "test:browser:replay-campaign-stages": "node tests/browser-replay-campaign-stages.js",
     "test:browser:ghost-vault-conditional-commit": "node tests/browser-ghost-vault-conditional-commit.js",
     "test:browser:ghost-vault-interrupted-recovery": "node tests/browser-ghost-vault-interrupted-recovery.js",

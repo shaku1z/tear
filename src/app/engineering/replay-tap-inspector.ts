@@ -6,7 +6,7 @@
  * where recording costs fall. Browser evidence for replay PR 5b-3 and 5c-1
  * (tests/browser-replay-live-verify.js) uses it.
  */
-import { replaySummaryTime } from "../../gameplay/runtime/canonical-state";
+import { canonicalReplayTotals } from "../../gameplay/runtime/canonical-state";
 import { createDetachedReplayWorld } from "../replay/detached-replay-world";
 import type { LiveReplayProduction, LiveReplayProductionCounters } from "../replay/live-replay-production";
 import type { LiveReplayTap, LiveReplayTapSlot } from "../replay/live-replay-tap-slot";
@@ -98,11 +98,7 @@ export function installReplayTapInspector(
       finish: time("finish", tap.finish),
     });
   };
-  const totals = () => {
-    const value = run();
-    // The canonical state holds the run time in whole milliseconds; the record's summary holds seconds.
-    return { score: value?.score ?? 0, wave: value?.wave ?? 0, time: replaySummaryTime(value?.time ?? 0) };
-  };
+  const totals = () => canonicalReplayTotals(run());
   const withStore = async <Result>(
     use: (store: ReplayRecordStore) => Promise<Result>,
   ): Promise<Result | Readonly<{ failed: string }>> => {

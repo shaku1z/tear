@@ -3,12 +3,12 @@
  * run's `runTime` in seconds) and by verify, from the canonical state the re-simulation ends on (whole
  * milliseconds). Both must write the same number, or every real kept run fails verify on its summary.
  */
-import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import { replayRunTotals } from "../../src/app/replay/live-replay-production";
 import { projectCanonicalGameplayState, replaySummaryTime } from "../../src/gameplay/runtime/canonical-state";
 import { stableVerificationHash } from "../../src/domain/hash";
+import { checkProperty, fc } from "./property-harness";
 
 const INPUT = { tick: 0, moveX: 0, moveY: 0, aimTurn: 0, primaryHeld: false } as const;
 const STEP_SECONDS = 1 / 120;
@@ -22,7 +22,7 @@ function verifiedTotals(run: Readonly<{ score: number; wave: number; runTime: nu
 
 describe("replay summary time", () => {
   it("the live run end and verify write the same summary for a run of any length", () => {
-    fc.assert(
+    checkProperty(
       fc.property(fc.nat(400_000), fc.nat(10_000), fc.nat(60), (ticks, score, wave) => {
         // The live run counts its time as the game does: one fixed step of seconds added per tick.
         let runTime = 0;
@@ -31,7 +31,6 @@ describe("replay summary time", () => {
         const verified = verifiedTotals({ score, wave, runTime });
         expect(stableVerificationHash(live)).toBe(stableVerificationHash(verified));
       }),
-      { seed: 20_261_123, numRuns: 200 },
     );
   });
 

@@ -1,7 +1,7 @@
 /** Plays a determinism corpus stream headless and records it, for the replay tests. */
 import { stableVerificationHash } from "../../src/domain/hash";
 import { CURRENT_RULESET_VERSION } from "../../src/gameplay/run/ruleset-version";
-import type { CanonicalGameplayState } from "../../src/gameplay/runtime/canonical-state";
+import { canonicalReplayTotals, type CanonicalGameplayState } from "../../src/gameplay/runtime/canonical-state";
 import { normalizeGameAction } from "../../src/input/game-action";
 import { createProductionHeadlessEnvironment } from "../../src/playtest/headless/production-headless-environment";
 import type { ReplayRecord } from "../../src/replay/record";
@@ -59,7 +59,7 @@ export function recordCorpusStream(spec: StreamSpec): ReplayRecord {
     return recorder.finish({
       tick: lastTick,
       hash: stableVerificationHash(last),
-      run: { score: last.run?.score ?? 0, wave: last.run?.wave ?? 0, time: last.run?.time ?? 0 },
+      run: canonicalReplayTotals(last.run),
     });
   } finally {
     environment.dispose();
