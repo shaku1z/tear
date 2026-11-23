@@ -329,10 +329,11 @@ function productionRuntimeState(replay: ProductionReplayWorld, prepared?: Prepar
       ),
     captureCinemaProtection: () => Object.freeze({ ...transient.protection }),
     restoreCinemaProtection: transient.assignProtection.bind(transient),
-    captureStageBanner: () => Object.freeze({ name: "", seconds: transient.feel.bannerSeconds }),
-    restoreStageBanner: (_name, seconds) => {
-      transient.feel.bannerSeconds = seconds;
-    },
+    // The detached world has no stage banner of its own: its one banner timer is `feel.bannerSeconds`,
+    // captured and restored exactly as `bannerT` above (it counts a tick below zero by design, which a
+    // stage banner may not).
+    captureStageBanner: () => Object.freeze({ name: "", seconds: 0 }),
+    restoreStageBanner: () => undefined,
     cinema: prepared?.director ?? replay.world.context.cinema,
   });
 }

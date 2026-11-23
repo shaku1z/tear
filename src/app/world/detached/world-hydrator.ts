@@ -100,30 +100,35 @@ export interface TearStagedWorld<
  */
 const transientInputProjectionKeys = new Set(["aiInput", "aimOverride", "lmbOverride"]);
 
-/** Recreates declarative codec data and its stable object references. */
-export function decodeTearCodecValue(value: TearCodecValue, identities: ReadonlyMap<string, object>): unknown {
-  if (Array.isArray(value))
-    return (value as readonly TearCodecValue[]).map((entry) => decodeTearCodecValue(entry, identities));
+/**
+ * Recreates declarative codec data and its stable object references. A reference to an identity that
+ * is not in `identities` throws, unless `unresolved` gives a stand-in (only for a temporary view that is
+ * decoded again once every identity exists).
+ */
+export function decodeTearCodecValue(
+  value: TearCodecValue,
+  identities: ReadonlyMap<string, object>,
+  unresolved?: (reference: string) => object,
+): unknown {
+  const decode = (entry: TearCodecValue) => decodeTearCodecValue(entry, identities, unresolved);
+  if (Array.isArray(value)) return (value as readonly TearCodecValue[]).map(decode);
   if (!isObject(value)) return value;
   if ("$ref" in value && typeof value.$ref === "string") {
-    const identity = identities.get(value.$ref);
+    const identity = identities.get(value.$ref) ?? unresolved?.(value.$ref);
     if (identity === undefined) throw new RangeError(`snapshot reference target is missing: ${value.$ref}`);
     return identity;
   }
   if ("$map" in value && Array.isArray(value.$map)) {
     return new Map(
       (value.$map as readonly (readonly TearCodecValue[])[]).map((pair) => [
-        decodeTearCodecValue(pair[0] as TearCodecValue, identities),
-        decodeTearCodecValue(pair[1] as TearCodecValue, identities),
+        decode(pair[0] as TearCodecValue),
+        decode(pair[1] as TearCodecValue),
       ]),
     );
   }
-  if ("$set" in value && Array.isArray(value.$set)) {
-    return new Set((value.$set as readonly TearCodecValue[]).map((entry) => decodeTearCodecValue(entry, identities)));
-  }
-  return Object.fromEntries(
-    Object.entries(value).map(([key, entry]) => [key, decodeTearCodecValue(entry, identities)]),
-  );
+  if ("$set" in value && Array.isArray(value.$set))
+    return new Set((value.$set as readonly TearCodecValue[]).map(decode));
+  return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, decode(entry)]));
 }
 
 /** Applies a codec object to a newly constructed instance without changing identity metadata. */
@@ -243,8 +248,10 @@ export function hydrateTearCodecWorld<
   ]);
   // The real Echo constructor needs decoded run modifiers. Keep this temporary
   // construction view separate: the final run is decoded after entity payloads
-  // have been restored, matching the historic live staging order exactly.
-  const constructionRun = decodeTearCodecValue(runPayload, identities) as Run;
+  // have been restored, matching the historic live staging order exactly. The run can refer to
+  // enemies (contact sets of the current dash), which do not exist yet; this view gets a stand-in for
+  // each, and the final run below refers to the real ones.
+  const constructionRun = decodeTearCodecValue(runPayload, identities, () => ({})) as Run;
   const enemies = enemyPayloads.map((payload) =>
     port.createEnemy(
       stringField(payload, "factoryId"),
