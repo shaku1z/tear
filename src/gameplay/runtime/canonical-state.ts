@@ -125,6 +125,16 @@ export interface CanonicalGameplayState {
 
 const fixed = (value: number): number => Math.round(value * 1_000);
 
+/** A run's time as the canonical state holds it: whole milliseconds of `run.runTime` (seconds). */
+export const canonicalRunTime = (runTime: number): number => fixed(runTime);
+
+/**
+ * A replay summary's run time: the canonical run time back in seconds, to the millisecond. The live run end
+ * (from `run.runTime`) and a re-simulation (from the canonical state) both write it through here, so verify
+ * compares the same number.
+ */
+export const replaySummaryTime = (canonicalMilliseconds: number): number => canonicalMilliseconds / 1_000;
+
 /** Canonical, renderer-neutral projection hashed by live runs and replay verification. */
 export function projectCanonicalGameplayState(
   tick: number,
@@ -146,7 +156,7 @@ export function projectCanonicalGameplayState(
             mode: run.mode,
             wave: run.wave,
             score: run.score,
-            time: fixed(run.runTime),
+            time: canonicalRunTime(run.runTime),
             seed: run.runSeed,
           }),
     player:

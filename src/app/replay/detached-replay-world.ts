@@ -1,5 +1,5 @@
 import type { AuthoritativeStepResult } from "../../gameplay/runtime/authoritative-step";
-import type { CanonicalGameplayState } from "../../gameplay/runtime/canonical-state";
+import { replaySummaryTime, type CanonicalGameplayState } from "../../gameplay/runtime/canonical-state";
 import type { ReplayRun } from "../../replay/record";
 import type { ReplayWorld, ReplayWorldRun } from "../../replay/verify";
 import { stepDetachedWorld } from "../world/detached/detached-step";
@@ -25,7 +25,7 @@ function startDetachedReplay(
     },
     run() {
       const current = last?.state.run;
-      return current == null ? NO_RUN : Object.freeze({ score: current.score, wave: current.wave, time: current.time });
+      return current == null ? NO_RUN : Object.freeze({ score: current.score, wave: current.wave, time: replaySummaryTime(current.time) });
     },
     dispose: world.dispose,
   });

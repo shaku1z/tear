@@ -14,6 +14,7 @@
  *   own gate. The statistics switch governs statistics events, not this.
  */
 import type { RunStartChoices } from "../../gameplay/run/run-start-choices";
+import { canonicalRunTime, replaySummaryTime } from "../../gameplay/runtime/canonical-state";
 import type { LazyModule } from "../../domain/lazy-module";
 import type { ReplayBuild, ReplayLook, ReplayRecord } from "../../replay/record";
 import type { ReplayRecordFailure, ReplayRecordStore } from "../../replay/record-store";
@@ -74,7 +75,7 @@ export function keepsReplayRecord(
 
 /** A live run's totals as its replay record ends with them. */
 export function replayRunTotals(run: Readonly<{ score: number; wave: number; runTime: number }>): ReplayRunEnd["run"] {
-  return { score: run.score, wave: run.wave, time: run.runTime };
+  return { score: run.score, wave: run.wave, time: replaySummaryTime(canonicalRunTime(run.runTime)) };
 }
 
 /**
