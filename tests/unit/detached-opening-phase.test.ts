@@ -27,8 +27,7 @@ function createDetachedOpeningWorld(seed: string) {
     outward.push(name);
   };
   const host = {
-    bossIntro: () => null,
-    endBossIntro: () => undefined,
+    world: { ...world.state, bossIntro: () => null },
     config: configuration.value,
     get player() {
       return world.state.player() as never;
@@ -95,7 +94,7 @@ function createDetachedOpeningWorld(seed: string) {
     lobExplode: note("lobExplode"),
     emitThrowResolve: note("emitThrowResolve"),
     nearestEnemy: () => (world.state.enemies()[0] ?? null) as never,
-    updateFeedback: () => undefined,
+    updateFeedback: () => [],
     consumeThrow: () => input.consumeThrow(() => false),
     updateWave: () => undefined,
     startTransformation: () => false,

@@ -18,8 +18,12 @@ describe("Tear combat simulation", () => {
     });
     const opening = {
       config: CONFIG,
-      bossIntro: () => null,
-      endBossIntro: () => undefined,
+      world: {
+        bossIntro: () => null,
+        setBossIntro: () => undefined,
+        stageBeat: () => null,
+        setStageBeat: () => undefined,
+      },
       player: { cinematicProtected: false },
       blade: { state: "held" },
       run: {},

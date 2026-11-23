@@ -9,7 +9,7 @@ import type {
 } from "./contracts";
 import { wrapSpaceSeparated } from "../ui-text-fit";
 import { actionRow, overlayHeader, overlayLayout, tabs, verticalMenu, type OverlayLayout } from "./screen-primitives";
-import { arsenalPanel, panelTag, runProgressPanel, waveLogPanel } from "./run-overlay-panels";
+import { arsenalPanel, panelTag, runContentSurface, runProgressPanel, waveLogPanel } from "./run-overlay-panels";
 import { LESSON_TEACHING, countedLessons } from "../../gameplay/training/training-exercises";
 import { PRACTICE_TABS, practiceTabDefinition, type PracticeTab } from "../../gameplay/training/practice-tabs";
 import { buttonGrid } from "./choice-grid";
@@ -289,6 +289,14 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
       });
     }
     canvas.textBaseline = "alphabetic";
+    if (copyLines > 0)
+      runContentSurface(
+        context,
+        panelX,
+        list.bottom + ui.t.space.sm,
+        panelW,
+        copy.size + (copyLines - 1) * copy.line + ui.t.space.xs,
+      );
     wrapText(copy.text, panelX, list.bottom + ui.t.space.sm + copy.size, panelW, copy.line, copy.size, ui.ink);
   }
 
@@ -362,8 +370,9 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
     const actions = pauseActions(view),
       columns = bodyColumns(layout);
     verticalMenu(context, actions, columns.railX, layout.bodyTop, columns.railW);
-    panelTag(context, "YOUR ARSENAL", columns.primary.x, layout.bodyTop);
     arsenalPanel(context, view.abilities, columns.primary);
+    // The tag goes on last: the panel's surface reaches up under it.
+    panelTag(context, "YOUR ARSENAL", columns.primary.x, layout.bodyTop);
     runProgressPanel(
       context,
       view.progress,
@@ -425,6 +434,9 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
   function rewards(view: GameoverScreenView, x: number, y: number): number {
     const t = ui.t,
       total = `coins  ·  ${String(view.coins)} total`;
+    // The block is a tag, then a figure and its total, or one line: its surface is as tall as that.
+    const body = view.celebrate ? t.type.h2 + t.space.xs + t.type.caption : t.type.caption;
+    runContentSurface(context, x, y, ui.t.metric.btnW, t.type.micro + t.space.sm + body);
     let cursor = panelTag(context, "REWARDS", x, y);
     if (view.celebrate) {
       cursor += t.type.h2;
@@ -449,8 +461,8 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
     actions.push({ label: "MAIN MENU", action: { type: "navigate", to: "menu" } });
     const columns = bodyColumns(layout);
     verticalMenu(context, actions, columns.railX, rewards(view, layout.left, layout.bodyTop), columns.railW);
-    panelTag(context, "RUN LOG", columns.primary.x, layout.bodyTop);
     waveLogPanel(context, view.log, columns.primary);
+    panelTag(context, "RUN LOG", columns.primary.x, layout.bodyTop);
     runProgressPanel(
       context,
       view.progress,
@@ -491,13 +503,13 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
     });
     const logW = Math.min(720, layout.width),
       logX = layout.centerX - logW / 2;
-    panelTag(context, "RUN LOG", logX, layout.bodyTop);
     waveLogPanel(context, view.log, {
       x: logX,
       y: panelTagTop(layout),
       w: logW,
       h: layout.bodyBottom - panelTagTop(layout),
     });
+    panelTag(context, "RUN LOG", logX, layout.bodyTop);
     actionRow(context, actions, layout.footerY, layout.width);
   }
 

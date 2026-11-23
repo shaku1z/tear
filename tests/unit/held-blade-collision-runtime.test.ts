@@ -1,7 +1,8 @@
 /**
  * The held blade against a boss part it cuts (the new Rootbound's planted vine,
  * plans/active/VERDANT_PALE_REBUILD.md, 2.1 "Cutting"): one swing through the part cuts it and does not hit the
- * body; with no part to cut, the swing reaches the body as before.
+ * body; with no part to cut, the swing reaches the body as before. A boss in its arrival is in reach too
+ * (plans/active/CINEMATICS_OVERHAUL.md, PR 6): only its own design can refuse the hit.
  */
 import { describe, expect, it, vi } from "vitest";
 
@@ -27,14 +28,14 @@ function input(enemy: Record<string, unknown>, damage = 10): HeldBladeCollisionI
   } as unknown as HeldBladeCollisionInput;
 }
 
-function boss(cut: { x: number; y: number; r: number } | null) {
+function boss(cut: { x: number; y: number; r: number } | null, introT = 0) {
   return {
     x: 10,
     y: 0,
     radius: 30,
     dead: false,
     dying: false,
-    introT: 0,
+    introT,
     hitCd: 0,
     color: "green",
     cutPoint: () => cut,
@@ -59,6 +60,13 @@ describe("held blade collisions", () => {
     resolveHeldBladeEnemyCollisions(input(foe));
     expect(foe.cutPart).not.toHaveBeenCalled();
     expect(foe.blocks).toHaveBeenCalled();
+  });
+
+  it("reaches a boss during its arrival", () => {
+    const foe = boss(null, 0.5);
+    resolveHeldBladeEnemyCollisions(input(foe));
+    expect(foe.blocks).toHaveBeenCalled();
+    expect(foe.hitCd).toBeGreaterThan(0);
   });
 
   it("does not cut with a blade too slow to do damage", () => {

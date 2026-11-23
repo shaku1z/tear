@@ -45,7 +45,7 @@ export interface BossRitualLaunchOptions {
   readonly reducedMotion: boolean;
   readonly time: number;
   execute(intents: readonly BossRitualIntent[]): void;
-  clearBossBeat(): void;
+  clearStageBeat(): void;
 }
 
 export function buildBossRitualScript(
@@ -68,7 +68,7 @@ export function buildBossRitualScript(
     ...started.sequence,
     beats,
     onStart() {
-      options.clearBossBeat();
+      options.clearStageBeat();
       options.execute(options.controller.start(started.context, options.ritual));
     },
     onComplete() {

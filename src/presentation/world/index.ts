@@ -31,7 +31,6 @@ export function createWorldRenderers(context: WorldRenderContext): WorldRenderer
       touch?.touchControls(snapshot);
     },
     waveBanner: overlays.waveBanner,
-    bossIntro: overlays.bossIntro,
     stageBanner: overlays.stageBanner,
     reticle: overlays.reticle,
   };

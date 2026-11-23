@@ -30,7 +30,7 @@ export interface LiveCinematicHostContext {
   readonly stage: CinematicStage;
   readonly width: number;
   readonly policy: () => Readonly<{ play: boolean; brief: boolean }>;
-  readonly clearBossBeat: () => void;
+  readonly clearStageBeat: () => void;
   readonly setWorldZoom: (value: number) => void;
   readonly spawnWisp: (x: number, y: number, lane: VoidLane) => void;
   readonly addFlash: (amount: number) => void;
@@ -98,7 +98,7 @@ export function createLiveCinematicHost(context: LiveCinematicHostContext) {
     clearDescent: () => {
       run().voidDescent = null;
     },
-    clearBossBeat: context.clearBossBeat,
+    clearStageBeat: context.clearStageBeat,
     setWorldZoom: context.setWorldZoom,
     spawnWisp: context.spawnWisp,
     liveWispCount: () => state.enemies().filter((enemy) => enemy.isVoidWisp === true && !enemy.dead).length,
@@ -170,7 +170,7 @@ export function createLiveCinematicHost(context: LiveCinematicHostContext) {
     time: () => d.CLOCK.sim,
     lerp: d.lerp,
     clamp: d.clamp,
-    clearBossBeat: context.clearBossBeat,
+    clearStageBeat: context.clearStageBeat,
     setMusicDuck: (amount, duration) => {
       d.SFX.setMusicDuck(amount, duration);
     },

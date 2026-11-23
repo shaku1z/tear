@@ -75,7 +75,6 @@ import { rebaseEnvironmentSnapshot } from "../../../gameplay/snapshot/environmen
 import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "../../../gameplay/snapshot/authored-environment-validation";
 import { readGhostRecordedOpeningPermit, type GhostRecordedOpeningPermit } from "../../../ghost/replay-admission";
 import { advanceFramePrelude, type MutableFramePreludeState } from "../../shell/frame-runtime";
-import { bossIntroPlaying } from "../../../gameplay/run/boss-encounter";
 import { clamp, lerp } from "../../../domain/geometry";
 import {
   createGhostApplicationClockPlayback,
@@ -92,7 +91,6 @@ export function captureProductionRewardSelection(selection: RewardSelectionSnaps
 const productionWaveRewards = new WeakMap<ProductionReplayWorld, ProductionWaveRewardRuntime>();
 
 export type { ProductionApplicationFrameConfirm } from "./application-frame";
-// One recorded tick in the detached world, so a lazily loaded caller steps it through this engine module.
 export { stepDetachedWorld } from "./detached-step";
 
 export interface ProductionGhostReplayCompositionOptions {
@@ -319,6 +317,10 @@ function productionRuntimeState(replay: ProductionReplayWorld, prepared?: Prepar
     captureBossIntro: () => replay.world.state.bossIntro(),
     restoreBossIntro: (intro) => {
       replay.world.state.setBossIntro(intro);
+    },
+    captureStageBeat: () => replay.world.state.stageBeat(),
+    restoreStageBeat: (beat) => {
+      replay.world.state.setStageBeat(beat);
     },
     captureTransient: () =>
       Object.freeze({
@@ -954,9 +956,7 @@ export function createProductionGhostReplayComposition(options: ProductionGhostR
             replay.tutorial.interruptCoaching();
             return;
           }
-          const transient = replay.world.context.transient,
-            intro = replay.world.state.bossIntro(),
-            beat = replay.world.state.bossBeat();
+          const transient = replay.world.context.transient;
           const frame: MutableFramePreludeState = {
             slowMotion: transient.impact.slowMotion,
             timeScale: transient.feel.timeScale,
@@ -967,7 +967,6 @@ export function createProductionGhostReplayComposition(options: ProductionGhostR
             bannerTime: transient.feel.bannerSeconds,
             stageBannerSeconds: transient.feel.bannerSeconds,
             rankPopTime: transient.feel.rankPopupSeconds,
-            bossBeat: beat === null ? null : { t: beat.t },
           };
           advanceFramePrelude({
             dt: deltaSeconds,
@@ -975,8 +974,6 @@ export function createProductionGhostReplayComposition(options: ProductionGhostR
             parrySlowScale: replay.configuration.value.juice.parrySlowScale,
             cinemaActive: replay.world.context.cinema.active,
             playgroundSlow: (replay.world.state.run() as { pg?: { slow?: boolean } } | null)?.pg?.slow === true,
-            bossArrivalPlaying: bossIntroPlaying(intro),
-            introScale: replay.configuration.value.bossTheater.introScale,
             lerp,
             clamp,
           });
@@ -989,8 +986,6 @@ export function createProductionGhostReplayComposition(options: ProductionGhostR
             bannerSeconds: frame.bannerTime,
             rankPopupSeconds: frame.rankPopTime,
           });
-          if (frame.bossBeat === null) replay.world.state.setBossBeat(null);
-          else if (beat !== null) replay.world.state.setBossBeat({ ...beat, t: frame.bossBeat.t });
         },
         completeRecordedOpening,
         invalidateRecordedOpening: () => {

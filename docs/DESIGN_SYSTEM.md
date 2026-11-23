@@ -86,7 +86,7 @@ Opacity for de-emphasised text and for the content surfaces. Text roles are meas
 | `faint` | 0.52 | Hints, 3:1 or better (was 0.4) |
 | `ghost` | 0.25 | Barely-there / placeholder (never for text a player must read) |
 | `sheet` | 1 | Paper sheet surface, solid so scene art never shows through text (was 0.96, which let demo ledges show as faint bars) |
-| `overlay` | 1 | The one scrim every run overlay sits on (pause, results, draft, reserve, tier-up, revive, quit confirm, playground menus). The frame draws it (`renderOverlayBackdrop` in `src/presentation/render-pipeline.ts`); screens never dim themselves |
+| `overlay` | 0.88 | The one scrim every run overlay sits on (pause, results, draft, reserve, tier-up, revive, quit confirm, playground menus): the live scene shows faded behind it, the middle of the 0.84–0.92 each overlay used before a single scrim. The frame draws it (`renderOverlayBackdrop` in `src/presentation/render-pipeline.ts`); screens never dim themselves |
 | `rail` / `railMid` | 0.90 / 0.60 | Main-menu rail fade: opacity at the screen edge and at the mid stop (then clear at `railFadeW`) |
 | `railControl` | 0.42 | Each dark-surface ghost control's own dark fill (rail rows, replay controls), so its label holds ≥ 4.5:1 over the open scene without a solid slab |
 | `modalDim` | 0.9 | Modal dim (Rename) |
@@ -126,7 +126,7 @@ Optional args are marked `?`. All draw to the passed `ctx`.
 | `UI.accentStrip` | `UI.accentStrip(ctx, x, y, w, color, thick?)` | Coloured top strip (category cue) |
 | `UI.divider` | `UI.divider(ctx, x, y, w, alpha?)` | Hairline separator |
 | `UI.bar` | `UI.bar(ctx, x, y, w, h, frac, fill?, line?)` | Progress / HP / meter (`frac` 0–1) |
-| `UI.dim` | `UI.dim(ctx, w, h, a?)` | Overlay backdrop; fades toward `paper` for dark ink and toward `scrim` for light ink, so the dim and the ink are always a contrasting pair. Run overlays get it from the frame at `alpha.overlay` |
+| `UI.dim` | `UI.dim(ctx, w, h, a?)` | Overlay backdrop; fades toward `paper` for dark ink and toward `scrim` for light ink, so the dim and the ink are always a contrasting pair. Run overlays get it from the frame at `alpha.overlay` (0.88) |
 | `UI.scrollHint` | `UI.scrollHint(ctx, x, y, canUp, canDown, align?)` | "▲ SCROLL ▼" affordance (sheet screens place it in the footer row via `pageFooter`) |
 | `UI.fitText` | `UI.fitText(ctx, text, maxW, { size, floor?, maxLines?, ellipsis?, wrapFirst?, bold? })` | The one fitting rule (below); returns `{ size, lines, truncated, overflow }` |
 | `UI.textBox` | `UI.textBox(ctx, text, x, y, maxW, opts?)` | Wrapped text in a box; `y` is the first baseline; **returns the height it used** so callers lay out below it |
@@ -169,11 +169,11 @@ Draft, reserve and tier-up keep the established card composition on desktop and 
 
 The rail sits on a soft dark fade from the screen's left edge into the scene, not on a solid panel: `color.rail` at `alpha.rail` at the edge, `alpha.railMid` at `metric.railFadeMid`, clear at `metric.railFadeW`. On an ultrawide window the fade starts at the true left edge, where the rail is anchored, and keeps the same falloff relative to the rail; a wider (two-column touch) rail stretches it. Each rail control carries its own dark fill (`alpha.railControl`) under its light glass wash and hairline, which keeps labels at ≥ 10:1 and sublines at ≥ 4.5:1 over the brightest attract biomes.
 
-The live scene never shows through a screen's content. A sheet is solid (`alpha.sheet`), and run overlays sit on the frame's solid scrim (`alpha.overlay`). The open main menu has no sheet, so the demo keeps its play layer (ledges, fighters, shots and effects) out of the padded area the screen's controls covered on the last frame (`controlsKeepOut` in `src/presentation/demo-keep-out.ts`). Its sky and backdrop still show behind the rail fade. Any open screen added later gets the same keep-out from its own controls.
+The live scene never shows through a screen's content. A sheet is solid (`alpha.sheet`), and run overlays sit on the frame's faded scrim (`alpha.overlay`, the scene visible but quiet behind it), and every body block on that scrim has its own solid surface: cards (`UI.card`), buttons, and, for blocks with no card of their own (arsenal empty line, progress rows, wave log, rewards, the Drills teaching copy), `runContentSurface` in `run-overlay-panels.ts`. Only an overlay's chrome stays on the faded scene: the title, subtitle lines, section tags and the tab strip. New body content with no card uses `runContentSurface`. The open main menu has no sheet, so the demo keeps its play layer (ledges, fighters, shots and effects) out of the padded area the screen's controls covered on the last frame (`controlsKeepOut` in `src/presentation/demo-keep-out.ts`). Its sky and backdrop still show behind the rail fade. Any open screen added later gets the same keep-out from its own controls.
 - The HUD is drawn only while playing; run overlays carry their own summary.
 - Announcements (stage and wave banners) share one band under the HUD lane, never over the spawn floor; the wave banner waits while the stage banner shows.
 - On-screen touch controls come from `src/input/touch-control-layout.ts`, the single owner of their geometry: input hit-tests exactly the circles the renderer draws, anchored to the real screen edges and safe area and sized in CSS pixels.
-- Achievement toasts have one placement per context (`hud` in a run, below the touch pause control; `corner` bottom-right on menus and overlays; `sheet-footer` left of BACK on sheet screens), are at most 360 wide, and are queued one at a time by the controller. While a cinematic or a boss arrival card owns the screen, the queue waits: nothing is shown, marked seen or timed until it ends.
+- Achievement toasts have one placement per context (`hud` in a run, below the touch pause control; `corner` bottom-right on menus and overlays; `sheet-footer` left of BACK on sheet screens), are at most 360 wide, and are queued one at a time by the controller. While a cinematic owns the screen, the queue waits: nothing is shown, marked seen or timed until it ends.
 
 ### Adventure chapter presentation contract
 
@@ -186,7 +186,7 @@ A chapter intro is the living biome writing its own title card. It follows the H
 - **Beats and reading contract.** ENTER (the header breathes in, `motion.chapterIn`) → pages → EXIT (the lore softens, the header stays) → REVEAL (the title crossfades into the biome name, the intro line settles, the haze retreats to `revealRest`) → READY (the HUD returns, the name and the last of the haze dissolve, then control). Each page holds for its reading dwell (`chapterPageDwell`: words at 220 wpm plus a settle, never under 3.2 s) and then plays on by itself; a confirm advances it sooner once it is fully shown. Full shows every page; Brief shows one (the prologue's hook, the fallen boss's relic, or the stage's first page) at the same dwell. Hold to skip jumps to the REVEAL, which keeps its own pace (`skipScale: 1`).
 - **Hand-off.** No enemy exists until the chapter completes: the first wave stays prepared until then (`activate-prepared-wave` on completion). The HUD returns on READY, before control; the wave banner raised by that activation is not repeated over the HUD's own WAVE line; the DOM controls hint and achievement toasts wait for the cinematic to end.
 - **Touch.** Every chapter role rises to the touch text floor (11 CSS px) at the live scale, and the column widens to keep about 46 characters a line.
-- Boss arrival cards keep every line inside their letterbox bars (`bossIntro*` metrics: name and epithet in the lower bar, a spoken opening line in the upper bar) and hide the HUD while they play.
+- The stage beat banner (`beatBanner`, `beatBanner*` metrics) is the one thing written over a live fight: a boss arrival, a phase change and a named move. It sits under the boss bar with no panel: an optional mark in the accent colour (a phase numeral or the boss name), a muted dot, the title in the display face, an accent rule that wipes in from the centre, and an optional line. It never hides the HUD.
 
 ### Usage examples
 

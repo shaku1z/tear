@@ -9,6 +9,7 @@ import type {
   WeaponPose,
   WeaponSegment,
 } from "../enemy-contracts";
+import { phaseNumeral } from "../../stage-beat";
 
 /** The Verdant boss's feedback, shared by the Rootbound and its rebuild until the switch. */
 const ROOTBOUND_FEEDBACK: Readonly<Record<string, BossFxEvent>> = {
@@ -153,6 +154,7 @@ export function createBossRuntime(dependencies: EnemyDependencies) {
         }
         if ((ev.banner || ev.txt) && pr >= textPriority) {
           out.banner = ev.banner;
+          out.mark = ev.mark;
           out.txt = ev.txt;
           out.x = ev.x;
           out.y = ev.y;
@@ -170,11 +172,12 @@ export function createBossRuntime(dependencies: EnemyDependencies) {
     BOSSFX.event(boss, name, overrides);
   }
 
-  // a PHASE TURN: flash + shake + a named banner + rings, with no slow motion.
+  // a PHASE TURN: flash + shake + a banner led by the phase numeral + rings, with no slow motion.
   // Also arms the HP bar's crack-flash (game.js reads boss._phaseFlashT).
   function bossPhaseBeat(boss: BossPresentationActor, title: string, color?: string) {
     const c = color ?? boss.color;
-    bossFeedback(boss, "phaseTransition", { banner: title, color: c });
+    const mark = phaseNumeral(boss.phase ?? 0);
+    bossFeedback(boss, "phaseTransition", { banner: title, color: c, ...(mark === null ? {} : { mark }) });
     try {
       FX.ring(boss.x, boss.y, 26, c);
       FX.shockwave(boss.x, boss.y, 12, c, 260, 5);

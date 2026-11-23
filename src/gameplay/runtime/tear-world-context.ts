@@ -7,7 +7,7 @@ import type { EnvironmentRuntimeState } from "../environment/environment-contrac
  * while simulation code keeps stable access to the current per-world values.
  * It deliberately contains no rendering, browser, persistence, or app types.
  */
-export interface TearWorldState<Run, Player, Blade, Enemy, Projectile, Floater, SlowZone, Wall, BossIntro, BossBeat> {
+export interface TearWorldState<Run, Player, Blade, Enemy, Projectile, Floater, SlowZone, Wall, BossIntro, StageBeat> {
   run(): Run | null;
   setRun(value: Run | null): void;
   player(): Player | undefined;
@@ -26,8 +26,8 @@ export interface TearWorldState<Run, Player, Blade, Enemy, Projectile, Floater, 
   setTemporaryWalls(value: readonly Wall[]): void;
   bossIntro(): BossIntro | null;
   setBossIntro(value: BossIntro | null): void;
-  bossBeat(): BossBeat | null;
-  setBossBeat(value: BossBeat | null): void;
+  stageBeat(): StageBeat | null;
+  setStageBeat(value: StageBeat | null): void;
 }
 
 export interface TearWorldStateOptions<
@@ -40,7 +40,7 @@ export interface TearWorldStateOptions<
   SlowZone,
   Wall,
   BossIntro,
-  BossBeat,
+  StageBeat,
 > {
   readonly run?: Run | null;
   readonly player?: Player;
@@ -51,7 +51,7 @@ export interface TearWorldStateOptions<
   readonly slowZones?: readonly SlowZone[];
   readonly temporaryWalls?: readonly Wall[];
   readonly bossIntro?: BossIntro | null;
-  readonly bossBeat?: BossBeat | null;
+  readonly stageBeat?: StageBeat | null;
 }
 
 /** Creates one isolated mutable world state, retaining entity identity but not input array ownership. */
@@ -65,7 +65,7 @@ export function createTearWorldState<
   SlowZone,
   Wall,
   BossIntro,
-  BossBeat,
+  StageBeat,
 >(
   options: TearWorldStateOptions<
     Run,
@@ -77,9 +77,9 @@ export function createTearWorldState<
     SlowZone,
     Wall,
     BossIntro,
-    BossBeat
+    StageBeat
   > = {},
-): TearWorldState<Run, Player, Blade, Enemy, Projectile, Floater, SlowZone, Wall, BossIntro, BossBeat> {
+): TearWorldState<Run, Player, Blade, Enemy, Projectile, Floater, SlowZone, Wall, BossIntro, StageBeat> {
   let run: Run | null = options.run ?? null;
   let player = options.player;
   let blade = options.blade;
@@ -89,8 +89,8 @@ export function createTearWorldState<
   let slowZones = [...(options.slowZones ?? [])];
   let temporaryWalls = [...(options.temporaryWalls ?? [])];
   let bossIntro: BossIntro | null = options.bossIntro ?? null;
-  let bossBeat: BossBeat | null = options.bossBeat ?? null;
-  const state: TearWorldState<Run, Player, Blade, Enemy, Projectile, Floater, SlowZone, Wall, BossIntro, BossBeat> = {
+  let stageBeat: StageBeat | null = options.stageBeat ?? null;
+  const state: TearWorldState<Run, Player, Blade, Enemy, Projectile, Floater, SlowZone, Wall, BossIntro, StageBeat> = {
     run: () => run,
     setRun: (value) => {
       run = value;
@@ -127,9 +127,9 @@ export function createTearWorldState<
     setBossIntro: (value) => {
       bossIntro = value;
     },
-    bossBeat: () => bossBeat,
-    setBossBeat: (value) => {
-      bossBeat = value;
+    stageBeat: () => stageBeat,
+    setStageBeat: (value) => {
+      stageBeat = value;
     },
   };
   return Object.freeze(state);

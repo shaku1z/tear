@@ -24,8 +24,8 @@ The lead's decision (brief of 2026-11-20) is binding:
 - **Slow motion (lead ruling, 2026-11-20).** No boss-side event slows time: not a phase change, a
   death, a stagger or a strike. The one source left is the player's own parry,
   `CONFIG.juice.parrySlowmo` 0.18 s at time scale 0.28 (`blade-parry-runtime.ts`,
-  `live-collision-phase.ts`). It is the player's move, not the fight stopping. Until PR 6, the boss
-  arrival still runs at time scale 0.25 (`introScale`); PR 6 removes it with the letterbox.
+  `live-collision-phase.ts`). It is the player's move, not the fight stopping. The boss arrival ran at
+  time scale 0.25 (`introScale`) until PR 6, which removed it with the letterbox.
 - A rule over every boss proves that no tick blocks input or the combat step.
 
 This plan covers what exists, what each piece becomes, what is deleted, the in-fight phase change of
@@ -306,8 +306,8 @@ never typed out letter by letter, and gone with the banner.
 ### Boss arrival and death (every boss)
 
 - **Arrival.**
-  - The boss's entrance is a move of 1.0 s of game time (120 ticks) in which it cannot attack. Today
-    it is 1.4 s of wall time at time scale 0.25, which is 0.35 s of game time.
+  - The boss's entrance is a move of 1.0 s of game time (120 ticks) in which it cannot attack. Before
+    PR 6 it was 1.4 s of wall time at time scale 0.25, which is 0.35 s of game time.
   - The entrance is counted in simulation ticks. Today `introT` is counted by the frame prelude in
     wall time (`frame-runtime.ts:50-57`). The intro-clock slice (after PR 3) moves it onto ticks
     first with the arrival unchanged; PR 6 then restyles the arrival on that tick clock.
@@ -463,8 +463,8 @@ and Adventure plays from Chapter I to the finale.
 This section is the handoff. Whoever picks the overhaul up, with or without the earlier sessions'
 notes, starts here.
 
-- **Merged:** PR 0 (#340), PR 1 (#350), PR 2 (#357), PR 3 (#367, Aldric, ruleset v18) and the
-  intro-clock slice (#374, ruleset v19).
+- **Merged:** PR 0 (#340), PR 1 (#350), PR 2 (#357), PR 3 (#367, Aldric, ruleset v18), the
+  intro-clock slice (#374, ruleset v19) and PR 4 (#392, the Source, ruleset v23).
 - **Before a cinematics pull request merges:** run `git merge origin/main` on its branch. If main
   took a ruleset step in the meantime, take the next free number. If main changed the determinism
   corpus, regenerate `tests/fixtures/canonical-hash-stream.json` and run it twice: the two runs
@@ -476,14 +476,15 @@ notes, starts here.
   PLAY, Boss Test, Aldric), what to watch in the crownfall and the revive, and two test-build frames.
   **Owed:** once #374 is on the preview, add it to that card: the boss arrival counts game ticks and
   should feel as before (1.4 s). This is a new picture or a note on the same document, never a new card.
-- **In review:** PR 4, the Source (below), ruleset v23, on branch `codex/cinematics-source`. The
-  Unmake and true form happen in the fight; the before and after pictures are on a new ledger card.
-  What it keeps for PR 5: the `SourceDescentBinding` type and the State Setup descent checks, the
+- **Kept for PR 5 by PR 4:** the `SourceDescentBinding` type and the State Setup descent checks, the
   cinematic float mode, `descentLiftV` (unused), and the saved names `voidDelayT` and
   `requestVoidCinematic`, which now hold the Unmake's clock and its request. A world saved inside
   the old descent no longer loads (`stageBinding` refuses it).
-- **After it:** PR 5 waits for Rootbound's pull request (see "Coordination"). PRs 6-8 draw new art
-  on the owner-approved look board.
+- **In review:** PR 6, the stage beat, the banner and the arrival (below), ruleset v24, on branch
+  `codex/cinematics-stage-beat`. It goes ahead of PR 5, which still waits for Rootbound's pull
+  request (see "Coordination"). Its before and after pictures are on a new ledger card, one per
+  kind of arrival.
+- **After it:** PR 5, then PRs 7-8 on the owner-approved look board.
 
 ### PR 0: this plan (docs only)
 
@@ -589,7 +590,7 @@ empty.
 
 ### PR 6: the stage beat, the banner and the arrival
 
-Waits for the owner's verdict on the look board.
+The owner approved the look board on 2026-11-21.
 
 - `src/gameplay/stage-beat.ts`, with the `banner` kind and one drawing function for it, in the
   approved style. Its world field goes into the world codec, live capture and the detached world
@@ -600,6 +601,26 @@ Waits for the owner's verdict on the look board.
 - Ruleset step.
 - Done when the banner matches the approved board in a built screenshot, the detached parity tests
   pass, and `pnpm test:determinism` passes.
+- What it did (ruleset v24):
+  - One stage beat in world state (`StageBeat`: kind, mark, title, line, accent, age in ticks),
+    stepped once per tick at the start of `runLiveOpeningPhase`, live and detached. The banner holds
+    138 ticks (1.15 s, the old wall-clock hold) and fades in over its first sixth and out over its
+    last fifth, as before. It replaces the wall-clock `bossBeat` the frame prelude counted down.
+  - It is saved in the world runtime payload (`stageBeat`, read by `parseStageBeat`) through the
+    State Setup bridge, so live capture, the detached hydrator and a replay restore read one field.
+    `bossIntroVersion` is 2; a version 1 clock (the slowed arrival) is refused by name.
+  - Detached worlds now write the banner from the boss and mirror feedback events as live play
+    does; before, only live play kept it.
+  - A phase change leads with its phase numeral (`bossPhaseBeat`). The arrival's first tick writes
+    the boss's name, epithet and opening line as the same banner. Named moves (STAGGERED, CORE
+    EXPOSED and the rest) use the same banner without a mark.
+  - `ui.bossPhaseBanner` (a 760x72 panel) and `ui.bossIntro` (letterbox, vignette, card) are gone,
+    with their snapshot, overlay and adapter chain. The HUD, achievement toasts and the DOM hints
+    no longer wait for the arrival.
+  - `CONFIG.bossTheater` is `{ introDur: 1.0, deathDur: 0.9 }`: 120 full-speed ticks. Held and
+    thrown blades reach a boss in its arrival; contact damage stays off, so it cannot hurt the
+    player then. Rootbound still refuses damage in its arrival by its own `blocksDamage` and
+    `limitIncomingDamage`.
 
 ### PR 7: the chapter card
 

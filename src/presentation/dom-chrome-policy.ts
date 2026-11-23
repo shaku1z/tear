@@ -45,7 +45,7 @@ export interface DomChromeInput {
   /** Seconds of the current run; 0 outside a run. */
   readonly runSeconds: number;
   readonly completedRuns: number;
-  /** A boss name card, chapter cinematic or finale prompt owns the screen. */
+  /** A chapter cinematic or finale prompt owns the screen. */
   readonly presentationBusy: boolean;
 }
 

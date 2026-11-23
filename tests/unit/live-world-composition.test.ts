@@ -122,8 +122,8 @@ describe("live world composition", () => {
         enemies: (value) => {
           seen.enemies = value;
         },
-        bossBeat: (value) => {
-          seen.bossBeat = value;
+        stageBeat: (value) => {
+          seen.stageBeat = value;
         },
         player: (value) => {
           seen.player = value;
@@ -134,11 +134,11 @@ describe("live world composition", () => {
     const player = { id: "player" };
     world.state.setPlayer(player as never);
     world.state.setEnemies([{ id: "enemy" }] as never);
-    world.state.setBossBeat(null);
+    world.state.setStageBeat(null);
 
     expect(seen.player).toBe(player);
     expect(seen.enemies).toBe(world.state.enemies());
-    expect(seen.bossBeat).toBeNull();
+    expect(seen.stageBeat).toBeNull();
     // The world keeps the array it owns rather than the caller's instance.
     expect(world.state.enemies()).toEqual([{ id: "enemy" }]);
   });
@@ -261,10 +261,10 @@ describe("live world composition", () => {
     const beat = { text: "WARDEN", color: "#fff", t: 1, dur: 1 } as never;
 
     world.state.setBossIntro(intro);
-    world.state.setBossBeat(beat);
+    world.state.setStageBeat(beat);
 
     expect(world.state.bossIntro()).toBe(intro);
-    expect(world.state.bossBeat()).toBe(beat);
+    expect(world.state.stageBeat()).toBe(beat);
   });
 });
 

@@ -110,7 +110,7 @@ export function createProductionFinaleRuntime(
         state.setSlowZones([]);
         state.setTemporaryWalls([]);
         state.setBossIntro(null);
-        state.setBossBeat(null);
+        state.setStageBeat(null);
         run().spawnQueue.length = 0;
         run().chapterState = "WAVE_LIVE";
       },

@@ -119,24 +119,19 @@ export function createUiState(colors: UiPalette) {
         bossGuardScale: 0.6,
         bossShimmerW: 112,
         bossCrackJut: 10,
-        bossIntroBarH: 96,
-        bossIntroAccentHalfW: 150,
-        bossIntroAccentH: 3,
-        // every line of the card sits inside its letterbox bar (96): the name and
-        // epithet in the lower bar, the spoken opening line in the upper bar
-        bossIntroTitleBottom: 48,
-        bossIntroAccentBottom: 37,
-        bossIntroEpithetBottom: 14,
-        bossIntroOpeningTop: 58,
-        bossVignetteFocusY: 0.46,
-        bossVignetteInner: 0.18,
-        bossVignetteOuter: 0.72,
-        // phase banner centre (fraction of the view height): below the boss header, never over its bar
-        bossPhaseBannerW: 760,
-        bossPhaseBannerH: 72,
-        bossPhaseBannerY: 0.34,
-        bossPhaseAccentH: 3,
+        // the banner stage beat, from the approved look board (1600x900): title baseline 296, line 40 below
+        beatBannerTitleY: 0.329,
+        beatBannerTitleSize: 44,
+        beatBannerTitleTrack: 3,
+        beatBannerGap: 10,
+        beatBannerRuleGap: 14,
+        beatBannerRuleHalfW: 60,
+        beatBannerRuleH: 3,
+        beatBannerLineGap: 40,
+        beatBannerLineSize: 16,
+        beatBannerLineTrack: 2,
         cinemaBarH: 74,
+        cinemaAccentH: 3,
         cinemaDialogueW: 780,
         cinemaDialogueH: 104,
         cinemaDialogueBottom: 96,
@@ -180,13 +175,14 @@ export function createUiState(colors: UiPalette) {
         muted: 0.66,
         faint: 0.52,
         ghost: 0.25,
-        // content surfaces: the sheet and the run-overlay scrim are solid, so the live
-        // scene never shows through content; the main-menu rail is a soft fade (rail at
+        // content surfaces: the sheet is solid, and run overlays fade the live scene with one
+        // scrim (overlay) while their content (cards, progress rows, the wave log) sits on
+        // its own solid surface, so the scene never shows through content; the main-menu rail is a soft fade (rail at
         // the screen edge, railMid at the mid stop, then clear), each dark-surface ghost
         // control adds its own fill (railControl), and the menu demo keeps out of the
         // controls (src/presentation/demo-keep-out.ts)
         sheet: 1,
-        overlay: 1,
+        overlay: 0.88,
         rail: 0.9,
         railMid: 0.6,
         railControl: 0.42,
@@ -198,7 +194,6 @@ export function createUiState(colors: UiPalette) {
         cinemaBar: 0.88,
         cinemaVignette: 0.3,
         cinemaSubtitle: 0.75,
-        bossPhasePanel: 0.82,
         // cinematic prompts read at ≥ 7:1 on the cinema field (0.58 measured ~4.3:1)
         cinemaPanel: 0.9,
         cinemaHint: 0.8,
@@ -246,11 +241,6 @@ export function createUiState(colors: UiPalette) {
         bossPhaseFlash: 0.7,
         bossShimmerCycle: 2.4,
         bossGuardPulse: 14,
-        bossIntroIn: 0.25,
-        bossIntroOutAt: 0.82,
-        bossIntroOutSpan: 0.18,
-        bossIntroAccentDelay: 0.15,
-        bossIntroAccentGrow: 0.5,
         cinemaFrameIn: 0.45,
         cinemaDialogueIn: 0.22,
         chapterIn: 0.6, // the chapter header and its fade breathe in

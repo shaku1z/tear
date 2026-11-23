@@ -118,7 +118,7 @@ export function createRunStartWorldPort(context: RunStartWorldContext): RunStart
       if (cinema.active) cinema.cancel("new-run");
       context.story.resetFinale();
       state.setBossIntro(null);
-      state.setBossBeat(null);
+      state.setStageBeat(null);
       context.combat.resetIdentity();
       world.lifecycle.reset();
       services.mirror.reset();

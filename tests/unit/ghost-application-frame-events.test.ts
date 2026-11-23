@@ -82,9 +82,9 @@ function fixture() {
   const source = composition.create(undefined),
     world = source.replay.world;
   const boss = world.entities.createEnemy("rootbound", 800, 520, world.state.run() as never);
-  boss.introT = 1.4;
+  boss.introT = 1;
   world.state.setEnemies([boss]);
-  world.state.setBossIntro({ boss, t: 0, dur: 1.4, delay: 0 });
+  world.state.setBossIntro({ boss, t: 0, dur: 1, delay: 0 });
   const origin = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "clock-origin");
   source.advanceApplicationFrame(0.1);
   source.simulation.advanceOne([]);
@@ -366,8 +366,8 @@ describe("Ghost application-frame evidence", () => {
         },
       );
       replay.seek(3);
-      // The arrival advances on the simulation tick, a tick being 1/120 s at its 0.25 time scale; the frames do not.
-      expect(current?.replay.world.state.bossIntro()?.t).toBeCloseTo(3 / 120 / 0.25, 12);
+      // The arrival advances on the simulation tick, at full speed; the frames do not advance it.
+      expect(current?.replay.world.state.bossIntro()?.t).toBeCloseTo(3 / 120, 12);
       expect(current?.simulation.scheduler.tick).toBe(3);
       expect(current?.replay.world.context.services.clock.seconds()).toBeCloseTo(3 / 120, 12);
     }

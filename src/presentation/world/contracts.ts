@@ -145,18 +145,6 @@ export interface WorldUiPort {
       readonly lowGraphics?: boolean;
     },
   ): void;
-  bossIntro(
-    canvas: CanvasRenderingContext2D,
-    options: {
-      readonly screen: WorldRect;
-      readonly bossName: string;
-      readonly epithet: string;
-      readonly openingLine: string;
-      readonly color: string;
-      readonly t: number;
-      readonly dur: number;
-    },
-  ): void;
 }
 
 export interface WorldRenderContext {
@@ -392,16 +380,6 @@ export interface WaveBannerSnapshot {
   readonly normalColor: string;
 }
 
-export interface BossIntroSnapshot {
-  readonly screen: WorldRect;
-  readonly bossName: string;
-  readonly epithet: string;
-  readonly openingLine: string;
-  readonly color: string;
-  readonly elapsed: number;
-  readonly duration: number;
-}
-
 export interface StageBannerSnapshot {
   readonly elapsed: number;
   readonly mode: string;
@@ -433,7 +411,6 @@ export interface WorldRendererRegistry {
   achievementToast(snapshot: AchievementToastSnapshot): void;
   touchControls(snapshot: TouchControlsSnapshot): void;
   waveBanner(snapshot: WaveBannerSnapshot): void;
-  bossIntro(snapshot: BossIntroSnapshot): void;
   stageBanner(snapshot: StageBannerSnapshot): void;
   reticle(snapshot: ReticleSnapshot): void;
 }

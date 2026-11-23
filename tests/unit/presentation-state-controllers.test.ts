@@ -23,12 +23,11 @@ describe("presentation state controllers", () => {
   });
 
   it("holds achievement toasts while a replay plays: the toast stays queued and shows after", () => {
-    const held = (name: string) => achievementToastHeld({ name, cinematic: false, bossIntro: false });
+    const held = (name: string) => achievementToastHeld({ name, cinematic: false });
     expect(held("replay")).toBe(true);
     expect(held("playing")).toBe(false);
     expect(held("menu")).toBe(false);
-    expect(achievementToastHeld({ name: "playing", cinematic: true, bossIntro: false })).toBe(true);
-    expect(achievementToastHeld({ name: "playing", cinematic: false, bossIntro: true })).toBe(true);
+    expect(achievementToastHeld({ name: "playing", cinematic: true })).toBe(true);
     const markSeen = vi.fn();
     const pending = [{ id: "giant", name: "Giant Slayer", desc: "", rarity: "uncommon", cat: "combat" }];
     const input = {

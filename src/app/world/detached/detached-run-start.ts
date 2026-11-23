@@ -51,8 +51,8 @@ export function createDetachedChapterPort(
       preparedWave: () => replay.world.lifecycle.hasPreparedWave,
       activationDeferred: () => replay.world.lifecycle.activationDeferred,
       dispatch: binding.dispatch,
-      clearBossBeat: () => {
-        replay.world.state.setBossBeat(null);
+      clearStageBeat: () => {
+        replay.world.state.setStageBeat(null);
       },
     },
   });

@@ -173,7 +173,7 @@ export function installSourceRenderer(types: EnemyTypes, runtime: EnemyRendererR
         w = this.hw,
         h = this.hh;
       const core = this.mode === "void" ? CONFIG.colors.perfect : this.color;
-      const introP = this.introT > 0 ? clamp(1 - this.introT / (CONFIG.bossTheater.introDur || 1.4), 0, 1) : 1;
+      const introP = this.introT > 0 ? clamp(1 - this.introT / CONFIG.bossTheater.introDur, 0, 1) : 1;
       const deathScale = this.dying ? Math.max(0.04, 1 - this.deathP * 0.92) : 1;
       const breachTellK = this.breachState === "tell" ? 1 - clamp(this.breachT / (this.breachMaxT || 1), 0, 1) : 0;
       const breachRecoilK = this.breachState === "recoil" ? clamp(this.breachT / (this.breachMaxT || 1), 0, 1) : 0;

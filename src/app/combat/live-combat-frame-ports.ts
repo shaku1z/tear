@@ -8,7 +8,6 @@ import type { LiveGhostChaseRuntime } from "../replay/live-ghost-chase";
 import type { LiveGhostPracticeSessionState } from "../replay/ghost-practice-session-state";
 import type { LiveGhostRecording } from "../replay/live-ghost-recording";
 import type { LiveRunOrchestration } from "../run/run-orchestration-composition";
-import { bossIntroPlaying } from "../../gameplay/run/boss-encounter";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { GameBlade, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveAuthoritativeInputAdapter } from "../../gameplay/runtime/authoritative-input-adapter";
@@ -84,7 +83,6 @@ export function createLiveCombatFramePorts(options: LiveCombatFramePortsOptions)
     director: musicDirector,
     getRun: () => projectLiveMusicRun(hostState.run()),
     readPreludeState: () => {
-      const bossBeat = hostState.bossBeat();
       return {
         slowMotion: impact.slowMotion,
         timeScale: feel.timeScale,
@@ -95,7 +93,6 @@ export function createLiveCombatFramePorts(options: LiveCombatFramePortsOptions)
         bannerTime: feel.bannerSeconds,
         stageBannerSeconds: stageRuntime.bannerSeconds,
         rankPopTime: feel.rankPopupSeconds,
-        bossBeat: bossBeat === null ? null : { t: bossBeat.t },
       };
     },
     writePreludeState(frameState) {
@@ -107,15 +104,10 @@ export function createLiveCombatFramePorts(options: LiveCombatFramePortsOptions)
       feel.bannerSeconds = frameState.bannerTime;
       stageRuntime.bannerSeconds = frameState.stageBannerSeconds;
       feel.rankPopupSeconds = frameState.rankPopTime;
-      const bossBeat = hostState.bossBeat();
-      if (frameState.bossBeat === null) hostState.setBossBeat(null);
-      else if (bossBeat !== null) hostState.setBossBeat({ ...bossBeat, t: frameState.bossBeat.t });
     },
     parrySlowScale: CONFIG.juice.parrySlowScale,
     cinemaActive: () => CINEMA.active,
     playgroundSlow: () => liveRun().pg.slow === true,
-    bossArrivalPlaying: () => bossIntroPlaying(hostState.bossIntro()),
-    introScale: CONFIG.bossTheater.introScale,
     lerp,
     clamp,
     timeScale: () => feel.timeScale,

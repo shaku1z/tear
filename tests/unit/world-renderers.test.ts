@@ -7,7 +7,6 @@ import {
   type EnemyStatusSnapshot,
   type HudSnapshot,
   type WorldRenderContext,
-  type WorldRect,
   type WorldUiPort,
 } from "../../src/presentation/world";
 import { renderSceneEffects, type SceneEffectsSnapshot } from "../../src/presentation/world/scene-effects";
@@ -113,9 +112,6 @@ class TestUi implements WorldUiPort {
   }
   bossHud(_canvas: CanvasRenderingContext2D, options: Parameters<WorldUiPort["bossHud"]>[1]): void {
     this.record("bossHud", options);
-  }
-  bossIntro(_canvas: CanvasRenderingContext2D, options: Parameters<WorldUiPort["bossIntro"]>[1]): void {
-    this.record("bossIntro", options);
   }
   readable(color: string): string {
     return color;
@@ -244,7 +240,6 @@ describe("legacy world presentation renderers", () => {
     const registry = createWorldRenderers(renderContext([]));
     expect(Object.keys(registry).sort()).toEqual([
       "achievementToast",
-      "bossIntro",
       "coachMarks",
       "enemyStatus",
       "finaleWorld",
@@ -580,16 +575,6 @@ describe("legacy world presentation renderers", () => {
       hordeColor: "#e44",
       normalColor: "#3df",
     });
-    const screen: WorldRect = { x: 0, y: 0, w: 1600, h: 900 };
-    renderers.bossIntro({
-      screen,
-      bossName: "THE SOURCE",
-      epithet: "BELOW ALL THINGS",
-      openingLine: "LOOK BENEATH.",
-      color: "#93f",
-      elapsed: 0.5,
-      duration: 2,
-    });
     renderers.stageBanner({
       elapsed: 1,
       mode: "campaign",
@@ -603,11 +588,6 @@ describe("legacy world presentation renderers", () => {
       call.arguments.filter((value): value is string => typeof value === "string"),
     );
     expect(uiLabels).toEqual(expect.arrayContaining(["WAVE 8", "HORDE", "STAGE 3", "THE DEEP", "DESCEND."]));
-    expect(ui.calls.find((call) => call.name === "bossIntro")?.arguments[0]).toMatchObject({
-      bossName: "THE SOURCE",
-      epithet: "BELOW ALL THINGS",
-      openingLine: "LOOK BENEATH.",
-    });
     expect(canvasCalls.some((call) => call.name === "fillText" && call.arguments[0] === "⇊")).toBe(true);
   });
 
