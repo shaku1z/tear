@@ -257,6 +257,95 @@
         "id": "TRAINING-UX-DRILLS",
         "condition": "Remove the alias once no player-facing copy or evidence names the Practice Lab."
       }
+    },
+    {
+      "id": "replay",
+      "displayName": "Replay",
+      "codeId": "replay",
+      "deprecatedAliases": [
+        "Vault",
+        "Theater",
+        "Capsule",
+        "Career Archive",
+        "Passport",
+        "Ghost 2",
+        "Ghost 3",
+        "Ghost V3",
+        "V2",
+        "V3",
+        "Run DNA"
+      ],
+      "deprecatedCopyAliases": [
+        "Vault",
+        "Theater",
+        "Capsule",
+        "Career Archive",
+        "Passport",
+        "Ghost 2",
+        "Ghost 3",
+        "Ghost V3",
+        "V2",
+        "V3",
+        "Run DNA"
+      ],
+      "deprecatedCopyAliasPathPatterns": {
+        "Vault": [
+          "src/presentation/*.ts",
+          "src/presentation/screens/*.ts",
+          "src/app/*/*screen*.ts",
+          "src/app/interface/*.ts",
+          "src/app/library/*.ts",
+          "src/app/replay/*.ts",
+          "src/tearbench/browser/*.ts",
+          "src/tearbench/canonical-scenarios.json",
+          "docs/*.md",
+          "docs/tearbench-ghost3-evidence-catalog.json",
+          "README.md",
+          "index.html",
+          "public/*.json",
+          "public/*.html"
+        ],
+        "V2": [
+          "src/presentation/*.ts",
+          "src/presentation/screens/*.ts",
+          "src/app/*/*screen*.ts",
+          "src/app/interface/*.ts",
+          "src/app/library/*.ts",
+          "src/app/replay/*.ts",
+          "index.html",
+          "public/*.json",
+          "public/*.html"
+        ],
+        "V3": [
+          "src/presentation/*.ts",
+          "src/presentation/screens/*.ts",
+          "src/app/*/*screen*.ts",
+          "src/app/interface/*.ts",
+          "src/app/library/*.ts",
+          "src/app/replay/*.ts",
+          "index.html",
+          "public/*.json",
+          "public/*.html"
+        ]
+      },
+      "persistenceImpact": {
+        "scope": "Player-facing copy for kept runs and the screen that plays them; stored replays keep their own formats until the replay plan removes them",
+        "legacyRead": [
+          "tear_vault_index",
+          "tear_vault_<id>",
+          "Ghost V3 capsule database"
+        ],
+        "canonicalWrite": "REPLAY / REPLAYS in copy; the tear-replays store for kept runs",
+        "preserve": [
+          "saved Ghost 2 recordings and V3 capsules until the replay plan's removal PR deletes their readers"
+        ]
+      },
+      "owner": "Replay overhaul owner (plans/active/REPLAY_OVERHAUL_PLAN.md)",
+      "compatibilityStrategy": "One player-visible name. Players see REPLAY or REPLAYS everywhere; the old names stay only where a path-scoped allowlist names the replay PR that removes them.",
+      "removalCheckpoint": {
+        "id": "REPLAY-ONE-LIST",
+        "condition": "The One Replays PR removes VAULT, CAREER and THEATER from player copy; later replay PRs remove the remaining code and doc mentions their allowlist entries name."
+      }
     }
   ],
   "userFacingCopyScan": {
@@ -387,7 +476,7 @@
       {
         "id": "history-ghost3-top-level-docs",
         "pathPattern": "docs/TEARBENCH_GHOST3_*.md",
-        "termIds": ["tear-music", "replay-editor", "tearbench"],
+        "termIds": ["tear-music", "replay-editor", "tearbench", "replay"],
         "owner": "Ghost preservation owner",
         "reason": "Top-level Ghost3 architecture, program, ledger and requirements documents are preserved historical evidence.",
         "testEvidence": ["ghost preservation corpus tests", "stored Ghost3 hashes"],
@@ -411,6 +500,22 @@
         "expiry": {
           "checkpoint": "never",
           "condition": "Preserved evidence routes retain original IDs and wording."
+        }
+      },
+      {
+        "id": "history-replay-weapon-roster-evidence-index",
+        "pathPattern": "docs/TEARBENCH_WEAPON_ROSTER_EVIDENCE_INDEX.md",
+        "termIds": [
+          "replay"
+        ],
+        "owner": "Replay overhaul owner",
+        "reason": "The weapon roster evidence index records the Ghost3 evidence runs under the names they had when they were taken.",
+        "testEvidence": [
+          "check:terminology"
+        ],
+        "expiry": {
+          "checkpoint": "never",
+          "condition": "Historical evidence rows stay as recorded."
         }
       }
     ],
@@ -828,6 +933,431 @@
         "expiry": {
           "checkpoint": "G4-B-MUSIC",
           "condition": "Update in the follow-up contributor-document slice once the hosted canonical vendoring workflow is accepted."
+        }
+      },
+      {
+        "id": "compat-replay-src-presentation-screens-profile-achievements",
+        "pathPattern": "src/presentation/screens/profile-achievements.ts",
+        "termIds": [
+          "replay"
+        ],
+        "owner": "Replay overhaul owner",
+        "reason": "Player copy of the old replay screens until the One Replays PR replaces them with one list.",
+        "testEvidence": [
+          "check:terminology",
+          "check:containment"
+        ],
+        "expiry": {
+          "checkpoint": "REPLAY-ONE-LIST",
+          "condition": "The One Replays PR (plans/active/REPLAY_OVERHAUL_PLAN.md) folds the old replay screens into one REPLAYS list and removes these names from this file."
+        }
+      },
+      {
+        "id": "compat-replay-src-presentation-screens-compact-profile",
+        "pathPattern": "src/presentation/screens/compact-profile.ts",
+        "termIds": [
+          "replay"
+        ],
+        "owner": "Replay overhaul owner",
+        "reason": "Player copy of the old replay screens until the One Replays PR replaces them with one list.",
+        "testEvidence": [
+          "check:terminology",
+          "check:containment"
+        ],
+        "expiry": {
+          "checkpoint": "REPLAY-ONE-LIST",
+          "condition": "The One Replays PR (plans/active/REPLAY_OVERHAUL_PLAN.md) folds the old replay screens into one REPLAYS list and removes these names from this file."
+        }
+      },
+      {
+        "id": "compat-replay-src-presentation-screens-career-archive",
+        "pathPattern": "src/presentation/screens/career-archive.ts",
+        "termIds": [
+          "replay"
+        ],
+        "owner": "Replay overhaul owner",
+        "reason": "Player copy of the old replay screens until the One Replays PR replaces them with one list.",
+        "testEvidence": [
+          "check:terminology",
+          "check:containment"
+        ],
+        "expiry": {
+          "checkpoint": "REPLAY-ONE-LIST",
+          "condition": "The One Replays PR (plans/active/REPLAY_OVERHAUL_PLAN.md) folds the old replay screens into one REPLAYS list and removes these names from this file."
+        }
+      },
+      {
+        "id": "compat-replay-src-presentation-screens-contracts",
+        "pathPattern": "src/presentation/screens/contracts.ts",
+        "termIds": [
+          "replay"
+        ],
+        "owner": "Replay overhaul owner",
+        "reason": "Player copy of the old replay screens until the One Replays PR replaces them with one list.",
+        "testEvidence": [
+          "check:terminology",
+          "check:containment"
+        ],
+        "expiry": {
+          "checkpoint": "REPLAY-ONE-LIST",
+          "condition": "The One Replays PR (plans/active/REPLAY_OVERHAUL_PLAN.md) folds the old replay screens into one REPLAYS list and removes these names from this file."
+        }
+      },
+      {
+        "id": "compat-replay-src-presentation-screens-leaderboards-replays",
+        "pathPattern": "src/presentation/screens/leaderboards-replays.ts",
+        "termIds": [
+          "replay"
+        ],
+        "owner": "Replay overhaul owner",
+        "reason": "Player copy of the old replay screens until the One Replays PR replaces them with one list.",
+        "testEvidence": [
+          "check:terminology",
+          "check:containment"
+        ],
+        "expiry": {
+          "checkpoint": "REPLAY-ONE-LIST",
+          "condition": "The One Replays PR (plans/active/REPLAY_OVERHAUL_PLAN.md) folds the old replay screens into one REPLAYS list and removes these names from this file."
+        }
+      },
+      {
+        "id": "compat-replay-src-app-library-ghost-theater-screen-adapter",
+        "pathPattern": "src/app/library/ghost-theater-screen-adapter.ts",
+        "termIds": [
+          "replay"
+        ],
+        "owner": "Replay overhaul owner",
+        "reason": "Player copy of the old replay screens until the One Replays PR replaces them with one list.",
+        "testEvidence": [
+          "check:terminology",
+          "check:containment"
+        ],
+        "expiry": {
+          "checkpoint": "REPLAY-ONE-LIST",
+          "condition": "The One Replays PR (plans/active/REPLAY_OVERHAUL_PLAN.md) folds the old replay screens into one REPLAYS list and removes these names from this file."
+        }
+      },
+      {
+        "id": "compat-replay-src-app-library-library-screen-adapters-runtime",
+        "pathPattern": "src/app/library/library-screen-adapters-runtime.ts",
+        "termIds": [
+          "replay"
+        ],
+        "owner": "Replay overhaul owner",
+        "reason": "Player copy of the old replay screens until the One Replays PR replaces them with one list.",
+        "testEvidence": [
+          "check:terminology",
+          "check:containment"
+        ],
+        "expiry": {
+          "checkpoint": "REPLAY-ONE-LIST",
+          "condition": "The One Replays PR (plans/active/REPLAY_OVERHAUL_PLAN.md) folds the old replay screens into one REPLAYS list and removes these names from this file."
+        }
+      },
+      {
+        "id": "compat-replay-src-app-library-library-screen-adapters",
+        "pathPattern": "src/app/library/library-screen-adapters.ts",
+        "termIds": [
+          "replay"
+        ],
+        "owner": "Replay overhaul owner",
+        "reason": "Player copy of the old replay screens until the One Replays PR replaces them with one list.",
+        "testEvidence": [
+          "check:terminology",
+          "check:containment"
+        ],
+        "expiry": {
+          "checkpoint": "REPLAY-ONE-LIST",
+          "condition": "The One Replays PR (plans/active/REPLAY_OVERHAUL_PLAN.md) folds the old replay screens into one REPLAYS list and removes these names from this file."
+        }
+      },
+      {
+        "id": "compat-replay-src-app-replay-replay-screen-adapter",
+        "pathPattern": "src/app/replay/replay-screen-adapter.ts",
+        "termIds": [
+          "replay"
+        ],
+        "owner": "Replay overhaul owner",
+        "reason": "Player copy of the old replay screens until the One Replays PR replaces them with one list.",
+        "testEvidence": [
+          "check:terminology",
+          "check:containment"
+        ],
+        "expiry": {
+          "checkpoint": "REPLAY-ONE-LIST",
+          "condition": "The One Replays PR (plans/active/REPLAY_OVERHAUL_PLAN.md) folds the old replay screens into one REPLAYS list and removes these names from this file."
+        }
+      },
+      {
+        "id": "compat-replay-src-app-interface-live-screen-actions",
+        "pathPattern": "src/app/interface/live-screen-actions.ts",
+        "termIds": [
+          "replay"
+        ],
+        "owner": "Replay overhaul owner",
+        "reason": "Player copy of the old replay screens until the One Replays PR replaces them with one list.",
+        "testEvidence": [
+          "check:terminology",
+          "check:containment"
+        ],
+        "expiry": {
+          "checkpoint": "REPLAY-ONE-LIST",
+          "condition": "The One Replays PR (plans/active/REPLAY_OVERHAUL_PLAN.md) folds the old replay screens into one REPLAYS list and removes these names from this file."
+        }
+      },
+      {
+        "id": "compat-replay-src-app-interface-screen-action-bindings",
+        "pathPattern": "src/app/interface/screen-action-bindings.ts",
+        "termIds": [
+          "replay"
+        ],
+        "owner": "Replay overhaul owner",
+        "reason": "Player copy of the old replay screens until the One Replays PR replaces them with one list.",
+        "testEvidence": [
+          "check:terminology",
+          "check:containment"
+        ],
+        "expiry": {
+          "checkpoint": "REPLAY-ONE-LIST",
+          "condition": "The One Replays PR (plans/active/REPLAY_OVERHAUL_PLAN.md) folds the old replay screens into one REPLAYS list and removes these names from this file."
+        }
+      },
+      {
+        "id": "compat-replay-docs-screen-parity-checklist",
+        "pathPattern": "docs/SCREEN_PARITY_CHECKLIST.md",
+        "termIds": [
+          "replay"
+        ],
+        "owner": "Replay overhaul owner",
+        "reason": "Player copy of the old replay screens until the One Replays PR replaces them with one list.",
+        "testEvidence": [
+          "check:terminology",
+          "check:containment"
+        ],
+        "expiry": {
+          "checkpoint": "REPLAY-ONE-LIST",
+          "condition": "The One Replays PR (plans/active/REPLAY_OVERHAUL_PLAN.md) folds the old replay screens into one REPLAYS list and removes these names from this file."
+        }
+      },
+      {
+        "id": "compat-replay-docs-visual-design-direction",
+        "pathPattern": "docs/VISUAL_DESIGN_DIRECTION.md",
+        "termIds": [
+          "replay"
+        ],
+        "owner": "Replay overhaul owner",
+        "reason": "Player copy of the old replay screens until the One Replays PR replaces them with one list.",
+        "testEvidence": [
+          "check:terminology",
+          "check:containment"
+        ],
+        "expiry": {
+          "checkpoint": "REPLAY-ONE-LIST",
+          "condition": "The One Replays PR (plans/active/REPLAY_OVERHAUL_PLAN.md) folds the old replay screens into one REPLAYS list and removes these names from this file."
+        }
+      },
+      {
+        "id": "compat-replay-src-tearbench-browser-live-runtime-bridge",
+        "pathPattern": "src/tearbench/browser/live-runtime-bridge.ts",
+        "termIds": [
+          "replay"
+        ],
+        "owner": "Replay overhaul owner",
+        "reason": "Names the old Ghost 2 and V3 stores and engines while they still exist.",
+        "testEvidence": [
+          "check:terminology",
+          "check:containment"
+        ],
+        "expiry": {
+          "checkpoint": "REPLAY-GHOST-REMOVAL",
+          "condition": "The replay plan's Ghost 2 and V3 removal PR (plans/active/REPLAY_OVERHAUL_PLAN.md) deletes the old stores and engines this file names."
+        }
+      },
+      {
+        "id": "compat-replay-src-tearbench-canonical-scenarios",
+        "pathPattern": "src/tearbench/canonical-scenarios.json",
+        "termIds": [
+          "replay"
+        ],
+        "owner": "Replay overhaul owner",
+        "reason": "Names the old Ghost 2 and V3 stores and engines while they still exist.",
+        "testEvidence": [
+          "check:terminology",
+          "check:containment"
+        ],
+        "expiry": {
+          "checkpoint": "REPLAY-GHOST-REMOVAL",
+          "condition": "The replay plan's Ghost 2 and V3 removal PR (plans/active/REPLAY_OVERHAUL_PLAN.md) deletes the old stores and engines this file names."
+        }
+      },
+      {
+        "id": "compat-replay-docs-tearbench-ghost3-evidence-catalog",
+        "pathPattern": "docs/tearbench-ghost3-evidence-catalog.json",
+        "termIds": [
+          "replay"
+        ],
+        "owner": "Replay overhaul owner",
+        "reason": "Names the old Ghost 2 and V3 stores and engines while they still exist.",
+        "testEvidence": [
+          "check:terminology",
+          "check:containment"
+        ],
+        "expiry": {
+          "checkpoint": "REPLAY-GHOST-REMOVAL",
+          "condition": "The replay plan's Ghost 2 and V3 removal PR (plans/active/REPLAY_OVERHAUL_PLAN.md) deletes the old stores and engines this file names."
+        }
+      },
+      {
+        "id": "compat-replay-docs-release-compatibility",
+        "pathPattern": "docs/RELEASE_COMPATIBILITY.md",
+        "termIds": [
+          "replay"
+        ],
+        "owner": "Replay overhaul owner",
+        "reason": "Names the old Ghost 2 and V3 stores and engines while they still exist.",
+        "testEvidence": [
+          "check:terminology",
+          "check:containment"
+        ],
+        "expiry": {
+          "checkpoint": "REPLAY-GHOST-REMOVAL",
+          "condition": "The replay plan's Ghost 2 and V3 removal PR (plans/active/REPLAY_OVERHAUL_PLAN.md) deletes the old stores and engines this file names."
+        }
+      },
+      {
+        "id": "compat-replay-docs-runtime-recovery-contract",
+        "pathPattern": "docs/RUNTIME_RECOVERY_CONTRACT.md",
+        "termIds": [
+          "replay"
+        ],
+        "owner": "Replay overhaul owner",
+        "reason": "Names the old Ghost 2 and V3 stores and engines while they still exist.",
+        "testEvidence": [
+          "check:terminology",
+          "check:containment"
+        ],
+        "expiry": {
+          "checkpoint": "REPLAY-GHOST-REMOVAL",
+          "condition": "The replay plan's Ghost 2 and V3 removal PR (plans/active/REPLAY_OVERHAUL_PLAN.md) deletes the old stores and engines this file names."
+        }
+      },
+      {
+        "id": "compat-replay-docs-performance-budgets",
+        "pathPattern": "docs/PERFORMANCE_BUDGETS.md",
+        "termIds": [
+          "replay"
+        ],
+        "owner": "Replay overhaul owner",
+        "reason": "Names the old Ghost 2 and V3 stores and engines while they still exist.",
+        "testEvidence": [
+          "check:terminology",
+          "check:containment"
+        ],
+        "expiry": {
+          "checkpoint": "REPLAY-GHOST-REMOVAL",
+          "condition": "The replay plan's Ghost 2 and V3 removal PR (plans/active/REPLAY_OVERHAUL_PLAN.md) deletes the old stores and engines this file names."
+        }
+      },
+      {
+        "id": "compat-replay-docs-feature-inventory",
+        "pathPattern": "docs/FEATURE_INVENTORY.md",
+        "termIds": [
+          "replay"
+        ],
+        "owner": "Replay overhaul owner",
+        "reason": "Current docs describe the replay features under their old names until the replay docs PR.",
+        "testEvidence": [
+          "check:terminology",
+          "check:containment"
+        ],
+        "expiry": {
+          "checkpoint": "REPLAY-DOCS",
+          "condition": "The replay plan's docs PR (plans/active/REPLAY_OVERHAUL_PLAN.md) rewrites these docs in the replay's one name."
+        }
+      },
+      {
+        "id": "compat-replay-docs-architecture",
+        "pathPattern": "docs/ARCHITECTURE.md",
+        "termIds": [
+          "replay"
+        ],
+        "owner": "Replay overhaul owner",
+        "reason": "Current docs describe the replay features under their old names until the replay docs PR.",
+        "testEvidence": [
+          "check:terminology",
+          "check:containment"
+        ],
+        "expiry": {
+          "checkpoint": "REPLAY-DOCS",
+          "condition": "The replay plan's docs PR (plans/active/REPLAY_OVERHAUL_PLAN.md) rewrites these docs in the replay's one name."
+        }
+      },
+      {
+        "id": "compat-replay-readme",
+        "pathPattern": "README.md",
+        "termIds": [
+          "replay"
+        ],
+        "owner": "Replay overhaul owner",
+        "reason": "Current docs describe the replay features under their old names until the replay docs PR.",
+        "testEvidence": [
+          "check:terminology",
+          "check:containment"
+        ],
+        "expiry": {
+          "checkpoint": "REPLAY-DOCS",
+          "condition": "The replay plan's docs PR (plans/active/REPLAY_OVERHAUL_PLAN.md) rewrites these docs in the replay's one name."
+        }
+      },
+      {
+        "id": "compat-replay-docs-decisions",
+        "pathPattern": "docs/DECISIONS.md",
+        "termIds": [
+          "replay"
+        ],
+        "owner": "Replay overhaul owner",
+        "reason": "Current docs describe the replay features under their old names until the replay docs PR.",
+        "testEvidence": [
+          "check:terminology",
+          "check:containment"
+        ],
+        "expiry": {
+          "checkpoint": "REPLAY-DOCS",
+          "condition": "The replay plan's docs PR (plans/active/REPLAY_OVERHAUL_PLAN.md) rewrites these docs in the replay's one name."
+        }
+      },
+      {
+        "id": "compat-replay-docs-pitfalls",
+        "pathPattern": "docs/PITFALLS.md",
+        "termIds": [
+          "replay"
+        ],
+        "owner": "Replay overhaul owner",
+        "reason": "Current docs describe the replay features under their old names until the replay docs PR.",
+        "testEvidence": [
+          "check:terminology",
+          "check:containment"
+        ],
+        "expiry": {
+          "checkpoint": "REPLAY-DOCS",
+          "condition": "The replay plan's docs PR (plans/active/REPLAY_OVERHAUL_PLAN.md) rewrites these docs in the replay's one name."
+        }
+      },
+      {
+        "id": "compat-replay-docs-tutorial-parity-and-upgrade-plan",
+        "pathPattern": "docs/TUTORIAL_PARITY_AND_UPGRADE_PLAN.md",
+        "termIds": [
+          "replay"
+        ],
+        "owner": "Replay overhaul owner",
+        "reason": "Current docs describe the replay features under their old names until the replay docs PR.",
+        "testEvidence": [
+          "check:terminology",
+          "check:containment"
+        ],
+        "expiry": {
+          "checkpoint": "REPLAY-DOCS",
+          "condition": "The replay plan's docs PR (plans/active/REPLAY_OVERHAUL_PLAN.md) rewrites these docs in the replay's one name."
         }
       }
     ]

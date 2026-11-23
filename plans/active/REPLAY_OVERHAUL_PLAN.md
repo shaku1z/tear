@@ -22,12 +22,13 @@ Written so that someone with only this repository can continue. The decision log
   - A record ends at the run's real end: its outcome (a defeat or a final win; a campaign stage win is not an outcome, so one record holds every stage played) or the player quitting (`src/app/run/live-run-abandonment.ts`) or restarting (`src/app/run/run-start-host.ts`). A run that ends inside a tick (a death or a win) ends its record once that tick is simulated, so the record ends on the tick the run ended in; `tests/unit/replay-run-ends.test.ts` lists every place the live game ends a run and verifies each kind of ending. One rule, `keepsReplayRecord`, says whether it is kept: a plain start is kept, campaign included; practice, beat-this-run, seed-race and assisted runs are recorded but not kept (a seed race's start is the race's shared draft and headstart, which the record does not hold until PR 8).
   - Kept records go to `src/replay/record-store.ts`: the `tear-replays` IndexedDB database, version 1, one `records` store, the newest 20 up to 25 MB. A quota error, a blocked open or any IndexedDB error turns recording off for that run and is counted; it never fails the run. Records stay on this device; the statistics switch does not govern them.
   - The browser test adds a cold leg (a run started straight after boot) and stores each warm leg's record, reads it back from the store and verifies that copy.
-- **Open: PR 5c-2, watch a kept run (branch `codex/replay-viewer`).** The owner's replay fix (the lead, 2026-11-22).
+- **Merged: PR 5c-2, watch a kept run (#403), run ends (#404) and the test-build cloud guard (#405).**
   - WATCH (the results screen and Profile > REPLAYS) finds the run's kept record by its seed (`src/app/replay/kept-record-lookup.ts`) and opens it on the replay screen. `src/app/replay/record-watch-session.ts` re-simulates the record in the detached world (`startRecordWorld`, `src/app/replay/record-world.ts`, which verify starts runs with too) and draws it through the replay screen's frame builder, so the stage, weapon, projectiles and bosses at a tick are play's own. A run with no kept record plays in Ghost 2 as before.
-  - Ghost 2 gets the stage fix only: a recording starts with the stage it starts in, playback no longer starts from the end stage, and a trim keeps the stage at its cut (`tests/unit/replay-visual-stage.test.ts`).
-  - The nightly stage leg watches its kept run and checks the stage shown either side of the stage change.
-  - VAULT listing kept records, and the "Recorded before this update" label on older capsules, move to PR 8 with the rest of the Vault.
-- **Then:** the status timers (burn and the rest) go into the canonical hash, with a ruleset step, a gold refresh and a test that a burn-only difference is caught at the next checkpoint (the lead, 2026-11-22).
+  - Ghost 2 got the stage fix only: a recording starts with the stage it starts in, playback no longer starts from the end stage, and a trim keeps the stage at its cut (`tests/unit/replay-visual-stage.test.ts`).
+  - #404: a run that ends inside a tick (a death or a win) ends its record once that tick is simulated, and a restarted run ends its record as a quit.
+  - #405: a test build or the dev server gets the offline cloud (`cloudFactoryForBuild`, `src/platform/offline-cloud.ts`), so a replay session's test run never reaches a production leaderboard. The one entry that did on 2026-11-22 is the owner's to remove.
+- **Open: plan and guards** (this card's order and the name guards; see "The order from here").
+- **Then: One Replays**, the visible fold, before any more internals. The order and each step's "Players see:" line are in "The order from here".
 - **Agreed with Shards (for PR 10):**
   - `ReplayLook.cosmetics` is the domain `Loadout`, filled at run start with `loadoutOf(COSMETIC_CATALOG, PROFILE.cosmetics())`.
   - `readLook` caps the entry count at the number of catalog slots.
@@ -533,7 +534,97 @@ in step with the playtest plan (coordination 3).
 **Target size:** the replay system outside the moved world and snapshots and the tutorial gold
 modules (about 677,000 characters in 106 modules today) under 200,000 characters. Each PR reports its count.
 
+## The order from here (the lead, 2026-11-22)
+
+**The decision.** The owner found five names for one thing: Profile had REPLAYS (Ghost 2 recordings),
+VAULT (V3 capsules, played in THEATER) and CAREER (a "career archive" with ten lists), playback was
+"THEATER" or "WATCH" depending on the way in, and the code said Ghost 2, Ghost V3, capsule, vault,
+theater, passport, career and Run DNA. Every PR so far fixed plumbing and none removed a screen,
+because the visible fold was PR 8. From now on:
+
+- **One word: Replay.** Every place a player sees says REPLAY or REPLAYS.
+- **One list: Profile > REPLAYS.** Every kept run on this device, newest first, one row each (mode,
+  stage reached, score, time, date, weapon), with ALL, BESTS and PINNED filters and the row actions
+  WATCH, SHARE, DOWNLOAD, PIN and DELETE; IMPORT A REPLAY FILE sits on the list. VAULT and CAREER go;
+  Profile keeps BESTS and STATS.
+- **One player: the replay screen.** WATCH from the results screen, Profile > REPLAYS, a leaderboard
+  row and the feed opens the same screen, headed REPLAY. Older recordings that cannot re-simulate play
+  there through the old path, labelled "Recorded before this update", until PR 8 removes them.
+- **One store: `tear-replays`.** Older recordings are listed through it or shown read-only; a player
+  never sees two lists.
+- **Race:** CHASE BEST and RACE THIS REFERENCE leave with CAREER; the race comes back as one WATCH-side
+  action in PR 9.
+
+**The order** (one PR at a time; it replaces the old PR 6, 7, 8 order):
+
+1. **Plan and guards** (this card, the terminology and containment guards, the one-name rules in
+   `AGENTS.md` and `docs/ENGINEERING_STANDARD.md`).
+   **Players see:** nothing changes in the game.
+2. **One Replays** (the visible part of the old PR 8): the list, its filters and row actions, the
+   replay screen's REPLAY header, WATCH from every way in, VAULT and CAREER removed with the screens,
+   controllers and stores only they use, `tear-replays` the only list source. It closes the
+   `REPLAY-ONE-LIST` allowlist entries in `config/terminology-registry.json`. Picture card from a real
+   preview build: the list, the replay screen and a leaderboard WATCH.
+   **Players see:** one REPLAYS list in Profile and one replay screen from everywhere; VAULT, CAREER
+   and THEATER are gone.
+3. **Status timers in the hash:** burn and the other status timers join the canonical hash, with a
+   ruleset step, a gold refresh and a test that a burn-only difference is caught at the next checkpoint.
+   **Players see:** nothing; a replay that would drift on a status effect is refused instead of shown wrong.
+4. **PR 6, one store** (below), with the list's index, budget and eviction rule.
+   **Players see:** the list opens at once with hundreds of runs; when the store drops an old unpinned
+   run to stay in budget, the list says so.
+5. **PR 7, one watch** (below), with the seek cache and its budgets.
+   **Players see:** WATCH opens fast on long runs, and seeking backwards is quick.
+6. **PR 8, Ghost 2 and V3 removed** (below, without the list, which moved to One Replays). It closes
+   the `REPLAY-GHOST-REMOVAL` allowlist entries.
+   **Players see:** the one-time notice about recordings made before this update (DOWNLOAD ALL, then
+   CONTINUE); afterwards only re-simulated replays.
+7. **PR 9, race on watch** (below).
+   **Players see:** RACE on the replay screen, against a run on the same seed.
+8. **PR 10, Shards looks in the record and the docs** (below). It closes the `REPLAY-DOCS` allowlist
+   entries.
+   **Players see:** a watched replay shows the cosmetics the runner wore.
+
+**The guards.** `pnpm check:terminology` refuses the `replay` term's old names (its
+`deprecatedCopyAliases`) in player text and current docs. Today's uses are allowlisted file by file,
+each entry expiring at `REPLAY-ONE-LIST`, `REPLAY-GHOST-REMOVAL` or `REPLAY-DOCS`, the step above
+that removes them. `pnpm check:containment` counts vault, theater, capsule, passport, v2 and v3 in
+code and paths against today's baseline, which only goes down. The rules (one thing, one name, one
+screen, one store; no version number in a product, module or store name; every plan PR says what
+players see) are in `AGENTS.md` and `docs/ENGINEERING_STANDARD.md`.
+
+## The quality bar (every remaining replay PR)
+
+The owner, 2026-11-22: effective, efficient, scalable, organized, no slop, no one-off fixes. Each PR
+body shows the numbers.
+
+- **One module, one public face.** Replay code lives in `src/replay/` (record, store, share, verify,
+  watch) and `src/app/replay/` (screens and wiring), each with one index that other code imports.
+  `config/architecture-roles.json` names them so `pnpm check:architecture` refuses a reach-around.
+  After One Replays nothing outside imports a Ghost 2 or V3 module; the inventory says when each goes.
+  Each PR reports characters removed against characters added, and removal wins overall.
+- **Watching scales with run length.** A bounded in-memory seek cache (a snapshot every N ticks, N and
+  the memory cap measured and written here) keeps a backward seek to at most N ticks. Measured on a
+  20-minute run on the test build: WATCH to first frame, the worst seek, steady frame time at 1x and
+  the fastest speed, and memory. The budgets go here and into a browser check that fails over them.
+- **The list scales with the number of runs.** List rows come from an index of summary fields (never
+  the action log), the list draws only visible rows, and the store has one budget and eviction rule
+  (pinned and shared runs kept, the oldest unpinned go first), with the player told when a run was
+  dropped. Tested with 500 runs.
+- **One way to do each thing.** One record type, one store, one file and share format, one watch path,
+  one verify. No second path "for now" without the named PR that deletes it.
+- **Correct by rule, not by case.** Property tests: any recorded run round-trips (record, store, file,
+  import, verify and watch give the same hashes), and any `look` change leaves every hash unchanged.
+  A rule test over every content definition (weapons, projectiles, bosses, stages) checks that watch
+  draws it from play's own state, so new content needs no replay change.
+- **No slop.** No dead options, unused exports, narrating comments, flags nobody sets or themed names.
+  Each new file has an evidence route. The code-budget numbers go down.
+- **Players see:** every PR says what changes for a player, or that nothing does.
+
 ## Pull request sequence
+
+The sections below are the original sequence. "The order from here" above sets the order and moves
+the list out of PR 8; each section keeps its design answers.
 
 Each PR is small, leaves the game working, and says what it deleted. Order is by dependency.
 "Deletes more than it adds" holds for every PR except PR 5, which adds the record core and its
@@ -627,6 +718,8 @@ PR 5 lands in three pull requests (the replay owner, 2026-11-21). A seed and act
 
 ### PR 6: one store (`store.ts`, `indexeddb-chunk-storage.ts`, `share.ts` file encoding)
 
+**Players see:** the REPLAYS list opens at once with hundreds of runs, and says when an old unpinned run was dropped to stay in budget.
+
 Builds on the `tear-replays` database from 5c-1: PR 6 changes the encoding inside it and needs no second database and no migration out.
 
 - **General case:** One device store and one file format for every record.
@@ -637,6 +730,8 @@ Builds on the `tear-replays` database from 5c-1: PR 6 changes the encoding insid
 - **Removed:** About 14 modules (vault, backend, protection, import plan, cold restore and jobs, archives, maintenance repair).
 
 ### PR 7: one watch (`watch.ts`, `replay-screen.ts`, `replay-frame.ts`)
+
+**Players see:** WATCH opens fast on long runs, and seeking backwards is quick.
 
 Play, pause, speed, seek, chapter jump and practice over the detached world, with the seek cache.
 Clip export rewired to `watch.frameAt` and still engineering-only.
@@ -656,8 +751,11 @@ Clip export rewired to `watch.frameAt` and still engineering-only.
 
 ### PR 8: one Replays list and share; Ghost 2 removed (decisions 1 and 3)
 
-Profile REPLAYS, VAULT and CAREER become one REPLAYS tab (WATCH, PIN, SHARE, DOWNLOAD, DELETE,
-IMPORT A REPLAY FILE). Publishing, the feed and leaderboard links use `share.ts`. Ghost 2 recording
+**Players see:** the one-time notice about recordings made before this update (DOWNLOAD ALL, then
+CONTINUE); afterwards only re-simulated replays.
+
+The one REPLAYS tab itself (WATCH, PIN, SHARE, DOWNLOAD, DELETE, IMPORT A REPLAY FILE) moved ahead
+to One Replays ("The order from here"); PR 8 removes what it left behind. Publishing, the feed and leaderboard links use `share.ts`. Ghost 2 recording
 and playback go, with the one-time notice and the old-store cleanup. From 5c (the lead, 2026-11-21): the seed race moves to the record, V3 recording stops and the V3 recorder modules are deleted, and the HUD checkpoint parser moves to the HUD's owner. This is the PR that fixes the
 owner's two defects for players: REPLAYS and leaderboard replays now open in `watch`. The Ghost 2
 driver of `replay-shows-the-moment.test.ts` goes with Ghost 2.
@@ -671,6 +769,8 @@ driver of `replay-shows-the-moment.test.ts` goes with Ghost 2.
 
 ### PR 9: race on watch (same seed only, decision 6)
 
+**Players see:** RACE on the replay screen, against a run on the same seed.
+
 - **General case:** A recorded run alongside a live run.
 - **One owner:** `src/replay/race.ts`; the racer's music pick always plays in a race.
 - **The next one:** A new race rule is data in the race declaration.
@@ -679,6 +779,8 @@ driver of `replay-shows-the-moment.test.ts` goes with Ghost 2.
 - **Removed:** About 10 modules (reference data, worker, controller, chase, seed race contract and decisions).
 
 ### PR 10: Shards cosmetics in the record, names and documents
+
+**Players see:** a watched replay shows the cosmetics the runner wore.
 
 Fills `look.cosmetics` from the Shards equip state once its catalogue ids exist, draws them in
 watch, rewrites `docs/FEATURE_INVENTORY.md` and `docs/ARCHITECTURE.md` replay text, updates the
@@ -829,7 +931,9 @@ writes are closed. Deploying the rules is the owner's step.
 - [ ] The architecture baseline has no `ghost` edges and no replay import cycle; the code budget and architecture baselines are lower than on `92eddb5c`.
 - [ ] The replay system outside `app/world/detached/` and `gameplay/snapshot/` is under 200,000 characters (about 677,000 today), counted the code budget's way.
 - [ ] The playtest-tool session confirms stage 5 can use `app/world/detached/`, `gameplay/snapshot/` and `replay/verify.ts`.
-- [ ] Every PR description answers the design check and passes `pnpm merge:ready`.
+- [ ] Every PR description answers the design check, says what players see, and passes `pnpm merge:ready`.
+- [ ] A player finds every kept run in one place, Profile > REPLAYS, and every WATCH opens the same replay screen.
+- [ ] `config/terminology-registry.json` has no allowlist entry for the `replay` term outside history, and `pnpm check:terminology` and `pnpm check:containment` fail on a new old replay name.
 
 ## Scope
 
@@ -862,3 +966,4 @@ writes are closed. Deploying the rules is the owner's step.
 - 2026-11-21 PR 5b-1 (`codex/replay-live-start`): one seed type, one start record, one run start and one stage load for live play and detached worlds; the eleven start differences in the start map are closed, each named in the pull request. A run keeps the cinematics setting it started with, so changing it mid-run applies from the next run. The determinism corpus names the boss each boss stream fights, because the shared start draws Boss Rush order as live play does; every stream's play facts are unchanged and its hashes are regenerated. Tutorial gold is regenerated: its lessons' inputs, actions and final counters are unchanged, only the start state and hashes.
 - 2026-11-21 PR 5c split into 5c-1 (production recorder and its store) and 5c-2 (VAULT and the Theater on the record), each on main before the next (the lead). The old third part (seed race on the record, V3 recording off, V3 recorder modules deleted) and the HUD parser move go into PR 8. Records get their own database, `tear-replays` version 1, which PR 6 builds on. 5c-1 keeps plain-start runs, campaign included (the lead: one record across stage wins, ended at a defeat, the final win or a quit); seed races are recorded but not kept until the record holds their start in PR 8. For 5c-2: V3 keeps recording until PR 8, so a V3 row is labelled "Recorded before this update" only when its recorded date is before this build, never because it is a V3 row.
 - 2026-11-22 The replay clock (#402): the scheduler counts only ticks it simulates, and the live and detached hosts share one padded contact test. 5c-2 (`codex/replay-viewer`): WATCH opens a kept run on the replay screen, re-simulated; Ghost 2 keeps only its stage fix; VAULT listing moves to PR 8; status timers enter the hash after 5c-2 (the lead).
+- 2026-11-23 Plan and guards (`codex/replay-plan-guards`): the lead's 2026-11-22 decision (one name, one list, one player, one store) and the new order, with One Replays before PR 6 and a "Players see:" line for every step; the quality bar; the `replay` term in the terminology registry with file-by-file allowlists that expire at the step removing each name; vault, theater, capsule, passport, v2 and v3 in containment with today's counts; the one-name rules in `AGENTS.md` and `docs/ENGINEERING_STANDARD.md`.

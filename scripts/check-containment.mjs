@@ -3,7 +3,9 @@
 //
 // 1. Plain names. A listed themed word (as a whole word, or one part of a camelCase or snake_case
 //    name) may not appear in a new tracked path, and a tracked text file may not hold more of them
-//    than its baseline. A file without a baseline entry holds none.
+//    than its baseline. A file without a baseline entry holds none. A listed word that ends in
+//    digits is a version-numbered name (`v3` in `ghostV3`, `tear-ghost-v3`): it counts when a
+//    part ends in those digits and no lower-case letter follows, so `v3x` and `v31` do not.
 // 2. Tools. The number of package scripts and of files under scripts/ may not pass its baseline.
 // 3. Worktrees. The number of worktrees and local branches on this machine may not pass its limit.
 //
@@ -19,13 +21,19 @@ import { fileURLToPath } from "node:url";
 export const CONFIG_PATH = "config/containment.json";
 const MODES = ["off", "observe", "enforce"];
 
-/** The parts of a name: `bossForge_LAB2` gives boss, Forge, LAB. */
-const NAME_PARTS = /[A-Z]+(?![a-z])|[A-Z]?[a-z]+/gu;
+/** The parts of a name and their trailing digits: `bossForge_LAB2` gives boss, Forge, LAB (2). */
+const NAME_PARTS = /([A-Z]+(?![a-z])|[A-Z]?[a-z]+)(\d*)/gu;
 
-/** How many parts of `text` are one of `words` (lower case). */
+/** How many parts of `text` are one of `words` (lower case), or one of them with its digits. */
 export function countThemedWords(text, words) {
   let count = 0;
-  for (const [part] of text.matchAll(NAME_PARTS)) if (words.has(part.toLowerCase())) count += 1;
+  for (const match of text.matchAll(NAME_PARTS)) {
+    const [, part, digits] = match;
+    const name = part.toLowerCase();
+    const end = (match.index ?? 0) + match[0].length;
+    const versioned = digits !== "" && !/[a-z]/u.test(text[end] ?? "") && words.has(name + digits);
+    if (words.has(name) || versioned) count += 1;
+  }
   return count;
 }
 
