@@ -3,10 +3,17 @@ import { canonicalReplayTotals, type CanonicalGameplayState } from "../../gamepl
 import type { ReplayRun } from "../../replay/record";
 import type { ReplayWorld, ReplayWorldRun } from "../../replay/verify";
 import { stepDetachedWorld } from "../world/detached/detached-step";
-import { createProductionGhostReplayComposition } from "../world/detached/replay-composition";
+import {
+  captureProductionReplayCheckpoint,
+  createProductionGhostReplayComposition,
+} from "../world/detached/replay-composition";
 import { startRecordWorld, type RecordWorldEngine } from "./record-world";
 
-const STATIC_ENGINE: RecordWorldEngine = Object.freeze({ createProductionGhostReplayComposition, stepDetachedWorld });
+const STATIC_ENGINE: RecordWorldEngine = Object.freeze({
+  createProductionGhostReplayComposition,
+  stepDetachedWorld,
+  captureProductionReplayCheckpoint,
+});
 
 function startDetachedReplay(
   run: Pick<ReplayRun, "seed" | "start">,
