@@ -6,6 +6,7 @@ import type { ReplayEngine } from "../../ghost/replay-engine";
 import { replayStartChoices, type ReplayAction, type ReplayFrame, type ReplayRun } from "../../replay/record";
 import type { ReplayWorld } from "../../replay/verify";
 import type { ProductionGhostReplayCompositionOptions } from "../world/detached/replay-composition";
+import { ownedLoadout } from "../../gameplay/progression/upgrade-loadout";
 
 /** The engine members a recorded run needs: the detached world and its one-tick step. */
 export type RecordWorldEngine = Pick<ReplayEngine, "createProductionGhostReplayComposition" | "stepDetachedWorld">;
@@ -18,6 +19,8 @@ export interface RecordWorld {
   ) => AuthoritativeStepResult<CanonicalGameplayState>;
   /** The stage the world is in now: the stage a replay shows at this tick. */
   readonly stage: () => number;
+  /** The run's upgrades now, as the run-end screen lists them. */
+  readonly loadout: () => ReturnType<typeof ownedLoadout>;
   readonly terminated: () => boolean;
   /** The world drawn through the game's own frame builder; only when the world was given a renderer. */
   readonly renderView: () => GhostReplayRenderView | undefined;
@@ -53,6 +56,10 @@ export function startRecordWorld(
   return Object.freeze<RecordWorld>({
     step: (actions, frames) => engine.stepDetachedWorld(session, actions, frames),
     stage: () => session.replay.stage.index,
+    loadout: () => {
+      const current = session.replay.world.state.run();
+      return current === null ? [] : ownedLoadout(current.mods);
+    },
     terminated: () => session.replay.world.lifecycle.phase === "terminated",
     renderView: () => session.renderView?.(),
     dispose: unsubscribe,

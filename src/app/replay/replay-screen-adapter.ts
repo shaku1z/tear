@@ -7,6 +7,7 @@ import { liveReplayRecorder } from "./live-replay-recorder-slot";
 import { createBrowserGhostReplayPresentation } from "./browser-ghost-replay-presentation";
 import { createBrowserReplayClipExport } from "./browser-replay-clip-export";
 import { stableVerificationHash } from "../../domain/hash";
+import { replayLoadoutCards } from "../../presentation/replay-snapshots";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../../presentation/screens/live-screen-renderers";
 import type { AppScreen } from "../../domain/screen-catalog";
@@ -130,9 +131,18 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
   const theater = createGhostTheaterScreenAdapter({
     presentation: createBrowserGhostReplayPresentation(services.document, d.UI),
     clipExport,
+    // The whole arena between the top bar and the transport bar, framed as play frames it.
     drawWorld: (frame) => {
-      frame.draw(services.canvas, { x: 0, y: 56, w: services.width, h: services.height - 172 });
+      const screen = services.screenRectangle();
+      frame.draw(services.canvas, { x: screen.x, y: 56, w: screen.w, h: services.height - 172 });
     },
+    loadoutCards: (items) =>
+      replayLoadoutCards(items, {
+        upgrades: d.UPGRADES,
+        categories: services.categories(),
+        fallbackCategory: services.fallbackCategory(),
+        specialColor: services.specialColor(),
+      }),
     render: (view) => {
       services.renderers.replay(view);
       if (view.clipExport?.thumbnail !== undefined)

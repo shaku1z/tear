@@ -35,7 +35,8 @@ export interface GhostReplayRenderView {
   readonly tick: number;
   readonly viewport: Readonly<{ width: number; height: number }>;
   readonly clockSeconds: number;
-  readonly camera: Readonly<{ policy: "player-follow"; x: number; y: number; scale: number; reconstructed: true }>;
+  /** The live game's camera: centred on the arena, at the world's zoom. */
+  readonly camera: Readonly<{ policy: "arena"; x: number; y: number; scale: number }>;
   readonly screen: string;
   readonly clockBlocked: boolean;
   draw(canvas: CanvasRenderingContext2D, rectangle: Readonly<{ x: number; y: number; w: number; h: number }>): void;

@@ -168,3 +168,8 @@ export function trickColor(multiplier: number, colors: TrickColors): string {
   if (multiplier >= 2) return "#caa520";
   return "#888";
 }
+
+/** Run time as the HUD shows it: whole minutes and seconds, m:ss. */
+export function formatRunClock(seconds: number): string {
+  return `${String(Math.floor(seconds / 60))}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
+}

@@ -331,12 +331,12 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     canvas.textAlign = "left";
     canvas.fillStyle = REPLAY_CYAN;
     canvas.font = ui.font(ui.t.type.micro, true);
-    canvas.fillText("FINAL LOADOUT", x + 20, loadoutY);
+    canvas.fillText(view.loadoutHeading?.title ?? "FINAL LOADOUT", x + 20, loadoutY);
     loadoutY += 14;
     if (!view.loadout || view.loadout.length === 0) {
       canvas.fillStyle = "#b4b8c8";
       canvas.font = ui.font(ui.t.type.micro, false);
-      canvas.fillText("(not recorded)", x + 20, loadoutY + 18);
+      canvas.fillText(view.loadoutHeading?.empty ?? "(not recorded)", x + 20, loadoutY + 18);
     }
     view.loadout?.slice(0, 12).forEach((item) => {
       if (loadoutY > y + panelHeight - 30) return;

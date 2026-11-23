@@ -29,6 +29,7 @@ export const ALL_LAYERS: readonly ReplayFrameLayer[] = [
   "player",
   "blade",
   "effects",
+  "indicators",
 ];
 export type { ReplayFrameLayer };
 
@@ -101,7 +102,6 @@ export function createSession(scene: SheetScene) {
     controllerGlyph: () => "",
   });
   const presentation = createBrowserGhostReplayPresentation(document, ui, {
-    zoom: 1,
     hidden: () => hidden,
     scenes: paintedScenes,
   });
