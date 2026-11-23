@@ -153,7 +153,7 @@ withJourney(
               cause: error,
             });
           });
-      await click("WATCH");
+      await click("▶  WATCH"); // The row's watch button (src/presentation/screens/profile-replay-list.ts).
       await waitScreen("replay");
       await shownIs({ paused: false }, "WATCH did not play at once");
       await click("❚❚");
