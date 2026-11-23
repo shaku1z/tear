@@ -26,7 +26,7 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     canvas.textAlign = "left";
     canvas.fillStyle = REPLAY_PAPER;
     canvas.font = ui.font(ui.t.type.lead, true);
-    canvas.fillText(view.theater ? "◆ THEATER" : "▶ REPLAY", 40 + safe.l, 36 + safe.t);
+    canvas.fillText("▶ REPLAY", 40 + safe.l, 36 + safe.t);
     canvas.fillStyle = REPLAY_MUTED;
     canvas.font = ui.font(ui.t.type.body, false);
     const header = view.title + "   ·   " + view.detail;

@@ -453,16 +453,6 @@
         "run": "node tests/browser-c40-source-void-ghost-seek.js"
       },
       {
-        "id": "replay-file-round-trip",
-        "run": "node tests/browser-c39-normal-capsule-roundtrip.js",
-        "seconds": 43
-      },
-      {
-        "id": "vault-library",
-        "run": "node tests/browser-ghost-vault-library.js",
-        "seconds": 16
-      },
-      {
         "id": "replay-engine-cold",
         "run": "node tests/browser-replay-engine-cold.js"
       },

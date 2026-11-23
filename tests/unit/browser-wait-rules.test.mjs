@@ -282,7 +282,7 @@ describe("reloadPage", () => {
     page.addInitScript = async () => undefined;
     await trackScriptLoads(page);
     const request = (url) => ({ resourceType: () => "script", url: () => url });
-    const early = "http://127.0.0.1/assets/career-archive-worker.js";
+    const early = "http://127.0.0.1/assets/live-ghost-reference-worker.js";
     const late = "http://127.0.0.1/assets/capsule-encoder-worker.js";
     // The page reports the worker first: its request is never counted.
     reportWorker(early);
@@ -316,10 +316,10 @@ describe("reloadPage", () => {
       __tearWorkerScript: (url) => (reported.push(url), Promise.resolve()),
     };
     new Function("window", `(${reportWorkerScripts.toString()})()`)(window);
-    const worker = new window.Worker("/assets/career-archive-worker.js", { type: "module" });
+    const worker = new window.Worker("/assets/live-ghost-reference-worker.js", { type: "module" });
     expect(worker).toBeInstanceOf(FakeWorker);
-    expect(reported).toEqual(["http://127.0.0.1/assets/career-archive-worker.js"]);
-    expect(constructed).toEqual([["/assets/career-archive-worker.js", { type: "module" }]]);
+    expect(reported).toEqual(["http://127.0.0.1/assets/live-ghost-reference-worker.js"]);
+    expect(constructed).toEqual([["/assets/live-ghost-reference-worker.js", { type: "module" }]]);
   });
 
   it("reloads with the state-wait ceiling", async () => {

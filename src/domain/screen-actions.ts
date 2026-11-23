@@ -37,16 +37,12 @@ export type ScreenAction =
   | { readonly type: "shards.renameLoadout"; readonly id: string }
   /** The first press asks; a later deliberate press deletes. */
   | { readonly type: "shards.deleteLoadout"; readonly id: string }
-  | { readonly type: "career.control"; readonly command: string; readonly id?: string }
   | { readonly type: "profile.selectTab"; readonly id: string }
+  /** The REPLAYS list's filter: all, bests or pinned. */
+  | { readonly type: "profile.filterReplays"; readonly id: string }
   | { readonly type: "profile.watchReplay"; readonly id: string }
-  | { readonly type: "profile.watchGhostCapsule"; readonly id: string }
-  | { readonly type: "profile.pickGhostArchive" }
-  | { readonly type: "profile.reselectGhostArchive"; readonly id: string }
-  | { readonly type: "profile.restoreGhostArchive"; readonly id: string; readonly revision: number }
-  | { readonly type: "profile.cancelGhostRestore"; readonly id: string; readonly revision: number }
-  | { readonly type: "profile.cancelGhostArchiveSelection" }
-  | { readonly type: "profile.downloadGhostArchive"; readonly id: string }
+  | { readonly type: "profile.downloadReplay"; readonly id: string }
+  | { readonly type: "profile.importReplay" }
   | { readonly type: "profile.signIn" }
   | { readonly type: "profile.signOut" }
   | { readonly type: "profile.rename" }

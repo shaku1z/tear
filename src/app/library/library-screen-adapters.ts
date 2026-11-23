@@ -4,9 +4,7 @@ import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies
 import type { createLiveScreenRenderers } from "../../presentation/screens/live-screen-renderers";
 import type { BrowserGamepad } from "../../input/browser-input-contracts";
 import { ABILITY_CATEGORY_ORDER, SPECIAL_ABILITY_COLOR, abilityBadge } from "../../presentation/codex-snapshots";
-import type { GhostVaultLibraryPort } from "./ghost-vault-library-controller";
-import type { GhostTheaterOpenResult } from "../../ghost/theater-open-result";
-import type { CareerPort } from "./ghost-career-controller";
+import type { ReplayFilePort } from "../replay/browser-replay-files";
 
 type Dependencies = Pick<
   GameRuntimeDependencies,
@@ -46,14 +44,6 @@ type Renderers = ReturnType<typeof createLiveScreenRenderers>;
 type Category = Readonly<{ name: string; color: string }>;
 
 export interface LibraryScreenServices {
-  readonly chase?: Readonly<{
-    choose(id: string, expectedManifestHash?: string): Promise<void>;
-    chooseRace?(id: string, expectedManifestHash?: string): Promise<void>;
-    cancelPreparation(): void;
-    snapshot(): Readonly<{ active: boolean; message: string }>;
-  }>;
-  readonly career?: CareerPort;
-  readonly enterCareerSource?: (id: string, command: string, expectedManifestHash?: string) => unknown;
   readonly dependencies: Dependencies;
   readonly renderers: Renderers;
   readonly canvas: CanvasRenderingContext2D;
@@ -67,13 +57,27 @@ export interface LibraryScreenServices {
   readonly ease: (value: number) => number;
   readonly formatTime: (seconds: number) => string;
   readonly getBest: (mode: string, difficulty: string) => Readonly<{ wave: number; score: number; time?: number }>;
-  readonly ghostVault: GhostVaultLibraryPort;
+  /** Where kept replay records are stored (the `tear-replays` IndexedDB database). */
+  readonly browserIndexedDb: IDBFactory | undefined;
+  /** The browser file picker and download; undefined where the browser has none. */
+  readonly replayFiles: ReplayFilePort | undefined;
   readonly enterReplay: (record: unknown, from: string) => boolean;
-  readonly enterGhostTheater: (id: string) => Promise<GhostTheaterOpenResult>;
+  /** Opens a kept record on the replay screen; false when it cannot be played. */
+  readonly watchRecord: (key: string) => Promise<boolean>;
+}
+
+/** The REPLAYS list's row and list actions (src/app/replay/replay-list-controller.ts). */
+export interface ReplayListActions {
+  readonly filter: (id: string) => void;
+  readonly watch: (id: string) => void;
+  readonly share: (id: string) => void;
+  readonly download: (id: string) => void;
+  readonly pin: (id: string, pinned: boolean) => void;
+  readonly remove: (id: string) => void;
+  readonly importFile: () => void;
 }
 
 export interface LibraryScreenAdapters {
-  readonly careerAction: (command: string, id?: string) => void;
   readonly categories: Readonly<Record<string, Category>>;
   readonly fallbackCategory: Category;
   readonly categoryOrder: readonly string[];
@@ -102,9 +106,9 @@ export interface LibraryScreenAdapters {
   readonly selectAchievementCategory: (id: string) => void;
   readonly selectLeaderboardTab: (id: string) => void;
   readonly selectLeaderboardBoard: (id: string) => void;
+  /** Watches a leaderboard or feed replay. */
   readonly watchReplay: (id: string, from?: "profile" | "leaderboards") => void;
-  readonly watchGhostCapsule: (id: string) => void;
-  readonly publishReplay: (id: string) => void;
+  readonly replays: ReplayListActions;
 }
 
 type DeferredAction = (adapters: LibraryScreenAdapters) => void;
@@ -154,12 +158,46 @@ export function createLiveLibraryScreenAdapters(services: LibraryScreenServices)
     else ensureLoaded();
   }
 
-  const adapters: LibraryScreenAdapters = {
-    careerAction: (command, id) => {
-      invokeReplay((value) => {
-        value.careerAction(command, id);
+  const replays: ReplayListActions = Object.freeze({
+    filter: (id: string) => {
+      invoke((value) => {
+        value.replays.filter(id);
       });
     },
+    watch: (id: string) => {
+      invokeReplay((value) => {
+        value.replays.watch(id);
+      });
+    },
+    share: (id: string) => {
+      invoke((value) => {
+        value.replays.share(id);
+      });
+    },
+    download: (id: string) => {
+      invoke((value) => {
+        value.replays.download(id);
+      });
+    },
+    pin: (id: string, pinned: boolean) => {
+      invoke((value) => {
+        value.replays.pin(id, pinned);
+      });
+    },
+    remove: (id: string) => {
+      invoke((value) => {
+        value.replays.remove(id);
+      });
+    },
+    // The file picker needs the click that asked for it; the list is drawn, so its code is loaded.
+    importFile: () => {
+      invoke((value) => {
+        value.replays.importFile();
+      });
+    },
+  });
+  const adapters: LibraryScreenAdapters = {
+    replays,
     categories,
     fallbackCategory,
     categoryOrder: ABILITY_CATEGORY_ORDER,
@@ -244,16 +282,6 @@ export function createLiveLibraryScreenAdapters(services: LibraryScreenServices)
     watchReplay: (id, from) => {
       invokeReplay((value) => {
         value.watchReplay(id, from);
-      });
-    },
-    watchGhostCapsule: (id) => {
-      invokeReplay((value) => {
-        value.watchGhostCapsule(id);
-      });
-    },
-    publishReplay: (id) => {
-      invokeReplay((value) => {
-        value.publishReplay(id);
       });
     },
   };

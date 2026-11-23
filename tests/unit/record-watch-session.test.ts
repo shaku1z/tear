@@ -81,9 +81,9 @@ describe("watching a kept record", () => {
 
   it("finds the newest kept record of a run by its seed", () => {
     const entries = [
-      { key: "record:2026-11-22T10:00:00Z:515303", bytes: 1, recordedAt: "2026-11-22T10:00:00Z" },
-      { key: "record:2026-11-22T11:00:00Z:515303", bytes: 1, recordedAt: "2026-11-22T11:00:00Z" },
-      { key: "record:2026-11-22T12:00:00Z:15303", bytes: 1, recordedAt: "2026-11-22T12:00:00Z" },
+      { key: "record:2026-11-22T10:00:00Z:515303", bytes: 1, pinned: false, recordedAt: "2026-11-22T10:00:00Z" },
+      { key: "record:2026-11-22T11:00:00Z:515303", bytes: 1, pinned: false, recordedAt: "2026-11-22T11:00:00Z" },
+      { key: "record:2026-11-22T12:00:00Z:15303", bytes: 1, pinned: false, recordedAt: "2026-11-22T12:00:00Z" },
     ];
     expect(keptRecordKeyFor(entries, "515303")).toBe("record:2026-11-22T11:00:00Z:515303");
     expect(keptRecordKeyFor(entries, "999")).toBeUndefined();

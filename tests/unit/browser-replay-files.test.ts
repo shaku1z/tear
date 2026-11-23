@@ -1,8 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import {
-  bindGhostArchiveFileLifecycle,
-  createBrowserGhostArchiveFiles,
-} from "../../src/app/library/browser-ghost-archive-files";
+import { createBrowserReplayFiles } from "../../src/app/replay/browser-replay-files";
 
 class Element extends EventTarget {
   type = "";
@@ -34,7 +31,7 @@ function fixture(active = true) {
     }),
     body: { append: vi.fn() },
   };
-  const port = createBrowserGhostArchiveFiles({
+  const port = createBrowserReplayFiles({
     document: document as unknown as Document,
     activation: () => active,
     createUrl: (blob) => {
@@ -48,26 +45,7 @@ function fixture(active = true) {
   });
   return { port, document, elements, revoked, callbacks, blobs };
 }
-describe("normal owned archive file capability", () => {
-  it("clears only transient selection on BFCache hide, refreshes on return, and disposes only on genuine unload", () => {
-    const target = new EventTarget(),
-      controller = { cancelArchive: vi.fn(), dispose: vi.fn(), refresh: vi.fn() };
-    bindGhostArchiveFileLifecycle(target, controller);
-    const transition = (type: string, persisted: boolean): void => {
-      const event = new Event(type);
-      Object.defineProperty(event, "persisted", { value: persisted });
-      target.dispatchEvent(event);
-    };
-    transition("pagehide", true);
-    expect(controller.cancelArchive).toHaveBeenCalledExactlyOnceWith();
-    expect(controller.dispose).not.toHaveBeenCalled();
-    transition("pageshow", true);
-    expect(controller.refresh).toHaveBeenCalledOnce();
-    transition("pagehide", false);
-    expect(controller.dispose).toHaveBeenCalledOnce();
-    transition("pageshow", true);
-    expect(controller.refresh).toHaveBeenCalledOnce();
-  });
+describe("the replay file picker and download", () => {
   it("opens the picker synchronously, passes only the selected File, clears its value and removes listeners", () => {
     const f = fixture(),
       selected = vi.fn(),
@@ -77,6 +55,7 @@ describe("normal owned archive file capability", () => {
       input = f.elements[0];
     expect(input?.click).toHaveBeenCalledOnce();
     expect(input?.hidden).toBe(true);
+    expect(input?.accept).toBe(".json,application/json");
     if (!input) throw new Error("missing input");
     input.files = [file];
     input.dispatchEvent(new Event("change"));
@@ -106,7 +85,7 @@ describe("normal owned archive file capability", () => {
   });
   it("reports expired activation before creating a picker", () => {
     const f = fixture(false);
-    expect(() => f.port.pick(vi.fn(), vi.fn())).toThrow(/Click or tap/u);
+    expect(() => f.port.pick(vi.fn(), vi.fn())).toThrow(/IMPORT A REPLAY FILE/u);
     expect(f.document.createElement).not.toHaveBeenCalled();
   });
   it("requests an exact-byte Blob download with safe filename and cleans the anchor and URL", async () => {

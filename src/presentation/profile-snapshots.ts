@@ -81,49 +81,67 @@ export function difficultyLabel(id: string): string {
   return id === "onehit" ? "ONE-HIT" : id.toUpperCase();
 }
 
-export interface ReplayIndexSource {
+/** A REPLAYS list row as the list builds it (src/app/replay/replay-list.ts). */
+export interface ReplayRowSource {
   readonly id: string;
-  readonly ts: number;
-  readonly pin?: boolean;
-  readonly shareId?: string;
-  readonly sum?: Readonly<{
-    name?: string;
-    mode?: string;
-    diff?: string;
-    wave?: number;
-    score?: number;
-    won?: boolean;
-    thumb?: string;
-  }>;
+  readonly kind: "record" | "older";
+  /** Wall-clock milliseconds. */
+  readonly recordedAt: number;
+  readonly mode?: string;
+  readonly difficulty?: string;
+  readonly score?: number;
+  readonly wave?: number;
+  /** Run time in seconds. */
+  readonly time?: number;
+  readonly victory: boolean;
+  readonly pinned: boolean;
+  readonly shared: boolean;
+  readonly best: boolean;
+  readonly playable: boolean;
+  readonly olderId?: string;
+  readonly thumb?: string;
 }
-export function buildProfileReplays(
-  entries: readonly ReplayIndexSource[],
+
+/** The REPLAYS rows: what ran, how it went, when, and which actions the run offers. */
+export function buildReplayRows(
+  items: readonly ReplayRowSource[],
   modes: readonly ModeViewSource[],
+  formatTime: (seconds: number) => string,
 ): readonly ReplayView[] {
-  return entries.map((entry) => {
-    const summary = entry.sum ?? {},
-      mode = modes.find((item) => item.id === summary.mode);
+  return items.map((item) => {
+    const mode = modes.find((entry) => entry.id === item.mode);
+    const title = [
+      mode?.label ?? item.mode ?? "Run",
+      item.difficulty === undefined ? "" : difficultyLabel(item.difficulty),
+    ]
+      .filter(Boolean)
+      .join(" · ")
+      .toUpperCase();
+    const detail = [
+      item.wave === undefined ? "" : "wave " + String(item.wave),
+      item.score === undefined ? "" : item.score.toLocaleString("en-US") + " pts",
+      item.time === undefined ? "" : formatTime(item.time),
+      item.victory ? "★ victory" : "",
+    ].filter(Boolean);
+    const timestamp = [
+      new Date(item.recordedAt).toLocaleDateString(),
+      item.best ? "★ BEST" : "",
+      item.shared ? "SHARED" : "",
+      item.kind === "older" ? "Recorded before this update" : "",
+      item.playable ? "" : "Made by an earlier version of the game",
+    ].filter(Boolean);
     return Object.freeze({
-      id: entry.id,
-      title:
-        (summary.name ?? "You") +
-        " — " +
-        (
-          (mode?.label ?? summary.mode ?? "Run") + (summary.diff ? " · " + difficultyLabel(summary.diff) : "")
-        ).toUpperCase(),
-      detail:
-        "wave " +
-        String(summary.wave ?? 0) +
-        " · " +
-        (summary.score ?? 0).toLocaleString("en-US") +
-        " pts" +
-        (summary.won ? " · ★ victory" : ""),
-      available: true,
+      id: item.id,
+      title,
+      detail: detail.length > 0 ? detail.join(" · ") : "This replay couldn't be read",
+      available: item.playable,
       local: true,
-      pinned: entry.pin === true,
-      shared: entry.shareId !== undefined,
-      ...(summary.thumb === undefined ? {} : { thumbnailId: summary.thumb }),
-      timestamp: new Date(entry.ts).toLocaleDateString() + (entry.shareId === undefined ? "" : " · PUBLISHED"),
+      pinned: item.pinned,
+      shared: item.shared,
+      canShare: item.kind === "older" || item.olderId !== undefined,
+      canDownload: item.kind === "record" && item.playable,
+      ...(item.thumb === undefined ? {} : { thumbnailId: item.thumb }),
+      timestamp: timestamp.join(" · "),
     });
   });
 }
@@ -243,7 +261,13 @@ export function buildProfileSnapshot(input: {
   readonly height: number;
   readonly scroll: number;
   readonly achievements: readonly ProfileAchievementSource[];
+  /** REPLAYS only: the toolbar (filters and import) height above the list. */
   readonly replayListInset?: number;
+  /** REPLAYS only: the list filters as [id, label], the chosen filter, and the list's state. */
+  readonly replayFilters?: readonly (readonly [string, string])[];
+  readonly replayFilter?: string;
+  readonly replayList?: "opening" | "failed";
+  readonly canImport?: boolean;
   readonly unlocked: (id: string) => boolean;
   readonly categoryIcon: (category: string) => string;
   readonly rarityColor: (rarity: string) => string;
@@ -254,7 +278,7 @@ export function buildProfileSnapshot(input: {
   readonly difficultyAccent: (difficultyId: string) => string;
 }): ProfileSnapshotResult {
   // Visible list height: page body bottom (height - 110) minus the content top (306),
-  // a possible notice line (24) and the vault toolbar inset.
+  // a possible notice line (24) and the REPLAYS toolbar inset.
   const maximumScroll = Math.max(0, input.replays.length * 96 - (input.height - 440 - (input.replayListInset ?? 0)));
   const scroll = Math.max(0, Math.min(maximumScroll, input.scroll));
   const rarityRank: Readonly<Record<string, number>> = { legendary: 0, epic: 1, rare: 2, uncommon: 3, common: 4 };
@@ -279,6 +303,17 @@ export function buildProfileSnapshot(input: {
     message: input.message,
     stats: input.tab === "stats" ? input.stats : [],
     replays: input.replays,
+    ...(input.tab === "replays"
+      ? {
+          replayFilters: (input.replayFilters ?? []).map(([id, label]) => ({
+            id,
+            label,
+            selected: id === input.replayFilter,
+          })),
+          canImport: input.canImport === true,
+          ...(input.replayList === undefined ? {} : { replayList: input.replayList }),
+        }
+      : {}),
     canScrollUp: scroll > 0,
     canScrollDown: scroll < maximumScroll,
     passport: {

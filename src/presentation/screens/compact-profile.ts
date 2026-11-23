@@ -1,4 +1,4 @@
-import type { AchievementsScreenView, CardView, ProfileScreenView, ReplayView, ScreenRenderContext } from "./contracts";
+import type { AchievementsScreenView, CardView, ProfileScreenView, ScreenRenderContext } from "./contracts";
 import {
   createCompactPage,
   type CompactPage,
@@ -6,27 +6,12 @@ import {
   type ScrollBlock,
   type ScrollView,
 } from "./compact-page";
-import { profileListEmptyState } from "./profile-list-empty-state";
+import { REPLAY_IMPORT_LABEL, profileListEmptyState, replayRowActions } from "./profile-replay-list";
 
 const PROFILE_HUE = "#b06cff",
   GOLD = "#e0a326";
-// Pure, so a build without the phone layout drops this module (plans/MOBILE_LATER.md).
-const ARCHIVE_STATUS: Readonly<Record<string, string>> = /* @__PURE__ */ Object.freeze({
-  idle: "",
-  unavailable: "Importing replay files isn't available in this browser.",
-  picking: "Choosing a file…",
-  validating: "Checking the file…",
-  ready: "Ready to restore.",
-  restoring: "Restoring…",
-  "reselect-required": "Choose the file again to continue.",
-  complete: "Restored to this device.",
-  cancelled: "Import cancelled.",
-  failed: "That file couldn't be restored.",
-  "download-requested": "Download started.",
-});
-
 /**
- * Phone compositions of PROFILE (passport, bests, replays, vault, stats) and
+ * Phone compositions of PROFILE (passport, bests, replays, stats) and
  * ACHIEVEMENTS (dailies, shard summary, the achievement grid) on the compact page.
  * The passport and every tab body scroll together under the header's tab strip.
  */
@@ -44,9 +29,7 @@ export function createCompactProfile(context: ScreenRenderContext) {
       tabAction: (id) => ({ type: "profile.selectTab", id }),
     });
     const blocks: ScrollBlock[] = [passport(page, view)];
-    const listTab = view.tab === "replays" || view.tab === "vault";
-    if (view.tab === "vault") blocks.push(...vaultToolbar(page, view));
-    if (listTab) blocks.push(...replayBlocks(page, view));
+    if (view.tab === "replays") blocks.push(replayToolbar(page, view), ...replayBlocks(page, view));
     else if (view.tab === "bests") blocks.push(...bests(page, view));
     else blocks.push(...stats(page, view));
     kit.footer(page, kit.scroll(page, blocks));
@@ -141,49 +124,20 @@ export function createCompactProfile(context: ScreenRenderContext) {
     return { height, draw };
   }
 
-  /** Vault import controls with their status line. */
-  function vaultToolbar(page: CompactPage, view: ProfileScreenView): readonly ScrollBlock[] {
-    const archive = view.archive,
-      items: FlowAction[] = [];
-    if (archive === undefined) return [];
-    items.push({
-      label: "IMPORT A REPLAY FILE",
-      action: { type: "profile.pickGhostArchive" },
-      enabled: archive.canPick,
-    });
-    if (archive.jobId !== undefined && archive.revision !== undefined) {
-      if (archive.canReselect)
-        items.push({ label: "CHOOSE AGAIN", action: { type: "profile.reselectGhostArchive", id: archive.jobId } });
-      if (archive.canRestore)
-        items.push({
-          label: archive.pairedCapsuleIds ? "RESTORE BOTH" : "RESTORE",
-          action: { type: "profile.restoreGhostArchive", id: archive.jobId, revision: archive.revision },
-        });
-      if (archive.canCancel)
-        items.push({
-          label: "CANCEL",
-          action: { type: "profile.cancelGhostRestore", id: archive.jobId, revision: archive.revision },
-        });
-    }
-    if (archive.canCancelSelection)
-      items.push({ label: "CANCEL", action: { type: "profile.cancelGhostArchiveSelection" } });
+  /** The REPLAYS filters, then IMPORT A REPLAY FILE when this browser can read a file. */
+  function replayToolbar(page: CompactPage, view: ProfileScreenView): ScrollBlock {
+    const items: FlowAction[] = (view.replayFilters ?? []).map((filter) => ({
+      label: filter.label,
+      selected: filter.selected === true,
+      action: { type: "profile.filterReplays", id: filter.id },
+    }));
+    if (view.canImport === true) items.push({ label: REPLAY_IMPORT_LABEL, action: { type: "profile.importReplay" } });
     const height = kit.actionsHeight(items, page.width);
-    const blocks: ScrollBlock[] = [
-      { height, draw: (y, scrollView) => kit.actions(items, page.left, y, page.width, scrollView) },
-    ];
-    const status = [
-      ARCHIVE_STATUS[archive.status] ?? "",
-      archive.pairedCapsuleIds ? "Includes the scored run and its finale." : "",
-    ]
-      .filter(Boolean)
-      .join(" ");
-    if (status) blocks.push(kit.prose(page, status, { alpha: ui.t.alpha.soft, maxLines: 2 }));
-    return blocks;
+    return { height, draw: (y, scrollView) => kit.actions(items, page.left, y, page.width, scrollView) };
   }
 
   function replayBlocks(page: CompactPage, view: ProfileScreenView): readonly ScrollBlock[] {
-    const replays = view.replays ?? [],
-      vault = view.tab === "vault";
+    const replays = view.replays ?? [];
     if (replays.length === 0) {
       const empty = profileListEmptyState(view);
       return [
@@ -192,58 +146,14 @@ export function createCompactProfile(context: ScreenRenderContext) {
           empty.glyph,
           empty.line,
           empty.detail,
-          vault ? undefined : { label: "PLAY A RUN", action: { type: "profile.play" } },
+          empty.play ? { label: "PLAY A RUN", action: { type: "profile.play" } } : undefined,
         ),
       ];
     }
     const blocks: ScrollBlock[] = view.message ? [kit.prose(page, view.message, { maxLines: 2 })] : [];
-    for (const replay of replays) {
-      blocks.push(
-        kit.replayRow(
-          page,
-          replay,
-          vault ? vaultActions(replay) : replayActions(replay),
-          replay.pinned ? GOLD : undefined,
-        ),
-      );
-    }
+    for (const replay of replays)
+      blocks.push(kit.replayRow(page, replay, replayRowActions(replay), replay.pinned ? GOLD : undefined));
     return blocks;
-  }
-
-  /** A local replay's actions: watch, then pin, share and delete for this device's recordings. */
-  function replayActions(replay: ReplayView): readonly FlowAction[] {
-    const items: FlowAction[] = [
-      { label: "▶  WATCH", action: { type: "profile.watchReplay", id: replay.id }, enabled: replay.available },
-    ];
-    if (replay.local) {
-      items.push({
-        label: replay.pinned ? "★ PINNED" : "PIN",
-        selected: replay.pinned,
-        action: { type: "profile.pinReplay", id: replay.id, pinned: !replay.pinned },
-      });
-      items.push({
-        label: replay.shared ? "SHARED" : "SHARE",
-        selected: replay.shared,
-        enabled: !replay.shared,
-        action: { type: "profile.publishReplay", id: replay.id },
-      });
-      items.push({ label: "✕ DELETE", action: { type: "profile.deleteReplay", id: replay.id } });
-    }
-    return items;
-  }
-
-  /** A saved replay's vault actions, in the desktop row's order. */
-  function vaultActions(replay: ReplayView): readonly FlowAction[] {
-    const items: FlowAction[] = [
-      {
-        label: replay.theaterUnavailable ? "CAN'T PLAY" : "◆ THEATER",
-        enabled: replay.available,
-        action: { type: "profile.watchGhostCapsule", id: replay.id },
-      },
-    ];
-    if (replay.canDownloadArchive)
-      items.push({ label: "DOWNLOAD", action: { type: "profile.downloadGhostArchive", id: replay.id } });
-    return items;
   }
 
   /** BESTS: the finest run, then one row per mode and difficulty record. */

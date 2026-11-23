@@ -5,8 +5,7 @@ import {
   type GhostReplayRunContextV1,
 } from "../../ghost/replay-admission";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameBlade, GameEnemy, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
-import { createBrowserGhostCareer } from "./browser-ghost-career";
+import type { GameBlade, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import { createLiveGhostFrameRecording, declareGhostApplicationFrames } from "./ghost-frame-recording";
 import { createLiveGhostOpeningCapture } from "./ghost-opening-capture";
 import { createLiveGhostRecordingSessionState } from "./ghost-recording-session-state";
@@ -14,21 +13,18 @@ import { createLiveGhostRunDnaRecording } from "./ghost-run-dna-recording";
 
 export interface LiveGhostRecordingOptions {
   readonly indexedDb: IDBFactory | undefined;
-  readonly document: Document;
   readonly recorderOptions: BrowserGhostLiveRecorderOptions;
   readonly run: () => GameRun;
   readonly player: () => GamePlayer;
   readonly blade: () => GameBlade;
   readonly screen: () => string;
   readonly tick: () => number;
-  readonly enemies: () => GameEnemy[];
-  readonly enemyId: (actor: object) => string;
   readonly practiceActive: () => boolean;
   readonly bossIntroActive: () => boolean;
 }
 
 /**
- * The live Ghost V3 sidecar: recorder session, career metadata, Run DNA,
+ * The live Ghost V3 sidecar: recorder session, Run DNA,
  * application frame clock and the recorded-opening capture. It observes the
  * run and never changes gameplay.
  */
@@ -36,13 +32,6 @@ export function createLiveGhostRecording(options: LiveGhostRecordingOptions) {
   const { indexedDb, recorderOptions } = options;
   const session = createLiveGhostRecordingSessionState(indexedDb, recorderOptions);
   const recorder = session.recorder();
-  const career = createBrowserGhostCareer(indexedDb, options.document, {
-    session,
-    run: options.run,
-    tick: () => options.tick(),
-    enemies: () => options.enemies(),
-    actorId: (actor) => options.enemyId(actor),
-  });
   const dna = createLiveGhostRunDnaRecording({
     session,
     player: options.player,
@@ -71,7 +60,7 @@ export function createLiveGhostRecording(options: LiveGhostRecordingOptions) {
       console.warn("Ghost opening completion capture failed; live play continues", error);
     },
   });
-  return Object.freeze({ session, recorder, career, dna, frames, opening });
+  return Object.freeze({ session, recorder, dna, frames, opening });
 }
 
 export type LiveGhostRecording = ReturnType<typeof createLiveGhostRecording>;
@@ -92,7 +81,7 @@ export function observeLiveGhostRecordingBoundaries(
   recording: LiveGhostRecording,
   ports: LiveGhostRecordingBoundaryPorts,
 ): void {
-  const { session, recorder, career, dna, frames, opening } = recording;
+  const { session, recorder, dna, frames, opening } = recording;
   const { run } = ports;
   // Keyframes attest the immutable bootstrap identity saved at recording boundary; never rebuild a divergent fingerprint later in the live loop.
   ports.ghost.setRecordingObserver(
@@ -134,7 +123,6 @@ export function observeLiveGhostRecordingBoundaries(
               });
               session.setReplayContext(replayContext);
               dna.start(replayContext);
-              career.start();
               if (replayContext !== undefined) {
                 // The sealed bootstrap event is queued first by GhostLiveRecorder.
                 // Capture its matching state/RNG anchor before any opening-content

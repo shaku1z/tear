@@ -190,7 +190,7 @@ export function createLiveReplayProduction(ports: LiveReplayProductionPorts): Li
               counts.stored += 1;
               counts.evicted += put.evicted.length;
             } else if (put.status === "oversized") counts.oversized += 1;
-            else storeFailed(put.reason);
+            else if (put.status === "failed") storeFailed(put.reason);
           })
           .catch(() => {
             storeFailed("error");

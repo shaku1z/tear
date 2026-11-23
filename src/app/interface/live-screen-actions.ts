@@ -1,6 +1,5 @@
 import { modeSurface } from "../../gameplay/run/mode-catalog";
 import type { LiveCampaignTrainingAssembly } from "../campaign/live-campaign-training-assembly";
-import type { GhostVaultLibraryPort } from "../library/ghost-vault-library-controller";
 import type { LiveGhostChaseRuntime } from "../replay/live-ghost-chase";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { GameRun } from "../../gameplay/runtime/game-runtime-state";
@@ -15,11 +14,6 @@ import {
 import type { LiveInterfaceInteractionState } from "./interface-interaction-state";
 import type { LiveScreenNavigation } from "./live-screen-navigation";
 
-/** The Ghost Vault controller behind the Profile screens. */
-export interface LiveGhostLibraryScreens {
-  readonly vault: GhostVaultLibraryPort;
-}
-
 export interface LiveScreenActionsOptions {
   readonly dependencies: GameRuntimeDependencies;
   readonly session: LiveWorldSessionState;
@@ -31,7 +25,6 @@ export interface LiveScreenActionsOptions {
   readonly navigation: Pick<LiveScreenNavigation, "screen" | "setScreen" | "back">;
   readonly interaction: Pick<LiveInterfaceInteractionState, "setScroll">;
   readonly chase: Pick<LiveGhostChaseRuntime, "toggle" | "stop">;
-  readonly ghostLibrary: LiveGhostLibraryScreens;
   readonly run: () => GameRun;
   /** The browser pointer-lock request, not the input-authority-owned one. */
   readonly requestPointerLock: () => void;
@@ -42,9 +35,8 @@ export function createLiveScreenActions(
   options: LiveScreenActionsOptions,
 ): LiveInterfaceCompositionOptions["screens"]["actions"] {
   const { dependencies, session, navigation, chase, run: liveRun, requestPointerLock: requestLock } = options;
-  const { Cloud, VAULT } = dependencies;
+  const { Cloud } = dependencies;
   const { setScreen } = navigation;
-  const { vault: ghostVault } = options.ghostLibrary;
   const { seedRace, settingsController } = options.services;
   const { resumeSavedFinale, claimSavedFinale, endRun, retryRun } = options.services.controllers.api;
   const {
@@ -58,7 +50,6 @@ export function createLiveScreenActions(
       if (command === "toggle") chase.toggle();
       else chase.stop();
     },
-    ghostFiles: ghostVault,
     setScreen,
     back: () => {
       navigation.back();
@@ -104,10 +95,6 @@ export function createLiveScreenActions(
     },
     signOut: () => {
       void Cloud.signOut();
-    },
-    pinReplay: (id, pinned) => VAULT.pin(id, pinned),
-    deleteReplay: (id) => {
-      VAULT.remove(id);
     },
     dispatchPlayground: dispatchPlaygroundAction,
     tutorialAction: (action) => {

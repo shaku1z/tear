@@ -77,10 +77,6 @@ export function screenSurface(screen: string): SurfaceId | undefined {
   return isAppScreen(screen) && SCREEN_CATALOG[screen].channel === "engineering" ? `screen:${screen}` : undefined;
 }
 
-const CAREER_COMMAND_SURFACES: Readonly<Partial<Record<string, SurfaceId>>> = Object.freeze({
-  race: "feature:seed-race",
-});
-
 /**
  * The surface a semantic screen action belongs to, or undefined for an
  * ordinary player action. Mode selection is classified by the mode catalog.
@@ -90,7 +86,6 @@ export function screenActionSurface(action: ScreenAction): SurfaceId | undefined
   if (action.type === "navigate") return screenSurface(action.to);
   if (action.type === "setup.start") return action.race === true ? "feature:seed-race" : undefined;
   if (action.type === "setup.selectBoss") return "setup:boss-picker";
-  if (action.type === "career.control") return CAREER_COMMAND_SURFACES[action.command];
   if (type.startsWith("replay.editor.")) return "feature:replay-editor";
   return undefined;
 }

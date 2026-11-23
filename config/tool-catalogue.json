@@ -444,13 +444,6 @@
       ],
       "duration": "under-a-minute"
     },
-    "test:browser:ghost-vault-library": {
-      "purpose": "Browser check of the Ghost Vault library screen",
-      "effects": [
-        "launches-browser"
-      ],
-      "duration": "under-a-minute"
-    },
     "test:browser:replay-engine-cold": {
       "purpose": "Browser check that a replay opened on a cold page waits for its code, reports a failed fetch plainly and opens on retry",
       "effects": [

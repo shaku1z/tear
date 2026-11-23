@@ -5,7 +5,6 @@ import type { LibraryScreenAdapters } from "../library/library-screen-adapters";
 import type { ReplayScreenAdapter } from "../replay/replay-screen-adapter";
 import type { SettingsRenameAdapters } from "../screens/settings-rename-adapters";
 import type { RunDifficulty, RunMode } from "../../gameplay/run/session";
-import type { GhostVaultLibraryPort } from "../library/ghost-vault-library-controller";
 import { screenActionAvailable, type SurfaceAvailability } from "../../domain/surface-availability";
 import type { ScreenAction } from "../../presentation/screens/contracts";
 import type { RunExitScreen } from "../../domain/screen-actions";
@@ -16,10 +15,6 @@ import { requestNextSong } from "../../audio/music/music-source";
 
 export interface ScreenActionBindingPorts {
   readonly controlChase?: (command: "toggle" | "stop") => void;
-  readonly ghostFiles: Pick<
-    GhostVaultLibraryPort,
-    "pickArchive" | "restoreArchive" | "cancelArchive" | "downloadArchive"
-  >;
   readonly setScreen: (screen: AppScreen) => void;
   /** Returns to the screen the current one was opened from. */
   readonly back: () => void;
@@ -50,8 +45,6 @@ export interface ScreenActionBindingPorts {
   readonly shop: ShopShardsPort;
   readonly signIn: () => void;
   readonly signOut: () => void;
-  readonly pinReplay: (id: string, pinned: boolean) => boolean;
-  readonly deleteReplay: (id: string) => void;
   readonly dispatchPlayground: (id: string) => void;
   readonly tutorialAction?: (action: Extract<ScreenAction, { type: "tutorial.action" }>) => void;
   readonly library: LibraryScreenAdapters;
@@ -213,35 +206,20 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "profile.selectTab": (action) => {
       ports.library.selectProfileTab(action.id);
     },
+    "profile.filterReplays": (action) => {
+      ports.library.replays.filter(action.id);
+    },
     "profile.watchReplay": (action) => {
-      ports.library.watchReplay(action.id, "profile");
+      ports.library.replays.watch(action.id);
     },
-    "profile.watchGhostCapsule": (action) => {
-      ports.library.watchGhostCapsule(action.id);
+    "profile.downloadReplay": (action) => {
+      ports.library.replays.download(action.id);
     },
-    "career.control": (action) => {
-      ports.library.careerAction(action.command, action.id);
+    "profile.importReplay": () => {
+      ports.library.replays.importFile();
     },
     "chase.control": (action) => {
       ports.controlChase?.(action.command);
-    },
-    "profile.pickGhostArchive": () => {
-      ports.ghostFiles.pickArchive();
-    },
-    "profile.reselectGhostArchive": (action) => {
-      ports.ghostFiles.pickArchive(action.id);
-    },
-    "profile.restoreGhostArchive": (action) => {
-      ports.ghostFiles.restoreArchive(action.id, action.revision);
-    },
-    "profile.cancelGhostRestore": (action) => {
-      ports.ghostFiles.cancelArchive(action.id, action.revision);
-    },
-    "profile.cancelGhostArchiveSelection": () => {
-      ports.ghostFiles.cancelArchive();
-    },
-    "profile.downloadGhostArchive": (action) => {
-      ports.ghostFiles.downloadArchive(action.id);
     },
     "profile.signIn": () => {
       ports.signIn();
@@ -260,13 +238,13 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
       ports.setScreen("setup");
     },
     "profile.pinReplay": (action) => {
-      if (!ports.pinReplay(action.id, action.pinned)) ports.library.setProfileMessage("pin limit reached (10)");
+      ports.library.replays.pin(action.id, action.pinned);
     },
     "profile.publishReplay": (action) => {
-      ports.library.publishReplay(action.id);
+      ports.library.replays.share(action.id);
     },
     "profile.deleteReplay": (action) => {
-      ports.deleteReplay(action.id);
+      ports.library.replays.remove(action.id);
     },
     "achievements.selectCategory": (action) => {
       ports.library.selectAchievementCategory(action.id);

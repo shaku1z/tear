@@ -15,10 +15,7 @@ import { trainingRunRequiresPreflight } from "../training/training-host";
 import type { LiveTutorialPracticeStart } from "../training/tutorial-practice-start";
 import { createLiveTutorialSessionActions } from "../training/tutorial-session-actions";
 import type { LiveWorldComposition } from "../world/world-composition";
-import {
-  createLiveCampaignTrainingComposition,
-  type LiveCampaignTrainingOptions,
-} from "./campaign-training-composition";
+import { createLiveCampaignTrainingComposition } from "./campaign-training-composition";
 
 export interface LiveCampaignTrainingAssemblyOptions {
   readonly dependencies: GameRuntimeDependencies;
@@ -29,7 +26,6 @@ export interface LiveCampaignTrainingAssemblyOptions {
   readonly interaction: Pick<LiveInterfaceInteractionState, "scroll" | "setScroll" | "setFocus">;
   readonly practiceStart: LiveTutorialPracticeStart;
   readonly journals: Pick<LiveTestBuildJournals, "observeFinaleIntents" | "observeFinaleOutwardCall">;
-  readonly observeStyle: NonNullable<LiveCampaignTrainingOptions["observeStyle"]>;
   readonly persistentEffects: () => boolean;
   readonly run: () => GameRun;
   readonly player: () => GamePlayer;
@@ -77,7 +73,6 @@ export function assembleLiveCampaignTraining(options: LiveCampaignTrainingAssemb
     entities: worldEntities,
     state: hostState,
     lifecycle: RUN_LIFECYCLE,
-    observeStyle: options.observeStyle,
     persistentEffects: options.persistentEffects,
     cinema: world.context.cinema,
     controllers: runControllers,

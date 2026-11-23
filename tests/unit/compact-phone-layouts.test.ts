@@ -410,7 +410,8 @@ const replays: ReplayView[] = Array.from({ length: 5 }, (_, index) => ({
   local: true,
   pinned: index === 0,
   shared: index === 1,
-  canDownloadArchive: true,
+  canDownload: true,
+  canShare: true,
   comparisonSelected: index === 1,
   comparisonSourceCount: 2,
 }));
@@ -419,7 +420,7 @@ const profileBase = {
   name: "A Rather Long Player Name",
   signedIn: true,
   cloudStatus: "Signed in — progress saves to your account everywhere",
-  tabs: ["BESTS", "REPLAYS", "VAULT", "CAREER", "STATS"].map((label) => ({ id: label.toLowerCase(), label })),
+  tabs: ["BESTS", "REPLAYS", "STATS"].map((label) => ({ id: label.toLowerCase(), label })),
   passport: {
     coins: 12_345,
     shards: 678,
@@ -640,48 +641,6 @@ const playgroundLab = {
     },
   ],
 };
-const careerEntry = {
-  kind: "capsule",
-  id: "run-1",
-  root: "root",
-  manifestHash: "hash",
-  date: "2026-11-12T10:00:00Z",
-  mode: "endless",
-  difficulty: "hard",
-  weapon: "riftlock",
-  wave: 24,
-  result: "defeat",
-  score: 123_456,
-  seconds: 612,
-  loadout: [{ id: "keen-edge", count: 2, tier: 1 }],
-  bosses: ["warden"],
-  damage: 310,
-  style: null,
-  nearMiss: null,
-  dna: { aggression: 0.6, mobility: 0.4 },
-  verified: "receipts",
-  unavailable: ["damage timeline"],
-  present: true,
-};
-const careerView = (selected: boolean) =>
-  ({
-    status: "ready" as const,
-    indexing: false,
-    message: "",
-    confirming: false,
-    retained: 12,
-    known: 12,
-    total: 12,
-    page: 0,
-    pages: 2,
-    query: { text: "", filters: {}, view: "history", sort: "newest", page: 0 },
-    rows: Array.from({ length: 6 }, (_, index) => ({
-      entry: { ...careerEntry, id: `run-${String(index)}` },
-      notes: { revision: 0, tags: ["clean"], retention: "pinned" },
-    })),
-    selected: selected ? { entry: careerEntry, notes: { revision: 0, tags: [], retention: "recent" } } : undefined,
-  }) as unknown as NonNullable<Parameters<ReturnType<typeof createScreenRenderers>["profile"]>[0]["career"]>;
-
 /** The demo coach on a lesson, with a diagnosis long enough to wrap over several lines. */
 const DRILLS_COACH = {
   available: true,
@@ -769,7 +728,7 @@ describe("phone compositions (compact density)", () => {
       );
     });
 
-    it(`composes every profile tab, its replay actions and the career archive at ${phone.name}`, () => {
+    it(`composes every profile tab and its replay actions at ${phone.name}`, () => {
       sweep(
         phone,
         (r) => {
@@ -794,35 +753,26 @@ describe("phone compositions (compact density)", () => {
       const local = sweep(
         phone,
         (r) => {
-          r.profile({ ...profileBase, tab: "replays", replays });
+          r.profile({
+            ...profileBase,
+            tab: "replays",
+            replays,
+            canImport: true,
+            replayFilters: [
+              { id: "all", label: "ALL", selected: true },
+              { id: "bests", label: "BESTS" },
+              { id: "pinned", label: "PINNED" },
+            ],
+          });
         },
         `profile replays ${phone.name}`,
       );
       for (const replay of replays)
-        expect(local.has(JSON.stringify({ type: "profile.deleteReplay", id: replay.id }))).toBe(true);
-      const vault = sweep(
-        phone,
-        (r) => {
-          r.profile({
-            ...profileBase,
-            tab: "vault",
-            replays: replays.map((replay) => ({ ...replay, local: false })),
-            archive: {
-              status: "ready",
-              detail: "",
-              canPick: true,
-              jobId: "job",
-              revision: 1,
-              canRestore: true,
-              canCancel: true,
-              pairedCapsuleIds: ["a", "b"],
-            },
-          });
-        },
-        `profile vault ${phone.name}`,
-      );
-      for (const replay of replays)
-        expect(vault.has(JSON.stringify({ type: "profile.watchGhostCapsule", id: replay.id }))).toBe(true);
+        for (const type of ["profile.watchReplay", "profile.downloadReplay", "profile.deleteReplay"])
+          expect(local.has(JSON.stringify({ type, id: replay.id })), type).toBe(true);
+      expect(local.has(JSON.stringify({ type: "profile.importReplay" }))).toBe(true);
+      for (const id of ["all", "bests", "pinned"])
+        expect(local.has(JSON.stringify({ type: "profile.filterReplays", id }))).toBe(true);
       sweep(
         phone,
         (r) => {
@@ -834,20 +784,6 @@ describe("phone compositions (compact density)", () => {
           });
         },
         `profile empty ${phone.name}`,
-      );
-      sweep(
-        phone,
-        (r) => {
-          r.profile({ ...profileBase, tab: "career", career: careerView(false) });
-        },
-        `career list ${phone.name}`,
-      );
-      sweep(
-        phone,
-        (r) => {
-          r.profile({ ...profileBase, tab: "career", career: careerView(true) });
-        },
-        `career run ${phone.name}`,
       );
     });
 
@@ -1286,27 +1222,6 @@ describe("leaderboards: one screen definition at both densities", () => {
   });
 });
 
-describe("career archive: one screen definition at both densities", () => {
-  it("offers the same actions on the desktop page and the phone page for the list, a run and the delete question", () => {
-    const phone = PHONES[0];
-    const cases = [
-      { label: "career list", career: careerView(false) },
-      { label: "career run", career: careerView(true) },
-      { label: "career delete", career: { ...careerView(true), confirming: true, message: "ignored" } },
-      { label: "career empty", career: { ...careerView(false), rows: [], total: 0 } },
-    ];
-    for (const { label, career } of cases) {
-      const draw = (r: ReturnType<typeof createScreenRenderers>): void => {
-        r.profile({ ...profileBase, tab: "career", career });
-      };
-      const desktop = renderDesktop({ width: 1600, height: 900 }, draw).controls.map((control) =>
-        JSON.stringify(control.action),
-      );
-      expect([...sweep(phone, draw, `${label} phone`)].sort(), label).toEqual([...new Set(desktop)].sort());
-    }
-  });
-});
-
 describe("codex and shop: one screen definition at both densities", () => {
   it("offers the same actions on the desktop page and the phone page for the shop and every codex tab", () => {
     const phone = PHONES[0];
@@ -1450,8 +1365,8 @@ describe("button rows sized from their content (ui.buttonFitHeight)", () => {
   });
 });
 
-describe("the Vault list before its saved replays have been read", () => {
-  const vault = { ...profileBase, tab: "vault", replays: [] };
+describe("the REPLAYS list before its replays have been read", () => {
+  const list = { ...profileBase, tab: "replays", replays: [] };
   const drawn = (view: Parameters<ReturnType<typeof createScreenRenderers>["profile"]>[0]) =>
     [
       render(PHONES[0], (r) => {
@@ -1463,21 +1378,23 @@ describe("the Vault list before its saved replays have been read", () => {
     ].map((frame) => frame.texts.map((glyphs) => glyphs.text).join(" | "));
 
   it("says it is opening, and does not claim there are none, on the phone and on the desktop", () => {
-    for (const text of drawn({ ...vault, vaultList: "opening", message: "Opening your saved replays…" })) {
-      expect(text).toContain("Opening your saved replays…");
-      expect(text).not.toContain("No saved replays yet");
+    for (const text of drawn({ ...list, replayList: "opening" })) {
+      expect(text).toContain("Opening your replays…");
+      expect(text).not.toContain("No runs recorded yet");
     }
   });
 
-  it("says they could not be opened, with the reason, when the Vault failed to open", () => {
-    for (const text of drawn({ ...vault, vaultList: "failed", message: "Ghost Vault could not open: blocked" })) {
-      expect(text).toContain("Saved replays could not be opened");
-      expect(text).toContain("blocked");
-      expect(text).not.toContain("No saved replays yet");
+  it("says they could not be opened, with the reason, when the list failed to open", () => {
+    for (const text of drawn({ ...list, replayList: "failed", message: "Replays on this device couldn't be read." })) {
+      expect(text).toContain("Replays could not be opened");
+      expect(text).toContain("couldn't be read");
+      expect(text).not.toContain("No runs recorded yet");
     }
   });
 
-  it("says there are none only once the list has been read and is empty", () => {
-    for (const text of drawn(vault)) expect(text).toContain("No saved replays yet");
+  it("says there are none only once the list has been read and is empty, and names an empty filter", () => {
+    for (const text of drawn(list)) expect(text).toContain("No runs recorded yet");
+    const pinned = { ...list, replayFilters: [{ id: "pinned", label: "PINNED", selected: true }] };
+    for (const text of drawn(pinned)) expect(text).toContain("No pinned replays");
   });
 });
