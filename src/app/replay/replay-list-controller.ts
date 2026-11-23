@@ -64,6 +64,12 @@ const MESSAGES = Object.freeze({
   noFiles: "Importing replay files isn't available in this browser.",
 });
 
+/** What the list says when the store dropped old unpinned runs to stay within its caps. */
+export const droppedRunsMessage = (count: number): string =>
+  count === 1
+    ? "An older run was removed to make room. PIN a run to keep it."
+    : `${String(count)} older runs were removed to make room. PIN a run to keep it.`;
+
 export function createReplayListController(ports: ReplayListPorts) {
   let status: ReplayListSnapshot["status"] = "idle";
   let filter: ReplayListFilter = "all";
@@ -111,10 +117,20 @@ export function createReplayListController(ports: ReplayListPorts) {
       store.close();
     }
   }
+  /**
+   * Lists again. The store's dropped count is taken (and so cleared) here, the one place the list opens,
+   * and said once on the list's message line even when a newer listing replaces this one.
+   */
   function refresh(): void {
     const ticket = ++generation;
     if (status === "idle") status = "loading";
-    void withStore((store) => store.entries()).then((entries) => {
+    void withStore(async (store) => {
+      const listed = await store.entries();
+      return { listed, dropped: "failed" in listed ? 0 : await store.takeDropped() };
+    }).then((read) => {
+      if (read !== undefined && typeof read.dropped === "number" && read.dropped > 0)
+        message = droppedRunsMessage(read.dropped);
+      const entries = read?.listed;
       if (ticket !== generation) return;
       if (entries === undefined || "failed" in entries) {
         status = "unavailable";
