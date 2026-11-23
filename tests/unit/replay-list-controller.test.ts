@@ -19,7 +19,8 @@ vi.mock("../../src/replay/record", async (original) => ({
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-function setup(options: { pinLimit?: boolean; storeFails?: boolean } = {}) {
+function setup(options: { pinLimit?: boolean; storeFails?: boolean; dropped?: number } = {}) {
+  let dropped = options.dropped ?? 0;
   const entries: ReplayRecordEntry[] = [
     {
       key: "kept",
@@ -57,6 +58,11 @@ function setup(options: { pinLimit?: boolean; storeFails?: boolean } = {}) {
     }),
     put: vi.fn(() => Promise.resolve({ status: "stored" as const, key: "new", evicted: [] })),
     read: vi.fn(() => Promise.resolve({ ok: true as const, record: kept })),
+    takeDropped: vi.fn(() => {
+      const count = dropped;
+      dropped = 0;
+      return Promise.resolve(count);
+    }),
     close: vi.fn(),
   } as unknown as ReplayRecordStore;
   const olderIndex = [
@@ -115,6 +121,21 @@ describe("the REPLAYS list controller", () => {
       status: "unavailable",
       items: [{ id: "before" }, { id: "copy", kind: "older" }],
     });
+  });
+
+  it("says once, when the list opens, how many older runs the store dropped to make room", async () => {
+    const { list } = setup({ dropped: 2 });
+    list.refresh();
+    await settle();
+    expect(list.snapshot().message).toBe("2 older runs were removed to make room. PIN a run to keep it.");
+    list.setMessage("");
+    list.refresh();
+    await settle();
+    expect(list.snapshot().message).toBe("");
+    const one = setup({ dropped: 1 });
+    one.list.refresh();
+    await settle();
+    expect(one.list.snapshot().message).toBe("An older run was removed to make room. PIN a run to keep it.");
   });
 
   it("watches a record on the replay screen and an older recording through the old player", async () => {

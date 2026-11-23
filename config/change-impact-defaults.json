@@ -87,6 +87,7 @@
         "src/gameplay/voidgen-inspection.ts",
         "src/gameplay/voidgen.ts",
         "src/gameplay/weapon-tuning.ts",
+        "src/replay/encoding.ts",
         "src/replay/envelope.ts",
         "src/replay/legacy-compat-validation.ts",
         "src/replay/record.ts",

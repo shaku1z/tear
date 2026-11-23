@@ -2,10 +2,12 @@
  * The replay record store (src/replay/record-store.ts): the count and byte caps drop the oldest unpinned
  * records first, an oversized record is not stored, the index carries each record's list row and pin, and
  * a quota error, a blocked upgrade or a missing IndexedDB resolves to a plain result instead of throwing,
- * so recording never fails a run.
+ * so recording never fails a run. Records are kept as gzip bytes (src/replay/encoding.ts), records kept as
+ * JSON text before replay PR 6 still read, and the store counts what its caps drop until the list says so.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import { decodeReplayRecord, encodedReplayRecordBytes, encodeReplayRecord } from "../../src/replay/encoding";
 import type { ReplayRecord } from "../../src/replay/record";
 import { createReplayRecorder } from "../../src/replay/recorder";
 import {
@@ -89,6 +91,19 @@ function fakeIndexedDb(mode: Mode) {
   return { factory: factory as unknown as IDBFactory, data, opened };
 }
 
+/** Text gzip cannot shrink much (a fixed pseudo-random sequence), so padding grows the stored size too. */
+function noise(length: number): string {
+  let state = 0x9e3779b9;
+  let text = "";
+  for (let index = 0; index < length; index += 1) {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    text += String.fromCharCode(33 + ((state >>> 0) % 90));
+  }
+  return text;
+}
+
 /** Only the parts the store reads: the key, the row and the size. */
 const record = (recordedAt: string, seed: number, padding = 0) =>
   ({
@@ -97,7 +112,7 @@ const record = (recordedAt: string, seed: number, padding = 0) =>
       ruleset: "rules",
       start: { mode: "endless", difficulty: "normal", weapon: "sword" },
       result: { outcome: "defeat" },
-      padding: "x".repeat(padding),
+      padding: noise(padding),
     },
     summary: {
       score: seed * 100,
@@ -259,6 +274,43 @@ describe("the replay record store", () => {
     expect(await opened.put(record("2026-11-21T00:00:05Z", 5, 20_000))).toMatchObject({ status: "oversized" });
   });
 
+  it("keeps a record as gzip bytes, counts those bytes, and reads a record kept as JSON text the same", async () => {
+    const { store, data } = await open("ok", { count: 5, bytes: 1_000_000, pinned: 2 });
+    const opened = store as ReplayRecordStore;
+    const whole = wholeRecord(9, "2026-11-21T00:00:01Z");
+    const key = "record:2026-11-21T00:00:01Z:9";
+    expect(await opened.put(whole)).toMatchObject({ status: "stored", key });
+    const stored = data.get(key);
+    expect(stored).toBeInstanceOf(Uint8Array);
+    expect([...(stored as Uint8Array).slice(0, 2)]).toEqual([0x1f, 0x8b]);
+    const entries = await opened.entries();
+    expect("failed" in entries ? entries : entries[0]?.bytes).toBe((stored as Uint8Array).byteLength);
+    expect(await opened.read(key)).toEqual({ ok: true, record: whole });
+    // A record kept before PR 6 is its JSON text.
+    data.set(key, JSON.stringify(whole));
+    expect(await opened.read(key)).toEqual({ ok: true, record: whole });
+    // Bytes that are not gzip, and a value of another kind, read as malformed, never throw.
+    data.set(key, new Uint8Array([1, 2, 3]));
+    expect(await opened.read(key)).toMatchObject({ ok: false, reason: "malformed" });
+    data.set(key, 7);
+    expect(await opened.read(key)).toMatchObject({ ok: false, reason: "malformed" });
+  });
+
+  it("counts the records the caps drop until the list takes the count", async () => {
+    const { store, data } = await open("ok", { count: 2, bytes: 1_000_000, pinned: 2 });
+    const opened = store as ReplayRecordStore;
+    expect(await opened.takeDropped()).toBe(0);
+    for (const [index, at] of ["2026-11-21T00:00:01Z", "2026-11-21T00:00:02Z", "2026-11-21T00:00:03Z"].entries())
+      await opened.put(record(at, index + 1));
+    await opened.put(record("2026-11-21T00:00:04Z", 4));
+    // Deleting a run is the player's choice and is not counted.
+    await opened.remove("record:2026-11-21T00:00:04Z:4");
+    expect(await opened.read("dropped")).toBeNull();
+    expect(await opened.takeDropped()).toBe(2);
+    expect(data.has("dropped")).toBe(false);
+    expect(await opened.takeDropped()).toBe(0);
+  });
+
   it("turns a quota error, a blocked upgrade and a missing IndexedDB into results, never throws", async () => {
     const quota = await open("quota");
     expect(await (quota.store as ReplayRecordStore).put(record("2026-11-21T00:00:01Z", 1))).toEqual({
@@ -273,5 +325,29 @@ describe("the replay record store", () => {
     const { opened } = await open("ok");
     opened[0]?.database?.onversionchange?.();
     expect(opened[0]?.closed).toBe(true);
+  });
+});
+
+describe("the record encoding", () => {
+  it("round-trips JSON through gzip and stops reading past the limit", async () => {
+    const json = JSON.stringify({ actions: Array.from({ length: 2_000 }, (_, tick) => [tick, "move", 1]) });
+    const encoded = await encodeReplayRecord(json);
+    expect(encoded).toBeInstanceOf(Uint8Array);
+    expect(encodedReplayRecordBytes(encoded)).toBeLessThan(json.length / 4);
+    expect(await decodeReplayRecord(encoded)).toBe(json);
+    expect(await decodeReplayRecord((encoded as Uint8Array).slice().buffer)).toBe(json);
+    expect(await decodeReplayRecord(encoded, json.length - 1)).toBeNull();
+    expect(await decodeReplayRecord(json, json.length - 1)).toBeNull();
+    expect(await decodeReplayRecord(null)).toBeNull();
+  });
+
+  it("keeps the JSON text where the browser cannot compress", async () => {
+    vi.stubGlobal("CompressionStream", undefined);
+    try {
+      expect(await encodeReplayRecord("{}")).toBe("{}");
+      expect(encodedReplayRecordBytes("{}")).toBe(2);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
