@@ -1,12 +1,33 @@
 import { clipWebCodecsAvailable, encodeClipVp8Webm } from "./browser-replay-clip-webm";
-import type { GhostReadCapsule } from "../../ghost/capsule-reader";
-import type { GhostVerifiedProductionReplaySession } from "../../ghost/production-replay-session";
-import { createReplayCutList, type ReplayCutList } from "../../ghost/replay-cut-list";
-import { parseGhostApplicationClockEvent } from "../../ghost/application-frame-events";
-import { mapGhostCapsuleToReplayEnvelope } from "../../ghost/capsule-replay-envelope";
-import { stableVerificationHash } from "../../domain/hash";
+import { WATCH_SPEEDS, WATCH_TICKS_PER_SECOND } from "../../replay/watch";
 
-/** A cut list rendered to one WebM file, held in memory until the player downloads it. */
+/** One range of a watched run, in simulation ticks, played at a replay speed. */
+export interface ReplayClip {
+  readonly fromTick: number;
+  readonly toTick: number;
+  readonly speed: number;
+}
+
+/** A frame the export can draw: the watched world at one tick, as the replay screen draws it. */
+export interface ReplayClipFrame {
+  /** True while a scene or a boss's arrival holds the run clock; such a frame is not gameplay time. */
+  readonly clockBlocked: boolean;
+  readonly screen: string;
+  readonly draw: (
+    canvas: CanvasRenderingContext2D,
+    rectangle: Readonly<{ x: number; y: number; w: number; h: number }>,
+  ) => void;
+}
+
+/** The run the clips are cut from: its own watch, so exporting never moves the replay on screen. */
+export interface ReplayClipSource {
+  readonly id: string;
+  readonly lastTick: number;
+  readonly frameAt: (tick: number) => ReplayClipFrame;
+  readonly dispose: () => void;
+}
+
+/** The clips rendered to one WebM file, held in memory until the player downloads it. */
 export interface ReplayClipWebm {
   readonly fileName: string;
   readonly mimeType: "video/webm";
@@ -17,12 +38,7 @@ export interface ReplayClipWebm {
 }
 export interface ReplayClipExportPort {
   available(): boolean;
-  render(
-    capsule: GhostReadCapsule,
-    session: GhostVerifiedProductionReplaySession,
-    cutList: ReplayCutList,
-    signal: AbortSignal,
-  ): Promise<ReplayClipWebm>;
+  render(source: ReplayClipSource, clips: readonly ReplayClip[], signal: AbortSignal): Promise<ReplayClipWebm>;
   download(clip: ReplayClipWebm, signal: AbortSignal): Promise<void>;
   drawThumbnail?(
     canvas: CanvasRenderingContext2D,
@@ -70,82 +86,46 @@ function mediaWait(
   });
 }
 
-/** The simulation tick each output frame shows, clip after clip. Refuses what the export cannot draw. */
-function framePlan(capsule: GhostReadCapsule, cutList: ReplayCutList): readonly number[] {
-  if (
-    cutList.clips.length === 0 ||
-    new Set(cutList.clips.map((clip) => clip.outputOrder)).size !== cutList.clips.length
-  )
-    throw new TypeError("Clip order is invalid");
+/**
+ * The simulation tick each output frame shows, clip after clip, at a fixed frame rate: no wall clock enters
+ * a frame. Refuses a clip outside the run, an unoffered speed, and more than 60 seconds of video.
+ */
+export function replayClipFramePlan(lastTick: number, clips: readonly ReplayClip[]): readonly number[] {
+  if (clips.length === 0) throw new TypeError("There are no clips to export");
   const plan: number[] = [];
-  for (const clip of [...cutList.clips].sort((a, b) => a.outputOrder - b.outputOrder)) {
+  for (const clip of clips) {
     if (
-      ![0.25, 0.5, 1, 2, 4].includes(clip.speed) ||
-      !Number.isSafeInteger(clip.sourceFromTick) ||
-      !Number.isSafeInteger(clip.sourceToTick) ||
-      clip.sourceFromTick < 0 ||
-      clip.sourceToTick <= clip.sourceFromTick ||
-      clip.sourceToTick > capsule.maxTick ||
-      !Number.isSafeInteger(clip.outputOrder)
+      !WATCH_SPEEDS.some((speed) => speed === clip.speed) ||
+      !Number.isSafeInteger(clip.fromTick) ||
+      !Number.isSafeInteger(clip.toTick) ||
+      clip.fromTick < 0 ||
+      clip.toTick <= clip.fromTick ||
+      clip.toTick > lastTick
     )
-      throw new TypeError("Clip is unsupported or outside its source");
-    // Only simulation-time gameplay is offered. Never collapse recorded zero-tick cinema/intro frames into inferred physics time.
-    if (
-      capsule.tracks.events.some((entry) => {
-        const value = parseGhostApplicationClockEvent(entry.value)?.payload;
-        return (
-          value?.format === "tearghost-application-frame" &&
-          value.kind === "begin" &&
-          value.beforeTick >= clip.sourceFromTick &&
-          value.beforeTick < clip.sourceToTick
-        );
-      })
-    )
-      throw new TypeError("Source-time cinema/intro media is unavailable; choose a gameplay-only range");
-    const count = Math.ceil(((clip.sourceToTick - clip.sourceFromTick) * FPS) / (120 * clip.speed));
+      throw new TypeError("Clip is unsupported or outside its run");
+    const step = (WATCH_TICKS_PER_SECOND * clip.speed) / FPS;
+    const count = Math.ceil((clip.toTick - clip.fromTick) / step);
     if (count + plan.length > MAX_FRAMES) throw new RangeError("Clip export exceeds 1800 frames / 60 seconds");
     for (let index = 0; index < count; index++)
-      plan.push(Math.min(clip.sourceToTick - 1, clip.sourceFromTick + Math.floor((index * 120 * clip.speed) / FPS)));
+      plan.push(Math.min(clip.toTick - 1, clip.fromTick + Math.floor(index * step)));
   }
   return plan;
 }
 
-/** Browser-native local encoding of the dedicated reconstructed replay canvas, never the live game surface. */
-export function createBrowserReplayClipExport(
-  document: Document,
-  current: (id: string, manifestHash: string) => Promise<boolean>,
-): ReplayClipExportPort {
+/** Browser-native local encoding of a dedicated canvas, never the live game surface. */
+export function createBrowserReplayClipExport(document: Document): ReplayClipExportPort {
   const urls = new Set<string>(),
     timers = new Set<ReturnType<typeof setTimeout>>();
   const release = (url: string): void => {
     URL.revokeObjectURL(url);
     urls.delete(url);
   };
-  let last: Readonly<{ clip: ReplayClipWebm; manifestHash: string; image: HTMLImageElement }> | undefined;
-  const check = async (id: string, hash: string, signal: AbortSignal): Promise<void> => {
-    signal.throwIfAborted();
-    if (!(await current(id, hash))) throw new Error("The saved replay changed during the export");
-    signal.throwIfAborted();
-  };
+  let last: Readonly<{ clip: ReplayClipWebm; image: HTMLImageElement }> | undefined;
   return {
     available: clipWebCodecsAvailable,
-    async render(capsule, session, cutList, signal) {
+    async render(source, clips, signal) {
       if (!clipWebCodecsAvailable()) throw new Error("Timestamped WebCodecs VP8 export is unavailable.");
-      const source = mapGhostCapsuleToReplayEnvelope(capsule).ghost;
-      if (
-        session.renderFrame === undefined ||
-        capsule.manifest.id !== session.sourceId ||
-        capsule.manifest.rootIntegrity !== session.sourceCapsuleRootIntegrity ||
-        cutList.sourceGhostId !== session.sourceId ||
-        cutList.sourceRootHash !== session.sourceRootHash ||
-        cutList.sourceGhostId !== source.id ||
-        cutList.sourceRootHash !== source.rootHash ||
-        createReplayCutList(cutList).cutListHash !== cutList.cutListHash
-      )
-        throw new TypeError("The cut list does not belong to this replay");
-      const plan = framePlan(capsule, cutList);
-      const manifestHash = stableVerificationHash(capsule.manifest);
-      await check(session.sourceId, manifestHash, signal);
+      const plan = replayClipFramePlan(source.lastTick, clips);
       last = undefined;
       const canvas = document.createElement("canvas");
       canvas.width = WIDTH;
@@ -156,15 +136,11 @@ export function createBrowserReplayClipExport(
         signal.throwIfAborted();
         const tick = plan[index];
         if (tick === undefined) throw new Error("Clip frame plan is incomplete");
-        const view = session.renderFrame?.(tick);
-        if (
-          view?.sourceRootHash !== cutList.sourceRootHash ||
-          view.sourceCapsuleRootIntegrity !== capsule.manifest.rootIntegrity ||
-          view.clockBlocked ||
-          view.screen !== "playing"
-        )
-          throw new TypeError("This frame is not supported gameplay-time media");
-        view.draw(context, { x: 0, y: 0, w: WIDTH, h: HEIGHT });
+        const frame = source.frameAt(tick);
+        // Only gameplay time is offered: a scene or an arrival holds the run clock, so it has no run time.
+        if (frame.clockBlocked || frame.screen !== "playing")
+          throw new TypeError("Scenes and arrivals cannot be exported; choose a gameplay-only range");
+        frame.draw(context, { x: 0, y: 0, w: WIDTH, h: HEIGHT });
       };
       draw(0);
       const thumbnail = canvas.toDataURL("image/png");
@@ -199,28 +175,25 @@ export function createBrowserReplayClipExport(
         video.load();
         release(url);
       }
-      await check(session.sourceId, manifestHash, signal);
       const clip: ReplayClipWebm = Object.freeze({
-        fileName: `${cutList.id}.webm`,
+        fileName: `${source.id}.webm`,
         mimeType: "video/webm",
         bytes: new Uint8Array(await blob.arrayBuffer()),
         thumbnail,
-        sourceId: session.sourceId,
+        sourceId: source.id,
         durationSeconds,
       });
       const image = document.createElement("img"),
         loadedImage = mediaWait(image, "load", signal);
       image.src = thumbnail;
       await loadedImage;
-      await check(session.sourceId, manifestHash, signal);
-      last = { clip, manifestHash, image };
+      signal.throwIfAborted();
+      last = { clip, image };
       return clip;
     },
-    async download(clip, signal) {
-      const captured = last;
-      if (captured?.clip !== clip) throw new Error("The exported clip is stale");
-      await check(clip.sourceId, captured.manifestHash, signal);
-      if (last !== captured) throw new Error("The exported clip was replaced");
+    download(clip, signal) {
+      if (last?.clip !== clip) return Promise.reject(new Error("The exported clip is stale"));
+      if (signal.aborted) return Promise.reject(signal.reason instanceof Error ? signal.reason : new Error("aborted"));
       const url = URL.createObjectURL(new Blob([Uint8Array.from(clip.bytes).buffer], { type: clip.mimeType }));
       urls.add(url);
       const anchor = document.createElement("a");
@@ -237,6 +210,7 @@ export function createBrowserReplayClipExport(
         }, 1000);
         timers.add(timer);
       }
+      return Promise.resolve();
     },
     drawThumbnail(canvas, rectangle) {
       if (last !== undefined) canvas.drawImage(last.image, rectangle.x, rectangle.y, rectangle.w, rectangle.h);

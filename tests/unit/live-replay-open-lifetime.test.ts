@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createLiveReplayScreenAdapter, type ReplayScreenServices } from "../../src/app/replay/replay-screen-adapter";
+import { createLiveReplayScreenAdapter, type ReplayScreenServices } from "../../src/app/replay/replay-screen";
 
 const ports = vi.hoisted(() => ({ read: vi.fn(), openRecord: vi.fn() }));
 vi.mock("../../src/app/replay/kept-record-lookup", () => ({
@@ -11,9 +11,7 @@ vi.mock("../../src/app/replay/live-replay-recorder-slot", () => ({
   liveReplayRecorder: { ensure: () => Promise.resolve({ openReplayRecordStore: vi.fn() }) },
 }));
 vi.mock("../../src/ghost/replay-engine", () => ({ replayEngine: { ensure: () => Promise.resolve({}) } }));
-vi.mock("../../src/app/library/ghost-theater-screen-adapter", () => ({
-  createGhostTheaterScreenAdapter: () => ({ openRecord: ports.openRecord, exit: vi.fn() }),
-}));
+vi.mock("../../src/app/replay/record-world", () => ({ watchRecord: ports.openRecord }));
 vi.mock("../../src/app/replay/browser-replay-clip-export", () => ({ createBrowserReplayClipExport: vi.fn() }));
 vi.mock("../../src/app/replay/browser-ghost-replay-presentation", () => ({
   createBrowserGhostReplayPresentation: vi.fn(),
@@ -30,7 +28,7 @@ describe("a pending replay open", () => {
       await held;
       return { key: "kept", record: {} };
     });
-    ports.openRecord.mockReturnValue({ kind: "opened" });
+    ports.openRecord.mockReturnValue({ play: vi.fn(), dispose: vi.fn() });
     const setScreen = vi.fn();
     const adapter = createLiveReplayScreenAdapter({
       dependencies: { UI: {} },

@@ -327,9 +327,9 @@ export interface ReplayScreenView {
   readonly loadout?: readonly CardView[];
   /** The loadout list's heading and what it says when the list is empty; the run's final loadout when absent. */
   readonly loadoutHeading?: Readonly<{ title: string; empty: string }>;
-  /** A run re-simulated on the replay screen: the replay transport with seek, checkpoints and practice. */
-  readonly theater?: boolean;
-  /** Only verified recorded checkpoints can begin an unranked practice child. */
+  /** A kept run, re-simulated on the replay screen: PRACTICE and, in engineering builds, the replay editor. */
+  readonly keptRun?: boolean;
+  /** Practice starts from the shown moment while it is gameplay (not a scene or a boss's arrival). */
   readonly practiceAvailable?: boolean;
   readonly notice?: string;
   readonly worldVisible?: boolean;

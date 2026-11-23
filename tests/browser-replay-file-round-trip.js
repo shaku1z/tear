@@ -7,6 +7,8 @@
 // 3. On Profile → REPLAYS the player presses DOWNLOAD (the file is the stored record), DELETE (the run is
 //    gone from the store), then IMPORT A REPLAY FILE with the downloaded file (the run is back, unchanged,
 //    and still verifies).
+// 4. WATCH on the imported row plays it at once; the replay bar pauses it, doubles the speed and jumps
+//    between chapters, the arrow keys seek five seconds, and PRACTICE starts a live run at the shown moment.
 //
 // Never reads the run's totals from the canonical state: a record whose live summary disagrees with what
 // verify derives fails step 2.
@@ -133,6 +135,50 @@ withJourney(
         status: "verified",
         tick: imported.run.result.tick,
       });
+      // 4. WATCH plays the run at once; the replay bar pauses it, doubles its speed and jumps between its
+      //    chapters, the arrow keys seek, and PRACTICE starts a live run at the shown moment.
+      const shownIs = (expected, message) =>
+        page
+          .waitForFunction(
+            (want) => {
+              const shown = window.__TEAR_REPLAY_TAP__.shown();
+              return shown !== undefined && Object.entries(want).every(([key, value]) => shown[key] === value);
+            },
+            expected,
+            { timeout: STATE_WAIT_MS },
+          )
+          .catch(async (error) => {
+            const shown = await page.evaluate(() => window.__TEAR_REPLAY_TAP__.shown());
+            throw new Error(`${message}: shows ${JSON.stringify(shown)}, wanted ${JSON.stringify(expected)}`, {
+              cause: error,
+            });
+          });
+      await click("WATCH");
+      await waitScreen("replay");
+      await shownIs({ paused: false }, "WATCH did not play at once");
+      await click("❚❚");
+      await shownIs({ paused: true }, "the pause control did not pause");
+      const pausedAt = (await page.evaluate(() => window.__TEAR_REPLAY_TAP__.shown())).tick;
+      await click("1×");
+      await shownIs({ speed: 2, tick: pausedAt }, "the speed control did not double the speed of the paused replay");
+      const last = record.run.result.tick;
+      const chapters = [...new Set(record.summary.marks.map((mark) => mark.tick))]
+        .filter((tick) => tick <= last)
+        .sort((left, right) => left - right);
+      const forward = chapters.find((tick) => tick > pausedAt) ?? pausedAt;
+      await click("▶|");
+      await shownIs({ tick: forward }, "the next-chapter control did not go to the next chapter");
+      const back = [...chapters].reverse().find((tick) => tick < forward) ?? forward;
+      await click("|◀");
+      await shownIs({ tick: back }, "the previous-chapter control did not go to the chapter before");
+      const later = Math.min(last, back + 5 * TICKS_PER_SECOND);
+      await page.keyboard.press("ArrowRight");
+      await shownIs({ tick: later }, "ArrowRight did not seek five seconds on");
+      await page.keyboard.press("ArrowLeft");
+      await shownIs({ tick: Math.max(0, later - 5 * TICKS_PER_SECOND) }, "ArrowLeft did not seek five seconds back");
+      await click("PRACTICE");
+      await waitScreen("playing");
+      console.log("watched", JSON.stringify({ pausedAt, forward, back, chapters: chapters.length, last }));
       console.log(
         "kept, downloaded, imported and verified",
         JSON.stringify({ ticks: record.run.result.tick, summary: { ...record.summary, marks: undefined } }),

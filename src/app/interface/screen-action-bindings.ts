@@ -2,7 +2,7 @@ import type { ShopShardsPort } from "../screens/menu-screen-adapters";
 import { createScreenActionRouter } from "./screen-action-router";
 import type { AppScreen } from "../../domain/screen-catalog";
 import type { LibraryScreenAdapters } from "../library/library-screen-adapters";
-import type { ReplayScreenAdapter } from "../replay/replay-screen-adapter";
+import type { ReplayScreenAdapter } from "../replay/replay-screen";
 import type { SettingsRenameAdapters } from "../screens/settings-rename-adapters";
 import type { RunDifficulty, RunMode } from "../../gameplay/run/session";
 import { screenActionAvailable, type SurfaceAvailability } from "../../domain/surface-availability";

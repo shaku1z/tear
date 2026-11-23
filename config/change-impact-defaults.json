@@ -94,6 +94,7 @@
         "src/replay/record-store.ts",
         "src/replay/recorder.ts",
         "src/replay/verify.ts",
+        "src/replay/watch.ts",
         "src/test-build.d.ts"
       ]
     },

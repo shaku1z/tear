@@ -62,32 +62,3 @@ export function handleReplayTransport(input: {
     input.seek(input.currentTime + 5);
   });
 }
-
-export const REPLAY_SPEEDS = [0.25, 0.5, 1, 2, 4] as const;
-export type ReplaySpeed = (typeof REPLAY_SPEEDS)[number];
-export interface ReplayTransportState {
-  readonly playing: boolean;
-  readonly tick: number;
-  readonly speed: ReplaySpeed;
-}
-
-/** Play, pause, position and speed of one open replay. */
-export class ReplayTransport {
-  #state: ReplayTransportState = Object.freeze({ playing: false, tick: 0, speed: 1 });
-
-  state(): ReplayTransportState {
-    return this.#state;
-  }
-  play(): void {
-    this.#state = Object.freeze({ ...this.#state, playing: true });
-  }
-  pause(): void {
-    this.#state = Object.freeze({ ...this.#state, playing: false });
-  }
-  seek(tick: number): void {
-    this.#state = Object.freeze({ ...this.#state, tick: Math.max(0, Math.floor(tick)) });
-  }
-  speed(value: ReplaySpeed): void {
-    this.#state = Object.freeze({ ...this.#state, speed: value });
-  }
-}

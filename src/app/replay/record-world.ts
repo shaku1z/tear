@@ -3,7 +3,14 @@ import type { AuthoritativeStepResult } from "../../gameplay/runtime/authoritati
 import type { CanonicalGameplayState } from "../../gameplay/runtime/canonical-state";
 import type { GhostReplayRenderView } from "../../ghost/replay-world";
 import type { ReplayEngine } from "../../ghost/replay-engine";
-import { replayStartChoices, type ReplayAction, type ReplayFrame, type ReplayRun } from "../../replay/record";
+import {
+  replayStartChoices,
+  type ReplayAction,
+  type ReplayFrame,
+  type ReplayRecord,
+  type ReplayRun,
+} from "../../replay/record";
+import { createWatch, type Watch, type WatchOptions, type WatchWorld } from "../../replay/watch";
 import type { ReplayWorld } from "../../replay/verify";
 import type {
   ProductionGhostReplayCompositionOptions,
@@ -106,5 +113,43 @@ export function startRecordWorld(
       if (wardrobe !== undefined && blade !== undefined) wardrobe.wear(blade, loadout);
     },
     dispose: unsubscribe,
+  });
+}
+
+/** A recorded run's world as watch steps it: the record world, dressed in the record's look. */
+export type RecordWatchWorld = WatchWorld<RecordCheckpoint, GhostReplayRenderView> &
+  Pick<RecordWorld, "stage" | "loadout">;
+
+/**
+ * Watches a kept record: the run re-simulated in the detached production world and drawn through the game's
+ * own frame builder, so the stage, weapon, projectiles and bosses at a tick are the ones play had at that
+ * tick. Every world watch starts, from the seed or a checkpoint, wears the record's cosmetics: the look is
+ * presentation, not checkpoint state. The chapters are the stages, waves and boss waves the run reached.
+ */
+export function watchRecord(
+  record: ReplayRecord,
+  engine: RecordWorldEngine,
+  presentation: RecordWorldPresentation = {},
+  cache?: WatchOptions<RecordCheckpoint, RecordWatchWorld>["cache"],
+): Watch<RecordCheckpoint, RecordWatchWorld> {
+  return createWatch<RecordCheckpoint, RecordWatchWorld>({
+    run: record.run,
+    chapters: record.summary.marks.map((mark) => mark.tick),
+    ...(cache === undefined ? {} : { cache }),
+    cacheOff: (reason) => {
+      console.warn(`replay seek cache off: ${reason}`);
+    },
+    start: (from) => {
+      const world = startRecordWorld(engine, record.run, () => undefined, presentation, from);
+      world.dress(record.look.cosmetics);
+      return Object.freeze<RecordWatchWorld>({
+        step: ({ actions, frames }) => world.step(actions, frames).stateHash,
+        checkpoint: world.checkpoint,
+        frame: world.renderView,
+        stage: world.stage,
+        loadout: world.loadout,
+        dispose: world.dispose,
+      });
+    },
   });
 }

@@ -29,7 +29,7 @@ import {
   rulesetRefusal,
 } from "../../src/gameplay/run/ruleset-version";
 import { ReplayLibraryController, recordingRefusal } from "../../src/app/library/replay-library-controller";
-import { refuseGhostTheater } from "../../src/ghost/theater-open-result";
+import { replayPlaybackRefusal } from "../../src/replay/record";
 import { createProfileStore } from "../../src/persistence/profile-store";
 
 describe("Gauntlet personal bests", () => {
@@ -227,7 +227,8 @@ describe("ruleset steps", () => {
     expect(enterReplay).toHaveBeenCalledTimes(1);
     expect(message).toHaveBeenLastCalledWith(`replay unavailable — ${reason}`);
 
-    expect(refuseGhostTheater("ruleset-retired", "root", 0, reason).detail).toBe(
+    // The replay screen refuses a kept record of that ruleset with the same named change.
+    expect(replayPlaybackRefusal({ ruleset: SIX_BIOME_PALE_PREVIEW_V5_RULESET_VERSION })).toBe(
       "This replay was recorded before the Gauntlet became a run of trials.",
     );
   });

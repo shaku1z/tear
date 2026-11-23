@@ -1131,7 +1131,7 @@
   {
     "id": "current-player-surfaces",
     "prefixes": [
-      "src/app/replay/replay-screen-adapter.ts",
+      "src/app/replay/replay-screen.ts",
       "src/app/library/replay-library-controller.ts",
       "src/app/library/replay-transport-controller.ts",
       "src/agents/live-watch-agent-host.ts",
