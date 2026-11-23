@@ -23,6 +23,9 @@ import { appendTheaterClip, type ReplayCutList } from "../../ghost/replay-cut-li
 import { refuseGhostTheater, type GhostTheaterOpenResult } from "../../ghost/theater-open-result";
 import { readGhostReplayRunContext } from "../../ghost/replay-admission";
 import { rulesetRefusal } from "../../gameplay/run/ruleset-version";
+import { replayPlaybackRefusal, type ReplayRecord } from "../../replay/record";
+import { createRecordWatchSession } from "../replay/record-watch-session";
+import type { RecordWorldEngine } from "../replay/record-world";
 
 export interface GhostTheaterScreenServices {
   readonly render: (view: ReplayScreenView) => void;
@@ -43,7 +46,12 @@ export interface GhostTheaterScreenStatus {
 }
 
 interface GhostTheaterContext {
-  readonly capsule: GhostReadCapsule;
+  /** The Vault capsule played; absent for a kept record, which has no clip editor yet. */
+  readonly capsule?: GhostReadCapsule;
+  readonly sourceId: string;
+  readonly assisted: boolean;
+  /** The stage the shown world is in; a kept record's world reports it. */
+  readonly stage?: () => number;
   readonly session: GhostVerifiedProductionReplaySession;
   readonly transport: ReplayTransport;
   readonly from: AppScreen;
@@ -111,7 +119,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
     return Object.freeze({
       id: "replay",
       title: "SAVED REPLAY",
-      detail: `RECORDED RUN${currentContext.capsule.manifest.provenance?.ghostAssistance === undefined ? "" : " · ASSISTED · UNRANKED"}`,
+      detail: `RECORDED RUN${currentContext.assisted ? " · ASSISTED · UNRANKED" : ""}`,
       paused: !state.playing,
       speed: state.speed,
       // Players read time, not simulation ticks (120 per second).
@@ -194,7 +202,51 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
   };
 
   return Object.freeze({
-    sourceId: () => context?.capsule.manifest.id,
+    sourceId: () => context?.sourceId,
+    /** The stage the replay screen shows now, when its source reports one. */
+    shownStage: () => context?.stage?.(),
+    /** The tick the replay screen shows now. */
+    shownTick: () => context?.result.tick,
+    /** Opens a kept record: the run re-simulated from its seed and drawn by the game's own renderer. */
+    openRecord(record: ReplayRecord, key: string, from: AppScreen, engine: RecordWorldEngine): GhostTheaterOpenResult {
+      invalidateExport();
+      const refusal = replayPlaybackRefusal(record.run);
+      if (refusal !== null) {
+        context = undefined;
+        return refuseGhostTheater("ruleset-retired", key, 0, refusal);
+      }
+      try {
+        const session = createRecordWatchSession(record, key, engine, services.presentation);
+        const transport = new ReplayTransport();
+        const result = session.seek(0);
+        transport.seek(0);
+        context = {
+          sourceId: key,
+          assisted: false,
+          stage: session.stage,
+          session,
+          transport,
+          from,
+          checkpoints: session.verifiedReceiptTicks,
+          result,
+          infoVisible: false,
+          fractionalTicks: 0,
+          firstTick: 0,
+          lastTick: session.lastTick,
+          editorOpen: false,
+          cutList: undefined,
+          frame: session.renderFrame?.(0),
+          clipMark: undefined,
+          exportAbort: undefined,
+          exportedClip: undefined,
+          exportStatus: "idle",
+        };
+        return Object.freeze({ kind: "opened", root: key, tick: 0 });
+      } catch {
+        context = undefined;
+        return refuseGhostTheater("source-verification", key);
+      }
+    },
     open(capsule: GhostReadCapsule, from: AppScreen): GhostTheaterOpenResult {
       invalidateExport();
       const recorded = readGhostReplayRunContext(capsule.manifest.provenance);
@@ -225,6 +277,8 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
         transport.seek(firstTick);
         context = {
           capsule,
+          sourceId: capsule.manifest.id,
+          assisted: capsule.manifest.provenance?.ghostAssistance !== undefined,
           session,
           transport,
           from,
@@ -340,6 +394,10 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
     },
     appendClip(): void {
       if (context === undefined) return;
+      if (context.capsule === undefined) {
+        context.message = "Clips come from a Vault replay.";
+        return;
+      }
       const appended = appendTheaterClip(
         context.cutList,
         context.capsule,
@@ -359,7 +417,8 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
     exportClips(): void {
       const captured = context,
         media = services.clipExport;
-      if (captured?.cutList === undefined || media?.available() !== true) return;
+      if (captured?.cutList === undefined || captured.capsule === undefined || media?.available() !== true) return;
+      const capsule = captured.capsule;
       invalidateExport();
       captured.transport.pause();
       const operation = new AbortController();
@@ -367,7 +426,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
       captured.exportStatus = "rendering";
       captured.message = "Encoding local replay canvas; the live game canvas is not recorded.";
       void media
-        .render(captured.capsule, captured.session, captured.cutList, operation.signal)
+        .render(capsule, captured.session, captured.cutList, operation.signal)
         .then((artifact) => {
           if (context !== captured || captured.exportAbort !== operation || operation.signal.aborted) return;
           captured.exportedClip = artifact;

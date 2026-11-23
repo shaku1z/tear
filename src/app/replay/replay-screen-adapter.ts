@@ -1,4 +1,8 @@
 import { replayTransportScrub } from "../library/replay-transport-controller";
+import { replayEngine } from "../../ghost/replay-engine";
+import { findKeptRecord, keptRecordSeed, type KeptRecord } from "./kept-record-lookup";
+import type { RecordWorldEngine } from "./record-world";
+import { liveReplayRecorder } from "./live-replay-recorder-slot";
 import { createBrowserGhostReplayPresentation } from "./browser-ghost-replay-presentation";
 import { createBrowserReplayClipExport } from "./browser-replay-clip-export";
 import { stableVerificationHash } from "../../domain/hash";
@@ -75,6 +79,10 @@ export interface ReplayScreenAdapter {
   readonly exit: () => void;
   readonly render: () => void;
   readonly enterGhostCapsule: (id: string, from?: AppScreen) => Promise<GhostTheaterOpenResult>;
+  /** Opens the kept record of the run with this seed on the replay screen; false when there is none. */
+  readonly watchKeptRun: (seed: string, from?: AppScreen) => Promise<boolean>;
+  /** The tick and stage the replay screen shows, while it shows a kept record. */
+  readonly shownReplay: () => Readonly<{ tick: number; stage: number }> | undefined;
   readonly togglePause: () => void;
   readonly seekBy: (delta: number) => void;
   readonly seekToFraction: (fraction: number) => void;
@@ -97,6 +105,8 @@ type LegacyReplayScreenAdapter = Omit<
   ReplayScreenAdapter,
   | "cancelPendingOpen"
   | "enterGhostCapsule"
+  | "watchKeptRun"
+  | "shownReplay"
   | "practice"
   | "toggleReplayEditor"
   | "appendClip"
@@ -160,12 +170,52 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
       ensureLoaded();
     }
   }
+  async function keptRecordFor(
+    seed: string,
+  ): Promise<Readonly<{ kept: KeptRecord; engine: RecordWorldEngine }> | undefined> {
+    try {
+      const module = await liveReplayRecorder.ensure();
+      const kept = await findKeptRecord(() => module.openReplayRecordStore(services.browserIndexedDb ?? null), seed);
+      return kept === undefined ? undefined : Object.freeze({ kept, engine: await replayEngine.ensure() });
+    } catch {
+      return undefined;
+    }
+  }
+  function openKeptRecord(found: Readonly<{ kept: KeptRecord; engine: RecordWorldEngine }>, from: AppScreen): boolean {
+    const opened = theater.openRecord(found.kept.record, found.kept.key, from, found.engine);
+    if (opened.kind === "refused") return false;
+    if (active === "legacy" && runtime !== undefined) runtime.exit();
+    pending = undefined;
+    active = "theater";
+    services.setScreen("replay", { returnTo: from });
+    return true;
+  }
+  /**
+   * Watches a run. A run kept in the replay store is re-simulated on the replay screen, so the stage, weapon,
+   * projectiles and bosses are the run's own at each moment; any other recording plays as before.
+   */
   function enter(data: unknown, from: AppScreen = "menu"): boolean {
-    sourceRequest++;
+    const request = ++sourceRequest;
     if (active === "theater") {
       theater.exit();
       active = undefined;
     }
+    const seed = keptRecordSeed(data);
+    if (seed === undefined) return enterRecording(data, from);
+    if (d.GHOST.begin(data) === null) return false;
+    d.GHOST.end();
+    if (active === "legacy" && runtime) runtime.exit();
+    active = undefined;
+    void openKeptRun(seed, from, request).then((opened) => {
+      if (!opened && request === sourceRequest) enterRecording(data, from);
+    });
+    return true;
+  }
+  async function openKeptRun(seed: string, from: AppScreen, request: number): Promise<boolean> {
+    const kept = await keptRecordFor(seed);
+    return request === sourceRequest && kept !== undefined && openKeptRecord(kept, from);
+  }
+  function enterRecording(data: unknown, from: AppScreen): boolean {
     if (runtime) {
       active = "legacy";
       return runtime.enter(data, from);
@@ -227,6 +277,12 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
     },
     enter,
     enterGhostCapsule,
+    watchKeptRun: (seed, from = "profile") => openKeptRun(seed, from, ++sourceRequest),
+    shownReplay: () => {
+      const tick = active === "theater" ? theater.shownTick() : undefined;
+      const stage = active === "theater" ? theater.shownStage() : undefined;
+      return tick === undefined || stage === undefined ? undefined : Object.freeze({ tick, stage });
+    },
     exit,
     render: () => {
       if (active === "theater") theater.render();

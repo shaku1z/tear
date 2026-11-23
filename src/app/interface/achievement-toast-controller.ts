@@ -17,6 +17,14 @@ export interface AchievementToastView {
   readonly reveal: number;
 }
 
+/**
+ * Whether achievement toasts wait. A cinematic owns the screen, and a replay shows a recorded run:
+ * a toast earned in play never appears over it. A held toast stays queued and shows once the screen is free.
+ */
+export function achievementToastHeld(screen: Readonly<{ name: string; cinematic: boolean }>): boolean {
+  return screen.cinematic || screen.name === "replay";
+}
+
 export class AchievementToastController {
   #active: AchievementToastSource | null = null;
   #elapsed = 0;

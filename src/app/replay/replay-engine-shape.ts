@@ -6,5 +6,6 @@ declare module "../../ghost/replay-engine" {
     readonly createProductionGhostReplayComposition: typeof Engine.createProductionGhostReplayComposition;
     readonly captureProductionReplayCheckpoint: typeof Engine.captureProductionReplayCheckpoint;
     readonly projectProductionReplayCanonicalState: typeof Engine.projectProductionReplayCanonicalState;
+    readonly stepDetachedWorld: typeof Engine.stepDetachedWorld;
   }
 }

@@ -9,6 +9,7 @@
 // starts from, so they are in the record's start and the run is still a plain start.
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 const { recordLiveRun, summary, ONE_STORED_RUN } = require("./browser-replay-live-legs");
 
 const RETURNING_PLAYER_UPGRADES = Object.freeze({
@@ -49,5 +50,33 @@ withJourney(
     );
     assert.deepEqual(campaign.verdict, { status: "verified", tick: campaign.record.run.result.tick });
     assert.deepEqual(campaign.counters, ONE_STORED_RUN);
+
+    // Watching it: the replay screen re-simulates the kept run, so the stage it shows at a tick is the stage
+    // live play was in at that tick, before and after each stage change.
+    const { page } = journey;
+    const { record } = campaign;
+    // A player watches from the menu: pause, QUIT, then WATCH.
+    await page.keyboard.press("Escape");
+    await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__.snapshot?.().screen === "paused", undefined, {
+      timeout: STATE_WAIT_MS,
+    });
+    await page.evaluate(() => window.__TEAR_REPLAY_TAP__.quit());
+    await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__.snapshot?.().screen === "menu", undefined, {
+      timeout: STATE_WAIT_MS,
+    });
+    assert.equal(await page.evaluate((seed) => window.__TEAR_REPLAY_TAP__.watchKept(seed), record.run.seed), true);
+    const stages = record.summary.marks.filter((mark) => mark.kind === "stage");
+    const liveStageAt = (tick) => stages.filter((mark) => mark.tick <= tick).at(-1)?.value;
+    const last = record.run.result.tick;
+    const shown = [];
+    for (const change of stages.filter((mark) => mark.tick > 0)) {
+      for (const tick of [change.tick - 60, change.tick + 60, 0]) {
+        const view = await page.evaluate((fraction) => window.__TEAR_REPLAY_TAP__.seekShown(fraction), tick / last);
+        assert.ok(view, "the replay screen shows no kept record");
+        shown.push(view);
+        assert.equal(view.stage, liveStageAt(view.tick), `the replay shows stage ${view.stage} at tick ${view.tick}`);
+      }
+    }
+    console.log("stage shown at a tick", JSON.stringify(shown));
   },
 );
