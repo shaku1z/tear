@@ -147,7 +147,7 @@ export interface ReplayMark {
 export interface ReplaySummary {
   readonly score: number;
   readonly wave: number;
-  /** Run time in seconds, as the run's clock counted it. */
+  /** Run time in seconds to the millisecond (`replaySummaryTime` in src/gameplay/runtime/canonical-state.ts). */
   readonly time: number;
   readonly kills: number;
   readonly marks: readonly ReplayMark[];

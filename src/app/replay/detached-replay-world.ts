@@ -1,12 +1,10 @@
 import type { AuthoritativeStepResult } from "../../gameplay/runtime/authoritative-step";
-import type { CanonicalGameplayState } from "../../gameplay/runtime/canonical-state";
+import { canonicalReplayTotals, type CanonicalGameplayState } from "../../gameplay/runtime/canonical-state";
 import type { ReplayRun } from "../../replay/record";
 import type { ReplayWorld, ReplayWorldRun } from "../../replay/verify";
 import { stepDetachedWorld } from "../world/detached/detached-step";
 import { createProductionGhostReplayComposition } from "../world/detached/replay-composition";
 import { startRecordWorld, type RecordWorldEngine } from "./record-world";
-
-const NO_RUN = Object.freeze({ score: 0, wave: 0, time: 0 });
 
 const STATIC_ENGINE: RecordWorldEngine = Object.freeze({ createProductionGhostReplayComposition, stepDetachedWorld });
 
@@ -23,10 +21,7 @@ function startDetachedReplay(
       last = result;
       return Object.freeze({ tick: result.tick, hash: () => result.stateHash, terminated: world.terminated() });
     },
-    run() {
-      const current = last?.state.run;
-      return current == null ? NO_RUN : Object.freeze({ score: current.score, wave: current.wave, time: current.time });
-    },
+    run: () => canonicalReplayTotals(last?.state.run),
     dispose: world.dispose,
   });
 }
