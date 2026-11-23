@@ -1,12 +1,13 @@
 /**
  * The saved replay records on this device: the `tear-replays` IndexedDB database (version 1, one
- * `records` store), opened through an injected `IDBFactory`. Replay PR 6 changes the encoding inside
- * this database; it needs neither a second database nor a migration out.
+ * `records` store), opened through an injected `IDBFactory`. Each record is held as `encoding.ts` writes
+ * it (gzip bytes of its JSON); a record kept as JSON text before replay PR 6 reads back the same way.
  *
  * - **Caps:** `REPLAY_RECORD_LIMITS.count` records, up to `REPLAY_RECORD_LIMITS.bytes` in all, of which
  *   at most `REPLAY_RECORD_LIMITS.pinned` are pinned. A write drops the oldest unpinned records until the
  *   new one fits, then the oldest pinned ones; a record bigger than the byte cap on its own is not stored.
- *   The write says what it dropped, so the list can tell the player.
+ *   The write says what it dropped and adds it to a count kept beside the index, which the list takes
+ *   (and so clears) when it opens, to tell the player.
  * - **The index is the list:** each entry carries the run's list row (`ReplayRecordRow`) and its pin, so
  *   listing never reads a record. An entry written before rows existed gets its row from its record the
  *   first time the index is listed, and the index is saved with it.
@@ -18,6 +19,7 @@
  * What clears it: the browser's site data clearing. Nothing in the game deletes it before replay PR 8.
  */
 import { isObject, isRecord } from "../domain/records";
+import { decodeReplayRecord, encodedReplayRecordBytes, encodeReplayRecord } from "./encoding";
 import {
   readReplayRecord,
   type ReplayOutcome,
@@ -30,16 +32,18 @@ export const REPLAY_RECORD_DATABASE = "tear-replays";
 export const REPLAY_RECORD_DATABASE_VERSION = 1;
 const STORE = "records";
 const INDEX_KEY = "index";
+/** How many records the caps dropped since the list last said so. */
+const DROPPED_KEY = "dropped";
 
 /**
- * 20 records and 25 MB. A live minute records about 700 KB as plain JSON (the 5c-1 browser legs: 356 KB
- * for a 30-second campaign run, 123 KB for 11 seconds of Endless), so the byte cap holds about 35 minutes
- * of play: the last several runs, or one long one. Replay PR 6 changes the encoding inside this store, and
- * a smaller encoding fits more records under the same cap. 25 MB is a small share of the origin quota
- * browsers grant (Chrome gives an origin a share of free disk measured in GB; Safari asks past 1 GB), and
- * leaves room for the player's save and the V3 vault until PR 8 removes it.
+ * 300 records and 25 MB. A live minute is about 700 KB as JSON and about 60 KB as stored (gzip, measured
+ * in replay PR 6 on real records: 54 to 73 KB a minute), so the byte cap holds about seven hours of play.
+ * Runs averaging under about 85 seconds reach the count cap first; longer ones reach the byte cap. The
+ * list is the index alone, a few hundred bytes a record, so 300 records list without reading one. 25 MB is a small share of the origin quota browsers grant
+ * (Chrome gives an origin a share of free disk measured in GB; Safari asks past 1 GB), and leaves room for
+ * the player's save and the V3 vault until PR 8 removes it.
  */
-export const REPLAY_RECORD_LIMITS = Object.freeze({ count: 20, bytes: 25 * 1024 * 1024, pinned: 10 });
+export const REPLAY_RECORD_LIMITS = Object.freeze({ count: 300, bytes: 25 * 1024 * 1024, pinned: 10 });
 
 export type ReplayRecordLimits = Readonly<{ count: number; bytes: number; pinned: number }>;
 
@@ -109,6 +113,8 @@ export interface ReplayRecordStore {
   readonly remove: (key: string) => Promise<ReplayRecordChange>;
   /** One stored record, read as untrusted data; null when the key holds none. */
   readonly read: (key: string) => Promise<ReplayReadResult | null | Readonly<{ failed: ReplayRecordFailure }>>;
+  /** How many records the caps dropped since the last call; the count starts again at 0. */
+  readonly takeDropped: () => Promise<number | Readonly<{ failed: ReplayRecordFailure }>>;
   readonly close: () => void;
 }
 
@@ -242,10 +248,12 @@ function storeOver(database: IDBDatabase, limits: ReplayRecordLimits): ReplayRec
         resolve({ failed: failureOf(error) });
       }
     });
-  const parse = (value: unknown): ReplayReadResult | null => {
-    if (typeof value !== "string") return null;
+  const parse = async (value: unknown): Promise<ReplayReadResult | null> => {
+    if (value === undefined) return null;
+    const json = await decodeReplayRecord(value);
+    if (json === null) return readReplayRecord(null);
     try {
-      return readReplayRecord(JSON.parse(value));
+      return readReplayRecord(JSON.parse(json));
     } catch {
       return readReplayRecord(null);
     }
@@ -253,7 +261,14 @@ function storeOver(database: IDBDatabase, limits: ReplayRecordLimits): ReplayRec
   const read = async (key: string): Promise<ReplayReadResult | null | Failed> => {
     const result = (await get(key)) as { value?: unknown } | Failed;
     if ("failed" in result) return result;
-    return key === INDEX_KEY ? null : parse(result.value);
+    return key === INDEX_KEY || key === DROPPED_KEY ? null : parse(result.value);
+  };
+  /** The dropped count as stored; anything but a positive whole number counts as none. */
+  const dropped = async (): Promise<number | Failed> => {
+    const result = (await get(DROPPED_KEY)) as { value?: unknown } | Failed;
+    if ("failed" in result) return result;
+    const count = result.value;
+    return typeof count === "number" && Number.isSafeInteger(count) && count > 0 ? count : 0;
   };
   /** The index with every readable entry's row; rows missing from an older index are read once and saved. */
   const entries = async (): Promise<readonly ReplayRecordEntry[] | Failed> => {
@@ -310,26 +325,34 @@ function storeOver(database: IDBDatabase, limits: ReplayRecordLimits): ReplayRec
         (index, at) => index.filter((_, position) => position !== at),
         (store) => store.delete(key),
       ),
+    takeDropped: async (): Promise<number | Failed> => {
+      const count = await dropped();
+      if (typeof count !== "number" || count === 0) return count;
+      const cleared = await write((store) => store.delete(DROPPED_KEY));
+      return cleared === "done" ? count : cleared;
+    },
     put: async (record: ReplayRecord): Promise<ReplayRecordPut> => {
-      const json = JSON.stringify(record);
       const key = replayRecordKey(record);
       const index = await entries();
       if ("failed" in index) return { status: "failed", reason: index.failed };
       if (index.some((entry) => entry.key === key)) return { status: "present", key };
-      // The JSON is ASCII apart from names, so its length stands for its bytes.
+      const stored = await encodeReplayRecord(JSON.stringify(record));
       const entry: ReplayRecordEntry = Object.freeze({
         key,
-        bytes: json.length,
+        bytes: encodedReplayRecordBytes(stored),
         recordedAt: record.look.recordedAt,
         pinned: false,
         row: replayRecordRow(record),
       });
       const plan = planReplayRecordWrite(index, entry, limits);
       if (!plan.store) return { status: "oversized", bytes: entry.bytes };
+      const before = plan.evict.length === 0 ? 0 : await dropped();
+      if (typeof before !== "number") return { status: "failed", reason: before.failed };
       const written = await write((store) => {
         for (const evicted of plan.evict) store.delete(evicted);
-        store.put(json, key);
+        store.put(stored, key);
         store.put(plan.index, INDEX_KEY);
+        if (plan.evict.length > 0) store.put(before + plan.evict.length, DROPPED_KEY);
       });
       return written === "done"
         ? { status: "stored", key, evicted: plan.evict }
