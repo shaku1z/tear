@@ -79,6 +79,42 @@ describe("watching a kept record", () => {
     },
   );
 
+  it("takes and restores checkpoints in a built game, which has its own build identity", () => {
+    vi.stubGlobal("__TEAR_BUILD_REVISION__", "0123456789abcdef0123456789abcdef01234567");
+    vi.stubGlobal("__TEAR_BUILD_TARGET__", "test-standalone");
+    vi.stubGlobal("__TEAR_BUILD_SOURCE_FINGERPRINT__", "a".repeat(64));
+    const spec = SPECS[0];
+    if (spec === undefined) throw new Error("no corpus stream");
+    const record = recordCorpusStream(spec);
+    const cache = createRecordSeekCache({ every: REPLAY_CHECKPOINT_TICKS, limit: 64 });
+    const session = createRecordWatchSession(record, "record:test:1", engineModule, {}, cache);
+    session.seek(record.run.result.tick);
+    expect(cache.held().ticks.length).toBeGreaterThan(1);
+    const [first] = record.run.checkpoints;
+    expect(session.seek(REPLAY_CHECKPOINT_TICKS).semanticHash).toBe(first?.hash);
+  });
+
+  it("re-simulates from the seed when a checkpoint cannot be taken, so a seek never fails on the cache", () => {
+    const spec = SPECS[0];
+    if (spec === undefined) throw new Error("no corpus stream");
+    const record = recordCorpusStream(spec);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const engine = {
+      ...engineModule,
+      captureProductionReplayCheckpoint: (): never => {
+        throw new TypeError("no checkpoint");
+      },
+    };
+    const cache = createRecordSeekCache({ every: REPLAY_CHECKPOINT_TICKS, limit: 64 });
+    const session = createRecordWatchSession(record, "record:test:1", engine, {}, cache);
+    expect(session.seek(record.run.result.tick).semanticHash).toBe(record.run.result.hash);
+    const [first] = record.run.checkpoints;
+    expect(session.seek(REPLAY_CHECKPOINT_TICKS).semanticHash).toBe(first?.hash);
+    expect(cache.held().ticks).toEqual([]);
+    expect(warn).toHaveBeenCalledWith("replay seek cache off: no checkpoint");
+    warn.mockRestore();
+  });
+
   it("never touches progress: a watched run that earns achievements and coins writes nothing outside its world", () => {
     const spec = SPECS[0];
     if (spec === undefined) throw new Error("no corpus stream");

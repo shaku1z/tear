@@ -418,6 +418,9 @@ export function captureProductionReplayCheckpoint(
     validateCinema: runtime.validate,
   });
   const tick = simulation.simulationRuntime.scheduler.tick;
+  // In a built game the capture takes the build's own identity; the checkpoint declares the same one,
+  // as `create` does, so a watched run can take checkpoints in a build as it does headless.
+  const build = buildIdentity ?? injectedBuildIdentity("headless", REPLAY_CONTENT_HASH);
   const snapshot = captureLiveStateSetupSnapshot({
     id,
     tick,
@@ -429,9 +432,9 @@ export function captureProductionReplayCheckpoint(
     registry: createDefaultStateCodecRegistry(),
     observationClass: "structured-state",
     producer: "production-headless-checkpoint",
-    target: buildIdentity?.target ?? "headless",
-    contentHash: buildIdentity?.contentHash ?? REPLAY_CONTENT_HASH,
-    ...(buildIdentity === undefined ? {} : { buildIdentity }),
+    target: build?.target ?? "headless",
+    contentHash: build?.contentHash ?? REPLAY_CONTENT_HASH,
+    ...(build === undefined ? {} : { buildIdentity: build }),
     // A required contract hash that explicitly denotes absence of a pixel capture;
     // it is not rendered-output evidence.
     visualHash: stableVerificationHash("not-captured"),
