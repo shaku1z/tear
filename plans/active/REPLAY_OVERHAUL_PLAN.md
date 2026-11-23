@@ -28,12 +28,14 @@ Written so that someone with only this repository can continue. The decision log
   - #404: a run that ends inside a tick (a death or a win) ends its record once that tick is simulated, and a restarted run ends its record as a quit.
   - #405: a test build or the dev server gets the offline cloud (`cloudFactoryForBuild`, `src/platform/offline-cloud.ts`), so a replay session's test run never reaches a production leaderboard. The one entry that did on 2026-11-22 is the owner's to remove.
 - **Merged: plan and guards (#406)** (this card's order and the name guards; see "The order from here").
-- **Open: One Replays**, the visible fold. Players see one REPLAYS list in Profile (filters ALL, BESTS, PINNED; WATCH, PIN, SHARE, DOWNLOAD and DELETE on each run; IMPORT A REPLAY FILE), and the replay screen says REPLAY from every WATCH.
+- **Merged: One Replays (#407)**, the visible fold. Players see one REPLAYS list in Profile (filters ALL, BESTS, PINNED; WATCH, PIN, SHARE, DOWNLOAD and DELETE on each run; IMPORT A REPLAY FILE), and the replay screen says REPLAY from every WATCH.
   - The list is `src/app/replay/replay-list.ts` (rows) and `replay-list-controller.ts` (actions). Rows come from the `tear-replays` index, which now carries each record's list row and pin (`src/replay/record-store.ts`: `pin`, `remove`, ten pins at most, eviction drops the oldest unpinned run first). An index written before rows existed is filled once by reading each record.
   - Ghost 2 recordings with no kept record of the same seed are listed as "Recorded before this update" and play through the old player until PR 8. A kept run keeps its Ghost 2 copy's id: SHARE publishes that copy (the feed plays only Ghost 2 until PR 8), and PIN and DELETE act on both. V3 capsules are not listed; they stay on the device until PR 8 removes them.
   - DOWNLOAD saves the record as JSON (`tear-replay-<date>-<seed>.json`); IMPORT reads one through `readReplayRecord` and stores it.
   - Removed: the VAULT and CAREER tabs, their screens, controllers, the career writer and worker, the V3 cold restore and their tests and browser checks. The V3 vault's own import path (`capsule-paired-archive.ts`, `capsule-import-plan.ts`) and the career store that vault upkeep reads pins from stay until PR 8. The chase controls have no entry point left; PR 9 removes them.
   - Left for PR 6: telling the player when the store dropped a run to make room.
+- **Open: summary time** (step 3 of "The order from here"). `summary.time` is seconds to the millisecond, written by the live run end (`replayRunTotals`) and by every re-simulation (`canonicalReplayTotals`) through `canonicalRunTime` and `replaySummaryTime` in `src/gameplay/runtime/canonical-state.ts`. Before it, every real kept run failed verify on its summary (float seconds against whole milliseconds); the browser checks never saw it because the test inspector ended runs with the canonical totals. `tests/browser-replay-file-round-trip.js` keeps a live One-Hit run through the game's own death, verifies it as stored, and takes it through DOWNLOAD, DELETE and IMPORT.
+- **Then: the cinematic-skip divergence** (step 4): a campaign run started with cinematics skipped and ended by QUIT differs at the checkpoint on tick 480.
 - **Agreed with Shards (for PR 10):**
   - `ReplayLook.cosmetics` is the domain `Loadout`, filled at run start with `loadoutOf(COSMETIC_CATALOG, PROFILE.cosmetics())`.
   - `readLook` caps the entry count at the number of catalog slots.
@@ -572,21 +574,33 @@ because the visible fold was PR 8. From now on:
    preview build: the list, the replay screen and a leaderboard WATCH.
    **Players see:** one REPLAYS list in Profile and one replay screen from everywhere; VAULT, CAREER
    and THEATER are gone.
-3. **Status timers in the hash:** burn and the other status timers join the canonical hash, with a
+3. **Summary time** (found taking the One Replays pictures, 2026-11-23): the live run end wrote
+   `summary.time` as the run's float seconds and verify derived it from the canonical state's whole
+   milliseconds, so every real kept run failed verify on its summary. One unit now: seconds to the
+   millisecond, through `canonicalRunTime` and `replaySummaryTime` (`src/gameplay/runtime/canonical-state.ts`).
+   With it, the browser check One Replays dropped comes back for the new record: a live One-Hit run the
+   game keeps, read back as stored, DOWNLOAD, DELETE and IMPORT, verified before and after
+   (`tests/browser-replay-file-round-trip.js`). It never reads the run's totals from the canonical state.
+   **Players see:** nothing; their kept runs now verify.
+4. **Cinematic skip and every ending:** a campaign run started with cinematics skipped and ended by QUIT
+   differs at the checkpoint on tick 480 (seed 731213, easy, sword). Find the first divergence and add a
+   rule test over cinematic skip and every way a run ends.
+   **Players see:** nothing; such a run's replay stops drifting.
+5. **Status timers in the hash:** burn and the other status timers join the canonical hash, with a
    ruleset step, a gold refresh and a test that a burn-only difference is caught at the next checkpoint.
    **Players see:** nothing; a replay that would drift on a status effect is refused instead of shown wrong.
-4. **PR 6, one store** (below), with the list's index, budget and eviction rule.
+6. **PR 6, one store** (below), with the list's index, budget and eviction rule.
    **Players see:** the list opens at once with hundreds of runs; when the store drops an old unpinned
    run to stay in budget, the list says so.
-5. **PR 7, one watch** (below), with the seek cache and its budgets.
+7. **PR 7, one watch** (below), with the seek cache and its budgets.
    **Players see:** WATCH opens fast on long runs, and seeking backwards is quick.
-6. **PR 8, Ghost 2 and V3 removed** (below, without the list, which moved to One Replays). It closes
+8. **PR 8, Ghost 2 and V3 removed** (below, without the list, which moved to One Replays). It closes
    the `REPLAY-GHOST-REMOVAL` allowlist entries.
    **Players see:** the one-time notice about recordings made before this update (DOWNLOAD ALL, then
    CONTINUE); afterwards only re-simulated replays.
-7. **PR 9, race on watch** (below).
+9. **PR 9, race on watch** (below).
    **Players see:** RACE on the replay screen, against a run on the same seed.
-8. **PR 10, Shards looks in the record and the docs** (below). It closes the `REPLAY-DOCS` allowlist
+10. **PR 10, Shards looks in the record and the docs** (below). It closes the `REPLAY-DOCS` allowlist
    entries.
    **Players see:** a watched replay shows the cosmetics the runner wore.
 
@@ -972,3 +986,4 @@ writes are closed. Deploying the rules is the owner's step.
 - 2026-11-21 PR 5c split into 5c-1 (production recorder and its store) and 5c-2 (VAULT and the Theater on the record), each on main before the next (the lead). The old third part (seed race on the record, V3 recording off, V3 recorder modules deleted) and the HUD parser move go into PR 8. Records get their own database, `tear-replays` version 1, which PR 6 builds on. 5c-1 keeps plain-start runs, campaign included (the lead: one record across stage wins, ended at a defeat, the final win or a quit); seed races are recorded but not kept until the record holds their start in PR 8. For 5c-2: V3 keeps recording until PR 8, so a V3 row is labelled "Recorded before this update" only when its recorded date is before this build, never because it is a V3 row.
 - 2026-11-22 The replay clock (#402): the scheduler counts only ticks it simulates, and the live and detached hosts share one padded contact test. 5c-2 (`codex/replay-viewer`): WATCH opens a kept run on the replay screen, re-simulated; Ghost 2 keeps only its stage fix; VAULT listing moves to PR 8; status timers enter the hash after 5c-2 (the lead).
 - 2026-11-23 Plan and guards (`codex/replay-plan-guards`): the lead's 2026-11-22 decision (one name, one list, one player, one store) and the new order, with One Replays before PR 6 and a "Players see:" line for every step; the quality bar; the `replay` term in the terminology registry with file-by-file allowlists that expire at the step removing each name; vault, theater, capsule, passport, v2 and v3 in containment with today's counts; the one-name rules in `AGENTS.md` and `docs/ENGINEERING_STANDARD.md`.
+- 2026-11-23 Summary time (`codex/replay-summary-time`), from the lead after One Replays: the two faults found taking its pictures go before the status timers, summary time first. `summary.time` is seconds to the millisecond, written by the live run end and by verify through the same two functions; the dropped browser round trip comes back over a kept live run.

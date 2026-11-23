@@ -336,7 +336,7 @@ jobs:
     needs: [scope, build]
     if: needs.scope.outputs.docs_only == 'false'
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 13
     permissions:
       contents: read
       actions: read

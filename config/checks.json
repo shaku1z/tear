@@ -303,6 +303,11 @@
         "seconds": 110
       },
       {
+        "id": "replay-file-round-trip",
+        "run": "node tests/browser-replay-file-round-trip.js",
+        "seconds": 40
+      },
+      {
         "id": "framerate-determinism",
         "run": "node tests/browser-tear-runtime-environment.js",
         "seconds": 45

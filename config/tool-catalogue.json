@@ -458,6 +458,13 @@
       ],
       "duration": "minutes"
     },
+    "test:browser:replay-file-round-trip": {
+      "purpose": "Browser check that a live run the game keeps verifies as stored, and survives DOWNLOAD, DELETE and IMPORT on the REPLAYS list unchanged and still verifying",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
     "test:browser:replay-campaign-stages": {
       "purpose": "Nightly browser check that a live campaign run is one replay record across a stage win, stored once and verified from its seed",
       "effects": [
