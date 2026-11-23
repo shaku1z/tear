@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { LegacyGhostEngine, type ReplayStore } from "../../src/replay/legacy-compat";
 import { SemanticInputBuffer } from "../../src/input/semantic-buffer";
+import { keptRecordSeed } from "../../src/app/replay/kept-record-lookup";
 
 // The older (Ghost 2) replay showed the stage a run ended in from its first second: the opening stage
 // is entered before recording starts, and playback fell back to the summary's end stage.
@@ -48,6 +49,13 @@ function multiStage(ghost: LegacyGhostEngine) {
 }
 
 describe("the older replay's stage at a moment", () => {
+  it("names its run's seed as saved, so WATCH finds the run's kept record", () => {
+    const saved = JSON.parse(JSON.stringify(multiStage(engine()))) as unknown;
+    expect(keptRecordSeed(saved)).toBe("515303");
+    expect(keptRecordSeed({ run: { seed: "not-a-run-seed" } })).toBeUndefined();
+    expect(keptRecordSeed(null)).toBeUndefined();
+  });
+
   it("shows the run's first stage at its start and each later stage from when it was entered", () => {
     const ghost = engine();
     const packet = multiStage(ghost);

@@ -1,6 +1,6 @@
 import { replayTransportScrub } from "../library/replay-transport-controller";
 import { replayEngine } from "../../ghost/replay-engine";
-import { findKeptRecord, type KeptRecord } from "./kept-record-lookup";
+import { findKeptRecord, keptRecordSeed, type KeptRecord } from "./kept-record-lookup";
 import type { RecordWorldEngine } from "./record-world";
 import { liveReplayRecorder } from "./live-replay-recorder-slot";
 import { createBrowserGhostReplayPresentation } from "./browser-ghost-replay-presentation";
@@ -170,12 +170,6 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
       ensureLoaded();
     }
   }
-  /** The run seed an older (Ghost 2) recording names, which finds the run's kept record. */
-  function recordedRunSeed(data: unknown): string | undefined {
-    const provenance = (data as { provenance?: { seed?: unknown } } | null)?.provenance;
-    const seed = provenance?.seed;
-    return typeof seed === "string" && /^\d+$/.test(seed) ? seed : undefined;
-  }
   async function keptRecordFor(
     seed: string,
   ): Promise<Readonly<{ kept: KeptRecord; engine: RecordWorldEngine }> | undefined> {
@@ -206,7 +200,7 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
       theater.exit();
       active = undefined;
     }
-    const seed = recordedRunSeed(data);
+    const seed = keptRecordSeed(data);
     if (seed === undefined) return enterRecording(data, from);
     if (d.GHOST.begin(data) === null) return false;
     d.GHOST.end();
