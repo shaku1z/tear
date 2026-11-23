@@ -115,7 +115,7 @@ describe("every scene change outside the director", () => {
   });
 
   it("asks the director to skip only from engineering tools; a player's skip and the test hooks' are a held confirm", () => {
-    const skips = sites.filter((file) => /\.requestSkip\(/u.test(readFileSync(file, "utf8")));
+    const skips = sites.filter((file) => readFileSync(file, "utf8").includes(".requestSkip("));
     const engineering = SCENE_CHANGES.filter((row) => row.how === "engineering").map((row) => row.site);
     expect(skips.filter((file) => !engineering.includes(file))).toEqual([]);
     expect(engineering.every((file) => file.startsWith("src/app/engineering/"))).toBe(true);
