@@ -57,9 +57,8 @@ describe("menu/setup snapshots", () => {
       pendingFinale: false,
       surfaces: RELEASE,
     };
-    expect(buildMenuSnapshot({ ...input, tutorialDone: 0 }).practiceAvailable).toBeUndefined();
-    expect(buildMenuSnapshot({ ...input, tutorialDone: 1 }).practiceAvailable).toBe(true);
-    expect(buildMenuSnapshot({ ...input, tutorialDone: 0.5 }).practiceAvailable).toBeUndefined();
+    // Drills live on PLAY's setup screen; the main menu carries no Drills entry, tutorial done or not.
+    expect(Object.keys(buildMenuSnapshot(input))).not.toContain("practiceAvailable");
   });
   it("projects weapon identity and best summary", () => {
     const view = buildSetupSnapshot({

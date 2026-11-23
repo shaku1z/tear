@@ -25,7 +25,6 @@ export function createLiveMenuScreenAdaptersRuntime(
       renderers.menu(
         buildMenuSnapshot({
           username: d.PROFILE.username(),
-          tutorialDone: d.PROFILE.stat("tutorialDone"),
           ...(isTutorialFirst(firstRunProfileFacts(d.PROFILE))
             ? { tutorialFirst: nextTutorialLesson(d.PROFILE.tutorialProgress().lessons) }
             : {}),

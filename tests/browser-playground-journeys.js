@@ -167,6 +167,9 @@ const journey = (practiceLab) =>
         assert.equal(before.earned, 1000);
         assert.equal(before.spent, 375);
         assert.equal(before.buy.sharp, 1);
+        // Drills open from PLAY's setup screen; the main menu has no DRILLS row.
+        await clickLabel("PLAY");
+        await waitScreen("setup");
         await clickLabel("DRILLS");
         await waitScreen("paused");
         let session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
