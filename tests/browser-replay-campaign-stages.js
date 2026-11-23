@@ -36,7 +36,7 @@ withJourney(
   async (journey) => {
     const campaign = await recordLiveRun(
       journey,
-      { mode: "campaign", difficulty: "easy", weapon: "sword", seed: 515_303, skipCinematics: false },
+      { mode: "campaign", difficulty: "easy", weapon: "sword", seed: 515_303, skipCinematics: true },
       (snapshot, stages) => stages.has(1) && snapshot.screen === "playing" && snapshot.fixedTicks > stages.get(1) + 240,
     );
     console.log("campaign across a stage win", JSON.stringify(summary(campaign)));

@@ -8,7 +8,7 @@
 //   starts before the recorder's code has loaded is not recorded and is counted (`notLoaded`); run start
 //   never waits for it. The leg reports which happened.
 // - Campaign leg: the opening chapter skipped by a held confirm, wave 1 cleared and a draft card taken,
-//   then on into wave 2.
+//   then on into wave 2, ended by the pause screen's QUIT.
 // - Boss Rush leg: a run that opens on the boss arrival.
 //
 // Each warm leg's record must hold its scene frames (campaign) and its draft pick as an action, be
@@ -32,11 +32,12 @@ withJourney(
 
     const campaign = await recordLiveRun(
       journey,
-      { mode: "campaign", difficulty: "easy", weapon: "sword", seed: 515_303, skipCinematics: false },
+      { mode: "campaign", difficulty: "easy", weapon: "sword", seed: 515_303, skipCinematics: true },
       (snapshot) =>
         snapshot.draftPicks.length > 0 &&
         snapshot.screen === "playing" &&
         snapshot.fixedTicks > snapshot.draftPicks[0].tick + 240,
+      "quit",
     );
     console.log("campaign", JSON.stringify(summary(campaign)));
     assert.ok(campaign.record.run.frames.length > 0, "the chapter's live frames were not recorded");
@@ -53,7 +54,7 @@ withJourney(
 
     const bossRush = await recordLiveRun(
       journey,
-      { mode: "bossonly", difficulty: "easy", weapon: "sword", boss: "warden", seed: 515_304, skipCinematics: false },
+      { mode: "bossonly", difficulty: "easy", weapon: "sword", boss: "warden", seed: 515_304, skipCinematics: true },
       (snapshot) => snapshot.fixedTicks >= 1_800,
     );
     console.log("boss rush", JSON.stringify(summary(bossRush)));

@@ -104,6 +104,7 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
   const { state: hostState, lifecycle: RUN_LIFECYCLE, environment } = world;
   const { impact, feel } = world.context.transient;
   const CINEMA = world.context.cinema;
+  let sceneSkipHeld = false;
   const { screen, setScreen } = navigation;
   const interfaceInteraction = sources.interaction;
   const interfaceComposition = sources.interface;
@@ -257,8 +258,17 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
       },
       setSemanticInputAuthority: sources.inputAuthority.setSemanticInputAuthority,
       routeAction: (action) => routeLiveTearBenchAction(actionRouting, action),
+      // A scene is skipped the way a player skips it: Enter held once the scene's input has armed, and
+      // released otherwise, so the frame the replay records carries the skip (a skip asked of the director
+      // directly is in no recorded input, and the re-simulated run would play the whole scene).
       skipCinematic: () => {
-        CINEMA.requestSkip();
+        const hold = CINEMA.active && CINEMA.latchArmed;
+        if (hold === sceneSkipHeld) return;
+        sceneSkipHeld = hold;
+        emitLiveTearBenchPhysicalInput(
+          { type: "key", code: "Enter", phase: hold ? "pressed" : "released" },
+          { window: browserWindow, canvas, width: W, height: H },
+        );
       },
       controlsDrawn: () => {
         presentationHost.render();

@@ -4,9 +4,9 @@
 // (src/app/engineering/replay-tap-inspector.ts) and the scripted Watch Agent.
 //
 // The live game runs as a player plays it. The Watch Agent plays through the real setup screen, the real
-// frame coordinator and the real reward screens. A leg holds the confirm key, as a player does, to skip a
-// chapter (HOLD TO SKIP CHAPTER), so a scene ends on live frames and confirm presses: the record's one
-// frame-clock exception.
+// frame coordinator and the real reward screens. With `skipCinematics` it skips a scene as a player does
+// (HOLD TO SKIP CHAPTER): it holds Enter once the scene's input has armed, so a scene ends on live frames
+// and confirm presses, the record's one frame-clock exception, and the record holds the skip.
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const { STATE_WAIT_MS } = require("./browser-waits");
@@ -39,39 +39,26 @@ async function coldRun(journey) {
 }
 
 // A warm leg starts from a fresh boot on the main menu, where the Watch Agent starts, waits for the
-// recorder before the run starts, plays until `done(snapshot, stages)`, then ends the run as a kept run's
-// outcome does, reads the record back from the store and verifies that copy. It also times every call
-// into the tap and the store write at the run's end (`cost`).
-async function recordLiveRun(journey, options, done) {
+// recorder before the run starts, plays until `done(snapshot, stages)`, then ends the run, reads the record
+// back from the store and verifies that copy. `end` is "kept" (as a kept run's outcome ends it, timed in
+// `cost`) or "quit" (pause, then the pause screen's QUIT). It also times every call into the tap.
+async function recordLiveRun(journey, options, done, end = "kept") {
   const { page } = journey;
   await bootToMenu(journey);
   await page.evaluate(() => window.__TEAR_REPLAY_TAP__.arm());
   let snapshot = await page.evaluate((start) => window.__TEAR_WATCH_AGENT__.start(start), options);
-  let holding = false;
-  let sceneBatches = 0;
   let profiled = false;
   // The tick each stage was first seen on.
   const stages = new Map([[0, 0]]);
   for (let batch = 0; batch < MAX_BATCHES && snapshot.status === "running" && !done(snapshot, stages); batch += 1) {
-    // Hold confirm through a scene once it has shown for a batch (the hold arms on a released key).
-    const { scene, stage, recording } = await page.evaluate(() => ({
-      scene: window.__TEAR_REPLAY_TAP__.scene(),
+    const { stage, recording } = await page.evaluate(() => ({
       stage: window.__TEAR_REPLAY_TAP__.stage(),
       recording: window.__TEAR_REPLAY_TAP__.recording(),
     }));
     if (!stages.has(stage)) stages.set(stage, snapshot.fixedTicks);
     if (recording && !profiled) profiled = await page.evaluate(() => window.__TEAR_REPLAY_TAP__.profile());
-    sceneBatches = scene ? sceneBatches + 1 : 0;
-    if (scene && sceneBatches > 1 && !holding) {
-      await page.keyboard.down("Enter");
-      holding = true;
-    } else if (!scene && holding) {
-      await page.keyboard.up("Enter");
-      holding = false;
-    }
     snapshot = await page.evaluate((ticks) => window.__TEAR_WATCH_AGENT__.runAsync(ticks), BATCH_TICKS);
   }
-  if (holding) await page.keyboard.up("Enter");
   const reached = {
     status: snapshot.status,
     reason: snapshot.terminalReason,
@@ -87,8 +74,8 @@ async function recordLiveRun(journey, options, done) {
   assert.equal(tapError, null, `${options.mode}: the recorder threw`);
   assert.ok(await page.evaluate(() => window.__TEAR_REPLAY_TAP__.recording()), `${options.mode}: no run recorded`);
   const timings = await page.evaluate(() => window.__TEAR_REPLAY_TAP__.timings());
-  // End it as a kept run's outcome does, then read it back from the store.
-  const runEnd = await page.evaluate(() => window.__TEAR_REPLAY_TAP__.keep());
+  // End it, then read it back from the store.
+  const runEnd = end === "kept" ? await page.evaluate(() => window.__TEAR_REPLAY_TAP__.keep()) : await quit(page);
   const entries = await page.evaluate(() => window.__TEAR_REPLAY_TAP__.stored());
   // The page keeps its IndexedDB across boots, so the store holds every earlier leg's record too.
   const entry = Array.isArray(entries) ? entries.find((stored) => stored.key.endsWith(`:${options.seed}`)) : undefined;
@@ -108,6 +95,19 @@ async function recordLiveRun(journey, options, done) {
   if (process.env.TEAR_REPLAY_DUMP)
     fs.writeFileSync(`${process.env.TEAR_REPLAY_DUMP}/${options.mode}.json`, JSON.stringify({ record, verdict }));
   return { record, verdict, snapshot, entry, counters, cost: { timings, runEnd, stringifyMs } };
+}
+
+// The game's own QUIT: pause, then the pause screen's QUIT, back to the menu.
+async function quit(page) {
+  await page.keyboard.press("Escape");
+  await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__.snapshot?.().screen === "paused", undefined, {
+    timeout: STATE_WAIT_MS,
+  });
+  await page.evaluate(() => window.__TEAR_REPLAY_TAP__.quit());
+  await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__.snapshot?.().screen === "menu", undefined, {
+    timeout: STATE_WAIT_MS,
+  });
+  return null;
 }
 
 function summary(leg) {
