@@ -27,7 +27,7 @@ export interface LiveRunOrchestrationAssemblyOptions {
   readonly surface: Pick<LiveBrowserRuntime, "canvas" | "width" | "height" | "testMode">;
   readonly navigation: Pick<LiveScreenNavigation, "setScreen">;
   readonly practiceStart: LiveTutorialPracticeStart;
-  readonly ghostRecording: Pick<LiveGhostRecording, "career" | "frames" | "opening">;
+  readonly ghostRecording: Pick<LiveGhostRecording, "frames" | "opening">;
   readonly ghostPractice: LiveGhostPracticeSessionState;
   readonly chase: Pick<LiveGhostChaseRuntime, "installed">;
   readonly replayRecorder: Pick<LiveReplayProduction, "runStarted" | "runEnded">;
@@ -86,7 +86,6 @@ export function assembleLiveRunOrchestration(options: LiveRunOrchestrationAssemb
     blade: options.blade,
     enemies: () => hostState.enemies(),
     actorId: (enemy) => options.combat().combatEntityRuntime.id(enemy, "enemy"),
-    observeTerminal: ghostRecording.career.terminal,
     observeBossIntro: (actorId, duration, delay) => {
       ghostRecording.frames.installed(actorId, duration, delay);
     },

@@ -189,7 +189,7 @@
     "app.navigator-owners": {
       "purpose": "App modules that may touch the browser navigator directly; everything else in src/app receives it through the composition port.",
       "include": [
-        "src/app/library/browser-ghost-archive-files.ts",
+        "src/app/replay/browser-replay-files.ts",
         "src/app/shell/composition.ts",
         "src/app/shell/runtime-frame-coordinator.ts",
         "src/app/screens/settings-controller.ts"
@@ -198,9 +198,7 @@
     "app.document-owners": {
       "purpose": "App modules that may touch the browser document directly; everything else in src/app receives it through the composition port.",
       "include": [
-        "src/app/library/browser-ghost-archive-files.ts",
-        "src/app/replay/browser-ghost-career-search.ts",
-        "src/app/replay/browser-ghost-career.ts",
+        "src/app/replay/browser-replay-files.ts",
         "src/app/replay/browser-ghost-replay-presentation.ts",
         "src/app/replay/browser-replay-clip-export.ts",
         "src/app/shell/composition.ts",

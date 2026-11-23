@@ -5,7 +5,6 @@ import type { LiveCanonicalCombatHost } from "../combat/live-canonical-state";
 import type { GhostPracticeLaunchResult } from "../replay/ghost-practice-launch";
 import type { GhostPracticeChild } from "../../ghost/replay-world";
 import type { LiveGhostChaseRuntime } from "../replay/live-ghost-chase";
-import type { LiveGhostRecording } from "../replay/live-ghost-recording";
 import type { RunResultInfo } from "../../gameplay/run/outcome-planner";
 import type { LiveReviveCountdownState } from "../run/revive-countdown-state";
 import type { LiveRunOrchestration } from "../run/run-orchestration-composition";
@@ -21,7 +20,8 @@ import type { LiveHudFeedbackState } from "./hud-feedback-state";
 import { createLiveInterfaceComposition } from "./interface-composition";
 import type { LiveInterfaceFrameState } from "./interface-frame-state";
 import type { LiveInterfaceInteractionState } from "./interface-interaction-state";
-import { createLiveScreenActions, type LiveGhostLibraryScreens } from "./live-screen-actions";
+import { createLiveScreenActions } from "./live-screen-actions";
+import { normalBrowserReplayFiles } from "../replay/browser-replay-files";
 import type { LiveScreenNavigation } from "./live-screen-navigation";
 import { renderRegisteredScreen } from "./screen-registry";
 import { isMenuScreen } from "../../domain/screen-catalog";
@@ -45,8 +45,6 @@ export interface LiveInterfaceAssemblyOptions {
   readonly reviveCountdown: LiveReviveCountdownState;
   readonly hudFeedback: LiveHudFeedbackState;
   readonly chase: LiveGhostChaseRuntime;
-  readonly career: LiveGhostRecording["career"];
-  readonly ghostLibrary: LiveGhostLibraryScreens;
   readonly launchGhostPractice: (child: GhostPracticeChild) => GhostPracticeLaunchResult;
   readonly abandonRun: (reason: string) => void;
   readonly persistentEffects: () => boolean;
@@ -123,7 +121,6 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
   const { addFloater } = campaignTraining;
   const { addShake, addFlash } = campaignTraining.weapon;
   const { color: trickColor, formatTime: fmtTime, check: achCheck } = campaignTraining.style;
-  const { vault: ghostVault } = options.ghostLibrary;
   const { simulation } = options.combat;
   const requestLock = browser.requestPointerLock;
   const screenRect = () => presentationHost.screenRectangle();
@@ -138,7 +135,6 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
     navigation,
     interaction: interfaceInteraction,
     chase,
-    ghostLibrary: options.ghostLibrary,
     run: liveRun,
     requestPointerLock: requestLock,
   });
@@ -221,7 +217,6 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
           launchGhostPractice: options.launchGhostPractice,
         },
         library: {
-          chase,
           dependencies,
           canvas: ctx,
           height: H,
@@ -233,8 +228,8 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
           ease: ez,
           formatTime: fmtTime,
           getBest,
-          ghostVault,
-          career: options.career.port,
+          browserIndexedDb,
+          replayFiles: normalBrowserReplayFiles(),
         },
         settings: {
           dependencies,
@@ -442,15 +437,10 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
     },
   );
   const { frame: presentationHost, screens: screenComposition } = interfaceComposition;
-  const { library: libraryAdapters, replay: replayAdapters } = screenComposition;
-  const leaveCareer = () => {
-    libraryAdapters.careerAction("suspend");
-  };
+  const { replay: replayAdapters } = screenComposition;
   navigation.bind({
     cancelPendingReplayOpen: replayAdapters.cancelPendingOpen,
-    leaveCareer,
     leaveShop: screenComposition.leaveShop,
   });
-  browserWindow.addEventListener("pagehide", leaveCareer);
   return interfaceComposition;
 }

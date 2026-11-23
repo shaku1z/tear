@@ -215,7 +215,6 @@ describe("the replay record", () => {
  * only shrinks. A new file that names a replay format fails here.
  */
 const GHOST_V3_FORMAT_FILES = Object.freeze([
-  "src/app/replay/browser-ghost-career.ts",
   "src/app/replay/browser-replay-clip-export.ts",
   "src/app/replay/ghost-frame-recording.ts",
   "src/ghost/application-frame-events.ts",

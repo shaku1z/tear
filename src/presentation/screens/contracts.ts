@@ -1,4 +1,3 @@
-import type { CareerRow, CareerQuery, CareerUsage } from "../../ghost/career-archive";
 import type { ScreenAction } from "../../domain/screen-actions";
 import type { AppScreen } from "../../domain/screen-catalog";
 import type { NameSubject } from "../../domain/display-names";
@@ -113,8 +112,10 @@ export interface ReplayView {
   readonly title: string;
   readonly detail: string;
   readonly available?: boolean;
-  readonly canDownloadArchive?: boolean;
-  readonly theaterUnavailable?: boolean;
+  /** The run has a replay file this device can save (a kept record). */
+  readonly canDownload?: boolean;
+  /** The run can be published to the feed. */
+  readonly canShare?: boolean;
   readonly badge?: string;
   readonly timestamp?: string;
   readonly thumbnailId?: string;
@@ -126,34 +127,6 @@ export interface ReplayView {
   readonly wave?: string;
   readonly time?: string;
   readonly score?: string;
-}
-export interface GhostArchiveOperationView {
-  readonly status:
-    | "idle"
-    | "unavailable"
-    | "picking"
-    | "validating"
-    | "ready"
-    | "restoring"
-    | "reselect-required"
-    | "complete"
-    | "cancelled"
-    | "failed"
-    | "download-requested";
-  readonly detail: string;
-  readonly canPick: boolean;
-  readonly jobId?: string;
-  readonly revision?: number;
-  readonly capsuleId?: string;
-  readonly schemaVersion?: number;
-  readonly byteLength?: number;
-  readonly sha256?: string;
-  readonly rootIntegrity?: string;
-  readonly pairedCapsuleIds?: readonly string[];
-  readonly canRestore?: boolean;
-  readonly canReselect?: boolean;
-  readonly canCancel?: boolean;
-  readonly canCancelSelection?: boolean;
 }
 export interface ProgressView {
   readonly label: string;
@@ -258,8 +231,12 @@ export interface ProfileScreenView {
   readonly stats: readonly StatView[];
   readonly message?: string;
   readonly replays?: readonly ReplayView[];
-  /** Vault tab only: set while the saved replays are being read, or when they could not be. */
-  readonly vaultList?: "opening" | "failed";
+  /** REPLAYS only: set while the replays are being read, or when they could not be. */
+  readonly replayList?: "opening" | "failed";
+  /** REPLAYS only: the list filters (ALL, BESTS, PINNED), the chosen one selected. */
+  readonly replayFilters?: readonly ChoiceView[];
+  /** REPLAYS only: this browser can read a replay file. */
+  readonly canImport?: boolean;
   readonly canScrollUp?: boolean;
   readonly canScrollDown?: boolean;
   readonly passport?: {
@@ -286,22 +263,6 @@ export interface ProfileScreenView {
   }[];
   readonly journey?: { readonly biomes: readonly ChoiceView[]; readonly bosses: readonly ChoiceView[] };
   readonly emptyMessage?: string;
-  readonly career?: Readonly<{
-    usage?: CareerUsage;
-    status: "idle" | "loading" | "ready" | "failed";
-    indexing: boolean;
-    message: string;
-    query: CareerQuery;
-    rows: readonly CareerRow[];
-    selected: CareerRow | undefined;
-    confirming: boolean;
-    retained: number;
-    known: number;
-    total: number;
-    page: number;
-    pages: number;
-  }>;
-  readonly archive?: GhostArchiveOperationView;
 }
 export interface AchievementsScreenView {
   readonly id: "achievements";
@@ -364,7 +325,7 @@ export interface ReplayScreenView {
   readonly infoVisible?: boolean;
   readonly infoRows?: readonly StatView[];
   readonly loadout?: readonly CardView[];
-  /** Ghost 3's semantic Theater reuses the mature replay transport chrome. */
+  /** A run re-simulated on the replay screen: the replay transport with seek, checkpoints and practice. */
   readonly theater?: boolean;
   /** Only verified recorded checkpoints can begin an unranked practice child. */
   readonly practiceAvailable?: boolean;

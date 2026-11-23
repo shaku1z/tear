@@ -24,8 +24,6 @@ import { createLiveInterfaceInteractionState } from "../interface/interface-inte
 import { assembleLiveInterface } from "../interface/live-interface-assembly";
 import { createLiveScreenNavigation } from "../interface/live-screen-navigation";
 import { isAppScreen, isMenuScreen } from "../../domain/screen-catalog";
-import { bindGhostArchiveFileLifecycle } from "../library/browser-ghost-archive-files";
-import { createBrowserGhostVaultLibrary } from "../library/ghost-vault-library-controller";
 import { createLiveGhostPracticeSessionState } from "../replay/ghost-practice-session-state";
 import { createLiveGhostCapture } from "../replay/live-ghost-capture";
 import { createLiveGhostChaseRuntime } from "../replay/live-ghost-chase";
@@ -91,23 +89,18 @@ export function startLiveGame(
   const requestOwnedPointerLock = inputAuthority.requestPointerLock;
   const ghostV3Options =
     createGhostV3BrowserTestOptions(browserRuntime.testMode, dependencies.engineeringQuery.search) ?? {};
-  const ghostVault = createBrowserGhostVaultLibrary(browserIndexedDb);
-  bindGhostArchiveFileLifecycle(browserWindow, ghostVault);
   const ghostRecording = createLiveGhostRecording({
     indexedDb: browserIndexedDb,
-    document: browserDocument,
     recorderOptions: ghostV3Options,
     run: liveRun,
     player: livePlayer,
     blade: liveBlade,
     screen: () => navigation.screen(),
     tick: () => combatHost.simulationRuntime.scheduler.tick,
-    enemies: () => hostState.enemies(),
-    enemyId: (actor) => combatHost.combatEntityRuntime.id(actor, "enemy"),
     practiceActive: () => ghostPracticeSession.active() !== null,
     bossIntroActive: () => hostState.bossIntro() !== null,
   });
-  const { session: ghostV3Session, recorder: ghostV3, career, frames: ghostFrames } = ghostRecording;
+  const { session: ghostV3Session, recorder: ghostV3, frames: ghostFrames } = ghostRecording;
   const replayTap = createLiveReplayTapSlot();
   GAMEPLAY_EVENTS.subscribe(replayTap.observe);
   // Replay PR 5c-1: every run is recorded on this device, alongside the V3 recorder until replay PR 8.
@@ -134,7 +127,6 @@ export function startLiveGame(
   });
   const gameplayEvents = subscribeLiveGameplayEventFanOut({
     events: GAMEPLAY_EVENTS,
-    career,
     recorder: ghostV3,
     nextEventSequence: ghostV3Session.nextEventSequence,
     recordsTelemetry: () => persistentEffects() && tracksAchievements(hostState.run()),
@@ -270,7 +262,6 @@ export function startLiveGame(
     interaction: interfaceInteraction,
     practiceStart,
     journals,
-    observeStyle: career.style,
     persistentEffects,
     run: liveRun,
     player: livePlayer,
@@ -600,8 +591,6 @@ export function startLiveGame(
     reviveCountdown,
     hudFeedback,
     chase,
-    career,
-    ghostLibrary: { vault: ghostVault },
     launchGhostPractice: ghostPractice.launch,
     abandonRun: (reason) => {
       runAbandonment.abandon(reason);

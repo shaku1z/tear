@@ -1,35 +1,75 @@
 import { describe, expect, it } from "vitest";
-import { buildProfileReplays } from "../../src/presentation/profile-snapshots";
+import { buildReplayRows, type ReplayRowSource } from "../../src/presentation/profile-snapshots";
 
-describe("profile replay snapshots", () => {
-  it("preserves oracle replay-card thumbnails, publication status, and identity", () => {
-    const rows = buildProfileReplays(
+const modes = [{ id: "endless", label: "Endless" }];
+const formatTime = (seconds: number) => `${String(Math.floor(seconds / 60))}:${String(seconds % 60).padStart(2, "0")}`;
+const row = (overrides: Partial<ReplayRowSource>): ReplayRowSource => ({
+  id: "kept",
+  kind: "record",
+  recordedAt: Date.UTC(2026, 10, 23),
+  mode: "endless",
+  difficulty: "normal",
+  score: 900,
+  wave: 8,
+  time: 125,
+  victory: false,
+  pinned: false,
+  shared: false,
+  best: false,
+  playable: true,
+  ...overrides,
+});
+
+describe("REPLAYS rows", () => {
+  it("names what ran and how it went, and keeps the run's thumbnail and identity", () => {
+    const [view] = buildReplayRows(
+      [row({ victory: true, pinned: true, best: true, olderId: "older", thumb: "data:image/jpeg;base64,abc" })],
+      modes,
+      formatTime,
+    );
+    expect(view).toMatchObject({
+      id: "kept",
+      title: "ENDLESS · NORMAL",
+      detail: "wave 8 · 900 pts · 2:05 · ★ victory",
+      thumbnailId: "data:image/jpeg;base64,abc",
+      available: true,
+      pinned: true,
+      canShare: true,
+      canDownload: true,
+    });
+    expect(view?.timestamp).toContain("★ BEST");
+  });
+
+  it("says when a run was recorded before this update or cannot be played by this version", () => {
+    const [older, retired] = buildReplayRows(
+      [row({ id: "older", kind: "older", shared: true }), row({ id: "retired", playable: false })],
+      modes,
+      formatTime,
+    );
+    expect(older).toMatchObject({ canShare: true, canDownload: false, shared: true });
+    expect(older?.timestamp).toContain("Recorded before this update");
+    expect(older?.timestamp).toContain("SHARED");
+    expect(retired).toMatchObject({ available: false, canShare: false, canDownload: false });
+    expect(retired?.timestamp).toContain("Made by an earlier version of the game");
+  });
+
+  it("describes a record whose row could not be read instead of drawing an empty line", () => {
+    const [unread] = buildReplayRows(
       [
         {
-          id: "local-1",
-          ts: 0,
-          pin: true,
-          shareId: "shared-1",
-          sum: {
-            name: "Blade",
-            mode: "endless",
-            diff: "normal",
-            wave: 8,
-            score: 900,
-            thumb: "data:image/jpeg;base64,abc",
-          },
+          id: "unread",
+          kind: "record",
+          recordedAt: 0,
+          victory: false,
+          pinned: false,
+          shared: false,
+          best: false,
+          playable: false,
         },
       ],
-      [{ id: "endless", label: "Endless" }],
+      modes,
+      formatTime,
     );
-    expect(rows[0]).toMatchObject({
-      id: "local-1",
-      title: "Blade — ENDLESS · NORMAL",
-      detail: "wave 8 · 900 pts",
-      thumbnailId: "data:image/jpeg;base64,abc",
-      pinned: true,
-      shared: true,
-    });
-    expect(rows[0]?.timestamp).toContain("PUBLISHED");
+    expect(unread).toMatchObject({ title: "RUN", detail: "This replay couldn't be read", available: false });
   });
 });

@@ -18,7 +18,13 @@
  * What clears it: the browser's site data clearing. Nothing in the game deletes it before replay PR 8.
  */
 import { isObject, isRecord } from "../domain/records";
-import { readReplayRecord, type ReplayOutcome, type ReplayReadResult, type ReplayRecord, type ReplayStart } from "./record";
+import {
+  readReplayRecord,
+  type ReplayOutcome,
+  type ReplayReadResult,
+  type ReplayRecord,
+  type ReplayStart,
+} from "./record";
 
 export const REPLAY_RECORD_DATABASE = "tear-replays";
 export const REPLAY_RECORD_DATABASE_VERSION = 1;
@@ -65,7 +71,10 @@ export interface ReplayRecordEntry {
 
 /** The list row of a record. */
 export function replayRecordRow(record: ReplayRecord): ReplayRecordRow {
-  const stage = record.summary.marks.reduce((highest, mark) => (mark.kind === "stage" ? Math.max(highest, mark.value) : highest), 0);
+  const stage = record.summary.marks.reduce(
+    (highest, mark) => (mark.kind === "stage" ? Math.max(highest, mark.value) : highest),
+    0,
+  );
   return Object.freeze({
     seed: record.run.seed,
     ruleset: record.run.ruleset,
@@ -89,11 +98,7 @@ export type ReplayRecordPut =
   | Readonly<{ status: "failed"; reason: ReplayRecordFailure }>;
 
 /** A change to one entry: done, refused (the pin limit), absent or failed. */
-export type ReplayRecordChange =
-  | "done"
-  | "missing"
-  | "pin-limit"
-  | Readonly<{ failed: ReplayRecordFailure }>;
+export type ReplayRecordChange = "done" | "missing" | "pin-limit" | Readonly<{ failed: ReplayRecordFailure }>;
 
 export interface ReplayRecordStore {
   /** Stores a record; a record already stored under its key is left as it is ("present"). */
@@ -163,7 +168,9 @@ function readIndex(value: unknown): readonly StoredEntry[] {
 }
 
 const storedRow = (row: unknown): ReplayRecordRow | undefined =>
-  isRecord(row) && typeof row.seed === "number" && typeof row.mode === "string" ? (row as unknown as ReplayRecordRow) : undefined;
+  isRecord(row) && typeof row.seed === "number" && typeof row.mode === "string"
+    ? (row as unknown as ReplayRecordRow)
+    : undefined;
 
 /** Opens the store; `failed` when IndexedDB is missing, the open is blocked or it errors. */
 export function openReplayRecordStore(

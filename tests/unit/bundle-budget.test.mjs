@@ -31,7 +31,7 @@ async function target({ preloadGold = false, precacheGold = false, appBytes = 1_
   const files = {
     "assets/index-a1.js": noise(110, 1),
     "assets/runtime-app-core-b2.js": noise(appBytes, 2) + (lazyIntoStartup ? 'import("./runtime-app-core-b2.js")' : ""),
-    "assets/career-archive-worker-c3.js": noise(2_000, 3),
+    "assets/live-ghost-reference-worker-c3.js": noise(2_000, 3),
     "assets/tutorial-gold-reference-d4.js": noise(4_000, 4),
   };
   for (const [file, contents] of Object.entries(files)) await writeFile(join(root, file), contents);
@@ -74,7 +74,7 @@ describe("bundle budget gate", () => {
   it("separates startup, worker, on-demand corpus and precache measurements", async () => {
     const measured = await measureBundleTarget(await target());
     expect(measured.main.file).toBe("runtime-app-core-b2.js");
-    expect(measured.worker.file).toBe("career-archive-worker-c3.js");
+    expect(measured.worker.file).toBe("live-ghost-reference-worker-c3.js");
     expect(measured.tutorialGold.file).toBe("tutorial-gold-reference-d4.js");
     expect(measured.startup.files).toEqual(["assets/index-a1.js", "assets/runtime-app-core-b2.js"]);
     expect(measured.startup.bytes).toBe(110 + 1_000);

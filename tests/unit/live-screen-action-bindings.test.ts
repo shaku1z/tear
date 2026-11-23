@@ -20,26 +20,31 @@ describe("live screen action bindings", () => {
     expect(startSelectedRace).toHaveBeenCalledExactlyOnceWith();
     expect(startSelectedRun).toHaveBeenCalledOnce();
   });
-  it("dispatches normal archive picking synchronously through eager ports with exact job revision controls", () => {
-    const ghostFiles = {
-      pickArchive: vi.fn(),
-      restoreArchive: vi.fn(),
-      cancelArchive: vi.fn(),
-      downloadArchive: vi.fn(),
+  it("sends every REPLAYS list action to the one list, the import in the same click", () => {
+    const replays = {
+      filter: vi.fn(),
+      watch: vi.fn(),
+      share: vi.fn(),
+      download: vi.fn(),
+      pin: vi.fn(),
+      remove: vi.fn(),
+      importFile: vi.fn(),
     };
-    const dispatch = createLiveScreenActionBindings({ ghostFiles } as unknown as ScreenActionBindingPorts);
-    dispatch({ type: "profile.pickGhostArchive" });
-    expect(ghostFiles.pickArchive).toHaveBeenCalledExactlyOnceWith();
-    dispatch({ type: "profile.reselectGhostArchive", id: "intent" });
-    expect(ghostFiles.pickArchive).toHaveBeenLastCalledWith("intent");
-    dispatch({ type: "profile.restoreGhostArchive", id: "intent", revision: 3 });
-    expect(ghostFiles.restoreArchive).toHaveBeenCalledExactlyOnceWith("intent", 3);
-    dispatch({ type: "profile.cancelGhostRestore", id: "intent", revision: 4 });
-    expect(ghostFiles.cancelArchive).toHaveBeenCalledExactlyOnceWith("intent", 4);
-    dispatch({ type: "profile.cancelGhostArchiveSelection" });
-    expect(ghostFiles.cancelArchive).toHaveBeenLastCalledWith();
-    dispatch({ type: "profile.downloadGhostArchive", id: "capsule" });
-    expect(ghostFiles.downloadArchive).toHaveBeenCalledExactlyOnceWith("capsule");
+    const dispatch = createLiveScreenActionBindings({ library: { replays } } as unknown as ScreenActionBindingPorts);
+    dispatch({ type: "profile.filterReplays", id: "bests" });
+    dispatch({ type: "profile.watchReplay", id: "a" });
+    dispatch({ type: "profile.publishReplay", id: "b" });
+    dispatch({ type: "profile.downloadReplay", id: "c" });
+    dispatch({ type: "profile.pinReplay", id: "d", pinned: true });
+    dispatch({ type: "profile.deleteReplay", id: "e" });
+    dispatch({ type: "profile.importReplay" });
+    expect(replays.filter).toHaveBeenCalledExactlyOnceWith("bests");
+    expect(replays.watch).toHaveBeenCalledExactlyOnceWith("a");
+    expect(replays.share).toHaveBeenCalledExactlyOnceWith("b");
+    expect(replays.download).toHaveBeenCalledExactlyOnceWith("c");
+    expect(replays.pin).toHaveBeenCalledExactlyOnceWith("d", true);
+    expect(replays.remove).toHaveBeenCalledExactlyOnceWith("e");
+    expect(replays.importFile).toHaveBeenCalledExactlyOnceWith();
   });
 
   it("maps the replay editor actions to the replay adapter", () => {

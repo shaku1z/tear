@@ -99,7 +99,13 @@ const record = (recordedAt: string, seed: number, padding = 0) =>
       result: { outcome: "defeat" },
       padding: "x".repeat(padding),
     },
-    summary: { score: seed * 100, wave: seed, time: 30, kills: 0, marks: [{ tick: 1, kind: "stage", value: seed % 3 }] },
+    summary: {
+      score: seed * 100,
+      wave: seed,
+      time: 30,
+      kills: 0,
+      marks: [{ tick: 1, kind: "stage", value: seed % 3 }],
+    },
     look: { recordedAt },
   }) as unknown as ReplayRecord;
 
@@ -212,10 +218,17 @@ describe("the replay record store", () => {
     const opened = store as ReplayRecordStore;
     await opened.put(wholeRecord(4, "2026-11-21T00:00:01Z"));
     const key = "record:2026-11-21T00:00:01Z:4";
-    data.set("index", [{ key, bytes: 10, recordedAt: "2026-11-21T00:00:01Z" }, { key: "record:gone", bytes: 1, recordedAt: "0" }]);
+    data.set("index", [
+      { key, bytes: 10, recordedAt: "2026-11-21T00:00:01Z" },
+      { key: "record:gone", bytes: 1, recordedAt: "0" },
+    ]);
     const entries = await opened.entries();
     expect(entries).toEqual([
-      expect.objectContaining({ key, pinned: false, row: expect.objectContaining({ seed: 4, stage: 2, score: 40 }) as object }),
+      expect.objectContaining({
+        key,
+        pinned: false,
+        row: expect.objectContaining({ seed: 4, stage: 2, score: 40 }) as object,
+      }),
       { key: "record:gone", bytes: 1, recordedAt: "0", pinned: false },
     ]);
     expect(data.get("index")).toEqual(entries);
