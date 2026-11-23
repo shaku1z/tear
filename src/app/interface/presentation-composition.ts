@@ -11,6 +11,7 @@ import { controlHintText, domChromeVisibility } from "../../presentation/dom-chr
 import { cinematicPromptForDevice } from "../../presentation/cinematic-prompts";
 import { createLivePresentationHost, type LivePresentationHost } from "./presentation-host";
 import { isSheetScreen, screenDensity } from "../../domain/screen-catalog";
+import { achievementToastHeld } from "./achievement-toast-controller";
 import { controlsKeepOut, type KeepOutArea } from "../../presentation/demo-keep-out";
 import { drawRotateGate } from "../../presentation/rotate-gate";
 
@@ -366,7 +367,12 @@ export function createLivePresentationFrameHost<Screen extends string, Stage ext
       drawPostLayers: () => {
         if (services.capturePolicy().ui === "include") {
           services.wipe.draw(state.deltaSeconds());
-          services.drawAchievementToast(state.deltaSeconds(), services.cinema.active || state.bossIntroActive());
+          const held = achievementToastHeld({
+            name: state.screen(),
+            cinematic: services.cinema.active,
+            bossIntro: state.bossIntroActive(),
+          });
+          services.drawAchievementToast(state.deltaSeconds(), held);
         }
       },
       drawCursor: () => {
