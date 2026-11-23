@@ -153,8 +153,8 @@ withJourney(
     await clickAndWait(800, 850, "menu");
 
     await clickAndWait(260, 266, "profile");
-    // Every profile tab that stays on the profile page, by its drawn label (CAREER opens its own archive page).
-    for (const tab of ["REPLAYS", "VAULT", "STATS", "BESTS"]) {
+    // Every profile tab (BESTS, REPLAYS and STATS), by its drawn label; each keeps the profile open.
+    for (const tab of ["REPLAYS", "STATS", "BESTS"]) {
       const point = await labelPoint(tab);
       await page.mouse.click(point.x, point.y);
       await settleInput();
@@ -164,13 +164,6 @@ withJourney(
         `${tab} tab keeps the profile open`,
       );
     }
-    // CAREER draws the career archive page; its BACK returns to the profile tabs.
-    await clickDrawn("CAREER");
-    await waitDrawn("CAREER ARCHIVE");
-    assert.ok(await drawn("every run recorded on this device"), "the career archive page drew its subtitle");
-    assert.ok(await drawn("Page 1 / 1"), "the career archive page drew its page counter");
-    await clickTarget(page, "profile", "BACK");
-    await waitDrawn("CAREER");
     await clickTarget(page, "profile", "BACK");
     await waitScreen("menu");
 

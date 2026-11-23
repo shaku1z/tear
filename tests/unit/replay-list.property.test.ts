@@ -3,11 +3,11 @@
  * per run, newest first; BESTS is the best playable run of each mode and difficulty; PINNED is the pinned
  * rows. The property test holds those rules over generated lists.
  */
-import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import { replayList, type OlderRecording } from "../../src/app/replay/replay-list";
 import type { ReplayRecordEntry } from "../../src/replay/record-store";
+import { checkProperty, fc } from "./property-harness";
 
 const playable = (ruleset: string) => ruleset === "today";
 const record = (
@@ -105,7 +105,7 @@ describe("the REPLAYS list", () => {
   });
 
   it("holds its rules for any mix of records and older recordings", () => {
-    fc.assert(
+    checkProperty(
       fc.property(generated, ({ records, older: olderRuns }) => {
         const entries = records.map((entry, index) => {
           const base = record(`r${String(index)}`, entry.seed, entry.at, entry.score, { pinned: entry.pinned });
@@ -144,7 +144,6 @@ describe("the REPLAYS list", () => {
           all.filter((item) => item.pinned).map((item) => item.id),
         );
       }),
-      { seed: 2026_11_23, numRuns: 300 },
     );
   });
 });
