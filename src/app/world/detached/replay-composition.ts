@@ -41,7 +41,6 @@ import {
 import type { RunDifficulty } from "../../../gameplay/run/session";
 import { RunRandomStreams, type RunRandomStreamsSnapshot } from "../../../simulation/run-random";
 import { captureCanonicalGameplayState, type CanonicalGameplayState } from "../../../gameplay/runtime/canonical-state";
-import type { GameEnemy } from "../../../gameplay/runtime/game-runtime-state";
 import { projectLiveCanonicalEnemy } from "../canonical-enemy-projection";
 import type {
   AuthoritativeInputSnapshot,
@@ -152,7 +151,7 @@ export function captureProductionReplayCanonicalState(
     replay.world.state.player() as never,
     replay.world.state.blade() as never,
     // The same enemy rows live play hashes (canonical-enemy-projection.ts).
-    replay.world.state.enemies().map((entity) => projectLiveCanonicalEnemy(entity as never as GameEnemy)),
+    replay.world.state.enemies().map(projectLiveCanonicalEnemy),
     replay.world.context.environment.snapshot(),
     replay.tutorial.captureSession(),
   );
