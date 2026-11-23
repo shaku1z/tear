@@ -7,9 +7,19 @@ import { replayStartChoices, type ReplayAction, type ReplayFrame, type ReplayRun
 import type { ReplayWorld } from "../../replay/verify";
 import type { ProductionGhostReplayCompositionOptions } from "../world/detached/replay-composition";
 import { ownedLoadout } from "../../gameplay/progression/upgrade-loadout";
+import type { Loadout } from "../../domain/cosmetic-types";
+import type { CosmeticWardrobe } from "../../presentation/cosmetic-styles";
 
 /** The engine members a recorded run needs: the detached world and its one-tick step. */
 export type RecordWorldEngine = Pick<ReplayEngine, "createProductionGhostReplayComposition" | "stepDetachedWorld">;
+
+/**
+ * How a recorded world is drawn: the game's frame builder, and the wardrobe the world draws cosmetics from.
+ * Without a wardrobe the world draws the game's own look.
+ */
+export type RecordWorldPresentation = Pick<ProductionGhostReplayCompositionOptions, "presentation" | "renderView"> & {
+  readonly wardrobe?: CosmeticWardrobe;
+};
 
 /** A recorded run in the detached production world, one tick per `step`. */
 export interface RecordWorld {
@@ -24,6 +34,8 @@ export interface RecordWorld {
   readonly terminated: () => boolean;
   /** The world drawn through the game's own frame builder; only when the world was given a renderer. */
   readonly renderView: () => GhostReplayRenderView | undefined;
+  /** Dresses the world's player blade in a recorded look; presentation only, so the run and its hashes are unchanged. */
+  readonly dress: (loadout: Loadout) => void;
   readonly dispose: () => void;
 }
 
@@ -35,7 +47,7 @@ export function startRecordWorld(
   engine: RecordWorldEngine,
   run: Pick<ReplayRun, "seed" | "start">,
   observe: Parameters<ReplayWorld["start"]>[1],
-  presentation: Pick<ProductionGhostReplayCompositionOptions, "presentation" | "renderView"> = {},
+  { wardrobe, ...presentation }: RecordWorldPresentation = {},
 ): RecordWorld {
   const events = new TearGameplayEventBus();
   const unsubscribe = events.subscribe(observe);
@@ -43,6 +55,7 @@ export function startRecordWorld(
   const session = engine
     .createProductionGhostReplayComposition({
       ...presentation,
+      ...(wardrobe === undefined ? {} : { looks: wardrobe }),
       runSeed: start.runSeed,
       mode: start.mode,
       weaponId: start.weapon,
@@ -62,6 +75,10 @@ export function startRecordWorld(
     },
     terminated: () => session.replay.world.lifecycle.phase === "terminated",
     renderView: () => session.renderView?.(),
+    dress: (loadout) => {
+      const blade = session.replay.world.state.blade();
+      if (wardrobe !== undefined && blade !== undefined) wardrobe.wear(blade, loadout);
+    },
     dispose: unsubscribe,
   });
 }

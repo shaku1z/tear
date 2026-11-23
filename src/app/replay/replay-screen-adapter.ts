@@ -40,6 +40,7 @@ type Dependencies = Pick<
   | "UI"
   | "UPGRADES"
   | "VARIANTS"
+  | "COSMETICS"
   | "Wraith"
   | "applyVariant"
   | "stageAt"
@@ -129,7 +130,7 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
     return source !== undefined && stableVerificationHash(source.manifest) === hash;
   });
   const theater = createGhostTheaterScreenAdapter({
-    presentation: createBrowserGhostReplayPresentation(services.document, d.UI),
+    presentation: createBrowserGhostReplayPresentation(services.document, d.UI, { wardrobe: d.COSMETICS }),
     clipExport,
     // The whole arena between the top bar and the transport bar, framed as play frames it.
     drawWorld: (frame) => {

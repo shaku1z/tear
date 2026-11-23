@@ -16,6 +16,7 @@
 import type { RunStartChoices } from "../../gameplay/run/run-start-choices";
 import { canonicalRunTime, replaySummaryTime } from "../../gameplay/runtime/canonical-state";
 import type { LazyModule } from "../../domain/lazy-module";
+import type { Loadout } from "../../domain/cosmetic-types";
 import type { ReplayBuild, ReplayLook, ReplayRecord } from "../../replay/record";
 import type { ReplayRecordFailure, ReplayRecordStore } from "../../replay/record-store";
 import type { ReplayRunEnd } from "../../replay/recorder";
@@ -39,6 +40,8 @@ export interface LiveReplayProductionPorts {
   readonly recorder: LazyModule<LiveReplayRecorderModule>;
   readonly build: ReplayBuild;
   readonly playerName: () => string;
+  /** The Shards loadout the runner wears at run start: owned, known, right-slot items only. */
+  readonly cosmetics: () => Loadout;
   readonly now: () => string;
   readonly indexedDb: () => IDBFactory | null;
 }
@@ -166,7 +169,12 @@ export function createLiveReplayProduction(ports: LiveReplayProductionPorts): Li
         void ports.recorder.ensure().catch(() => undefined);
         return;
       }
-      const look: ReplayLook = { playerName: ports.playerName(), cosmetics: {}, music: null, recordedAt: ports.now() };
+      const look: ReplayLook = {
+        playerName: ports.playerName(),
+        cosmetics: ports.cosmetics(),
+        music: null,
+        recordedAt: ports.now(),
+      };
       const tap = ports.recorder.loaded().createLiveReplayTap({ build: ports.build, look });
       ports.slot.install(
         guarded(tap, ports.slot, (error) => {

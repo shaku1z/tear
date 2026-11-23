@@ -6,7 +6,6 @@ import {
   type ReplayNativeTransport,
   type ReplaySpeed,
 } from "./replay-transport-controller";
-import type { ProductionGhostReplayCompositionOptions } from "../world/detached/replay-composition";
 import type { ReplayClipExportPort, ReplayClipWebm } from "../replay/browser-replay-clip-export";
 import type { GhostVerifiedReplayRenderView } from "../../ghost/production-replay-session";
 import type { GhostReadCapsule } from "../../ghost/capsule-reader";
@@ -27,11 +26,11 @@ import { replayPlaybackRefusal, type ReplayRecord } from "../../replay/record";
 import { createRecordWatchSession, type RecordWatchSession } from "../replay/record-watch-session";
 import type { CardView } from "../../presentation/screens/contracts";
 import { formatRunClock } from "../../gameplay/scoring/style-runtime";
-import type { RecordWorldEngine } from "../replay/record-world";
+import type { RecordWorldEngine, RecordWorldPresentation } from "../replay/record-world";
 
 export interface GhostTheaterScreenServices {
   readonly render: (view: ReplayScreenView) => void;
-  readonly presentation?: Pick<ProductionGhostReplayCompositionOptions, "presentation" | "renderView">;
+  readonly presentation?: RecordWorldPresentation;
   readonly drawWorld?: (view: GhostVerifiedReplayRenderView) => void;
   readonly clipExport?: ReplayClipExportPort;
   readonly deltaSeconds: () => number;
