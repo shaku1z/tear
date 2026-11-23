@@ -1,8 +1,11 @@
-import type { RuntimeEnemyState } from "../../gameplay/runtime/canonical-state";
+import { ENEMY_STATUS_FIELDS, copyStatus, type RuntimeEnemyState } from "../../gameplay/runtime/canonical-state";
 import type { EnemyTypes } from "../../gameplay/entities/enemies";
 import type { GameEnemy } from "../../gameplay/runtime/game-runtime-state";
 
-/** Preserves authored deterministic actor state in live canonical receipts. */
+/**
+ * An enemy's row in the canonical state, read from the actor. Live play and the detached replay world both
+ * project their enemies through here, so a field added here is hashed the same on both sides.
+ */
 export function projectLiveCanonicalEnemy(entity: GameEnemy): RuntimeEnemyState {
   const enemy = entity;
   const base: RuntimeEnemyState = {
@@ -15,6 +18,7 @@ export function projectLiveCanonicalEnemy(entity: GameEnemy): RuntimeEnemyState 
     vy: enemy.vy,
     hp: enemy.hp,
     dead: enemy.dead,
+    ...copyStatus(ENEMY_STATUS_FIELDS, enemy),
   };
   if (enemy.kind === "rimehound") {
     const hound = entity as InstanceType<EnemyTypes["Rimehound"]>;

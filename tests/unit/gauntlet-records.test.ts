@@ -23,6 +23,7 @@ import {
   SIX_BIOME_PALE_PREVIEW_V21_RULESET_VERSION,
   SIX_BIOME_PALE_PREVIEW_V22_RULESET_VERSION,
   SIX_BIOME_PALE_PREVIEW_V23_RULESET_VERSION,
+  SIX_BIOME_PALE_PREVIEW_V24_RULESET_VERSION,
   SIX_BIOME_PALE_PREVIEW_V9_RULESET_VERSION,
   UNKNOWN_RULESET_REFUSAL,
   rulesetRefusal,
@@ -125,12 +126,15 @@ describe("ruleset steps", () => {
     const versions = RULESET_STEPS.map((step) => step.version);
     expect(new Set(versions).size).toBe(versions.length);
     expect(versions.at(-1)).toBe(CURRENT_RULESET_VERSION);
-    expect(versions.at(-2)).toBe(SIX_BIOME_PALE_PREVIEW_V23_RULESET_VERSION);
+    expect(versions.at(-2)).toBe(SIX_BIOME_PALE_PREVIEW_V24_RULESET_VERSION);
     for (const step of RULESET_STEPS) expect(step.change.length).toBeGreaterThan(0);
   });
 
   it("admits only the current ruleset, in every mode, and names the first change an older recording missed", () => {
     expect(rulesetRefusal(CURRENT_RULESET_VERSION)).toBeNull();
+    expect(rulesetRefusal(SIX_BIOME_PALE_PREVIEW_V24_RULESET_VERSION)).toBe(
+      "recorded before replays began checking status effects such as burn",
+    );
     expect(rulesetRefusal(SIX_BIOME_PALE_PREVIEW_V23_RULESET_VERSION)).toBe(
       "recorded before the boss arrival began running at full speed",
     );

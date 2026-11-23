@@ -40,11 +40,9 @@ import {
 } from "../../engineering/state-setup-runtime-bridge";
 import type { RunDifficulty } from "../../../gameplay/run/session";
 import { RunRandomStreams, type RunRandomStreamsSnapshot } from "../../../simulation/run-random";
-import {
-  captureCanonicalGameplayState,
-  type CanonicalGameplayState,
-  type RuntimeEnemyState,
-} from "../../../gameplay/runtime/canonical-state";
+import { captureCanonicalGameplayState, type CanonicalGameplayState } from "../../../gameplay/runtime/canonical-state";
+import type { GameEnemy } from "../../../gameplay/runtime/game-runtime-state";
+import { projectLiveCanonicalEnemy } from "../canonical-enemy-projection";
 import type {
   AuthoritativeInputSnapshot,
   AuthoritativeInputState,
@@ -153,58 +151,8 @@ export function captureProductionReplayCanonicalState(
     replay.world.state.run(),
     replay.world.state.player() as never,
     replay.world.state.blade() as never,
-    replay.world.state.enemies().map((entity) => {
-      const enemy = entity as never as RuntimeEnemyState & { readonly kind: string };
-      return {
-        ...(typeof enemy._gid === "number" ? { _gid: enemy._gid } : {}),
-        kind: enemy.kind,
-        ...(typeof enemy.bossId === "string" ? { bossId: enemy.bossId } : {}),
-        x: enemy.x,
-        y: enemy.y,
-        vx: enemy.vx,
-        vy: enemy.vy,
-        hp: enemy.hp,
-        dead: enemy.dead,
-        ...(enemy.kind === "rimehound"
-          ? {
-              atk: enemy.atk,
-              atkT: enemy.atkT,
-              atkCd: enemy.atkCd,
-              packRole: enemy.packRole,
-              packFlank: enemy.packFlank,
-              packLockT: enemy.packLockT,
-              packAttackAuthorized: enemy.packAttackAuthorized,
-              pounceTargetX: enemy.pounceTargetX,
-              pounceAirborne: enemy.pounceAirborne,
-              auroraDirection: enemy.auroraDirection,
-              auroraResponseT: enemy.auroraResponseT,
-              auroraPounceExtended: enemy.auroraPounceExtended,
-            }
-          : {}),
-        ...(enemy.kind === "white-hart"
-          ? {
-              state: enemy.state,
-              atk: enemy.atk,
-              stateT: enemy.stateT,
-              stateMax: enemy.stateMax,
-              phaseMarker: enemy.phaseMarker,
-              attackCursor: enemy.attackCursor,
-              attackStep: enemy.attackStep,
-              attackSequence: enemy.attackSequence,
-              environmentSequence: enemy.environmentSequence,
-              routeProgress: enemy.routeProgress,
-              trueRouteIndex: enemy.trueRouteIndex,
-              fracturePlatformId: enemy.fracturePlatformId,
-              fractureWindow: enemy.fractureWindow,
-              batonStrike: enemy.batonStrike,
-              auroraBossChargeActive: enemy.auroraBossChargeActive,
-              parryOutcome: enemy.parryOutcome,
-              routeTelegraph: enemy.routeTelegraph,
-              candidateRoutes: enemy.candidateRoutes,
-            }
-          : {}),
-      };
-    }),
+    // The same enemy rows live play hashes (canonical-enemy-projection.ts).
+    replay.world.state.enemies().map((entity) => projectLiveCanonicalEnemy(entity as never as GameEnemy)),
     replay.world.context.environment.snapshot(),
     replay.tutorial.captureSession(),
   );
