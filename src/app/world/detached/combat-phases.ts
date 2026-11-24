@@ -2,6 +2,7 @@ import { isObject } from "../../../domain/records";
 import { createLiveCollisionGameplayBindings } from "../../../gameplay/combat/live-collision-gameplay-bindings";
 import type { LiveStyleAchievementOptions } from "../../../gameplay/scoring/live-style-achievement-runtime";
 import { bindRunDnaShot, runDnaObserver } from "../../../gameplay/runtime/run-dna-observer";
+import { createFloater } from "../../../gameplay/runtime/game-runtime-state";
 import { aabbOverlap, boxesOverlap, clamp, len, lerp, segCircle, segPointDist } from "../../../domain/geometry";
 import { GFX, THEME } from "../../../config/game-config";
 import type { FeedbackBannerEvent } from "../../../gameplay/stage-beat";
@@ -326,8 +327,8 @@ export function createProductionCombatPhases(
   } as unknown as CombatEntityRuntimeHooks;
   let combat = options.deferCombatRuntime === true ? null : new CombatEntityRuntime(entityHooks);
 
-  const addFloater = (x: number, y: number, text: string, big = false, color = config.colors.perfect): void => {
-    world.state.setFloaters([...world.state.floaters(), { x, y, text, life: 0.8, big, col: color }]);
+  const addFloater = (x: number, y: number, text: string, big?: boolean, color?: string): void => {
+    world.state.setFloaters([...world.state.floaters(), createFloater(x, y, text, big, color)]);
   };
   weaponRuntime = createLiveWeaponRuntime<LiveWeaponEnemy>({
     run: () => world.state.run(),
@@ -556,7 +557,9 @@ export function createProductionCombatPhases(
     syncVoidSupport: () => {
       if (!replay.tutorial.session().bossPractice?.defeated) replay.practiceCinematic.sourceRuntime.syncPlayer();
     },
-    activateThrowSecondary: note("activateThrowSecondary"),
+    activateThrowSecondary: () => {
+      weaponRuntime.activateThrowSecondary();
+    },
     linkBroken: (reason: string) => {
       outward.push(`linkBroken:${reason}`);
       const active = blade() as { tipX: number; tipY: number };

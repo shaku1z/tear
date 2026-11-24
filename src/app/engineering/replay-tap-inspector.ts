@@ -17,6 +17,8 @@ import { verifyReplay, type ReplayVerdict } from "../../replay/verify";
 import type { ReplayScreenAdapter } from "../replay/replay-screen";
 
 type RunTotals = Readonly<{ score: number; wave: number; time: number }> | null;
+/** The ticks one frame of play advances at 60 frames a second. */
+const FRAME_TICKS = 2;
 
 /** Per tap method: how many calls, their total, and the slowest one-in-a-hundred and slowest call. */
 export type ReplayTapTimings = Readonly<
@@ -60,8 +62,10 @@ export interface ReplayTapInspector {
   /** The game's canvas as the last frame left it, for comparison with a replay frame. */
   readonly liveFrame: () => ImageData | null;
   /**
-   * Pauses the replay screen on `tick` and returns the world it shows there, drawn on a canvas the size of the
-   * game's and laid out as play lays it out (no replay bars); null when no kept record is shown.
+   * Plays the replay screen on to `tick`, paused, a frame of play (two ticks) at a time from the last tick it
+   * drew (from the start when `tick` is behind it), and returns the world it shows there, drawn on a canvas the
+   * size of the game's and laid out as play lays it out (no replay bars); null when no kept record is shown.
+   * Playing every frame on the way eases the HUD as playback does.
    */
   readonly replayFrame: (tick: number) => ImageData | null;
 }
@@ -85,6 +89,8 @@ export function installReplayTapInspector(
 ): void {
   const now = () => target.performance.now();
   const samples = new Map<string, number[]>();
+  // The last tick `replayFrame` drew, which its next call plays on from.
+  let drawnTick: number | null = null;
   const timed = (tap: LiveReplayTap): LiveReplayTap => {
     const time =
       <Args extends unknown[], Result>(name: string, call: (...args: Args) => Result) =>
@@ -186,7 +192,18 @@ export function installReplayTapInspector(
       canvas.width = live.width;
       canvas.height = live.height;
       const context = canvas.getContext("2d", { alpha: false });
-      if (context === null || !screen().drawShownAsPlayed(tick, context)) return null;
+      if (context === null) return null;
+      const from = drawnTick !== null && drawnTick <= tick ? drawnTick + FRAME_TICKS : tick % FRAME_TICKS;
+      for (let at = from; at <= tick; at += FRAME_TICKS) {
+        drawnTick = null;
+        if (!screen().drawShownAsPlayed(at, context)) return null;
+        drawnTick = at;
+      }
+      if (drawnTick !== tick) {
+        drawnTick = null;
+        if (!screen().drawShownAsPlayed(tick, context)) return null;
+        drawnTick = tick;
+      }
       return context.getImageData(0, 0, canvas.width, canvas.height);
     },
   });

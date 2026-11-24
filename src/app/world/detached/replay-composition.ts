@@ -71,8 +71,7 @@ import {
 import { rebaseEnvironmentSnapshot } from "../../../gameplay/snapshot/environment-codec";
 import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "../../../gameplay/snapshot/authored-environment-validation";
 import { readGhostRecordedOpeningPermit, type GhostRecordedOpeningPermit } from "../../../ghost/replay-admission";
-import { advanceFramePrelude, type MutableFramePreludeState } from "../../shell/frame-runtime";
-import { clamp, lerp } from "../../../domain/geometry";
+import { createDetachedFrameClock, type DetachedFrameDebt } from "./frame-clock";
 import {
   createGhostApplicationClockPlayback,
   type GhostApplicationClockSchedule,
@@ -86,6 +85,13 @@ export function captureProductionRewardSelection(selection: RewardSelectionSnaps
 }
 
 const productionWaveRewards = new WeakMap<ProductionReplayWorld, ProductionWaveRewardRuntime>();
+const productionFrameDebts = new WeakMap<ProductionReplayWorld, DetachedFrameDebt>();
+/** The ticks a world's played frames owe its simulation, which its frame clock and its checkpoint share. */
+function frameDebtOf(replay: ProductionReplayWorld): DetachedFrameDebt {
+  let debt = productionFrameDebts.get(replay);
+  if (debt === undefined) productionFrameDebts.set(replay, (debt = { ticksOwed: 0 }));
+  return debt;
+}
 
 export type { ProductionApplicationFrameConfirm } from "./application-frame";
 export { stepDetachedWorld } from "./detached-step";
@@ -288,6 +294,7 @@ function productionRuntimeState(replay: ProductionReplayWorld, prepared?: Prepar
         throwCd: transient.opening.throwCooldown,
         rankPopT: transient.feel.rankPopupSeconds,
         rankPopText: transient.feel.rankPopupText,
+        frameTicksOwed: frameDebtOf(replay).ticksOwed,
       }),
     restoreTransient: (state) => {
       transient.assignImpact({
@@ -313,6 +320,11 @@ function productionRuntimeState(replay: ProductionReplayWorld, prepared?: Prepar
         rankPopupSeconds: Number(state.rankPopT),
         rankPopupText: String(state.rankPopText),
       });
+      // Play's checkpoints carry no frame debt (play's scheduler keeps its own): such a world starts on a frame.
+      const owed = state.frameTicksOwed ?? 0;
+      if (typeof owed !== "number" || !Number.isFinite(owed) || owed < 0)
+        throw new TypeError("checkpoint frame debt is invalid");
+      frameDebtOf(replay).ticksOwed = owed;
     },
     captureLifecycle:
       prepared === undefined ? replay.world.lifecycle.snapshot.bind(replay.world.lifecycle) : () => prepared.lifecycle,
@@ -329,11 +341,9 @@ function productionRuntimeState(replay: ProductionReplayWorld, prepared?: Prepar
       ),
     captureCinemaProtection: () => Object.freeze({ ...transient.protection }),
     restoreCinemaProtection: transient.assignProtection.bind(transient),
-    // The detached world has no stage banner of its own: its one banner timer is `feel.bannerSeconds`,
-    // captured and restored exactly as `bannerT` above (it counts a tick below zero by design, which a
-    // stage banner may not).
-    captureStageBanner: () => Object.freeze({ name: "", seconds: 0 }),
-    restoreStageBanner: () => undefined,
+    // The stage banner, as play's checkpoint carries it, so a replay started from a checkpoint shows it.
+    captureStageBanner: () => Object.freeze({ name: replay.stage.name, seconds: replay.stage.bannerSeconds }),
+    restoreStageBanner: replay.stage.restoreBanner.bind(replay.stage),
     cinema: prepared?.director ?? replay.world.context.cinema,
   });
 }
@@ -864,6 +874,15 @@ export function createProductionGhostReplayComposition(options: ProductionGhostR
           throw error;
         }
       };
+      const frameClock = createDetachedFrameClock({
+        transient: replay.world.context.transient,
+        debt: frameDebtOf(replay),
+        stage: replay.stage,
+        stepSeconds: core.simulationRuntime.stepSeconds,
+        parrySlowScale: replay.configuration.value.juice.parrySlowScale,
+        cinemaActive: () => replay.world.context.cinema.active,
+        playgroundSlow: () => (replay.world.state.run() as { pg?: { slow?: boolean } } | null)?.pg?.slow === true,
+      });
       const renderView = options.renderView;
       const session = Object.freeze({
         ...(renderView === undefined
@@ -907,37 +926,9 @@ export function createProductionGhostReplayComposition(options: ProductionGhostR
             replay.tutorial.interruptCoaching();
             return;
           }
-          const transient = replay.world.context.transient;
-          const frame: MutableFramePreludeState = {
-            slowMotion: transient.impact.slowMotion,
-            timeScale: transient.feel.timeScale,
-            worldZoom: transient.feel.worldZoom,
-            worldZoomTarget: transient.feel.worldZoomTarget,
-            zoom: transient.feel.zoom,
-            flash: transient.feel.flash,
-            bannerTime: transient.feel.bannerSeconds,
-            stageBannerSeconds: transient.feel.bannerSeconds,
-            rankPopTime: transient.feel.rankPopupSeconds,
-          };
-          advanceFramePrelude({
-            dt: deltaSeconds,
-            state: frame,
-            parrySlowScale: replay.configuration.value.juice.parrySlowScale,
-            cinemaActive: replay.world.context.cinema.active,
-            playgroundSlow: (replay.world.state.run() as { pg?: { slow?: boolean } } | null)?.pg?.slow === true,
-            lerp,
-            clamp,
-          });
-          transient.impact.slowMotion = frame.slowMotion;
-          Object.assign(transient.feel, {
-            timeScale: frame.timeScale,
-            worldZoom: frame.worldZoom,
-            zoom: frame.zoom,
-            flash: frame.flash,
-            bannerSeconds: frame.bannerTime,
-            rankPopupSeconds: frame.rankPopTime,
-          });
+          frameClock.frame(deltaSeconds);
         },
+        playFramesBeforeTick: frameClock.beforeTick,
         completeRecordedOpening,
         invalidateRecordedOpening: () => {
           openingStatus = "failed";

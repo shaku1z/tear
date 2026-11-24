@@ -230,6 +230,7 @@ withJourney(
   async (journey) => {
     const { page } = journey;
     const dump = process.env.TEAR_REPLAY_PARITY_DUMP;
+    if (dump) fs.mkdirSync(dump, { recursive: true });
     const failures = [];
     for (const [index, weapon] of WEAPONS.entries()) {
       const seed = FIRST_SEED + index;

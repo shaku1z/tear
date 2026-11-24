@@ -2,7 +2,7 @@ import { BossArenaRules } from "../../gameplay/training/arena-rules";
 import { createBossArenaRuntimeBridge } from "../../gameplay/training/arena-runtime-bridge";
 import { planBossPlacement } from "../../gameplay/run/boss-placement";
 import { createTearSpawnFactPublisher } from "../../gameplay/runtime/gameplay-event-publishers";
-import { createLiveContentHost } from "./content-host";
+import { createLiveContentHost, playEnemyArrival } from "./content-host";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { GameEnemy, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveGameHostState } from "./game-host-state";
@@ -97,11 +97,7 @@ export function createLiveContentComposition(options: LiveContentCompositionOpti
       d.rollAffixes(enemy, wave, options.worldServices.random.stream("spawn"));
     },
     arrivalEffect(enemy, boss) {
-      d.FX.ring(enemy.x, enemy.y, 10, enemy.color);
-      if (boss && !d.GFX.low) {
-        d.FX.ring(enemy.x, enemy.y, 22, enemy.color);
-        d.FX.burst(enemy.x, enemy.y, 0, -1, 10, enemy.color);
-      }
+      playEnemyArrival(d.FX, d.GFX.low, enemy, boss);
     },
     recordSpawn: publishSpawn,
     install: (enemy) => {

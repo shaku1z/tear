@@ -63,6 +63,10 @@ export interface GameFloater {
   big: boolean;
   col: string;
 }
+/** A new floating text: play and a replay's world both make floaters here, so a replay shows play's. */
+export function createFloater(x: number, y: number, text: string, big = false, color = "#000"): GameFloater {
+  return { x, y, text, life: 0.8, big, col: color };
+}
 export interface GameSlowZone {
   x: number;
   y: number;

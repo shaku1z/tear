@@ -109,7 +109,7 @@ export function createReplayFrames(
         graphics,
         accessibility,
         backdrop,
-        clock: createReplayIndicatorClock(context.config.juice.bannerTime),
+        clock: createReplayIndicatorClock(),
         overlay: createRunOverlay("watcher"),
         cosmeticRandom: context.cosmeticRandom,
         drawBossTransformationWorld: ports.enemy.port.drawBossTransformationWorld,
@@ -146,9 +146,6 @@ export function createReplayFrames(
     look.theme.set(biome ? background : "#ffffff");
     look.clock.observe({
       tick,
-      wave: run.wave,
-      stage: replay.stage.index,
-      stageBannerSeconds: replay.stage.bannerSeconds,
       hpFraction: Math.max(0, Math.min(1, player.hp / player.maxHp)),
       multiplier: run.mult,
     });
@@ -159,7 +156,7 @@ export function createReplayFrames(
       policy: "arena" as const,
       x: width / 2,
       y: height / 2,
-      scale: context.transient.feel.worldZoom,
+      scale: context.transient.feel.zoom,
     });
     const platforms = replayPlatforms(replay.stage.platforms);
     const worldState: WorldPresentationState = {
@@ -173,10 +170,10 @@ export function createReplayFrames(
       temporaryWalls: () => state.temporaryWalls(),
       environment: () => context.environment.snapshot(),
       screen: () => screen,
-      zoom: () => context.transient.feel.worldZoom,
+      zoom: () => context.transient.feel.zoom,
       shake: () => context.transient.impact.shake,
       lastUiDelta: look.clock.deltaSeconds,
-      bannerSeconds: look.clock.waveBanner,
+      bannerSeconds: () => context.transient.feel.bannerSeconds,
       bossIntro: () => state.bossIntro(),
       hud: look.clock.hud,
       hudClockSeconds: look.clock.hudClockSeconds,
@@ -238,7 +235,7 @@ export function createReplayFrames(
             index: replay.stage.index,
             current: stage,
             platforms,
-            bannerSeconds: look.clock.stageBanner(),
+            bannerSeconds: replay.stage.bannerSeconds,
             name: stage.name,
           },
           finale: () => replay.finale.story.finale,
@@ -259,8 +256,8 @@ export function createReplayFrames(
       cinema: context.cinema,
       parryFlash: context.transient.feel.flash,
       stageBeat: state.stageBeat(),
-      waveBannerSeconds: look.clock.waveBanner(),
-      stageBannerSeconds: look.clock.stageBanner(),
+      waveBannerSeconds: context.transient.feel.bannerSeconds,
+      stageBannerSeconds: replay.stage.bannerSeconds,
       rankPopup: {
         seconds: context.transient.feel.rankPopupSeconds,
         text: context.transient.feel.rankPopupText,
