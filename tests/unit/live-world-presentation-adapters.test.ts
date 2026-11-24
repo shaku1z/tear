@@ -16,6 +16,7 @@ describe("live world capture layers", () => {
     feedback.set({ lagHp: 0.9, multiplier: 2, multiplierPop: 0.5 });
     const boss = { isBoss: true, hp: 100, maxHp: 100, _phaseFlashT: 0.5 };
     const worldHud = vi.fn(),
+      lowHealthScreen = vi.fn(),
       chaseHud = vi.fn();
     let screen = "playing";
     const state = {
@@ -41,7 +42,7 @@ describe("live world capture layers", () => {
     const services = {
       dependencies: { CONFIG, A11Y: { flashScale: 1 }, UPGRADES: [], UI: { t: { color: { accent: "#abc" } } } },
       chase: { hud: chaseHud },
-      world: { hud: worldHud },
+      world: { hud: worldHud, lowHealthScreen },
       stage: { current: { accent: "#abc" } },
       formatTime: String,
       trickColor: () => "#fff",
@@ -67,6 +68,8 @@ describe("live world capture layers", () => {
     adapter.drawHud();
     expect(worldHud.mock.calls[2]?.[0]).toMatchObject({ boss: { phaseFlash: 0.5 } });
     expect(chaseHud).toHaveBeenCalledTimes(3);
+    // Live play is the player's view: it draws the low-health layer (which draws nothing above a quarter).
+    expect(lowHealthScreen).toHaveBeenCalledTimes(3);
     for (const menu of ["draft", "reserve", "tierup", "paused"]) {
       screen = menu;
       adapter.drawHud();

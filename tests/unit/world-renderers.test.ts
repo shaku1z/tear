@@ -244,6 +244,7 @@ describe("legacy world presentation renderers", () => {
       "enemyStatus",
       "finaleWorld",
       "hud",
+      "lowHealthScreen",
       "pantheonDebug",
       "reticle",
       "stageBanner",
@@ -292,7 +293,18 @@ describe("legacy world presentation renderers", () => {
     const boss = ui.calls.find((call) => call.name === "bossHud");
     expect((boss?.arguments[0] as { readonly frac?: number } | undefined)?.frac).toBeCloseTo(0.6);
     expect(boss?.arguments[0]).toMatchObject({ phaseMarks: [0.66, 0.33], guard: 0.5 });
-    expect(canvasCalls.some((call) => call.name === "createRadialGradient")).toBe(true);
+    // The red low-health screen is its own layer (lowHealthScreen), not part of the HUD a replay draws.
+    expect(canvasCalls.some((call) => call.name === "createRadialGradient")).toBe(false);
+  });
+
+  it("draws the red low-health screen over the whole screen at low health, and nothing above it", () => {
+    const low: CanvasCall[] = [];
+    createWorldRenderers(renderContext(low)).lowHealthScreen(hudSnapshot().player);
+    expect(low.filter((call) => call.name === "createRadialGradient")).toHaveLength(1);
+    expect(low.find((call) => call.name === "fillRect")?.arguments).toEqual([0, 0, 1600, 900]);
+    const healthy: CanvasCall[] = [];
+    createWorldRenderers(renderContext(healthy)).lowHealthScreen({ ...hudSnapshot().player, hpFraction: 0.26 });
+    expect(healthy).toEqual([]);
   });
 
   it("draws the HUD as plain text on the scene (no plate, outline or box) and keeps the boss header below the multiplier", () => {

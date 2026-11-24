@@ -404,6 +404,8 @@ export interface WorldRendererRegistry {
   pantheonDebug(snapshot: PantheonDebugSnapshot): void;
   finaleWorld(layer: "rear" | "front", snapshot: FinaleWorldSnapshot): void;
   hud(snapshot: HudSnapshot): void;
+  /** The red screen edge while the player's health is low: an alarm for the person playing, under the HUD. */
+  lowHealthScreen(player: PlayerHudSnapshot): void;
   /** Draws the lesson card and returns its rectangle, which coach marks keep clear of. */
   tutorialCard(snapshot: TutorialCardSnapshot): WorldRect;
   /** Draws the visible coach marks and returns where each landed. */
