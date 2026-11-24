@@ -147,16 +147,21 @@ export function createLiveWorldPresentationAdapters(
       ? []
       : state.enemies().flatMap((enemy) => (isDrawableEnemy(enemy) ? [projectPresentationEnemy(enemy)] : []));
 
-  const indicators = createWorldIndicators(world, liveIndicatorState(state, stage), {
-    config: d.CONFIG,
-    upgrades: d.UPGRADES,
-    flashScale: () => d.A11Y.flashScale,
-    fallbackAccent: () => d.UI.t.color.accent,
-    ink: () => d.THEME.ink,
-    formatTime: services.formatTime,
-    trickColor: services.trickColor,
-    ease: services.ease,
-  });
+  const indicators = createWorldIndicators(
+    world,
+    liveIndicatorState(state, stage),
+    {
+      config: d.CONFIG,
+      upgrades: d.UPGRADES,
+      flashScale: () => d.A11Y.flashScale,
+      fallbackAccent: () => d.UI.t.color.accent,
+      ink: () => d.THEME.ink,
+      formatTime: services.formatTime,
+      trickColor: services.trickColor,
+      ease: services.ease,
+    },
+    "player",
+  );
   const drawEnemyStatus = indicators.enemyStatus;
   const drawPantheonDebug = (view: WorldBounds, painted: WorldBounds): void => {
     // Release builds never show it, so the snapshot (a copy of every platform,
@@ -419,6 +424,7 @@ export function createLiveWorldPresentationAdapters(
   };
   const drawHud = (): void => {
     if (!state.player()) return;
+    indicators.lowHealthScreen();
     indicators.hud();
     if (state.screen() === "playing") services.chase?.hud(canvas, width);
     drawTraining();
