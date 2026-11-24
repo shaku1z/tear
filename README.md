@@ -32,7 +32,7 @@ Run everything from the repository root. "Slow" means minutes, not seconds.
 | `pnpm format:check` | Fail if any formatted file differs from Prettier's output; CI runs it. About 15 seconds. |
 | `pnpm exec vitest run tests/unit/<name>.test.ts` | Run one unit test file. |
 | `pnpm test:watch` | Vitest in watch mode; reruns affected tests when you save. |
-| `pnpm test:related [files]` | The tests a change can break: those whose imports reach the files (`vitest related`), those that name a file or a folder holding it as text, those that read the tree with git, and the `node --test` files the checks run among them. With no files it takes the branch's change from `origin/main`, uncommitted and deleted files included. `--list` prints the picks and why without running them. Expect a minute or two. |
+| `pnpm test:related [files]` | The tests a change can break: those whose imports reach the files (`vitest related`), those that name a file or a folder holding it as text, those that read the tree with git, and the `node --test` files the checks run among them. With no files it takes the branch's change from `origin/main`, uncommitted and deleted files included. `--list` prints the picks and why without running them. A one-file `src` change took about 3 minutes, most of it the `node --test` files of the architecture and code-budget gates. |
 | `pnpm test:weapons` | The five-weapon roster tests. |
 | `pnpm check:quick` | The cheap static gates: format check, typecheck, lint, architecture, code budget, docs. Slow because of typecheck and lint. |
 | `pnpm build` | Build both production targets into `dist/standalone` and `dist/crazygames`. Slow. |
