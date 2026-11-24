@@ -241,6 +241,7 @@ function course(legacy: boolean) {
         const before =
           pending && !pending.done ? frame(source, pending.originTick, pending.stages.length - 1) : undefined;
         source.advanceApplicationFrame(1 / 120);
+        source.playFramesBeforeTick();
         const transition = source.simulation.advanceOne(actions);
         acceptedActions += actions.length;
         if (pending && !pending.done) {
@@ -409,6 +410,7 @@ export function verifyTutorialGoldReference(reference: TutorialGoldReference, pr
       command,
     }));
     source.advanceApplicationFrame(1 / 120);
+    source.playFramesBeforeTick();
     const result = source.simulation.advanceOne(actions);
     if (result.stateHash !== proof.hashes[index])
       throw new Error(`Gold ${reference.lessonId} diverged at ${String(tick)}`);

@@ -39,7 +39,9 @@ export function detachedSceneFrames(session: DetachedWorldSession): readonly Det
  * order. Verify gives the frames a record holds (live play's own frame seconds and confirm presses);
  * a world with no frame clock gives `detachedSceneFrames`. The boss arrival is off it: the simulation
  * tick advances the arrival (`advanceBossIntro` in the opening phase). Then the reward and menu actions
- * go to the screen router and the rest to the simulation.
+ * go to the screen router and the rest to the simulation. Before a tick it steps, the world's frame clock
+ * (./frame-clock.ts) plays the frames play would have drawn since the last tick, so what a replay shows
+ * at a tick is what play showed there.
  *
  * Live play advances the simulation only on the playing screen (RuntimeFrameCoordinator), so a held
  * screen (paused, a draft, a reserve or a tier-up) holds a detached world too: the step returns the last
@@ -55,5 +57,6 @@ export function stepDetachedWorld(
   const simulated = actions.filter((action) => !session.routeAction(action.command));
   const held = session.simulation.lastResult;
   if (held !== null && !session.replayLifecycle.shouldStep()) return held;
+  session.playFramesBeforeTick();
   return session.simulation.advanceOne(simulated);
 }

@@ -99,6 +99,11 @@ export interface ReplayScreenAdapter {
   readonly watchRecord: (key: string, from?: AppScreen) => Promise<boolean>;
   /** The tick and stage the replay screen shows, while it shows a kept record. */
   readonly shownReplay: () => Readonly<{ tick: number; stage: number }> | undefined;
+  /**
+   * Pauses a kept record on `tick` and draws the world there into `target`, laid out as play lays out the game's
+   * canvas (no replay bars); false when no kept record is shown. For test builds' live-against-replay checks.
+   */
+  readonly drawShownAsPlayed: (tick: number, target: CanvasRenderingContext2D) => boolean;
   readonly togglePause: () => void;
   readonly seekBy: (delta: number) => void;
   readonly seekToFraction: (fraction: number) => void;
@@ -279,6 +284,28 @@ export function createKeptRunScreen(services: KeptRunScreenServices) {
     shownTick: () => watching?.watch.state().tick,
     /** The stage the shown world is in. */
     shownStage: () => watching?.watch.world().stage(),
+    /**
+     * Pauses on `tick` and draws the world shown there into `target` as play lays out the game's canvas: the
+     * whole `screen` rectangle, no replay bars. Test builds compare it with the live frame at the same tick.
+     */
+    drawAsPlayed(
+      tick: number,
+      target: CanvasRenderingContext2D,
+      screen: Readonly<{ x: number; y: number; w: number; h: number }>,
+    ): boolean {
+      const current = watching;
+      if (current === undefined) return false;
+      current.watch.pause();
+      command(({ watch }) => watch.seek(tick));
+      const frame = shownFrame(current);
+      if (frame === undefined || current.watch.state().tick !== tick) return false;
+      const scale = target.canvas.width / screen.w;
+      target.save();
+      target.setTransform(scale, 0, 0, scale, -screen.x * scale, -screen.y * scale);
+      frame.draw(target, screen);
+      target.restore();
+      return true;
+    },
     /** Opens a kept record and plays it at once, as a video player does. Returns why it cannot, or undefined. */
     open(
       record: ReplayRecord,
@@ -584,6 +611,8 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
       const stage = active === "kept" ? kept.shownStage() : undefined;
       return tick === undefined || stage === undefined ? undefined : Object.freeze({ tick, stage });
     },
+    drawShownAsPlayed: (tick, target) =>
+      active === "kept" && kept.drawAsPlayed(tick, target, services.screenRectangle()),
     exit,
     render: () => {
       if (active === "kept") kept.render();

@@ -3,7 +3,7 @@
   "note": "Debt recorded by `node scripts/check-code-budget.mjs --update`. Values may only fall; see docs/ARCHITECTURE.md.",
   "files": {
     "src/agents/live-watch-agent-host.ts": {
-      "largestFunctionStatements": 94
+      "largestFunctionStatements": 92
     },
     "src/agents/live-watch-agent-panel.ts": {
       "maxLineLength": 171
@@ -12,10 +12,10 @@
       "chars": 29185
     },
     "src/app/world/detached/combat-phases.ts": {
-      "chars": 30047
+      "chars": 29927
     },
     "src/app/world/detached/replay-composition.ts": {
-      "chars": 34095
+      "chars": 33390
     },
     "src/audio/stems/validate.ts": {
       "largestFunctionStatements": 83

@@ -6,12 +6,13 @@ import type { RunLifecycleController } from "../../gameplay/run/lifecycle";
 import { drawTutorialGhost } from "../../presentation/tutorial-ghost";
 import { cinematicLaunchPolicy, type CinematicPreference } from "../../gameplay/campaign/cinematic-preference";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type {
-  GameBlade,
-  GameEnemy,
-  GamePlayer,
-  GameProjectile,
-  GameRun,
+import {
+  createFloater,
+  type GameBlade,
+  type GameEnemy,
+  type GamePlayer,
+  type GameProjectile,
+  type GameRun,
 } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
 import type { LiveWorldEntityConstructionPort } from "../world/world-entity-factory";
@@ -139,8 +140,8 @@ export function createLiveCampaignTrainingComposition(options: LiveCampaignTrain
       : { observeFinaleOutwardCall: options.observeFinaleOutwardCall }),
   });
 
-  const addFloater = (x: number, y: number, text: string, big = false, color = "#000"): void => {
-    options.state.floaters().push({ x, y, text, life: 0.8, big, col: color });
+  const addFloater = (x: number, y: number, text: string, big?: boolean, color?: string): void => {
+    options.state.floaters().push(createFloater(x, y, text, big, color));
   };
   const weapon = createLiveWeaponRuntime<GameEnemy>({
     run: options.run,

@@ -3,7 +3,10 @@ import { stableVerificationHash } from "../../src/domain/hash";
 import { CURRENT_RULESET_VERSION } from "../../src/gameplay/run/ruleset-version";
 import { canonicalReplayTotals, type CanonicalGameplayState } from "../../src/gameplay/runtime/canonical-state";
 import { normalizeGameAction } from "../../src/input/game-action";
-import { createProductionHeadlessEnvironment } from "../../src/playtest/headless/production-headless-environment";
+import {
+  createProductionHeadlessEnvironment,
+  type ProductionHeadlessEnvironment,
+} from "../../src/playtest/headless/production-headless-environment";
 import type { ReplayRecord } from "../../src/replay/record";
 import { createReplayRecorder } from "../../src/replay/recorder";
 import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
@@ -12,11 +15,18 @@ import { createCorpusPlayer, scenarioContract, type StreamSpec } from "./hash-st
 const BUILD = Object.freeze({ version: "0.1.0", revision: "round-trip", target: "test" });
 const LOOK = Object.freeze({ playerName: "Player", cosmetics: {}, music: null, recordedAt: "2026-11-21T00:00:00Z" });
 
-/** Plays a corpus stream in the headless environment and records it. */
-export function recordCorpusStream(spec: StreamSpec): ReplayRecord {
+/**
+ * Plays a corpus stream in the headless environment and records it. `observe` sees the playing environment
+ * after the reset (tick 0) and after each tick.
+ */
+export function recordCorpusStream(
+  spec: StreamSpec,
+  observe?: (environment: ProductionHeadlessEnvironment, tick: number) => void,
+): ReplayRecord {
   const environment = createProductionHeadlessEnvironment({ captureSourceTracks: true });
   try {
     environment.reset(scenarioContract(spec));
+    observe?.(environment, 0);
     const recorder = createReplayRecorder({
       ruleset: CURRENT_RULESET_VERSION,
       build: BUILD,
@@ -50,6 +60,7 @@ export function recordCorpusStream(spec: StreamSpec): ReplayRecord {
         return Object.freeze({ kind: "command" as const, id: ++id, tick, command: normalized.action });
       });
       recorder.step(tick, applied, () => stableVerificationHash(observation));
+      observe?.(environment, tick);
       last = observation;
       lastTick = tick;
       if (transition.terminated) break;

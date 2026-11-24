@@ -23,6 +23,8 @@ import type { BossId } from "../../../gameplay/run/content-director";
 import { applyUpgrade, rollUpgrades, tierUp, UPGRADES, type UpgradeDefinition } from "../../../gameplay/upgrades";
 import type { GameAction } from "../../../input/game-action";
 import { routeLiveTearBenchAction } from "./action-routing";
+import { GFX } from "../../../config/game-config";
+import { playEnemyArrival } from "../content-host";
 import type { ProductionReplayWorld } from "./world-factory";
 import type { ChapterPage } from "../../../gameplay/campaign/chapter-controller";
 
@@ -230,7 +232,9 @@ export function createProductionWaveRewardRuntime(
       rollAffixes: (enemy, wave) => {
         rollAffixes(enemy, wave, random.streams.stream("spawn"));
       },
-      arrivalEffect: note("arrivalEffect"),
+      arrivalEffect: (enemy, boss) => {
+        playEnemyArrival(replay.effects, GFX.low, enemy, boss);
+      },
       recordSpawn: publishSpawn,
       install,
     },

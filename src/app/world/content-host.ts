@@ -12,6 +12,29 @@ import type { ArenaPlatform } from "../../gameplay/training/arena-rules";
 import type { EnemyVariant, VariantSelectionContext } from "../../gameplay/variants";
 import type { StageId } from "../../gameplay/stages";
 
+/** The effects an enemy's arrival plays on. */
+export interface EnemyArrivalEffects {
+  ring(x: number, y: number, radius: number, color: string): void;
+  burst(x: number, y: number, dx: number, dy: number, count: number, color: string): void;
+}
+
+/**
+ * What an enemy's arrival looks like: a ring where it lands, and for a boss a wider ring and a burst unless
+ * graphics are low. Play and a replay's world both play it, so a replay shows play's arrivals.
+ */
+export function playEnemyArrival(
+  effects: EnemyArrivalEffects,
+  lowGraphics: boolean,
+  enemy: Readonly<{ x: number; y: number; color: string }>,
+  boss: boolean,
+): void {
+  effects.ring(enemy.x, enemy.y, 10, enemy.color);
+  if (boss && !lowGraphics) {
+    effects.ring(enemy.x, enemy.y, 22, enemy.color);
+    effects.burst(enemy.x, enemy.y, 0, -1, 10, enemy.color);
+  }
+}
+
 export interface ContentHostEnemy extends LiveSpawnEnemy {
   introT?: number;
 }

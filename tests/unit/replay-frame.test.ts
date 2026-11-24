@@ -71,7 +71,8 @@ describe("a replay's frame", () => {
 
   it("shows more of the world when a scene zooms it out, as play does", () => {
     const { session, draw } = framed();
-    session.replay.world.context.transient.feel.worldZoom = 0.8;
+    // Play's camera draws at `zoom`, which its frames ease toward `worldZoom`; a replay's frame clock does the same.
+    session.replay.world.context.transient.feel.zoom = 0.8;
     expect(draw({ x: 0, y: 0, w: 1600, h: 900 }).bounds).toEqual({
       left: -200,
       top: -112.5,

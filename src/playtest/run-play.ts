@@ -9,7 +9,11 @@ import { BOSS_PLAYER_IDS, type BossPlayer, type BossPlayerId } from "./boss-play
 import { createSeededPlayer } from "./player-variation";
 import { readBoss, readPlayerBox } from "./boss-view";
 import { chapterHolds, finaleHolds, skipChapter, skipFinale } from "./headless/chapter";
-import { createProductionHeadlessEnvironment } from "./headless/production-headless-environment";
+import {
+  createProductionHeadlessEnvironment,
+  type ProductionHeadlessEnvironment,
+  type ProductionHeadlessEnvironmentOptions,
+} from "./headless/production-headless-environment";
 import { requireProductionHeadlessScenario } from "./headless/production-headless-scenario";
 import { kindOf } from "./wave-play";
 
@@ -116,6 +120,17 @@ export function runScenario(request: RunRequest): TearScenarioV1 {
   });
 }
 
+/** How a run is played beyond its request: the environment's options, and who watches the run as it plays. */
+export interface RunPlayOptions {
+  readonly environment?: ProductionHeadlessEnvironmentOptions;
+  /**
+   * The environment the run plays through, given the one created for it: a recorder wraps its steps and frames.
+   * The reset, each frame and step of the run (chapter and closing-scene skips included) and the closing
+   * dispose go through what this returns.
+   */
+  readonly through?: (environment: ProductionHeadlessEnvironment) => ProductionHeadlessEnvironment;
+}
+
 /**
  * Plays one run from wave 1 on the real game, headless, as a player's run goes: the player drafts from what the
  * game offers after each wave and skips each story chapter. Measures it wave by wave.
@@ -123,8 +138,10 @@ export function runScenario(request: RunRequest): TearScenarioV1 {
 export function playRun(
   request: RunRequest,
   player: BossPlayer = createSeededPlayer(request.player, request.seed),
+  options: RunPlayOptions = {},
 ): RunResult {
-  const environment = createProductionHeadlessEnvironment();
+  const created = createProductionHeadlessEnvironment(options.environment);
+  const environment = options.through?.(created) ?? created;
   try {
     environment.reset(runScenario(request));
     const run = (): RunView => environment.world().run() as unknown as RunView;

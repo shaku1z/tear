@@ -91,6 +91,8 @@ export interface ProductionHeadlessEnvironmentOptions {
   readonly build?: ProductionRunOpening["build"];
   /** Who wears which cosmetics; the game's own look when absent. The simulation never reads it. */
   readonly looks?: ProductionGhostReplayCompositionOptions["looks"];
+  /** The saved progress a fresh run starts from (permanent upgrades, discoveries), as a record's start holds it. */
+  readonly saved?: ProductionGhostReplayCompositionOptions["saved"];
 }
 
 export interface ProductionHeadlessTerminalArtifact {
@@ -298,6 +300,7 @@ export function createProductionHeadlessEnvironment(
       ...(snapshot === undefined || input === undefined ? {} : { inputSnapshots: new Map([[snapshot.tick, input]]) }),
       gameplayEvents,
       ...(options.looks === undefined ? {} : { looks: options.looks }),
+      ...(options.saved === undefined ? {} : { saved: options.saved }),
       ...(sourceTracks === undefined
         ? {}
         : {
