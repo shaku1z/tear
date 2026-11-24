@@ -59,7 +59,7 @@ export interface WorldIndicators {
 /**
  * The indicators play shows, built from a world's state and drawn through the world renderers. Live play
  * and the replay screen both draw them here, so a replay shows what happened in the run. `viewer` says who
- * the frame is for: a watcher sees only the layers `OVERLAY_AUDIENCE` gives to everyone, so an alarm meant
+ * the frame is for: a watcher sees only the layers `OVERLAY_LAYERS` gives to everyone, so an alarm meant
  * for the person playing never reaches a replay.
  */
 export function createWorldIndicators(

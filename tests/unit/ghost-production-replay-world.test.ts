@@ -1,4 +1,4 @@
-import { createBrowserGhostReplayPresentation } from "../../src/app/replay/browser-ghost-replay-presentation";
+import { recordingCanvas, replayPresentation } from "../support/replay-presentation";
 import {
   createProductionGhostReplayComposition,
   projectProductionReplayCanonicalState,
@@ -58,86 +58,6 @@ function productionComposition(created: unknown[]) {
       });
     },
   };
-}
-
-/** A 1600x900 canvas whose context records every drawing call into `calls`. */
-function recordingCanvas(calls: string[]) {
-  const surface = { width: 1600, height: 900, getContext: () => context };
-  const context = new Proxy(
-    { canvas: surface },
-    {
-      has: () => true,
-      get(target, key) {
-        if (key === "canvas") return target.canvas;
-        if (key === "createLinearGradient" || key === "createRadialGradient")
-          return () => ({
-            addColorStop() {
-              return;
-            },
-          });
-        if (key === "measureText") return () => ({ width: 10 });
-        return (...args: unknown[]) => {
-          calls.push(`${String(key)}:${args.map(String).join(",")}`);
-        };
-      },
-    },
-  ) as unknown as CanvasRenderingContext2D;
-  return surface;
-}
-
-const noDraw = () => undefined;
-
-/** The replay presentation over recording canvases, with a stub UI kit. */
-function replayPresentation(calls: string[]) {
-  const document = { createElement: () => recordingCanvas(calls) } as unknown as Document;
-  return createBrowserGhostReplayPresentation(document, {
-    font: () => "12px sans-serif",
-    tag: noDraw,
-    text: noDraw,
-    title: noDraw,
-    bossHud: noDraw,
-    chapterHeader: noDraw,
-    loreFragment: noDraw,
-    chapterPrompt: noDraw,
-    biomeReveal: noDraw,
-    cinematicFrame: noDraw,
-    finaleFracture: noDraw,
-    finalReward: noDraw,
-    cinematicPrompt: noDraw,
-    bossDeclaration: noDraw,
-    dialogueCard: noDraw,
-    ink: "#000",
-    density: { touch: false, compact: false },
-    readable: (color: string) => color,
-    displayText: noDraw,
-    fitText: (_canvas: unknown, text: string, _width: number, options: { size: number }) => ({
-      size: options.size,
-      lines: [text],
-      truncated: false,
-    }),
-    textBox: (_canvas: unknown, text: string) => ({ size: 16, lines: [text], height: 24, lineHeight: 24 }),
-    keycap: () => 30,
-    keycapSize: () => ({ w: 30, h: 22 }),
-    sheetRect: () => ({ x: 180, y: 44, w: 1240, h: 820 }),
-    sheetFooter: () => ({ y: 804, h: 48, backX: 690 }),
-    t: {
-      type: { display: 40, h2: 28, title: 24, lead: 20, body: 16, label: 14, caption: 12, micro: 10 },
-      alpha: { soft: 0.5, muted: 0.66, faint: 0.2 },
-      color: { accent: "#f00", muted: "#888", paper: "#fff", danger: "#e44", scrim: "#06070c", scrimInk: "#f1eff9" },
-      metric: {
-        bossHudH: 40,
-        bossNotchH: 6,
-        bossGuardGap: 10,
-        bossGuardH: 6,
-        barH: 14,
-        hudPad: 10,
-        hudBarW: 320,
-        hudAbilityRows: 4,
-      },
-      space: { xs: 6, sm: 10, md: 16, lg: 24, xl: 40 },
-      motion: { finalRewardIn: 0.4 },
-    },
-  });
 }
 
 describe("Ghost production replay world", () => {

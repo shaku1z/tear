@@ -16,8 +16,15 @@ export function createProductionReplayFrame(
     /** Leaves the area behind the world clear instead of filling it. */
     transparent?: boolean;
     ports: Omit<WorldFramePorts, "canvas" | "screen">;
-    /** What play draws over the world (HUD, scenes, banners), in the arena's coordinates. */
-    drawOverlay?: (canvas: CanvasRenderingContext2D) => void;
+    /**
+     * What play draws over the world (HUD, scenes, banners), in the arena's coordinates. `screen` is the
+     * rectangle the frame is drawn into, in those coordinates: the arena plus the margin the fit leaves. A layer
+     * drawn against the view anchors to it, as play anchors to the window, never to the arena's box.
+     */
+    drawOverlay?: (
+      canvas: CanvasRenderingContext2D,
+      screen: Readonly<{ x: number; y: number; w: number; h: number }>,
+    ) => void;
   }>,
 ) {
   const { width, height, zoom } = input.ports;
@@ -58,7 +65,7 @@ export function createProductionReplayFrame(
           h: rectangle.h / scale,
         };
         renderWorldFrame({ ...input.ports, canvas, screen });
-        input.drawOverlay?.(canvas);
+        input.drawOverlay?.(canvas, screen);
       } finally {
         canvas.restore();
       }

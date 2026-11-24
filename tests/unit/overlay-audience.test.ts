@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import { CONFIG } from "../../src/config/game-config";
-import { OVERLAY_AUDIENCE, shownTo, type OverlayViewer } from "../../src/app/world/overlay-audience";
+import { OVERLAY_LAYERS, shownTo, type OverlayViewer } from "../../src/app/world/overlay-audience";
 import {
   createWorldIndicators,
   type WorldIndicatorState,
@@ -84,8 +84,8 @@ describe("who each overlay is for", () => {
     const watcher = drawn("watcher"),
       player = drawn("player");
     for (const layer of player) {
-      expect(OVERLAY_AUDIENCE).toHaveProperty(layer);
-      expect(watcher.includes(layer)).toBe(shownTo(layer as keyof typeof OVERLAY_AUDIENCE, "watcher"));
+      expect(OVERLAY_LAYERS).toHaveProperty(layer);
+      expect(watcher.includes(layer)).toBe(shownTo(layer as keyof typeof OVERLAY_LAYERS, "watcher"));
     }
   });
 

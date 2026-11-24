@@ -60,6 +60,7 @@ export interface BrowserGhostReplayPresentationOptions {
   readonly wardrobe?: CosmeticWardrobe;
 }
 const NOTHING_HIDDEN: ReadonlySet<ReplayFrameLayer> = new Set();
+type ViewRectangle = Readonly<{ x: number; y: number; w: number; h: number }>;
 /** Each reconstructed world gets its own theme, backdrop caches, FX and renderer constructors. */
 export function createBrowserGhostReplayPresentation(
   document: Document,
@@ -142,14 +143,19 @@ export function createBrowserGhostReplayPresentation(
         hpFraction: Math.max(0, Math.min(1, player.hp / player.maxHp)),
         multiplier: run.mult,
       });
-      // The world renderers hold the canvas they draw on, so the indicators are built for each canvas drawn.
-      const builtIndicators = new WeakMap<CanvasRenderingContext2D, WorldIndicators>();
-      const indicators = (): WorldIndicators => {
+      // The world renderers hold the canvas they draw on and the view they anchor to, so the indicators are built
+      // for each canvas and view drawn. A layer drawn in the world (an enemy's status) uses the arena's box.
+      const arena: ViewRectangle = { x: 0, y: 0, w: width, h: height };
+      const builtIndicators = new WeakMap<CanvasRenderingContext2D, Map<string, WorldIndicators>>();
+      const indicators = (view: ViewRectangle = arena): WorldIndicators => {
         const canvas = replayCanvas();
-        let built = builtIndicators.get(canvas);
+        let views = builtIndicators.get(canvas);
+        if (views === undefined) builtIndicators.set(canvas, (views = new Map()));
+        const key = `${view.x},${view.y},${view.w},${view.h}`;
+        let built = views.get(key);
         if (built === undefined) {
-          built = replayIndicators(replay, clock, { canvas, theme, graphics, accessibility, width, height });
-          builtIndicators.set(canvas, built);
+          built = replayIndicators(replay, clock, { canvas, theme, graphics, accessibility, width, height, view });
+          views.set(key, built);
         }
         return built;
       };
@@ -217,15 +223,15 @@ export function createBrowserGhostReplayPresentation(
         screen,
         clockBlocked: state.bossIntro() !== null || replay.world.context.cinema.active,
         transparent: hidden.has("backdrop"),
-        drawOverlay: (canvas) => {
+        drawOverlay: (canvas, view) => {
           if (!hidden.has("indicators"))
-            drawPlayOverlay(canvas, replay, screen, indicators(), clock, ui, accessibility);
+            drawPlayOverlay(canvas, replay, screen, indicators(view), clock, ui, accessibility, view);
         },
         ports: {
           width,
           height,
           zoom,
-          shake: 0,
+          shake: shownTo("screenShake", "watcher") ? replay.world.context.transient.impact.shake : 0,
           playing: false,
           random: () => 0.5,
           biome: !hidden.has("backdrop"),
@@ -358,6 +364,8 @@ export function createBrowserGhostReplayPresentation(
       accessibility: typeof A11Y;
       width: number;
       height: number;
+      /** The rectangle the frame is drawn into, in the arena's coordinates: screen-framed layers anchor to it. */
+      view: ViewRectangle;
     }>,
   ): WorldIndicators {
     const config = replay.configuration.value,
@@ -369,7 +377,7 @@ export function createBrowserGhostReplayPresentation(
       width: look.width,
       height: look.height,
       safe: { top: 0, right: 0, bottom: 0, left: 0 },
-      screen: { x: 0, y: 0, w: look.width, h: look.height },
+      screen: look.view,
       get ink() {
         return look.theme.ink;
       },
@@ -421,7 +429,7 @@ export function createBrowserGhostReplayPresentation(
 /**
  * What play draws over the world, in play's order and on play's conditions (`renderWorldLayers` in
  * src/app/interface/presentation-composition.ts): the HUD, a running scene, the wave or stage banner and
- * the blade's reticle.
+ * the blade's reticle. Each screen-framed layer is drawn to `view`, the replay's own rectangle.
  */
 function drawPlayOverlay(
   canvas: CanvasRenderingContext2D,
@@ -431,15 +439,14 @@ function drawPlayOverlay(
   clock: ReturnType<typeof createReplayIndicatorClock>,
   ui: Ui,
   accessibility: typeof A11Y,
+  view: ViewRectangle,
 ): void {
   if (screen !== "playing") return;
   const config = replay.configuration.value,
-    cinema = replay.world.context.cinema,
-    width = config.view.w,
-    height = config.view.h;
+    cinema = replay.world.context.cinema;
   if (!cinema.active || !cinema.hideHud || cinema.beat?.hud === true) indicators.hud();
   if (cinema.active && shownTo("cinematic", "watcher"))
-    drawCinematicDirector(cinema, config, canvas, ui, { x: 0, y: 0, w: width, h: height }, accessibility.reducedMotion);
+    drawCinematicDirector(cinema, config, canvas, ui, view, accessibility.reducedMotion);
   // The stage banner owns the announcement band while it shows.
   const stageBanner = clock.stageBanner() > 0;
   if (!cinema.active && !stageBanner && clock.waveBanner() > 0) indicators.waveBanner();
