@@ -36,6 +36,7 @@ import { isSheetScreen } from "../../domain/screen-catalog";
 import { isObject } from "../../domain/records";
 import type { EnvironmentSnapshot } from "../../gameplay/environment/environment-contracts";
 import { renderEnvironmentLayer } from "./environment-layer";
+import { shownTo, type OverlayLayer, type OverlayViewer } from "./overlay-audience";
 
 type Dependencies = Pick<
   GameRuntimeDependencies,
@@ -95,7 +96,32 @@ export interface WorldPresentationState {
   readonly advanceHud: (input: Readonly<{ hpFraction: number; multiplier: number; deltaSeconds: number }>) => void;
 }
 
+/**
+ * Parts of the world frame a caller may leave out (the asset sheets draw each part on its own). Without the
+ * backdrop the frame is drawn on transparency; without the indicators, nothing play draws over the world.
+ */
+export type WorldFrameLayer =
+  | "backdrop"
+  | "platforms"
+  | "hazards"
+  | "environment"
+  | "enemies"
+  | "projectiles"
+  | "player"
+  | "blade"
+  | "effects"
+  | "indicators";
+
+const NOTHING_HIDDEN: ReadonlySet<WorldFrameLayer> = new Set();
+
 export interface WorldPresentationServices {
+  /**
+   * Who the frame is for: live play draws for the player, a replay for someone watching. A layer
+   * `OVERLAY_LAYERS` gives to the player alone is drawn only for the player.
+   */
+  readonly viewer: OverlayViewer;
+  /** Layers left out of the frame; nothing when absent. */
+  readonly hidden?: () => ReadonlySet<WorldFrameLayer>;
   readonly chase?: Readonly<{
     draw(canvas: CanvasRenderingContext2D): void;
     hud(canvas: CanvasRenderingContext2D, width: number): void;
@@ -142,8 +168,12 @@ export function createLiveWorldPresentationAdapters(
   services: WorldPresentationServices,
 ): LiveWorldPresentationAdapters {
   const { dependencies: d, canvas, width, height, stage, world, tutorial } = services;
+  /** The parts of the world this frame draws (the asset sheets leave some out). */
+  const shows = (layer: WorldFrameLayer): boolean => !(services.hidden?.() ?? NOTHING_HIDDEN).has(layer);
+  /** Whether this frame's viewer sees an overlay layer (a replay leaves the player's own out). */
+  const seen = (layer: OverlayLayer): boolean => shownTo(layer, services.viewer);
   const presentationEnemies = (): PresentationEnemy[] =>
-    services.capturePolicy().actors === "exclude"
+    services.capturePolicy().actors === "exclude" || !shows("enemies")
       ? []
       : state.enemies().flatMap((enemy) => (isDrawableEnemy(enemy) ? [projectPresentationEnemy(enemy)] : []));
 
@@ -160,13 +190,13 @@ export function createLiveWorldPresentationAdapters(
       trickColor: services.trickColor,
       ease: services.ease,
     },
-    "player",
+    services.viewer,
   );
   const drawEnemyStatus = indicators.enemyStatus;
   const drawPantheonDebug = (view: WorldBounds, painted: WorldBounds): void => {
     // Release builds never show it, so the snapshot (a copy of every platform,
     // projectile and enemy zone) is not built at all.
-    if (!(services.debug && services.capturePolicy().debug === "include")) return;
+    if (!(services.debug && services.capturePolicy().debug === "include" && seen("pantheonDebug"))) return;
     const run = state.run();
     world.pantheonDebug(
       buildPantheonDebugSnapshot({
@@ -212,11 +242,12 @@ export function createLiveWorldPresentationAdapters(
       }),
     );
   };
-  const sceneEffects = (voidActive: boolean) =>
-    buildSceneEffectsSnapshot({
+  const sceneEffects = (voidActive: boolean) => {
+    const hazards = shows("hazards");
+    return buildSceneEffectsSnapshot({
       voidActive,
-      enemies: services.capturePolicy().actors === "exclude" ? [] : state.enemies().map(projectSceneBoss),
-      platforms: stage.platforms.map((platform) => ({
+      enemies: services.capturePolicy().actors === "exclude" || !hazards ? [] : state.enemies().map(projectSceneBoss),
+      platforms: (hazards ? stage.platforms : []).map((platform) => ({
         x: platform.x,
         y: platform.y,
         w: platform.w,
@@ -226,10 +257,14 @@ export function createLiveWorldPresentationAdapters(
         ...(platform.crackMax === undefined ? {} : { crackMax: platform.crackMax }),
         ...(typeof platform.crackColor === "string" ? { crackColor: platform.crackColor } : {}),
       })),
-      walls: state
-        .temporaryWalls()
-        .map((wall) => ({ x: wall.x, y: wall.y, w: wall.w, life: wall.life, maxLife: wall.maxLife })),
-      slowZones: state.slowZones(),
+      walls: (hazards ? state.temporaryWalls() : []).map((wall) => ({
+        x: wall.x,
+        y: wall.y,
+        w: wall.w,
+        life: wall.life,
+        maxLife: wall.maxLife,
+      })),
+      slowZones: hazards ? state.slowZones() : [],
       width,
       height,
       groundY: d.CONFIG.world.groundY,
@@ -243,6 +278,7 @@ export function createLiveWorldPresentationAdapters(
       seamLife: d.CONFIG.aldric.seamLife,
       trailLife: d.CONFIG.warden.trailLife || 1,
     });
+  };
   const entityLayer = () => {
     const run = state.run();
     return buildEntityLayerSnapshot({
@@ -258,7 +294,7 @@ export function createLiveWorldPresentationAdapters(
   };
   const drawEnvironment = (): void => {
     const snapshot = state.environment?.();
-    if (snapshot === undefined) return;
+    if (snapshot === undefined || !shows("environment")) return;
     renderEnvironmentLayer(canvas, snapshot, state.enemies(), {
       highContrast: d.A11Y.highContrast,
       reducedMotion: d.A11Y.reducedMotion,
@@ -286,9 +322,13 @@ export function createLiveWorldPresentationAdapters(
     const run = state.run();
     const actorsIncluded = services.capturePolicy().actors === "include";
     const physicalPlayer = state.player();
-    const player = actorsIncluded ? physicalPlayer : undefined;
-    const blade = actorsIncluded ? state.blade() : undefined;
-    const biome = ["campaign", "endless", "bossonly", "gauntlet", "tutorial", "playground"].includes(run.mode);
+    const player = actorsIncluded && shows("player") ? physicalPlayer : undefined;
+    const blade = actorsIncluded && shows("blade") ? state.blade() : undefined;
+    // The player's figure is what the blade hangs from, so a hidden figure still holds a shown blade.
+    const bladeHolder = actorsIncluded ? physicalPlayer : undefined;
+    const backdrop = shows("backdrop");
+    const biome =
+      backdrop && ["campaign", "endless", "bossonly", "gauntlet", "tutorial", "playground"].includes(run.mode);
     const voidActive = !!run.voidScroll && (run.voidScroll.active || run.voidScroll.frozen);
     return renderWorldFrame({
       canvas,
@@ -315,23 +355,25 @@ export function createLiveWorldPresentationAdapters(
         font: (size, bold) => d.UI.font(size, bold),
       },
       floaterTextScale: d.UI.density.textScale,
-      floaters: actorsIncluded
-        ? state.floaters().map((item) => ({
-            x: item.x,
-            y: item.y,
-            text: item.text,
-            color: item.col || "#000",
-            life: item.life,
-            big: item.big,
-          }))
-        : [],
-      brokenPlatforms: run._arenaBroken ?? [],
-      platforms: stage.platforms,
-      projectiles: actorsIncluded ? state.projectiles() : [],
+      floaters:
+        actorsIncluded && shows("effects")
+          ? state.floaters().map((item) => ({
+              x: item.x,
+              y: item.y,
+              text: item.text,
+              color: item.col || "#000",
+              life: item.life,
+              big: item.big,
+            }))
+          : [],
+      brokenPlatforms: shows("platforms") ? (run._arenaBroken ?? []) : [],
+      platforms: shows("platforms") ? stage.platforms : [],
+      projectiles: actorsIncluded && shows("projectiles") ? state.projectiles() : [],
       setEffectView: (bounds) => {
         d.FX.setViewRect(bounds);
       },
       drawBackdrop: (_value, time, playerX, bounds, camera) => {
+        if (!backdrop) return;
         const stageId = stage.current.id;
         // The world is showing this stage: its painted background may load now,
         // and the stages a run has left give their decoded layers back.
@@ -340,6 +382,7 @@ export function createLiveWorldPresentationAdapters(
         d.Scenes.drawBack(canvas, sceneInput(stageId, time, playerX, bounds, camera));
       },
       drawBackdropFront: (bounds, camera) => {
+        if (!backdrop) return;
         d.Scenes.drawFront(
           canvas,
           sceneInput(stage.current.id, d.CLOCK.sim, state.player()?.x ?? width / 2, bounds, camera),
@@ -349,19 +392,19 @@ export function createLiveWorldPresentationAdapters(
         d.Backdrop.platform(canvas, platform, stage.current, floor, bounds);
       },
       drawFinale: drawFinaleWorld,
-      tutorialActive: actorsIncluded && run.mode === "tutorial" && tutorial.active,
+      tutorialActive: actorsIncluded && run.mode === "tutorial" && tutorial.active && seen("tutorialCard"),
       drawTutorialGhost: () => {
         tutorial.drawGhost();
-        if (actorsIncluded && state.screen() === "playing") services.chase?.draw(canvas);
+        if (actorsIncluded && state.screen() === "playing" && seen("chaseHud")) services.chase?.draw(canvas);
       },
       drawPlayer: () => {
         player?.draw(canvas);
       },
       drawBlade: () => {
-        if (blade && player) blade.draw(canvas, player);
+        if (blade && bladeHolder) blade.draw(canvas, bladeHolder);
       },
       drawEffects: () => {
-        if (actorsIncluded) d.FX.draw(canvas);
+        if (actorsIncluded && shows("effects")) d.FX.draw(canvas);
       },
       drawEnvironment,
       drawDebug: drawPantheonDebug,
@@ -400,7 +443,7 @@ export function createLiveWorldPresentationAdapters(
   const drawTraining = (): void => {
     const run = state.run();
     const mode = run.mode === "tutorial" ? "tutorial" : run.mode === "playground" ? "playground" : "other";
-    if (mode === "other") return;
+    if (mode === "other" || !seen("coachMarks")) return;
     const exercise = mode === "tutorial" ? currentExercise() : undefined;
     const lessonCard = exercise ? drawTutorialCard(exercise) : undefined;
     const frame = coach.frame({
@@ -423,10 +466,10 @@ export function createLiveWorldPresentationAdapters(
     world.coachMarks(frame);
   };
   const drawHud = (): void => {
-    if (!state.player()) return;
+    if (!state.player() || !shows("indicators")) return;
     indicators.lowHealthScreen();
     indicators.hud();
-    if (state.screen() === "playing") services.chase?.hud(canvas, width);
+    if (state.screen() === "playing" && seen("chaseHud")) services.chase?.hud(canvas, width);
     drawTraining();
   };
 
@@ -448,6 +491,7 @@ export function createLiveWorldPresentationAdapters(
       if (boss && boss._phaseFlashT > 0) boss._phaseFlashT = Math.max(0, boss._phaseFlashT - deltaSeconds);
     },
     drawAchievementToast(deltaSeconds: number, held = false): void {
+      if (!seen("achievementToast")) return;
       const snapshot = services.achievementToast.step(deltaSeconds, {
         held,
         pending: d.ACH.pending,
@@ -473,6 +517,7 @@ export function createLiveWorldPresentationAdapters(
       }
     },
     drawTouchControls(): void {
+      if (!seen("touchControls")) return;
       const onboarding = services.touchOnboarding?.step(state.lastUiDelta(), !!d.PROFILE.stat("touchOnboarded")) ?? {
         alpha: 0,
         completed: false,

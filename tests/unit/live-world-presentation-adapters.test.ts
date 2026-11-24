@@ -40,6 +40,7 @@ describe("live world capture layers", () => {
       lastUiDelta: () => 1 / 60,
     } as unknown as WorldPresentationState;
     const services = {
+      viewer: "player",
       dependencies: { CONFIG, A11Y: { flashScale: 1 }, UPGRADES: [], UI: { t: { color: { accent: "#abc" } } } },
       chase: { hud: chaseHud },
       world: { hud: worldHud, lowHealthScreen },
@@ -103,6 +104,7 @@ describe("live world capture layers", () => {
       shake: () => 0,
     } as unknown as WorldPresentationState;
     const services = {
+      viewer: "player",
       dependencies: {
         CONFIG,
         CLOCK: { sim: 1 },
@@ -169,6 +171,7 @@ describe("live world capture layers", () => {
         shake: () => 0,
       } as unknown as WorldPresentationState;
       const services = {
+        viewer: "player",
         dependencies: {
           CONFIG,
           CLOCK: { sim: 1 },

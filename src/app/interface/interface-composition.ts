@@ -50,7 +50,7 @@ type FrameServices = Omit<
 >;
 type WorldServices = Omit<
   WorldPresentationServices,
-  "screenRectangle" | "world" | "achievementToast" | "touchOnboarding" | "capturePolicy"
+  "screenRectangle" | "world" | "achievementToast" | "touchOnboarding" | "capturePolicy" | "viewer"
 >;
 
 const SCREEN_HUES: Partial<Record<AppScreen, string>> = Object.freeze({
@@ -153,6 +153,7 @@ export function createLiveInterfaceComposition(
   });
   const worldAdapters = createLiveWorldPresentationAdapters(options.worldState, {
     ...options.worldServices,
+    viewer: "player",
     capturePolicy: capture.policy,
     screenRectangle: frame.screenRectangle,
     world: surface.world,
