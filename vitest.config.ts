@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
-import { indexedTestFiles, processTestFiles } from "./scripts/test-files.mjs";
+import { VITEST_TEST_GLOBS, indexedTestFiles, processTestFiles } from "./scripts/test-files.mjs";
 
 /** Node tests link the replay engine in directly; the game fetches it on first use. */
 const replayEngineInTests = {
@@ -9,7 +9,7 @@ const replayEngineInTests = {
 };
 
 // Only files in git's index run (tracked, or staged with `git add -N`): see scripts/test-files.mjs.
-const globs = ["tests/unit/**/*.test.ts", "tests/unit/**/*.test.mjs", "tests/contract/**/*.test.ts"];
+const globs = [...VITEST_TEST_GLOBS];
 const files = indexedTestFiles(globs);
 const starts = new Set(processTestFiles(globs));
 const processFiles = files.filter((file) => starts.has(file));
