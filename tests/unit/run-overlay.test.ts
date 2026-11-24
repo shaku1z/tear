@@ -62,8 +62,9 @@ describe("the run overlay", () => {
   it("draws the run's layers for a watcher and leaves the player's own out", () => {
     const player = drawn("player"),
       watcher = drawn("watcher");
-    for (const { paint } of [player, watcher]) {
-      expect(paint.backdropPost).toHaveBeenCalledOnce();
+    for (const { paint, screen } of [player, watcher]) {
+      // The vignette covers the rectangle the frame is shown in, not the arena's box inside it.
+      expect(paint.backdropPost).toHaveBeenCalledExactlyOnceWith(screen);
       expect(paint.hud).toHaveBeenCalledOnce();
       expect(paint.reticle).toHaveBeenCalledOnce();
     }

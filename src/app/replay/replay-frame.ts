@@ -273,8 +273,8 @@ export function createReplayFrames(
       world: LiveWorldPresentationAdapters,
       worldCamera: Parameters<typeof look.backdrop.post>[2],
     ): RunOverlayPainters => ({
-      backdropPost: () => {
-        look.backdrop.post(canvas, stage, worldCamera);
+      backdropPost: (view) => {
+        look.backdrop.post(canvas, stage, worldCamera, view);
       },
       hud: world.drawHud,
       beatBanner: (model) => {

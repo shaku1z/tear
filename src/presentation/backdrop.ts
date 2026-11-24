@@ -184,8 +184,15 @@ export interface BackdropController {
   flare(x: number, y: number, color: string, radius: number, life: number): void;
   bloom(color: string, strength: number, life: number): void;
   drawFx(context: CanvasRenderingContext2D, camera?: CameraPort): void;
-  post(context: CanvasRenderingContext2D, stage: Stage, camera?: CameraPort): void;
+  /**
+   * The vignette over `screen`, the rectangle the frame is shown in (default: the view and its overscan), then
+   * the combat light at its place in the world.
+   */
+  post(context: CanvasRenderingContext2D, stage: Stage, camera?: CameraPort, screen?: ScreenArea): void;
 }
+
+/** A rectangle in the view's coordinates. */
+type ScreenArea = Readonly<{ x: number; y: number; w: number; h: number }>;
 
 /** Outward rendering adapters supplied by the composition that owns a world. */
 export interface BackdropPolicy {
@@ -961,9 +968,10 @@ export function createBackdrop(policy: BackdropPolicy): BackdropController {
     },
 
     // === vignette + grain (screen space, after world, before HUD) ===
-    post(ctx, stage, camera) {
+    post(ctx, stage, camera, screen) {
       const c = this._get(stage);
-      ctx.drawImage(c.vign, -this.PX, -this.PY, this.W + this.PX * 2, this.H + this.PY * 2);
+      const area = screen ?? { x: -this.PX, y: -this.PY, w: this.W + this.PX * 2, h: this.H + this.PY * 2 };
+      ctx.drawImage(c.vign, area.x, area.y, area.w, area.h);
       this.drawFx(ctx, camera); // combat light glows over the vignette
     },
   } satisfies BackdropController;

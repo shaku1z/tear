@@ -45,7 +45,8 @@ export interface RunOverlayFrame {
 
 /** What draws each layer. The overlay decides whether and in what order. */
 export interface RunOverlayPainters {
-  backdropPost(): void;
+  /** The stage's vignette over the screen rectangle, and its combat light. */
+  backdropPost(screen: ScreenRectangle): void;
   hud(): void;
   beatBanner(model: BeatBannerModel): void;
   scene(screen: ScreenRectangle): void;
@@ -94,7 +95,7 @@ export function createRunOverlay(viewer: OverlayViewer): RunOverlay {
     },
     draw(frame: RunOverlayFrame, paint: RunOverlayPainters): void {
       const { context, screen, cinema } = frame;
-      if (frame.biome && seen("backdropPost")) paint.backdropPost();
+      if (frame.biome && seen("backdropPost")) paint.backdropPost(screen);
       if (frame.parryFlash > 0 && seen("parryFlash")) {
         context.save();
         context.globalCompositeOperation = "difference";

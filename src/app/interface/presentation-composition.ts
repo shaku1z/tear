@@ -151,7 +151,12 @@ export interface LivePresentationFrameServices<Screen extends string, Stage exte
   readonly blendColor: (from: string, to: string, amount: number) => string;
   readonly setTheme: (background: string, playLike: boolean) => void;
   readonly themeInk: () => string;
-  readonly backdropPost: (context: CanvasRenderingContext2D, stage: Stage, camera: WorldCamera) => void;
+  readonly backdropPost: (
+    context: CanvasRenderingContext2D,
+    stage: Stage,
+    camera: WorldCamera,
+    screen: ScreenRectangle,
+  ) => void;
   /** The colour the stage paints behind play: a painted stage's paper, else the stage colour. */
   readonly stageBackground: (stage: Stage) => string;
   readonly renderWorld: () => WorldCamera;
@@ -203,8 +208,8 @@ export function createLivePresentationFrameHost<Screen extends string, Stage ext
     touchControls: services.touchActive() && !services.controller()?.active,
   });
   const overlayPainters = (camera: WorldCamera | undefined): RunOverlayPainters => ({
-    backdropPost: () => {
-      if (camera !== undefined) services.backdropPost(context, services.stage.current, camera);
+    backdropPost: (screen) => {
+      if (camera !== undefined) services.backdropPost(context, services.stage.current, camera, screen);
     },
     hud: services.drawHud,
     beatBanner: (model) => {

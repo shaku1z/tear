@@ -373,8 +373,8 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
           }
         },
         themeInk: () => THEME.ink,
-        backdropPost: (context, stage, camera) => {
-          Backdrop.post(context, stage, camera);
+        backdropPost: (context, stage, camera, screen) => {
+          Backdrop.post(context, stage, camera, screen);
         },
         stageBackground: (stage) => Scenes.paper(stage.id) ?? stage.bg,
         drawMenuAttract: (_, keepOut) => {
