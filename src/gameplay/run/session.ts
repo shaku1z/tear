@@ -5,6 +5,19 @@ import type { SeedRaceRun } from "./seed-locked-draft";
 import type { CinematicPreference } from "../campaign/cinematic-preference";
 
 export type RunMode = "campaign" | "endless" | "gauntlet" | "playground" | "tutorial" | "bossonly" | "sandbox";
+
+const BIOME_MODES: ReadonlySet<string> = new Set<RunMode>([
+  "campaign",
+  "endless",
+  "bossonly",
+  "gauntlet",
+  "tutorial",
+  "playground",
+]);
+/** True for a mode played in the stages' biomes (their backdrop, light and music); the sandbox has none. */
+export function isBiomeRunMode(mode: string): boolean {
+  return BIOME_MODES.has(mode);
+}
 export type RunDifficulty = DifficultyId;
 
 export interface RunDifficultyScaling {

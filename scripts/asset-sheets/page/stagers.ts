@@ -23,7 +23,7 @@ import {
   VIEW,
   type Actor,
   type Command,
-  type ReplayFrameLayer,
+  type WorldFrameLayer,
   type Session,
 } from "./session";
 
@@ -32,7 +32,7 @@ export interface Track {
   readonly category: string;
   readonly asset: string;
   readonly state: string;
-  readonly show: readonly ReplayFrameLayer[];
+  readonly show: readonly WorldFrameLayer[];
   /** Detail for the index: for example a projectile's family. */
   readonly facts?: Readonly<Record<string, string>>;
 }
@@ -196,7 +196,7 @@ function actorStager(boss: boolean): Stager {
     tracks(session, scene, tick, naturalTicks) {
       const subject = subjectOf(session);
       if (subject === undefined || (subject.spawnT ?? 0) > 0 || (subject.introT ?? 0) > 0) return [];
-      const show: ReplayFrameLayer[] = boss
+      const show: WorldFrameLayer[] = boss
         ? ["hazards", "environment", "enemies", "projectiles", "effects"]
         : ["environment", "enemies", "effects"];
       let state: string;
@@ -243,7 +243,7 @@ function playerStager(whole: boolean): Stager {
     tracks(session, scene, tick) {
       const player = playerOf(session);
       const blade = session.replay.world.state.blade() as unknown as { state: string } | undefined;
-      const show: ReplayFrameLayer[] = whole ? ["player", "blade", "effects"] : ["blade", "effects"];
+      const show: WorldFrameLayer[] = whole ? ["player", "blade", "effects"] : ["blade", "effects"];
       let state = whole ? "idle" : "held";
       if (tick >= 470 && tick <= 540) state = "swing";
       else if (blade !== undefined && blade.state !== "held") state = whole ? `blade-${blade.state}` : blade.state;

@@ -15,6 +15,7 @@ import {
 import {
   createLiveWorldPresentationAdapters,
   type LiveWorldPresentationAdapters,
+  type PlayerPresentationServices,
   type WorldPresentationServices,
   type WorldPresentationState,
 } from "../world/world-presentation-adapters";
@@ -48,10 +49,13 @@ type FrameServices = Omit<
   | "screenHue"
   | "capturePolicy"
 >;
+/** Live play's world services: the world's and the player's own, which this composition separates. */
 type WorldServices = Omit<
   WorldPresentationServices,
-  "screenRectangle" | "world" | "achievementToast" | "touchOnboarding" | "capturePolicy" | "viewer"
->;
+  "screenRectangle" | "world" | "capturePolicy" | "player" | "dependencies"
+> &
+  Omit<PlayerPresentationServices, "achievementToast" | "touchOnboarding" | "dependencies"> &
+  Readonly<{ dependencies: WorldPresentationServices["dependencies"] & PlayerPresentationServices["dependencies"] }>;
 
 const SCREEN_HUES: Partial<Record<AppScreen, string>> = Object.freeze({
   shop: "#e0a326",
@@ -151,15 +155,23 @@ export function createLiveInterfaceComposition(
     chooseTier: screens.chooseTier,
     rerollDraft: screens.rerollDraft,
   });
+  const { chase, debug, tutorial, trainingCallouts, ...worldServices } = options.worldServices;
   const worldAdapters = createLiveWorldPresentationAdapters(options.worldState, {
-    ...options.worldServices,
-    viewer: "player",
+    ...worldServices,
     capturePolicy: capture.policy,
     screenRectangle: frame.screenRectangle,
     world: surface.world,
-    achievementToast: new AchievementToastController(options.worldServices.ease),
-    // Mobile is paused: production builds leave the touch coaching out (plans/MOBILE_LATER.md).
-    touchOnboarding: __TEAR_MOBILE__ ? new TouchOnboardingController() : null,
+    // Live play is drawn for the person playing, with their own devices, aids and toasts.
+    player: {
+      dependencies: worldServices.dependencies,
+      ...(chase === undefined ? {} : { chase }),
+      debug,
+      tutorial,
+      trainingCallouts,
+      achievementToast: new AchievementToastController(worldServices.ease),
+      // Mobile is paused: production builds leave the touch coaching out (plans/MOBILE_LATER.md).
+      touchOnboarding: __TEAR_MOBILE__ ? new TouchOnboardingController() : null,
+    },
   });
   return Object.freeze({
     capture,

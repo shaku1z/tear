@@ -8,6 +8,7 @@ import type { MusicContextObservation } from "../../audio/music-director";
 import type { CommandEnvelope } from "../../domain/envelopes";
 import type { GameAction } from "../../input/game-action";
 import type { TearSimulationAdvanceLifecycle } from "../../gameplay/runtime/tear-simulation-runtime";
+import { isBiomeRunMode } from "../../gameplay/run/session";
 
 export interface MutableFramePreludeState {
   slowMotion: number;
@@ -210,11 +211,7 @@ export function syncMusicTheme(
 ): void {
   if (!port) return;
   if (input.menu) port.setMusicTheme(input.attractReady ? input.attractStage : "menu", false);
-  else if (
-    input.stageName &&
-    input.runMode &&
-    ["campaign", "endless", "bossonly", "gauntlet", "tutorial", "playground"].includes(input.runMode)
-  )
+  else if (input.stageName && input.runMode && isBiomeRunMode(input.runMode))
     port.setMusicTheme(input.stageName, input.bossWave && input.appState !== "gameover" && input.appState !== "win");
   else port.setMusicTheme("menu", false);
 }

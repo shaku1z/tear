@@ -2,10 +2,7 @@
  * The replay presentation over recording canvases, with a stub UI kit, for tests that draw a real replay frame
  * (tests/unit/ghost-production-replay-world.test.ts, tests/unit/replay-screen-layers.test.ts).
  */
-import {
-  createBrowserGhostReplayPresentation,
-  type BrowserGhostReplayPresentationOptions,
-} from "../../src/app/replay/browser-ghost-replay-presentation";
+import { createReplayFrames, type ReplayFrameOptions } from "../../src/app/replay/replay-frame";
 
 /** A point a drawing call reached, in the canvas's own pixels (after every transform), and the call. */
 export interface RecordedPoint {
@@ -137,12 +134,14 @@ const text = (canvas: CanvasRenderingContext2D, value: string, x: number, y: num
 const noDraw = () => undefined;
 
 /** The replay presentation over recording canvases (each `createElement` records into `calls`). */
-export function replayPresentation(calls: string[], options: BrowserGhostReplayPresentationOptions = {}) {
+export function replayPresentation(calls: string[], options: ReplayFrameOptions = {}) {
   const document = { createElement: () => recordingCanvas(calls) } as unknown as Document;
-  return createBrowserGhostReplayPresentation(
+  return createReplayFrames(
     document,
+    // The parts of the UI kit a replay frame calls; the rest of the kit is never reached.
     {
       font: () => "12px sans-serif",
+      beatBanner: noDraw,
       tag: text,
       text,
       title: text,
@@ -188,7 +187,7 @@ export function replayPresentation(calls: string[], options: BrowserGhostReplayP
         space: { xs: 6, sm: 10, md: 16, lg: 24, xl: 40 },
         motion: { finalRewardIn: 0.4 },
       },
-    },
+    } as unknown as Parameters<typeof createReplayFrames>[1],
     options,
   );
 }

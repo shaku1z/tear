@@ -17,7 +17,7 @@ import type { WorldRendererRegistry } from "../../presentation/world";
 import type { WorldRect } from "../../presentation/world/contracts";
 import { formatEnemyLabel } from "../../presentation/world/entity-layer";
 import { renderWorldFrame, type WorldBounds, type WorldCamera } from "../../presentation/world/world-frame";
-import type { SceneDrawInput } from "../../presentation/scenes/scene-library";
+import type { SceneDrawInput, SceneLibrary } from "../../presentation/scenes/scene-library";
 import { buildTouchControlsSnapshot, buildTutorialCardSnapshot } from "../../presentation/world/overlay-snapshots";
 import { createWorldIndicators, type WorldIndicatorState } from "./world-indicators";
 import {
@@ -33,33 +33,27 @@ import { trainingExercise } from "../../gameplay/training/training-exercises";
 import { createTrainingCoachPresentation } from "./training-coach-presentation";
 import type { TrainingCallouts } from "../training/training-coach";
 import { isSheetScreen } from "../../domain/screen-catalog";
+import { isBiomeRunMode } from "../../gameplay/run/session";
 import { isObject } from "../../domain/records";
 import type { EnvironmentSnapshot } from "../../gameplay/environment/environment-contracts";
-import { renderEnvironmentLayer } from "./environment-layer";
+import { isEnvironmentDrawnEnemy, renderEnvironmentLayer } from "./environment-layer";
 import { shownTo, type OverlayLayer, type OverlayViewer } from "./overlay-audience";
 
-type Dependencies = Pick<
+/** What every viewer's frame is drawn from: the world's look, clock and effects. */
+export type WorldDependencies = Pick<
   GameRuntimeDependencies,
-  | "A11Y"
-  | "ACH"
-  | "Backdrop"
-  | "Scenes"
-  | "CLOCK"
-  | "CONFIG"
-  | "FX"
-  | "GFX"
-  | "Input"
-  | "PAD"
-  | "PROFILE"
-  | "SAFE"
-  | "STAGES"
-  | "THEME"
-  | "UI"
-  | "UPGRADES"
-  | "achievementToastPersistence"
-  | "profileStatsPersistence"
-  | "cosmeticRandom"
-  | "drawBossTransformationWorld"
+  "A11Y" | "Backdrop" | "CLOCK" | "CONFIG" | "FX" | "GFX" | "STAGES" | "THEME" | "UI" | "UPGRADES"
+> &
+  Readonly<{
+    /** Painted stage backgrounds: what the frame calls of them. */
+    Scenes: Pick<SceneLibrary, "show" | "opaque" | "drawBack" | "drawFront">;
+    cosmeticRandom: () => number;
+    drawBossTransformationWorld: GameRuntimeDependencies["drawBossTransformationWorld"];
+  }>;
+/** What only the player's own layers read: their devices, profile and achievements. */
+type PlayerDependencies = Pick<
+  GameRuntimeDependencies,
+  "ACH" | "Input" | "PAD" | "PROFILE" | "achievementToastPersistence" | "profileStatsPersistence"
 >;
 type Stage = ReturnType<GameRuntimeDependencies["stageAt"]>;
 type Platforms = ArenaPlatform[];
@@ -114,23 +108,35 @@ export type WorldFrameLayer =
 
 const NOTHING_HIDDEN: ReadonlySet<WorldFrameLayer> = new Set();
 
-export interface WorldPresentationServices {
-  /**
-   * Who the frame is for: live play draws for the player, a replay for someone watching. A layer
-   * `OVERLAY_LAYERS` gives to the player alone is drawn only for the player.
-   */
-  readonly viewer: OverlayViewer;
-  /** Layers left out of the frame; nothing when absent. */
-  readonly hidden?: () => ReadonlySet<WorldFrameLayer>;
+/** The person playing: their devices, aids and toasts, which the player's own layers draw from. */
+export interface PlayerPresentationServices {
+  readonly dependencies: PlayerDependencies;
   readonly chase?: Readonly<{
     draw(canvas: CanvasRenderingContext2D): void;
     hud(canvas: CanvasRenderingContext2D, width: number): void;
   }>;
-  readonly dependencies: Dependencies;
+  /** Whether this build has the boss debug overlay. */
+  readonly debug: boolean;
+  readonly tutorial: LiveTutorialRuntime;
+  /** Training call-outs (spawned enemies' names, save notices), drawn as coach marks. */
+  readonly trainingCallouts: TrainingCallouts;
+  readonly achievementToast: AchievementToastController;
+  /** The first-touch coaching; null in a build without touch. */
+  readonly touchOnboarding: TouchOnboardingController | null;
+}
+
+export interface WorldPresentationServices {
+  /**
+   * The person the frame is drawn for. Live play gives it; a replay is drawn for someone watching and does not,
+   * so every layer `OVERLAY_LAYERS` gives to the player alone is left out of it.
+   */
+  readonly player?: PlayerPresentationServices;
+  /** Layers left out of the frame; nothing when absent. */
+  readonly hidden?: () => ReadonlySet<WorldFrameLayer>;
+  readonly dependencies: WorldDependencies;
   readonly canvas: CanvasRenderingContext2D;
   readonly width: number;
   readonly height: number;
-  readonly debug: boolean;
   readonly capturePolicy: () => Readonly<{
     readonly debug: "include" | "exclude";
     readonly actors: "include" | "exclude";
@@ -138,13 +144,7 @@ export interface WorldPresentationServices {
   readonly screenRectangle: () => WorldRect;
   readonly world: WorldRendererRegistry;
   readonly stage: { index: number; current: Stage; platforms: Platforms; bannerSeconds: number; name: string };
-  readonly tutorial: LiveTutorialRuntime;
-  /** Training call-outs (spawned enemies' names, save notices), drawn as coach marks. */
-  readonly trainingCallouts: TrainingCallouts;
   readonly finale: () => Finale | null;
-  readonly achievementToast: AchievementToastController;
-  /** The first-touch coaching; null in a build without touch. */
-  readonly touchOnboarding: TouchOnboardingController | null;
   readonly formatTime: (seconds: number) => string;
   readonly trickColor: (multiplier: number) => string;
   readonly ease: (amount: number) => number;
@@ -167,15 +167,24 @@ export function createLiveWorldPresentationAdapters(
   state: WorldPresentationState,
   services: WorldPresentationServices,
 ): LiveWorldPresentationAdapters {
-  const { dependencies: d, canvas, width, height, stage, world, tutorial } = services;
+  const { dependencies: d, canvas, width, height, stage, world } = services;
+  const viewer: OverlayViewer = services.player === undefined ? "watcher" : "player";
   /** The parts of the world this frame draws (the asset sheets leave some out). */
   const shows = (layer: WorldFrameLayer): boolean => !(services.hidden?.() ?? NOTHING_HIDDEN).has(layer);
-  /** Whether this frame's viewer sees an overlay layer (a replay leaves the player's own out). */
-  const seen = (layer: OverlayLayer): boolean => shownTo(layer, services.viewer);
+  /** The player's services when this frame's viewer sees `layer`, one of the player's own; nothing for a watcher. */
+  const own = (layer: OverlayLayer): PlayerPresentationServices | undefined =>
+    shownTo(layer, viewer) ? services.player : undefined;
+  const debugShown = (): boolean =>
+    own("pantheonDebug")?.debug === true && services.capturePolicy().debug === "include";
   const presentationEnemies = (): PresentationEnemy[] =>
     services.capturePolicy().actors === "exclude" || !shows("enemies")
       ? []
-      : state.enemies().flatMap((enemy) => (isDrawableEnemy(enemy) ? [projectPresentationEnemy(enemy)] : []));
+      : state.enemies().flatMap((enemy) => {
+          if (isDrawableEnemy(enemy)) return [projectPresentationEnemy(enemy)];
+          // The environment layer draws its own enemy kinds; any other enemy without a renderer is a fault, not a gap.
+          if (isEnvironmentDrawnEnemy(enemy)) return [];
+          throw new TypeError(`enemy renderer is unavailable: ${enemy.kind}`);
+        });
 
   const indicators = createWorldIndicators(
     world,
@@ -190,13 +199,13 @@ export function createLiveWorldPresentationAdapters(
       trickColor: services.trickColor,
       ease: services.ease,
     },
-    services.viewer,
+    viewer,
   );
   const drawEnemyStatus = indicators.enemyStatus;
   const drawPantheonDebug = (view: WorldBounds, painted: WorldBounds): void => {
     // Release builds never show it, so the snapshot (a copy of every platform,
     // projectile and enemy zone) is not built at all.
-    if (!(services.debug && services.capturePolicy().debug === "include" && seen("pantheonDebug"))) return;
+    if (!debugShown()) return;
     const run = state.run();
     world.pantheonDebug(
       buildPantheonDebugSnapshot({
@@ -327,8 +336,7 @@ export function createLiveWorldPresentationAdapters(
     // The player's figure is what the blade hangs from, so a hidden figure still holds a shown blade.
     const bladeHolder = actorsIncluded ? physicalPlayer : undefined;
     const backdrop = shows("backdrop");
-    const biome =
-      backdrop && ["campaign", "endless", "bossonly", "gauntlet", "tutorial", "playground"].includes(run.mode);
+    const biome = backdrop && isBiomeRunMode(run.mode);
     const voidActive = !!run.voidScroll && (run.voidScroll.active || run.voidScroll.frozen);
     return renderWorldFrame({
       canvas,
@@ -336,11 +344,12 @@ export function createLiveWorldPresentationAdapters(
       height,
       screen: services.screenRectangle(),
       zoom: state.zoom(),
-      shake: state.shake(),
+      // The camera's shake is felt by the one playing; a watcher sees the run held steady.
+      shake: shownTo("screenShake", viewer) ? state.shake() : 0,
       playing: state.screen() === "playing",
       random: d.cosmeticRandom,
       biome,
-      debug: services.debug && services.capturePolicy().debug === "include",
+      debug: debugShown(),
       timeSeconds: d.CLOCK.sim,
       reducedMotion: d.A11Y.reducedMotion,
       stage: stage.current,
@@ -392,10 +401,10 @@ export function createLiveWorldPresentationAdapters(
         d.Backdrop.platform(canvas, platform, stage.current, floor, bounds);
       },
       drawFinale: drawFinaleWorld,
-      tutorialActive: actorsIncluded && run.mode === "tutorial" && tutorial.active && seen("tutorialCard"),
+      tutorialActive: actorsIncluded && run.mode === "tutorial" && own("tutorialCard")?.tutorial.active === true,
       drawTutorialGhost: () => {
-        tutorial.drawGhost();
-        if (actorsIncluded && state.screen() === "playing" && seen("chaseHud")) services.chase?.draw(canvas);
+        own("tutorialCard")?.tutorial.drawGhost();
+        if (actorsIncluded && state.screen() === "playing") own("chaseHud")?.chase?.draw(canvas);
       },
       drawPlayer: () => {
         player?.draw(canvas);
@@ -412,14 +421,14 @@ export function createLiveWorldPresentationAdapters(
   };
 
   /** On touch, top-right HUD cards and toasts rest below the on-screen pause control. */
-  const touchClearTop = (): number | undefined => {
-    if (!d.Input.touchActive()) return undefined;
-    const pause = d.Input.touchLayout().pause;
+  const touchClearTop = ({ dependencies: { Input } }: PlayerPresentationServices): number | undefined => {
+    if (!Input.touchActive()) return undefined;
+    const pause = Input.touchLayout().pause;
     return pause.y + pause.r + d.UI.t.space.sm;
   };
   const coach = createTrainingCoachPresentation();
   /** The exercise on screen, read once per HUD frame for the strip and the coach. */
-  const currentExercise = () => {
+  const currentExercise = ({ tutorial }: PlayerPresentationServices) => {
     if (!tutorial.active) return undefined;
     const view = tutorial.step();
     return {
@@ -428,40 +437,46 @@ export function createLiveWorldPresentationAdapters(
       completing: tutorial.doneT > 0,
     };
   };
-  const drawTutorialCard = (exercise: NonNullable<ReturnType<typeof currentExercise>>): WorldRect => {
-    const keys = promptLabels(exercise.teaching.controls, promptDevice(d.Input.mode), padPromptLabel(d.PAD));
+  const drawTutorialCard = (
+    exercise: NonNullable<ReturnType<typeof currentExercise>>,
+    player: PlayerPresentationServices,
+  ): WorldRect => {
+    const { Input, PAD } = player.dependencies;
+    const keys = promptLabels(exercise.teaching.controls, promptDevice(Input.mode), padPromptLabel(PAD));
     return world.tutorialCard(
       buildTutorialCardSnapshot(
         { ...exercise.teaching, bossPractice: exercise.teaching.kind === "boss" },
         keys,
         exercise.progress,
-        tutorial.doneT,
-        touchClearTop(),
+        player.tutorial.doneT,
+        touchClearTop(player),
       ),
     );
   };
   const drawTraining = (): void => {
     const run = state.run();
     const mode = run.mode === "tutorial" ? "tutorial" : run.mode === "playground" ? "playground" : "other";
-    if (mode === "other" || !seen("coachMarks")) return;
-    const exercise = mode === "tutorial" ? currentExercise() : undefined;
-    const lessonCard = exercise ? drawTutorialCard(exercise) : undefined;
+    const player = own("coachMarks");
+    if (mode === "other" || player === undefined) return;
+    const { Input, PAD } = player.dependencies;
+    const exercise = mode === "tutorial" ? currentExercise(player) : undefined;
+    const lessonCard = exercise ? drawTutorialCard(exercise, player) : undefined;
     const frame = coach.frame({
       mode,
       run,
       ...(run.pgArena === undefined ? {} : { arena: run.pgArena }),
       deltaSeconds: state.lastUiDelta(),
       reducedMotion: d.A11Y.reducedMotion,
-      inputMode: d.Input.mode,
-      padLabel: padPromptLabel(d.PAD),
+      inputMode: Input.mode,
+      padLabel: padPromptLabel(PAD),
       camera: lastCamera,
       player: state.player(),
       enemies: state.enemies().filter((enemy) => !enemy.dead),
       bladeReach: d.CONFIG.blade.aimRadius + d.CONFIG.blade.length,
       ...(exercise ? { exercise } : {}),
       lessonCard,
-      touchLayout: d.Input.touchActive() ? d.Input.touchLayout() : undefined,
-      callouts: services.trainingCallouts.drain(),
+      touchLayout: Input.touchActive() ? Input.touchLayout() : undefined,
+      callouts: player.trainingCallouts.drain(),
     });
     world.coachMarks(frame);
   };
@@ -469,7 +484,7 @@ export function createLiveWorldPresentationAdapters(
     if (!state.player() || !shows("indicators")) return;
     indicators.lowHealthScreen();
     indicators.hud();
-    if (state.screen() === "playing" && seen("chaseHud")) services.chase?.hud(canvas, width);
+    if (state.screen() === "playing") own("chaseHud")?.chase?.hud(canvas, width);
     drawTraining();
   };
 
@@ -491,46 +506,50 @@ export function createLiveWorldPresentationAdapters(
       if (boss && boss._phaseFlashT > 0) boss._phaseFlashT = Math.max(0, boss._phaseFlashT - deltaSeconds);
     },
     drawAchievementToast(deltaSeconds: number, held = false): void {
-      if (!seen("achievementToast")) return;
-      const snapshot = services.achievementToast.step(deltaSeconds, {
+      const player = own("achievementToast");
+      if (player === undefined) return;
+      const { ACH, achievementToastPersistence } = player.dependencies;
+      const snapshot = player.achievementToast.step(deltaSeconds, {
         held,
-        pending: d.ACH.pending,
-        rarities: d.ACH.RARITY,
-        commonRarity: d.ACH.RARITY.common,
-        categories: d.ACH.CATS,
-        markSeen: d.achievementToastPersistence.markSeen,
-        save: d.achievementToastPersistence.save,
+        pending: ACH.pending,
+        rarities: ACH.RARITY,
+        commonRarity: ACH.RARITY.common,
+        categories: ACH.CATS,
+        markSeen: achievementToastPersistence.markSeen,
+        save: achievementToastPersistence.save,
         shardsFor: (achievement) => {
-          const source = d.ACH.byId(achievement.id);
-          return source ? d.ACH.shardsFor(source) : 0;
+          const source = ACH.byId(achievement.id);
+          return source ? ACH.shardsFor(source) : 0;
         },
         coinsFor: (achievement) => {
-          const source = d.ACH.byId(achievement.id);
-          return source ? d.ACH.coinsFor(source) : 0;
+          const source = ACH.byId(achievement.id);
+          return source ? ACH.coinsFor(source) : 0;
         },
       });
       if (snapshot) {
         const screen = state.screen();
         const placement = screen === "playing" ? "hud" : isSheetScreen(screen) ? "sheet-footer" : "corner";
-        const clearTop = touchClearTop();
+        const clearTop = touchClearTop(player);
         world.achievementToast({ ...snapshot, placement, ...(clearTop === undefined ? {} : { clearTop }) });
       }
     },
     drawTouchControls(): void {
-      if (!seen("touchControls")) return;
-      const onboarding = services.touchOnboarding?.step(state.lastUiDelta(), !!d.PROFILE.stat("touchOnboarded")) ?? {
+      const player = own("touchControls");
+      if (player === undefined) return;
+      const { Input, PROFILE, profileStatsPersistence } = player.dependencies;
+      const onboarding = player.touchOnboarding?.step(state.lastUiDelta(), !!PROFILE.stat("touchOnboarded")) ?? {
         alpha: 0,
         completed: false,
       };
-      if (onboarding.completed) d.profileStatsPersistence.add("touchOnboarded", 1);
+      if (onboarding.completed) profileStatsPersistence.add("touchOnboarded", 1);
       world.touchControls(
         buildTouchControlsSnapshot({
-          layout: d.Input.touchLayout(),
-          joystick: d.Input.joy,
+          layout: Input.touchLayout(),
+          joystick: Input.joy,
           held: Object.fromEntries(
-            Object.entries(d.Input.btnHeld).filter((entry): entry is [string, boolean] => entry[1] !== undefined),
+            Object.entries(Input.btnHeld).filter((entry): entry is [string, boolean] => entry[1] !== undefined),
           ),
-          ...(d.Input.touchAim && d.Input.stickAim ? { aim: d.Input.stickAim } : {}),
+          ...(Input.touchAim && Input.stickAim ? { aim: Input.stickAim } : {}),
           onboardingAlpha: onboarding.alpha,
         }),
       );

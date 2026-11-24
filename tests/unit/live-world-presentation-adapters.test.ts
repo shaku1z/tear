@@ -40,9 +40,8 @@ describe("live world capture layers", () => {
       lastUiDelta: () => 1 / 60,
     } as unknown as WorldPresentationState;
     const services = {
-      viewer: "player",
+      player: { chase: { hud: chaseHud } },
       dependencies: { CONFIG, A11Y: { flashScale: 1 }, UPGRADES: [], UI: { t: { color: { accent: "#abc" } } } },
-      chase: { hud: chaseHud },
       world: { hud: worldHud, lowHealthScreen },
       stage: { current: { accent: "#abc" } },
       formatTime: String,
@@ -104,7 +103,7 @@ describe("live world capture layers", () => {
       shake: () => 0,
     } as unknown as WorldPresentationState;
     const services = {
-      viewer: "player",
+      player: { tutorial: { active: true, drawGhost } },
       dependencies: {
         CONFIG,
         CLOCK: { sim: 1 },
@@ -123,7 +122,6 @@ describe("live world capture layers", () => {
       screenRectangle: () => ({ x: 0, y: 0, w: 1600, h: 900 }),
       stage: { current: { id: "verdant-sanctum" }, platforms: [] },
       capturePolicy: () => ({ actors, debug: "exclude" }),
-      tutorial: { active: true, drawGhost },
     } as unknown as WorldPresentationServices;
     vi.mocked(renderWorldFrame).mockImplementation((ports) => {
       expect(ports.playerX).toBe(137);
@@ -153,6 +151,82 @@ describe("live world capture layers", () => {
       expect(draw).toHaveBeenCalledTimes(actors === "include" ? 1 : 0);
     }
   });
+  it("draws the player's own layers for the player and leaves them out for a watcher", () => {
+    const frame = (forPlayer: boolean) => {
+      const lowHealthScreen = vi.fn(),
+        hud = vi.fn(),
+        chaseHud = vi.fn(),
+        achievementToast = vi.fn(),
+        touchControls = vi.fn();
+      const state = {
+        run: () => ({ mode: "endless", wave: 1, score: 0, runTime: 1, mult: 1, spawnQueue: [], mods: { owned: {} } }),
+        player: () => ({ x: 800, y: 500, hw: 10, hh: 20, hp: 10, maxHp: 100, dashCd: 0, shield: 0, maxShield: 0 }),
+        blade: () => undefined,
+        enemies: () => [],
+        projectiles: () => [],
+        floaters: () => [],
+        slowZones: () => [],
+        temporaryWalls: () => [],
+        bossIntro: () => null,
+        hud: () => ({ lagHp: 0.1, multiplier: 1, multiplierPop: 0 }),
+        hudClockSeconds: () => 0,
+        lastUiDelta: () => 1 / 60,
+        screen: () => "playing",
+        zoom: () => 1,
+        shake: () => 12,
+      } as unknown as WorldPresentationState;
+      const services = {
+        ...(forPlayer ? { player: { chase: { hud: chaseHud }, debug: false } } : {}),
+        dependencies: {
+          CONFIG,
+          CLOCK: { sim: 1 },
+          A11Y: { reducedMotion: false, highContrast: false, flashScale: 1 },
+          GFX: { low: false },
+          THEME: { dark: false, ink: "#000" },
+          UI: { font: () => "12px monospace", density: { textScale: 1 }, t: { color: { accent: "#abc" } } },
+          FX: { draw: vi.fn(), setViewRect: vi.fn() },
+          Backdrop: { draw: vi.fn() },
+          Scenes: { show: vi.fn(), opaque: () => false, drawBack: vi.fn() },
+          UPGRADES: [],
+          cosmeticRandom: () => 0.5,
+        },
+        canvas: {},
+        width: 1600,
+        height: 900,
+        screenRectangle: () => ({ x: 0, y: 0, w: 1600, h: 900 }),
+        world: { hud, lowHealthScreen, achievementToast, touchControls },
+        stage: { current: { id: "verdant-sanctum", accent: "#abc" }, platforms: [] },
+        capturePolicy: () => ({ actors: "include", debug: "exclude" }),
+        formatTime: String,
+        trickColor: () => "#fff",
+        ease: (value: number) => value,
+      } as unknown as WorldPresentationServices;
+      let shake: number | undefined;
+      vi.mocked(renderWorldFrame).mockImplementation((ports) => {
+        shake = ports.shake;
+        return {} as ReturnType<typeof renderWorldFrame>;
+      });
+      const adapters = createLiveWorldPresentationAdapters(state, services);
+      adapters.renderWorld();
+      adapters.drawHud();
+      if (!forPlayer) {
+        // A watcher has no devices, profile or toasts: these layers are left out before anything reads them.
+        adapters.drawAchievementToast(1 / 60);
+        adapters.drawTouchControls();
+      }
+      return {
+        hud: hud.mock.calls.length,
+        lowHealth: lowHealthScreen.mock.calls.length,
+        chase: chaseHud.mock.calls.length,
+        toast: achievementToast.mock.calls.length,
+        touch: touchControls.mock.calls.length,
+        shake,
+      };
+    };
+    expect(frame(true)).toEqual({ hud: 1, lowHealth: 1, chase: 1, toast: 0, touch: 0, shake: 12 });
+    // The run's HUD stays; the red screen, the chase panel and the camera's shake are the player's.
+    expect(frame(false)).toEqual({ hud: 1, lowHealth: 0, chase: 0, toast: 0, touch: 0, shake: 0 });
+  });
   it("builds the boss debug snapshot only when it will be drawn", () => {
     const frame = (debug: boolean, policy: "include" | "exclude") => {
       const pantheonDebug = vi.fn(),
@@ -171,7 +245,7 @@ describe("live world capture layers", () => {
         shake: () => 0,
       } as unknown as WorldPresentationState;
       const services = {
-        viewer: "player",
+        player: { debug },
         dependencies: {
           CONFIG,
           CLOCK: { sim: 1 },
@@ -187,7 +261,6 @@ describe("live world capture layers", () => {
         width: 1600,
         height: 900,
         screenRectangle: () => ({ x: 0, y: 0, w: 1600, h: 900 }),
-        debug,
         world: { pantheonDebug },
         stage: {
           current: { id: "verdant-sanctum" },

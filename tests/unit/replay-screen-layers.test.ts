@@ -7,7 +7,7 @@
 import { describe, expect, it } from "vitest";
 
 import { OVERLAY_LAYERS, shownTo, type OverlayLayer } from "../../src/app/world/overlay-audience";
-import type { ReplayFrameLayer } from "../../src/app/replay/browser-ghost-replay-presentation";
+import type { WorldFrameLayer } from "../../src/app/world/world-presentation-adapters";
 import { createProductionGhostReplayComposition } from "../../src/app/world/detached/replay-composition";
 import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 import { recordingCanvas, replayPresentation, type RecordedPoint } from "../support/replay-presentation";
@@ -15,7 +15,7 @@ import { recordingCanvas, replayPresentation, type RecordedPoint } from "../supp
 type Rectangle = Readonly<{ x: number; y: number; w: number; h: number }>;
 
 /** Every world layer of a replay frame, so what is left is what play draws over the world. */
-const WORLD_LAYERS: ReadonlySet<ReplayFrameLayer> = new Set([
+const WORLD_LAYERS: ReadonlySet<WorldFrameLayer> = new Set([
   "backdrop",
   "platforms",
   "hazards",

@@ -214,6 +214,6 @@ describe("Ghost production replay world", () => {
     Reflect.set(enemy, "kind", "rootbinder");
     expect(draw).not.toThrow();
     Reflect.set(enemy, "kind", "undrawable-test-kind");
-    expect(draw).toThrow("replay enemy renderer is unavailable");
+    expect(draw).toThrow("enemy renderer is unavailable: undrawable-test-kind");
   });
 });
