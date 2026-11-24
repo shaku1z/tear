@@ -12,7 +12,7 @@ export type OverlayLayer =
   | keyof WorldRendererRegistry
   | "backdropPost"
   | "echoFlash"
-  | "hitFlash"
+  | "parryFlash"
   | "screenShake"
   | "chaseHud"
   | "stageBeat"
@@ -68,8 +68,9 @@ export const OVERLAY_LAYERS = Object.freeze({
   reticle: run("world"),
   // The player's own alarms, aids and devices.
   lowHealthScreen: players("screen"),
-  // The whole-screen flash when the player is hit, and the camera's shake on impacts: felt by the one playing.
-  hitFlash: players("screen"),
+  // The whole-screen flash on a parry (`config.juice.flashParry`, inverted over the scene) and the camera's shake
+  // on impacts: felt by the one playing. The parry's spark at the clash is a world effect and stays in a replay.
+  parryFlash: players("screen"),
   screenShake: players("screen"),
   chaseHud: players("screen"),
   tutorialCard: players("screen"),
