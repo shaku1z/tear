@@ -30,47 +30,45 @@ function multiply(m: Matrix, [a, b, c, d, e, f]: Matrix): Matrix {
 
 /** The points each drawing call names, in the coordinates it was called with. */
 function namedPoints(call: string, args: readonly unknown[]): readonly (readonly [number, number])[] {
-  const n = args.map((value) => (typeof value === "number" ? value : Number.NaN));
+  const n = (index: number): number => {
+    const value = args[index];
+    return typeof value === "number" ? value : Number.NaN;
+  };
+  // A box from its corner and size, as fillRect, rect and drawImage's destination take it.
+  const box = (x: number, y: number, w: number, h: number) =>
+    [
+      [n(x), n(y)],
+      [n(x) + n(w), n(y) + n(h)],
+    ] as const;
   switch (call) {
     case "fillRect":
     case "strokeRect":
     case "rect":
     case "roundRect":
-      return [
-        [n[0], n[1]],
-        [n[0] + n[2], n[1] + n[3]],
-      ];
+      return box(0, 1, 2, 3);
     case "fillText":
     case "strokeText":
-      return [[n[1], n[2]]];
+      return [[n(1), n(2)]];
     case "moveTo":
     case "lineTo":
-      return [[n[0], n[1]]];
+      return [[n(0), n(1)]];
     case "arc":
     case "ellipse": {
-      const rx = n[2],
-        ry = call === "ellipse" ? n[3] : n[2];
+      const rx = n(2),
+        ry = call === "ellipse" ? n(3) : n(2);
       return [
-        [n[0] - rx, n[1] - ry],
-        [n[0] + rx, n[1] + ry],
+        [n(0) - rx, n(1) - ry],
+        [n(0) + rx, n(1) + ry],
       ];
     }
     case "quadraticCurveTo":
-      return [[n[2], n[3]]];
+      return [[n(2), n(3)]];
     case "bezierCurveTo":
-      return [[n[4], n[5]]];
+      return [[n(4), n(5)]];
     case "drawImage":
-      if (args.length >= 9)
-        return [
-          [n[5], n[6]],
-          [n[5] + n[7], n[6] + n[8]],
-        ];
-      if (args.length >= 5)
-        return [
-          [n[1], n[2]],
-          [n[1] + n[3], n[2] + n[4]],
-        ];
-      return [[n[1], n[2]]];
+      if (args.length >= 9) return box(5, 6, 7, 8);
+      if (args.length >= 5) return box(1, 2, 3, 4);
+      return [[n(1), n(2)]];
     default:
       return [];
   }

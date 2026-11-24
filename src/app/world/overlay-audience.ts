@@ -33,8 +33,8 @@ export type OverlayAudience = "everyone" | "player";
 /**
  * Where a layer is drawn. "world": at a place in the arena (an enemy's status, the reticle at the blade), so it
  * moves with the camera. "screen": against the view (the HUD in its corners, a banner across it, a whole-screen
- * tint), so it is drawn to the rectangle the frame is shown in: the window in play, the replay's own rectangle
- * in a replay, never the arena's box or the window's centre.
+ * tint), so it is drawn to the rectangle the frame is shown in: the whole screen in play, the replay's own
+ * rectangle in a replay, never the arena's box in the middle of it.
  */
 export type OverlayFraming = "world" | "screen";
 
