@@ -1,4 +1,5 @@
 import { isObject } from "../domain/records";
+import type { GameAction } from "../input/game-action";
 import type { ScreenAction } from "../presentation/screens/contracts";
 import type { RunDifficulty, RunMode } from "../gameplay/run/session";
 import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
@@ -101,6 +102,11 @@ export interface TearWatchAgentApi {
   pause(): TearWatchAgentSnapshot;
   resume(): TearWatchAgentSnapshot;
   stop(): TearWatchAgentSnapshot;
+  /**
+   * Takes the run's input from the policy: from the next frame of play, only actions given here are pushed,
+   * each once, on the next frame (held inputs stay held until released). null hands play back to the policy.
+   */
+  steer(actions: readonly GameAction[] | null): void;
   activatePlaygroundAction(id: string): TearWatchAgentSnapshot;
   resumePlayground(): TearWatchAgentSnapshot;
   snapshot(): TearWatchAgentSnapshot;
@@ -230,6 +236,8 @@ function activateRequired(context: LiveTearRuntimeEnvironmentContext, action: Sc
 
 export function createLiveWatchAgentHost(context: LiveTearRuntimeEnvironmentContext): TearWatchAgentApi {
   let generation = 0;
+  /** The actions to push on the next frame of play instead of the policy's, while steered. */
+  let steered: GameAction[] | null = null;
   let asyncOwner: Readonly<{ generation: number; cancelled: Promise<void>; cancel: () => void }> | undefined;
   const invalidateAdvance = (): void => {
     generation++;
@@ -294,6 +302,7 @@ export function createLiveWatchAgentHost(context: LiveTearRuntimeEnvironmentCont
   const start = (options: TearWatchAgentOptions = {}): TearWatchAgentSnapshot => {
     if (context.screen() !== "menu") throw new Error("Watch Agent must start from the real main menu");
     invalidateAdvance();
+    steered = null;
     context.setSemanticInputAuthority(true);
     const resolved = { ...DEFAULTS, ...options };
     const director =
@@ -465,7 +474,7 @@ export function createLiveWatchAgentHost(context: LiveTearRuntimeEnvironmentCont
         });
       }
       if (screen === "playing") {
-        for (const action of decision.actions) context.pushAction(action);
+        for (const action of steered === null ? decision.actions : steered.splice(0)) context.pushAction(action);
         const beforeTick = context.authoritative()?.tick ?? 0;
         context.advanceApplicationFrame(1 / 60);
         state.fixedTicks += Math.max(0, (context.authoritative()?.tick ?? beforeTick) - beforeTick);
@@ -553,6 +562,9 @@ export function createLiveWatchAgentHost(context: LiveTearRuntimeEnvironmentCont
       context.setSemanticInputAuthority(false);
       context.startFrameLoop();
       return immutableSnapshot(context, state);
+    },
+    steer(actions: readonly GameAction[] | null) {
+      steered = actions === null ? null : [...(steered ?? []), ...actions];
     },
     activatePlaygroundAction(id: string) {
       const screen = context.screen();

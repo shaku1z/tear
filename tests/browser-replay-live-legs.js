@@ -137,4 +137,4 @@ const ONE_STORED_RUN = Object.freeze({
   storeFailures: {},
 });
 
-module.exports = { coldRun, recordLiveRun, summary, ONE_STORED_RUN };
+module.exports = { bootToMenu, coldRun, recordLiveRun, summary, ONE_STORED_RUN };

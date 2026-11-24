@@ -458,6 +458,13 @@
       ],
       "duration": "minutes"
     },
+    "test:browser:replay-matches-live": {
+      "purpose": "Browser check that the replay of each weapon's scripted run (tether, throw, the throw ability, recall) draws the same frames live play drew at the same ticks",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
     "test:browser:replay-file-round-trip": {
       "purpose": "Browser check that a live run the game keeps verifies as stored, and survives DOWNLOAD, DELETE and IMPORT on the REPLAYS list unchanged and still verifying",
       "effects": [

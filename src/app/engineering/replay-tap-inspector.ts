@@ -57,12 +57,19 @@ export interface ReplayTapInspector {
   readonly shown: () => Readonly<{ tick: number; stage: number; paused: boolean; speed: number }> | undefined;
   /** Leaves the paused run for the menu, as the pause screen's QUIT does. */
   readonly quit: () => void;
+  /** The game's canvas as the last frame left it, for comparison with a replay frame. */
+  readonly liveFrame: () => ImageData | null;
+  /**
+   * Pauses the replay screen on `tick` and returns the world it shows there, drawn on a canvas the size of the
+   * game's and laid out as play lays it out (no replay bars); null when no kept record is shown.
+   */
+  readonly replayFrame: (tick: number) => ImageData | null;
 }
 
 /** The replay screen's members the inspector drives. */
 export type ReplayTapScreen = Pick<
   ReplayScreenAdapter,
-  "watchKeptRun" | "shownReplay" | "seekToFraction" | "togglePause" | "status" | "render"
+  "watchKeptRun" | "shownReplay" | "seekToFraction" | "togglePause" | "status" | "render" | "drawShownAsPlayed"
 >;
 
 export function installReplayTapInspector(
@@ -73,6 +80,7 @@ export function installReplayTapInspector(
   scene: () => boolean,
   stage: () => number,
   screen: () => ReplayTapScreen,
+  game: () => HTMLCanvasElement,
   dispatch: (action: Readonly<{ type: "run.quit" }>) => void = () => undefined,
 ): void {
   const now = () => target.performance.now();
@@ -167,6 +175,19 @@ export function installReplayTapInspector(
       return shown === undefined || status === null
         ? undefined
         : Object.freeze({ ...shown, paused: status.paused, speed: status.speed });
+    },
+    liveFrame: () => {
+      const context = game().getContext("2d");
+      return context === null ? null : context.getImageData(0, 0, context.canvas.width, context.canvas.height);
+    },
+    replayFrame: (tick: number) => {
+      const live = game(),
+        canvas = target.document.createElement("canvas");
+      canvas.width = live.width;
+      canvas.height = live.height;
+      const context = canvas.getContext("2d", { alpha: false });
+      if (context === null || !screen().drawShownAsPlayed(tick, context)) return null;
+      return context.getImageData(0, 0, canvas.width, canvas.height);
     },
   });
   (target as Window & { __TEAR_REPLAY_TAP__?: ReplayTapInspector }).__TEAR_REPLAY_TAP__ = inspector;
