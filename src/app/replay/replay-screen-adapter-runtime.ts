@@ -11,7 +11,7 @@ import { createReplayPuppet } from "../../presentation/replay-puppet-factory";
 import { renderReplayWorldFrame } from "../../presentation/replay-world-frame";
 import { buildReplayScreenSnapshot } from "../../presentation/replay-snapshots";
 import { handleReplayTransport, replayTransportScrub } from "../library/replay-transport-controller";
-import { AttackPresentationDirector } from "../../presentation/combat/attack-presentation-director";
+import { createAttackPresentation } from "../combat/attack-presentation";
 import { decodeAttackPresentationEffect } from "../../presentation/combat/attack-presentation-effect-codec";
 
 type Dependencies = Pick<
@@ -123,28 +123,11 @@ function isVariantPuppet(value: unknown): value is VariantPuppet {
 export function createLiveReplayScreenAdapterRuntime(services: ReplayScreenServices): ReplayScreenAdapter {
   const d = services.dependencies;
   let context: ReplayContext | null = null;
-  const replayAttackPresentation = new AttackPresentationDirector({
+  const replayAttackPresentation = createAttackPresentation({
     scope: () => context,
     tick: () => Math.max(0, Math.round((d.GHOST.play?.t ?? 0) * 120)),
-    lowGraphics: () => d.GFX.low,
-    reducedMotion: () => d.A11Y.reducedMotion,
-    highContrast: () => d.A11Y.highContrast,
-    contrastColor: () => d.THEME.ink,
-    edgeTrace: (...args) => {
-      d.FX.edgeTrace(...args);
-    },
-    contactMark: (...args) => {
-      d.FX.contactMark(...args);
-    },
-    groundPulse: (...args) => {
-      d.FX.groundPulse(...args);
-    },
-    muzzleWedge: (...args) => {
-      d.FX.muzzleWedge(...args);
-    },
-    burst: (...args) => {
-      d.FX.burst(...args);
-    },
+    effects: d.FX,
+    settings: d,
   });
   const supportKind = (kind: string): "anchor" | "priest" | "herald" | "mender" =>
     kind === "anchor" || kind === "herald" || kind === "mender" ? kind : "priest";

@@ -4,7 +4,7 @@
 // and throws and recalls again. The game's canvas is captured at fixed ticks and at each of those moments.
 // The run is kept, opened on the replay screen through WATCH, and the replay's frame at each captured tick is
 // drawn as play lays out the canvas (src/app/replay/replay-screen.ts `drawAsPlayed`, without the replay's
-// bars). Each pair must match within a small share of pixels. Built test target only
+// bars). Each pair must match: no pixel may differ by more than the channel tolerance. Built test target only
 // (`pnpm build:test:standalone`).
 //
 // Layers drawn only for the one playing (src/app/world/overlay-audience.ts) are left out of play by the
@@ -23,8 +23,12 @@ const WEAPONS = Object.freeze(["sword", "hammer", "greatsword", "chainblade", "r
 const FIRST_SEED = 515_410;
 /** A pixel differs when one of its channels differs by more than this. */
 const CHANNEL_TOLERANCE = 32;
-/** The share of a frame's pixels that may differ. */
-const PIXEL_SHARE_TOLERANCE = 0.002;
+/**
+ * The share of a frame's pixels that may differ: none. Play and the replay draw the same world with the same
+ * code in the same browser; with attack presentation shared (replay overhaul 7c-3) every captured frame of
+ * every weapon matched exactly, where 0.2% was allowed before.
+ */
+const PIXEL_SHARE_TOLERANCE = 0;
 /** A capture this often, in simulation ticks, as well as at each scripted moment. */
 const EVERY_TICKS = 60;
 const SEGMENT_FRAMES = 300;
