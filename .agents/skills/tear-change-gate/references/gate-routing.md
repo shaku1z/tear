@@ -6,7 +6,7 @@ start. Run builds, browser tests and whole suites through `pnpm queue -- <comman
 | Change | Start with | Add when relevant |
 | --- | --- | --- |
 | Any code or root config | `pnpm format`, then `pnpm check:quick` | `pnpm lint` (the whole tree; several minutes) when a lint rule or a shared type changed |
-| TypeScript in `src/` | `pnpm typecheck`, `pnpm test:related <files>` | `pnpm check:architecture` and `pnpm check:code-budget` when files move, grow or import across layers |
+| TypeScript in `src/` | `pnpm typecheck`, `pnpm test:related <files>` (before the first push, with no files: the branch change, including tests that name or scan the changed files) | `pnpm check:architecture` and `pnpm check:code-budget` when files move, grow or import across layers |
 | A new file under `src/` | `pnpm exec vitest run tests/unit/change-impact.test.mjs` | Route it in `src/tearbench/evidence-routes.json` or list it in `config/change-impact-defaults.json` ([docs/CHANGE_IMPACT.md](../../../../docs/CHANGE_IMPACT.md)) |
 | A new package script or `scripts/` file | `git add` it, then `pnpm exec vitest run tests/unit/tool-catalogue.test.mjs` | The test sees tracked files only: an untracked script passes locally and fails in CI |
 | Weapon, ability, enemy, boss, mode, simulation | The area's unit tests | `pnpm test:weapons`; `pnpm test:determinism`; `pnpm test:headless:current-gameplay-scenarios`; a browser check below when players can see it |
