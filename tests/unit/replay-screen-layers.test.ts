@@ -66,7 +66,7 @@ describe("screen layers in a replay", () => {
       expect(shownTo(layer as OverlayLayer, "watcher"), layer).toBe(rule.audience === "everyone");
     }
     // The owner's case and the lead's list: the player's alarms, flashes and shake stay out of a replay.
-    for (const layer of ["lowHealthScreen", "hitFlash", "screenShake", "runOverlay", "coachMarks"] as const)
+    for (const layer of ["lowHealthScreen", "parryFlash", "screenShake", "runOverlay", "coachMarks"] as const)
       expect(OVERLAY_LAYERS[layer]).toEqual({ audience: "player", framing: "screen" });
   });
 
