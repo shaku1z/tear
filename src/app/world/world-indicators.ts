@@ -11,6 +11,7 @@ import { buildEnemyStatusSnapshot, type VisualEnemySource } from "../../presenta
 import { gauntletTrialCard, gauntletWave } from "../../gameplay/run/gauntlet-trials";
 import { bossName } from "../../gameplay/run/content-director";
 import type { CONFIG } from "../../config/game-config";
+import { shownTo, type OverlayLayer, type OverlayViewer } from "./overlay-audience";
 
 type Config = Pick<typeof CONFIG, "status" | "colors" | "juice" | "blade" | "dash" | "trick">;
 type Stage = Readonly<{ accent?: string; blurb?: string; name: string }>;
@@ -47,6 +48,8 @@ export interface WorldIndicators {
   readonly enemyStatus: (enemy: VisualEnemySource) => void;
   /** Health, dash, shield, multiplier, wave, score and the boss bar, drawn over the screen. */
   readonly hud: () => void;
+  /** The red screen edge while health is low, drawn under the HUD; the player's alarm, never a watcher's. */
+  readonly lowHealthScreen: () => void;
   readonly waveBanner: () => void;
   readonly stageBanner: () => void;
   /** The blade's aim mark and its slam or updraft power, drawn in the world. */
@@ -55,16 +58,54 @@ export interface WorldIndicators {
 
 /**
  * The indicators play shows, built from a world's state and drawn through the world renderers. Live play
- * and the replay screen both draw them here, so a replay shows what the player saw.
+ * and the replay screen both draw them here, so a replay shows what happened in the run. `viewer` says who
+ * the frame is for: a watcher sees only the layers `OVERLAY_AUDIENCE` gives to everyone, so an alarm meant
+ * for the person playing never reaches a replay.
  */
 export function createWorldIndicators(
   world: WorldRendererRegistry,
   state: WorldIndicatorState,
   style: WorldIndicatorStyle,
+  viewer: OverlayViewer,
 ): WorldIndicators {
   const { config } = style;
+  const hidden = (layer: OverlayLayer): boolean => !shownTo(layer, viewer);
+  const hudSnapshot = () => {
+    const run = state.run();
+    const enemies = state.enemies();
+    const boss = enemies.find((enemy) => enemy.isBoss);
+    const previous = state.hud();
+    const intro = state.bossIntro();
+    const player = state.player();
+    if (!player) return undefined;
+    return buildHudSnapshot({
+      player,
+      run: { ...run, owned: run.mods.owned },
+      ...(boss ? { boss } : {}),
+      ...(intro ? { bossIntro: { boss: intro.boss, delay: intro.delay, elapsed: intro.t, duration: intro.dur } } : {}),
+      upgrades: style.upgrades,
+      enemyCount: enemies.length,
+      previousLagHp: previous.lagHp,
+      previousMultiplier: previous.multiplier,
+      multiplierPop: previous.multiplierPop,
+      nowMilliseconds: state.hudClockSeconds() * 1000,
+      flashScale: style.flashScale(),
+      deltaSeconds: state.deltaSeconds(),
+      stageAccent: state.stage().current.accent ?? "",
+      fallbackAccent: style.fallbackAccent(),
+      bossColor: config.colors.boss,
+      dashCooldown: config.dash.cooldown,
+      dashColor: config.colors.perfect,
+      shieldColor: config.colors.armoredShield,
+      trickDecay: config.trick.decay,
+      formatTime: style.formatTime,
+      trickColor: style.trickColor,
+      ease: style.ease,
+    }).snapshot;
+  };
   return Object.freeze({
     enemyStatus(enemy: VisualEnemySource) {
+      if (hidden("enemyStatus")) return;
       world.enemyStatus(
         buildEnemyStatusSnapshot(enemy, {
           bleedMaximum: config.status.bleedMax,
@@ -75,42 +116,17 @@ export function createWorldIndicators(
       );
     },
     hud() {
-      const run = state.run();
-      const enemies = state.enemies();
-      const boss = enemies.find((enemy) => enemy.isBoss);
-      const previous = state.hud();
-      const intro = state.bossIntro();
-      const player = state.player();
-      if (!player) return;
-      const result = buildHudSnapshot({
-        player,
-        run: { ...run, owned: run.mods.owned },
-        ...(boss ? { boss } : {}),
-        ...(intro
-          ? { bossIntro: { boss: intro.boss, delay: intro.delay, elapsed: intro.t, duration: intro.dur } }
-          : {}),
-        upgrades: style.upgrades,
-        enemyCount: enemies.length,
-        previousLagHp: previous.lagHp,
-        previousMultiplier: previous.multiplier,
-        multiplierPop: previous.multiplierPop,
-        nowMilliseconds: state.hudClockSeconds() * 1000,
-        flashScale: style.flashScale(),
-        deltaSeconds: state.deltaSeconds(),
-        stageAccent: state.stage().current.accent ?? "",
-        fallbackAccent: style.fallbackAccent(),
-        bossColor: config.colors.boss,
-        dashCooldown: config.dash.cooldown,
-        dashColor: config.colors.perfect,
-        shieldColor: config.colors.armoredShield,
-        trickDecay: config.trick.decay,
-        formatTime: style.formatTime,
-        trickColor: style.trickColor,
-        ease: style.ease,
-      });
-      world.hud(result.snapshot);
+      if (hidden("hud")) return;
+      const snapshot = hudSnapshot();
+      if (snapshot !== undefined) world.hud(snapshot);
+    },
+    lowHealthScreen() {
+      if (hidden("lowHealthScreen")) return;
+      const snapshot = hudSnapshot();
+      if (snapshot !== undefined) world.lowHealthScreen(snapshot.player);
     },
     waveBanner() {
+      if (hidden("waveBanner")) return;
       const run = state.run();
       world.waveBanner(
         buildWaveBannerSnapshot({
@@ -128,6 +144,7 @@ export function createWorldIndicators(
       );
     },
     stageBanner() {
+      if (hidden("stageBanner")) return;
       const run = state.run(),
         stage = state.stage();
       world.stageBanner(
@@ -145,6 +162,7 @@ export function createWorldIndicators(
       );
     },
     reticle() {
+      if (hidden("reticle")) return;
       const blade = state.blade();
       if (!blade) return;
       const player = state.player();

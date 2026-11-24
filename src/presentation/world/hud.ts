@@ -1,4 +1,11 @@
-import type { BossHudSnapshot, HudSnapshot, WorldRenderContext, WorldUiPort, RunHudSnapshot } from "./contracts";
+import type {
+  BossHudSnapshot,
+  HudSnapshot,
+  PlayerHudSnapshot,
+  WorldRenderContext,
+  WorldUiPort,
+  RunHudSnapshot,
+} from "./contracts";
 import { clamp } from "./primitives";
 import { INTERFACE_ACCESSIBILITY } from "../../domain/interface-accessibility";
 import { GAUNTLET_WAVES_PER_TRIAL, gauntletWave } from "../../gameplay/run/gauntlet-trials";
@@ -63,11 +70,18 @@ export function bossHudTop(context: WorldRenderContext): number {
   return runGroupMetrics(context).slotBottom + context.ui.t.space.sm;
 }
 
-export function createHudRenderer(context: WorldRenderContext) {
-  const canvas = context.canvas;
-  const ui = context.ui;
+/** At or below this share of its maximum, the player's health is low: the bar pulses red. */
+export const LOW_HEALTH_FRACTION = 0.25;
 
-  function lowHealthVignette(pulse: number): void {
+/**
+ * The red screen edge while the player's health is low. It is an alarm for the person playing, not part of
+ * the HUD's information, so it is its own layer and a replay never draws it (src/app/world/overlay-audience.ts).
+ */
+export function createLowHealthScreenRenderer(context: WorldRenderContext) {
+  const canvas = context.canvas;
+  return function lowHealthScreen(player: PlayerHudSnapshot): void {
+    if (player.hpFraction > LOW_HEALTH_FRACTION) return;
+    const pulse = clamp(player.lowHpPulse);
     canvas.save();
     const gradient = canvas.createRadialGradient(
       context.width / 2,
@@ -82,7 +96,12 @@ export function createHudRenderer(context: WorldRenderContext) {
     canvas.fillStyle = gradient;
     canvas.fillRect(context.screen.x, context.screen.y, context.screen.w, context.screen.h);
     canvas.restore();
-  }
+  };
+}
+
+export function createHudRenderer(context: WorldRenderContext) {
+  const canvas = context.canvas;
+  const ui = context.ui;
 
   function measure(text: string, size: number, bold: boolean): number {
     canvas.font = ui.font(size, bold);
@@ -96,7 +115,7 @@ export function createHudRenderer(context: WorldRenderContext) {
       type = hudType(context),
       pad = t.metric.hudPad,
       frame = hudFrame(context);
-    const lowHealth = player.hpFraction <= 0.25,
+    const lowHealth = player.hpFraction <= LOW_HEALTH_FRACTION,
       pulse = clamp(player.lowHpPulse);
     const hpText = `${String(Math.ceil(player.hp))} / ${String(player.maxHp)}`;
     const barW = t.metric.hudBarW,
@@ -337,7 +356,6 @@ export function createHudRenderer(context: WorldRenderContext) {
 
   return function hud(snapshot: HudSnapshot): void {
     const run = snapshot.run;
-    if (snapshot.player.hpFraction <= 0.25) lowHealthVignette(clamp(snapshot.player.lowHpPulse));
     vitals(snapshot);
     if (run.mode !== "tutorial" && run.mode !== "playground") runGroup(run);
     if (run.multiplier > 1) multiplier(run);

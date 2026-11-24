@@ -28,6 +28,7 @@ import type { ProductionGhostReplayCompositionOptions } from "../world/detached/
 import { createWorldRenderers } from "../../presentation/world";
 import { easeOut } from "../../presentation/world/primitives";
 import { createWorldIndicators, type WorldIndicators } from "../world/world-indicators";
+import { shownTo } from "../world/overlay-audience";
 import { createReplayIndicatorClock } from "./replay-indicator-clock";
 import { UPGRADES } from "../../gameplay/upgrades";
 import { formatRunClock, trickColor } from "../../gameplay/scoring/style-runtime";
@@ -411,6 +412,8 @@ export function createBrowserGhostReplayPresentation(
         trickColor: (multiplier) => trickColor(multiplier, config.colors),
         ease: easeOut,
       },
+      // A replay is watched: the player's own alarms (the red low-health screen) stay out of it.
+      "watcher",
     );
   }
 }
@@ -435,7 +438,7 @@ function drawPlayOverlay(
     width = config.view.w,
     height = config.view.h;
   if (!cinema.active || !cinema.hideHud || cinema.beat?.hud === true) indicators.hud();
-  if (cinema.active)
+  if (cinema.active && shownTo("cinematic", "watcher"))
     drawCinematicDirector(cinema, config, canvas, ui, { x: 0, y: 0, w: width, h: height }, accessibility.reducedMotion);
   // The stage banner owns the announcement band while it shows.
   const stageBanner = clock.stageBanner() > 0;

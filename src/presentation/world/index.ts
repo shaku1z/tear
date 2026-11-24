@@ -1,6 +1,6 @@
 import type { WorldRenderContext, WorldRendererRegistry } from "./contracts";
 import { createFinaleRenderer } from "./finale";
-import { createHudRenderer } from "./hud";
+import { createHudRenderer, createLowHealthScreenRenderer } from "./hud";
 import { createOverlayRenderers } from "./overlays";
 import { createStatusDebugRenderers } from "./status-debug";
 import { createTutorialCardRenderer } from "./tutorial-card";
@@ -24,6 +24,7 @@ export function createWorldRenderers(context: WorldRenderContext): WorldRenderer
     pantheonDebug: statusDebug.pantheonDebug,
     finaleWorld,
     hud,
+    lowHealthScreen: createLowHealthScreenRenderer(context),
     tutorialCard: tutorial.tutorialCard,
     coachMarks: coach.coachMarks,
     achievementToast: overlays.achievementToast,
