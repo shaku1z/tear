@@ -79,7 +79,7 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     const { canvas, safeInsets: safe } = context;
     replayTopBar(view);
 
-    if (view.theater) theaterState();
+    if (view.keptRun) editorButton();
 
     const barY = height - 96 - safe.b,
       barX = 220 + safe.l,
@@ -134,7 +134,7 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
       ghost: true,
       action: { type: "replay.restart" },
     });
-    if (view.theater)
+    if (view.keptRun)
       context.enqueue({
         x: 644 + safe.l,
         y: controlY,
@@ -168,7 +168,7 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     if (view.cutList) replayEditorPanel(view);
   }
 
-  function theaterState(): void {
+  function editorButton(): void {
     const { safeInsets: safe } = context;
     context.enqueue({
       x: 30 + safe.l,

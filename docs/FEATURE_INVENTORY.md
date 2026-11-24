@@ -1052,7 +1052,7 @@ The inventory is reviewed at every phase gate. New features added during the red
 
 The verified V3 Theater now draws the reconstructed production world through
 per-world presentation ports and the shared actor/platform/world renderers.
-The replay editor (`src/ghost/replay-cut-list.ts`, `src/app/replay/browser-replay-clip-export.ts`;
+The replay editor (`src/app/replay/replay-clip-editor.ts`, `src/app/replay/browser-replay-clip-export.ts`;
 engineering builds only) marks verified IN/OUT checkpoints and appends ranges in chosen
 order at the transport speed. Local native WebM encoding uses a dedicated canvas,
 reconstructed player-follow at 640×360, and explicit simulation

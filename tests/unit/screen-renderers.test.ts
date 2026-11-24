@@ -1078,7 +1078,7 @@ describe("legacy screen renderer registry", () => {
       elapsed: "TICK 120",
       duration: "TICK 240",
       progress: 0.5,
-      theater: true,
+      keptRun: true,
       practiceAvailable: true,
     });
     renderer.settings({

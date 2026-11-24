@@ -36,6 +36,7 @@ import {
   type TearWorldConstructionPort,
 } from "../world/detached/world-hydrator";
 import { cleanupBossEncounterActors } from "../../gameplay/run/boss-encounter";
+import { rebaseEnvironmentSnapshot } from "../../gameplay/environment/environment-projection";
 import type {
   UiTutorialPresentationCheckpoint,
   UiHudPresentationCheckpoint,
@@ -385,8 +386,16 @@ function stageWorld(
     LegacyGhostRuntimeState
   >(createWorldConstructionPort(options.dependencies, options.entities), world, context);
   restoreUpgradeHooks({ mods: candidate.run.mods, config: options.worldServices.configuration.value });
+  // A snapshot taken in another world (practice from a watched replay takes the detached world's) restores
+  // here with its generated environment IDs rebased into this world, as the detached world rebases a live one.
+  const worldId = options.environment().snapshot().worldId;
   return Object.freeze({
     ...candidate,
+    ...(worldId === undefined ||
+    candidate.environment.worldId === undefined ||
+    candidate.environment.worldId === worldId
+      ? {}
+      : { environment: rebaseEnvironmentSnapshot(candidate.environment, worldId) }),
     ...(options.particlesPresentation === undefined
       ? {}
       : {
@@ -430,14 +439,6 @@ export function createLiveStateSetupAdapter(options: LiveStateSetupAdapterOption
         candidate.environment.stageId !== stage.id
       ) {
         issues.push("environment snapshot stage does not match restored world stage");
-      }
-      const currentWorldId = options.environment().snapshot().worldId;
-      if (
-        candidate.environment.worldId !== undefined &&
-        currentWorldId !== undefined &&
-        candidate.environment.worldId !== currentWorldId
-      ) {
-        issues.push("environment snapshot belongs to another world");
       }
       if (candidate.enemies.some((enemy) => !Number.isFinite(enemy.x) || !Number.isFinite(enemy.y))) {
         issues.push("enemy transform is not finite");

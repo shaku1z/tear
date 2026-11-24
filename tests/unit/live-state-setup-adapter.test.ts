@@ -518,6 +518,22 @@ describe("live State Setup adapter ownership boundary", () => {
     expect(host.restore(snapshot).ok).toBe(true);
     expect(host.replay.world.context.services.clock.seconds()).toBe(0.3987654321);
   });
+
+  it("restores a snapshot taken in another world with its generated environment IDs rebased into this one", () => {
+    // Practice from a watched replay restores the detached world's checkpoint into the live world.
+    const host = fixture();
+    host.facts(0.8);
+    const own = host.replay.world.context.environment.worldId;
+    const before = host.capture();
+    const elsewhere = structuredClone(before);
+    const hazard = JSON.stringify(elsewhere.state["tear.hazard.v1"]);
+    expect(hazard).toContain(`"${own}"`);
+    (elsewhere.state as Record<string, unknown>)["tear.hazard.v1"] = JSON.parse(
+      hazard.replaceAll(`"${own}"`, '"elsewhere"').replaceAll(`"${own}:`, '"elsewhere:'),
+    );
+    expect(host.restore(elsewhere).ok).toBe(true);
+    expect(host.capture().state["tear.hazard.v1"]).toEqual(before.state["tear.hazard.v1"]);
+  });
 });
 
 describe("live Race state ownership", () => {

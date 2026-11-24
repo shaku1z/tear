@@ -16,7 +16,7 @@ import {
   createLiveReplayScreenAdapter,
   type ReplayScreenAdapter,
   type ReplayScreenServices,
-} from "../replay/replay-screen-adapter";
+} from "../replay/replay-screen";
 import { createLiveRunScreenAdapters, type RunScreenServices, type RunScreenState } from "../run/run-screen-adapters";
 import {
   createLiveScreenActionBindings,

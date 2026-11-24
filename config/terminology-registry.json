@@ -987,23 +987,6 @@
         }
       },
       {
-        "id": "compat-replay-src-app-library-ghost-theater-screen-adapter",
-        "pathPattern": "src/app/library/ghost-theater-screen-adapter.ts",
-        "termIds": [
-          "replay"
-        ],
-        "owner": "Replay overhaul owner",
-        "reason": "Names the old replay stores and engines while they still exist.",
-        "testEvidence": [
-          "check:terminology",
-          "check:containment"
-        ],
-        "expiry": {
-          "checkpoint": "REPLAY-GHOST-REMOVAL",
-          "condition": "The replay plan's PR that removes the old replay stores (plans/active/REPLAY_OVERHAUL_PLAN.md) deletes the stores and engines this file names."
-        }
-      },
-      {
         "id": "compat-replay-src-app-library-library-screen-adapters-runtime",
         "pathPattern": "src/app/library/library-screen-adapters-runtime.ts",
         "termIds": [
@@ -1038,8 +1021,8 @@
         }
       },
       {
-        "id": "compat-replay-src-app-replay-replay-screen-adapter",
-        "pathPattern": "src/app/replay/replay-screen-adapter.ts",
+        "id": "compat-replay-src-app-replay-replay-screen",
+        "pathPattern": "src/app/replay/replay-screen.ts",
         "termIds": [
           "replay"
         ],

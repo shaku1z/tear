@@ -14,7 +14,7 @@ import type { ReplayRecord } from "../../replay/record";
 import type { ReplayReadResult } from "../../replay/record";
 import { openReplayRecordStore, type ReplayRecordEntry, type ReplayRecordStore } from "../../replay/record-store";
 import { verifyReplay, type ReplayVerdict } from "../../replay/verify";
-import type { ReplayScreenAdapter } from "../replay/replay-screen-adapter";
+import type { ReplayScreenAdapter } from "../replay/replay-screen";
 
 type RunTotals = Readonly<{ score: number; wave: number; time: number }> | null;
 
@@ -53,6 +53,8 @@ export interface ReplayTapInspector {
   readonly watchKept: (seed: number) => Promise<boolean>;
   /** Moves the replay screen to this share of the run, as the seek bar does, and says what it shows then. */
   readonly seekShown: (fraction: number) => Readonly<{ tick: number; stage: number }> | undefined;
+  /** What the replay screen shows now: the tick and stage, and whether it plays and at what speed. */
+  readonly shown: () => Readonly<{ tick: number; stage: number; paused: boolean; speed: number }> | undefined;
   /** Leaves the paused run for the menu, as the pause screen's QUIT does. */
   readonly quit: () => void;
 }
@@ -158,6 +160,13 @@ export function installReplayTapInspector(
     seekShown: (fraction: number) => {
       screen().seekToFraction(fraction);
       return screen().shownReplay();
+    },
+    shown: () => {
+      const shown = screen().shownReplay(),
+        status = screen().status();
+      return shown === undefined || status === null
+        ? undefined
+        : Object.freeze({ ...shown, paused: status.paused, speed: status.speed });
     },
   });
   (target as Window & { __TEAR_REPLAY_TAP__?: ReplayTapInspector }).__TEAR_REPLAY_TAP__ = inspector;
