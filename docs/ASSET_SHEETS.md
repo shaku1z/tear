@@ -66,9 +66,9 @@ second run is identical, because the simulation is deterministic, and takes each
 first time that look appears. After the watched time the subject is hit once for a hurt picture, and enemies
 and each boss's last phase are killed for four pictures of the death.
 
-Frames are drawn by the game's replay frame path (`createBrowserGhostReplayPresentation` in
-`src/app/replay/browser-ghost-replay-presentation.ts`) with layers left out: never the backdrop, only the environment
-layer for a stage object, and so on. The picture is cropped to what was drawn.
+Frames are drawn by the game's replay frame (`createReplayFrames` in `src/app/replay/replay-frame.ts`), which draws
+through the live world builder, with layers left out: never the backdrop, only the environment layer for a stage
+object, and so on. The picture is cropped to what was drawn.
 
 The PNGs are drawn on a canvas. The SVGs are drawn by the same game code into a recording drawing context
 (`scripts/asset-sheets/page/svg-context.ts`) that writes each canvas call as SVG: paths, arcs, transforms,

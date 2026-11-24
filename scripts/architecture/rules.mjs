@@ -684,6 +684,24 @@ const STRUCTURE_RULES = [
   ),
 ];
 
+const REPLAY_RULES = [
+  importRule(
+    "replay.draws-through-live-builder",
+    [],
+    ["src/replay/**", "src/app/replay/**"],
+    ["@presentation.world-drawers"],
+    "a replay draws its world through the live world builder (src/app/world/world-presentation-adapters.ts) and the run overlay, never through a world, actor, environment or HUD renderer of its own",
+    {
+      except: ["@replay.live-play-ghost"],
+      toExcept: ["@presentation.world-renderer-factories"],
+      fixtures: {
+        reject: [{ imports: "@presentation.world-drawers" }, { imports: "@presentation.world-drawers", type: true }],
+        accept: [{ imports: "@presentation.world-renderer-factories" }],
+      },
+    },
+  ),
+];
+
 export const RULES = Object.freeze([
   ...BIOME_RULES,
   ...PORTABLE_RULES,
@@ -691,6 +709,7 @@ export const RULES = Object.freeze([
   ...APP_BROWSER_RULES,
   ...LIVE_ROOT_RULES,
   ...STRUCTURE_RULES,
+  ...REPLAY_RULES,
 ]);
 
 /** Every selector a rule names, for fail-closed coverage. */

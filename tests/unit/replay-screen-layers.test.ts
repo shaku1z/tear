@@ -7,7 +7,7 @@
 import { describe, expect, it } from "vitest";
 
 import { OVERLAY_LAYERS, shownTo, type OverlayLayer } from "../../src/app/world/overlay-audience";
-import type { ReplayFrameLayer } from "../../src/app/replay/browser-ghost-replay-presentation";
+import type { WorldFrameLayer } from "../../src/app/world/world-presentation-adapters";
 import { createProductionGhostReplayComposition } from "../../src/app/world/detached/replay-composition";
 import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 import { recordingCanvas, replayPresentation, type RecordedPoint } from "../support/replay-presentation";
@@ -15,7 +15,7 @@ import { recordingCanvas, replayPresentation, type RecordedPoint } from "../supp
 type Rectangle = Readonly<{ x: number; y: number; w: number; h: number }>;
 
 /** Every world layer of a replay frame, so what is left is what play draws over the world. */
-const WORLD_LAYERS: ReadonlySet<ReplayFrameLayer> = new Set([
+const WORLD_LAYERS: ReadonlySet<WorldFrameLayer> = new Set([
   "backdrop",
   "platforms",
   "hazards",
@@ -27,17 +27,21 @@ const WORLD_LAYERS: ReadonlySet<ReplayFrameLayer> = new Set([
   "effects",
 ]);
 
-/** A replay of a fresh run drawn into `rectangle` on a canvas of `size`; the points its overlay reached. */
+/**
+ * A replay of a fresh run drawn into `rectangle` on a canvas of `size`; the points its overlay reached. With
+ * `hidden`, the frame leaves out those world layers instead of all of them.
+ */
 function overlayPoints(
   rectangle: Rectangle,
   size: Readonly<{ width: number; height: number }>,
   prepare?: (session: ReturnType<ReturnType<typeof createProductionGhostReplayComposition>["create"]>) => void,
+  hidden: ReadonlySet<WorldFrameLayer> = WORLD_LAYERS,
 ) {
   const calls: string[] = [],
     points: RecordedPoint[] = [];
   const session = createProductionGhostReplayComposition({
     runSeed: scenarioRunSeed("replay-screen-layers"),
-    ...replayPresentation(calls, { hidden: () => WORLD_LAYERS }),
+    ...replayPresentation(calls, { hidden: () => hidden }),
   }).create(undefined);
   prepare?.(session);
   const view = session.renderView?.();
@@ -66,7 +70,7 @@ describe("screen layers in a replay", () => {
       expect(shownTo(layer as OverlayLayer, "watcher"), layer).toBe(rule.audience === "everyone");
     }
     // The owner's case and the lead's list: the player's alarms, flashes and shake stay out of a replay.
-    for (const layer of ["lowHealthScreen", "hitFlash", "screenShake", "runOverlay", "coachMarks"] as const)
+    for (const layer of ["lowHealthScreen", "parryFlash", "screenShake", "runOverlay", "coachMarks"] as const)
       expect(OVERLAY_LAYERS[layer]).toEqual({ audience: "player", framing: "screen" });
   });
 
@@ -96,6 +100,31 @@ describe("screen layers in a replay", () => {
     const down = overlayPoints(tall, { width: 1700, height: 1600 }).map((point) => point.y);
     // The arena's box starts 300 below the rectangle's top; the HUD starts at the rectangle's top.
     expect(Math.min(...down)).toBeLessThan(tall.y + tall.h * 0.1);
+  });
+
+  it("lays the stage's vignette over the whole rectangle, not over the arena's box in its middle", () => {
+    // The vignette is the one image the stage draws after the world; the backdrop is the only world layer drawn.
+    const withBackdrop = new Set([...WORLD_LAYERS].filter((layer) => layer !== "backdrop"));
+    for (const [rectangle, size] of [
+      [wide, { width: 3000, height: 1100 }],
+      [tall, { width: 1700, height: 1600 }],
+    ] as const) {
+      const images = overlayPoints(rectangle, size, undefined, withBackdrop).filter(
+        (point) => point.call === "drawImage",
+      );
+      // A drawImage with a destination box records its two corners one after the other.
+      const corners = images.map((point, index) => [point, images[index + 1]] as const);
+      const close = (a: number, b: number) => Math.abs(a - b) < 0.01;
+      const covers = corners.some(
+        ([start, end]) =>
+          end !== undefined &&
+          close(start.x, rectangle.x) &&
+          close(start.y, rectangle.y) &&
+          close(end.x, rectangle.x + rectangle.w) &&
+          close(end.y, rectangle.y + rectangle.h),
+      );
+      expect(covers, `no image covers ${JSON.stringify(rectangle)}`).toBe(true);
+    }
   });
 
   it("does not shake a replay: the camera's shake is the player's", () => {

@@ -2,10 +2,8 @@
  * One run of the game's detached world (the one replays use) for a scene, and drawing its frames through the
  * game's own frame path with chosen layers left out, onto a canvas or into SVG.
  */
-import {
-  createBrowserGhostReplayPresentation,
-  type ReplayFrameLayer,
-} from "../../../src/app/replay/browser-ghost-replay-presentation";
+import { createReplayFrames } from "../../../src/app/replay/replay-frame";
+import type { WorldFrameLayer } from "../../../src/app/world/world-presentation-adapters";
 import { CONFIG } from "../../../src/config/game-config";
 import { clamp } from "../../../src/domain/geometry";
 import { createSceneCanvas, releaseSceneBitmap } from "../../../src/presentation/scenes/scene-bitmap";
@@ -19,7 +17,7 @@ import { scenarioRunSeed } from "../../../src/gameplay/run/run-start-choices";
 
 export const VIEW = { w: CONFIG.view.w, h: CONFIG.view.h };
 export const TICKS_PER_SECOND = 120;
-export const ALL_LAYERS: readonly ReplayFrameLayer[] = [
+export const ALL_LAYERS: readonly WorldFrameLayer[] = [
   "backdrop",
   "platforms",
   "hazards",
@@ -31,7 +29,7 @@ export const ALL_LAYERS: readonly ReplayFrameLayer[] = [
   "effects",
   "indicators",
 ];
-export type { ReplayFrameLayer };
+export type { WorldFrameLayer };
 
 export interface Rect {
   readonly x: number;
@@ -67,7 +65,7 @@ export interface Actor {
   takeDamage?(damage: number, fromX: number): unknown;
 }
 
-let hidden: ReadonlySet<ReplayFrameLayer> = new Set();
+let hidden: ReadonlySet<WorldFrameLayer> = new Set();
 let sceneClock = 0;
 const paintedScenes = createSceneLibrary({
   stages: PAINTED_STAGES,
@@ -101,7 +99,7 @@ export function createSession(scene: SheetScene) {
     clamp,
     controllerGlyph: () => "",
   });
-  const presentation = createBrowserGhostReplayPresentation(document, ui, {
+  const presentation = createReplayFrames(document, ui, {
     hidden: () => hidden,
     scenes: paintedScenes,
   });
@@ -135,12 +133,7 @@ export function step(session: Session, tick: number, commands: readonly Command[
 interface FrameView {
   draw(target: CanvasRenderingContext2D, area: Rect): void;
 }
-function drawFrame(
-  session: Session,
-  show: ReadonlySet<ReplayFrameLayer>,
-  target: CanvasRenderingContext2D,
-  area: Rect,
-) {
+function drawFrame(session: Session, show: ReadonlySet<WorldFrameLayer>, target: CanvasRenderingContext2D, area: Rect) {
   hidden = new Set(ALL_LAYERS.filter((layer) => !show.has(layer)));
   try {
     (session as unknown as { renderView(): FrameView }).renderView().draw(target, area);
@@ -150,7 +143,7 @@ function drawFrame(
 }
 
 /** The frame on a transparent canvas, cropped to `rect` and drawn at `scale` (not enlarged afterwards). */
-export function drawRaster(session: Session, show: ReadonlySet<ReplayFrameLayer>, rect: Rect, scale: number) {
+export function drawRaster(session: Session, show: ReadonlySet<WorldFrameLayer>, rect: Rect, scale: number) {
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(rect.w * scale);
   canvas.height = Math.round(rect.h * scale);
@@ -165,7 +158,7 @@ const measure = document.createElement("canvas").getContext("2d");
 /** The same frame as SVG: every shape the game draws, as vectors, cropped to `rect`. */
 export function drawSvg(
   session: Session,
-  show: ReadonlySet<ReplayFrameLayer>,
+  show: ReadonlySet<WorldFrameLayer>,
   rect: Rect,
   idPrefix: string,
   title: string,

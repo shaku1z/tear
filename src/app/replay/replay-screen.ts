@@ -17,7 +17,7 @@ import { replayPlaybackRefusal, type ReplayRecord } from "../../replay/record";
 import { REPLAY_TICKS_PER_SECOND } from "../../replay/record";
 import type { Watch } from "../../replay/watch";
 import { liveReplayRecorder } from "./live-replay-recorder-slot";
-import { createBrowserGhostReplayPresentation } from "./browser-ghost-replay-presentation";
+import { createReplayFrames } from "./replay-frame";
 import { createBrowserReplayClipExport, type ReplayClipExportPort } from "./browser-replay-clip-export";
 import { createReplayClipEditor, type ReplayClipEditor } from "./replay-clip-editor";
 import { replayClock, replayLoadoutCards } from "../../presentation/replay-snapshots";
@@ -418,7 +418,7 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
   const d = services.dependencies;
   let recordings: RecordingScreen | undefined;
   const clipExport = createBrowserReplayClipExport(services.document);
-  const presentation = createBrowserGhostReplayPresentation(services.document, d.UI, { wardrobe: d.COSMETICS });
+  const presentation = createReplayFrames(services.document, d.UI, { wardrobe: d.COSMETICS });
   const kept = createKeptRunScreen({
     clipExport,
     // The whole arena between the top bar and the transport bar, framed as play frames it.

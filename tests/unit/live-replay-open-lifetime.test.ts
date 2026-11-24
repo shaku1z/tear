@@ -13,9 +13,7 @@ vi.mock("../../src/app/replay/live-replay-recorder-slot", () => ({
 vi.mock("../../src/ghost/replay-engine", () => ({ replayEngine: { ensure: () => Promise.resolve({}) } }));
 vi.mock("../../src/app/replay/record-world", () => ({ watchRecord: ports.openRecord }));
 vi.mock("../../src/app/replay/browser-replay-clip-export", () => ({ createBrowserReplayClipExport: vi.fn() }));
-vi.mock("../../src/app/replay/browser-ghost-replay-presentation", () => ({
-  createBrowserGhostReplayPresentation: vi.fn(),
-}));
+vi.mock("../../src/app/replay/replay-frame", () => ({ createReplayFrames: vi.fn() }));
 
 describe("a pending replay open", () => {
   it("cannot replace a newer screen after a delayed read of a kept record", async () => {

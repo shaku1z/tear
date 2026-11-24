@@ -199,7 +199,7 @@
       "purpose": "App modules that may touch the browser document directly; everything else in src/app receives it through the composition port.",
       "include": [
         "src/app/replay/browser-replay-files.ts",
-        "src/app/replay/browser-ghost-replay-presentation.ts",
+        "src/app/replay/replay-frame.ts",
         "src/app/replay/browser-replay-clip-export.ts",
         "src/app/shell/composition.ts",
         "src/app/campaign/campaign-training-composition.ts",
@@ -209,6 +209,30 @@
         "src/app/shell/session-services-composition.ts",
         "src/app/run/wave-composition.ts",
         "src/app/shell/runtime-frame-coordinator.ts"
+      ]
+    },
+    "presentation.world-drawers": {
+      "purpose": "The modules that draw the world, its actors, its environment and the HUD. Live play and a replay both reach them through the live world builder (src/app/world/world-presentation-adapters.ts).",
+      "include": [
+        "src/presentation/world/**",
+        "src/presentation/entities/**",
+        "src/presentation/enemies/**",
+        "src/presentation/environment/**",
+        "src/app/world/environment-layer.ts",
+        "src/app/world/world-indicators.ts"
+      ]
+    },
+    "presentation.world-renderer-factories": {
+      "purpose": "What builds a world's renderers (the registry's constructor) and the pure helpers beside it; a replay world builds its own renderers with them and draws through the live builder.",
+      "include": [
+        "src/presentation/world/index.ts",
+        "src/presentation/world/primitives.ts"
+      ]
+    },
+    "replay.live-play-ghost": {
+      "purpose": "Draws a recorded run inside live play (the chase ghost, a player-only layer), not a replay's frame.",
+      "include": [
+        "src/app/replay/ghost-chase-composition.ts"
       ]
     },
     "app.window-owners": {

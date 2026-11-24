@@ -26,6 +26,7 @@ import type { LiveScreenNavigation } from "./live-screen-navigation";
 import { renderRegisteredScreen } from "./screen-registry";
 import { isMenuScreen } from "../../domain/screen-catalog";
 import { PRACTICE_TABS } from "../../gameplay/training/practice-tabs";
+import { isBiomeRunMode } from "../../gameplay/run/session";
 
 /** The Drills tabs in the shape the shared tab stepper reads (Q/E, bumpers). */
 const PRACTICE_TAB_STEPS = Object.freeze(PRACTICE_TABS.map(({ id }) => [id] as const));
@@ -124,8 +125,7 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
   const { simulation } = options.combat;
   const requestLock = browser.requestPointerLock;
   const screenRect = () => presentationHost.screenRectangle();
-  const biomeMode = () =>
-    ["campaign", "endless", "bossonly", "gauntlet", "tutorial", "playground"].includes(liveRun().mode);
+  const biomeMode = () => isBiomeRunMode(liveRun().mode);
   const shopFeedback = createLiveShopFeedbackState();
   const actions = createLiveScreenActions({
     dependencies,
@@ -373,8 +373,8 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
           }
         },
         themeInk: () => THEME.ink,
-        backdropPost: (context, stage, camera) => {
-          Backdrop.post(context, stage, camera);
+        backdropPost: (context, stage, camera, screen) => {
+          Backdrop.post(context, stage, camera, screen);
         },
         stageBackground: (stage) => Scenes.paper(stage.id) ?? stage.bg,
         drawMenuAttract: (_, keepOut) => {
