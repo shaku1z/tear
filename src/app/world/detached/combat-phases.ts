@@ -1,10 +1,11 @@
 import { isObject } from "../../../domain/records";
 import { createLiveCollisionGameplayBindings } from "../../../gameplay/combat/live-collision-gameplay-bindings";
 import type { LiveStyleAchievementOptions } from "../../../gameplay/scoring/live-style-achievement-runtime";
-import { bindRunDnaShot, runDnaObserver } from "../../../gameplay/runtime/run-dna-observer";
 import { createFloater } from "../../../gameplay/runtime/game-runtime-state";
 import { aabbOverlap, boxesOverlap, clamp, len, lerp, segCircle, segPointDist } from "../../../domain/geometry";
 import { GFX, THEME } from "../../../config/game-config";
+import { worldImpactCue, type WorldImpactBlade } from "../../../gameplay/combat/attack-presentation-cue";
+import { applyWeaponActionEvents, weaponActionTuning } from "../../../gameplay/combat/weapon-action-events";
 import type { FeedbackBannerEvent } from "../../../gameplay/stage-beat";
 import {
   CombatEntityRuntime,
@@ -85,6 +86,7 @@ export function createProductionCombatPhases(
   };
   const player = () => world.state.player() as never;
   const blade = () => world.state.blade() as never;
+  const { presentAttack } = replay;
   const bossArena = createBossArenaRuntimeBridge<ArenaActor>({
     rules: new BossArenaRules(config.bossArena, config.colors),
     viewportWidth: config.view.w,
@@ -425,9 +427,7 @@ export function createProductionCombatPhases(
     weaponEffect: (weaponId, effect) => {
       replay.tutorial.weaponEffect(weaponId, effect);
     },
-    presentAttack: () => {
-      outward.push("weaponProjectileContact");
-    },
+    presentAttack,
     floater: addFloater,
     log: weaponRuntime.log,
     resolveKill: (enemy, cause) => {
@@ -461,6 +461,7 @@ export function createProductionCombatPhases(
       outward.push("sound:boom");
     },
     areaDamage: dealArea,
+    presentAttack,
   });
 
   const opening = {
@@ -512,36 +513,21 @@ export function createProductionCombatPhases(
       weaponRuntime.updateAbilities(dt);
     },
     flushWeaponActions: (events: readonly BladeWeaponEvent[]) => {
-      for (const event of events) {
-        if (event.type === "slingRelease") {
-          replay.tutorial.weaponEffect("chainblade", "slingRelease");
-          outward.push(`weapon:${event.type}`);
-          continue;
-        }
-        const shot = world.entities.createProjectile(event.x, event.y, event.vx, event.vy) as never as Record<
-          string,
-          unknown
-        >;
-        shot.family = "weaponProjectile";
-        shot.playerOwned = true;
-        shot.weaponId = "riftlock";
-        bindRunDnaShot(shot, blade(), event.attackId, event.secondary, event.throwId);
-        if (!event.secondary) runDnaObserver(blade())?.end(`shot:${String(event.attackId)}`);
-        shot.attackId = event.attackId;
-        shot.throwId = event.throwId;
-        shot.remote = event.remote;
-        shot.secondary = event.secondary;
-        shot.kind = "razor";
-        shot.r = config.weapons.riftlock.razorRadius;
-        shot.life = config.weapons.riftlock.razorLife;
-        shot.dmg = event.damage;
-        shot.tint = config.colors.perfect;
-        shot.unparryable = true;
-        shot.counterplay = "weapon";
-        world.state.setProjectiles([...world.state.projectiles(), shot as never]);
-        effects.burst(event.x, event.y, event.vx, event.vy, 5, config.colors.perfect);
-        outward.push(`weapon:${event.type}`);
-      }
+      applyWeaponActionEvents(events, {
+        blade,
+        tuning: () => weaponActionTuning(config),
+        createRound: (x, y, vx, vy) => world.entities.createProjectile(x, y, vx, vy) as never,
+        addRound: (round) => {
+          world.state.setProjectiles([...world.state.projectiles(), round as never]);
+        },
+        weaponEffect: (weaponId, effect) => {
+          replay.tutorial.weaponEffect(weaponId, effect);
+        },
+        presentAttack,
+        log: (type) => {
+          outward.push(`weapon:${type}`);
+        },
+      });
     },
     updateWorldHazards: (dt: number) => {
       if (combat === null) throw new Error("production combat runtime has not been composed");
@@ -623,15 +609,14 @@ export function createProductionCombatPhases(
     },
     logThrowLaunch: note("logThrowLaunch"),
     weaponWorldImpact: () => {
-      const result = invokeWeaponHook((blade() as { weapon?: object | null }).weapon, "onWorldImpact", {
-        config,
-        blade: blade(),
-        player: player(),
-        platforms: platforms(),
-        x: (blade() as { x: number }).x,
-        y: (blade() as { y: number }).y,
-      });
-      return isObject(result) ? (result as Readonly<{ mechanic?: string }>) : null;
+      const active = blade() as WorldImpactBlade & { weapon?: object | null };
+      const at = { config, blade: active, player: player(), platforms: platforms(), x: active.x, y: active.y };
+      const result = invokeWeaponHook(active.weapon, "onWorldImpact", at);
+      const effect = isObject(result) ? (result as Readonly<{ mechanic?: string }>) : null;
+      const weaponId = (world.state.run() as { weaponId: string }).weaponId;
+      const cue = worldImpactCue(weaponId, effect?.mechanic, active, config.blade.throw.maxSpeed);
+      if (cue !== null) presentAttack(cue);
+      return effect;
     },
     lobExplode: () => {
       const activeBlade = blade() as { x: number; y: number };
@@ -829,6 +814,7 @@ export function createProductionCombatPhases(
       replay.tutorial.mark(kind);
       outward.push("fx:tutorial");
     },
+    presentAttack,
   };
   const collision = {
     config,

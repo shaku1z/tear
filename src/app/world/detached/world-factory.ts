@@ -7,7 +7,9 @@ import { createLiveCinematicHost } from "../../campaign/cinematic-host";
 import { createLiveSourceVoidController } from "../../run/source-void-controller";
 import { stageAt } from "../../../gameplay/stages";
 import type { EnemyKind } from "../../../gameplay/run/content-director";
-import { A11Y, CONFIG, GFX, REMOTE } from "../../../config/game-config";
+import { A11Y, CONFIG, GFX, REMOTE, THEME } from "../../../config/game-config";
+import type { AttackPresentationCue } from "../../../gameplay/combat/attack-presentation-cue";
+import { createAttackPresentation } from "../../combat/attack-presentation";
 import { createLiveAuthoritativeInputAdapter } from "../../../gameplay/runtime/authoritative-input-adapter";
 import { createLiveWorldComposition, type LiveWorldSessionPort } from "../world-composition";
 import type { GameRuntimeDependencies } from "../../shell/game-runtime-dependencies";
@@ -478,6 +480,13 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
     },
   });
   tutorial.bindBossPractice(bossPractice);
+  // Play's attack presentation (src/app/shell/game-runtime.ts), over this world's effects and clock.
+  const attackPresentation = createAttackPresentation({
+    scope: () => state.blade(),
+    tick: () => Math.max(0, Math.round(clock.sim * 120)),
+    effects,
+    settings: { GFX, A11Y, THEME },
+  });
   return Object.freeze({
     finale,
     practiceCinematic,
@@ -486,6 +495,10 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
     configuration,
     clock,
     effects,
+    /** Presents an attack's cue as play does, into this world's effects. */
+    presentAttack: (cue: AttackPresentationCue) => {
+      attackPresentation.emit(cue);
+    },
     random,
     cosmeticEmissionRandom,
     factories,

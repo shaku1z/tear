@@ -1,5 +1,10 @@
 import { createLiveCollisionGameplayBindings } from "../../gameplay/combat/live-collision-gameplay-bindings";
-import { bindRunDnaShot, runDnaObserver } from "../../gameplay/runtime/run-dna-observer";
+import { worldImpactCue } from "../../gameplay/combat/attack-presentation-cue";
+import {
+  applyWeaponActionEvents,
+  weaponActionTuning,
+  type WeaponRound,
+} from "../../gameplay/combat/weapon-action-events";
 import { updateMirrorCombat } from "../../gameplay/combat/mirror-combat-feedback";
 import { overrunMovementMultiplier } from "../../gameplay/combat/overrun";
 import { isObject } from "../../domain/records";
@@ -159,75 +164,21 @@ export function createLiveCombatActions<
     },
     updateWeaponAbilities: f.updateWeaponAbilities,
     flushWeaponActions(events) {
-      for (const event of events) {
-        if (event.type === "slingRelease") {
-          ports.tutorial.weaponEffect?.("chainblade", "slingRelease");
-          context.attackPresentation.emit({
-            weaponId: "chainblade",
-            attackId: event.attackId,
-            throwId: event.throwId,
-            action: "secondary",
-            phase: "return",
-            variant: "sling",
-            sourceX: event.sourceX,
-            sourceY: event.sourceY,
-            x: event.x,
-            y: event.y,
-            directionX: event.vx,
-            directionY: event.vy,
-            normalX: -event.vy,
-            normalY: event.vx,
-            material: "air",
-            intensity: d.clamp(
-              Math.hypot(event.vx, event.vy) / Math.max(1, d.CONFIG.weapons.chainblade.maxReleaseSpeed),
-              0,
-              1,
-            ),
-          });
-          f.logWeaponEvent(event.type, { attackId: event.attackId, throwId: event.throwId });
-          continue;
-        }
-        const shot = new d.Projectile(event.x, event.y, event.vx, event.vy);
-        shot.setFamily("weaponProjectile");
-        shot.playerOwned = true;
-        shot.weaponId = "riftlock";
-        bindRunDnaShot(shot, blade(), event.attackId, event.secondary, event.throwId);
-        if (!event.secondary) runDnaObserver(blade())?.end(`shot:${String(event.attackId)}`);
-        shot.attackId = event.attackId;
-        shot.throwId = event.throwId;
-        shot.remote = event.remote;
-        shot.secondary = event.secondary;
-        shot.kind = "razor";
-        shot.r = d.CONFIG.weapons.riftlock.razorRadius;
-        shot.life = d.CONFIG.weapons.riftlock.razorLife;
-        shot.dmg = event.damage;
-        shot.tint = d.CONFIG.colors.perfect;
-        shot.unparryable = true;
-        shot.counterplay = "weapon";
-        projectiles().push(shot as unknown as Projectile);
-        context.attackPresentation.emit({
-          weaponId: "riftlock",
-          attackId: event.attackId,
-          throwId: event.throwId,
-          action: "projectile",
-          phase: "start",
-          variant: event.secondary ? "backblastRound" : "razorRound",
-          sourceX: event.x,
-          sourceY: event.y,
-          x: event.x,
-          y: event.y,
-          directionX: event.vx,
-          directionY: event.vy,
-          material: "air",
-          intensity: d.clamp(Math.hypot(event.vx, event.vy) / Math.max(1, d.CONFIG.proj.speed), 0, 1),
-        });
-        f.logWeaponEvent(event.type, {
-          attackId: event.attackId,
-          throwId: event.throwId,
-          remote: event.remote,
-          secondary: event.secondary,
-        });
-      }
+      applyWeaponActionEvents(events, {
+        blade,
+        tuning: () => weaponActionTuning(d.CONFIG),
+        createRound: (x, y, vx, vy) => new d.Projectile(x, y, vx, vy) as unknown as WeaponRound,
+        addRound: (round) => {
+          projectiles().push(round as unknown as Projectile);
+        },
+        weaponEffect: (weaponId, effect) => {
+          ports.tutorial.weaponEffect?.(weaponId, effect);
+        },
+        presentAttack: (cue) => {
+          context.attackPresentation.emit(cue);
+        },
+        log: f.logWeaponEvent,
+      });
     },
     updateWorldHazards: (seconds) => {
       updateWorldHazards(context, seconds);
@@ -345,38 +296,9 @@ export function createLiveCombatActions<
       f.logWeaponEvent("throwLaunch", { throwId });
     },
     weaponWorldImpact() {
-      const effect = f.weaponWorldImpact(),
-        activeBlade = blade(),
-        weaponId = run().weaponId;
-      if (
-        (effect?.mechanic === "meteor" && weaponId === "hammer") ||
-        (effect?.mechanic === "wheelCut" && weaponId === "greatsword")
-      ) {
-        context.attackPresentation.emit({
-          weaponId,
-          attackId: activeBlade.attackId,
-          swingId: activeBlade.swingId,
-          throwId: activeBlade.throwId,
-          action: "impact",
-          phase: "impact",
-          variant: effect.mechanic,
-          sourceX: activeBlade.throwOrigin?.x ?? activeBlade.x,
-          sourceY: activeBlade.throwOrigin?.y ?? activeBlade.y,
-          x: activeBlade.x,
-          y: activeBlade.y,
-          directionX: activeBlade.impactVX ?? activeBlade.vx,
-          directionY: activeBlade.impactVY ?? activeBlade.vy,
-          normalX: 0,
-          normalY: -1,
-          material: "stone",
-          intensity: d.clamp(
-            d.len(activeBlade.impactVX ?? activeBlade.vx, activeBlade.impactVY ?? activeBlade.vy) /
-              Math.max(1, d.CONFIG.blade.throw.maxSpeed),
-            0,
-            1,
-          ),
-        });
-      }
+      const effect = f.weaponWorldImpact();
+      const cue = worldImpactCue(run().weaponId, effect?.mechanic, blade(), d.CONFIG.blade.throw.maxSpeed);
+      if (cue !== null) context.attackPresentation.emit(cue);
       return effect;
     },
     lobExplode: () => {

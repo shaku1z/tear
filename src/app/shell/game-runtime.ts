@@ -5,7 +5,7 @@ import { createFrameFaultHandler } from "../../platform/browser-error-screen";
 import { createScreenPresence } from "../../platform/screen-presence";
 import { assembleLiveCampaignTraining } from "../campaign/live-campaign-training-assembly";
 import { createLiveBossPhasePractice } from "../campaign/boss-phase-practice";
-import { createLiveAttackPresentation } from "../combat/attack-presentation";
+import { createAttackPresentation } from "../combat/attack-presentation";
 import { createLiveCombatComposition } from "../combat/combat-composition";
 import type { LiveCombatCoordinatorContext } from "../combat/combat-frame-context";
 import { createLiveCanonicalStateCapture, type LiveCanonicalCombatHost } from "../combat/live-canonical-state";
@@ -292,31 +292,16 @@ export function startLiveGame(
     run: liveRun,
     player: livePlayer,
   });
-  const attackPresentation = createLiveAttackPresentation({
+  const attackPresentation = createAttackPresentation({
     scope: liveBlade,
     tick: () => Math.max(0, Math.round(CLOCK.sim * 120)),
-    lowGraphics: () => GFX.low,
-    reducedMotion: () => A11Y.reducedMotion,
-    highContrast: () => A11Y.highContrast,
-    contrastColor: () => THEME.ink,
-    edgeTrace: (...args) => {
-      FX.edgeTrace(...args);
-    },
-    contactMark: (...args) => {
-      FX.contactMark(...args);
-    },
-    groundPulse: (...args) => {
-      FX.groundPulse(...args);
-    },
-    muzzleWedge: (...args) => {
-      FX.muzzleWedge(...args);
-    },
-    burst: (...args) => {
-      FX.burst(...args);
-    },
-    shouldRecord: () => GHOST.recording(),
-    recordEffect: (effect, x, y) => {
-      GHOST.presentationEvent(effect, x, y);
+    effects: FX,
+    settings: { GFX, A11Y, THEME },
+    record: {
+      active: () => GHOST.recording(),
+      effect: (effect, x, y) => {
+        GHOST.presentationEvent(effect, x, y);
+      },
     },
   });
   const orchestration = assembleLiveRunOrchestration({
