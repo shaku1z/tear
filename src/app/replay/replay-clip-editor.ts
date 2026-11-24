@@ -1,5 +1,5 @@
 import { stableVerificationHash } from "../../domain/hash";
-import { WATCH_TICKS_PER_SECOND } from "../../replay/watch";
+import { REPLAY_TICKS_PER_SECOND } from "../../replay/record";
 import type { ReplayScreenView } from "../../presentation/screens/contracts";
 import type { ReplayClip, ReplayClipExportPort, ReplayClipSource, ReplayClipWebm } from "./browser-replay-clip-export";
 
@@ -56,7 +56,7 @@ export function createReplayClipEditor(options: ReplayClipEditorOptions): Replay
       say(`IN marked at TICK ${String(tick)}. Seek the OUT point and append.`);
     },
     append: (tick, speed) => {
-      const from = mark ?? Math.max(0, tick - 5 * WATCH_TICKS_PER_SECOND);
+      const from = mark ?? Math.max(0, tick - 5 * REPLAY_TICKS_PER_SECOND);
       if (from >= tick) {
         say("Mark an earlier IN point, then seek a later OUT point.");
         return;

@@ -1,5 +1,6 @@
 import { clipWebCodecsAvailable, encodeClipVp8Webm } from "./browser-replay-clip-webm";
-import { WATCH_SPEEDS, WATCH_TICKS_PER_SECOND } from "../../replay/watch";
+import { REPLAY_TICKS_PER_SECOND } from "../../replay/record";
+import { WATCH_SPEEDS } from "../../replay/watch";
 
 /** One range of a watched run, in simulation ticks, played at a replay speed. */
 export interface ReplayClip {
@@ -103,7 +104,7 @@ export function replayClipFramePlan(lastTick: number, clips: readonly ReplayClip
       clip.toTick > lastTick
     )
       throw new TypeError("Clip is unsupported or outside its run");
-    const step = (WATCH_TICKS_PER_SECOND * clip.speed) / FPS;
+    const step = (REPLAY_TICKS_PER_SECOND * clip.speed) / FPS;
     const count = Math.ceil((clip.toTick - clip.fromTick) / step);
     if (count + plan.length > MAX_FRAMES) throw new RangeError("Clip export exceeds 1800 frames / 60 seconds");
     for (let index = 0; index < count; index++)

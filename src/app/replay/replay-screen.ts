@@ -14,7 +14,8 @@ import {
 } from "./record-world";
 import type { ReplayRecordStore } from "../../replay/record-store";
 import { replayPlaybackRefusal, type ReplayRecord } from "../../replay/record";
-import { WATCH_TICKS_PER_SECOND, type Watch } from "../../replay/watch";
+import { REPLAY_TICKS_PER_SECOND } from "../../replay/record";
+import type { Watch } from "../../replay/watch";
 import { liveReplayRecorder } from "./live-replay-recorder-slot";
 import { createBrowserGhostReplayPresentation } from "./browser-ghost-replay-presentation";
 import { createBrowserReplayClipExport, type ReplayClipExportPort } from "./browser-replay-clip-export";
@@ -326,10 +327,10 @@ export function createKeptRunScreen(services: KeptRunScreenServices) {
       if (native !== undefined && current.editor?.isOpen() !== true)
         handleReplayTransport({
           ...native,
-          currentTime: current.watch.state().tick / WATCH_TICKS_PER_SECOND,
-          duration: current.watch.lastTick / WATCH_TICKS_PER_SECOND,
+          currentTime: current.watch.state().tick / REPLAY_TICKS_PER_SECOND,
+          duration: current.watch.lastTick / REPLAY_TICKS_PER_SECOND,
           seek: (seconds) => {
-            command(({ watch }) => watch.seek(Math.round(seconds * WATCH_TICKS_PER_SECOND)));
+            command(({ watch }) => watch.seek(Math.round(seconds * REPLAY_TICKS_PER_SECOND)));
           },
           toggle: () => {
             command(({ watch }) => {

@@ -1,8 +1,6 @@
-import type { ReplayRun } from "./record";
+import { REPLAY_TICKS_PER_SECOND, type ReplayRun } from "./record";
 import { createReplayInputCursor, type ReplayTickInputs } from "./verify";
 
-/** Simulation ticks per second of run time; a replay's clock and seek bar read time, not ticks. */
-export const WATCH_TICKS_PER_SECOND = 120;
 /** The playback speeds the replay bar offers. */
 export const WATCH_SPEEDS = Object.freeze([0.25, 0.5, 1, 2, 4] as const);
 export type WatchSpeed = (typeof WATCH_SPEEDS)[number];
@@ -179,7 +177,7 @@ export function createWatch<Checkpoint extends WatchCheckpoint, World extends Wa
       return true;
     },
     seek,
-    seekBy: (seconds) => seek(tick + Math.round(seconds * WATCH_TICKS_PER_SECOND)),
+    seekBy: (seconds) => seek(tick + Math.round(seconds * REPLAY_TICKS_PER_SECOND)),
     seekToFraction: (fraction) => seek(Math.round(lastTick * Math.max(0, Math.min(1, fraction)))),
     jumpChapter: (direction) => {
       const ordered = direction < 0 ? [...chapters].reverse() : chapters;
@@ -187,7 +185,7 @@ export function createWatch<Checkpoint extends WatchCheckpoint, World extends Wa
     },
     advance: (seconds) => {
       if (!playing) return state();
-      fractionalTicks += Math.max(0, seconds) * WATCH_TICKS_PER_SECOND * speed;
+      fractionalTicks += Math.max(0, seconds) * REPLAY_TICKS_PER_SECOND * speed;
       const whole = Math.floor(fractionalTicks);
       fractionalTicks -= whole;
       if (whole <= 0) return state();
