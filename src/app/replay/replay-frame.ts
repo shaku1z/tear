@@ -9,7 +9,7 @@ import type { createUi } from "../../presentation/ui";
 import { DEFAULT_COSMETIC_LOOKS } from "../../presentation/cosmetic-defaults";
 import type { CosmeticWardrobe } from "../../presentation/cosmetic-styles";
 import { createWorldRenderers } from "../../presentation/world";
-import { easeOut } from "../../presentation/world/primitives";
+import { blendHex, easeOut } from "../../presentation/world/primitives";
 import { createLiveWorldSimulationPresentationAdapter } from "../world/world-simulation-factories";
 import type { ProductionReplayPresentationContext } from "../world/detached/world-factory";
 import type { ProductionGhostReplayCompositionOptions } from "../world/detached/replay-composition";
@@ -129,8 +129,21 @@ export function createReplayFrames(
       player = state.player();
     if (run === null || player === undefined || state.blade() === undefined)
       throw new TypeError("replay world has no drawable actors");
-    const stage = stageAt(replay.stage.index);
-    look.theme.set(options.scenes?.paper(stage.id) ?? stage.bg);
+    const stage = stageAt(replay.stage.index),
+      biome = isBiomeRunMode(run.mode);
+    // Play sets the theme from the colour it paints behind the world: the stage's, whitened by the Echo's flash.
+    const background = look.overlay.background({
+      biome,
+      stageColor: options.scenes?.paper(stage.id) ?? stage.bg,
+      // Only the Echo carries a white flash; the world's enemy type does not name it.
+      enemies: state.enemies().map((enemy) => {
+        const whiteFlash: unknown = Reflect.get(enemy, "whiteFlash");
+        return { whiteFlash: typeof whiteFlash === "number" ? whiteFlash : 0 };
+      }),
+      flashScale: look.accessibility.flashScale,
+      blend: blendHex,
+    });
+    look.theme.set(biome ? background : "#ffffff");
     look.clock.observe({
       tick,
       wave: run.wave,
@@ -242,7 +255,7 @@ export function createReplayFrames(
       screen: view,
       playing: screen === "playing",
       interfaceShown: !hidden.has("indicators"),
-      biome: !hidden.has("backdrop") && isBiomeRunMode(run.mode),
+      biome: biome && !hidden.has("backdrop"),
       cinema: context.cinema,
       parryFlash: context.transient.feel.flash,
       stageBeat: state.stageBeat(),

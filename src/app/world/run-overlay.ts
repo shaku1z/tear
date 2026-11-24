@@ -57,7 +57,20 @@ export interface RunOverlayPainters {
   trickColor(multiplier: number): string;
 }
 
+/** What play paints behind the world. */
+export interface RunBackgroundInput {
+  /** A run in the stages' biomes paints the stage's colour; any other run paints white. */
+  readonly biome: boolean;
+  /** The stage's colour: a painted stage's paper, else the stage colour. */
+  readonly stageColor: string;
+  readonly enemies: readonly Readonly<{ whiteFlash?: number }>[];
+  readonly flashScale: number;
+  readonly blend: (from: string, to: string, amount: number) => string;
+}
+
 export interface RunOverlay {
+  /** The colour behind the world, whitened while an enemy's flash (the Echo's return) lasts. */
+  background(input: RunBackgroundInput): string;
   /** Everything play draws over the world, in play's order: what follows the world and comes before the screens. */
   draw(frame: RunOverlayFrame, painters: RunOverlayPainters): void;
   /** The blade's aim mark, drawn last over a playing frame. */
@@ -72,6 +85,13 @@ export function createRunOverlay(viewer: OverlayViewer): RunOverlay {
   const handoff = createChapterHandoff();
   const seen = (layer: OverlayLayer): boolean => shownTo(layer, viewer);
   return Object.freeze({
+    background(input: RunBackgroundInput): string {
+      const color = input.biome ? input.stageColor : "#fff";
+      const flashing = seen("echoFlash") ? input.enemies.find((enemy) => (enemy.whiteFlash ?? 0) > 0) : undefined;
+      return flashing?.whiteFlash === undefined
+        ? color
+        : input.blend(color, "#ffffff", flashing.whiteFlash * input.flashScale);
+    },
     draw(frame: RunOverlayFrame, paint: RunOverlayPainters): void {
       const { context, screen, cinema } = frame;
       if (frame.biome && seen("backdropPost")) paint.backdropPost();

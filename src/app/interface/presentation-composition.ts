@@ -243,13 +243,16 @@ export function createLivePresentationFrameHost<Screen extends string, Stage ext
         const density = screenDensity(screen);
         ui.useCompactLayout(density === "compact", density === "phone");
       },
-      background: (playLike) => {
-        let color = playLike && state.biomeMode() ? services.stageBackground(services.stage.current) : "#fff";
-        const flashing = playLike ? state.enemies().find((enemy) => (enemy.whiteFlash ?? 0) > 0) : undefined;
-        if (flashing?.whiteFlash !== undefined)
-          color = services.blendColor(color, "#ffffff", flashing.whiteFlash * services.flashScale());
-        return color;
-      },
+      background: (playLike) =>
+        playLike
+          ? overlay.background({
+              biome: state.biomeMode(),
+              stageColor: services.stageBackground(services.stage.current),
+              enemies: state.enemies(),
+              flashScale: services.flashScale(),
+              blend: services.blendColor,
+            })
+          : "#fff",
       setTheme: services.setTheme,
       renderWorldLayers: (rectangle) => {
         const camera = services.renderWorld();
