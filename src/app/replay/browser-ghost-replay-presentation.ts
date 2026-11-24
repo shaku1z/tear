@@ -150,8 +150,8 @@ export function createBrowserGhostReplayPresentation(
       const indicators = (view: ViewRectangle = arena): WorldIndicators => {
         const canvas = replayCanvas();
         let views = builtIndicators.get(canvas);
-        if (views === undefined) builtIndicators.set(canvas, (views = new Map()));
-        const key = `${view.x},${view.y},${view.w},${view.h}`;
+        if (views === undefined) builtIndicators.set(canvas, (views = new Map<string, WorldIndicators>()));
+        const key = [view.x, view.y, view.w, view.h].join(",");
         let built = views.get(key);
         if (built === undefined) {
           built = replayIndicators(replay, clock, { canvas, theme, graphics, accessibility, width, height, view });
