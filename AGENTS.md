@@ -60,7 +60,9 @@ merged.
    `Date.now` and browser globals there.
 3. Run the closest tests: `pnpm exec vitest run tests/unit/<area>.test.ts`, or
    `pnpm test:related <changed src files>`; add `pnpm test:weapons` for weapon
-   or ability changes.
+   or ability changes. Before the first push, `pnpm test:related` with no files
+   runs every test the branch's change can reach, including tests that pin a
+   path as text or read the tree, which imports alone do not find.
 4. Add the smallest permanent test or scenario that fails without your change.
    Vitest runs only test files in git's index, so `git add -N` a new test
    file before running it. A new file under `src/` needs a TearBench evidence route in

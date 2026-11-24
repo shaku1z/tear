@@ -1,3 +1,6 @@
+/** The test files vitest.config.ts collects; see scripts/test-files.mjs. */
+export const VITEST_TEST_GLOBS: readonly string[];
+
 /** Index entries matching `globs`; see scripts/test-files.mjs. */
 export function indexedTestFiles(
   globs: readonly string[],

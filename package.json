@@ -26,7 +26,7 @@
     "format:check": "node scripts/format.mjs --check",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:related": "vitest related --run",
+    "test:related": "node scripts/test-related.mjs",
     "test:agent-skills": "pnpm exec vitest run tests/unit/agent-skills.test.mjs",
     "check:quick": "node scripts/run-checks.mjs fast",
     "test:unit:serial": "pnpm exec vitest run --no-file-parallelism",
