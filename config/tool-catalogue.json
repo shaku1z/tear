@@ -153,11 +153,11 @@
       "duration": "long"
     },
     "test:related": {
-      "purpose": "Runs only the Vitest tests related to the given changed source files",
+      "purpose": "Runs the tests a change can break: vitest's import graph plus tests naming or scanning the changed files",
       "effects": [
         "read-only"
       ],
-      "duration": "under-a-minute"
+      "duration": "minutes"
     },
     "test:agent-skills": {
       "purpose": "Checks skill pointers mirror their sources and that every path, link and script a skill cites exists",
@@ -1574,6 +1574,16 @@
         "test:rules"
       ]
     },
+    "scripts/test-related.mjs": {
+      "purpose": "Picks and runs the tests a change can break, by imports, by text naming its files and by tree scans",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "minutes",
+      "via": [
+        "test:related"
+      ]
+    },
     "scripts/verify-release-artifact.mjs": {
       "purpose": "Verifies a release artifact identity against the expected SHA",
       "effects": [
@@ -1740,6 +1750,7 @@
       "vite.config.ts"
     ],
     "scripts/test-files.mjs": [
+      "scripts/test-related.mjs",
       "tests/unit/pitfall-guards.test.mjs",
       "vitest.config.ts",
       "vitest.endurance.config.ts",

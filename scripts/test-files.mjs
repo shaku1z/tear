@@ -6,6 +6,14 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
+
+/** The test files vitest.config.ts collects (vitest glob syntax); pnpm test:related reads the same list. */
+export const VITEST_TEST_GLOBS = Object.freeze([
+  "tests/unit/**/*.test.ts",
+  "tests/unit/**/*.test.mjs",
+  "tests/contract/**/*.test.ts",
+]);
+
 const GLOB_CHARACTERS = /[[\]{}()!*?+@]/u;
 
 function realGit(args) {

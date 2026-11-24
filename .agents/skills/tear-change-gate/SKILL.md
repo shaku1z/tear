@@ -13,7 +13,7 @@ says which to run when; it defines no check of its own.
 
 | Level | Command | When |
 | --- | --- | --- |
-| One file | `pnpm exec vitest run <test file>` or `pnpm test:related <changed src files>` | While iterating. A new test file must be in git's index first (`git add -N <file>`). |
+| One file | `pnpm exec vitest run <test file>` or `pnpm test:related <changed src files>` | While iterating. A new test file must be in git's index first (`git add -N <file>`). Before the first push, `pnpm test:related` with no files: it adds the tests that name a changed or deleted file as text or read the tree. |
 | Format | `pnpm format` | Before every hand-off. It rewrites files. |
 | Fast group | `pnpm check:quick` | Before pushing. Nothing runs it for you: the pre-push hook checks commits and branch names only. Format, docs, terminology, repository guards, architecture, code budget, typecheck, lint of changed files. |
 | Required check | CI's Validate workflow on the pull request | Always. It runs the `static`, `unit`, `build` and `browser` groups on the change merged with current `main`. |
