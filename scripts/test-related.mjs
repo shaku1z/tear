@@ -136,12 +136,40 @@ export function folders(file) {
   return parts.map((_, index) => parts.slice(0, parts.length - index).join("/"));
 }
 
+/** The characters a path is written with in this repository; a run of them is one path-like word. */
+const PATH_RUN = /[\w./-]+/gu;
+const PATH_ONLY = /^[\w./-]+$/u;
+const QUOTES = new Set(['"', "'", "`"]);
+
 /**
- * Why each test file goes with `changed`: a map from test file to its reasons. `textOf` reads a
- * candidate's text; `candidates` lists the files to consider for each text rule (a cheap superset,
- * such as git grep's fixed-string hits); `scanners` are the tests that read the tree with git.
+ * What a test's text names, read in one pass:
+ * - `names`: for each path-like run, the run itself and each start of it that ends before a "." or a
+ *   "/" (a path written with its extension, without it, or as the folder of a longer path). A path
+ *   is named exactly when it is one of these: not a longer name that starts with it (watch is not
+ *   watch-screen) and not one that ends with it (README is not docs/README).
+ * - `quoted`: each run written whole between quotes, without one trailing slash (a folder it reads).
  */
-export function selectTests({ changed, tests, candidates, textOf, scanners }) {
+export function mentions(text) {
+  const names = new Set();
+  const quoted = new Set();
+  for (const match of text.matchAll(PATH_RUN)) {
+    const run = match[0];
+    for (let end = 1; end <= run.length; end += 1)
+      if (end === run.length || run[end] === "." || run[end] === "/") names.add(run.slice(0, end));
+    if (QUOTES.has(text[match.index - 1] ?? "") && QUOTES.has(text[match.index + run.length] ?? ""))
+      quoted.add(run.endsWith("/") ? run.slice(0, -1) : run);
+  }
+  return { names, quoted };
+}
+
+/**
+ * Why each test file goes with `changed`: a map from test file to its reasons. `textOf` reads a test's
+ * text; `searched` are the tests whose text the rules read (a cheap superset, such as git grep's
+ * fixed-string hits); `scanners` are the tests that read the tree with git. Each searched test's text
+ * is read once into an index of what it names, so the work grows with tests plus changed files, not
+ * their product. A path with a character no path-like run holds is matched by its own expression.
+ */
+export function selectTests({ changed, tests, textOf, scanners, searched = tests }) {
   const known = new Set(tests);
   const picked = new Map();
   const add = (file, reason) => {
@@ -149,22 +177,33 @@ export function selectTests({ changed, tests, candidates, textOf, scanners }) {
     if (!picked.has(file)) picked.set(file, []);
     if (!picked.get(file).includes(reason)) picked.get(file).push(reason);
   };
+  const byName = new Map();
+  const byQuoted = new Map();
+  const index = (map, key, test) => {
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(test);
+  };
+  for (const test of searched) {
+    const { names, quoted } = mentions(textOf(test));
+    for (const name of names) index(byName, name, test);
+    for (const folder of quoted) index(byQuoted, folder, test);
+  }
+  const naming = (stem) =>
+    PATH_ONLY.test(stem)
+      ? (byName.get(stem) ?? [])
+      : searched.filter((test) => new RegExp(`(?<![\\w./-])${escape(stem)}(?![\\w-])`, "u").test(textOf(test)));
+  const quoting = (folder) =>
+    PATH_ONLY.test(folder)
+      ? (byQuoted.get(folder) ?? [])
+      : searched.filter((test) => new RegExp(`["'\`]${escape(folder)}/?["'\`]`, "u").test(textOf(test)));
   for (const file of changed) add(file, "changed");
   for (const file of changed) {
-    const stem = withoutExtension(file);
-    // The path itself: not a longer name that starts with it (watch is not watch-screen), and not
-    // one that ends with it (README is not docs/README).
-    const names = new RegExp(`(?<![\\w./-])${escape(stem)}(?![\\w-])`, "u");
-    for (const test of candidates(stem)) if (test !== file && names.test(textOf(test))) add(test, `names ${file}`);
-    for (const folder of folders(file)) {
-      const whole = new RegExp(`["'\`]${escape(folder)}/?["'\`]`, "u");
-      for (const test of candidates(folder)) if (whole.test(textOf(test))) add(test, `reads ${folder}/`);
-    }
+    for (const test of naming(withoutExtension(file))) if (test !== file) add(test, `names ${file}`);
+    for (const folder of folders(file)) for (const test of quoting(folder)) add(test, `reads ${folder}/`);
   }
   if (changed.length > 0) for (const test of scanners) add(test, "reads the tree with git");
   return picked;
 }
-
 /** The selection for `changed` in this repository. */
 export function relatedTests(changed, { git = realGit } = {}) {
   const vitestTests = indexedTestFiles(VITEST_TEST_GLOBS, { git });
@@ -177,11 +216,10 @@ export function relatedTests(changed, { git = realGit } = {}) {
     return texts.get(file);
   };
   const needles = [...new Set(changed.flatMap((file) => [withoutExtension(file), ...folders(file)]))];
-  // One git grep finds every file holding any needle; each rule then reads only those.
+  // git grep finds every test holding any needle; the rules index only those.
   const hits = needles.length === 0 ? [] : grepFiles(git, "-F", needles, pathspecs);
-  const candidates = (needle) => hits.filter((file) => textOf(file).includes(needle));
   const scanners = grepFiles(git, "-E", [`["'](ls-files|grep)["']`], pathspecs);
-  const picked = selectTests({ changed, tests, candidates, textOf, scanners });
+  const picked = selectTests({ changed, tests, textOf, scanners, searched: hits });
   const nodeSet = new Set(nodeTests);
   return {
     picked,

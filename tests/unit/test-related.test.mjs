@@ -9,6 +9,7 @@ import {
   batchedArguments,
   COMMAND_ARGUMENT_BUDGET,
   folders,
+  mentions,
   nodeTestFiles,
   relatedTests,
   selectTests,
@@ -16,14 +17,7 @@ import {
 
 /** selectTests over in-memory test files, the way relatedTests calls it over git grep's hits. */
 function pick(changed, files, scanners = []) {
-  const tests = Object.keys(files);
-  return selectTests({
-    changed,
-    tests,
-    candidates: (needle) => tests.filter((file) => files[file].includes(needle)),
-    textOf: (file) => files[file],
-    scanners,
-  });
+  return selectTests({ changed, tests: Object.keys(files), textOf: (file) => files[file], scanners });
 }
 
 describe("test:related", () => {
@@ -102,24 +96,39 @@ describe("test:related", () => {
     expect(argumentBatches(["a", "x".repeat(50), "b"], 20)).toEqual([["a"], ["x".repeat(50)], ["b"]]);
   });
 
-  // A real selection over hundreds of changed files reads every test's text for each one, so this test
-  // takes several seconds; its timeout says so rather than the default's 5 s.
-  it(
-    "in this repository, selects for a change whose paths alone fill more than one command line",
-    { timeout: 30_000 },
-    () => {
-      const tracked = execFileSync("git", ["ls-files", "src"], { encoding: "utf8" }).split(/\r?\n/u).filter(Boolean);
-      const changed = [];
-      for (const file of tracked) {
-        changed.push(file);
-        if (changed.join(" ").length > COMMAND_ARGUMENT_BUDGET + 1_000) break;
-      }
-      expect(changed.join(" ").length).toBeGreaterThan(COMMAND_ARGUMENT_BUDGET);
-      const { picked, node } = relatedTests(changed);
-      expect(picked.size).toBeGreaterThan(0);
-      expect(node).toContain("tests/source-architecture.test.mjs");
-    },
-  );
+  it("in this repository, selects for a change whose paths alone fill more than one command line", () => {
+    const tracked = execFileSync("git", ["ls-files", "src"], { encoding: "utf8" }).split(/\r?\n/u).filter(Boolean);
+    const changed = [];
+    for (const file of tracked) {
+      changed.push(file);
+      if (changed.join(" ").length > COMMAND_ARGUMENT_BUDGET + 1_000) break;
+    }
+    expect(changed.join(" ").length).toBeGreaterThan(COMMAND_ARGUMENT_BUDGET);
+    const { picked, node } = relatedTests(changed);
+    expect(picked.size).toBeGreaterThan(0);
+    expect(node).toContain("tests/source-architecture.test.mjs");
+  });
+
+  it("indexes what a test names in one pass, as the path rules read it", () => {
+    const { names, quoted } = mentions(
+      `readFileSync("src/app/replay/watch.ts"); import x from "../../src/app/other"; git(["grep", "src/app/"]);`,
+    );
+    expect(names.has("src/app/replay/watch")).toBe(true);
+    expect(names.has("src/app/replay/watch.ts")).toBe(true);
+    expect(names.has("src/app/replay/wat")).toBe(false);
+    expect(names.has("src/app/other")).toBe(false); // written after "../../", so not this path
+    expect(quoted.has("src/app")).toBe(true);
+    expect(quoted.has("src/app/replay/watch.ts")).toBe(true);
+    expect(quoted.has("src/app/replay")).toBe(false);
+  });
+
+  it("still matches a path written with a character no path-like word holds", () => {
+    const picked = pick(["docs/notes/a b.md"], {
+      "tests/unit/space.test.ts": `readFileSync("docs/notes/a b.md")`,
+      "tests/unit/other.test.ts": `readFileSync("docs/notes/a")`,
+    });
+    expect([...picked.keys()]).toEqual(["tests/unit/space.test.ts"]);
+  });
 
   it("in this repository, finds the tree scanners and the node:test files for a source change", () => {
     const { vitest, node, picked } = relatedTests(["src/app/replay/watch.ts"]);
