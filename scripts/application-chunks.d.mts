@@ -2,6 +2,8 @@ export interface ChunkModuleInfo {
   readonly isEntry: boolean;
   readonly importers: readonly string[];
   readonly dynamicImporters: readonly string[];
+  /** The modules it imports statically; missing where the bundler does not say. */
+  readonly importedIds?: readonly string[];
   /** The module's code; null where the bundler has not made it available. */
   readonly code: string | null;
 }

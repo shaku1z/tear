@@ -7,7 +7,7 @@
 import { CURRENT_RULESET_VERSION } from "../../gameplay/run/ruleset-version";
 import type { ReplayBuild, ReplayRecord, ReplayRun } from "../../replay/record";
 import { createReplayRecorder } from "../../replay/recorder";
-import { createDetachedReplayWorld } from "../replay/detached-replay-world";
+import { recordReplayWorld, type RecordWorldEngine } from "../replay/record-world";
 
 /** The idle run: a fixed seed and the baseline loadout, so every journey opens the same replay. */
 const IDLE_RUN: Pick<ReplayRun, "seed" | "start"> = Object.freeze({
@@ -25,8 +25,8 @@ const IDLE_RUN: Pick<ReplayRun, "seed" | "start"> = Object.freeze({
   }),
 });
 
-/** Records `ticks` ticks of the idle run (fewer when the run ends first). */
-export function recordIdleReplay(build: ReplayBuild, ticks: number): ReplayRecord {
+/** Records `ticks` ticks of the idle run (fewer when the run ends first) in the engine the deferred loader fetched. */
+export function recordIdleReplay(engine: RecordWorldEngine, build: ReplayBuild, ticks: number): ReplayRecord {
   const recorder = createReplayRecorder({
     ruleset: CURRENT_RULESET_VERSION,
     build,
@@ -38,7 +38,7 @@ export function recordIdleReplay(build: ReplayBuild, ticks: number): ReplayRecor
       recordedAt: new Date(0).toISOString(),
     }),
   });
-  const run = createDetachedReplayWorld().start(IDLE_RUN, recorder.observe);
+  const run = recordReplayWorld(engine).start(IDLE_RUN, recorder.observe);
   try {
     let tick = 0;
     let hash = (): string => "";

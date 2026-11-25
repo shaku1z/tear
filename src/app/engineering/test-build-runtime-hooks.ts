@@ -13,6 +13,7 @@ import {
 } from "../../ghost/browser-capsule-vault";
 import type { GhostLiveRecorder } from "../../ghost/live-recorder";
 import { verifyGhostCapsuleOpeningContinuation } from "../../ghost/production-replay-verification";
+import { replayEngine } from "../../ghost/replay-engine";
 import type { GameAction } from "../../input/game-action";
 import { emitLiveTearBenchPhysicalInput } from "../../tearbench/browser/live-physical-input";
 import { liveRewardChoiceIds, routeLiveTearBenchAction } from "../world/detached/action-routing";
@@ -456,10 +457,11 @@ function installBossDebug(
     player: sources.player,
     blade: sources.blade,
     applyUpgrade: dependencies.applyUpgrade,
-    // Ten seconds of an idle Endless run, recorded in the detached world (idle-replay-record.ts).
+    // Ten seconds of an idle Endless run, recorded in the detached world (idle-replay-record.ts) with the engine
+    // the deferred loader fetches, as play opens a replay, so the engine stays one on-demand chunk.
     openReplay: () =>
-      import("./idle-replay-record").then(({ recordIdleReplay }) =>
-        replayAdapters.watch(recordIdleReplay(dependencies.build, 1200), "engineering:idle-replay", "menu"),
+      Promise.all([import("./idle-replay-record"), replayEngine.ensure()]).then(([{ recordIdleReplay }, engine]) =>
+        replayAdapters.watch(recordIdleReplay(engine, dependencies.build, 1200), "engineering:idle-replay", "menu"),
       ),
     beginRename: () => {
       settingsRenameAdapters.beginRename(false, true);

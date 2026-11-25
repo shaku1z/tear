@@ -71,6 +71,42 @@ describe("application chunk rule", () => {
     expect(applicationChunk(shared, meta)).toBe(ON_DEMAND_SHARED_CHUNK);
   });
 
+  it("keeps a small shared module out of the group when it imports an on-demand module, directly or not", () => {
+    // The replay engine is a deferred module; a small adapter that two on-demand chunks share imports it. In
+    // the group, the adapter would bring the whole engine, so the engine's own fetch would hold nothing back.
+    const engine = "/repo/src/app/world/detached/replay-composition.ts";
+    const middle = "/repo/src/app/replay/middle.ts";
+    const direct = graph({
+      [ROOT]: {},
+      [lazyA]: { dynamicImporters: [ROOT] },
+      [lazyB]: { dynamicImporters: [ROOT] },
+      [engine]: { dynamicImporters: [ROOT], importers: [shared], code: large },
+      [shared]: { importers: [lazyA, lazyB], importedIds: [engine], code: small },
+    });
+    expect(applicationChunk(shared, direct)).toBeUndefined();
+    const through = graph({
+      [ROOT]: {},
+      [lazyA]: { dynamicImporters: [ROOT] },
+      [lazyB]: { dynamicImporters: [ROOT] },
+      [engine]: { dynamicImporters: [ROOT], importers: [middle], code: large },
+      [middle]: { importers: [shared], importedIds: [engine], code: large },
+      [shared]: { importers: [lazyA, lazyB], importedIds: [middle], code: small },
+    });
+    expect(applicationChunk(shared, through)).toBeUndefined();
+  });
+
+  it("still groups a small shared module whose imports the startup path already loads", () => {
+    const startup = "/repo/src/domain/records.ts";
+    const meta = graph({
+      [ROOT]: { importedIds: [startup] },
+      [lazyA]: { dynamicImporters: [ROOT] },
+      [lazyB]: { dynamicImporters: [ROOT] },
+      [startup]: { importers: [ROOT, shared] },
+      [shared]: { importers: [lazyA, lazyB], importedIds: [startup], code: small },
+    });
+    expect(applicationChunk(shared, meta)).toBe(ON_DEMAND_SHARED_CHUNK);
+  });
+
   it("never gives the group a module the startup path loads", () => {
     const meta = graph({
       [ROOT]: {},

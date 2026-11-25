@@ -1,6 +1,6 @@
 import { TearGameplayEventBus } from "../../gameplay/runtime/gameplay-events";
 import type { AuthoritativeStepResult } from "../../gameplay/runtime/authoritative-step";
-import type { CanonicalGameplayState } from "../../gameplay/runtime/canonical-state";
+import { canonicalReplayTotals, type CanonicalGameplayState } from "../../gameplay/runtime/canonical-state";
 import type { GhostReplayRenderView } from "../../ghost/replay-world";
 import type { ReplayEngine } from "../../ghost/replay-engine";
 import {
@@ -11,7 +11,7 @@ import {
   type ReplayRun,
 } from "../../replay/record";
 import { createWatch, type Watch, type WatchOptions, type WatchWorld } from "../../replay/watch";
-import type { ReplayWorld } from "../../replay/verify";
+import type { ReplayWorld, ReplayWorldRun } from "../../replay/verify";
 import type {
   ProductionGhostReplayCompositionOptions,
   ProductionReplayCheckpointCapture,
@@ -116,6 +116,28 @@ export function startRecordWorld(
   });
 }
 
+/**
+ * The replay world port (verify, watch and race run through it) over the detached production world, with the
+ * engine it is given: the engine the deferred loader fetched, or a bundle's own copy where that is static.
+ */
+export function recordReplayWorld(engine: RecordWorldEngine): ReplayWorld {
+  return Object.freeze<ReplayWorld>({
+    start(run, observe) {
+      const world = startRecordWorld(engine, run, observe);
+      // The last step's result; its state is captured only when asked for.
+      let last: AuthoritativeStepResult<CanonicalGameplayState> | undefined;
+      return Object.freeze<ReplayWorldRun>({
+        step(actions, frames) {
+          const result = world.step(actions, frames);
+          last = result;
+          return Object.freeze({ tick: result.tick, hash: () => result.stateHash, terminated: world.terminated() });
+        },
+        run: () => canonicalReplayTotals(last?.state.run),
+        dispose: world.dispose,
+      });
+    },
+  });
+}
 /** A recorded run's world as watch steps it: the record world, dressed in the record's look. */
 export type RecordWatchWorld = WatchWorld<RecordCheckpoint, GhostReplayRenderView> &
   Pick<RecordWorld, "stage" | "loadout">;
