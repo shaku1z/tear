@@ -1,11 +1,13 @@
 /**
- * The REPLAYS list's actions (src/app/replay/replay-list-controller.ts) over an in-memory store and older
- * index: pin and delete reach a run's older copy too, SHARE publishes that copy, WATCH picks the right
- * player, DOWNLOAD names the file by date and seed, IMPORT adds a record file, and each says what happened.
+ * The REPLAYS list's actions (src/app/replay/replay-list-controller.ts) over an in-memory store: WATCH opens
+ * the replay screen, PIN and DELETE change the store, SHARE publishes the kept record and names its share,
+ * DOWNLOAD names the file by date and seed, IMPORT adds a record file, the earlier-replays notice saves and
+ * removes recordings made before this update, and each says what happened.
  */
 import { describe, expect, it, vi } from "vitest";
 
-import { createReplayListController, type OlderRecordings } from "../../src/app/replay/replay-list-controller";
+import { EARLIER_BEST_PREFIX, EARLIER_INDEX_KEY, EARLIER_RECORDING_PREFIX } from "../../src/app/replay/earlier-replays";
+import { createReplayListController } from "../../src/app/replay/replay-list-controller";
 import type { ReplayFile } from "../../src/app/replay/browser-replay-files";
 import type { ReplayRecord } from "../../src/replay/record";
 import type { ReplayRecordEntry, ReplayRecordStore } from "../../src/replay/record-store";
@@ -19,7 +21,15 @@ vi.mock("../../src/replay/record", async (original) => ({
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-function setup(options: { pinLimit?: boolean; storeFails?: boolean; dropped?: number } = {}) {
+function setup(
+  options: {
+    pinLimit?: boolean;
+    storeFails?: boolean;
+    dropped?: number;
+    canShare?: boolean;
+    earlier?: Record<string, string>;
+  } = {},
+) {
   let dropped = options.dropped ?? 0;
   const entries: ReplayRecordEntry[] = [
     {
@@ -56,6 +66,10 @@ function setup(options: { pinLimit?: boolean; storeFails?: boolean; dropped?: nu
       );
       return Promise.resolve("done" as const);
     }),
+    shared: vi.fn((key: string, shareId: string) => {
+      for (const [index, entry] of entries.entries()) if (entry.key === key) entries[index] = { ...entry, shareId };
+      return Promise.resolve("done" as const);
+    }),
     put: vi.fn(() => Promise.resolve({ status: "stored" as const, key: "new", evicted: [] })),
     read: vi.fn(() => Promise.resolve({ ok: true as const, record: kept })),
     takeDropped: vi.fn(() => {
@@ -65,23 +79,13 @@ function setup(options: { pinLimit?: boolean; storeFails?: boolean; dropped?: nu
     }),
     close: vi.fn(),
   } as unknown as ReplayRecordStore;
-  const olderIndex = [
-    { id: "copy", ts: 1, pin: false, shareId: null, sum: { mode: "endless", diff: "normal", score: 300 } },
-    { id: "before", ts: 2, pin: false, shareId: "shared", sum: { mode: "endless", diff: "hard", score: 5 } },
-  ];
-  // A Ghost 2 packet keeps its run seed as a digit string.
-  const olderRecords: Record<string, unknown> = { copy: { run: { seed: "42" } }, before: { run: { seed: "7" } } };
-  const older = {
-    index: () => olderIndex,
-    get: (id: string) => olderRecords[id],
-    pin: vi.fn(() => true),
-    remove: vi.fn((id: string) => {
-      olderIndex.splice(
-        olderIndex.findIndex((entry) => entry.id === id),
-        1,
-      );
+  const saved = new Map(Object.entries(options.earlier ?? {}));
+  const earlier = {
+    get: (key: string) => saved.get(key) ?? null,
+    set: vi.fn((key: string, value: string) => {
+      saved.set(key, value);
     }),
-  } satisfies OlderRecordings;
+  };
   const picked: ((file: ReplayFile) => void)[] = [];
   const files = {
     pick: vi.fn((choose: (file: ReplayFile) => void) => {
@@ -91,36 +95,29 @@ function setup(options: { pinLimit?: boolean; storeFails?: boolean; dropped?: nu
   };
   const ports = {
     openStore: vi.fn(() => Promise.resolve(options.storeFails === true ? { failed: "blocked" } : store)),
-    older,
     files,
     playableRuleset: (ruleset: string) => ruleset === "today",
     watchRecord: vi.fn(() => Promise.resolve(true)),
-    watchOlder: vi.fn(),
-    shareOlder: vi.fn(),
+    canShare: () => options.canShare ?? true,
+    share: vi.fn<(record: ReplayRecord) => Promise<string | null>>(() => Promise.resolve("share-1")),
+    earlier,
   };
   const list = createReplayListController(ports as never);
-  return { list, ports, store, older, files, picked, entries };
+  return { list, ports, store, files, picked, entries, saved, earlier };
 }
 
 describe("the REPLAYS list controller", () => {
-  it("lists kept records and older recordings without a record, and says when the store cannot be read", async () => {
+  it("lists kept records, and says when the store cannot be read", async () => {
     const { list } = setup();
     expect(list.snapshot().status).toBe("idle");
     list.refresh();
     expect(list.snapshot().status).toBe("loading");
     await settle();
-    expect(list.snapshot().items.map((item) => [item.id, item.kind, item.olderId])).toEqual([
-      ["kept", "record", "copy"],
-      ["before", "older", undefined],
-    ]);
+    expect(list.snapshot().items.map((item) => [item.id, item.shared])).toEqual([["kept", false]]);
     const failing = setup({ storeFails: true });
     failing.list.refresh();
     await settle();
-    // Without the store, the run's older copy is listed on its own.
-    expect(failing.list.snapshot()).toMatchObject({
-      status: "unavailable",
-      items: [{ id: "before" }, { id: "copy", kind: "older" }],
-    });
+    expect(failing.list.snapshot()).toMatchObject({ status: "unavailable", items: [] });
   });
 
   it("says once, when the list opens, how many older runs the store dropped to make room", async () => {
@@ -138,46 +135,75 @@ describe("the REPLAYS list controller", () => {
     expect(one.list.snapshot().message).toBe("An older run was removed to make room. PIN a run to keep it.");
   });
 
-  it("watches a record on the replay screen and an older recording through the old player", async () => {
+  it("watches a record on the replay screen and says when it could not be opened", async () => {
     const { list, ports } = setup();
     list.refresh();
     await settle();
     list.watch("kept");
-    list.watch("before");
     expect(ports.watchRecord).toHaveBeenCalledExactlyOnceWith("kept");
-    expect(ports.watchOlder).toHaveBeenCalledExactlyOnceWith("before");
     ports.watchRecord.mockResolvedValueOnce(false);
     list.watch("kept");
     await settle();
     expect(list.snapshot().message).toBe("That replay couldn't be opened.");
   });
 
-  it("pins and deletes a run together with its older copy, and shares the copy", async () => {
-    const { list, ports, older, store } = setup();
+  it("pins and deletes a kept record", async () => {
+    const { list, store } = setup();
     list.refresh();
     await settle();
     list.pin("kept", true);
     await settle();
     expect(store.pin).toHaveBeenCalledWith("kept", true);
-    expect(older.pin).toHaveBeenCalledWith("copy", true);
     expect(list.snapshot().items[0]?.pinned).toBe(true);
-    list.share("kept");
-    expect(ports.shareOlder).toHaveBeenCalledExactlyOnceWith("copy");
     list.remove("kept");
     await settle();
-    expect(older.remove).toHaveBeenCalledWith("copy");
     expect(store.remove).toHaveBeenCalledWith("kept");
-    expect(list.snapshot().items.map((item) => item.id)).toEqual(["before"]);
+    expect(list.snapshot().items).toEqual([]);
   });
 
-  it("says the pin limit was reached and leaves the older copy as it was", async () => {
-    const { list, older } = setup({ pinLimit: true });
+  it("says the pin limit was reached", async () => {
+    const { list } = setup({ pinLimit: true });
     list.refresh();
     await settle();
     list.pin("kept", true);
     await settle();
     expect(list.snapshot().message).toBe("Pin limit reached (10). Unpin a replay first.");
-    expect(older.pin).not.toHaveBeenCalled();
+  });
+
+  it("shares the kept record once, names its share on the row, and refuses a second share", async () => {
+    const { list, ports, store } = setup();
+    list.refresh();
+    await settle();
+    list.share("kept");
+    list.share("kept");
+    expect(list.snapshot().message).toBe("Publishing…");
+    await settle();
+    await settle();
+    expect(ports.share).toHaveBeenCalledOnce();
+    expect(store.shared).toHaveBeenCalledExactlyOnceWith("kept", "share-1");
+    expect(list.snapshot().message).toBe("Published to the global feed ✓");
+    expect(list.snapshot().items[0]?.shared).toBe(true);
+    list.share("kept");
+    expect(list.snapshot().message).toBe("Already on the global feed.");
+    expect(ports.share).toHaveBeenCalledOnce();
+  });
+
+  it("says why a share did not happen: no online layer, or the publish failed", async () => {
+    const offline = setup({ canShare: false });
+    offline.list.refresh();
+    await settle();
+    offline.list.share("kept");
+    expect(offline.list.snapshot().message).toBe("Sharing needs the online layer.");
+    expect(offline.ports.share).not.toHaveBeenCalled();
+    const failing = setup();
+    failing.ports.share.mockResolvedValueOnce(null);
+    failing.list.refresh();
+    await settle();
+    failing.list.share("kept");
+    await settle();
+    await settle();
+    expect(failing.list.snapshot().message).toBe("Publish failed — try again.");
+    expect(failing.store.shared).not.toHaveBeenCalled();
   });
 
   it("downloads a record as a JSON file named by its date and seed", async () => {
@@ -211,5 +237,34 @@ describe("the REPLAYS list controller", () => {
     await settle();
     expect(list.snapshot().message).not.toBe("Replay added.");
     expect(store.put).toHaveBeenCalledOnce();
+  });
+
+  it("counts recordings made before this update, saves them to one file, then removes only them", async () => {
+    const recording = `${EARLIER_RECORDING_PREFIX}a`;
+    const best = `${EARLIER_BEST_PREFIX}endless_hard`;
+    const { list, files, saved } = setup({
+      earlier: {
+        [EARLIER_INDEX_KEY]: JSON.stringify([{ id: "a" }]),
+        [recording]: JSON.stringify({ v: 2 }),
+        [best]: "packet",
+        tear_settings: "kept",
+      },
+    });
+    list.refresh();
+    await settle();
+    expect(list.snapshot().earlier).toBe(2);
+    list.downloadEarlier();
+    expect(files.download).toHaveBeenCalledOnce();
+    expect(files.download.mock.calls[0]?.[1]).toBe("tear-earlier-replays.json");
+    const file = JSON.parse(new TextDecoder().decode(files.download.mock.calls[0]?.[0] as Uint8Array)) as unknown;
+    expect(file).toEqual({
+      format: "tear-earlier-replays",
+      recordings: { [recording]: { v: 2 }, [best]: "packet" },
+    });
+    list.clearEarlier();
+    expect(list.snapshot()).toMatchObject({ earlier: 0, message: "Earlier replays removed." });
+    expect(saved.get(recording)).toBe("");
+    expect(saved.get(EARLIER_INDEX_KEY)).toBe("");
+    expect(saved.get("tear_settings")).toBe("kept");
   });
 });

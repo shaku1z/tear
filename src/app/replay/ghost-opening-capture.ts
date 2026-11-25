@@ -3,11 +3,24 @@ import {
   type GhostReplayRunContextInput,
   type GhostRecordedOpeningV1,
 } from "../../ghost/replay-admission";
-import type { VisualReplayProvenance } from "../../replay/visual-replay";
 import type { TearCausalEventV1 } from "../../tearbench/contracts";
 import { REPLAY_CONTENT_HASH } from "../../gameplay/snapshot/codec-ids";
 import { stableVerificationHash } from "../../domain/hash";
-import type { LiveOpeningCaptureBoundary } from "../run/run-start-host";
+
+export interface LiveOpeningCaptureBoundary {
+  readonly phase: "opening-initialized-before-run-start";
+  readonly runId: string;
+  readonly seed: number;
+}
+
+/** The recording's start as the old recorder's sidecar context reads it. */
+type OpeningRunContext = Readonly<{
+  runId: string;
+  seed: string;
+  ticksPerSecond: number;
+  build: Pick<GhostReplayRunContextInput["build"], "version" | "revision" | "target">;
+  rulesetVersion: string;
+}>;
 
 interface OpeningCapturePorts {
   readonly screen: () => string;
@@ -41,7 +54,7 @@ export function createLiveGhostOpeningCapture(ports: OpeningCapturePorts) {
       }
     },
     createContext(
-      context: Pick<VisualReplayProvenance, "runId" | "seed" | "ticksPerSecond" | "build" | "rulesetVersion">,
+      context: OpeningRunContext,
       run: Readonly<{ mode: string; diff: string; weaponId: string }>,
       configuration: unknown,
       rng: GhostReplayRunContextInput["rng"],

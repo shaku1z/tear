@@ -57,7 +57,7 @@ export function applyStyleSnapshot(run: MutableStyleRun, state: StyleState): voi
 
 export interface StyleIntentPorts {
   tutorialMark(kind: string): void;
-  ghostCapture(kind: string, x: number, y: number, importance: 1 | 2 | 3): void;
+  ghostCapture(kind: string, x: number, y: number): void;
   playerTrick(kind: string, at: number): void;
   rankUp(rank: string): void;
   musicRankChanged(rank: string): void;
@@ -75,7 +75,7 @@ export function executeStyleIntents(intents: readonly StyleIntent[], ports: Styl
         ports.tutorialMark(intent.kind);
         break;
       case "ghost-capture":
-        ports.ghostCapture(intent.kind, intent.x, intent.y, intent.importance);
+        ports.ghostCapture(intent.kind, intent.x, intent.y);
         break;
       case "player-trick":
         ports.playerTrick(intent.kind, intent.at);

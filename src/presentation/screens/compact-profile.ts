@@ -6,7 +6,12 @@ import {
   type ScrollBlock,
   type ScrollView,
 } from "./compact-page";
-import { REPLAY_IMPORT_LABEL, profileListEmptyState, replayRowActions } from "./profile-replay-list";
+import {
+  REPLAY_IMPORT_LABEL,
+  earlierReplaysNotice,
+  profileListEmptyState,
+  replayRowActions,
+} from "./profile-replay-list";
 
 const PROFILE_HUE = "#b06cff",
   GOLD = "#e0a326";
@@ -136,11 +141,27 @@ export function createCompactProfile(context: ScreenRenderContext) {
     return { height, draw: (y, scrollView) => kit.actions(items, page.left, y, page.width, scrollView) };
   }
 
+  /** The notice about replays recorded before this update, then DOWNLOAD ALL and CONTINUE; none when there are none. */
+  function earlierNotice(page: CompactPage, view: ProfileScreenView): readonly ScrollBlock[] {
+    const notice = earlierReplaysNotice(view);
+    if (notice === null) return [];
+    const items: FlowAction[] = notice.actions.map((item) => ({ label: item.label, action: item.action }));
+    return [
+      kit.prose(page, notice.text, { maxLines: 4 }),
+      {
+        height: kit.actionsHeight(items, page.width),
+        draw: (y, scrollView) => kit.actions(items, page.left, y, page.width, scrollView),
+      },
+    ];
+  }
+
   function replayBlocks(page: CompactPage, view: ProfileScreenView): readonly ScrollBlock[] {
     const replays = view.replays ?? [];
+    const notice = earlierNotice(page, view);
     if (replays.length === 0) {
       const empty = profileListEmptyState(view);
       return [
+        ...notice,
         kit.empty(
           page,
           empty.glyph,
@@ -150,7 +171,10 @@ export function createCompactProfile(context: ScreenRenderContext) {
         ),
       ];
     }
-    const blocks: ScrollBlock[] = view.message ? [kit.prose(page, view.message, { maxLines: 2 })] : [];
+    const blocks: ScrollBlock[] = [
+      ...notice,
+      ...(view.message ? [kit.prose(page, view.message, { maxLines: 2 })] : []),
+    ];
     for (const replay of replays)
       blocks.push(kit.replayRow(page, replay, replayRowActions(replay), replay.pinned ? GOLD : undefined));
     return blocks;

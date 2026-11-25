@@ -1,14 +1,9 @@
-import {
-  LiveRecordingController,
-  type RecordedReplay,
-  type StoredRecordingSummary,
-} from "../../gameplay/run/live-recording-controller";
+import { LiveRecordingController, type LiveRecordingPort } from "../../gameplay/run/live-recording-controller";
 import { LiveRunOutcomeController, type LiveOutcomeControllerPort } from "../../gameplay/run/live-outcome-controller";
 import type { OutcomeChronologyEffect } from "../../gameplay/run/outcome-chronology-journal";
 import type {
   OutcomeRunState,
   PreparedVictory,
-  RecordingSummary,
   RunResultInfo,
   VictoryProgressionIntent,
 } from "../../gameplay/run/outcome-planner";
@@ -28,24 +23,13 @@ interface BestRecord {
   readonly time: number;
 }
 
-export interface LiveRunOutcomeHostContext<TReplay extends RecordedReplay> {
+export interface LiveRunOutcomeHostContext<TKept>
+  extends Omit<LiveRecordingPort<TKept>, "snapshot">, Readonly<{ snapshot: () => OutcomeRunState }> {
   readonly observeTerminal?: (outcome: "defeat" | "victory") => void;
-  readonly snapshot: () => OutcomeRunState;
-  readonly displayName: () => string;
-  readonly stageIndex: () => number;
-  readonly loadout: () => readonly Readonly<{ id: string; tier: number; count: number }>[];
-  readonly authoritativeResult: () => Readonly<{ tick: number; stateHash: string }> | null;
-  readonly stopRecording: (summary: RecordingSummary) => TReplay | null;
-  readonly storeReplay: (recording: TReplay, summary: StoredRecordingSummary) => string | null;
-  readonly setLastRecording: (recording: TReplay | null) => void;
-  readonly setLastVaultId: (id: string | null) => void;
   readonly submitScore: (
     board: LeaderboardRef,
     score: Readonly<{ score: number; wave: number; time: number }>,
   ) => Promise<boolean>;
-  readonly publishReplay: (recording: TReplay, board: string) => Promise<string | null>;
-  readonly linkReplay: (board: LeaderboardRef, shareId: string) => void;
-  readonly attachShareId: (vaultId: string, shareId: string) => void;
   readonly replaceWaveLog: (log: OutcomeRunState["waveLog"]) => void;
   readonly waveActive: () => boolean;
   readonly preparedVictory: () => PreparedVictory | null;
@@ -88,29 +72,21 @@ export interface LiveRunOutcomeHostContext<TReplay extends RecordedReplay> {
   readonly stopInterruptedRecording: (reason: "claimedFinale" | "resumedFinale") => void;
   readonly presentClaimed: (result: PendingFinaleResult) => void;
   readonly launchFinale: (death: Readonly<{ x: number; y: number }>, recovered: true) => void;
-  readonly installRecording: (controller: LiveRecordingController<TReplay>) => void;
+  readonly installRecording: (controller: LiveRecordingController<TKept>) => void;
   readonly installOutcome: (controller: LiveRunOutcomeController) => void;
   readonly installPendingFinale: (controller: LivePendingFinaleController) => void;
 }
 
 /** Composes recording, terminal outcomes, and pending-finale recovery as one run boundary. */
-export function createLiveRunOutcomeHost<TReplay extends RecordedReplay>(
-  context: LiveRunOutcomeHostContext<TReplay>,
-): void {
-  const recording = new LiveRecordingController<TReplay>({
+export function createLiveRunOutcomeHost<TKept>(context: LiveRunOutcomeHostContext<TKept>): void {
+  const recording = new LiveRecordingController<TKept>({
     snapshot: context.snapshot,
-    displayName: context.displayName,
-    stageIndex: context.stageIndex,
-    loadout: context.loadout,
-    authoritativeResult: context.authoritativeResult,
-    stopRecording: context.stopRecording,
-    storeReplay: context.storeReplay,
-    recordingStopped: context.setLastRecording,
-    replayStored: context.setLastVaultId,
+    endRecord: context.endRecord,
+    recordEnded: context.recordEnded,
     submitScore: context.submitScore,
     publishReplay: context.publishReplay,
     linkReplay: context.linkReplay,
-    attachShareId: context.attachShareId,
+    markShared: context.markShared,
   });
   context.installRecording(recording);
 

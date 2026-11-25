@@ -25,7 +25,8 @@ export interface StyleState {
 
 export type StyleIntent =
   | Readonly<{ type: "tutorial-mark"; kind: string }>
-  | Readonly<{ type: "ghost-capture"; kind: string; x: number; y: number; importance: 1 | 2 | 3 }>
+  /** A style beat's presentation effect event (src/gameplay/runtime/gameplay-events.ts), for its readers. */
+  | Readonly<{ type: "ghost-capture"; kind: string; x: number; y: number }>
   | Readonly<{ type: "player-trick"; kind: string; at: number }>
   | Readonly<{ type: "rank-up"; rank: string }>
   | Readonly<{ type: "music-rank-changed"; rank: string }>
@@ -40,7 +41,6 @@ export interface AddStyleInput {
   readonly state: StyleState;
   readonly tuning: TrickTuning;
   readonly player: Readonly<{ x: number; y: number }> | null;
-  readonly ghostRecording: boolean;
   readonly achievementTracking: boolean;
 }
 
@@ -92,15 +92,8 @@ function trackedStyleIntents(kind: string): StyleIntent[] {
 
 export function addStyle(input: AddStyleInput): StyleTransition {
   const intents: StyleIntent[] = [{ type: "tutorial-mark", kind: input.kind }];
-  if (input.ghostRecording && GHOST_BEATS.has(input.kind)) {
-    intents.push({
-      type: "ghost-capture",
-      kind: input.kind,
-      x: input.player?.x ?? 0,
-      y: input.player?.y ?? 0,
-      importance: input.kind === "superslam" ? 3 : input.kind === "parry" ? 2 : 1,
-    });
-  }
+  if (GHOST_BEATS.has(input.kind))
+    intents.push({ type: "ghost-capture", kind: input.kind, x: input.player?.x ?? 0, y: input.player?.y ?? 0 });
 
   // Preserve the authored fallback: missing and zero-point entries both use the
   // default trick value. The legacy runtime intentionally treated zero as absent.

@@ -68,9 +68,6 @@ export const createStandaloneCloud: CloudFactory = (options) => {
     async linkReplay(...args) {
       return (await load()).shared.linkReplay(...args);
     },
-    async loadGhost(...args) {
-      return (await load()).shared.loadGhost(...args);
-    },
   };
   return createCloudCompatibility({
     ...options,

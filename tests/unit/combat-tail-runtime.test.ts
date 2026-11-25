@@ -25,8 +25,6 @@ const run = (): TailRun => ({ mode: "campaign", runTime: 0, waveTime: 0, _prevGr
 function cleanupHooks(): CombatCleanupHooks {
   return {
     enemyDefeated: vi.fn(),
-    ghostRecording: () => false,
-    ghostSample: vi.fn(),
     updateTrick: vi.fn(),
     breakStreak: vi.fn(),
     jumped: vi.fn(),
@@ -37,13 +35,11 @@ function cleanupHooks(): CombatCleanupHooks {
   };
 }
 describe("combat tick tail", () => {
-  it("publishes a native defeat once without Ghost 2 recording or a legacy visual id", () => {
+  it("publishes a native defeat once", () => {
     const dead = { dead: true, y: 0, bleedStacks: 0, burnT: 0 };
     const hooks = cleanupHooks();
     const enemyDefeated = vi.fn();
-    const ghostSample = vi.fn();
     hooks.enemyDefeated = enemyDefeated;
-    hooks.ghostSample = ghostSample;
     const input = {
       dt: 0.25,
       enemies: [dead],
@@ -61,31 +57,6 @@ describe("combat tick tail", () => {
 
     expect(enemyDefeated).toHaveBeenCalledTimes(1);
     expect(enemyDefeated).toHaveBeenCalledWith(dead);
-    expect(ghostSample).not.toHaveBeenCalled();
-  });
-  it("samples living enemies only while Ghost 2 recording is active", () => {
-    const alive = { dead: false, y: 0, bleedStacks: 0, burnT: 0 };
-    const hooks = cleanupHooks();
-    const enemyDefeated = vi.fn();
-    const ghostSample = vi.fn();
-    hooks.enemyDefeated = enemyDefeated;
-    hooks.ghostSample = ghostSample;
-    hooks.ghostRecording = () => true;
-
-    finalizeCombatTick({
-      dt: 0.25,
-      enemies: [alive],
-      projectiles: [],
-      floaters: [],
-      shake: 0,
-      shakeDecay: 4,
-      player: player(),
-      run: run(),
-      hooks,
-    });
-
-    expect(ghostSample).toHaveBeenCalledWith(0.25, [alive]);
-    expect(enemyDefeated).not.toHaveBeenCalled();
   });
   it("filters before updating survivors and records hit/air achievement state", () => {
     const alive = { dead: false, y: 0, bleedStacks: 3, burnT: 1 };

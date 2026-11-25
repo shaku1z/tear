@@ -1,3 +1,4 @@
+import type { KeptReplay } from "../replay/live-replay-production";
 import { releasePointerLock } from "../../platform/browser-pointer-lock";
 import type { LiveStyleHostServices } from "../combat/style-host";
 import { tutorialGoldGlyphs } from "../../presentation/world/tutorial-input-prompts";
@@ -35,8 +36,7 @@ import type {
   FinaleWorldZoomReceipt,
 } from "../../gameplay/campaign/finale-outward-call";
 
-type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
-type Controllers = LiveRunControllerRegistry<GameRun, ReplayPacket, PreparedVictory>;
+type Controllers = LiveRunControllerRegistry<GameRun, KeptReplay, PreparedVictory>;
 type Cinema = InstanceType<GameRuntimeDependencies["Cinematics"]["Director"]>;
 
 export interface LiveCampaignTrainingOptions {
@@ -328,9 +328,8 @@ export function createLiveCampaignTrainingComposition(options: LiveCampaignTrain
     entities: options.entities,
     state: options.state,
     tutorial: training.tutorial,
-    captureGhost: (trick, x, y, importance) => {
+    captureGhost: (trick, x, y) => {
       d.GAMEPLAY_EVENTS.emit({ kind: "effect", effect: trick, x, y });
-      d.GHOST.snapshot(options.canvas, importance);
     },
     rankUp: (rank) => {
       options.showRank(rank);

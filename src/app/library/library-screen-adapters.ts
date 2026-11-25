@@ -5,6 +5,7 @@ import type { createLiveScreenRenderers } from "../../presentation/screens/live-
 import type { BrowserGamepad } from "../../input/browser-input-contracts";
 import { ABILITY_CATEGORY_ORDER, SPECIAL_ABILITY_COLOR, abilityBadge } from "../../presentation/codex-snapshots";
 import type { ReplayFilePort } from "../replay/browser-replay-files";
+import type { ReplayLibraryPorts } from "./replay-library-controller";
 
 type Dependencies = Pick<
   GameRuntimeDependencies,
@@ -28,6 +29,7 @@ type Dependencies = Pick<
   | "Wraith"
   | "applyVariant"
   | "Cloud"
+  | "CG"
   | "CONFIG"
   | "DAILY"
   | "FirebaseProvider"
@@ -37,7 +39,6 @@ type Dependencies = Pick<
   | "STAGES"
   | "UI"
   | "UPGRADES"
-  | "VAULT"
 > &
   Readonly<{ PAD: BrowserGamepad }>;
 type Renderers = ReturnType<typeof createLiveScreenRenderers>;
@@ -61,7 +62,8 @@ export interface LibraryScreenServices {
   readonly browserIndexedDb: IDBFactory | undefined;
   /** The browser file picker and download; undefined where the browser has none. */
   readonly replayFiles: ReplayFilePort | undefined;
-  readonly enterReplay: (record: unknown, from: string) => boolean;
+  /** Opens a published replay (a leaderboard or feed row) on the replay screen; false when it cannot be played. */
+  readonly watchShared: ReplayLibraryPorts["watch"];
   /** Opens a kept record on the replay screen; false when it cannot be played. */
   readonly watchRecord: (key: string) => Promise<boolean>;
 }
@@ -75,6 +77,9 @@ export interface ReplayListActions {
   readonly pin: (id: string, pinned: boolean) => void;
   readonly remove: (id: string) => void;
   readonly importFile: () => void;
+  /** The notice about replays recorded before this update: DOWNLOAD ALL and CONTINUE. */
+  readonly downloadEarlier: () => void;
+  readonly clearEarlier: () => void;
 }
 
 export interface LibraryScreenAdapters {
@@ -89,10 +94,6 @@ export interface LibraryScreenAdapters {
   readonly renderProfile: () => void;
   readonly renderAchievements: () => void;
   readonly renderLeaderboards: () => void;
-  readonly drawReplayPreview: (
-    source: string,
-    bounds: Readonly<{ x: number; y: number; w: number; h: number }>,
-  ) => void;
   readonly drawCreaturePreview: (
     name: string,
     bounds: Readonly<{ x: number; y: number; w: number; h: number }>,
@@ -195,6 +196,17 @@ export function createLiveLibraryScreenAdapters(services: LibraryScreenServices)
         value.replays.importFile();
       });
     },
+    // The download needs the click that asked for it, like the file picker.
+    downloadEarlier: () => {
+      invoke((value) => {
+        value.replays.downloadEarlier();
+      });
+    },
+    clearEarlier: () => {
+      invoke((value) => {
+        value.replays.clearEarlier();
+      });
+    },
   });
   const adapters: LibraryScreenAdapters = {
     replays,
@@ -222,11 +234,6 @@ export function createLiveLibraryScreenAdapters(services: LibraryScreenServices)
     renderLeaderboards: () => {
       render((value) => {
         value.renderLeaderboards();
-      });
-    },
-    drawReplayPreview: (source, bounds) => {
-      render((value) => {
-        value.drawReplayPreview(source, bounds);
       });
     },
     drawCreaturePreview: (name, bounds) => {

@@ -1,9 +1,7 @@
 import type { RunDifficulty, RunMode } from "../../gameplay/run/session";
 import type { RunResultInfo } from "../../gameplay/run/outcome-planner";
-import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
+import type { KeptReplay } from "../replay/live-replay-production";
 import type { LiveWorldSessionPort } from "./world-composition";
-
-type ReplayPacket = ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>;
 
 /** The setup choices retained between worlds by the live application. */
 export interface LiveWorldSetupSelection {
@@ -41,8 +39,7 @@ export function createLiveWorldSessionState(defaultMode: () => RunMode = () => "
   let weapon = "sword";
   let boss = "shuffle";
   let outcome: RunResultInfo | null = null;
-  let lastRecording: ReplayPacket = null;
-  let lastVaultId: string | null = null;
+  let lastReplay: KeptReplay | null = null;
   let winSeconds = 0;
   let runSeed: number | null = null;
   return Object.freeze({
@@ -75,13 +72,9 @@ export function createLiveWorldSessionState(defaultMode: () => RunMode = () => "
     setOutcome: (value) => {
       outcome = value;
     },
-    lastRecording: () => lastRecording,
-    setLastRecording: (value) => {
-      lastRecording = value;
-    },
-    lastVaultId: () => lastVaultId,
-    setLastVaultId: (value) => {
-      lastVaultId = value;
+    lastReplay: () => lastReplay,
+    setLastReplay: (value) => {
+      lastReplay = value;
     },
     winSeconds: () => winSeconds,
     setWinSeconds: (value) => {

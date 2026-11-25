@@ -10,8 +10,9 @@
  *   stage wins) or when the player quits it, and `keepsReplayRecord` says whether it is kept. Practice,
  *   beat-this-run, seed-race and assisted runs are recorded but not kept: their start is not the plain
  *   start a record replays.
- * - **Privacy:** records stay on this device. Nothing here uploads; publishing is replay PR 8, behind its
- *   own gate. The statistics switch governs statistics events, not this.
+ * - **Privacy:** records stay on this device. Nothing here uploads: a run's record is published only when it
+ *   enters a leaderboard (live-recording-controller.ts) or the player presses SHARE (src/replay/share.ts).
+ *   The statistics switch governs statistics events, not this.
  */
 import type { RunStartChoices } from "../../gameplay/run/run-start-choices";
 import { canonicalRunTime, replaySummaryTime } from "../../gameplay/runtime/canonical-state";
@@ -46,14 +47,23 @@ export interface LiveReplayProductionPorts {
   readonly indexedDb: () => IDBFactory | null;
 }
 
+/** A finished run's record and the key the store keeps it under. */
+export interface KeptReplay {
+  readonly key: string;
+  readonly record: ReplayRecord;
+}
+
 export interface LiveReplayProduction {
   /** A run's start is resolved, before its world initializes. */
   readonly runStarted: (choices: RunStartChoices) => void;
   /**
    * The run ended; `keep` is false for runs a record does not replay. `run` gives its totals and is read
-   * once the tick it ended in has been simulated.
+   * once the tick it ended in has been simulated. Resolves with the kept record once it is stored, or null
+   * when the run is not kept or its record could not be stored.
    */
-  readonly runEnded: (run: () => ReplayRunEnd["run"], keep: boolean) => void;
+  readonly runEnded: (run: () => ReplayRunEnd["run"], keep: boolean) => Promise<KeptReplay | null>;
+  /** Names the published copy of a kept record, so the list shows it SHARED and the store keeps it. */
+  readonly shared: (key: string, shareId: string) => void;
   /** Ends the open recording between ticks and returns it, unstored (the test-build inspector). */
   readonly finishOpen: (run: () => ReplayRunEnd["run"]) => ReplayRecord | null;
   readonly ensure: () => Promise<void>;
@@ -155,7 +165,10 @@ export function createLiveReplayProduction(ports: LiveReplayProductionPorts): Li
   // The tap stays in the slot until its record is done, so it sees the tick its run ended in.
   const finish = (run: () => ReplayRunEnd["run"], done: (record: ReplayRecord | null) => void): void => {
     const tap = ports.slot.current();
-    if (tap === null) return;
+    if (tap === null) {
+      done(null);
+      return;
+    }
     tap.finish(run, (record) => {
       if (ports.slot.current() === tap) ports.slot.install(null);
       done(record);
@@ -184,26 +197,49 @@ export function createLiveReplayProduction(ports: LiveReplayProductionPorts): Li
       );
       ports.slot.runStarted(choices);
     },
-    runEnded(run: () => ReplayRunEnd["run"], keep: boolean): void {
-      finish(run, (record) => {
-        if (record === null || !keep) return;
-        counts.recorded += 1;
-        const module = ports.recorder.loaded();
-        writes = writes
-          .then(() => openStore(module))
-          .then(async (opened) => {
-            if (opened === null) return;
-            const put = await opened.put(record);
-            if (put.status === "stored") {
-              counts.stored += 1;
-              counts.evicted += put.evicted.length;
-            } else if (put.status === "oversized") counts.oversized += 1;
-            else if (put.status === "failed") storeFailed(put.reason);
-          })
-          .catch(() => {
-            storeFailed("error");
-          });
+    runEnded(run: () => ReplayRunEnd["run"], keep: boolean): Promise<KeptReplay | null> {
+      return new Promise((resolve) => {
+        finish(run, (record) => {
+          if (record === null || !keep) {
+            resolve(null);
+            return;
+          }
+          counts.recorded += 1;
+          const module = ports.recorder.loaded();
+          const kept = writes
+            .then(() => openStore(module))
+            .then(async (opened): Promise<KeptReplay | null> => {
+              if (opened === null) return null;
+              const put = await opened.put(record);
+              if (put.status === "stored") {
+                counts.stored += 1;
+                counts.evicted += put.evicted.length;
+              } else if (put.status === "oversized") counts.oversized += 1;
+              else if (put.status === "failed") storeFailed(put.reason);
+              return put.status === "stored" || put.status === "present"
+                ? Object.freeze({ key: put.key, record })
+                : null;
+            })
+            .catch(() => {
+              storeFailed("error");
+              return null;
+            });
+          writes = kept.then(() => undefined);
+          resolve(kept);
+        });
       });
+    },
+    shared(key: string, shareId: string): void {
+      const module = ports.recorder.status() === "ready" ? ports.recorder.loaded() : null;
+      if (module === null) return;
+      writes = writes
+        .then(() => openStore(module))
+        .then(async (opened) => {
+          await opened?.shared(key, shareId);
+        })
+        .catch(() => {
+          storeFailed("error");
+        });
     },
     finishOpen: (run: () => ReplayRunEnd["run"]) => {
       let finished: ReplayRecord | null = null;

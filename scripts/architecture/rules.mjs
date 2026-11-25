@@ -28,7 +28,6 @@ const OUTWARD = Object.freeze([
   "src/audio/**",
   "src/persistence/**",
   "src/platform/**",
-  "@replay.ghost2-compat-family",
 ]);
 const CANVAS_FIXTURE = Object.freeze({ text: "const canvas: HTMLCanvasElement | null = null;" });
 const APP_IMPORT_FIXTURE = Object.freeze({ imports: "@app.live-runtime-root" });
@@ -129,14 +128,6 @@ const PORTABLE_RULES = [
     },
   ),
   importRule(
-    "research.no-ghost2-compat",
-    ["R05"],
-    ["src/ghost/**", "src/agents/**", "src/tearbench/**"],
-    ["@replay.ghost2-compat"],
-    "portable Ghost, agent, and TearBench modules cannot depend on the Ghost 2 compatibility adapter",
-    { fixtures: { reject: [{ imports: "@replay.ghost2-compat", type: true }], accept: [] } },
-  ),
-  importRule(
     "tearbench.structural-world-ports",
     ["R06"],
     ["src/tearbench/**"],
@@ -223,8 +214,8 @@ const PORTABLE_RULES = [
     "tearbench.browser-adapter-imports",
     ["R15"],
     ["@tearbench.browser-adapters"],
-    ["src/app/**", "@replay.ghost2-compat-family"],
-    "browser TearBench adapters cannot depend on app-world or Ghost 2 compatibility modules",
+    ["src/app/**"],
+    "browser TearBench adapters cannot depend on app-world modules",
     { fixtures: { reject: [APP_IMPORT_FIXTURE], accept: [] } },
   ),
   importRule(

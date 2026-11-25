@@ -84,7 +84,6 @@ export function difficultyLabel(id: string): string {
 /** A REPLAYS list row as the list builds it (src/app/replay/replay-list.ts). */
 export interface ReplayRowSource {
   readonly id: string;
-  readonly kind: "record" | "older";
   /** Wall-clock milliseconds. */
   readonly recordedAt: number;
   readonly mode?: string;
@@ -98,8 +97,6 @@ export interface ReplayRowSource {
   readonly shared: boolean;
   readonly best: boolean;
   readonly playable: boolean;
-  readonly olderId?: string;
-  readonly thumb?: string;
 }
 
 /** The REPLAYS rows: what ran, how it went, when, and which actions the run offers. */
@@ -127,7 +124,6 @@ export function buildReplayRows(
       new Date(item.recordedAt).toLocaleDateString(),
       item.best ? "★ BEST" : "",
       item.shared ? "SHARED" : "",
-      item.kind === "older" ? "Recorded before this update" : "",
       item.playable ? "" : "Made by an earlier version of the game",
     ].filter(Boolean);
     return Object.freeze({
@@ -138,9 +134,8 @@ export function buildReplayRows(
       local: true,
       pinned: item.pinned,
       shared: item.shared,
-      canShare: item.kind === "older" || item.olderId !== undefined,
-      canDownload: item.kind === "record" && item.playable,
-      ...(item.thumb === undefined ? {} : { thumbnailId: item.thumb }),
+      canShare: item.playable && !item.shared,
+      canDownload: item.playable,
       timestamp: timestamp.join(" · "),
     });
   });
@@ -156,7 +151,6 @@ export interface LeaderboardRowSource {
   readonly wave?: number;
   readonly score?: number;
   readonly time?: number;
-  readonly thumb?: string;
   readonly lb?: boolean;
   readonly won?: boolean;
   readonly createdAt?: string | number | Date;
@@ -199,7 +193,6 @@ export function buildLeaderboardRow(
     wave: String(row.wave ?? 0),
     time: formatTime(row.time ?? 0),
     score: (row.score ?? 0).toLocaleString("en-US"),
-    ...(row.thumb === undefined ? {} : { thumbnailId: row.thumb }),
     ...(row.lb ? { badge: "LEADERBOARD RUN" } : {}),
     ...(row.createdAt === undefined
       ? {}
@@ -268,6 +261,8 @@ export function buildProfileSnapshot(input: {
   readonly replayFilter?: string;
   readonly replayList?: "opening" | "failed";
   readonly canImport?: boolean;
+  /** REPLAYS only: recordings made before this update that the save still holds. */
+  readonly earlierReplays?: number;
   readonly unlocked: (id: string) => boolean;
   readonly categoryIcon: (category: string) => string;
   readonly rarityColor: (rarity: string) => string;
@@ -311,6 +306,7 @@ export function buildProfileSnapshot(input: {
             selected: id === input.replayFilter,
           })),
           canImport: input.canImport === true,
+          ...((input.earlierReplays ?? 0) > 0 ? { earlierReplays: input.earlierReplays } : {}),
           ...(input.replayList === undefined ? {} : { replayList: input.replayList }),
         }
       : {}),

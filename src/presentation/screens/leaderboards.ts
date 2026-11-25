@@ -86,7 +86,6 @@ const DESKTOP = {
   ranked: { top: 300, stateCentre: 110, cull: { above: 28, below: 10 } },
   feed: { top: 202, stateCentre: 178, cull: { above: 104, below: 0 } },
   state: { wrap: 720, ctaWidth: 320, ctaHeight: 46 },
-  lineButton: { width: 280, height: 30 },
   replay: { width: 1120, pitch: 96, inset: 8, textReserve: 170 },
 } as const;
 
@@ -330,17 +329,7 @@ export function createLeaderboardRenderers(context: ScreenRenderContext) {
         },
       },
     ];
-    if (view.legacyGhostId) {
-      const label = view.message?.length ? view.message : "▶  WATCH THE #1 RUN";
-      head.push(
-        frames.actions(frame, [{ label, action: { type: "leaderboards.watchReplay", id: view.legacyGhostId } }], {
-          height: DESKTOP.lineButton.height,
-          size: m.line.size,
-          blockHeight: m.line.height,
-          slots: [{ x: frame.centerX - DESKTOP.lineButton.width / 2, w: DESKTOP.lineButton.width }],
-        }),
-      );
-    } else if (view.message) {
+    if (view.message) {
       head.push(
         frames.prose(frame, view.message, {
           size: m.line.size,

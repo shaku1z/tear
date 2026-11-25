@@ -350,7 +350,7 @@ export function chips(
   }
 }
 
-/** Oracle replay-vault/feed row shared by Profile and Leaderboards. */
+/** The replay row shared by Profile and Leaderboards. */
 export function replayRow(
   context: ScreenRenderContext,
   replay: ReplayView,
@@ -364,20 +364,17 @@ export function replayRow(
   ui.card(canvas, x, y, width, 84, false);
   if (spineColor) ui.spine(canvas, x, y, 84, spineColor);
   canvas.save();
-  // Without a captured thumbnail the slot shows a designed dark tile, never an empty box.
+  // The slot is a designed dark tile with a play mark.
   canvas.fillStyle = "#0e1017";
-  canvas.globalAlpha = replay.thumbnailId ? 0.15 : 0.88;
+  canvas.globalAlpha = 0.88;
   canvas.fillRect(x + 12, y + 6, 128, 72);
   canvas.globalAlpha = 1;
-  if (replay.thumbnailId) context.renderPreview?.(replay.thumbnailId, { x: x + 12, y: y + 6, w: 128, h: 72 });
-  else {
-    canvas.fillStyle = ui.t.color.accent;
-    canvas.font = ui.font(ui.t.type.h2, true);
-    canvas.textAlign = "center";
-    canvas.textBaseline = "middle";
-    canvas.fillText("▶", x + 76, y + 40);
-    canvas.textBaseline = "alphabetic";
-  }
+  canvas.fillStyle = ui.t.color.accent;
+  canvas.font = ui.font(ui.t.type.h2, true);
+  canvas.textAlign = "center";
+  canvas.textBaseline = "middle";
+  canvas.fillText("▶", x + 76, y + 40);
+  canvas.textBaseline = "alphabetic";
   canvas.strokeStyle = ui.ink;
   canvas.globalAlpha = 0.35;
   canvas.lineWidth = 1;

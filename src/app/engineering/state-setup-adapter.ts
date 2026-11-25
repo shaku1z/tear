@@ -22,7 +22,6 @@ import type { RunRandomStreamName } from "../../simulation/run-random";
 import type { RandomSource } from "../../domain/random";
 import { isObject, isRecord } from "../../domain/records";
 import type { TearWorldServices } from "../../gameplay/runtime/tear-world-context";
-import type { LegacyGhostRuntimeState } from "../../replay/legacy-compat";
 import type { CombatEntityIdentityState } from "../../gameplay/combat/combat-entity-runtime";
 import type { RewardSelectionSnapshot } from "../../gameplay/run/reward-selection";
 import type { UpgradeDefinition } from "../../gameplay/upgrades";
@@ -56,6 +55,14 @@ interface Platform {
   readonly floor?: boolean;
   readonly oneway?: boolean;
 }
+/**
+ * The world component's `ghost` field held the old recording's state. Nothing records there now, so a
+ * snapshot writes it empty, as the detached world does, and a restore ignores it; replay PR 8b removes
+ * the field with the old recorder's fork origin, which also writes it.
+ */
+type RetiredRecordingState = Readonly<{ recording: null }>;
+const RETIRED_RECORDING: RetiredRecordingState = Object.freeze({ recording: null });
+
 type Candidate = TearStagedWorld<
   GameRun,
   GamePlayer,
@@ -69,7 +76,7 @@ type Candidate = TearStagedWorld<
   Platform,
   RunRandomStreamsSnapshot,
   CombatEntityIdentityState,
-  LegacyGhostRuntimeState
+  unknown
 > & { readonly particleRestore?: PreparedParticlePresentationRestore };
 type StateSetupWorldServices = Pick<
   TearWorldServices<RunRandomStreamsSnapshot, RunRandomStreamName, RandomSource, GameRuntimeDependencies["CONFIG"]>,
@@ -103,8 +110,6 @@ export interface LiveStateSetupAdapterOptions {
   readonly clearInputProjection: () => void;
   readonly reward: () => RewardSelectionSnapshot<UpgradeDefinition> | null;
   readonly restoreReward: (snapshot: RewardSelectionSnapshot<UpgradeDefinition> | null) => void;
-  readonly captureGhost: () => LegacyGhostRuntimeState;
-  readonly restoreGhost: (state: LegacyGhostRuntimeState) => void;
   readonly captureIdentityState: () => CombatEntityIdentityState;
   readonly restoreIdentityState: (state: CombatEntityIdentityState) => void;
   readonly runtimeState: () => Readonly<Record<string, unknown>>;
@@ -258,7 +263,7 @@ function captureWorld(options: LiveStateSetupAdapterOptions): TearCodecWorld {
       runtime: encode(options.runtimeState(), identities),
       simulationSeconds: options.worldServices.clock.seconds(),
       floaters: encode(options.state.floaters(), identities),
-      ghost: encode(options.captureGhost(), identities),
+      ghost: encode(RETIRED_RECORDING, identities),
       identityState: encode(options.captureIdentityState(), identities),
     }),
   );
@@ -383,7 +388,7 @@ function stageWorld(
     Platform,
     RunRandomStreamsSnapshot,
     CombatEntityIdentityState,
-    LegacyGhostRuntimeState
+    unknown
   >(createWorldConstructionPort(options.dependencies, options.entities), world, context);
   restoreUpgradeHooks({ mods: candidate.run.mods, config: options.worldServices.configuration.value });
   // A snapshot taken in another world (practice from a watched replay takes the detached world's) restores
@@ -506,7 +511,6 @@ export function createLiveStateSetupAdapter(options: LiveStateSetupAdapterOption
       options.state.setTemporaryWalls(candidate.walls);
       options.replacePlatforms(candidate.platforms);
       options.worldServices.random.restore(candidate.rng);
-      options.restoreGhost(candidate.ghost);
       options.restoreReward(candidate.reward);
       options.setTick(candidate.tick);
       // Ticks do not encode accumulated time under slow motion or hit-stop.

@@ -13,7 +13,12 @@ import { createProfileStore } from "../../src/persistence/profile-store";
 import { migrateAudioSettings } from "../../src/persistence/audio-settings";
 import { migrateMetaData } from "../../src/gameplay/progression/meta";
 import { BestScoreRepository } from "../../src/gameplay/scoring/best-scores";
-import { LegacyReplayVault } from "../../src/replay/legacy-compat";
+import {
+  EARLIER_REPLAYS_FORMAT,
+  clearEarlierReplays,
+  earlierReplayKeys,
+  earlierReplaysFile,
+} from "../../src/app/replay/earlier-replays";
 
 const RELEASES = join(import.meta.dirname, "..", "fixtures", "releases");
 
@@ -105,21 +110,27 @@ describe("release compatibility fixtures", { timeout: 60_000 }, () => {
         expect(best.score).toBe(expected.best.score);
       });
 
-      it("lists and opens every saved local replay", () => {
-        const vault = new LegacyReplayVault(
-          memoryStore(storage.localStorage),
-          () => 0,
-          () => 0.5,
-        );
-        expect(vault.index().map((entry) => entry.id)).toEqual(expected.localReplays.map((replay) => replay.id));
+      it("offers every saved local replay to save to a file, then removes only them", () => {
+        const store = memoryStore(storage.localStorage);
+        const keys = earlierReplayKeys(store);
+        for (const replay of expected.localReplays) expect(keys, replay.id).toContain(`tear_vault_${replay.id}`);
+        const file = JSON.parse(new TextDecoder().decode(earlierReplaysFile(store, keys))) as {
+          format: string;
+          recordings: Record<string, Record<string, unknown>>;
+        };
+        expect(file.format).toBe(EARLIER_REPLAYS_FORMAT);
         for (const replay of expected.localReplays) {
-          const recording = vault.get(replay.id) as unknown as Record<string, unknown> | null;
-          expect(recording, replay.id).not.toBeNull();
-          expect(recording?.authoritativeTick).toBe(replay.authoritativeTick);
-          expect(recording?.authoritativeStateHash).toBe(replay.authoritativeStateHash);
+          const recording = file.recordings[`tear_vault_${replay.id}`];
+          expect(recording?.authoritativeTick, replay.id).toBe(replay.authoritativeTick);
+          expect(recording?.authoritativeStateHash, replay.id).toBe(replay.authoritativeStateHash);
         }
+        const before = new Map(store.values);
+        expect(clearEarlierReplays(store, keys)).toBe(true);
+        expect(earlierReplayKeys(store)).toEqual([]);
+        for (const [key, value] of before)
+          if (!key.startsWith("tear_vault_") && !key.startsWith("tear_ghost_"))
+            expect(store.values.get(key), key).toBe(value);
       });
-
       it("reads every Ghost capsule intact and reports it unavailable for replay on this build", async () => {
         const stores = new Map(
           Object.entries(storage.indexedDB["tear-ghost-v3"]?.stores ?? {}).map(([name, rows]) => [

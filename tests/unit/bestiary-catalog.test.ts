@@ -94,7 +94,6 @@ describe("leaderboard states", () => {
       boards: [{ id: "endless", label: "ENDLESS" }],
       board: "endless",
       kind: LEADERBOARD_KINDS.score,
-      legacyGhost: "ghost:endless:normal",
       formatTime: (seconds) =>
         `${String(Math.floor(seconds / 60))}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`,
       difficulties: [{ id: "normal", label: "Normal" }],

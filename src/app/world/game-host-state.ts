@@ -9,11 +9,9 @@ import type {
   GameTemporaryWall,
 } from "../../gameplay/runtime/game-runtime-state";
 import type { RunResultInfo } from "../../gameplay/run/outcome-planner";
-import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { TearWorldState } from "../../gameplay/runtime/tear-world-context";
 import type { StageBeat } from "../../gameplay/stage-beat";
-
-type ReplayPacket = ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>;
+import type { KeptReplay } from "../replay/live-replay-production";
 
 export interface BossIntroState {
   boss: GameEnemy;
@@ -41,10 +39,8 @@ export interface LiveGameHostState extends TearWorldState<
   setSelectedWeapon(value: string): void;
   outcome(): RunResultInfo | null;
   setOutcome(value: RunResultInfo | null): void;
-  lastRecording(): ReplayPacket;
-  setLastRecording(value: ReplayPacket): void;
-  lastVaultId(): string | null;
-  setLastVaultId(value: string | null): void;
+  lastReplay(): KeptReplay | null;
+  setLastReplay(value: KeptReplay | null): void;
   winSeconds(): number;
   setWinSeconds(value: number): void;
 }

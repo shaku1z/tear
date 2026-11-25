@@ -86,6 +86,19 @@ async function writtenEarlier(board: LeaderboardRef): Promise<void> {
     await setDoc(row, { at: Timestamp.fromMillis(earlier), ts: earlier }, { merge: true });
   });
 }
+/** A published replay's feed row, as src/replay/share.ts writes it. */
+const SUMMARY = Object.freeze({
+  mode: "endless",
+  diff: "hard",
+  wave: 7,
+  score: 4200,
+  time: 210.4,
+  won: false,
+  kills: 31,
+  peak: 0,
+  name: "Guest",
+  thumb: null,
+});
 const recording = (size: number) => ({
   mode: "endless",
   diff: "hard",
@@ -134,21 +147,21 @@ describe("the game's Firebase adapter under firestore.rules", () => {
       cloud.shared.submitScore(ENDLESS_HARD, { name: "Guest", score: 4200, wave: 7, time: 210 }),
     ).resolves.toBe(true);
     const published = recording(1_200_000);
-    const shareId = await cloud.shared.publishReplay(published, null, "lb_endless_hard");
+    const shareId = await cloud.shared.publishReplay(published, SUMMARY, "lb_endless_hard");
     expect(shareId).toBe(`lb_endless_hard_${uid()}`);
     await expect(cloud.shared.linkReplay(ENDLESS_HARD, shareId ?? "")).resolves.toBe(true);
     const row = (await cloud.shared.topScores(ENDLESS_HARD, 25))?.[0];
     expect(row?.replayId).toBe(shareId);
     await expect(cloud.shared.loadReplay(shareId ?? "")).resolves.toEqual(published);
     // Publishing the next leaderboard run replaces the same replay.
-    await expect(cloud.shared.publishReplay(recording(10), null, "lb_endless_hard")).resolves.toBe(shareId);
+    await expect(cloud.shared.publishReplay(recording(10), SUMMARY, "lb_endless_hard")).resolves.toBe(shareId);
     await expect(cloud.shared.loadReplay(shareId ?? "")).resolves.toEqual(recording(10));
   });
 
   it("keeps the fastest Gauntlet clear lowest first, and a new best replaces the row without the old link", async () => {
     const clear = (ticks: number) => ({ name: "Guest", score: ticks, wave: 6, time: Math.round(ticks / 120) });
     await expect(cloud.shared.submitScore(CLEAR_HARD, clear(90_000))).resolves.toBe(true);
-    const shareId = await cloud.shared.publishReplay(recording(10), null, "lb_gauntletclear_hard");
+    const shareId = await cloud.shared.publishReplay(recording(10), SUMMARY, "lb_gauntletclear_hard");
     expect(shareId).toBe(`lb_gauntletclear_hard_${uid()}`);
     await expect(cloud.shared.linkReplay(CLEAR_HARD, shareId ?? "")).resolves.toBe(true);
     expect((await cloud.shared.topScores(CLEAR_HARD, 25))?.[0]?.replayId).toBe(shareId);
@@ -165,7 +178,7 @@ describe("the game's Firebase adapter under firestore.rules", () => {
   });
 
   it("publishes a replay to the feed under a random id", async () => {
-    const shareId = await cloud.shared.publishReplay(recording(100), null);
+    const shareId = await cloud.shared.publishReplay(recording(100), SUMMARY);
     expect(shareId).toMatch(/^r[0-9a-z]+$/u);
     const feed = await cloud.shared.replayFeed(20);
     expect(feed?.map((entry) => entry.shareId)).toEqual([shareId]);
@@ -176,16 +189,16 @@ describe("the game's Firebase adapter under firestore.rules", () => {
     // 3 and 4 bytes a character in UTF-8: 500,000 characters of either would be over the 1 MiB document limit,
     // and a cut inside a surrogate pair would come back as a replacement character.
     const published = { ...recording(0), frames: `${"★".repeat(400_000)}${"\u{1F600}".repeat(300_000)}` };
-    const shareId = await cloud.shared.publishReplay(published, null);
+    const shareId = await cloud.shared.publishReplay(published, SUMMARY);
     expect(shareId).not.toBeNull();
     await expect(cloud.shared.loadReplay(shareId ?? "")).resolves.toEqual(published);
   });
 
   it("publishes without a thumbnail that is not a small JPEG, which the feed would otherwise fetch", async () => {
-    const shareId = await cloud.shared.publishReplay(
-      { ...recording(10), thumb: "https://example.com/pixel.png" },
-      null,
-    );
+    const shareId = await cloud.shared.publishReplay(recording(10), {
+      ...SUMMARY,
+      thumb: "https://example.com/pixel.png",
+    });
     expect(shareId).not.toBeNull();
     const feed = await cloud.shared.replayFeed(20);
     expect(feed?.find((entry) => entry.shareId === shareId)?.thumb).toBeNull();
@@ -212,9 +225,5 @@ describe("the game's Firebase adapter under firestore.rules", () => {
         died: true,
       },
     ]);
-  });
-
-  it("finds no legacy ghost", async () => {
-    await expect(cloud.shared.loadGhost("endless", "hard")).resolves.toBeNull();
   });
 });

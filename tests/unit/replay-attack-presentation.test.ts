@@ -4,15 +4,14 @@
  * marks in the replay's effects. Before, the replay's world had no attack presentation: a Hammer meteor left no
  * ground pulse and a Riftlock round no muzzle wedge.
  */
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { CONFIG } from "../../src/config/game-config";
 import { EnvelopeSequencer } from "../../src/domain/envelopes";
-import { createAttackPresentation } from "../../src/app/combat/attack-presentation";
 import { createProductionCombatPhases } from "../../src/app/world/detached/combat-phases";
 import { createProductionCombatSimulation } from "../../src/app/world/detached/combat-simulation";
 import { createProductionReplayWorld } from "../../src/app/world/detached/world-factory";
-import { riftlockRoundCue, worldImpactCue } from "../../src/gameplay/combat/attack-presentation-cue";
+import { worldImpactCue } from "../../src/gameplay/combat/attack-presentation-cue";
 import { scenarioRunSeed } from "../../src/gameplay/run/run-start-choices";
 
 const kinds = (list: readonly { type: string }[]) => list.map((particle) => particle.type);
@@ -45,24 +44,6 @@ describe("a replay's world presents an attack as play does", () => {
       sequence.command(1, { type: "weapon", intent: "primary", phase: "pressed" } as const),
     ]);
     expect(kinds(replay.effects.list)).toContain("muzzleWedge");
-  });
-
-  it("records a presented attack only while recording is on", () => {
-    let recording = false;
-    const effect = vi.fn();
-    const presentation = createAttackPresentation({
-      scope: () => "run",
-      tick: () => 0,
-      effects: { edgeTrace: vi.fn(), contactMark: vi.fn(), groundPulse: vi.fn(), muzzleWedge: vi.fn(), burst: vi.fn() },
-      settings: { GFX: { low: false }, A11Y: { reducedMotion: false, highContrast: false }, THEME: { ink: "#000" } },
-      record: { active: () => recording, effect },
-    });
-    const round = { x: 10, y: 20, vx: 900, vy: 0, damage: 1, attackId: 1, throwId: 0, remote: false };
-    presentation.emit(riftlockRoundCue({ ...round, type: "razorRound", secondary: false }, CONFIG.proj.speed));
-    expect(effect).not.toHaveBeenCalled();
-    recording = true;
-    presentation.emit(riftlockRoundCue({ ...round, attackId: 2, type: "razorRound", secondary: false }, 900));
-    expect(effect).toHaveBeenCalledTimes(1);
   });
 
   it("presents a world impact only for the Hammer's meteor and the Greatsword's wheel cut", () => {

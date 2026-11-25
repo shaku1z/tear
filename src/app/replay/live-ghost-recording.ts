@@ -4,7 +4,8 @@ import {
   type GhostReplayRunContextInput,
   type GhostReplayRunContextV1,
 } from "../../ghost/replay-admission";
-import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
+import type { BuildIdentity } from "../../platform/build-identity";
+import type { TearScoreReplayMetadata } from "../../domain/tear-score-replay";
 import type { GameBlade, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import { createLiveGhostFrameRecording, declareGhostApplicationFrames } from "./ghost-frame-recording";
 import { createLiveGhostOpeningCapture } from "./ghost-opening-capture";
@@ -65,8 +66,19 @@ export function createLiveGhostRecording(options: LiveGhostRecordingOptions) {
 
 export type LiveGhostRecording = ReturnType<typeof createLiveGhostRecording>;
 
+/** A recorded run's start as the old recorder's sidecar keeps it in its provenance. */
+export interface LiveGhostRecordingStart {
+  readonly runId: string;
+  readonly seed: string;
+  readonly ticksPerSecond: number;
+  readonly build: BuildIdentity;
+  readonly rulesetVersion: string;
+  readonly weaponId: string;
+  readonly weaponSchemaVersion: string;
+  readonly tearScore: TearScoreReplayMetadata;
+}
+
 export interface LiveGhostRecordingBoundaryPorts {
-  readonly ghost: Pick<GameRuntimeDependencies["GHOST"], "setRecordingObserver">;
   readonly run: () => GameRun;
   /** The State Setup projection of the live configuration component. */
   readonly configurationProjection: () => unknown;
@@ -76,72 +88,77 @@ export interface LiveGhostRecordingBoundaryPorts {
   readonly captureReceipt: (tick: number) => void;
 }
 
-/** Starts and stops the sidecar at Ghost 2's recording boundaries. */
-export function observeLiveGhostRecordingBoundaries(
+/**
+ * Starts and stops the old recorder's sidecar at a recorded run's start and end: the run start host calls `start`
+ * inside the opening boundary, and each run end (outcome, quit, replacement, a claimed finale) calls
+ * `stop`. Replay PR 8b removes it with that recorder.
+ */
+export function createLiveGhostRecordingBoundary(
   recording: LiveGhostRecording,
   ports: LiveGhostRecordingBoundaryPorts,
-): void {
+) {
   const { session, recorder, dna, frames, opening } = recording;
   const { run } = ports;
-  // Keyframes attest the immutable bootstrap identity saved at recording boundary; never rebuild a divergent fingerprint later in the live loop.
-  ports.ghost.setRecordingObserver(
-    recorder === null
-      ? null
-      : {
-          started(context) {
-            opening.discard();
-            frames.reset();
-            session.reset();
-            let provenance: Readonly<Record<string, unknown>>;
-            let replayContext: GhostReplayRunContextV1 | undefined;
-            try {
-              // Context and tick-zero keyframe share the settled opening-initialized boundary.
-              replayContext = declareGhostApplicationFrames(
-                opening.createContext(context, run(), ports.configurationProjection(), ports.randomSnapshot()),
-              );
-              ports.chaseConfiguration(replayContext.build.configHash);
-              provenance = Object.freeze({
-                ...context,
-                ...(run().ghostAssistance ? { ghostAssistance: run().ghostAssistance } : {}),
-                ...(run().seedRace ? { seedRace: run().seedRace } : {}),
-                [GHOST_REPLAY_CONTEXT_PROVENANCE_KEY]: replayContext,
-              });
-            } catch (error) {
-              // Ghost V3 is an observational sidecar. A malformed optional replay
-              // bootstrap must leave both Ghost 2 and the active live run untouched;
-              // admission will reject this explicitly incomplete provenance later.
-              provenance = Object.freeze({
-                ...context,
-                replayContextFailure: error instanceof Error ? error.message : String(error),
-              });
-            }
-            try {
-              recorder.start({
-                sessionId: `ghost-v3-${context.runId}-${ports.sessionNonce()}`,
-                createdAt: new Date().toISOString(),
-                provenance,
-              });
-              session.setReplayContext(replayContext);
-              dna.start(replayContext);
-              if (replayContext !== undefined) {
-                // The sealed bootstrap event is queued first by GhostLiveRecorder.
-                // Capture its matching state/RNG anchor before any opening-content
-                // randomness or legal upgrade can mutate the live configuration.
-                recorder.record("rng", 0, ports.randomSnapshot());
-                ports.captureReceipt(0);
-                opening.captured(context.runId);
-              }
-            } catch (error) {
-              console.warn("Ghost V3 recorder failed to start; live play continues", error);
-            }
-          },
-          // Run lifecycle owns canonical recording; an open intro frame closes before finalization.
-          stopped(meta) {
-            opening.discard();
-            dna.finish(() => {
-              frames.finish(meta);
-            });
-          },
-        },
-  );
+  let active = false;
+  return Object.freeze({
+    start(context: LiveGhostRecordingStart): void {
+      active = true;
+      if (recorder === null) return;
+      opening.discard();
+      frames.reset();
+      session.reset();
+      let provenance: Readonly<Record<string, unknown>>;
+      let replayContext: GhostReplayRunContextV1 | undefined;
+      try {
+        // Context and tick-zero keyframe share the settled opening-initialized boundary.
+        replayContext = declareGhostApplicationFrames(
+          opening.createContext(context, run(), ports.configurationProjection(), ports.randomSnapshot()),
+        );
+        ports.chaseConfiguration(replayContext.build.configHash);
+        provenance = Object.freeze({
+          ...context,
+          ...(run().ghostAssistance ? { ghostAssistance: run().ghostAssistance } : {}),
+          ...(run().seedRace ? { seedRace: run().seedRace } : {}),
+          [GHOST_REPLAY_CONTEXT_PROVENANCE_KEY]: replayContext,
+        });
+      } catch (error) {
+        // The sidecar observes; a malformed optional bootstrap leaves the live run untouched, and
+        // admission later rejects this explicitly incomplete provenance.
+        provenance = Object.freeze({
+          ...context,
+          replayContextFailure: error instanceof Error ? error.message : String(error),
+        });
+      }
+      try {
+        recorder.start({
+          sessionId: `ghost-v3-${context.runId}-${ports.sessionNonce()}`,
+          createdAt: new Date().toISOString(),
+          provenance,
+        });
+        session.setReplayContext(replayContext);
+        dna.start(replayContext);
+        if (replayContext !== undefined) {
+          // The sealed bootstrap event is queued first by GhostLiveRecorder. Capture its matching
+          // state and RNG anchor before any opening randomness or legal upgrade changes the run.
+          recorder.record("rng", 0, ports.randomSnapshot());
+          ports.captureReceipt(0);
+          opening.captured(context.runId);
+        }
+      } catch (error) {
+        console.warn("The old recorder's sidecar failed to start; live play continues", error);
+      }
+    },
+    /** Ends the sidecar's session with the run's end; an open intro frame closes before it finalizes. */
+    stop(meta: Readonly<Record<string, unknown>>): void {
+      if (!active) return;
+      active = false;
+      if (recorder === null) return;
+      opening.discard();
+      dna.finish(() => {
+        frames.finish(meta);
+      });
+    },
+  });
 }
+
+export type LiveGhostRecordingBoundary = ReturnType<typeof createLiveGhostRecordingBoundary>;

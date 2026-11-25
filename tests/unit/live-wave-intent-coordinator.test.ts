@@ -12,7 +12,6 @@ describe("live wave intent coordinator", () => {
       { type: "set-stage-banner", name: "Ash", duration: 3 },
       { type: "begin-campaign-chapter", stageIndex: 2, priorBossOutro: "outro" },
       { type: "ghost-wave", wave: 11, marker: "boss" },
-      { type: "ghost-snapshot", slot: 4 },
       { type: "prepare-wave", wave: 11, boss: true, deferred: true },
       { type: "activate-wave" },
       { type: "show-wave-banner" },
@@ -34,9 +33,6 @@ describe("live wave intent coordinator", () => {
       recordWave: (wave, marker) => {
         calls.push(`wave:${String(wave)}:${marker}`);
       },
-      snapshotReplay: (slot) => {
-        calls.push(`snapshot:${String(slot)}`);
-      },
       prepareWave: (wave, boss, deferred) => {
         calls.push(`prepare:${String(wave)}:${String(boss)}:${String(deferred)}`);
       },
@@ -56,7 +52,6 @@ describe("live wave intent coordinator", () => {
       "banner:Ash:3",
       "chapter:2:outro",
       "wave:11:boss",
-      "snapshot:4",
       "prepare:11:true:true",
       "activate",
       "show",
@@ -136,7 +131,6 @@ describe("live wave intent coordinator", () => {
       setStageBanner: vi.fn(),
       beginCampaignChapter: vi.fn(),
       recordWave: vi.fn(),
-      snapshotReplay: vi.fn(),
       prepareWave: vi.fn(),
       activateWave: vi.fn(),
       showWaveBanner: vi.fn(),

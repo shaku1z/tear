@@ -61,6 +61,8 @@ export interface LiveTestBuildHookSources {
   readonly reviveCountdown: LiveReviveCountdownState;
   readonly inputAuthority: LiveInputAuthorityState;
   readonly recorder: GhostLiveRecorder | null;
+  /** The old recorder's sidecar boundary (replay PR 8b removes it). */
+  readonly ghostBoundary: Readonly<{ stop(meta: Readonly<Record<string, unknown>>): void }>;
   readonly ghostPractice: LiveGhostPracticeSessionState;
   readonly stateSetup: LiveStateSetup;
   readonly abandonment: LiveRunAbandonment;
@@ -296,7 +298,7 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
         return true;
       },
       terminateRun: () => {
-        sources.abandonment.abandon("tearbench-terminated", { tearBenchTerminated: true });
+        sources.abandonment.abandon("tearbench-terminated");
         setScreen("paused");
       },
       resetSemanticInput: () => {
@@ -454,9 +456,11 @@ function installBossDebug(
     player: sources.player,
     blade: sources.blade,
     applyUpgrade: dependencies.applyUpgrade,
-    enterReplay: (record, from) => {
-      replayAdapters.enter(record, from);
-    },
+    // Ten seconds of an idle Endless run, recorded in the detached world (idle-replay-record.ts).
+    openReplay: () =>
+      import("./idle-replay-record").then(({ recordIdleReplay }) =>
+        replayAdapters.watch(recordIdleReplay(dependencies.build, 1200), "engineering:idle-replay", "menu"),
+      ),
     beginRename: () => {
       settingsRenameAdapters.beginRename(false, true);
     },
@@ -492,6 +496,9 @@ function installBossDebug(
     authoritative: () => authoritativeStep.lastResult,
     startFinale: startAdventureFinale,
     severFinale: () => severFinaleAnchor(false),
+    stopGhostRecording: () => {
+      sources.ghostBoundary.stop({ debugFinale: true });
+    },
   });
   Object.defineProperty(dependencies.browserWindow, "__TEAR_STAGE_REST_FRAME__", {
     configurable: true,

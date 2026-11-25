@@ -46,8 +46,6 @@ export interface TailRun {
 }
 export interface CombatCleanupHooks {
   enemyDefeated(enemy: TailEnemy): void;
-  ghostRecording(): boolean;
-  ghostSample(dt: number, enemies: readonly TailEnemy[]): void;
   updateTrick(dt: number): void;
   breakStreak(): void;
   jumped(): void;
@@ -101,7 +99,6 @@ export function finalizeCombatTick(input: CombatCleanupInput): CombatCleanupResu
   const { dt, player, run, hooks } = input;
   for (const enemy of input.enemies) {
     if (!enemy.dead || enemy.nativeDefeatPublished === true) continue;
-    // This is a native gameplay fact, not a Ghost 2 visual-recording concern.
     // Mark before publishing so a re-entrant or repeated cleanup cannot emit it twice.
     enemy.nativeDefeatPublished = true;
     hooks.enemyDefeated(enemy);
@@ -128,7 +125,6 @@ export function finalizeCombatTick(input: CombatCleanupInput): CombatCleanupResu
     run._dmgThisStage = true;
     hooks.breakStreak();
   }
-  if (hooks.ghostRecording()) hooks.ghostSample(dt, enemies);
   if (run._prevGround && !player.onGround && player.vy < -100) hooks.jumped();
   run._prevGround = player.onGround;
   if (player.onGround) {

@@ -328,7 +328,12 @@ function actualOpeningHost(
     COSMETICS: createCosmeticWardrobe(COSMETIC_CATALOG, () => false),
     META: { level: () => 0, apply: noop },
     SHOP: [],
-    SFX: { setVoidDescent: noop, setMusicDuck: noop, musicScoreVersion: () => "unit" },
+    SFX: {
+      setVoidDescent: noop,
+      setMusicDuck: noop,
+      musicScoreVersion: () => "unit",
+      musicReplayMetadata: () => ({ enabled: false, reason: "not-recorded" }),
+    },
     newMods,
     Input: {
       startSemanticRecording: () => {
@@ -350,18 +355,19 @@ function actualOpeningHost(
         if (failStarted) throw new Error("source start listener failed");
       },
     },
-    GHOST: {
-      recording: () => false,
-      startRec: () => {
-        order.push("recording");
-        source.waveReward.restoreScreen(screen);
-        captured = captureProductionReplayCheckpoint(replay, source.combat, source.waveReward, "actual-host-opening");
-        if (boundary !== undefined) {
-          observer?.captured(captured, boundary);
-          openingCapture.captured(boundary.runId);
-        }
-      },
+  };
+  // The old recorder's sidecar boundary: started inside the opening boundary, as the live host starts it.
+  const ghostRecording = {
+    start: () => {
+      order.push("recording");
+      source.waveReward.restoreScreen(screen);
+      captured = captureProductionReplayCheckpoint(replay, source.combat, source.waveReward, "actual-host-opening");
+      if (boundary !== undefined) {
+        observer?.captured(captured, boundary);
+        openingCapture.captured(boundary.runId);
+      }
     },
+    stop: noop,
   };
   const context = {
     dependencies: { ...dependencies, CONFIG: replay.configuration.value, applyWeapon },
@@ -413,6 +419,7 @@ function actualOpeningHost(
     requestPointerLock: noop,
     testMode: false,
     window: {},
+    ghostRecording,
     withOpeningCapture: (value: NonNullable<typeof boundary>, record: () => void) => {
       order.push("boundary");
       boundary = value;

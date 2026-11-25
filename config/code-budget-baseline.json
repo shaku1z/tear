@@ -9,13 +9,13 @@
       "maxLineLength": 171
     },
     "src/app/engineering/debug-harness.ts": {
-      "chars": 29185
+      "chars": 28547
     },
     "src/app/world/detached/combat-phases.ts": {
-      "chars": 29532
+      "chars": 29400
     },
     "src/app/world/detached/replay-composition.ts": {
-      "chars": 33390
+      "chars": 33314
     },
     "src/audio/stems/validate.ts": {
       "largestFunctionStatements": 83
@@ -101,7 +101,7 @@
       "largestFunctionStatements": 140
     },
     "src/presentation/combat/attack-presentation-director.ts": {
-      "largestFunctionStatements": 84
+      "largestFunctionStatements": 83
     },
     "src/presentation/enemies/renderers/aldric-echo-renderers.ts": {
       "largestFunctionStatements": 105

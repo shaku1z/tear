@@ -397,8 +397,6 @@ export function captureProductionReplayCheckpoint(
     clearInputProjection: replay.input.clear.bind(replay.input),
     reward: waveReward.reward.snapshot.bind(waveReward.reward),
     restoreReward: waveReward.reward.restore.bind(waveReward.reward),
-    captureGhost: () => Object.freeze({ recording: null }),
-    restoreGhost: () => undefined,
     captureIdentityState: simulation.combatEntityRuntime.captureIdentityState.bind(simulation.combatEntityRuntime),
     restoreIdentityState: simulation.combatEntityRuntime.restoreIdentityState.bind(simulation.combatEntityRuntime),
     runtimeState: runtime.capture,

@@ -3,14 +3,6 @@
  "cases": [
   {
    "legacy": [
-    "R05"
-   ],
-   "file": "src/tearbench/__planted-violation.ts",
-   "text": "import type { LiveGhostEngineEvent } from \"../replay/legacy-compat\";",
-   "reject": true
-  },
-  {
-   "legacy": [
     "R06"
    ],
    "file": "src/tearbench/__planted-world-violation.ts",

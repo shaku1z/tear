@@ -70,8 +70,6 @@ import { createLiveAttractFeedback } from "../interface/attract-feedback";
 import { createCosmeticWardrobe } from "../../presentation/cosmetic-styles";
 import { createParticleSystem } from "../../presentation/particles";
 import { createUi } from "../../presentation/ui";
-import { createLegacyReplayCompatibility } from "../../replay/legacy-compat";
-import { CURRENT_RULESET_VERSION } from "../../gameplay/run/ruleset-version";
 import { PerformanceMonitor } from "../../diagnostics/performance-monitor";
 import { createTearTestEnvironment } from "../../tearbench/test-support";
 import { AppStateController } from "../interface/app-state-controller";
@@ -333,25 +331,6 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   // The music pick and the Radio hear only songs this player has found.
   setMusicProgressFacts(() => PROFILE.facts());
   const GAMEPLAY_EVENTS = new TearGameplayEventBus(() => Input.semantic.lastSealedTick);
-  const { GHOST, VAULT } = createLegacyReplayCompatibility({
-    store: CG.store,
-    document,
-    now: () => Date.now(),
-    random: () => Math.random(),
-    semanticInput: Input.semantic,
-    // Ghost 2 remains a visual compatibility recorder. The live runtime owns
-    // the shared canonical input stream; Ghost 2 does not capture commands.
-    captureSemanticActions: false,
-    gameplayEvents: GAMEPLAY_EVENTS,
-    defaults: {
-      rulesetVersion: CURRENT_RULESET_VERSION,
-      build,
-      ticksPerSecond: 120,
-      weaponId: "sword",
-      weaponSchemaVersion: "final-five-v1",
-      tearScore: () => SFX.musicReplayMetadata(),
-    },
-  });
   // What the build keeps and the player's choice about statistics. A statistic is sent only when the build
   // sends them, the player has not turned them off, and the player has seen the first-run notice.
   const privacyStance = privacyStanceFor(target);
@@ -472,7 +451,6 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     GAME_RANDOM,
     GAME_RANDOM_STREAMS,
     GFX,
-    GHOST,
     Input,
     META,
     Mirror,
@@ -510,7 +488,6 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     UI,
     UPGRADES,
     victoryProfileProgressPersistence,
-    VAULT,
     VARIANTS,
     VoidGen,
     VoidWisp,

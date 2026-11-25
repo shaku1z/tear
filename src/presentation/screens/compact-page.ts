@@ -556,7 +556,7 @@ export function createCompactPage(context: ScreenRenderContext) {
       const { canvas } = context;
       ui.card(canvas, page.left, y, page.width, height, false);
       if (spine) ui.spine(canvas, page.left, y, height, spine);
-      thumbnail(replay, page.left + pad, y + pad, thumbW, thumbH);
+      thumbnail(page.left + pad, y + pad, thumbW, thumbH);
       const titleY = y + pad + t.type.lead;
       const title = ui.fitText(canvas, replay.title, textW, { size: t.type.lead, floor: t.type.micro, bold: true });
       ui.displayText(canvas, title.lines[0] ?? replay.title, textX, titleY, title.size);
@@ -577,17 +577,16 @@ export function createCompactPage(context: ScreenRenderContext) {
     return { height, draw };
   }
 
-  /** The replay's captured frame, or a designed dark tile with a play mark when there is none. */
-  function thumbnail(replay: ReplayView, x: number, y: number, w: number, h: number): void {
+  /** A replay row's tile: a designed dark tile with a play mark. */
+  function thumbnail(x: number, y: number, w: number, h: number): void {
     const { canvas } = context,
       t = ui.t;
     canvas.save();
     canvas.fillStyle = "#0e1017";
-    canvas.globalAlpha = replay.thumbnailId ? 0.15 : 0.88;
+    canvas.globalAlpha = 0.88;
     canvas.fillRect(x, y, w, h);
     canvas.globalAlpha = 1;
-    if (replay.thumbnailId) context.renderPreview?.(replay.thumbnailId, { x, y, w, h });
-    else ui.tag(canvas, "▶", x + w / 2, y + h / 2 + Math.round(t.type.h2 * 0.35), t.color.accent, "center", t.type.h2);
+    ui.tag(canvas, "▶", x + w / 2, y + h / 2 + Math.round(t.type.h2 * 0.35), t.color.accent, "center", t.type.h2);
     canvas.strokeStyle = ui.ink;
     canvas.globalAlpha = 0.35;
     canvas.lineWidth = 1;

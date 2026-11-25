@@ -258,10 +258,8 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
     setSelectedWeapon: () => undefined,
     outcome: () => null,
     setOutcome: () => undefined,
-    lastRecording: () => null,
-    setLastRecording: () => undefined,
-    lastVaultId: () => null,
-    setLastVaultId: () => undefined,
+    lastReplay: () => null,
+    setLastReplay: () => undefined,
     winSeconds: () => 0,
     setWinSeconds: () => undefined,
   };

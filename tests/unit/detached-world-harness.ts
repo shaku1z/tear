@@ -216,10 +216,8 @@ export function createDetachedWorld(options: DetachedWorldOptions) {
     setSelectedWeapon: () => undefined,
     outcome: () => null,
     setOutcome: () => undefined,
-    lastRecording: () => null,
-    setLastRecording: () => undefined,
-    lastVaultId: () => null,
-    setLastVaultId: () => undefined,
+    lastReplay: () => null,
+    setLastReplay: () => undefined,
     winSeconds: () => 0,
     setWinSeconds: () => undefined,
   };
@@ -397,9 +395,6 @@ export function createDetachedCombatPhases(detached: DetachedWorld, options: Det
     },
     tuning: () => config.trick,
     colors: () => config.colors,
-    // The browser parity trace starts a Ghost recording for the run. Supplying
-    // its gameplay-event port is the detached host's equivalent capability.
-    ghostRecording: () => options.gameplayEvents !== undefined,
     styleIntents: {
       tutorialMark: (kind) => {
         outward.push(`tutorial:${kind}`);
@@ -803,8 +798,6 @@ export function createDetachedCombatPhases(detached: DetachedWorld, options: Det
       if (options.gameplayEvents === undefined || actorId === null) return;
       options.gameplayEvents.emit({ kind: "death", actorId: actorId(enemy), cause: "combat" });
     },
-    ghostRecording: () => nativeTracking() && actorId !== null,
-    ghostSample: () => undefined,
     ghostRevive: note("ghostRevive"),
     updateTrick: (seconds: number) => {
       style.update(seconds);
@@ -1489,7 +1482,6 @@ export function createDetachedWaveRuntime(
       setStageBanner: note("setStageBanner"),
       beginCampaignChapter: () => false,
       recordWave: publishWave,
-      snapshotReplay: note("snapshotReplay"),
       prepareWave: (wave: number, boss: boolean, deferred: boolean) => {
         world.lifecycle.prepareWave(wave, boss, deferred);
       },

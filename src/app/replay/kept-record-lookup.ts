@@ -1,20 +1,10 @@
 import type { ReplayRecord } from "../../replay/record";
 import type { ReplayRecordEntry, ReplayRecordStore } from "../../replay/record-store";
-import type { VisualReplayPacket } from "../../replay/visual-replay";
 
 /** A kept record and its key in the `tear-replays` store. */
 export interface KeptRecord {
   readonly key: string;
   readonly record: ReplayRecord;
-}
-
-/**
- * The run seed an older (Ghost 2) replay packet names, which finds the run's kept record. Saved replays and
- * the results screen's last run are both packets, and a packet carries its seed in `run.seed`.
- */
-export function keptRecordSeed(packet: unknown): string | undefined {
-  const seed = (packet as Partial<Pick<VisualReplayPacket, "run">> | null)?.run?.seed;
-  return typeof seed === "string" && /^\d+$/u.test(seed) ? seed : undefined;
 }
 
 /** The key of the newest kept record of the run with this seed; record keys end in the run seed. */
@@ -47,7 +37,7 @@ async function readKept(open: OpenStore, key: (store: ReplayRecordStore) => Prom
 
 /**
  * The kept record of the run with this seed, read from the store, or undefined when there is none or the
- * store cannot be read. The caller falls back to the older replay it was given.
+ * store cannot be read.
  */
 export function findKeptRecord(open: OpenStore, seed: string): Promise<KeptRecord | undefined> {
   return readKept(open, async (store) => {

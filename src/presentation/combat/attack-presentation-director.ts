@@ -113,7 +113,6 @@ export interface AttackPresentationDirectorPorts {
     color: string,
   ) => void;
   readonly burst: (x: number, y: number, dx: number, dy: number, count: number, color: string) => void;
-  readonly record?: (cue: AttackPresentationCue) => void;
 }
 
 function normalized(x: number, y: number, fallbackX: number, fallbackY: number): readonly [number, number] {
@@ -150,8 +149,6 @@ export class AttackPresentationDirector implements AttackPresentationCueSink {
       const expired = this.#order.shift();
       if (expired !== undefined) this.#seen.delete(expired);
     }
-    this.ports.record?.(cue);
-
     const profile = ATTACK_PRESENTATION_PROFILES[cue.weaponId];
     const intensity = Math.max(0, Math.min(1, cue.intensity));
     const lowGraphics = this.ports.lowGraphics();

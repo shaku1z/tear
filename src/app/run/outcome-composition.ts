@@ -11,37 +11,33 @@ import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies
 import type { GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveRunControllerRegistry } from "./run-controller-api";
 import { createLiveRunOutcomeHost } from "./run-outcome-host";
-import type { RecordingSummary } from "../../gameplay/run/outcome-planner";
-import type { StoredRecordingSummary } from "../../gameplay/run/live-recording-controller";
 import { createTearTerminalRunFactPublisher } from "../../gameplay/runtime/gameplay-event-publishers";
 import type { OutcomeChronologyEffect } from "../../gameplay/run/outcome-chronology-journal";
 import type { LiveGhostPracticeSessionState } from "../replay/ghost-practice-session-state";
 import type { EnvironmentRuntimeState } from "../../gameplay/environment/environment-contracts";
-import type { ReplayRunEnd } from "../../replay/recorder";
-import { keepsReplayRecord, replayRunTotals } from "../replay/live-replay-production";
-import { ownedLoadout } from "../../gameplay/progression/upgrade-loadout";
-
-type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
-
-const recordingMetadata = (summary: RecordingSummary): Readonly<Record<string, unknown>> => ({ ...summary });
-const storedRecordingMetadata = (summary: StoredRecordingSummary): Readonly<Record<string, unknown>> => ({
-  ...summary,
-});
+import { shareReplay } from "../../replay/share";
+import {
+  keepsReplayRecord,
+  replayRunTotals,
+  type KeptReplay,
+  type LiveReplayProduction,
+} from "../replay/live-replay-production";
+import type { LiveGhostRecordingBoundary } from "../replay/live-ghost-recording";
 
 export interface LiveOutcomeCompositionOptions {
   readonly observeTerminal?: (outcome: "defeat" | "victory") => void;
-  /** Ends the run's replay record (src/app/replay/live-replay-production.ts); `keep` says whether it is kept. */
-  readonly replayRunEnded?: (run: () => ReplayRunEnd["run"], keep: boolean) => void;
+  /** The run's replay record (src/app/replay/live-replay-production.ts): ended here, published and named. */
+  readonly replays: Pick<LiveReplayProduction, "runEnded" | "shared">;
+  /** The old recorder's sidecar, stopped with the run (replay PR 8b removes it). */
+  readonly ghostRecording?: Pick<LiveGhostRecordingBoundary, "stop">;
   readonly dependencies: GameRuntimeDependencies;
   readonly lifecycle: RunLifecycleController;
-  readonly controllers: LiveRunControllerRegistry<GameRun, ReplayPacket, PreparedVictory>;
+  readonly controllers: LiveRunControllerRegistry<GameRun, KeptReplay, PreparedVictory>;
   readonly run: () => GameRun;
   readonly player: () => GamePlayer;
-  readonly stageIndex: () => number;
   readonly loadStage: (index: number) => void;
-  readonly authoritativeResult: () => Readonly<{ tick: number; stateHash: string }> | null;
-  readonly setLastRecording: (recording: ReplayPacket | null) => void;
-  readonly setLastVaultId: (id: string | null) => void;
+  /** The finished run's kept record, for the results screen's WATCH; null until it is stored. */
+  readonly setLastReplay: (replay: KeptReplay | null) => void;
   readonly setOutcome: (result: RunResultInfo) => void;
   readonly selectedWeapon: () => string;
   readonly selectWeapon: (weapon: string) => void;
@@ -80,37 +76,36 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
     d.GAMEPLAY_EVENTS,
     () => options.lifecycle.snapshot().sessionId,
   );
-  createLiveRunOutcomeHost<ReplayPacket>({
+  /** Counts run ends, so a record stored after a later run ended is not offered as that run's. */
+  let ends = 0;
+  createLiveRunOutcomeHost<KeptReplay>({
     ...(options.observeTerminal === undefined ? {} : { observeTerminal: options.observeTerminal }),
     snapshot: () => snapshotOutcomeRun(active()),
-    displayName: () => d.Cloud.displayName(),
-    stageIndex: options.stageIndex,
-    loadout: () => ownedLoadout(active().mods),
-    authoritativeResult: options.authoritativeResult,
-    stopRecording: (summary) => {
+    endRecord: (won) => {
       // The run's real end: a defeat or a final win (a campaign stage win is not an outcome).
-      const keep = keepsReplayRecord(summary, options.practiceSession?.active() != null);
-      // Read when the record closes: a death ends the record after the tick it happened in.
       const run = active();
-      options.replayRunEnded?.(() => replayRunTotals(run), keep);
-      try {
-        return d.GHOST.stopRec(recordingMetadata(summary), {
-          continueSemanticInput: summary.won && active().mode === "campaign",
-        });
-      } finally {
-        if (!(summary.won && active().mode === "campaign")) d.Input.stopSemanticRecording();
-      }
+      const keep = keepsReplayRecord(run, options.practiceSession?.active() != null);
+      // Read when the record closes: a death ends the record after the tick it happened in.
+      const kept = options.replays.runEnded(() => replayRunTotals(run), keep);
+      options.ghostRecording?.stop({ won, mode: run.mode, diff: run.diff, wave: run.wave, score: run.score });
+      // A campaign stage win keeps the input recording open for the next stage.
+      if (!(won && run.mode === "campaign")) d.Input.stopSemanticRecording();
+      return kept;
     },
-    storeReplay: (recording, summary) => d.VAULT.add(recording, storedRecordingMetadata(summary)),
-    setLastRecording: options.setLastRecording,
-    setLastVaultId: options.setLastVaultId,
+    recordEnded: (kept) => {
+      const end = ++ends;
+      options.setLastReplay(null);
+      void kept.then((replay) => {
+        if (end === ends) options.setLastReplay(replay);
+      });
+    },
     submitScore: (board, score) => d.Cloud.submitScore(board, score),
-    publishReplay: (recording, board) => d.Cloud.publishReplay(recording, null, board),
+    publishReplay: (kept, board) => shareReplay(d.Cloud, kept.record, board),
     linkReplay: (board, shareId) => {
       void d.Cloud.linkReplay(board, shareId);
     },
-    attachShareId: (vaultId, shareId) => {
-      d.VAULT.setShareId(vaultId, shareId);
+    markShared: (kept, shareId) => {
+      options.replays.shared(kept.key, shareId);
     },
     replaceWaveLog: (log) => {
       active().waveLog = log.slice();
@@ -225,10 +220,10 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
     clearCombat: options.clearCombat,
     groundY: () => d.CONFIG.world.groundY,
     viewport: () => ({ width: options.width, height: options.height }),
-    isRecording: () => d.GHOST.recording(),
+    isRecording: () => d.Input.semantic.recording,
     stopInterruptedRecording: (reason) => {
       try {
-        d.GHOST.stopRec({ [reason]: true });
+        options.ghostRecording?.stop({ [reason]: true });
       } finally {
         d.Input.stopSemanticRecording();
       }

@@ -164,8 +164,6 @@ export interface LiveCollisionPhaseHost {
   checkAchievements: () => void;
   tutorialMark: (name: "strike" | "airHit") => void;
   enemyDefeated: (enemy: LiveEnemy) => void;
-  ghostRecording: () => boolean;
-  ghostSample: (dt: number, enemies: readonly LiveEnemy[]) => void;
   ghostRevive: () => void;
   updateTrick: (dt: number) => void;
   achievementTick: (dt: number) => void;
@@ -577,8 +575,6 @@ function projectileTuning(host: LiveCollisionPhaseHost) {
 function tailHooks(host: LiveCollisionPhaseHost) {
   return {
     enemyDefeated: host.enemyDefeated,
-    ghostRecording: host.ghostRecording,
-    ghostSample: host.ghostSample,
     updateTrick: host.updateTrick,
     breakStreak: () => {
       host.achievement("break");

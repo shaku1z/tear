@@ -32,7 +32,7 @@ export interface LiveStateSetupAssemblyOptions {
 /** The live State Setup adapter: world capture, staging and restore over the live runtime owners. */
 export function assembleLiveStateSetup(options: LiveStateSetupAssemblyOptions) {
   const { dependencies, world, navigation, interaction, run: liveRun } = options;
-  const { A11Y, CONFIG, FX, GFX, GHOST } = dependencies;
+  const { A11Y, CONFIG, FX, GFX } = dependencies;
   const { state: hostState, entities: worldEntities, lifecycle: RUN_LIFECYCLE, environment } = world;
   const { transient } = world.context;
   const { impact, feel, opening: openingCarry } = transient;
@@ -158,10 +158,6 @@ export function assembleLiveStateSetup(options: LiveStateSetupAssemblyOptions) {
     },
     reward: options.reward.snapshot,
     restoreReward: options.reward.restore,
-    captureGhost: () => GHOST.captureRuntimeState(),
-    restoreGhost: (snapshot) => {
-      GHOST.restoreRuntimeState(snapshot);
-    },
     captureIdentityState: () => combatRuntime.captureIdentityState(),
     restoreIdentityState: (snapshot) => {
       combatRuntime.restoreIdentityState(snapshot);

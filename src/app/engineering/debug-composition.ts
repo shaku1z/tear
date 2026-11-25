@@ -36,7 +36,7 @@ export interface LiveDebugCompositionOptions {
   readonly player: () => GamePlayer;
   readonly blade: () => GameBlade;
   readonly applyUpgrade: GameRuntimeDependencies["applyUpgrade"];
-  readonly enterReplay: (record: object, from: "menu") => void;
+  readonly openReplay: () => Promise<boolean>;
   readonly beginRename: () => void;
   readonly renameSnapshot: () => Readonly<{ active: boolean; previous: string; minLength: number; maxLength: number }>;
   readonly selectSettingsTab: (tab: string) => void;
@@ -51,6 +51,8 @@ export interface LiveDebugCompositionOptions {
   readonly tutorialSnapshot: () => object;
   readonly startFinale: Parameters<typeof installLiveDebugHarness>[0]["startFinale"];
   readonly severFinale: () => unknown;
+  /** Stops the old recorder's sidecar with the debug finale's run (replay PR 8b removes it). */
+  readonly stopGhostRecording?: () => void;
 }
 
 /** Installs the development-only journey API and its typed diagnostic snapshot. */
@@ -84,7 +86,7 @@ export function installLiveGameDebug(options: LiveDebugCompositionOptions): void
         mods: options.run().mods,
       });
     },
-    enterReplay: options.enterReplay,
+    openReplay: options.openReplay,
     beginRename: options.beginRename,
     applyOptions: options.applyOptions,
     startFinale: options.startFinale,
@@ -92,7 +94,7 @@ export function installLiveGameDebug(options: LiveDebugCompositionOptions): void
     selectSettingsTab: options.selectSettingsTab,
     stopRecording: () => {
       try {
-        if (d.GHOST.recording()) d.GHOST.stopRec({ debugFinale: true });
+        options.stopGhostRecording?.();
       } finally {
         d.Input.stopSemanticRecording();
       }

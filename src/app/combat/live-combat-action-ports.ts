@@ -64,7 +64,7 @@ export function createLiveCombatActionPorts(options: LiveCombatActionPortsOption
     player: livePlayer,
     blade: liveBlade,
   } = options;
-  const { CONFIG, GAMEPLAY_EVENTS, GFX, GHOST, Input, SFX, weaponCapsuleIntersectsSegment } = dependencies;
+  const { CONFIG, GAMEPLAY_EVENTS, GFX, Input, SFX, weaponCapsuleIntersectsSegment } = dependencies;
   const { state: hostState, entities: worldEntities, environment } = world;
   const { transient } = world.context;
   const { impact, feel, opening: openingCarry } = transient;
@@ -321,23 +321,6 @@ export function createLiveCombatActionPorts(options: LiveCombatActionPortsOption
           if (isGameEnemy(enemy) && isEnemySample(enemy)) {
             GAMEPLAY_EVENTS.emit({ kind: "death", actorId: enemyId(enemy), cause: "combat" });
           }
-        },
-        ghostSample: (seconds, living) => {
-          GHOST.sample(
-            seconds,
-            livePlayer(),
-            liveBlade(),
-            living
-              .filter(isGameEnemy)
-              .filter(isEnemySample)
-              .map((enemy) => ({
-                x: enemy.x,
-                y: enemy.y,
-                dead: enemy.dead,
-                stableId: enemyId(enemy),
-                ...(enemy._gid === undefined ? {} : { _gid: enemy._gid }),
-              })),
-          );
         },
         restorePlatforms: (platforms) => {
           stageRuntime.platforms = platforms.filter(isCombatPlatform);

@@ -116,13 +116,13 @@ const LIVE_RUN_ENDS: readonly Readonly<{ site: string; how: string; file?: strin
     site: "src/gameplay/run/live-outcome-controller.ts",
     how: "defeat (a death inside a tick; a give-up or countdown on the continue screen) and victory: the outcome's recording stop",
     file: "src/app/run/outcome-composition.ts",
-    ends: "options.replayRunEnded?.(",
+    ends: "options.replays.runEnded(",
   },
   {
     site: "src/app/run/outcome-composition.ts",
     how: "the outcome controller's terminate port (the row above)",
     file: "src/app/run/outcome-composition.ts",
-    ends: "options.replayRunEnded?.(",
+    ends: "options.replays.runEnded(",
   },
   {
     site: "src/app/run/live-run-abandonment.ts",

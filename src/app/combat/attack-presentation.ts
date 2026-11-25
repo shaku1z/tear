@@ -1,9 +1,7 @@
-import type { AttackPresentationCue } from "../../gameplay/combat/attack-presentation-cue";
 import {
   AttackPresentationDirector,
   type AttackPresentationDirectorPorts,
 } from "../../presentation/combat/attack-presentation-director";
-import { encodeAttackPresentationEffect } from "../../presentation/combat/attack-presentation-effect-codec";
 
 /** The effects an attack is presented with: a world's particle system. */
 export type AttackPresentationEffects = Pick<
@@ -25,16 +23,14 @@ export interface AttackPresentationOptions {
   readonly tick: () => number;
   readonly effects: AttackPresentationEffects;
   readonly settings: AttackPresentationSettings;
-  /** Records each presented attack as a cosmetic effect, while `active` says so. */
-  readonly record?: Readonly<{ active: () => boolean; effect: (effect: string, x: number, y: number) => void }>;
 }
 
 /**
- * The attack presentation of a world. Live play, a replay's world and the older Ghost 2 playback each build
- * theirs here, over their own effects, so an attack looks the same in all three.
+ * The attack presentation of a world. Live play and a replay's world each build theirs here, over their own
+ * effects, so an attack looks the same in both.
  */
 export function createAttackPresentation(options: AttackPresentationOptions): AttackPresentationDirector {
-  const { effects, settings, record } = options;
+  const { effects, settings } = options;
   return new AttackPresentationDirector({
     scope: options.scope,
     tick: options.tick,
@@ -57,12 +53,5 @@ export function createAttackPresentation(options: AttackPresentationOptions): At
     burst: (...args) => {
       effects.burst(...args);
     },
-    ...(record === undefined
-      ? {}
-      : {
-          record: (cue: AttackPresentationCue) => {
-            if (record.active()) record.effect(encodeAttackPresentationEffect(cue), cue.x, cue.y);
-          },
-        }),
   });
 }

@@ -131,8 +131,6 @@ function fixture(includeTutorial = false) {
     clearInputProjection: replay.input.clear.bind(replay.input),
     reward: host.waveReward.reward.snapshot.bind(host.waveReward.reward),
     restoreReward: host.waveReward.reward.restore.bind(host.waveReward.reward),
-    captureGhost: () => ({ recording: null }),
-    restoreGhost: () => undefined,
     captureIdentityState: identities.captureIdentityState.bind(identities),
     restoreIdentityState: identities.restoreIdentityState.bind(identities),
     runtimeState: () => ({ ...runtime, ...(tutorial ? { tutorialSession: tutorial.captureSession() } : {}) }),

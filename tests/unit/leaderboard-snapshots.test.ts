@@ -26,7 +26,7 @@ describe("leaderboard snapshots", () => {
     expect(result.view.canScrollDown).toBe(false);
   });
 
-  it("projects podium, ghost fallback, and local rank", () => {
+  it("projects the podium and local rank", () => {
     const result = buildRankedLeaderboardSnapshot({
       tabs,
       tab: "global",
@@ -39,7 +39,6 @@ describe("leaderboard snapshots", () => {
       boards: [{ id: "endless", label: "ENDLESS" }],
       board: "endless",
       kind: LEADERBOARD_KINDS.score,
-      legacyGhost: "ghost:endless:normal",
       formatTime: (seconds) =>
         `${String(Math.floor(seconds / 60))}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`,
       difficulties: [{ id: "normal", label: "Normal" }],
@@ -49,7 +48,6 @@ describe("leaderboard snapshots", () => {
       rowView: () => ({ id: "row", title: "Rival", detail: "run" }),
     });
     expect(result.view.podium?.[0]?.replayId).toBeUndefined();
-    expect(result.view.legacyGhostId).toBe("ghost:endless:normal");
     expect(result.view.ownRank).toContain("local best wave 2");
   });
 
@@ -66,7 +64,6 @@ describe("leaderboard snapshots", () => {
       boards: [{ id: "endless", label: "ENDLESS" }],
       board: "endless",
       kind: LEADERBOARD_KINDS.score,
-      legacyGhost: "ghost:endless:normal",
       formatTime: (seconds) =>
         `${String(Math.floor(seconds / 60))}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`,
       difficulties: [{ id: "normal", label: "Normal" }],
@@ -75,7 +72,6 @@ describe("leaderboard snapshots", () => {
       rowView: () => ({ id: "linked-8", title: "Rival", detail: "run", available: true }),
     });
     expect(result.view.podium?.[0]?.replayId).toBe("linked-8");
-    expect(result.view.legacyGhostId).toBeUndefined();
     expect(result.view.message).toBe("");
   });
 
@@ -116,7 +112,6 @@ describe("leaderboard snapshots", () => {
     expect(result.view.headings).toEqual({ count: "TRIALS", time: "", score: "CLEAR" });
     expect(result.view.boards?.find((board) => board.selected)?.id).toBe("gauntlet-clear");
     expect(result.view.ownRank).toBe("unranked · local best 15:00");
-    expect(result.view.legacyGhostId).toBeUndefined();
   });
 
   it("leaves out a row the clear board cannot rank, so a 0-tick or broken time never takes first place", () => {

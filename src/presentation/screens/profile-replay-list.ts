@@ -95,3 +95,31 @@ export function replayRowActions(replay: ReplayView): readonly ReplayRowAction[]
 
 /** The import button's label; the list offers it only when this browser can read a file (`canImport`). */
 export const REPLAY_IMPORT_LABEL = "IMPORT A REPLAY FILE";
+
+/** The desktop earlier-replays notice's height under the toolbar; the snapshot's scroll bounds use the same value. */
+export const EARLIER_NOTICE_HEIGHT = 84;
+
+export interface EarlierReplaysNotice {
+  readonly text: string;
+  readonly actions: readonly Readonly<{ label: string; action: ScreenAction }>[];
+}
+
+/**
+ * The notice about replays recorded before this update, which this version cannot play: what it says and
+ * its two actions. None when the save holds none.
+ */
+export function earlierReplaysNotice(view: Pick<ProfileScreenView, "earlierReplays">): EarlierReplaysNotice | null {
+  const count = view.earlierReplays ?? 0;
+  if (count <= 0) return null;
+  const many = count === 1 ? "1 replay was" : `${String(count)} replays were`;
+  const actions: EarlierReplaysNotice["actions"] = [
+    { label: "DOWNLOAD ALL", action: { type: "profile.downloadEarlierReplays" } },
+    { label: "CONTINUE", action: { type: "profile.clearEarlierReplays" } },
+  ];
+  return Object.freeze({
+    text:
+      `${many} recorded before this update. This version can't play them. DOWNLOAD ALL saves them to a ` +
+      "file; CONTINUE removes them from this device. Nothing else in your save is touched.",
+    actions: Object.freeze(actions),
+  });
+}
