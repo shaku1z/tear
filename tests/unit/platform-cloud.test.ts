@@ -30,7 +30,6 @@ function dependencies() {
     loadReplay: () => Promise.resolve(null),
     replayFeed: () => Promise.resolve(null),
     linkReplay: () => Promise.resolve(false),
-    loadGhost: () => Promise.resolve(null),
   };
   return { profile, meta, shared };
 }

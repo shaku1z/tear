@@ -1,3 +1,4 @@
+import type { KeptReplay } from "../replay/live-replay-production";
 import type { LiveReplayTapSeams } from "../replay/live-replay-tap-slot";
 import { createLiveSeedRace } from "../replay/seed-race-composition";
 import type { PreparedVictory } from "../../gameplay/run/outcome-planner";
@@ -10,8 +11,6 @@ import { initializeLivePlatformBootstrap } from "./platform-bootstrap";
 import { createRewardRuntime } from "../../gameplay/run/reward-runtime";
 import { LiveRunControllerRegistry } from "../run/run-controller-api";
 import { SettingsController } from "../screens/settings-controller";
-
-type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
 
 export interface LiveSessionServicesOptions {
   readonly seedRace?: Omit<
@@ -49,7 +48,7 @@ export function createLiveSessionServices(options: LiveSessionServicesOptions) {
     navigator: d.browserNavigator,
     matchMedia: (query) => d.browserWindow.matchMedia(query),
   });
-  const controllers = new LiveRunControllerRegistry<GameRun, ReplayPacket, PreparedVictory>();
+  const controllers = new LiveRunControllerRegistry<GameRun, KeptReplay, PreparedVictory>();
   initializeLivePlatformBootstrap(d, settingsController, {
     screen: options.screen,
     prompted: options.renamePrompted,

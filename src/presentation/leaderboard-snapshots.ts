@@ -104,8 +104,6 @@ export function buildRankedLeaderboardSnapshot(
     readonly difficulties: readonly DifficultyViewSource[];
     readonly board: string;
     readonly kind: LeaderboardKind;
-    /** The legacy ghost a score board without linked replays falls back to; none on other boards. */
-    readonly legacyGhost?: string;
     readonly difficulty: string;
     readonly currentUserId?: string;
     readonly localBest: LocalBoardBest | null;
@@ -117,8 +115,6 @@ export function buildRankedLeaderboardSnapshot(
   // A row the board cannot rank (a 0-tick or broken time, a non-numeric score) is not listed.
   const data = input.data.filter((row) => rankedScore(kind, row.score) !== null);
   const text = (count: number | undefined, score: number) => entryText(kind, input.formatTime, count, score);
-  const linked = data.some((row) => row.replayId !== undefined);
-  const ghostId = !linked && data.length > 0 ? input.legacyGhost : undefined;
   const medals = ["#e0a326", "#c9ccd6", "#cd7f32"] as const;
   const podium = data.slice(0, 3).map((row, index) => ({
     rank: index + 1,
@@ -155,7 +151,6 @@ export function buildRankedLeaderboardSnapshot(
       rows,
       podium,
       ...(ownRank === undefined ? {} : { ownRank }),
-      ...(ghostId === undefined ? {} : { legacyGhostId: ghostId }),
       signInRequired: !input.cloudAvailable,
       status: leaderboardStatus(input, data.length),
       boards: input.boards.map((board) => ({

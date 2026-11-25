@@ -95,9 +95,8 @@ describe("the cloud of a build that is not a release", () => {
       expect(Cloud.canSignIn()).toBe(false);
       expect(Cloud.hasLeaderboards()).toBe(false);
       await expect(Cloud.submitScore(BOARD, { score: 6721, wave: 4, time: 300 })).resolves.toBe(false);
-      await expect(Cloud.publishReplay({ run: {} }, null, "lb_endless_normal")).resolves.toBeNull();
+      await expect(Cloud.publishReplay({ run: {} }, { mode: "endless" }, "lb_endless_normal")).resolves.toBeNull();
       await expect(Cloud.linkReplay(BOARD, "share")).resolves.toBe(false);
-      await expect(Cloud.submitGhost("endless", "normal", {})).resolves.toBe(false);
       Cloud.logEvent("run_end", { score: 1 });
       await Cloud.push();
       await Cloud.sync();

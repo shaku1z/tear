@@ -272,7 +272,6 @@ export function createProductionWaveRewardRuntime(
         },
         beginCampaignChapter: options.beginCampaignChapter ?? (() => undefined),
         recordWave: publishWave,
-        snapshotReplay: note("snapshotReplay"),
         prepareWave: (wave, boss, deferred) => {
           const weapon = WEAPONS.find((candidate) => candidate.id === run().weaponId);
           const blade = world.state.blade();

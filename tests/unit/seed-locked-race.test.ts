@@ -347,24 +347,18 @@ describe("Race source category", () => {
       expect(addProfileStat).not.toHaveBeenCalled();
       const submitScore = vi.fn(),
         publishReplay = vi.fn(),
-        storeReplay = vi.fn(() => "retained"),
-        stopRecording = vi.fn(() => ({}));
-      new LiveRecordingController({
+        endRecord = vi.fn(() => Promise.resolve(null));
+      void new LiveRecordingController({
         snapshot: () => run,
-        displayName: () => "",
-        stageIndex: () => 0,
-        loadout: () => [],
-        authoritativeResult: () => null,
-        stopRecording,
-        storeReplay,
-        recordingStopped: () => undefined,
-        replayStored: () => undefined,
+        endRecord,
+        recordEnded: () => undefined,
         submitScore,
         publishReplay,
         linkReplay: vi.fn(),
-        attachShareId: vi.fn(),
+        markShared: vi.fn(),
       }).finish(false);
-      expect(storeReplay).toHaveBeenCalledWith({}, expect.objectContaining({ seedRace: race }));
+      // A race run's record is kept on this device like any run; it is never entered or published.
+      expect(endRecord).toHaveBeenCalledWith(false);
       expect(submitScore).not.toHaveBeenCalled();
       expect(publishReplay).not.toHaveBeenCalled();
       const manifest = {

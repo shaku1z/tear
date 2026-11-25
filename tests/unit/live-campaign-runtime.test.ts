@@ -378,7 +378,6 @@ describe("live campaign chapter gate and the wave it holds", () => {
           campaign.beginChapter(index, outro as ChapterPage | null);
         },
         recordWave: vi.fn(),
-        snapshotReplay: vi.fn(),
         prepareWave: (index, boss, deferred) => {
           lifecycle.prepareWave(index, boss, deferred);
         },

@@ -17,15 +17,11 @@ import { CURRENT_RULESET_VERSION } from "../../gameplay/run/ruleset-version";
 import type { RunStartChoices } from "../../gameplay/run/run-start-choices";
 import { createRunStartWorldPort, type RunStartWorldContext } from "./run-start-world";
 import { sanitizeCinematicPreference, type CinematicPreference } from "../../gameplay/campaign/cinematic-preference";
+import type { LiveOpeningCaptureBoundary } from "../replay/ghost-opening-capture";
+import type { LiveGhostRecordingBoundary } from "../replay/live-ghost-recording";
 
 interface InstalledRunStartController {
   start(mode: RunMode, difficulty: RunDifficulty): GameRun;
-}
-
-export interface LiveOpeningCaptureBoundary {
-  readonly phase: "opening-initialized-before-run-start";
-  readonly runId: string;
-  readonly seed: number;
 }
 
 interface RunStartHostContext extends Omit<RunStartWorldContext, "dependencies" | "hooks" | "race"> {
@@ -52,7 +48,9 @@ interface RunStartHostContext extends Omit<RunStartWorldContext, "dependencies" 
   readonly selectedBoss: () => string;
   readonly achievementTracking: () => boolean;
   readonly achievementCheck: () => void;
-  /** Scoped around the existing synchronous recorder call; never a second start transaction. */
+  /** The old recorder's sidecar, started with a recorded run and stopped when a new run replaces it (replay PR 8b removes it). */
+  readonly ghostRecording?: Pick<LiveGhostRecordingBoundary, "start" | "stop">;
+  /** Scoped around the sidecar's start; never a second start transaction. */
   readonly withOpeningCapture?: (boundary: LiveOpeningCaptureBoundary, record: () => void) => void;
   readonly openingExposed?: (runId: string) => void;
   readonly discardOpeningCapture?: () => void;
@@ -70,13 +68,21 @@ export function createLiveRunStartHost(
 ): LiveRunStartController<ReturnType<GameRuntimeDependencies["newMods"]>> {
   const { dependencies } = context;
   const { state, lifecycle } = context.world;
-  const { GHOST, PROFILE, META, SHOP, SFX, GAMEPLAY_EVENTS, Input, createRunSeed, COSMETICS } = dependencies;
+  const { PROFILE, META, SHOP, SFX, GAMEPLAY_EVENTS, Input, createRunSeed, COSMETICS } = dependencies;
+  /** Whether the run in play started recording (achievement-tracked or a seed race), as `startRecording` decides. */
+  let recordedRun = false;
+  // A recorded run still in play when a new one starts is ended as abandoned, so its events close first.
   const replacement = new RunReplacementGuard({
-    recording: () => GHOST.recording(),
+    recording: () => {
+      const phase = lifecycle.snapshot();
+      return recordedRun && state.run() !== null && phase.sessionId !== null && phase.phase !== "terminated";
+    },
     stopInterruptedRecording: () => {
+      recordedRun = false;
       const activeRun = state.run();
       const phase = lifecycle.snapshot();
-      if (activeRun !== null && phase.sessionId !== null && phase.phase !== "terminated") {
+      try {
+        if (activeRun === null || phase.sessionId === null) return;
         lifecycle.terminate("quit");
         GAMEPLAY_EVENTS.emit({
           kind: "run",
@@ -90,11 +96,12 @@ export function createLiveRunStartHost(
           runTimeSeconds: activeRun.runTime,
           reason: "replaced-by-new-run",
         });
-      }
-      try {
-        GHOST.stopRec({ interruptedByNewRun: true });
       } finally {
-        Input.stopSemanticRecording();
+        try {
+          context.ghostRecording?.stop({ interruptedByNewRun: true });
+        } finally {
+          Input.stopSemanticRecording();
+        }
       }
     },
   });
@@ -324,25 +331,28 @@ export function createLiveRunStartHost(
       }
     },
     startRecording: (runId, seed) => {
-      // Canonical device input is the live simulation's normal route, not a
-      // Ghost 2-only observation feature.  Start it before the optional visual
-      // recorder so the very first live tick (and its V3 sidecar) sees the
-      // current held movement state.
+      // Canonical device input is the live simulation's normal route; it starts before the first
+      // live tick so that tick sees the current held movement state.
       context.race?.finalize();
       Input.startSemanticRecording();
       Input.syncSemanticMovement();
-      if (context.achievementTracking() || context.race?.active()) {
-        const record = () => {
-          GHOST.startRec({
-            runId,
-            seed: String(seed),
-            weaponId: migrateWeaponSelection(requireRun(state).weaponId),
-            weaponSchemaVersion: FINAL_FIVE_WEAPON_SCHEMA_VERSION,
-          });
-        };
-        if (context.withOpeningCapture === undefined) record();
-        else context.withOpeningCapture({ phase: "opening-initialized-before-run-start", runId, seed }, record);
-      }
+      recordedRun = context.achievementTracking() || context.race?.active() === true;
+      const sidecar = context.ghostRecording;
+      if (sidecar === undefined || !recordedRun) return;
+      const start = () => {
+        sidecar.start({
+          runId,
+          seed: String(seed),
+          ticksPerSecond: 120,
+          build: dependencies.build,
+          rulesetVersion: CURRENT_RULESET_VERSION,
+          weaponId: migrateWeaponSelection(requireRun(state).weaponId),
+          weaponSchemaVersion: FINAL_FIVE_WEAPON_SCHEMA_VERSION,
+          tearScore: SFX.musicReplayMetadata(),
+        });
+      };
+      if (context.withOpeningCapture === undefined) start();
+      else context.withOpeningCapture({ phase: "opening-initialized-before-run-start", runId, seed }, start);
     },
     publishRunStarted: (session, runId) => {
       try {

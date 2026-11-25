@@ -4,7 +4,7 @@ import {
   type ReplayNativeTransport,
 } from "../library/replay-transport-controller";
 import { replayEngine } from "../../ghost/replay-engine";
-import { findKeptRecord, keptRecordSeed, readKeptRecord, type KeptRecord } from "./kept-record-lookup";
+import { findKeptRecord, readKeptRecord, type KeptRecord } from "./kept-record-lookup";
 import {
   watchRecord,
   type RecordCheckpoint,
@@ -29,36 +29,7 @@ import type { AppScreen } from "../../domain/screen-catalog";
 import type { GhostPracticeChild, GhostReplayRenderView } from "../../ghost/replay-world";
 import type { GhostPracticeLaunchResult } from "./ghost-practice-launch";
 
-type Dependencies = Pick<
-  GameRuntimeDependencies,
-  | "A11Y"
-  | "APP"
-  | "Armored"
-  | "Backdrop"
-  | "Bomber"
-  | "Charger"
-  | "Chimera"
-  | "CONFIG"
-  | "FX"
-  | "Flyer"
-  | "GFX"
-  | "GHOST"
-  | "Input"
-  | "Ranged"
-  | "Rootbinder"
-  | "SAFE"
-  | "STAGES"
-  | "Support"
-  | "THEME"
-  | "UI"
-  | "UPGRADES"
-  | "VARIANTS"
-  | "COSMETICS"
-  | "Wraith"
-  | "applyVariant"
-  | "stageAt"
-  | "stagePlatforms"
->;
+type Dependencies = Pick<GameRuntimeDependencies, "APP" | "Input" | "SAFE" | "UI" | "UPGRADES" | "COSMETICS">;
 type Renderers = ReturnType<typeof createLiveScreenRenderers>;
 
 export interface ReplayStatus {
@@ -75,22 +46,19 @@ export interface ReplayScreenServices {
   readonly width: number;
   readonly height: number;
   readonly screenRectangle: () => Readonly<{ x: number; y: number; w: number; h: number }>;
-  readonly time: () => number;
   readonly deltaSeconds: () => number;
-  readonly fallbackPlayer: () => unknown;
-  readonly bossById: (id: string) => unknown;
   readonly setScreen: (screen: AppScreen, context?: Readonly<{ returnTo: AppScreen }>) => void;
   readonly categories: () => Readonly<Record<string, Readonly<{ name: string; color: string }>>>;
   readonly fallbackCategory: () => Readonly<{ name: string; color: string }>;
   readonly specialColor: () => string;
-  readonly formatTime: (seconds: number) => string;
   readonly document: Document;
   readonly browserIndexedDb: IDBFactory | undefined;
   readonly launchGhostPractice: (child: GhostPracticeChild) => GhostPracticeLaunchResult;
 }
 export interface ReplayScreenAdapter {
   readonly cancelPendingOpen: () => void;
-  readonly enter: (data: unknown, from?: AppScreen) => boolean;
+  /** Opens a record already read (a shared replay or a file) under `key`; false when it cannot be played. */
+  readonly watch: (record: ReplayRecord, key: string, from?: AppScreen) => Promise<boolean>;
   readonly exit: () => void;
   readonly render: () => void;
   /** Opens the kept record of the run with this seed on the replay screen; false when there is none. */
@@ -121,23 +89,6 @@ export interface ReplayScreenAdapter {
   readonly setSpeed: (value: number) => void;
   readonly status: () => ReplayStatus | null;
 }
-
-/** The replay screen's controls over a Ghost 2 recording, which plays through the older path until PR 8. */
-type RecordingScreen = Pick<
-  ReplayScreenAdapter,
-  | "enter"
-  | "exit"
-  | "render"
-  | "togglePause"
-  | "seekBy"
-  | "seekToFraction"
-  | "jumpChapter"
-  | "restart"
-  | "toggleInfo"
-  | "setSpeed"
-  | "status"
->;
-type DeferredAction = (screen: RecordingScreen) => void;
 
 /** How the replay screen shows a kept record: the world, the INFO panel's cards and where they are drawn. */
 export interface KeptRunScreenServices {
@@ -437,13 +388,12 @@ export function createKeptRunScreen(services: KeptRunScreenServices) {
 }
 
 /**
- * The replay screen. A run kept in the replay store is re-simulated (`createKeptRunScreen`), so the stage,
- * weapon, projectiles and bosses are the run's own at each moment; an older Ghost 2 recording plays through
- * its own path, loaded on first use, until PR 8 retires it.
+ * The replay screen. Every replay is a record re-simulated by `createKeptRunScreen`, so the stage, weapon,
+ * projectiles and bosses are the run's own at each moment: a run kept on this device (a REPLAYS row or the
+ * results screen's WATCH), a shared one (a leaderboard or the feed) or one read from a file.
  */
 export function createLiveReplayScreenAdapter(services: ReplayScreenServices): ReplayScreenAdapter {
   const d = services.dependencies;
-  let recordings: RecordingScreen | undefined;
   const clipExport = createBrowserReplayClipExport(services.document);
   const presentation = createReplayFrames(services.document, d.UI, { wardrobe: d.COSMETICS });
   const kept = createKeptRunScreen({
@@ -475,205 +425,94 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
     }),
     launchPractice: services.launchGhostPractice,
   });
-  let active: "recording" | "kept" | undefined;
-  let sourceRequest = 0;
-  let loading: Promise<void> | undefined;
-  let pending: Readonly<{ data: unknown; from: AppScreen }> | undefined;
-  const deferred: DeferredAction[] = [];
+  let showing = false;
+  /** Counts open requests, so a record that finishes loading after a later request or an exit is not shown. */
+  let request = 0;
 
-  function ensureLoaded(): void {
-    loading ??= import("./replay-screen-adapter-runtime").then((module) => {
-      recordings = module.createLiveReplayScreenAdapterRuntime(services);
-      const request = pending;
-      pending = undefined;
-      const loaded = recordings;
-      if (request !== undefined) loaded.enter(request.data, request.from);
-      for (const action of deferred.splice(0)) action(loaded);
-    });
-  }
-  function invoke(action: DeferredAction): void {
-    if (recordings) action(recordings);
-    else {
-      deferred.push(action);
-      ensureLoaded();
-    }
-  }
   async function keptRecordFor(
     find: (open: () => Promise<ReplayRecordStore | Readonly<{ failed: unknown }>>) => Promise<KeptRecord | undefined>,
-  ): Promise<Readonly<{ kept: KeptRecord; engine: RecordWorldEngine }> | undefined> {
+  ): Promise<KeptRecord | undefined> {
     try {
       const module = await liveReplayRecorder.ensure();
-      const found = await find(() => module.openReplayRecordStore(services.browserIndexedDb ?? null));
-      return found === undefined ? undefined : Object.freeze({ kept: found, engine: await replayEngine.ensure() });
+      return await find(() => module.openReplayRecordStore(services.browserIndexedDb ?? null));
     } catch {
       return undefined;
     }
   }
-  function openKeptRecord(found: Readonly<{ kept: KeptRecord; engine: RecordWorldEngine }>, from: AppScreen): boolean {
-    if (kept.open(found.kept.record, found.kept.key, from, found.engine, presentation) !== undefined) return false;
-    if (active === "recording" && recordings !== undefined) recordings.exit();
-    pending = undefined;
-    active = "kept";
+  /** Opens a record once the replay engine has loaded; false when a later request came first or it cannot play. */
+  async function open(found: KeptRecord | undefined, from: AppScreen, asked: number): Promise<boolean> {
+    if (found === undefined || asked !== request) return false;
+    let engine: RecordWorldEngine;
+    try {
+      engine = await replayEngine.ensure();
+    } catch {
+      return false;
+    }
+    if (asked !== request || kept.open(found.record, found.key, from, engine, presentation) !== undefined) return false;
+    showing = true;
     services.setScreen("replay", { returnTo: from });
     return true;
   }
-  /** Watches a run: its kept record when the store has one, otherwise its Ghost 2 recording. */
-  function enter(data: unknown, from: AppScreen = "menu"): boolean {
-    const request = ++sourceRequest;
-    if (active === "kept") {
-      kept.exit();
-      active = undefined;
-    }
-    const seed = keptRecordSeed(data);
-    if (seed === undefined) return enterRecording(data, from);
-    if (d.GHOST.begin(data) === null) return false;
-    d.GHOST.end();
-    if (active === "recording" && recordings) recordings.exit();
-    active = undefined;
-    void openKeptRun(seed, from, request).then((opened) => {
-      if (!opened && request === sourceRequest) enterRecording(data, from);
-    });
-    return true;
-  }
-  async function openKeptRun(seed: string, from: AppScreen, request: number): Promise<boolean> {
-    const found = await keptRecordFor((open) => findKeptRecord(open, seed));
-    return request === sourceRequest && found !== undefined && openKeptRecord(found, from);
-  }
-  async function watchStoredRecord(key: string, from: AppScreen, request: number): Promise<boolean> {
-    const found = await keptRecordFor((open) => readKeptRecord(open, key));
-    return request === sourceRequest && found !== undefined && openKeptRecord(found, from);
-  }
-  function enterRecording(data: unknown, from: AppScreen): boolean {
-    if (recordings) {
-      active = "recording";
-      return recordings.enter(data, from);
-    }
-    const playback = d.GHOST.begin(data);
-    if (playback === null) return false;
-    d.GHOST.end();
-    pending = { data, from };
-    active = "recording";
-    ensureLoaded();
-    return true;
-  }
-  function renderLoading(): void {
-    ensureLoaded();
-    const ui = d.UI;
-    ui.header(services.canvas, "LOADING REPLAY", "preparing the recorded run", 1, ui.t.color.accent);
-    ui.text(services.canvas, "◇", services.width / 2, services.height / 2, 36, "center", 0.5);
-  }
   function exit(): void {
-    sourceRequest++;
-    if (active === "kept") {
-      const destination = kept.exit() ?? d.APP.replayReturn;
-      active = undefined;
-      services.setScreen(destination);
-      return;
-    }
-    if (active === "recording" && recordings) {
-      recordings.exit();
-      active = undefined;
-      return;
-    }
-    const destination = pending?.from ?? d.APP.replayReturn;
-    pending = undefined;
-    deferred.splice(0);
-    active = undefined;
-    d.GHOST.end();
+    request++;
+    const destination = kept.exit() ?? d.APP.replayReturn;
+    showing = false;
     services.setScreen(destination);
   }
-  /** A control that both paths have: the kept run's, or the recording's once its path has loaded. */
-  const either = (onKept: () => void, onRecording: DeferredAction) => (): void => {
-    if (active === "kept") onKept();
-    else invoke(onRecording);
-  };
-  /** A control only a kept run has. */
-  const keptOnly = (act: () => void) => (): void => {
-    if (active === "kept") act();
+  /** A control that acts only while a replay is shown. */
+  const shown = (act: () => void) => (): void => {
+    if (showing) act();
   };
   const editor = (act: (value: ReplayClipEditor) => void) =>
-    keptOnly(() => {
+    shown(() => {
       const value = kept.editor();
       if (value !== undefined) act(value);
     });
 
   return Object.freeze<ReplayScreenAdapter>({
     cancelPendingOpen: () => {
-      sourceRequest++;
-      pending = undefined;
-      deferred.splice(0);
+      request++;
     },
-    enter,
-    watchKeptRun: (seed, from = "profile") => openKeptRun(seed, from, ++sourceRequest),
-    watchRecord: (key, from = "profile") => watchStoredRecord(key, from, ++sourceRequest),
+    watch: (record, key, from = "profile") => open(Object.freeze({ key, record }), from, ++request),
+    watchKeptRun: async (seed, from = "profile") => {
+      const asked = ++request;
+      return open(await keptRecordFor((store) => findKeptRecord(store, seed)), from, asked);
+    },
+    watchRecord: async (key, from = "profile") => {
+      const asked = ++request;
+      return open(await keptRecordFor((store) => readKeptRecord(store, key)), from, asked);
+    },
     shownReplay: () => {
-      const tick = active === "kept" ? kept.shownTick() : undefined;
-      const stage = active === "kept" ? kept.shownStage() : undefined;
+      const tick = showing ? kept.shownTick() : undefined;
+      const stage = showing ? kept.shownStage() : undefined;
       return tick === undefined || stage === undefined ? undefined : Object.freeze({ tick, stage });
     },
-    drawShownAsPlayed: (tick, target) =>
-      active === "kept" && kept.drawAsPlayed(tick, target, services.screenRectangle()),
+    drawShownAsPlayed: (tick, target) => showing && kept.drawAsPlayed(tick, target, services.screenRectangle()),
     exit,
     render: () => {
-      if (active === "kept") kept.render();
-      else if (recordings) recordings.render();
-      else renderLoading();
+      if (showing) kept.render();
     },
-    togglePause: either(kept.togglePause, (value) => {
-      value.togglePause();
-    }),
+    togglePause: shown(kept.togglePause),
     seekBy: (delta) => {
-      either(
-        () => {
-          kept.seekBy(delta);
-        },
-        (value) => {
-          value.seekBy(delta);
-        },
-      )();
+      if (showing) kept.seekBy(delta);
     },
     seekToFraction: (fraction) => {
-      either(
-        () => {
-          kept.seekToFraction(fraction);
-        },
-        (value) => {
-          value.seekToFraction(fraction);
-        },
-      )();
+      if (showing) kept.seekToFraction(fraction);
     },
     jumpChapter: (direction) => {
-      either(
-        () => {
-          kept.jumpChapter(direction);
-        },
-        (value) => {
-          value.jumpChapter(direction);
-        },
-      )();
+      if (showing) kept.jumpChapter(direction);
     },
-    restart: either(kept.restart, (value) => {
-      value.restart();
-    }),
-    toggleInfo: either(kept.toggleInfo, (value) => {
-      value.toggleInfo();
-    }),
+    restart: shown(kept.restart),
+    toggleInfo: shown(kept.toggleInfo),
     setSpeed: (speed) => {
-      either(
-        () => {
-          kept.setSpeed(speed);
-        },
-        (value) => {
-          value.setSpeed(speed);
-        },
-      )();
+      if (showing) kept.setSpeed(speed);
     },
-    practice: keptOnly(kept.practice),
+    practice: shown(kept.practice),
     toggleReplayEditor: editor((value) => {
       value.toggle();
     }),
-    appendClip: keptOnly(kept.appendClip),
-    markClipIn: keptOnly(kept.markClipIn),
+    appendClip: shown(kept.appendClip),
+    markClipIn: shown(kept.markClipIn),
     clearClips: editor((value) => {
       value.clear();
     }),
@@ -686,17 +525,6 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
     downloadClip: editor((value) => {
       value.download();
     }),
-    status: () =>
-      kept.status() ??
-      recordings?.status() ??
-      (pending === undefined
-        ? null
-        : {
-            paused: true,
-            speed: 1,
-            infoVisible: false,
-            progress: 0,
-            from: pending.from,
-          }),
+    status: () => kept.status(),
   });
 }

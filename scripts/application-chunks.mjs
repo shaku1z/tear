@@ -73,14 +73,32 @@ function onDemandEntries(id, meta, entries = new Set(), visited = new Set()) {
 }
 
 /**
+ * True when the module's static imports reach a module that is itself fetched on demand (imported dynamically
+ * and reached only that way). A group takes the static dependencies of its modules, so a group given this
+ * module would take that on-demand module with it, and its code would arrive with every other user of the group.
+ */
+function importsOnDemandModule(id, meta, memo = new Map(), visited = new Set([id])) {
+  for (const imported of meta.getModuleInfo(id)?.importedIds ?? []) {
+    if (visited.has(imported)) continue;
+    visited.add(imported);
+    const info = meta.getModuleInfo(imported);
+    if (info === null || !reachedOnlyDynamically(imported, meta, memo)) continue;
+    if (info.dynamicImporters.length > 0 || importsOnDemandModule(imported, meta, memo, visited)) return true;
+  }
+  return false;
+}
+
+/**
  * The shared on-demand chunk for a small module that two or more on-demand chunks use; otherwise undefined,
  * which leaves the module with the one chunk that uses it, or in a chunk of its own when the shared module is large.
- * The module is reached only through dynamic imports, so it never joins a chunk the startup path loads.
+ * The module is reached only through dynamic imports, so it never joins a chunk the startup path loads, and it
+ * stays out of the group when it imports another on-demand module, which the group would otherwise swallow.
  */
 function sharedOnDemandChunk(id, meta) {
   const code = meta.getModuleInfo(id)?.code;
   if (typeof code !== "string" || code.length > SMALL_SHARED_MODULE_CHARS) return undefined;
-  return onDemandEntries(id, meta).size >= 2 ? ON_DEMAND_SHARED_CHUNK : undefined;
+  if (onDemandEntries(id, meta).size < 2 || importsOnDemandModule(id, meta)) return undefined;
+  return ON_DEMAND_SHARED_CHUNK;
 }
 
 /** Keep the async application composition below the release transfer budget. */

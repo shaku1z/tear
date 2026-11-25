@@ -79,7 +79,6 @@ export type WavePlanIntent =
   | Readonly<{ type: "set-stage-banner"; duration: number; name: string }>
   | Readonly<{ type: "begin-campaign-chapter"; stageIndex: number; priorBossOutro: unknown }>
   | Readonly<{ type: "ghost-wave"; wave: number; marker: "start" | "boss" }>
-  | Readonly<{ type: "ghost-snapshot"; slot: number }>
   | Readonly<{ type: "prepare-wave"; wave: number; boss: boolean; deferred: boolean }>
   | Readonly<{ type: "activate-wave" }>
   | Readonly<{ type: "show-wave-banner" }>
@@ -363,7 +362,6 @@ export function planNextWave(options: PlanNextWaveOptions): PlannedWave {
   ];
   const deferred = prior.mode === "campaign" && Boolean(options.chapterFlowActive);
   intents.push({ type: "ghost-wave", wave, marker: description.bossWave ? "boss" : "start" });
-  if (wave === 2) intents.push({ type: "ghost-snapshot", slot: 0 });
   intents.push({ type: "prepare-wave", wave, boss: description.bossWave, deferred });
   if (!deferred) intents.push({ type: "activate-wave" }, { type: "show-wave-banner" }, { type: "play-wave-sfx" });
 

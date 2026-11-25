@@ -118,7 +118,6 @@ export interface ReplayView {
   readonly canShare?: boolean;
   readonly badge?: string;
   readonly timestamp?: string;
-  readonly thumbnailId?: string;
   readonly pinned?: boolean;
   readonly shared?: boolean;
   readonly local?: boolean;
@@ -237,6 +236,8 @@ export interface ProfileScreenView {
   readonly replayFilters?: readonly ChoiceView[];
   /** REPLAYS only: this browser can read a replay file. */
   readonly canImport?: boolean;
+  /** REPLAYS only: how many recordings made before this update the save still holds (its notice). */
+  readonly earlierReplays?: number;
   readonly canScrollUp?: boolean;
   readonly canScrollDown?: boolean;
   readonly passport?: {
@@ -301,7 +302,6 @@ export interface LeaderboardsScreenView {
   }[];
   readonly ownRank?: string;
   readonly signInRequired?: boolean;
-  readonly legacyGhostId?: string;
   /** Distinct designed states: account needed, loading, unreachable, nothing recorded yet, or rows to show. */
   readonly status?: "signin" | "loading" | "offline" | "empty" | "ready";
 }

@@ -28,7 +28,7 @@ import { createLiveGhostPracticeSessionState } from "../replay/ghost-practice-se
 import { createLiveGhostCapture } from "../replay/live-ghost-capture";
 import { createLiveGhostChaseRuntime } from "../replay/live-ghost-chase";
 import { createLiveGhostPractice } from "../replay/live-ghost-practice";
-import { createLiveGhostRecording, observeLiveGhostRecordingBoundaries } from "../replay/live-ghost-recording";
+import { createLiveGhostRecording, createLiveGhostRecordingBoundary } from "../replay/live-ghost-recording";
 import { createTearRunScreenFactPublisher } from "../../gameplay/runtime/gameplay-event-publishers";
 import { subscribeLiveGameplayEventFanOut } from "../run/live-gameplay-event-fanout";
 import { createLiveRunAbandonment } from "../run/live-run-abandonment";
@@ -74,7 +74,6 @@ export function startLiveGame(
     FX,
     GAMEPLAY_EVENTS,
     GFX,
-    GHOST,
     Input,
     PAD,
     SFX,
@@ -105,7 +104,7 @@ export function startLiveGame(
   const { session: ghostV3Session, recorder: ghostV3, frames: ghostFrames } = ghostRecording;
   const replayTap = createLiveReplayTapSlot();
   GAMEPLAY_EVENTS.subscribe(replayTap.observe);
-  // Replay PR 5c-1: every run is recorded on this device, alongside the V3 recorder until replay PR 8.
+  // Every run is recorded on this device (src/app/replay/live-replay-production.ts).
   const replayProduction = createLiveReplayProduction({
     slot: replayTap,
     recorder: liveReplayRecorder,
@@ -116,8 +115,8 @@ export function startLiveGame(
     now: () => new Date().toISOString(),
     indexedDb: () => browserIndexedDb ?? null,
   });
-  observeLiveGhostRecordingBoundaries(ghostRecording, {
-    ghost: GHOST,
+  // The old recorder's sidecar starts and stops with a recorded run until replay PR 8b removes it.
+  const ghostBoundary = createLiveGhostRecordingBoundary(ghostRecording, {
     run: liveRun,
     configurationProjection: () => liveStateSetup.capture().components.get("tear.configuration.v1"),
     randomSnapshot: () => worldContext.services.random.snapshot(),
@@ -242,12 +241,12 @@ export function startLiveGame(
   const runAbandonment = createLiveRunAbandonment({
     world,
     events: GAMEPLAY_EVENTS,
-    ghost: GHOST,
     input: Input,
     run: liveRun,
+    ghostRecording: ghostBoundary,
     replayRunEnded: (run) => {
       const keep = keepsReplayRecord(run, ghostPracticeSession.active() !== null);
-      replayProduction.runEnded(() => replayRunTotals(run), keep);
+      void replayProduction.runEnded(() => replayRunTotals(run), keep);
     },
   });
   // One world owns the transient records read by combat, State Setup, and diagnostics.
@@ -297,12 +296,6 @@ export function startLiveGame(
     tick: () => Math.max(0, Math.round(CLOCK.sim * 120)),
     effects: FX,
     settings: { GFX, A11Y, THEME },
-    record: {
-      active: () => GHOST.recording(),
-      effect: (effect, x, y) => {
-        GHOST.presentationEvent(effect, x, y);
-      },
-    },
   });
   const orchestration = assembleLiveRunOrchestration({
     dependencies,
@@ -315,6 +308,7 @@ export function startLiveGame(
     navigation,
     practiceStart,
     ghostRecording,
+    ghostBoundary,
     ghostPractice: ghostPracticeSession,
     chase,
     attackPresentation,
@@ -561,7 +555,6 @@ export function startLiveGame(
     practice: ghostPracticeSession,
     world,
     navigation,
-    ghost: GHOST,
     input: Input,
     requestPointerLock: requestLock,
   });
@@ -608,6 +601,7 @@ export function startLiveGame(
     reviveCountdown,
     inputAuthority,
     recorder: ghostV3,
+    ghostBoundary,
     ghostPractice: ghostPracticeSession,
     stateSetup: liveStateSetup,
     abandonment: runAbandonment,

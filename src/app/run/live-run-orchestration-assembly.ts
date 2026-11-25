@@ -8,7 +8,7 @@ import type { LiveInterfaceComposition } from "../interface/interface-compositio
 import type { LiveScreenNavigation } from "../interface/live-screen-navigation";
 import type { LiveGhostChaseRuntime } from "../replay/live-ghost-chase";
 import type { LiveGhostPracticeSessionState } from "../replay/ghost-practice-session-state";
-import type { LiveGhostRecording } from "../replay/live-ghost-recording";
+import type { LiveGhostRecording, LiveGhostRecordingBoundary } from "../replay/live-ghost-recording";
 import type { LiveBrowserRuntime } from "../shell/browser-runtime";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { GameBlade, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
@@ -28,9 +28,11 @@ export interface LiveRunOrchestrationAssemblyOptions {
   readonly navigation: Pick<LiveScreenNavigation, "setScreen">;
   readonly practiceStart: LiveTutorialPracticeStart;
   readonly ghostRecording: Pick<LiveGhostRecording, "frames" | "opening">;
+  /** Starts and stops the old recorder's sidecar with a recorded run (replay PR 8b removes it). */
+  readonly ghostBoundary: Pick<LiveGhostRecordingBoundary, "start" | "stop">;
   readonly ghostPractice: LiveGhostPracticeSessionState;
   readonly chase: Pick<LiveGhostChaseRuntime, "installed">;
-  readonly replayRecorder: Pick<LiveReplayProduction, "runStarted" | "runEnded">;
+  readonly replayRecorder: Pick<LiveReplayProduction, "runStarted" | "runEnded" | "shared">;
   readonly attackPresentation: AttackPresentationCueSink;
   readonly hudFeedback: Pick<LiveHudFeedbackState, "restore">;
   readonly journals: Pick<LiveTestBuildJournals, "outcomeChronology">;
@@ -99,7 +101,7 @@ export function assembleLiveRunOrchestration(options: LiveRunOrchestrationAssemb
       options.chase.installed(run);
     },
     runStarted: options.replayRecorder.runStarted,
-    replayRunEnded: options.replayRecorder.runEnded,
+    replays: options.replayRecorder,
     selectedBoss: () => session.selectedBoss(),
     worldServices: world.context.services,
     applySettings,
@@ -118,6 +120,7 @@ export function assembleLiveRunOrchestration(options: LiveRunOrchestrationAssemb
     cinematicPreference: () => services.settings.cinematics,
     race: seedRace,
     createRunSeed: () => seedRace.seed() ?? session.takeRunSeed() ?? dependencies.createRunSeed(),
+    ghostRecording: options.ghostBoundary,
     withOpeningCapture: openingCapture.withCapture,
     openingExposed: openingCapture.exposed,
     discardOpeningCapture: openingCapture.discard,
@@ -142,11 +145,8 @@ export function assembleLiveRunOrchestration(options: LiveRunOrchestrationAssemb
     getBest,
     awardCoins,
     economyTelemetry,
-    setLastRecording: (value) => {
-      session.setLastRecording(value);
-    },
-    setLastVaultId: (value) => {
-      session.setLastVaultId(value);
+    setLastReplay: (value) => {
+      session.setLastReplay(value);
     },
     setOutcome: (value) => {
       session.setOutcome(value);

@@ -73,7 +73,6 @@ describe("style runtime", () => {
       state: style(),
       tuning,
       player: { x: 3, y: 4 },
-      ghostRecording: true,
       achievementTracking: true,
     });
     expect(result.state.combo).toBe((tuning.pts[kind] ?? 2) * tuning.variety);
@@ -96,7 +95,6 @@ describe("style runtime", () => {
         state: style({ lastTrick: "parry" }),
         tuning,
         player: null,
-        ghostRecording: false,
         achievementTracking: false,
       }).state.combo,
     ).toBe(15);
@@ -106,7 +104,6 @@ describe("style runtime", () => {
         state: style(),
         tuning,
         player: null,
-        ghostRecording: false,
         achievementTracking: false,
       }).state.combo,
     ).toBe(3);
@@ -116,23 +113,21 @@ describe("style runtime", () => {
         state: style(),
         tuning: { ...tuning, pts: { silent: 0 } },
         player: null,
-        ghostRecording: false,
         achievementTracking: false,
       }).state.combo,
     ).toBe(3);
   });
 
-  it("emits ghost, rank, music, haptic and top-rank intents at the exact authored beats", () => {
+  it("emits effect, rank, music, haptic and top-rank intents at the exact authored beats", () => {
     const parry = addStyle({
       kind: "parry",
       state: style({ combo: 40, rank: "BRUTAL", mult: 3 }),
       tuning,
       player: null,
-      ghostRecording: true,
       achievementTracking: true,
     });
     expect(parry.state).toMatchObject({ combo: 62.5, mult: 5, rank: "PERFECT", wavePeak: 5 });
-    expect(parry.intents).toContainEqual({ type: "ghost-capture", kind: "parry", x: 0, y: 0, importance: 2 });
+    expect(parry.intents).toContainEqual({ type: "ghost-capture", kind: "parry", x: 0, y: 0 });
     expect(parry.intents).toContainEqual({ type: "rank-up", rank: "PERFECT" });
     expect(parry.intents).toContainEqual({ type: "music-rank-changed", rank: "PERFECT" });
     expect(parry.intents).toContainEqual({ type: "haptic", pattern: 24 });
@@ -142,10 +137,9 @@ describe("style runtime", () => {
       state: style(),
       tuning,
       player: { x: 1, y: 2 },
-      ghostRecording: true,
       achievementTracking: false,
     });
-    expect(superSlam.intents).toContainEqual({ type: "ghost-capture", kind: "superslam", x: 1, y: 2, importance: 3 });
+    expect(superSlam.intents).toContainEqual({ type: "ghost-capture", kind: "superslam", x: 1, y: 2 });
     expect(superSlam.intents).toContainEqual({ type: "haptic", pattern: [14, 20, 14] });
   });
 
@@ -155,10 +149,15 @@ describe("style runtime", () => {
       state: style(),
       tuning,
       player: null,
-      ghostRecording: false,
       achievementTracking: false,
     });
-    expect(intentTypes(result.intents)).toEqual(["tutorial-mark", "rank-up", "music-rank-changed", "haptic"]);
+    expect(intentTypes(result.intents)).toEqual([
+      "tutorial-mark",
+      "ghost-capture",
+      "rank-up",
+      "music-rank-changed",
+      "haptic",
+    ]);
   });
 
   it("preserves hit loss, timer countdown, drain, zero reset and color thresholds", () => {

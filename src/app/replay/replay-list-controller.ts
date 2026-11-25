@@ -2,43 +2,30 @@
  * The REPLAYS list's state and row actions (src/app/replay/replay-list.ts builds the rows).
  *
  * Kept records come from the `tear-replays` store, opened through `openStore` (the store's code is in the
- * lazily loaded replay recorder chunk, so startup carries none of it). Older recordings come from the
- * Ghost 2 index until replay PR 8 removes it. Every action resolves to a plain message on the list; none
- * throws.
+ * lazily loaded replay recorder chunk, so startup carries none of it). Recordings made before this update
+ * (earlier-replays.ts) are counted for the list's notice, which saves them to a file or removes them. Every
+ * action resolves to a plain message on the list; none throws.
  */
 import { EARLIER_VERSION_MESSAGE, MALFORMED_MESSAGE, readReplayRecord, type ReplayRecord } from "../../replay/record";
 import type { ReplayRecordChange, ReplayRecordEntry, ReplayRecordStore } from "../../replay/record-store";
 import type { ReplayFile, ReplayFilePort } from "./browser-replay-files";
-import { keptRecordSeed } from "./kept-record-lookup";
-import { replayList, type OlderRecording, type ReplayListFilter, type ReplayListItem } from "./replay-list";
+import { clearEarlierReplays, earlierReplayKeys, earlierReplaysFile, type EarlierReplayStore } from "./earlier-replays";
+import { replayList, type ReplayListFilter, type ReplayListItem } from "./replay-list";
 
 type Failed = Readonly<{ failed: unknown }>;
 
-/** The Ghost 2 index, as much of it as the list uses. */
-export interface OlderRecordings {
-  index(): readonly Readonly<{
-    id: string;
-    ts: number;
-    pin: boolean;
-    shareId: string | null;
-    sum: Readonly<Record<string, unknown>>;
-  }>[];
-  get(id: string): unknown;
-  pin(id: string, on: boolean): boolean;
-  remove(id: string): void;
-}
-
 export interface ReplayListPorts {
   readonly openStore: () => Promise<ReplayRecordStore | Failed>;
-  readonly older: OlderRecordings;
   readonly files: ReplayFilePort | undefined;
   readonly playableRuleset: (ruleset: string) => boolean;
   /** Opens a kept record on the replay screen; false when it cannot be read or played. */
   readonly watchRecord: (key: string) => Promise<boolean>;
-  /** Plays an older recording through the old path. */
-  readonly watchOlder: (id: string) => void;
-  /** Publishes an older recording to the feed (the feed plays only those until replay PR 8). */
-  readonly shareOlder: (id: string) => void;
+  /** Whether this target can publish to the feed. */
+  readonly canShare: () => boolean;
+  /** Publishes a record to the feed (src/replay/share.ts `shareReplay`); the share id, or null when it failed. */
+  readonly share: (record: ReplayRecord) => Promise<string | null>;
+  /** The save's storage, where recordings made before this update are kept. */
+  readonly earlier: EarlierReplayStore;
 }
 
 export interface ReplayListSnapshot {
@@ -47,13 +34,19 @@ export interface ReplayListSnapshot {
   readonly items: readonly ReplayListItem[];
   readonly canImport: boolean;
   readonly message: string;
+  /** How many recordings made before this update the save still holds. */
+  readonly earlier: number;
 }
 
 const MESSAGES = Object.freeze({
   pinLimit: "Pin limit reached (10). Unpin a replay first.",
   failed: "Replays on this device couldn't be read.",
   watchFailed: "That replay couldn't be opened.",
-  noShare: "Only replays with a recording for the feed can be shared.",
+  noCloud: "Sharing needs the online layer.",
+  alreadyShared: "Already on the global feed.",
+  sharing: "Publishing…",
+  shared: "Published to the global feed ✓",
+  shareFailed: "Publish failed — try again.",
   downloaded: "Download started.",
   downloadFailed: "That replay couldn't be saved.",
   importing: "Reading the file…",
@@ -62,6 +55,10 @@ const MESSAGES = Object.freeze({
   importFailed: "That file couldn't be added.",
   oversized: "That replay is too large to keep on this device.",
   noFiles: "Importing replay files isn't available in this browser.",
+  earlierSaved: "Download started. CONTINUE removes them from this device.",
+  earlierNotSaved: "They couldn't be saved to a file.",
+  earlierRemoved: "Earlier replays removed.",
+  earlierNotRemoved: "They couldn't be removed. Try again.",
 });
 
 /** What the list says when the store dropped old unpinned runs to stay within its caps. */
@@ -76,34 +73,14 @@ export function createReplayListController(ports: ReplayListPorts) {
   let records: readonly ReplayRecordEntry[] = [];
   let message = "";
   let generation = 0;
-  /** Run seeds read from older recordings, by id; a recording's seed never changes. */
-  const seeds = new Map<string, number | undefined>();
+  /** Keys being published, so a second SHARE press does not publish twice. */
+  const sharing = new Set<string>();
+  /** The earlier recordings' keys, read again each time the list is. */
+  let earlier: readonly string[] = [];
 
-  const olderRecordings = (): readonly OlderRecording[] =>
-    ports.older.index().map((entry) => {
-      if (!seeds.has(entry.id)) {
-        const seed = keptRecordSeed(ports.older.get(entry.id));
-        seeds.set(entry.id, seed === undefined ? undefined : Number(seed));
-      }
-      const seed = seeds.get(entry.id);
-      const { mode, diff, score, wave, won, thumb } = entry.sum;
-      return Object.freeze({
-        id: entry.id,
-        recordedAt: entry.ts,
-        pinned: entry.pin,
-        shared: entry.shareId !== null,
-        ...(seed === undefined ? {} : { seed }),
-        ...(typeof mode === "string" ? { mode } : {}),
-        ...(typeof diff === "string" ? { difficulty: diff } : {}),
-        ...(typeof score === "number" ? { score } : {}),
-        ...(typeof wave === "number" ? { wave } : {}),
-        victory: won === true,
-        ...(typeof thumb === "string" ? { thumb } : {}),
-      });
-    });
-  const items = (): readonly ReplayListItem[] => replayList(records, olderRecordings(), filter, ports.playableRuleset);
+  const items = (): readonly ReplayListItem[] => replayList(records, filter, ports.playableRuleset);
   const item = (id: string): ReplayListItem | undefined =>
-    replayList(records, olderRecordings(), "all", ports.playableRuleset).find((candidate) => candidate.id === id);
+    replayList(records, "all", ports.playableRuleset).find((candidate) => candidate.id === id);
 
   /** Runs `use` on an open store and closes it; undefined when the store cannot be opened. */
   async function withStore<T>(use: (store: ReplayRecordStore) => Promise<T>): Promise<T | undefined> {
@@ -123,6 +100,7 @@ export function createReplayListController(ports: ReplayListPorts) {
    */
   function refresh(): void {
     const ticket = ++generation;
+    earlier = earlierReplayKeys(ports.earlier);
     if (status === "idle") status = "loading";
     void withStore(async (store) => {
       const listed = await store.entries();
@@ -177,7 +155,14 @@ export function createReplayListController(ports: ReplayListPorts) {
   return Object.freeze({
     refresh,
     snapshot: (): ReplayListSnapshot =>
-      Object.freeze({ status, filter, items: items(), canImport: ports.files !== undefined, message }),
+      Object.freeze({
+        status,
+        filter,
+        items: items(),
+        canImport: ports.files !== undefined,
+        message,
+        earlier: earlier.length,
+      }),
     setFilter: (next: ReplayListFilter): void => {
       filter = next;
     },
@@ -188,41 +173,48 @@ export function createReplayListController(ports: ReplayListPorts) {
       const found = item(id);
       if (!found?.playable) return;
       message = "";
-      if (found.kind === "older") {
-        ports.watchOlder(found.id);
-        return;
-      }
       void ports.watchRecord(found.id).then((opened) => {
         if (!opened) message = MESSAGES.watchFailed;
       });
     },
     share: (id: string): void => {
       const found = item(id);
-      const older = found?.kind === "older" ? found.id : found?.olderId;
-      if (older === undefined) message = MESSAGES.noShare;
-      else ports.shareOlder(older);
+      if (!found?.playable || sharing.has(found.id)) return;
+      if (found.shared) {
+        message = MESSAGES.alreadyShared;
+        return;
+      }
+      if (!ports.canShare()) {
+        message = MESSAGES.noCloud;
+        return;
+      }
+      sharing.add(found.id);
+      message = MESSAGES.sharing;
+      void withStore(async (store) => {
+        const read = await store.read(found.id);
+        if (read === null || "failed" in read || !read.ok) return false;
+        const shareId = await ports.share(read.record);
+        if (shareId === null) return false;
+        await store.shared(found.id, shareId);
+        return true;
+      })
+        .then((done) => {
+          message = done === true ? MESSAGES.shared : MESSAGES.shareFailed;
+        })
+        .finally(() => {
+          sharing.delete(found.id);
+          refresh();
+        });
     },
     pin: (id: string, pinned: boolean): void => {
       const found = item(id);
       if (found === undefined) return;
-      const older = found.kind === "older" ? found.id : found.olderId;
-      if (found.kind === "older") {
-        if (!ports.older.pin(found.id, pinned)) message = MESSAGES.pinLimit;
-        return;
-      }
-      void change((store) => store.pin(found.id, pinned)).then((done) => {
-        if (done && older !== undefined) ports.older.pin(older, pinned);
-      });
+      void change((store) => store.pin(found.id, pinned));
     },
     remove: (id: string): void => {
       const found = item(id);
       if (found === undefined) return;
-      const older = found.kind === "older" ? found.id : found.olderId;
-      if (older !== undefined) {
-        ports.older.remove(older);
-        seeds.delete(older);
-      }
-      if (found.kind === "record") void change((store) => store.remove(found.id));
+      void change((store) => store.remove(found.id));
     },
     download: (id: string): void => {
       const files = ports.files;
@@ -243,6 +235,20 @@ export function createReplayListController(ports: ReplayListPorts) {
           message = MESSAGES.downloadFailed;
         }
       });
+    },
+    downloadEarlier: (): void => {
+      const files = ports.files;
+      try {
+        if (files === undefined || earlier.length === 0) throw new Error("nothing to save");
+        files.download(earlierReplaysFile(ports.earlier, earlier), "tear-earlier-replays.json");
+        message = MESSAGES.earlierSaved;
+      } catch {
+        message = MESSAGES.earlierNotSaved;
+      }
+    },
+    clearEarlier: (): void => {
+      message = clearEarlierReplays(ports.earlier, earlier) ? MESSAGES.earlierRemoved : MESSAGES.earlierNotRemoved;
+      earlier = earlierReplayKeys(ports.earlier);
     },
     importFile: (): void => {
       const files = ports.files;

@@ -135,8 +135,11 @@ export function installReplayTapInspector(
     finish: () => production.finishOpen(totals),
     keep: async () => {
       const started = now();
-      production.runEnded(totals, true);
+      const kept = production.runEnded(totals, true);
       const ended = now();
+      // This run's own write: runEnded settles once its record is stored (or not kept) and never rejects.
+      // Waiting on it, not only on the writes already queued, keeps `writeMs` from ending before the write.
+      await kept;
       await production.settled();
       return { endMs: ended - started, writeMs: now() - ended };
     },

@@ -57,7 +57,8 @@ export interface LiveDebugHarnessContext {
   readonly openDraft: () => void;
   readonly openTier: (choices: readonly UpgradeDefinition[]) => void;
   readonly applyUpgrade: (upgrade: GameRuntimeDependencies["UPGRADES"][number]) => void;
-  readonly enterReplay: (record: object, from: "menu") => void;
+  /** Opens a short real record on the replay screen; false when it could not be opened. */
+  readonly openReplay: () => Promise<boolean>;
   readonly beginRename: () => void;
   readonly applyOptions: (options: object) => void;
   readonly startFinale: (death: { x: number; y: number }, recovered: boolean) => void;
@@ -941,7 +942,7 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
         run.runTime = 96;
         run.spawnQueue.length = 0;
         context.state.setEnemies([]);
-        context.state.setLastRecording(null);
+        context.state.setLastReplay(null);
         context.state.setWinSeconds(campaign ? 1 : 0);
         run.waveLog = [{ wave: 1, time: 12.5, kills: 5, peak: 2 }];
         context.state.setOutcome({
@@ -967,49 +968,7 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
         unlockPointer(document);
       },
       openReplay() {
-        const count = 96;
-        const px = Array.from({ length: count }, (_, index) => 300 + index * 8);
-        const py = Array.from({ length: count }, (_, index) => 680 - Math.round(Math.sin(index / 8) * 70));
-        const tx = px.map((x, index) => x + 70 + Math.round(Math.cos(index / 6) * 20));
-        const ty = py.map((y, index) => y - 20 + Math.round(Math.sin(index / 6) * 20));
-        context.enterReplay(
-          {
-            v: 2,
-            dt: 0.1,
-            edt: 0.25,
-            px,
-            py,
-            tx,
-            ty,
-            fc: px.map(() => 1),
-            stages: [
-              { t: 0, s: 0 },
-              { t: 4.5, s: 1 },
-            ],
-            waves: [
-              { t: 0, w: 1, e: "start" },
-              { t: 3, w: 1, e: "clear" },
-              { t: 4.5, w: 2, e: "boss" },
-            ],
-            spawns: [],
-            esamp: [],
-            deaths: [],
-            events: [],
-            // Oracle-published ghosts use the final summary form instead of timed picks.
-            loadout: [
-              { id: "tempo", tier: 3, n: 1 },
-              { id: "reach", tier: 1, n: 2 },
-            ],
-            thumb: null,
-            mode: "endless",
-            diff: "normal",
-            name: "Journey Tester",
-            wave: 2,
-            score: 1234,
-            won: true,
-          },
-          "menu",
-        );
+        return context.openReplay();
       },
       openRename() {
         if (context.screen() !== "menu") context.setScreen("menu");

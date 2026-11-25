@@ -29,11 +29,11 @@ import {
   type SettingsRenameAdapters,
   type SettingsRenameServices,
 } from "../screens/settings-rename-adapters";
-import { isAppScreen, type AppScreen } from "../../domain/screen-catalog";
+import type { AppScreen } from "../../domain/screen-catalog";
 
 type RendererBase = Omit<LiveScreenRendererOptions, "dispatch" | "renderPreview">;
 type ReplayBase = Omit<ReplayScreenServices, "renderers" | "categories" | "fallbackCategory" | "specialColor">;
-type LibraryBase = Omit<LibraryScreenServices, "renderers" | "enterReplay" | "watchRecord">;
+type LibraryBase = Omit<LibraryScreenServices, "renderers" | "watchShared" | "watchRecord">;
 type SettingsBase = Omit<SettingsRenameServices, "renderers" | "setCodexGuide">;
 type RunServicesBase = Omit<
   RunScreenServices,
@@ -102,7 +102,6 @@ export function createLiveScreenPresentationComposition(
     },
     renderPreview: (id, bounds) => {
       if (id.startsWith("creature:")) library.drawCreaturePreview(id.slice("creature:".length), bounds);
-      else library.drawReplayPreview(id, bounds);
     },
   });
   const replay: ReplayScreenAdapter = createLiveReplayScreenAdapter({
@@ -115,7 +114,7 @@ export function createLiveScreenPresentationComposition(
   const library: LibraryScreenAdapters = createLiveLibraryScreenAdapters({
     ...options.library,
     renderers: renderer,
-    enterReplay: (record, from) => replay.enter(record, isAppScreen(from) ? from : "profile"),
+    watchShared: (record, key, from) => replay.watch(record, key, from),
     watchRecord: (key) => replay.watchRecord(key, "profile"),
   });
   const settings: SettingsRenameAdapters = createLiveSettingsRenameAdapters({

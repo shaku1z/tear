@@ -2,6 +2,7 @@ import { createTearWorldState, type TearWorldState } from "../../gameplay/runtim
 import { createTearWorldComposition } from "../../gameplay/runtime/tear-world-composition";
 import type { RunLifecycleController } from "../../gameplay/run/lifecycle";
 import type { RunResultInfo } from "../../gameplay/run/outcome-planner";
+import type { KeptReplay } from "../replay/live-replay-production";
 import { MusicDirector } from "../../audio/music-director";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type {
@@ -37,7 +38,6 @@ type PortableWorldState = TearWorldState<
   BossIntroState,
   StageBeat
 >;
-type ReplayPacket = ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>;
 
 /**
  * Write-through hooks for the host's remaining local views of world values.
@@ -63,10 +63,9 @@ export interface LiveWorldSessionPort {
   setSelectedWeapon(value: string): void;
   outcome(): RunResultInfo | null;
   setOutcome(value: RunResultInfo | null): void;
-  lastRecording(): ReplayPacket;
-  setLastRecording(value: ReplayPacket): void;
-  lastVaultId(): string | null;
-  setLastVaultId(value: string | null): void;
+  /** The last finished run's kept replay record, for the results screen's WATCH. */
+  lastReplay(): KeptReplay | null;
+  setLastReplay(value: KeptReplay | null): void;
   winSeconds(): number;
   setWinSeconds(value: number): void;
 }
@@ -184,13 +183,9 @@ export function createLiveWorldState(session: LiveWorldSessionPort, mirrors: Liv
     setOutcome: (value) => {
       session.setOutcome(value);
     },
-    lastRecording: () => session.lastRecording(),
-    setLastRecording: (value) => {
-      session.setLastRecording(value);
-    },
-    lastVaultId: () => session.lastVaultId(),
-    setLastVaultId: (value) => {
-      session.setLastVaultId(value);
+    lastReplay: () => session.lastReplay(),
+    setLastReplay: (value) => {
+      session.setLastReplay(value);
     },
     winSeconds: () => session.winSeconds(),
     setWinSeconds: (value) => {

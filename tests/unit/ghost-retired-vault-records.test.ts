@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { GhostLocalVault } from "../../src/ghost/capsule-vault";
 import { GhostStreamingRecorder } from "../../src/ghost/streaming-recorder";
 import {
@@ -11,7 +11,6 @@ import {
 import type { GhostVaultBackend } from "../../src/ghost/capsule-vault";
 import { GhostCareerStore, careerKey } from "../../src/ghost/career-archive-store";
 import { provisionalCareerEntry } from "../../src/ghost/career-archive";
-import { ReplayLibraryController } from "../../src/app/library/replay-library-controller";
 
 // One record under every retired prefix, standing in for what removed features left in a
 // player's vault. Nothing reads them any more; a vault that holds them must still load.
@@ -123,28 +122,5 @@ describe("vault records left by removed features", () => {
       source.manifest.rootIntegrity,
     );
     await expectOldRecordsUntouched(target, "some-other-capsule");
-  });
-
-  it("do not touch leaderboard-linked replays, which open through the shared cloud", async () => {
-    const record = { v: 2 },
-      enterReplay = vi.fn(() => true),
-      leaderboardMessage = vi.fn();
-    const controller = new ReplayLibraryController({
-      vault: { index: () => [], get: () => null, setShareId: vi.fn() },
-      cloud: {
-        hasLeaderboards: () => true,
-        loadGhost: vi.fn(),
-        loadReplay: vi.fn(() => Promise.resolve(record)),
-        publishReplay: vi.fn(),
-      },
-      enterReplay,
-      setProfileMessage: vi.fn(),
-      setLeaderboardMessage: leaderboardMessage,
-    });
-    controller.watch("linked-1", "leaderboards");
-    await vi.waitFor(() => {
-      expect(enterReplay).toHaveBeenCalledWith(record, "leaderboards");
-    });
-    expect(leaderboardMessage).toHaveBeenLastCalledWith("");
   });
 });

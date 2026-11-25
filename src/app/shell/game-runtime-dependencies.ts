@@ -35,7 +35,6 @@ import type { cosmeticRandom } from "../../presentation/cosmetic-random";
 import type { CosmeticEmissionRandom } from "../../domain/cosmetic-emission-random";
 import type { ParticleSystem } from "../../presentation/particles";
 import type { createUi } from "../../presentation/ui";
-import type { createLegacyReplayCompatibility } from "../../replay/legacy-compat";
 import type { RunRandomService, RunRandomStreams } from "../../simulation/run-random";
 import type { PerformanceMonitor } from "../../diagnostics/performance-monitor";
 import type { AppStateController } from "../interface/app-state-controller";
@@ -57,7 +56,6 @@ type EnemyTypes = ReturnType<typeof createEnemyTypes>;
 type MirrorTypes = ReturnType<typeof createMirrorTypes>;
 type Cloud = ReturnType<CloudFactory>;
 type PlatformCompatibility = ReturnType<typeof createLegacyPlatformCompatibility>;
-type ReplayCompatibility = ReturnType<typeof createLegacyReplayCompatibility>;
 
 /** Inferred composition contract shared by the strict runtime host and platform composition root. */
 export interface GameRuntimeDependencies {
@@ -113,7 +111,6 @@ export interface GameRuntimeDependencies {
   readonly GAME_RANDOM: RunRandomService;
   readonly GAME_RANDOM_STREAMS: RunRandomStreams;
   readonly GFX: typeof GFX;
-  readonly GHOST: ReplayCompatibility["GHOST"];
   readonly Input: BrowserInput;
   readonly META: ReturnType<typeof createMetaProgression>["META"];
   readonly Mirror: MirrorTypes["Mirror"];
@@ -150,7 +147,6 @@ export interface GameRuntimeDependencies {
   readonly WhiteHart: EnemyTypes["WhiteHart"];
   readonly UI: ReturnType<typeof createUi>;
   readonly UPGRADES: typeof Upgrades.UPGRADES;
-  readonly VAULT: ReplayCompatibility["VAULT"];
   readonly VARIANTS: typeof Variants.VARIANTS;
   readonly VoidGen: typeof VoidGen;
   readonly VoidWisp: EnemyTypes["VoidWisp"];

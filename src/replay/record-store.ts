@@ -69,6 +69,8 @@ export interface ReplayRecordEntry {
   readonly bytes: number;
   readonly recordedAt: string;
   readonly pinned: boolean;
+  /** The id of the copy published from this device (share.ts), once there is one. */
+  readonly shareId?: string;
   /** Absent only when the record could not be read; the list offers to delete it. */
   readonly row?: ReplayRecordRow;
 }
@@ -110,6 +112,8 @@ export interface ReplayRecordStore {
   /** The index, oldest first, every readable entry with its row. */
   readonly entries: () => Promise<readonly ReplayRecordEntry[] | Readonly<{ failed: ReplayRecordFailure }>>;
   readonly pin: (key: string, pinned: boolean) => Promise<ReplayRecordChange>;
+  /** Names the published copy of a stored record. */
+  readonly shared: (key: string, shareId: string) => Promise<ReplayRecordChange>;
   readonly remove: (key: string) => Promise<ReplayRecordChange>;
   /** One stored record, read as untrusted data; null when the key holds none. */
   readonly read: (key: string) => Promise<ReplayReadResult | null | Readonly<{ failed: ReplayRecordFailure }>>;
@@ -122,8 +126,8 @@ export type ReplayRecordWritePlan =
   Readonly<{ store: true; evict: readonly string[]; index: readonly ReplayRecordEntry[] }> | Readonly<{ store: false }>;
 
 /**
- * Which records a write keeps. The index is oldest first and the new entry goes last; the oldest unpinned
- * entries go first, then the oldest pinned ones, until the count and byte caps hold.
+ * Which records a write keeps. The index is oldest first and the new entry goes last; the oldest entries
+ * neither pinned nor shared go first, then the oldest of the rest, until the count and byte caps hold.
  */
 export function planReplayRecordWrite(
   index: readonly ReplayRecordEntry[],
@@ -135,10 +139,11 @@ export function planReplayRecordWrite(
   const evict = new Set<string>();
   let count = older.length + 1;
   let total = older.reduce((sum, existing) => sum + existing.bytes, entry.bytes);
-  for (const pinned of [false, true])
+  const kept = (candidate: ReplayRecordEntry): boolean => candidate.pinned || candidate.shareId !== undefined;
+  for (const keptPass of [false, true])
     for (const candidate of older) {
       if (count <= limits.count && total <= limits.bytes) break;
-      if (candidate.pinned !== pinned) continue;
+      if (kept(candidate) !== keptPass) continue;
       evict.add(candidate.key);
       count -= 1;
       total -= candidate.bytes;
@@ -160,7 +165,8 @@ function failureOf(error: unknown): ReplayRecordFailure {
 }
 
 /** An index entry as stored; `row` is checked as a whole and re-derived when it is not an object. */
-type StoredEntry = Omit<ReplayRecordEntry, "row" | "pinned"> & Readonly<{ pinned?: unknown; row?: unknown }>;
+type StoredEntry = Omit<ReplayRecordEntry, "row" | "pinned" | "shareId"> &
+  Readonly<{ pinned?: unknown; shareId?: unknown; row?: unknown }>;
 
 function readIndex(value: unknown): readonly StoredEntry[] {
   if (!Array.isArray(value)) return [];
@@ -277,7 +283,7 @@ function storeOver(database: IDBDatabase, limits: ReplayRecordLimits): ReplayRec
     let filled = false;
     const index: ReplayRecordEntry[] = [];
     for (const stored of readIndex(result.value)) {
-      const { row: rawRow, pinned, ...rest } = stored;
+      const { row: rawRow, pinned, shareId, ...rest } = stored;
       let row = storedRow(rawRow);
       if (row === undefined) {
         const record = await read(stored.key);
@@ -286,7 +292,14 @@ function storeOver(database: IDBDatabase, limits: ReplayRecordLimits): ReplayRec
           filled = true;
         }
       }
-      index.push(Object.freeze({ ...rest, pinned: pinned === true, ...(row === undefined ? {} : { row }) }));
+      index.push(
+        Object.freeze({
+          ...rest,
+          pinned: pinned === true,
+          ...(typeof shareId === "string" && shareId.length > 0 ? { shareId } : {}),
+          ...(row === undefined ? {} : { row }),
+        }),
+      );
     }
     if (filled) await write((store) => store.put(index, INDEX_KEY));
     return index;
@@ -319,6 +332,10 @@ function storeOver(database: IDBDatabase, limits: ReplayRecordLimits): ReplayRec
           return "pin-limit";
         return index.map((entry, position) => (position === at ? Object.freeze({ ...entry, pinned }) : entry));
       }),
+    shared: (key: string, shareId: string) =>
+      change(key, (index, at) =>
+        index.map((entry, position) => (position === at ? Object.freeze({ ...entry, shareId }) : entry)),
+      ),
     remove: (key: string) =>
       change(
         key,

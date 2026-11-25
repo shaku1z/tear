@@ -1,7 +1,6 @@
 import type { TearLiveWorldAdapter } from "../../gameplay/snapshot/live-restore";
 import type { BrowserInput } from "../../input/browser-input-contracts";
 import type { LiveScreenNavigation } from "../interface/live-screen-navigation";
-import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { LiveWorldComposition } from "../world/world-composition";
 import { launchGhostPracticeChild } from "./ghost-practice-launch";
 import type { LiveGhostPracticeSessionState } from "./ghost-practice-session-state";
@@ -13,7 +12,6 @@ export interface LiveGhostPracticeOptions {
   readonly practice: LiveGhostPracticeSessionState;
   readonly world: Pick<LiveWorldComposition, "state">;
   readonly navigation: Pick<LiveScreenNavigation, "setScreen">;
-  readonly ghost: Pick<GameRuntimeDependencies["GHOST"], "restoreRuntimeState">;
   readonly input: Pick<BrowserInput, "stopSemanticRecording">;
   /** The browser pointer-lock request, not the input-authority-owned one. */
   readonly requestPointerLock: () => void;
@@ -30,7 +28,6 @@ export function createLiveGhostPractice(options: LiveGhostPracticeOptions) {
       hasLiveWorld: () => hostState.run() !== null,
       practice,
       clearRestoredRecording: () => {
-        options.ghost.restoreRuntimeState({ recording: null });
         options.input.stopSemanticRecording();
       },
       setPlaying: () => {

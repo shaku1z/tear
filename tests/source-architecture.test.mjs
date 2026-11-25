@@ -124,7 +124,11 @@ test("every planted case of the pre-role gate keeps its verdict, and the deliber
     .map((entry) => `${entry.file} [${entry.legacy.join(",")}]: ${entry.text}`);
   assert.deepEqual(mismatches, []);
   const covered = new Set(legacy.filter((entry) => entry.reject).flatMap((entry) => entry.legacy));
-  assert.equal(covered.size, 76, "R01-R75 and S1 each keep at least one rejected case");
+  assert.equal(
+    covered.size,
+    75,
+    "R01-R75 but R05 (Ghost 2, removed with its module) and S1 each keep at least one rejected case",
+  );
 });
 
 test("transitive biome isolation reports a reach through an intermediate module", () => {

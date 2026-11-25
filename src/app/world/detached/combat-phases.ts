@@ -120,7 +120,6 @@ export function createProductionCombatPhases(
     },
     tuning: () => config.trick,
     colors: () => config.colors,
-    ghostRecording: () => options.gameplayEvents !== undefined,
     styleIntents: {
       tutorialMark: (kind) => {
         if (isTutorialMark(kind)) replay.tutorial.mark(kind);
@@ -953,8 +952,6 @@ export function createProductionCombatPhases(
       if (options.gameplayEvents === undefined || actorId === null) return;
       options.gameplayEvents.emit({ kind: "death", actorId: actorId(enemy), cause: "combat" });
     },
-    ghostRecording: () => nativeTracking() && actorId !== null,
-    ghostSample: () => undefined,
     ghostRevive: note("ghostRevive"),
     updateTrick: (seconds: number) => {
       style.update(seconds);

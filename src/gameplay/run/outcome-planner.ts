@@ -30,8 +30,8 @@ export function gauntletRunCleared(progress: GauntletProgress | undefined): bool
 export interface RunLeaderboardEntry {
   readonly board: LeaderboardRef;
   readonly entry: Readonly<{ score: number; wave: number; time: number }>;
-  /** The board whose published replay the run's vault copy records; exactly one entry per run. */
-  readonly vaultShare: boolean;
+  /** The board whose published replay the run's kept record names as its share; exactly one entry per run. */
+  readonly keptShare: boolean;
 }
 
 /**
@@ -43,14 +43,14 @@ export function runLeaderboardEntries(run: OutcomeRunState): readonly RunLeaderb
     {
       board: { kind: "score", mode: run.mode, difficulty: run.diff },
       entry: { score: run.score, wave: run.wave, time: run.runTime },
-      vaultShare: true,
+      keptShare: true,
     },
   ];
   if (run.gauntlet !== undefined && gauntletRunCleared(run.gauntlet))
     entries.push({
       board: { kind: "gauntlet-clear", mode: run.mode, difficulty: run.diff },
       entry: { score: run.gauntlet.ticks, wave: run.gauntlet.trialsCleared, time: run.runTime },
-      vaultShare: false,
+      keptShare: false,
     });
   return Object.freeze(entries);
 }
@@ -115,66 +115,6 @@ export function snapshotOutcomeRun(run: OutcomeRunSource): OutcomeRunState {
     waveLog: run.waveLog,
     weaponId: run.weaponId,
     damagedThisRun: Boolean(run._dmgThisRun),
-  });
-}
-
-export interface RecordingLoadoutEntry {
-  readonly id: string;
-  readonly tier: number;
-  readonly count: number;
-}
-
-export interface RecordingSummary {
-  readonly ghostAssistance?: GhostRunAssistance;
-  readonly beatThisRun?: BeatRunBinding;
-  readonly seedRace?: SeedRaceRun;
-  readonly mode: RunMode;
-  readonly diff: RunDifficulty;
-  readonly wave: number;
-  readonly score: number;
-  readonly time: number;
-  readonly won: boolean;
-  readonly kills: number;
-  readonly peak: number;
-  readonly name: string;
-  readonly stage: number;
-  readonly weapon: string;
-  readonly loadout: readonly Readonly<{ id: string; tier: number; n: number }>[];
-  readonly authoritativeTick: number;
-  readonly authoritativeStateHash: string;
-}
-
-export function buildRecordingSummary(
-  run: OutcomeRunState,
-  options: Readonly<{
-    won: boolean;
-    displayName: string;
-    stageIndex: number;
-    loadout: readonly RecordingLoadoutEntry[];
-    authoritativeTick?: number;
-    authoritativeStateHash?: string;
-  }>,
-): RecordingSummary {
-  return Object.freeze({
-    ...(run.ghostAssistance === undefined ? {} : { ghostAssistance: run.ghostAssistance }),
-    ...(run.beatThisRun === undefined ? {} : { beatThisRun: run.beatThisRun }),
-    ...(run.seedRace === undefined ? {} : { seedRace: run.seedRace }),
-    mode: run.mode,
-    diff: run.diff,
-    wave: run.wave,
-    score: run.score,
-    time: Math.round(run.runTime),
-    won: options.won,
-    kills: run.waveLog.reduce((sum, entry) => sum + (entry.kills || 0), 0),
-    peak: run.waveLog.reduce((highest, entry) => Math.max(highest, entry.peak || 1), 1),
-    name: options.displayName,
-    stage: options.stageIndex,
-    weapon: run.weaponId,
-    loadout: Object.freeze(
-      options.loadout.map((entry) => Object.freeze({ id: entry.id, tier: entry.tier, n: entry.count })),
-    ),
-    authoritativeTick: options.authoritativeTick ?? 0,
-    authoritativeStateHash: options.authoritativeStateHash ?? "",
   });
 }
 

@@ -363,32 +363,32 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
         }
       });
     },
-    async publishReplay(recording, summary, fixedIdPrefix) {
+    async publishReplay(upload, summary, fixedIdPrefix) {
       const session = await passport();
       if (!session) return null;
       try {
         const shareId = fixedIdPrefix
           ? `${fixedIdPrefix}_${session.uid}`
           : `r${now().toString(36)}${random().toString(36).slice(2, 8)}`;
-        const json = JSON.stringify(recording);
+        const json = JSON.stringify(upload);
         if (json.length > 3_000_000) return null;
         const chunks = replayChunks(json);
         if (chunks.length > REPLAY_MAX_CHUNKS) return null;
+        // Exactly the fields firestore.rules (isReplaySummary) allows, each of its type.
         const replaySummary: DataRecord = {
-          ...(summary ?? {}),
           ownerUid: session.uid,
           createdAt: now(),
           chunkCount: chunks.length,
-          mode: recording.mode ?? "",
-          diff: recording.diff ?? "",
-          wave: Math.trunc(number(recording.wave)),
-          score: Math.trunc(number(recording.score)),
-          time: number(recording.time),
-          won: recording.won === true,
-          kills: Math.trunc(number(recording.kills)),
-          peak: Math.trunc(number(recording.peak, 1)),
-          name: string(recording.name, "Player"),
-          thumb: replayThumb(recording.thumb),
+          mode: string(summary.mode, ""),
+          diff: string(summary.diff, ""),
+          wave: Math.trunc(number(summary.wave)),
+          score: Math.trunc(number(summary.score)),
+          time: number(summary.time),
+          won: summary.won === true,
+          kills: Math.trunc(number(summary.kills)),
+          peak: Math.trunc(number(summary.peak)),
+          name: string(summary.name, "Player"),
+          thumb: replayThumb(summary.thumb),
           lb: fixedIdPrefix !== undefined,
         };
         await race(session.store.write(`replays/${shareId}`, replaySummary, false), 12_000);
@@ -418,11 +418,7 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
           json += chunk.d;
         }
         if (json.length > 3_000_000) return null;
-        const recording = asRecord(JSON.parse(json) as unknown);
-        if (!recording) return null;
-        recording.name = string(summary.name, "Player");
-        recording.won = summary.won === true;
-        return recording;
+        return asRecord(JSON.parse(json) as unknown) ?? null;
       } catch {
         return null;
       }
@@ -445,15 +441,6 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
         return true;
       } catch {
         return false;
-      }
-    },
-    async loadGhost(mode, difficulty) {
-      const session = await passport();
-      if (!session) return null;
-      try {
-        return await race(session.store.read(`ghosts/${mode}_${difficulty}`));
-      } catch {
-        return null;
       }
     },
   };

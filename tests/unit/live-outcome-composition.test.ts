@@ -21,34 +21,34 @@ describe("live outcome composition pending-finale persistence", () => {
       dependencies: {
         GAMEPLAY_EVENTS: {},
         pendingFinalePersistence: { pending: () => null },
-        GHOST: {
-          stopRec: () => {
-            order.push("ghost2-closed");
-            return null;
-          },
-        },
         Input: {
           stopSemanticRecording: () => {
             order.push("input-stopped");
           },
         },
       } as never,
+      replays: { runEnded: () => Promise.resolve(null), shared: () => undefined },
+      ghostRecording: {
+        stop: () => {
+          order.push("sidecar-closed");
+        },
+      },
       run: () => run,
       cleanupBossActors: () => undefined,
       environment: { clear: () => undefined },
       lifecycle: { terminate: () => undefined },
     } as never);
     const context = captured.context as unknown as {
-      stopRecording(summary: { won: boolean }): void;
+      endRecord(won: boolean): Promise<unknown>;
       terminate(outcome: "victory"): void;
     };
-    context.stopRecording({ won: true });
-    expect(order).toEqual(["ghost2-closed"]);
+    void context.endRecord(true);
+    expect(order).toEqual(["sidecar-closed"]);
     context.terminate("victory");
-    expect(order).toEqual(["ghost2-closed", "input-stopped"]);
+    expect(order).toEqual(["sidecar-closed", "input-stopped"]);
     run.mode = "endless";
-    context.stopRecording({ won: true });
-    expect(order.slice(-2)).toEqual(["ghost2-closed", "input-stopped"]);
+    void context.endRecord(true);
+    expect(order.slice(-2)).toEqual(["sidecar-closed", "input-stopped"]);
   });
   it.each([
     ["defeat", "defeat"],
@@ -249,19 +249,24 @@ describe("live outcome composition pending-finale persistence", () => {
         dependencies: {
           GAMEPLAY_EVENTS: {},
           pendingFinalePersistence: { pending: () => null },
-          GHOST: { stopRec: () => null },
           Input: { stopSemanticRecording: () => undefined },
         } as never,
         // The record reads the live run's totals when it closes.
-        run: () => ({ ...run, score: 120, wave: 3, runTime: 41 }),
+        run: () => ({ ...run, ...extra, score: 120, wave: 3, runTime: 41 }),
         ...(practice ? { practiceSession: { active: () => ({ id: "practice" }) } } : {}),
-        replayRunEnded: (totals: () => unknown, kept: boolean) => ended.push([totals(), kept]),
+        replays: {
+          runEnded: (totals: () => unknown, kept: boolean) => {
+            ended.push([totals(), kept]);
+            return Promise.resolve(null);
+          },
+          shared: () => undefined,
+        },
         cleanupBossActors: () => undefined,
         environment: { clear: () => undefined },
         lifecycle: { terminate: () => undefined },
       } as never);
-      const context = captured.context as unknown as { stopRecording(summary: Record<string, unknown>): void };
-      context.stopRecording({ mode: run.mode, won: false, score: 120, wave: 3, time: 41, ...extra });
+      const context = captured.context as unknown as { endRecord(won: boolean): Promise<unknown> };
+      void context.endRecord(false);
       expect(ended).toEqual([[{ score: 120, wave: 3, time: 41 }, keep]]);
     },
   );

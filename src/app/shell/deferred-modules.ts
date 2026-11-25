@@ -26,7 +26,7 @@ function deferred<Module>(
 }
 
 const DEFERRED_MODULES: readonly DeferredModule[] = [
-  // Re-running a ghost (verify, Vault, Theater, linked replay): about a fifth of startup code.
+  // Re-running a replay (verify, the replay screen, a shared replay): about a fifth of startup code.
   deferred(replayEngine, () => import("../world/detached/replay-composition"), {
     fetchAheadOnIdleMenu: true,
   }),

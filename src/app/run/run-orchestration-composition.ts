@@ -23,9 +23,15 @@ import type { LiveTrainingHost } from "../training/training-host";
 import type { createLiveWeaponRuntime } from "../../gameplay/combat/live-weapon-runtime";
 import { createLiveContentComposition } from "../world/content-composition";
 import { createLiveOutcomeComposition } from "./outcome-composition";
-import type { ReplayRunEnd } from "../../replay/recorder";
-import { keepsReplayRecord, replayRunTotals } from "../replay/live-replay-production";
-import { createLiveRunStartHost, type LiveOpeningCaptureBoundary } from "./run-start-host";
+import {
+  keepsReplayRecord,
+  replayRunTotals,
+  type KeptReplay,
+  type LiveReplayProduction,
+} from "../replay/live-replay-production";
+import { createLiveRunStartHost } from "./run-start-host";
+import type { LiveOpeningCaptureBoundary } from "../replay/ghost-opening-capture";
+import type { LiveGhostRecordingBoundary } from "../replay/live-ghost-recording";
 import { createLiveVictoryProgressionExecutor } from "./victory-progression-host";
 import { createLiveWaveComposition } from "./wave-composition";
 import type { OutcomeChronologyEffect } from "../../gameplay/run/outcome-chronology-journal";
@@ -37,8 +43,7 @@ import type { RunStartWorld } from "./run-start-world";
 import type { CinematicPreference } from "../../gameplay/campaign/cinematic-preference";
 import type { AttackPresentationCueSink } from "../../gameplay/combat/attack-presentation-cue";
 
-type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
-type Controllers = LiveRunControllerRegistry<GameRun, ReplayPacket, PreparedVictory>;
+type Controllers = LiveRunControllerRegistry<GameRun, KeptReplay, PreparedVictory>;
 type CampaignHost = ReturnType<typeof createLiveCampaignHost>;
 type TrainingHost = LiveTrainingHost;
 type WeaponRuntime = ReturnType<typeof createLiveWeaponRuntime<GameEnemy>>;
@@ -46,8 +51,8 @@ type WeaponRuntime = ReturnType<typeof createLiveWeaponRuntime<GameEnemy>>;
 export interface LiveRunOrchestrationOptions {
   readonly runInstalled?: (run: GameRun) => void;
   readonly runStarted?: (start: RunStartChoices) => void;
-  /** The run reached its outcome; `keep` says whether its replay record is kept. */
-  readonly replayRunEnded?: (run: () => ReplayRunEnd["run"], keep: boolean) => void;
+  /** The run's replay record (src/app/replay/live-replay-production.ts): ended, kept and named shared. */
+  readonly replays: Pick<LiveReplayProduction, "runEnded" | "shared">;
   readonly observeTerminal?: (outcome: "defeat" | "victory") => void;
   readonly dependencies: GameRuntimeDependencies;
   readonly entities: LiveWorldEntityConstructionPort;
@@ -91,6 +96,8 @@ export interface LiveRunOrchestrationOptions {
     discovery(ordinary: readonly string[]): readonly string[];
   }>;
   readonly createRunSeed?: () => number;
+  /** The old recorder's sidecar: its start and stop at a recorded run's boundaries (replay PR 8b removes it). */
+  readonly ghostRecording?: Pick<LiveGhostRecordingBoundary, "start" | "stop">;
   readonly withOpeningCapture?: (boundary: LiveOpeningCaptureBoundary, record: () => void) => void;
   readonly openingExposed?: (runId: string) => void;
   readonly discardOpeningCapture?: () => void;
@@ -107,8 +114,7 @@ export interface LiveRunOrchestrationOptions {
   readonly getBest: (mode: string, difficulty: string) => Readonly<{ wave: number; score: number; time: number }>;
   readonly awardCoins: (score: number) => number;
   readonly economyTelemetry: (earned: number) => Readonly<Record<string, unknown>>;
-  readonly setLastRecording: (recording: ReplayPacket | null) => void;
-  readonly setLastVaultId: (id: string | null) => void;
+  readonly setLastReplay: (replay: KeptReplay | null) => void;
   readonly setOutcome: (result: RunResultInfo) => void;
   readonly resetWinSeconds: () => void;
   readonly achievementTracking: () => boolean;
@@ -173,14 +179,10 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
   createLiveRunStartHost({
     ...(options.runInstalled === undefined ? {} : { runInstalled: options.runInstalled }),
     ...(options.runStarted === undefined ? {} : { runStarted: options.runStarted }),
-    ...(options.replayRunEnded === undefined
-      ? {}
-      : {
-          replayRunReplaced: (run: GameRun) => {
-            const practice = options.practiceSession?.active() != null;
-            options.replayRunEnded?.(() => replayRunTotals(run), keepsReplayRecord(run, practice));
-          },
-        }),
+    replayRunReplaced: (run: GameRun) => {
+      const practice = options.practiceSession?.active() != null;
+      void options.replays.runEnded(() => replayRunTotals(run), keepsReplayRecord(run, practice));
+    },
     ...(options.race === undefined ? {} : { race: options.race }),
     dependencies: d,
     world: options.world,
@@ -193,6 +195,7 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
     },
     applySettings: options.applySettings,
     ...(options.createRunSeed === undefined ? {} : { createRunSeed: options.createRunSeed }),
+    ...(options.ghostRecording === undefined ? {} : { ghostRecording: options.ghostRecording }),
     ...(options.withOpeningCapture === undefined ? {} : { withOpeningCapture: options.withOpeningCapture }),
     ...(options.openingExposed === undefined ? {} : { openingExposed: options.openingExposed }),
     ...(options.discardOpeningCapture === undefined ? {} : { discardOpeningCapture: options.discardOpeningCapture }),
@@ -287,18 +290,18 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
   });
 
   const executeVictory = createLiveVictoryProgressionExecutor(d, options.achievementCheck, (won) => {
-    options.controllers.api.finishRecording(won);
+    void options.controllers.api.finishRecording(won);
   });
   createLiveOutcomeComposition({
     ...(options.observeTerminal === undefined ? {} : { observeTerminal: options.observeTerminal }),
-    ...(options.replayRunEnded === undefined ? {} : { replayRunEnded: options.replayRunEnded }),
+    replays: options.replays,
+    ...(options.ghostRecording === undefined ? {} : { ghostRecording: options.ghostRecording }),
     dependencies: d,
     lifecycle: options.lifecycle,
     controllers: options.controllers,
     environment: options.environment,
     run: options.run,
     player: options.player,
-    stageIndex: () => stage.index,
     loadStage: (index) => {
       // The outcome's restart loads the stage state alone: the stage controller's resets are its own.
       const load = (next: number): void => {
@@ -306,9 +309,7 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
       };
       loadRunStage({ ...stageLoad, load }, index, "stage-transition");
     },
-    authoritativeResult: options.authoritativeResult,
-    setLastRecording: options.setLastRecording,
-    setLastVaultId: options.setLastVaultId,
+    setLastReplay: options.setLastReplay,
     setOutcome: options.setOutcome,
     selectedWeapon: () => options.state.selectedWeapon(),
     selectWeapon: (weapon) => {
@@ -329,7 +330,9 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
     achievementTracking: options.achievementTracking,
     achievementCheck: options.achievementCheck,
     ...(options.practiceSession === undefined ? {} : { practiceSession: options.practiceSession }),
-    finishRecording: options.controllers.api.finishRecording,
+    finishRecording: (won) => {
+      void options.controllers.api.finishRecording(won);
+    },
     executeVictory,
     emitMusicOutcome: options.emitMusicOutcome,
     startRun: options.startRun,

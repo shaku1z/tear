@@ -76,15 +76,19 @@ export interface SharedCloudService {
   /** The board's entries in rank order, best first. */
   topScores(board: LeaderboardRef, limit: number): Promise<readonly Record<string, unknown>[] | null>;
   logEvent(name: string, data: Record<string, unknown>): void;
+  /**
+   * Publishes a replay upload with its feed row (src/replay/share.ts writes both); `fixedIdPrefix` names a
+   * leaderboard's own replay. The share id, or null when it failed.
+   */
   publishReplay(
-    recording: Record<string, unknown>,
-    summary: Record<string, unknown> | null,
+    upload: Readonly<Record<string, unknown>>,
+    summary: Readonly<Record<string, unknown>>,
     fixedIdPrefix?: string,
   ): Promise<string | null>;
+  /** A published upload, unread (src/replay/share.ts reads it); null when there is none. */
   loadReplay(shareId: string): Promise<Record<string, unknown> | null>;
   replayFeed(limit: number): Promise<readonly Record<string, unknown>[] | null>;
   linkReplay(board: LeaderboardRef, shareId: string): Promise<boolean>;
-  loadGhost(mode: string, difficulty: string): Promise<Record<string, unknown> | null>;
 }
 
 export interface CloudCompatibilityOptions {
@@ -130,16 +134,10 @@ export interface LegacyCloudFacade {
   submitScore(board: LeaderboardRef, entry: ScoreEntry): Promise<boolean>;
   topScores(board: LeaderboardRef, limit: number): Promise<readonly Record<string, unknown>[] | null>;
   logEvent(name: string, data?: Record<string, unknown>): void;
-  publishReplay(
-    recording: Record<string, unknown>,
-    summary: Record<string, unknown> | null,
-    fixedIdPrefix?: string,
-  ): Promise<string | null>;
+  publishReplay: SharedCloudService["publishReplay"];
   loadReplay(shareId: string): Promise<Record<string, unknown> | null>;
   replayFeed(limit: number): Promise<readonly Record<string, unknown>[] | null>;
   linkReplay(board: LeaderboardRef, shareId: string): Promise<boolean>;
-  submitGhost(mode: string, difficulty: string, data: unknown): Promise<boolean>;
-  loadGhost(mode: string, difficulty: string): Promise<Record<string, unknown> | null>;
 }
 
 export interface CloudCompatibility {
@@ -417,16 +415,6 @@ export function createCloudCompatibility(options: CloudCompatibilityOptions): Cl
         return await options.shared.linkReplay(board, shareId);
       } catch {
         return false;
-      }
-    },
-    submitGhost() {
-      return Promise.resolve(false);
-    },
-    async loadGhost(mode, difficulty) {
-      try {
-        return await options.shared.loadGhost(mode, difficulty);
-      } catch {
-        return null;
       }
     },
   };

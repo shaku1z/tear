@@ -79,10 +79,6 @@ describe("detached portable finale runtime", () => {
       },
     ]);
     expect(actorId).not.toBe("enemy:41");
-
-    const silent = createDetachedWorld({ seed: "detached-source-silent", mode: "campaign" });
-    const silentCore = createDetachedCombatSimulation(silent, { snapshot: (tick) => ({ tick }) });
-    expect(silentCore.collision.ghostRecording()).toBe(false);
   });
 
   it("crosses final campaign wave clear, real cinematic frames, and the victory outcome endpoint", () => {

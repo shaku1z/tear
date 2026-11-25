@@ -14,8 +14,10 @@ A build may ship only if, given the browser storage an earlier supported release
 2. **Keeps the audio settings.** Every volume and mute value is carried over.
 3. **Keeps coins earned and spent** (`tear_meta`).
 4. **Keeps best scores** (`tear_best_<mode>_<difficulty>`).
-5. **Lists and opens every saved local replay** (`tear_vault_index` and `tear_vault_<id>`), with
-   the same authoritative tick and state hash it was saved with.
+5. **Offers every saved local replay to the player** (`tear_vault_index` and `tear_vault_<id>`).
+   This build cannot play a replay recorded before replay PR 8, so the REPLAYS list's notice counts
+   them, DOWNLOAD ALL saves each as it was kept (the same authoritative tick and state hash), and
+   CONTINUE removes them and nothing else (`src/app/replay/earlier-replays.ts`).
 6. **Reads every Ghost capsule intact** from the `tear-ghost-v3` database: manifest, every
    chunk, and the recorded build revision. Replay admission must answer `unavailable`: the
    shipped app registers no replay runtime, so a capsule is kept and listed but cannot be

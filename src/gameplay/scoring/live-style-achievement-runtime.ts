@@ -75,7 +75,6 @@ export interface LiveStyleAchievementOptions<TProjectile extends SplitProjectile
   readonly moving: () => boolean;
   readonly tuning: () => TrickTuning;
   readonly colors: () => Readonly<{ perfect: string; charger: string; bomber: string }>;
-  readonly ghostRecording: () => boolean;
   readonly styleIntents: StyleIntentPorts;
   readonly profileMax: (stat: string, value: number) => void;
   readonly achievementCheck: () => void;
@@ -179,7 +178,6 @@ export function createLiveStyleAchievementRuntime<TProjectile extends SplitProje
         state: before,
         tuning,
         player: { x: player.x, y: player.y },
-        ghostRecording: options.ghostRecording(),
         achievementTracking: tracksAchievements(current),
       });
       applyStyleSnapshot(current, result.state);

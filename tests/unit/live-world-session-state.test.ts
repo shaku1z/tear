@@ -18,19 +18,17 @@ describe("live world session state", () => {
     expect(Object.isFrozen(first.selection())).toBe(true);
   });
 
-  it("retains world-crossing outcome, replay, vault, and victory-clock state", () => {
+  it("retains world-crossing outcome, kept replay and victory-clock state", () => {
     const session = createLiveWorldSessionState();
     const outcome = { score: 27 } as never;
-    const replay = { id: "ghost:27" } as never;
+    const replay = { key: "replay:27", record: {} } as never;
 
     session.setOutcome(outcome);
-    session.setLastRecording(replay);
-    session.setLastVaultId("vault:27");
+    session.setLastReplay(replay);
     session.setWinSeconds(4.5);
 
     expect(session.outcome()).toBe(outcome);
-    expect(session.lastRecording()).toBe(replay);
-    expect(session.lastVaultId()).toBe("vault:27");
+    expect(session.lastReplay()).toBe(replay);
     expect(session.winSeconds()).toBe(4.5);
   });
 

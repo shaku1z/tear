@@ -13,7 +13,7 @@ export interface LiveStyleHostServices {
   readonly entities: Pick<LiveWorldEntityConstructionPort, "createProjectile">;
   readonly state: LiveGameHostState;
   readonly tutorial: LiveTutorialRuntime;
-  readonly captureGhost: (trick: string, x: number, y: number, importance: 1 | 2 | 3) => void;
+  readonly captureGhost: (trick: string, x: number, y: number) => void;
   readonly rankUp: (rank: string) => void;
   readonly musicRankChanged: (rank: string) => void;
   readonly addProjectile: (projectile: InstanceType<GameRuntimeDependencies["Projectile"]>) => void;
@@ -44,7 +44,6 @@ export function createLiveStyleHost(services: LiveStyleHostServices) {
     moving: () => d.Input.left() || d.Input.right(),
     tuning: () => d.CONFIG.trick,
     colors: () => d.CONFIG.colors,
-    ghostRecording: () => d.GHOST.recording(),
     styleIntents: {
       tutorialMark: (trick) => {
         if (isTutorialMark(trick)) services.tutorial.mark(trick);

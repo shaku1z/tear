@@ -43,6 +43,9 @@ export type ScreenAction =
   | { readonly type: "profile.watchReplay"; readonly id: string }
   | { readonly type: "profile.downloadReplay"; readonly id: string }
   | { readonly type: "profile.importReplay" }
+  /** The notice about replays recorded before this update: save them all to a file, or remove them. */
+  | { readonly type: "profile.downloadEarlierReplays" }
+  | { readonly type: "profile.clearEarlierReplays" }
   | { readonly type: "profile.signIn" }
   | { readonly type: "profile.signOut" }
   | { readonly type: "profile.rename" }

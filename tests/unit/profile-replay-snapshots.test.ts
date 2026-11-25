@@ -5,7 +5,6 @@ const modes = [{ id: "endless", label: "Endless" }];
 const formatTime = (seconds: number) => `${String(Math.floor(seconds / 60))}:${String(seconds % 60).padStart(2, "0")}`;
 const row = (overrides: Partial<ReplayRowSource>): ReplayRowSource => ({
   id: "kept",
-  kind: "record",
   recordedAt: Date.UTC(2026, 10, 23),
   mode: "endless",
   difficulty: "normal",
@@ -21,17 +20,12 @@ const row = (overrides: Partial<ReplayRowSource>): ReplayRowSource => ({
 });
 
 describe("REPLAYS rows", () => {
-  it("names what ran and how it went, and keeps the run's thumbnail and identity", () => {
-    const [view] = buildReplayRows(
-      [row({ victory: true, pinned: true, best: true, olderId: "older", thumb: "data:image/jpeg;base64,abc" })],
-      modes,
-      formatTime,
-    );
+  it("names what ran and how it went, and keeps the run's identity", () => {
+    const [view] = buildReplayRows([row({ victory: true, pinned: true, best: true })], modes, formatTime);
     expect(view).toMatchObject({
       id: "kept",
       title: "ENDLESS · NORMAL",
       detail: "wave 8 · 900 pts · 2:05 · ★ victory",
-      thumbnailId: "data:image/jpeg;base64,abc",
       available: true,
       pinned: true,
       canShare: true,
@@ -40,15 +34,14 @@ describe("REPLAYS rows", () => {
     expect(view?.timestamp).toContain("★ BEST");
   });
 
-  it("says when a run was recorded before this update or cannot be played by this version", () => {
-    const [older, retired] = buildReplayRows(
-      [row({ id: "older", kind: "older", shared: true }), row({ id: "retired", playable: false })],
+  it("says when a run is shared or cannot be played by this version", () => {
+    const [shared, retired] = buildReplayRows(
+      [row({ id: "shared", shared: true }), row({ id: "retired", playable: false })],
       modes,
       formatTime,
     );
-    expect(older).toMatchObject({ canShare: true, canDownload: false, shared: true });
-    expect(older?.timestamp).toContain("Recorded before this update");
-    expect(older?.timestamp).toContain("SHARED");
+    expect(shared).toMatchObject({ canShare: false, canDownload: true, shared: true });
+    expect(shared?.timestamp).toContain("SHARED");
     expect(retired).toMatchObject({ available: false, canShare: false, canDownload: false });
     expect(retired?.timestamp).toContain("Made by an earlier version of the game");
   });
@@ -58,7 +51,6 @@ describe("REPLAYS rows", () => {
       [
         {
           id: "unread",
-          kind: "record",
           recordedAt: 0,
           victory: false,
           pinned: false,

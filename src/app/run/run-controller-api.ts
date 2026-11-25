@@ -9,7 +9,7 @@ interface WaveController {
   update(dt: number): void;
 }
 interface RecordingController<TReplay> {
-  finish(won: boolean): TReplay | null;
+  finish(won: boolean): Promise<TReplay | null>;
 }
 interface OutcomeController<TPrepared> {
   defeat(): unknown;
@@ -30,7 +30,7 @@ export interface LiveRunControllerApi<TRun, TReplay, TPrepared> {
   readonly startNextWave: () => void;
   readonly activatePreparedWave: () => void;
   readonly updateWave: (dt: number) => void;
-  readonly finishRecording: (won: boolean) => TReplay | null;
+  readonly finishRecording: (won: boolean) => Promise<TReplay | null>;
   readonly endRun: () => void;
   readonly prepareVictoryRecord: (campaign: boolean, persistFinale: boolean) => TPrepared;
   readonly winRun: (campaign?: boolean) => void;

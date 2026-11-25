@@ -63,10 +63,10 @@ export function createPlatformSharedCloud(getPlatform: () => PlatformServices): 
       );
       capability.service.event(name, properties);
     },
-    async publishReplay(recording) {
+    async publishReplay(upload) {
       const service = leaderboards();
       if (!service) return null;
-      const id = await service.publishReplay(JSON.stringify(recording));
+      const id = await service.publishReplay(JSON.stringify(upload));
       return id || null;
     },
     async loadReplay(shareId) {
@@ -87,9 +87,6 @@ export function createPlatformSharedCloud(getPlatform: () => PlatformServices): 
       if (!service || score === undefined) return false;
       await service.submit(boardId, score, shareId);
       return true;
-    },
-    loadGhost() {
-      return Promise.resolve(null);
     },
   };
 }

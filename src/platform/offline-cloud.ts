@@ -20,7 +20,6 @@ const OFFLINE_SHARED: SharedCloudService = Object.freeze({
   loadReplay: () => Promise.resolve(null),
   replayFeed: () => Promise.resolve(null),
   linkReplay: () => Promise.resolve(false),
-  loadGhost: () => Promise.resolve(null),
 });
 
 /** A cloud with no account service and no shared service: progress stays on this device. */

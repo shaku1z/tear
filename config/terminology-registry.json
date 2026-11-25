@@ -337,7 +337,8 @@
         ],
         "canonicalWrite": "REPLAY / REPLAYS in copy; the tear-replays store for kept runs",
         "preserve": [
-          "saved Ghost 2 recordings and V3 capsules until the replay plan's removal PR deletes their readers"
+          "replays recorded before this update: the REPLAYS notice offers them as one file, and CONTINUE removes them (src/app/replay/earlier-replays.ts)",
+          "V3 capsules until replay PR 8b deletes their readers"
         ]
       },
       "owner": "Replay overhaul owner (plans/active/REPLAY_OVERHAUL_PLAN.md)",
@@ -719,7 +720,6 @@
         "reason": "Replay metadata readers must accept legacy audio names without rewriting historical semantics.",
         "testEvidence": [
           "tests/unit/replay-envelope.test.ts",
-          "tests/unit/replay-visual.test.ts",
           "tests/contract/replay-round-trip.test.ts"
         ],
         "expiry": {

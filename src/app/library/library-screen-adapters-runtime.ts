@@ -39,9 +39,13 @@ import {
   type LeaderboardRowSource,
 } from "../../presentation/profile-snapshots";
 import { ReplayLibraryController } from "./replay-library-controller";
-import { renderReplayThumbnail } from "../../presentation/replay-thumbnail";
+import { loadSharedReplay, shareReplay } from "../../replay/share";
 import { createLiveBestiaryPreview } from "./bestiary-preview";
-import { REPLAY_TOOLBAR_HEIGHT, replayListState } from "../../presentation/screens/profile-replay-list";
+import {
+  EARLIER_NOTICE_HEIGHT,
+  REPLAY_TOOLBAR_HEIGHT,
+  replayListState,
+} from "../../presentation/screens/profile-replay-list";
 import { createReplayListController } from "../replay/replay-list-controller";
 import { REPLAY_LIST_FILTERS, type ReplayListFilter } from "../replay/replay-list";
 import { liveReplayRecorder } from "../replay/live-replay-recorder-slot";
@@ -60,6 +64,7 @@ type Dependencies = Pick<
   | "Charger"
   | "Chimera"
   | "Cloud"
+  | "CG"
   | "Colossus"
   | "CONFIG"
   | "DAILY"
@@ -78,7 +83,6 @@ type Dependencies = Pick<
   | "UI"
   | "UPGRADES"
   | "VARIANTS"
-  | "VAULT"
   | "Warden"
   | "Wraith"
   | "applyVariant"
@@ -103,7 +107,8 @@ export interface LibraryScreenServices {
   readonly getBest: (mode: string, difficulty: string) => Readonly<{ wave: number; score: number; time?: number }>;
   readonly browserIndexedDb: SharedLibraryScreenServices["browserIndexedDb"];
   readonly replayFiles: SharedLibraryScreenServices["replayFiles"];
-  readonly enterReplay: (record: unknown, from: string) => boolean;
+  /** Opens a published replay on the replay screen. */
+  readonly watchShared: SharedLibraryScreenServices["watchShared"];
   readonly watchRecord: SharedLibraryScreenServices["watchRecord"];
 }
 
@@ -119,10 +124,6 @@ export interface LibraryScreenAdapters {
   readonly renderProfile: () => void;
   readonly renderAchievements: () => void;
   readonly renderLeaderboards: () => void;
-  readonly drawReplayPreview: (
-    source: string,
-    bounds: Readonly<{ x: number; y: number; w: number; h: number }>,
-  ) => void;
   readonly drawCreaturePreview: (
     name: string,
     bounds: Readonly<{ x: number; y: number; w: number; h: number }>,
@@ -176,7 +177,6 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     extreme: null,
     onehit: "#b06cff",
   };
-  const replayThumbs: Record<string, HTMLImageElement> = {};
   let codexTab = "abilities",
     codexFilter = "all",
     codexSort = "category",
@@ -198,9 +198,8 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     leaderboardFailed = false;
 
   const replayLibrary = new ReplayLibraryController({
-    vault: d.VAULT,
-    cloud: d.Cloud,
-    enterReplay: (record, from) => services.enterReplay(record, from),
+    loadShared: (shareId) => loadSharedReplay(d.Cloud, shareId),
+    watch: (record, key, from) => services.watchShared(record, key, from),
     setProfileMessage: (message) => {
       replays.setMessage(message);
     },
@@ -211,16 +210,12 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
   const replays = createReplayListController({
     openStore: () =>
       liveReplayRecorder.ensure().then((module) => module.openReplayRecordStore(services.browserIndexedDb ?? null)),
-    older: d.VAULT,
     files: services.replayFiles,
     playableRuleset: (ruleset) => rulesetRefusal(ruleset) === null,
     watchRecord: (key) => services.watchRecord(key),
-    watchOlder: (id) => {
-      replayLibrary.watch(id, "profile");
-    },
-    shareOlder: (id) => {
-      replayLibrary.publish(id);
-    },
+    canShare: () => d.Cloud.hasLeaderboards(),
+    share: (record) => shareReplay(d.Cloud, record),
+    earlier: d.CG.store,
   });
   /** The list is read again each time the REPLAYS tab is shown or the profile entered, so a run kept since is in it. */
   let replaysShown = false,
@@ -331,14 +326,16 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       tab: profileTab,
       tabs: profileTabs,
       signedIn,
-      // The REPLAYS toolbar (filters and import) sits above the list: profile-achievements replayToolbar.
-      replayListInset: list === undefined ? 0 : REPLAY_TOOLBAR_HEIGHT,
+      // The REPLAYS toolbar (filters and import), and the earlier-replays notice when there is one, sit above
+      // the list: profile-achievements replayToolbar.
+      replayListInset: list === undefined ? 0 : REPLAY_TOOLBAR_HEIGHT + (list.earlier > 0 ? EARLIER_NOTICE_HEIGHT : 0),
       ...(list === undefined
         ? {}
         : {
             replayFilters: REPLAY_FILTER_CHOICES,
             replayFilter: list.filter,
             canImport: list.canImport,
+            earlierReplays: list.earlier,
             ...(listState === undefined ? {} : { replayList: listState }),
           }),
       firebase: d.Cloud.provider === d.FirebaseProvider,
@@ -489,7 +486,6 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       boards,
       board: leaderboardBoard,
       kind: leaderboardKind(board),
-      ...(board.kind === "score" ? { legacyGhost: `ghost:${board.mode}:${board.difficulty}` } : {}),
       difficulties: d.CONFIG.difficulties,
       difficulty: leaderboardDifficulty,
       ...(d.Cloud.user === null ? {} : { currentUserId: d.Cloud.user.id }),
@@ -510,16 +506,6 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     renderProfile,
     renderAchievements,
     renderLeaderboards,
-    drawReplayPreview: (source, bounds) => {
-      renderReplayThumbnail({
-        canvas: services.canvas,
-        source,
-        bounds,
-        cache: replayThumbs,
-        createImage: () => new Image(),
-        ink: d.UI.ink,
-      });
-    },
     // source drawCreature: render the live enemy instance scaled into its preview box
     drawCreaturePreview: (name, bounds) => {
       const context = services.canvas,
@@ -611,6 +597,8 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       pin: replays.pin,
       remove: replays.remove,
       importFile: replays.importFile,
+      downloadEarlier: replays.downloadEarlier,
+      clearEarlier: replays.clearEarlier,
     }),
   };
   return Object.freeze(adapters);

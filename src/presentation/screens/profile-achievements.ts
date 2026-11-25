@@ -2,8 +2,10 @@ import type { AchievementsScreenView, ProfileScreenView, ScreenRenderContext } f
 import { chips, clipBody, page, pageFooter, replayRow, tabs } from "./screen-primitives";
 import { createCompactProfile } from "./compact-profile";
 import {
+  EARLIER_NOTICE_HEIGHT,
   REPLAY_IMPORT_LABEL,
   REPLAY_TOOLBAR_HEIGHT,
+  earlierReplaysNotice,
   profileListEmptyState,
   replayRowActions,
   type ReplayRowActionId,
@@ -250,7 +252,39 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
         action: { type: "profile.importReplay" },
       });
     ui.divider(context.canvas, left, top + 46, 1120, 0.14);
-    return top + REPLAY_TOOLBAR_HEIGHT;
+    return earlierNotice(view, left, top + REPLAY_TOOLBAR_HEIGHT);
+  }
+
+  /** The notice about replays recorded before this update, under the toolbar; returns the next free y. */
+  function earlierNotice(view: ProfileScreenView, left: number, top: number): number {
+    const notice = earlierReplaysNotice(view);
+    if (notice === null) return top;
+    const { canvas } = context,
+      width = 1120,
+      height = EARLIER_NOTICE_HEIGHT - 12,
+      buttons = [170, 150] as const;
+    ui.card(canvas, left, top, width, height, false);
+    ui.spine(canvas, left, top, height, PROFILE_HUE);
+    ui.textBox(canvas, notice.text, left + 24, top + 24, width - 24 - buttons[0] - buttons[1] - 48, {
+      size: ui.t.type.caption,
+      lineHeight: 18,
+      maxLines: 3,
+    });
+    let x = left + width - 16 - buttons[0] - buttons[1] - 8;
+    notice.actions.forEach((item, index) => {
+      const w = buttons[index] ?? buttons[1];
+      context.enqueue({
+        x,
+        y: top + (height - 36) / 2,
+        w,
+        h: 36,
+        label: item.label,
+        size: ui.t.type.label,
+        action: item.action,
+      });
+      x += w + 8;
+    });
+    return top + EARLIER_NOTICE_HEIGHT;
   }
 
   function passport(view: ProfileScreenView): void {

@@ -42,7 +42,6 @@ describe("C40 Source one-HP void rescue seek evidence registry", () => {
         "src/app/run/source-void-",
         "src/tearbench/gameplay-causal-events.ts",
         "src/gameplay/snapshot/state-codec.ts",
-        "src/replay/legacy-compat.ts",
         "src/tearbench/canonical-scenarios.json",
         "src/tearbench/evidence-routes.json",
         "tests/browser-c40-source-void-ghost-seek.js",

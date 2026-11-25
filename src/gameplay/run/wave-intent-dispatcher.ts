@@ -8,7 +8,6 @@ export interface WavePlanIntentPort {
   setStageBanner(name: string, duration: number): void;
   beginCampaignChapter(index: number, priorOutro: unknown): void;
   recordWave(wave: number, marker: "start" | "boss"): void;
-  snapshotReplay(slot: number): void;
   prepareWave(wave: number, boss: boolean, deferred: boolean): void;
   activateWave(): void;
   showWaveBanner(): void;
@@ -33,9 +32,6 @@ export function dispatchWavePlanIntents(intents: readonly WavePlanIntent[], port
         break;
       case "ghost-wave":
         port.recordWave(intent.wave, intent.marker);
-        break;
-      case "ghost-snapshot":
-        port.snapshotReplay(intent.slot);
         break;
       case "prepare-wave":
         port.prepareWave(intent.wave, intent.boss, intent.deferred);

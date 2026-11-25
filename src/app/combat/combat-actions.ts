@@ -567,8 +567,6 @@ function createCollision(
       ports.tutorial.mark(name);
     },
     enemyDefeated: f.enemyDefeated,
-    ghostRecording: () => d.GHOST.recording(),
-    ghostSample: f.ghostSample,
     ghostRevive: () => {
       d.GAMEPLAY_EVENTS.emit({ kind: "effect", effect: "revive", x: live.player().x, y: live.player().y });
     },
@@ -624,7 +622,6 @@ function createKill(context: LiveCombatActionContext): LiveKillHost {
     checkAchievements: f.checkAchievements,
     bossGhostMoment: (enemy) => {
       d.GAMEPLAY_EVENTS.emit({ kind: "effect", effect: "bossKill", x: enemy.x, y: enemy.y });
-      d.GHOST.snapshot(context.canvas, 4);
     },
     deathEffect: (enemy, shards) => {
       d.FX.death(enemy.x, enemy.y, shards, enemy.color);

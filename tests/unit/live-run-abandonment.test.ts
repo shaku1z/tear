@@ -22,11 +22,9 @@ function harness(phase: "playing" | "terminated") {
       environment: { clear: () => undefined },
     },
     events: { emit: () => undefined },
-    ghost: {
-      recording: () => true,
-      stopRec: () => {
-        order.push("ghost2-closed");
-        return null;
+    ghostRecording: {
+      stop: () => {
+        order.push("sidecar-closed");
       },
     },
     input: { stopSemanticRecording: () => undefined },
@@ -44,7 +42,7 @@ describe("quitting a run", () => {
     const { abandonment, ended, order, run } = harness("playing");
     abandonment.abandon("menu");
     expect(ended).toEqual([run]);
-    expect(order).toEqual(["terminated", "replay-ended", "ghost2-closed"]);
+    expect(order).toEqual(["terminated", "replay-ended", "sidecar-closed"]);
   });
 
   it("does not end the record of a run that has already ended", () => {

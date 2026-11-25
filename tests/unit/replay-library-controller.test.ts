@@ -1,79 +1,79 @@
+/**
+ * Watching a published replay (src/app/library/replay-library-controller.ts): a leaderboard or feed row
+ * loads the shared record and opens it on the one replay screen; a missing or earlier-version replay says
+ * why on the surface that launched it, and a newer press wins over a slower older load.
+ */
 import { describe, expect, it, vi } from "vitest";
-import { ReplayLibraryController } from "../../src/app/library/replay-library-controller";
+import { ReplayLibraryController, sharedReplayKey } from "../../src/app/library/replay-library-controller";
+import type { ReplayReadResult, ReplayRecord } from "../../src/replay/record";
+
+const record = { v: 3 } as unknown as ReplayRecord;
+
+function setup(load: (shareId: string) => Promise<ReplayReadResult | null>, opened = true) {
+  const ports = {
+    loadShared: vi.fn(load),
+    watch: vi.fn(() => Promise.resolve(opened)),
+    setProfileMessage: vi.fn(),
+    setLeaderboardMessage: vi.fn(),
+  };
+  return { ports, controller: new ReplayLibraryController(ports) };
+}
 
 describe("replay library controller", () => {
-  it("plays local recordings without cloud work", () => {
-    const enterReplay = vi.fn(() => true),
-      profileMessage = vi.fn(),
-      loadReplay = vi.fn();
-    const controller = new ReplayLibraryController({
-      vault: { index: () => [], get: () => ({}), setShareId: vi.fn() },
-      cloud: { hasLeaderboards: () => true, loadGhost: vi.fn(), loadReplay, publishReplay: vi.fn() },
-      enterReplay,
-      setProfileMessage: profileMessage,
-      setLeaderboardMessage: vi.fn(),
-    });
-    controller.watch("local");
-    expect(enterReplay).toHaveBeenCalledWith({}, "profile");
-    expect(loadReplay).not.toHaveBeenCalled();
-  });
-
-  it("rejects publishing an already shared recording", () => {
-    const message = vi.fn();
-    const controller = new ReplayLibraryController({
-      vault: { index: () => [{ id: "a", shareId: "s" }], get: () => ({}), setShareId: vi.fn() },
-      cloud: { hasLeaderboards: () => true, loadGhost: vi.fn(), loadReplay: vi.fn(), publishReplay: vi.fn() },
-      enterReplay: vi.fn(() => true),
-      setProfileMessage: message,
-      setLeaderboardMessage: vi.fn(),
-    });
-    controller.publish("a");
-    expect(message).toHaveBeenCalledWith("already on the global feed");
-  });
-
-  it("loads a linked leaderboard replay through the leaderboard status channel", async () => {
-    const record = { v: 2 },
-      enterReplay = vi.fn(() => true),
-      profileMessage = vi.fn(),
-      leaderboardMessage = vi.fn();
-    const controller = new ReplayLibraryController({
-      vault: { index: () => [], get: () => null, setShareId: vi.fn() },
-      cloud: {
-        hasLeaderboards: () => true,
-        loadGhost: vi.fn(),
-        loadReplay: vi.fn(() => Promise.resolve(record)),
-        publishReplay: vi.fn(),
-      },
-      enterReplay,
-      setProfileMessage: profileMessage,
-      setLeaderboardMessage: leaderboardMessage,
-    });
+  it("opens a published replay on the replay screen under its shared key, saying so on the launching surface", async () => {
+    const { ports, controller } = setup(() => Promise.resolve({ ok: true, record }));
     controller.watch("published-1", "leaderboards");
-    expect(leaderboardMessage).toHaveBeenCalledWith("loading replay…");
+    expect(ports.setLeaderboardMessage).toHaveBeenCalledWith("loading replay…");
     await vi.waitFor(() => {
-      expect(enterReplay).toHaveBeenCalledWith(record, "leaderboards");
+      expect(ports.watch).toHaveBeenCalledWith(record, sharedReplayKey("published-1"), "leaderboards");
     });
-    expect(leaderboardMessage).toHaveBeenLastCalledWith("");
-    expect(profileMessage).not.toHaveBeenCalled();
+    expect(ports.setLeaderboardMessage).toHaveBeenLastCalledWith("");
+    expect(ports.setProfileMessage).not.toHaveBeenCalled();
+    expect(sharedReplayKey("published-1")).toBe("shared:published-1");
   });
 
-  it("keeps linked replay failures visible on the surface that launched them", async () => {
-    const leaderboardMessage = vi.fn();
-    const controller = new ReplayLibraryController({
-      vault: { index: () => [], get: () => null, setShareId: vi.fn() },
-      cloud: {
-        hasLeaderboards: () => true,
-        loadGhost: vi.fn(),
-        loadReplay: vi.fn(() => Promise.resolve(null)),
-        publishReplay: vi.fn(),
-      },
-      enterReplay: vi.fn(() => false),
-      setProfileMessage: vi.fn(),
-      setLeaderboardMessage: leaderboardMessage,
-    });
-    controller.watch("missing", "leaderboards");
+  it("says why a published replay did not open: missing, made by an earlier version, or not playable", async () => {
+    const missing = setup(() => Promise.resolve(null));
+    missing.controller.watch("gone", "leaderboards");
     await vi.waitFor(() => {
-      expect(leaderboardMessage).toHaveBeenLastCalledWith("replay unavailable — it uses an older weapon runtime");
+      expect(missing.ports.setLeaderboardMessage).toHaveBeenLastCalledWith("couldn't load that replay");
     });
+    const earlier = setup(() =>
+      Promise.resolve({
+        ok: false,
+        reason: "earlier-version",
+        message: "Made by an earlier version.",
+        detail: "old ruleset",
+      }),
+    );
+    earlier.controller.watch("old");
+    await vi.waitFor(() => {
+      expect(earlier.ports.setProfileMessage).toHaveBeenLastCalledWith("Made by an earlier version.");
+    });
+    expect(earlier.ports.watch).not.toHaveBeenCalled();
+    const unplayable = setup(() => Promise.resolve({ ok: true, record }), false);
+    unplayable.controller.watch("odd");
+    await vi.waitFor(() => {
+      expect(unplayable.ports.setProfileMessage).toHaveBeenLastCalledWith("this replay can't be played");
+    });
+  });
+
+  it("drops a slower earlier load when a newer replay was asked for", async () => {
+    let finishFirst: (read: ReplayReadResult) => void = () => undefined;
+    const first = new Promise<ReplayReadResult>((resolve) => {
+      finishFirst = resolve;
+    });
+    const { ports, controller } = setup((shareId) =>
+      shareId === "slow" ? first : Promise.resolve({ ok: true, record }),
+    );
+    controller.watch("slow", "leaderboards");
+    controller.watch("fast", "leaderboards");
+    await vi.waitFor(() => {
+      expect(ports.watch).toHaveBeenCalledOnce();
+    });
+    finishFirst({ ok: true, record });
+    await first;
+    await Promise.resolve();
+    expect(ports.watch).toHaveBeenCalledExactlyOnceWith(record, "shared:fast", "leaderboards");
   });
 });

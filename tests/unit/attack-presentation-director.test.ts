@@ -1,14 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import type { AttackPresentationCue } from "../../src/gameplay/combat/attack-presentation-cue";
 import {
   ATTACK_PRESENTATION_PROFILES,
   AttackPresentationDirector,
   type AttackPresentationDirectorPorts,
 } from "../../src/presentation/combat/attack-presentation-director";
-import {
-  decodeAttackPresentationEffect,
-  encodeAttackPresentationEffect,
-} from "../../src/presentation/combat/attack-presentation-effect-codec";
 
 function makePorts(overrides: Partial<AttackPresentationDirectorPorts> = {}): AttackPresentationDirectorPorts {
   return {
@@ -283,71 +278,5 @@ describe("AttackPresentationDirector", () => {
     scope = {};
     director.emit(cue);
     expect(edgeTrace).toHaveBeenCalledTimes(2);
-  });
-
-  it("round-trips a bounded cosmetic replay fact without changing authoritative state", () => {
-    const cue = {
-      weaponId: "chainblade" as const,
-      attackId: 19,
-      throwId: 4,
-      action: "secondary" as const,
-      phase: "return" as const,
-      variant: "sling",
-      sourceX: 40.4,
-      sourceY: 55.6,
-      x: 180,
-      y: 90,
-      directionX: -920.4,
-      directionY: 311.2,
-      normalX: 0,
-      normalY: -1,
-      material: "metal" as const,
-      intensity: 0.84,
-    };
-    const effect = encodeAttackPresentationEffect(cue);
-    const decoded = decodeAttackPresentationEffect(effect, cue.x, cue.y, cue.attackId);
-
-    expect(effect).toMatch(/^attack:v1:chainblade:/);
-    expect(decoded).toEqual(
-      expect.objectContaining({
-        weaponId: "chainblade",
-        attackId: 19,
-        action: "secondary",
-        phase: "return",
-        variant: "sling",
-        x: 180,
-        y: 90,
-        directionX: -920,
-        directionY: 311,
-        intensity: 0.84,
-      }),
-    );
-    expect(decoded?.sourceX).toBeCloseTo(40);
-    expect(decoded?.sourceY).toBeCloseTo(56);
-    expect(decoded?.normalX).toBeUndefined();
-    expect(decoded?.material).toBeUndefined();
-    expect(decodeAttackPresentationEffect("attack:v99:sword:held:contact:reversal:0:0:0:0:100", 0, 0, 1)).toBeNull();
-  });
-
-  it("records a semantic cue once after deduplication", () => {
-    const record = vi.fn();
-    const director = new AttackPresentationDirector(makePorts({ reducedMotion: () => true, record }));
-    const cue: AttackPresentationCue = {
-      weaponId: "hammer",
-      attackId: 3,
-      action: "impact",
-      phase: "impact",
-      variant: "meteor",
-      sourceX: 0,
-      sourceY: 0,
-      x: 50,
-      y: 60,
-      directionX: 0,
-      directionY: 500,
-      intensity: 1,
-    };
-    director.emit(cue);
-    director.emit(cue);
-    expect(record).toHaveBeenCalledOnce();
   });
 });

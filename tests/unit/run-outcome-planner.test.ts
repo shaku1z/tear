@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   appendDefeatWave,
   buildPendingFinale,
-  buildRecordingSummary,
   buildRunResult,
   planVictoryProgression,
   type OutcomeRunState,
@@ -26,34 +25,6 @@ const run: OutcomeRunState = {
 };
 
 describe("run outcome planner", () => {
-  it("builds deterministic replay summary metadata", () => {
-    expect(
-      buildRecordingSummary(run, {
-        won: true,
-        displayName: "Tester",
-        stageIndex: 1,
-        loadout: [{ id: "bloodrite", tier: 2, count: 1 }],
-        authoritativeTick: 321,
-        authoritativeStateHash: "hash",
-      }),
-    ).toEqual({
-      mode: "campaign",
-      diff: "hard",
-      wave: 20,
-      score: 12_345,
-      time: 613,
-      won: true,
-      kills: 5,
-      peak: 5,
-      name: "Tester",
-      stage: 1,
-      weapon: "hammer",
-      loadout: [{ id: "bloodrite", tier: 2, n: 1 }],
-      authoritativeTick: 321,
-      authoritativeStateHash: "hash",
-    });
-  });
-
   it("appends an in-progress death row only while a wave is active", () => {
     expect(appendDefeatWave(run.waveLog, false, run)).toEqual(run.waveLog);
     expect(appendDefeatWave(run.waveLog, true, run).at(-1)).toEqual({

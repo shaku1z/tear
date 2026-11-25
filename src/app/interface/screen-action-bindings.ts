@@ -3,6 +3,7 @@ import { createScreenActionRouter } from "./screen-action-router";
 import type { AppScreen } from "../../domain/screen-catalog";
 import type { LibraryScreenAdapters } from "../library/library-screen-adapters";
 import type { ReplayScreenAdapter } from "../replay/replay-screen";
+import type { KeptReplay } from "../replay/live-replay-production";
 import type { SettingsRenameAdapters } from "../screens/settings-rename-adapters";
 import type { RunDifficulty, RunMode } from "../../gameplay/run/session";
 import { screenActionAvailable, type SurfaceAvailability } from "../../domain/surface-availability";
@@ -38,7 +39,8 @@ export interface ScreenActionBindingPorts {
   readonly revive: () => void;
   readonly endRun: () => void;
   readonly retryRun: () => void;
-  readonly lastReplay: () => unknown;
+  /** The run just ended, kept on this device; null when it was not kept. */
+  readonly lastReplay: () => KeptReplay | null;
   readonly campaignDifficulty: () => RunDifficulty;
   readonly resetSettings: () => void;
   readonly buyShopItem: (id: string) => void;
@@ -142,8 +144,8 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
       ports.retryRun();
     },
     "results.watchReplay": () => {
-      const replay = ports.lastReplay();
-      if (replay !== null) ports.replay.enter(replay, "gameover");
+      const kept = ports.lastReplay();
+      if (kept !== null) void ports.replay.watch(kept.record, kept.key, "gameover");
     },
     "results.descendAgain": () => {
       ports.startRun("campaign", ports.campaignDifficulty());
@@ -217,6 +219,12 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     },
     "profile.importReplay": () => {
       ports.library.replays.importFile();
+    },
+    "profile.downloadEarlierReplays": () => {
+      ports.library.replays.downloadEarlier();
+    },
+    "profile.clearEarlierReplays": () => {
+      ports.library.replays.clearEarlier();
     },
     "chase.control": (action) => {
       ports.controlChase?.(action.command);

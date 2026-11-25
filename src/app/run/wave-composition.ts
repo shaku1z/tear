@@ -1,3 +1,4 @@
+import type { KeptReplay } from "../replay/live-replay-production";
 import { releasePointerLock } from "../../platform/browser-pointer-lock";
 import type { BossId } from "../../gameplay/run/content-director";
 import { bossStageOwner, isBossDefinitionId } from "../../gameplay/run/boss-definitions";
@@ -18,7 +19,6 @@ import type { WavePlanIntentPort } from "../../gameplay/run/wave-intent-dispatch
 
 type CampaignHost = ReturnType<typeof createLiveCampaignHost>;
 type Content = ReturnType<typeof createLiveContentComposition>;
-type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
 
 function bossId(value: string): BossId {
   return isBossDefinitionId(value) ? value : "warden";
@@ -66,7 +66,7 @@ export function startingStageId(
 export interface LiveWaveCompositionOptions {
   readonly dependencies: GameRuntimeDependencies;
   readonly lifecycle: RunLifecycleController;
-  readonly controllers: LiveRunControllerRegistry<GameRun, ReplayPacket, PreparedVictory>;
+  readonly controllers: LiveRunControllerRegistry<GameRun, KeptReplay, PreparedVictory>;
   readonly stage: CampaignHost["stage"];
   readonly story: CampaignHost["story"];
   readonly worldServices: Pick<LiveWorldServices, "random">;
@@ -127,9 +127,6 @@ export function createLiveWaveComposition(options: LiveWaveCompositionOptions): 
       },
       beginCampaignChapter: options.beginCampaignChapter,
       recordWave: publishWave,
-      snapshotReplay: (slot) => {
-        d.GHOST.snapshot(options.canvas, slot);
-      },
       prepareWave: (wave, boss, deferred) => {
         const weapon = d.WEAPONS.find((candidate) => candidate.id === options.run().weaponId);
         weapon?.onReset?.({ blade: options.blade() });

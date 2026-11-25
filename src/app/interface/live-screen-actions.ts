@@ -85,7 +85,7 @@ export function createLiveScreenActions(
     requestPointer: requestLock,
     endRun,
     retryRun,
-    lastReplay: () => session.lastRecording(),
+    lastReplay: () => session.lastReplay(),
     campaignDifficulty: () => session.outcome()?.diff ?? "normal",
     resetSettings: () => {
       settingsController.reset();

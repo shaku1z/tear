@@ -146,14 +146,6 @@
       "purpose": "The browser adapter that owns the Ghost V3 test inspection global.",
       "include": ["src/tearbench/browser/live-runtime-bridge.ts"]
     },
-    "replay.ghost2-compat": {
-      "purpose": "The Ghost 2 compatibility adapter, which portable research code must not depend on.",
-      "include": ["src/replay/legacy-compat.ts"]
-    },
-    "replay.ghost2-compat-family": {
-      "purpose": "The Ghost 2 compatibility adapter and its validation module, which portable and browser TearBench code and the portable gameplay core must not reach.",
-      "include": ["@replay.ghost2-compat", "src/replay/legacy-compat-validation.ts"]
-    },
     "replay.ghost-recorder-session-owners": {
       "purpose": "The Ghost V3 recorder and its typed live recording-session owner.",
       "include": ["src/ghost/live-recorder.ts", "src/app/replay/ghost-recording-session-state.ts"]
