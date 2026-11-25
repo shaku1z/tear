@@ -2,8 +2,17 @@
 // vitest's import graph cannot see. #418 went red on main after a green local run: it moved
 // src/app/replay/browser-replay-clip-export.ts off the replay format, and tests/unit/replay-record.test.ts
 // pinned that path in a list without importing it.
+import { execFileSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
-import { folders, nodeTestFiles, relatedTests, selectTests } from "../../scripts/test-related.mjs";
+import {
+  argumentBatches,
+  batchedArguments,
+  COMMAND_ARGUMENT_BUDGET,
+  folders,
+  nodeTestFiles,
+  relatedTests,
+  selectTests,
+} from "../../scripts/test-related.mjs";
 
 /** selectTests over in-memory test files, the way relatedTests calls it over git grep's hits. */
 function pick(changed, files, scanners = []) {
@@ -71,6 +80,46 @@ describe("test:related", () => {
       ]),
     ).toEqual(["tests/a.test.mjs", "tests/parity/b.test.mjs"]);
   });
+
+  it("splits a file list longer than one command line into runs that each fit, in order, losing none (#420)", () => {
+    // Replay PR 8a changed 132 files; its list crashed the run on Windows with spawn ENAMETOOLONG.
+    const files = Array.from(
+      { length: 2_000 },
+      (_, index) => `tests/unit/a-long-test-file-name-${String(index).padStart(4, "0")}.test.ts`,
+    );
+    const fixed = ["node_modules/vitest/vitest.mjs", "related", "--run"];
+    expect(files.join(" ").length).toBeGreaterThan(COMMAND_ARGUMENT_BUDGET);
+    const runs = batchedArguments(fixed, files);
+    expect(runs.length).toBeGreaterThan(1);
+    for (const args of runs) {
+      expect(args.slice(0, fixed.length)).toEqual(fixed);
+      expect(args.reduce((total, argument) => total + argument.length + 3, 0)).toBeLessThanOrEqual(
+        COMMAND_ARGUMENT_BUDGET,
+      );
+    }
+    expect(runs.flatMap((args) => args.slice(fixed.length))).toEqual(files);
+    expect(batchedArguments(fixed, [])).toEqual([]);
+    expect(argumentBatches(["a", "x".repeat(50), "b"], 20)).toEqual([["a"], ["x".repeat(50)], ["b"]]);
+  });
+
+  // A real selection over hundreds of changed files reads every test's text for each one, so this test
+  // takes several seconds; its timeout says so rather than the default's 5 s.
+  it(
+    "in this repository, selects for a change whose paths alone fill more than one command line",
+    { timeout: 30_000 },
+    () => {
+      const tracked = execFileSync("git", ["ls-files", "src"], { encoding: "utf8" }).split(/\r?\n/u).filter(Boolean);
+      const changed = [];
+      for (const file of tracked) {
+        changed.push(file);
+        if (changed.join(" ").length > COMMAND_ARGUMENT_BUDGET + 1_000) break;
+      }
+      expect(changed.join(" ").length).toBeGreaterThan(COMMAND_ARGUMENT_BUDGET);
+      const { picked, node } = relatedTests(changed);
+      expect(picked.size).toBeGreaterThan(0);
+      expect(node).toContain("tests/source-architecture.test.mjs");
+    },
+  );
 
   it("in this repository, finds the tree scanners and the node:test files for a source change", () => {
     const { vitest, node, picked } = relatedTests(["src/app/replay/watch.ts"]);

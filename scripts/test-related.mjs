@@ -39,6 +39,62 @@ function grep(git, args) {
 
 const lines = (text) => text.split(/\r?\n/u).filter(Boolean);
 
+/**
+ * Room for one command's arguments, in characters. Windows limits a whole command line to 32,767
+ * (CreateProcess fails with ENAMETOOLONG past it), and the program and its fixed flags take some of
+ * that. Other systems allow far more, but one budget everywhere splits a run the same way on every
+ * machine. Every list this script hands a command (changed paths, test files) goes through
+ * `argumentBatches`, so a large change makes more commands, never a longer one.
+ */
+export const COMMAND_ARGUMENT_BUDGET = 24_000;
+
+/** An argument's share of a command line: its characters, a separating space and two quotes. */
+const argumentCost = (argument) => argument.length + 3;
+
+/**
+ * `items` split, in order, into batches whose cost fits `budget`. `cost` gives one item's share; an item
+ * that alone exceeds the budget goes in a batch by itself (it cannot be split).
+ */
+export function argumentBatches(items, budget = COMMAND_ARGUMENT_BUDGET, cost = argumentCost) {
+  const batches = [];
+  let batch = [];
+  let used = 0;
+  for (const item of items) {
+    const share = cost(item);
+    if (batch.length > 0 && used + share > budget) {
+      batches.push(batch);
+      batch = [];
+      used = 0;
+    }
+    batch.push(item);
+    used += share;
+  }
+  if (batch.length > 0) batches.push(batch);
+  return batches;
+}
+
+/** The argument lists for running `fixed` over `items`: one per batch that fits beside `fixed`. */
+export function batchedArguments(fixed, items, budget = COMMAND_ARGUMENT_BUDGET) {
+  const room = budget - fixed.reduce((total, argument) => total + argumentCost(argument), 0);
+  return argumentBatches(items, room).map((batch) => [...fixed, ...batch]);
+}
+
+/**
+ * The files among `files` that hold any of `patterns` (`git grep -l <mode> -e …`), run in batches of
+ * patterns and of files that fit the command line together, and joined.
+ */
+function grepFiles(git, mode, patterns, files) {
+  const half = Math.floor(COMMAND_ARGUMENT_BUDGET / 2);
+  const hits = new Set();
+  for (const someFiles of argumentBatches(files, half))
+    for (const somePatterns of argumentBatches(patterns, half, (pattern) => argumentCost(pattern) + argumentCost("-e")))
+      for (const file of lines(
+        grep(git, ["-l", mode, ...somePatterns.flatMap((pattern) => ["-e", pattern]), "--", ...someFiles]),
+      ))
+        hits.add(file);
+  return [...hits].sort();
+}
+
 /** The branch's change: committed since origin/main, uncommitted, and new untracked files, deletions included. */
 export function branchChange({ git = realGit } = {}) {
   const base = git(["merge-base", "origin/main", "HEAD"]).trim();
@@ -122,12 +178,9 @@ export function relatedTests(changed, { git = realGit } = {}) {
   };
   const needles = [...new Set(changed.flatMap((file) => [withoutExtension(file), ...folders(file)]))];
   // One git grep finds every file holding any needle; each rule then reads only those.
-  const hits =
-    needles.length === 0
-      ? []
-      : lines(grep(git, ["-l", "-F", ...needles.flatMap((n) => ["-e", n]), "--", ...pathspecs]));
+  const hits = needles.length === 0 ? [] : grepFiles(git, "-F", needles, pathspecs);
   const candidates = (needle) => hits.filter((file) => textOf(file).includes(needle));
-  const scanners = lines(grep(git, ["-l", "-E", "-e", `["'](ls-files|grep)["']`, "--", ...pathspecs]));
+  const scanners = grepFiles(git, "-E", [`["'](ls-files|grep)["']`], pathspecs);
   const picked = selectTests({ changed, tests, candidates, textOf, scanners });
   const nodeSet = new Set(nodeTests);
   return {
@@ -160,17 +213,20 @@ function main() {
     console.log("vitest related adds the tests whose imports reach a changed file; --list does not run it.");
     return 0;
   }
+  // A change too large for one command line runs in several: each batch is its own run and its own
+  // verdict, and every batch runs whatever an earlier one said. A test whose imports reach sources in
+  // two batches runs in both.
+  const vitestRuns = batchedArguments(
+    [path.join(root, "node_modules/vitest/vitest.mjs"), "related", "--run", ...flags],
+    [...sources, ...vitest],
+  );
+  const nodeRuns = batchedArguments(["--test", "--test-concurrency=1"], node);
+  if (vitestRuns.length > 1 || nodeRuns.length > 1)
+    console.log(
+      `test:related: the files fill more than one command line: ${vitestRuns.length} vitest and ${nodeRuns.length} node:test run(s).`,
+    );
   let status = 0;
-  if (sources.length > 0 || vitest.length > 0)
-    status ||= run(process.execPath, [
-      path.join(root, "node_modules/vitest/vitest.mjs"),
-      "related",
-      "--run",
-      ...flags,
-      ...sources,
-      ...vitest,
-    ]);
-  if (node.length > 0) status = run(process.execPath, ["--test", "--test-concurrency=1", ...node]) || status;
+  for (const args of [...vitestRuns, ...nodeRuns]) status = run(process.execPath, args) || status;
   return status;
 }
 
