@@ -2,19 +2,22 @@
 // vitest's import graph cannot see. #418 went red on main after a green local run: it moved
 // src/app/replay/browser-replay-clip-export.ts off the replay format, and tests/unit/replay-record.test.ts
 // pinned that path in a list without importing it.
+import { execFileSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
-import { folders, nodeTestFiles, relatedTests, selectTests } from "../../scripts/test-related.mjs";
+import {
+  argumentBatches,
+  batchedArguments,
+  COMMAND_ARGUMENT_BUDGET,
+  folders,
+  mentions,
+  nodeTestFiles,
+  relatedTests,
+  selectTests,
+} from "../../scripts/test-related.mjs";
 
 /** selectTests over in-memory test files, the way relatedTests calls it over git grep's hits. */
 function pick(changed, files, scanners = []) {
-  const tests = Object.keys(files);
-  return selectTests({
-    changed,
-    tests,
-    candidates: (needle) => tests.filter((file) => files[file].includes(needle)),
-    textOf: (file) => files[file],
-    scanners,
-  });
+  return selectTests({ changed, tests: Object.keys(files), textOf: (file) => files[file], scanners });
 }
 
 describe("test:related", () => {
@@ -70,6 +73,61 @@ describe("test:related", () => {
         "vitest run tests/unit/c.test.ts",
       ]),
     ).toEqual(["tests/a.test.mjs", "tests/parity/b.test.mjs"]);
+  });
+
+  it("splits a file list longer than one command line into runs that each fit, in order, losing none (#420)", () => {
+    // Replay PR 8a changed 132 files; its list crashed the run on Windows with spawn ENAMETOOLONG.
+    const files = Array.from(
+      { length: 2_000 },
+      (_, index) => `tests/unit/a-long-test-file-name-${String(index).padStart(4, "0")}.test.ts`,
+    );
+    const fixed = ["node_modules/vitest/vitest.mjs", "related", "--run"];
+    expect(files.join(" ").length).toBeGreaterThan(COMMAND_ARGUMENT_BUDGET);
+    const runs = batchedArguments(fixed, files);
+    expect(runs.length).toBeGreaterThan(1);
+    for (const args of runs) {
+      expect(args.slice(0, fixed.length)).toEqual(fixed);
+      expect(args.reduce((total, argument) => total + argument.length + 3, 0)).toBeLessThanOrEqual(
+        COMMAND_ARGUMENT_BUDGET,
+      );
+    }
+    expect(runs.flatMap((args) => args.slice(fixed.length))).toEqual(files);
+    expect(batchedArguments(fixed, [])).toEqual([]);
+    expect(argumentBatches(["a", "x".repeat(50), "b"], 20)).toEqual([["a"], ["x".repeat(50)], ["b"]]);
+  });
+
+  it("in this repository, selects for a change whose paths alone fill more than one command line", () => {
+    const tracked = execFileSync("git", ["ls-files", "src"], { encoding: "utf8" }).split(/\r?\n/u).filter(Boolean);
+    const changed = [];
+    for (const file of tracked) {
+      changed.push(file);
+      if (changed.join(" ").length > COMMAND_ARGUMENT_BUDGET + 1_000) break;
+    }
+    expect(changed.join(" ").length).toBeGreaterThan(COMMAND_ARGUMENT_BUDGET);
+    const { picked, node } = relatedTests(changed);
+    expect(picked.size).toBeGreaterThan(0);
+    expect(node).toContain("tests/source-architecture.test.mjs");
+  });
+
+  it("indexes what a test names in one pass, as the path rules read it", () => {
+    const { names, quoted } = mentions(
+      `readFileSync("src/app/replay/watch.ts"); import x from "../../src/app/other"; git(["grep", "src/app/"]);`,
+    );
+    expect(names.has("src/app/replay/watch")).toBe(true);
+    expect(names.has("src/app/replay/watch.ts")).toBe(true);
+    expect(names.has("src/app/replay/wat")).toBe(false);
+    expect(names.has("src/app/other")).toBe(false); // written after "../../", so not this path
+    expect(quoted.has("src/app")).toBe(true);
+    expect(quoted.has("src/app/replay/watch.ts")).toBe(true);
+    expect(quoted.has("src/app/replay")).toBe(false);
+  });
+
+  it("still matches a path written with a character no path-like word holds", () => {
+    const picked = pick(["docs/notes/a b.md"], {
+      "tests/unit/space.test.ts": `readFileSync("docs/notes/a b.md")`,
+      "tests/unit/other.test.ts": `readFileSync("docs/notes/a")`,
+    });
+    expect([...picked.keys()]).toEqual(["tests/unit/space.test.ts"]);
   });
 
   it("in this repository, finds the tree scanners and the node:test files for a source change", () => {
